@@ -54,7 +54,7 @@ app.get('/img/:key', async (req, res) => {
     );
     if (rows.length > 0) {
       res.set('Content-Type', rows[0].mime_type);
-      res.set('Cache-Control', 'public, max-age=3600');
+      res.set('Cache-Control', 'no-cache');
       return res.send(rows[0].data);
     }
     res.status(404).send('Image not found');
