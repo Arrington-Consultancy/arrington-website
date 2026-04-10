@@ -31,6 +31,15 @@ CREATE TABLE IF NOT EXISTS images (
     updated_by INTEGER REFERENCES users(id)
 );
 
+CREATE TABLE IF NOT EXISTS backups (
+    id SERIAL PRIMARY KEY,
+    label VARCHAR(200) NOT NULL,
+    content_snapshot JSONB NOT NULL,
+    images_snapshot JSONB NOT NULL,
+    created_by INTEGER REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS audit_log (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id),

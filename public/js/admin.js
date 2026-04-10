@@ -348,6 +348,122 @@
         imageInput.value = '';
     });
 
+    // ---- BACKUPS ----
+    const backupBtn = document.getElementById('cmsBackupBtn');
+    const backupsListBtn = document.getElementById('cmsBackupsListBtn');
+    const backupsListSection = document.getElementById('cmsBackupsList');
+    const backupsEntries = document.getElementById('cmsBackupsEntries');
+    const restoreConfirmOverlay = document.getElementById('cmsRestoreConfirm');
+    const restoreCancel = document.getElementById('cmsRestoreCancel');
+    const restoreConfirmBtn = document.getElementById('cmsRestoreConfirmBtn');
+    const restoreMsg = document.getElementById('cmsRestoreMsg');
+    let restoreId = null;
+
+    backupBtn.addEventListener('click', async () => {
+        backupBtn.textContent = 'Backing up...';
+        backupBtn.disabled = true;
+        try {
+            const res = await fetch('/api/admin/backup', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify({})
+            });
+            if (!res.ok) throw new Error('Backup failed');
+            backupBtn.textContent = 'Backed up!';
+            setTimeout(() => {
+                backupBtn.textContent = 'Backup current content';
+                backupBtn.disabled = false;
+            }, 2000);
+        } catch (err) {
+            backupBtn.textContent = 'Backup current content';
+            backupBtn.disabled = false;
+            alert('Failed to create backup. Please try again.');
+        }
+    });
+
+    backupsListBtn.addEventListener('click', async () => {
+        backupsListSection.style.display = backupsListSection.style.display === 'none' ? 'block' : 'none';
+        if (backupsListSection.style.display === 'block') {
+            backupsEntries.innerHTML = '<span style="color:#5a5650;font-size:0.78rem">Loading...</span>';
+            try {
+                const res = await fetch('/api/admin/backups', {
+                    headers: { 'X-CSRF-Token': csrfToken }
+                });
+                const data = await res.json();
+
+                if (data.backups.length === 0) {
+                    backupsEntries.innerHTML = '<span style="color:#5a5650;font-size:0.78rem">No backups yet.</span>';
+                    return;
+                }
+
+                backupsEntries.innerHTML = data.backups.map(b => {
+                    const date = new Date(b.created_at);
+                    const timeStr = date.toLocaleDateString('en-GB', {
+                        day: '2-digit', month: 'short', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit'
+                    });
+                    return `<div class="cms-log-entry" style="display:flex;justify-content:space-between;align-items:center">
+                        <div>
+                            <span class="log-action">${b.label}</span><br>
+                            <span class="log-time">${b.username} &middot; ${timeStr}</span>
+                        </div>
+                        <button class="cms-backup-restore" data-id="${b.id}" data-label="${b.label}"
+                                style="background:none;border:1px solid rgba(255,255,255,0.1);color:#d4d0c8;padding:0.3rem 0.6rem;border-radius:3px;font-size:0.7rem;cursor:pointer;white-space:nowrap;margin-left:0.5rem">
+                            Restore
+                        </button>
+                    </div>`;
+                }).join('');
+
+                // Attach restore handlers
+                backupsEntries.querySelectorAll('.cms-backup-restore').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        restoreId = btn.dataset.id;
+                        restoreMsg.textContent = `Restore backup "${btn.dataset.label}"? All current content and images will be replaced.`;
+                        restoreConfirmOverlay.classList.add('active');
+                    });
+                });
+            } catch (err) {
+                backupsEntries.innerHTML = '<span style="color:#e85d5d;font-size:0.78rem">Failed to load backups.</span>';
+            }
+        }
+    });
+
+    restoreCancel.addEventListener('click', () => {
+        restoreConfirmOverlay.classList.remove('active');
+        restoreId = null;
+    });
+
+    restoreConfirmOverlay.addEventListener('click', (e) => {
+        if (e.target === restoreConfirmOverlay) {
+            restoreConfirmOverlay.classList.remove('active');
+            restoreId = null;
+        }
+    });
+
+    restoreConfirmBtn.addEventListener('click', async () => {
+        if (!restoreId) return;
+        restoreConfirmBtn.disabled = true;
+        restoreConfirmBtn.textContent = 'Restoring...';
+        try {
+            const res = await fetch(`/api/admin/backup/${restoreId}/restore`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                }
+            });
+            if (!res.ok) throw new Error('Restore failed');
+            window.location.reload();
+        } catch (err) {
+            restoreConfirmBtn.disabled = false;
+            restoreConfirmBtn.textContent = 'Restore';
+            alert('Failed to restore backup. Please try again.');
+        }
+    });
+
     // ---- THEME SWITCHER ----
     document.querySelectorAll('.cms-theme-swatch').forEach(swatch => {
         swatch.addEventListener('click', async () => {
