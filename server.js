@@ -12,7 +12,10 @@ const adminRoutes = require('./routes/admin');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const isProd = process.env.NODE_ENV === 'production';
+const isProd = !!process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 'production';
+
+// Trust Railway's proxy (required for rate limiting and secure cookies behind reverse proxy)
+app.set('trust proxy', 1);
 
 // View engine
 app.set('view engine', 'ejs');
