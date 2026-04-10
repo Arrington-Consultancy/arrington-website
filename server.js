@@ -6,6 +6,7 @@ const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const { doubleCsrf } = require('csrf-csrf');
 const db = require('./db/pool');
+const themes = require('./db/themes');
 const authRoutes = require('./routes/auth');
 const contentRoutes = require('./routes/content');
 const adminRoutes = require('./routes/admin');
@@ -126,7 +127,9 @@ app.get('/', async (req, res) => {
     const { rows } = await db.query('SELECT section_key, content FROM content');
     const content = {};
     rows.forEach(r => { content[r.section_key] = r.content; });
-    res.render('index', { content });
+    const activeTheme = content['site.theme'] || 'dark';
+    const theme = themes[activeTheme] || themes.dark;
+    res.render('index', { content, theme, activeTheme, themes });
   } catch (err) {
     console.error('Error loading content:', err);
     res.status(500).send('Server error');

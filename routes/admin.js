@@ -2,6 +2,7 @@ const express = require('express');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const db = require('../db/pool');
 const defaults = require('../db/defaults');
+const themes = require('../db/themes');
 
 const router = express.Router();
 
@@ -59,6 +60,33 @@ router.post('/reset', requireAdmin, async (req, res) => {
   } catch (err) {
     console.error('Content reset error:', err);
     res.status(500).json({ error: 'Failed to reset content' });
+  }
+});
+
+// Set theme
+router.put('/theme', requireAuth, async (req, res) => {
+  const { theme } = req.body;
+
+  if (!theme || !themes[theme]) {
+    return res.status(400).json({ error: 'Invalid theme' });
+  }
+
+  try {
+    await db.query(
+      `UPDATE content SET content = $1, updated_at = NOW(), updated_by = $2
+       WHERE section_key = 'site.theme'`,
+      [theme, req.session.user.id]
+    );
+
+    await db.query(
+      'INSERT INTO audit_log (user_id, action, section_key, detail) VALUES ($1, $2, $3, $4)',
+      [req.session.user.id, 'theme_change', 'site.theme', `Theme changed to "${themes[theme].label}" by ${req.session.user.username}`]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Theme change error:', err);
+    res.status(500).json({ error: 'Failed to change theme' });
   }
 });
 

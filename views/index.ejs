@@ -19,19 +19,9 @@
         }
 
         :root {
-            --black: #0a0a0a;
-            --near-black: #151515;
-            --dark-grey: #1e1e1e;
-            --charcoal: #272727;
-            --mid-grey: #333333;
-            --accent: #c47a3a;
-            --accent-hover: #a8632e;
-            --warm-white: #f5f3ef;
-            --cream: #eae6df;
-            --text: #d4d0c8;
-            --text-muted: #8a8680;
-            --text-bright: #f0ece6;
-            --border: rgba(255,255,255,0.06);
+            <% for (const [prop, val] of Object.entries(theme.vars)) { %>
+            <%= prop %>: <%= val %>;
+            <% } %>
         }
 
         html {

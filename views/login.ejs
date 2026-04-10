@@ -10,18 +10,9 @@
     <style>
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
-            --black: #000000;
-            --near-black: #0a0a0a;
-            --dark-grey: #141414;
-            --charcoal: #1c1c1c;
-            --mid-grey: #2a2a2a;
-            --accent: #c47a3a;
-            --accent-hover: #a8632e;
-            --warm-white: #f5f3ef;
-            --text: #d4d0c8;
-            --text-muted: #8a8680;
-            --text-bright: #f0ece6;
-            --border: rgba(255,255,255,0.06);
+            <% for (const [prop, val] of Object.entries(theme.vars)) { %>
+            <%= prop %>: <%= val %>;
+            <% } %>
         }
         html { font-size: 16px; }
         body {

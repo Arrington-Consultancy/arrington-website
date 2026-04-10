@@ -8,6 +8,19 @@
         </div>
     </div>
     <div class="cms-admin-actions">
+        <div class="cms-theme-section">
+            <div class="cms-theme-label">Theme</div>
+            <div class="cms-theme-swatches">
+                <% for (const [key, t] of Object.entries(themes)) { %>
+                <button class="cms-theme-swatch<%= key === activeTheme ? ' active' : '' %>"
+                        data-theme="<%= key %>"
+                        title="<%= t.label %>"
+                        style="background: <%= t.swatch %>">
+                </button>
+                <% } %>
+            </div>
+        </div>
+        <div class="cms-admin-divider"></div>
         <% if (user.role === 'admin') { %>
         <button class="cms-admin-action danger" id="cmsResetBtn">Reset all content to defaults</button>
         <div class="cms-admin-divider"></div>

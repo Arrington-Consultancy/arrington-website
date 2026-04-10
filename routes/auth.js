@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const rateLimit = require('express-rate-limit');
 const db = require('../db/pool');
+const themes = require('../db/themes');
 
 const router = express.Router();
 
@@ -14,18 +15,34 @@ const loginLimiter = rateLimit({
   legacyHeaders: false
 });
 
-router.get('/login', (req, res) => {
+router.get('/login', async (req, res) => {
   if (req.session.user) {
     return res.redirect('/');
   }
-  res.render('login', { error: null });
+  let theme = themes.dark;
+  try {
+    const { rows } = await db.query("SELECT content FROM content WHERE section_key = 'site.theme'");
+    if (rows.length > 0 && themes[rows[0].content]) {
+      theme = themes[rows[0].content];
+    }
+  } catch (e) { /* use default */ }
+  res.render('login', { error: null, theme });
 });
+
+async function getActiveTheme() {
+  try {
+    const { rows } = await db.query("SELECT content FROM content WHERE section_key = 'site.theme'");
+    if (rows.length > 0 && themes[rows[0].content]) return themes[rows[0].content];
+  } catch (e) { /* fallback */ }
+  return themes.dark;
+}
 
 router.post('/login', loginLimiter, async (req, res) => {
   const { username, password } = req.body;
+  const theme = await getActiveTheme();
 
   if (!username || !password) {
-    return res.render('login', { error: 'Username and password required.' });
+    return res.render('login', { error: 'Username and password required.', theme });
   }
 
   try {
@@ -35,14 +52,14 @@ router.post('/login', loginLimiter, async (req, res) => {
     );
 
     if (rows.length === 0) {
-      return res.render('login', { error: 'Invalid credentials.' });
+      return res.render('login', { error: 'Invalid credentials.', theme });
     }
 
     const user = rows[0];
     const valid = await bcrypt.compare(password, user.password_hash);
 
     if (!valid) {
-      return res.render('login', { error: 'Invalid credentials.' });
+      return res.render('login', { error: 'Invalid credentials.', theme });
     }
 
     req.session.user = {
@@ -60,7 +77,7 @@ router.post('/login', loginLimiter, async (req, res) => {
     res.redirect('/');
   } catch (err) {
     console.error('Login error:', err);
-    res.render('login', { error: 'Something went wrong. Please try again.' });
+    res.render('login', { error: 'Something went wrong. Please try again.', theme });
   }
 });
 

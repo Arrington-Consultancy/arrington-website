@@ -74,6 +74,9 @@ const defaults = {
   'filter.p1': 'I review every submission personally to establish if your operational challenges align with my capacity to deliver a measurable impact.',
   'filter.p2': 'If I can help, I will tell you exactly how. If I can\'t, I will tell you that too. There is no sales process. There is a conversation.',
 
+  // Site settings
+  'site.theme': 'dark',
+
   // Contact
   'contact.label': 'Start a conversation',
   'contact.heading': 'We start with a coffee',

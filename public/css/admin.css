@@ -387,6 +387,45 @@
     color: #5a5650;
 }
 
+/* ---- THEME SELECTOR ---- */
+.cms-theme-section {
+    padding: 0.75rem 1.25rem;
+}
+
+.cms-theme-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+    color: #8a8680;
+    margin-bottom: 0.6rem;
+}
+
+.cms-theme-swatches {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.cms-theme-swatch {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.15s;
+    padding: 0;
+}
+
+.cms-theme-swatch:hover {
+    border-color: rgba(255, 255, 255, 0.35);
+    transform: scale(1.1);
+}
+
+.cms-theme-swatch.active {
+    border-color: #c47a3a;
+    box-shadow: 0 0 0 2px rgba(196, 122, 58, 0.4);
+}
+
 /* ---- CONFIRM DIALOG ---- */
 .cms-confirm-overlay {
     display: none;

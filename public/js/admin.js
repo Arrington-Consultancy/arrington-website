@@ -345,6 +345,27 @@
         imageInput.value = '';
     });
 
+    // ---- THEME SWITCHER ----
+    document.querySelectorAll('.cms-theme-swatch').forEach(swatch => {
+        swatch.addEventListener('click', async () => {
+            const theme = swatch.dataset.theme;
+            try {
+                const res = await fetch('/api/admin/theme', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify({ theme })
+                });
+                if (!res.ok) throw new Error('Theme change failed');
+                window.location.reload();
+            } catch (err) {
+                alert('Failed to change theme. Please try again.');
+            }
+        });
+    });
+
     // Content reset (admin only)
     if (resetBtn) {
         resetBtn.addEventListener('click', () => {
