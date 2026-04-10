@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arrington Business Consultancy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <% if (user) { %>
+    <meta name="csrf-token" content="<%= csrfToken %>">
+    <link rel="stylesheet" href="/css/admin.css">
+    <% } %>
+    <style>
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --black: #000000;
+            --near-black: #0a0a0a;
+            --dark-grey: #141414;
+            --charcoal: #1c1c1c;
+            --mid-grey: #2a2a2a;
+            --accent: #c47a3a;
+            --accent-hover: #a8632e;
+            --warm-white: #f5f3ef;
+            --cream: #eae6df;
+            --text: #d4d0c8;
+            --text-muted: #8a8680;
+            --text-bright: #f0ece6;
+            --border: rgba(255,255,255,0.06);
+        }
+
+        html {
+            scroll-behavior: smooth;
+            font-size: 16px;
+        }
+
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text);
+            background: var(--black);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ---- NAV ---- */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+            transition: box-shadow 0.3s;
+        }
+
+        nav.scrolled {
+            box-shadow: 0 1px 20px rgba(0,0,0,0.5);
+        }
+
+        .nav-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+        }
+
+        .nav-logo {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.15rem;
+            color: var(--text-bright);
+            text-decoration: none;
+            letter-spacing: -0.01em;
+        }
+
+        .nav-logo span {
+            color: var(--accent);
+        }
+
+        .nav-cta {
+            font-size: 0.85rem;
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            transition: color 0.2s;
+        }
+
+        .nav-cta:hover {
+            color: var(--text-bright);
+        }
+
+        /* ---- HERO ---- */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            background: var(--black);
+            position: relative;
+        }
+
+        .hero-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 8rem 2rem 6rem;
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 4rem;
+            align-items: center;
+        }
+
+        .hero-text h1 {
+            font-family: 'DM Serif Display', serif;
+            font-size: clamp(2.2rem, 4.5vw, 3.2rem);
+            color: var(--text-bright);
+            line-height: 1.12;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .hero-text .sub {
+            font-size: 1.15rem;
+            color: var(--text);
+            margin-bottom: 2.5rem;
+            max-width: 520px;
+            line-height: 1.7;
+        }
+
+        .hero-text .btn {
+            display: inline-flex;
+        }
+
+        .hero-photo {
+            background: var(--black);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            aspect-ratio: 3 / 4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .hero-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center top;
+        }
+
+        /* ---- BUTTONS ---- */
+        .btn {
+            align-items: center;
+            padding: 0.9rem 2.2rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+            font-family: inherit;
+            letter-spacing: 0.02em;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text-bright);
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+
+        .btn-outline:hover {
+            border-color: rgba(255,255,255,0.35);
+        }
+
+        /* ---- SECTIONS ---- */
+        section {
+            padding: 6rem 2rem;
+        }
+
+        .section-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .section-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 0.75rem;
+        }
+
+        .section-heading {
+            font-family: 'DM Serif Display', serif;
+            font-size: clamp(1.7rem, 3vw, 2.2rem);
+            color: var(--text-bright);
+            margin-bottom: 1rem;
+            letter-spacing: -0.01em;
+            line-height: 1.2;
+        }
+
+        .section-sub {
+            font-size: 1.05rem;
+            color: var(--text-muted);
+            max-width: 600px;
+            line-height: 1.75;
+        }
+
+        /* ---- DIVIDER ---- */
+        .divider {
+            max-width: 1100px;
+            margin: 0 auto;
+            height: 1px;
+            background: var(--border);
+        }
+
+        /* ---- CREDENTIALS ---- */
+        .credentials {
+            background: var(--near-black);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .credentials-inner {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+        }
+
+        .credential-block {
+            padding: 2.5rem 0;
+        }
+
+        .credential-block h3 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.1rem;
+            color: var(--text-bright);
+            margin-bottom: 0.5rem;
+        }
+
+        .credential-block p {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            line-height: 1.7;
+        }
+
+        .credential-stat {
+            font-family: 'DM Serif Display', serif;
+            font-size: 2.8rem;
+            color: var(--accent);
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+
+        /* ---- PROBLEM ---- */
+        .problem {
+            background: var(--black);
+        }
+
+        .problem-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            margin-top: 3rem;
+            align-items: start;
+        }
+
+        .problem-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .problem-list li {
+            font-size: 1rem;
+            color: var(--text);
+            padding-left: 1.5rem;
+            position: relative;
+            line-height: 1.6;
+        }
+
+        .problem-list li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0.55rem;
+            width: 6px;
+            height: 6px;
+            background: var(--accent);
+            border-radius: 50%;
+        }
+
+        .problem-right p {
+            font-size: 1.05rem;
+            color: var(--text-muted);
+            line-height: 1.75;
+            margin-bottom: 1.25rem;
+        }
+
+        .problem-right p strong {
+            color: var(--text-bright);
+        }
+
+        /* ---- APPROACH ---- */
+        .approach {
+            background: var(--dark-grey);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .approach-steps {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .step {
+            padding: 2rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--charcoal);
+        }
+
+        .step-number {
+            font-family: 'DM Serif Display', serif;
+            font-size: 2rem;
+            color: var(--accent);
+            opacity: 0.4;
+            line-height: 1;
+            margin-bottom: 1rem;
+        }
+
+        .step h3 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.1rem;
+            color: var(--text-bright);
+            margin-bottom: 0.75rem;
+        }
+
+        .step p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.7;
+        }
+
+        /* ---- INSIGHTS ---- */
+        .insights {
+            background: var(--near-black);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .insights-header {
+            margin-bottom: 3rem;
+        }
+
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+        }
+
+        .insight-card {
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--charcoal);
+            padding: 2rem;
+            transition: border-color 0.2s;
+        }
+
+        .insight-card:hover {
+            border-color: rgba(255,255,255,0.12);
+        }
+
+        .insight-tag {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 0.75rem;
+        }
+
+        .insight-card h3 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.05rem;
+            color: var(--text-bright);
+            margin-bottom: 0.75rem;
+            line-height: 1.35;
+        }
+
+        .insight-card p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.7;
+            margin-bottom: 1rem;
+        }
+
+        .insight-card a {
+            font-size: 0.85rem;
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .insight-card a:hover {
+            color: var(--text-bright);
+        }
+
+        @media (max-width: 900px) {
+            .insights-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ---- CASE STUDY ---- */
+        .case-study {
+            background: var(--black);
+        }
+
+        .case-inner {
+            max-width: 800px;
+        }
+
+        .case-timeline {
+            margin-top: 3rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .case-phase {
+            display: grid;
+            grid-template-columns: 160px 1fr;
+            gap: 2rem;
+            padding: 2rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .case-phase:last-child {
+            border-bottom: none;
+        }
+
+        .phase-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            font-weight: 700;
+            color: var(--accent);
+            padding-top: 0.15rem;
+        }
+
+        .phase-content p {
+            font-size: 1rem;
+            color: var(--text);
+            line-height: 1.7;
+        }
+
+        .phase-content p strong {
+            color: var(--text-bright);
+        }
+
+        /* ---- ASSESSMENT ---- */
+        .assessment {
+            background: var(--near-black);
+            border-top: 1px solid var(--border);
+        }
+
+        .assessment-inner {
+            text-align: center;
+            max-width: 680px;
+            margin: 0 auto;
+        }
+
+        .assessment .section-heading {
+            margin-bottom: 1.5rem;
+        }
+
+        .assessment p {
+            font-size: 1.05rem;
+            color: var(--text-muted);
+            line-height: 1.75;
+            margin-bottom: 1.5rem;
+        }
+
+        .assessment-questions {
+            text-align: left;
+            margin: 2.5rem 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .aq {
+            background: var(--charcoal);
+            border-left: 3px solid var(--accent);
+            border-radius: 4px;
+            padding: 1rem 1.25rem;
+            font-size: 0.95rem;
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .assessment .btn {
+            display: inline-flex;
+            margin-bottom: 1.5rem;
+        }
+
+        .assessment .note {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        /* ---- FILTER ---- */
+        .filter {
+            background: var(--black);
+            border-top: 1px solid var(--border);
+        }
+
+        .filter-inner {
+            max-width: 680px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .filter .section-heading {
+            margin-bottom: 1.5rem;
+        }
+
+        .filter p {
+            font-size: 1.05rem;
+            color: var(--text-muted);
+            line-height: 1.75;
+            margin-bottom: 0.75rem;
+        }
+
+        /* ---- CONTACT ---- */
+        .contact {
+            background: var(--dark-grey);
+            border-top: 1px solid var(--border);
+        }
+
+        .contact-inner {
+            text-align: center;
+            max-width: 580px;
+            margin: 0 auto;
+        }
+
+        .contact p {
+            font-size: 1rem;
+            color: var(--text-muted);
+            line-height: 1.7;
+            margin-bottom: 1.5rem;
+        }
+
+        .contact-details {
+            display: flex;
+            justify-content: center;
+            gap: 2.5rem;
+            flex-wrap: wrap;
+        }
+
+        .contact-details a {
+            color: var(--text-bright);
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .contact-details a:hover {
+            color: var(--accent);
+        }
+
+        /* ---- FOOTER ---- */
+        footer {
+            background: var(--black);
+            border-top: 1px solid var(--border);
+            padding: 2rem;
+        }
+
+        .footer-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .footer-inner a {
+            color: var(--text-muted);
+            text-decoration: none;
+        }
+
+        .footer-inner a:hover {
+            color: var(--text);
+        }
+
+        /* ---- MOBILE ---- */
+        @media (max-width: 900px) {
+            .hero-inner {
+                grid-template-columns: 1fr;
+                gap: 2.5rem;
+                padding-top: 6rem;
+            }
+
+            .hero-photo {
+                max-width: 300px;
+                margin: 0 auto;
+            }
+
+            .credentials-inner {
+                grid-template-columns: 1fr;
+                gap: 0;
+            }
+
+            .credential-block {
+                padding: 1.5rem 0;
+            }
+
+            .credential-block + .credential-block {
+                border-top: 1px solid var(--border);
+            }
+
+            .problem-grid {
+                grid-template-columns: 1fr;
+                gap: 2.5rem;
+            }
+
+            .approach-steps {
+                grid-template-columns: 1fr;
+            }
+
+            .case-phase {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            }
+
+            .contact-details {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+
+        @media (max-width: 600px) {
+            section {
+                padding: 4rem 1.25rem;
+            }
+
+            .hero-inner {
+                padding: 5.5rem 1.25rem 3.5rem;
+            }
+
+            .hero-text h1 {
+                font-size: 1.85rem;
+            }
+
+            .hero-text .sub {
+                font-size: 1rem;
+            }
+
+            .section-heading {
+                font-size: 1.5rem;
+            }
+
+            .step {
+                padding: 1.5rem;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="nav">
+    <div class="nav-inner">
+        <a href="#" class="nav-logo">Arrington<span>.</span></a>
+        <a href="#conversation" class="nav-cta">Start a conversation</a>
+    </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+    <div class="hero-inner cms-section" data-section="hero">
+        <% if (user) { %><button class="cms-edit-btn" data-section="hero" title="Edit section">&#9998;</button><% } %>
+        <div class="hero-text">
+            <h1><%- content['hero.heading'] %></h1>
+            <p class="sub"><%- content['hero.subtext'] %></p>
+            <a href="#conversation" class="btn btn-primary"><%- content['hero.cta'] %></a>
+        </div>
+        <div class="hero-photo">
+            <img src="/headshot.png" alt="Arrington Business Consultancy">
+        </div>
+    </div>
+</section>
+
+<!-- CREDENTIALS -->
+<section class="credentials">
+    <div class="section-inner cms-section" data-section="credentials">
+        <% if (user) { %><button class="cms-edit-btn" data-section="credentials" title="Edit section">&#9998;</button><% } %>
+        <div class="credentials-inner">
+            <div class="credential-block">
+                <h3><%- content['credentials.block_1_title'] %></h3>
+                <p><%- content['credentials.block_1_text'] %></p>
+            </div>
+            <div class="credential-block">
+                <div class="credential-stat"><%- content['credentials.block_2_stat'] %></div>
+                <p><%- content['credentials.block_2_text'] %></p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- BIOGRAPHY -->
+<section class="problem">
+    <div class="section-inner cms-section" data-section="biography">
+        <% if (user) { %><button class="cms-edit-btn" data-section="biography" title="Edit section">&#9998;</button><% } %>
+        <p class="section-label"><%- content['biography.label'] %></p>
+        <h2 class="section-heading"><%- content['biography.heading'] %></h2>
+        <div class="problem-grid">
+            <div class="problem-right">
+                <p><%- content['biography.col_1_p1'] %></p>
+                <p><%- content['biography.col_1_p2'] %></p>
+            </div>
+            <div class="problem-right">
+                <p><%- content['biography.col_2_p1'] %></p>
+                <p><%- content['biography.col_2_p2'] %></p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- APPROACH -->
+<section class="approach">
+    <div class="section-inner cms-section" data-section="approach">
+        <% if (user) { %><button class="cms-edit-btn" data-section="approach" title="Edit section">&#9998;</button><% } %>
+        <p class="section-label"><%- content['approach.label'] %></p>
+        <h2 class="section-heading"><%- content['approach.heading'] %></h2>
+        <div class="approach-steps">
+            <div class="step">
+                <div class="step-number">01</div>
+                <h3><%- content['approach.step_1_title'] %></h3>
+                <p><%- content['approach.step_1_body'] %></p>
+            </div>
+            <div class="step">
+                <div class="step-number">02</div>
+                <h3><%- content['approach.step_2_title'] %></h3>
+                <p><%- content['approach.step_2_body'] %></p>
+            </div>
+            <div class="step">
+                <div class="step-number">03</div>
+                <h3><%- content['approach.step_3_title'] %></h3>
+                <p><%- content['approach.step_3_body'] %></p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- INSIGHTS -->
+<section class="insights">
+    <div class="section-inner cms-section" data-section="insights">
+        <% if (user) { %><button class="cms-edit-btn" data-section="insights" title="Edit section">&#9998;</button><% } %>
+        <div class="insights-header">
+            <p class="section-label"><%- content['insights.label'] %></p>
+            <h2 class="section-heading"><%- content['insights.heading'] %></h2>
+            <p class="section-sub"><%- content['insights.subtext'] %></p>
+        </div>
+        <div class="insights-grid">
+            <article class="insight-card">
+                <p class="insight-tag"><%- content['insights.card_1_tag'] %></p>
+                <h3><%- content['insights.card_1_title'] %></h3>
+                <p><%- content['insights.card_1_body'] %></p>
+                <a href="#">Read more</a>
+            </article>
+            <article class="insight-card">
+                <p class="insight-tag"><%- content['insights.card_2_tag'] %></p>
+                <h3><%- content['insights.card_2_title'] %></h3>
+                <p><%- content['insights.card_2_body'] %></p>
+                <a href="#">Read more</a>
+            </article>
+            <article class="insight-card">
+                <p class="insight-tag"><%- content['insights.card_3_tag'] %></p>
+                <h3><%- content['insights.card_3_title'] %></h3>
+                <p><%- content['insights.card_3_body'] %></p>
+                <a href="#">Read more</a>
+            </article>
+        </div>
+    </div>
+</section>
+
+<!-- CASE STUDY -->
+<section class="case-study">
+    <div class="section-inner cms-section" data-section="casestudy">
+        <% if (user) { %><button class="cms-edit-btn" data-section="casestudy" title="Edit section">&#9998;</button><% } %>
+        <div class="case-inner">
+            <p class="section-label"><%- content['casestudy.label'] %></p>
+            <h2 class="section-heading"><%- content['casestudy.heading'] %></h2>
+            <p class="section-sub"><%- content['casestudy.subtext'] %></p>
+            <div class="case-timeline">
+                <div class="case-phase">
+                    <div class="phase-label"><%- content['casestudy.phase_1_label'] %></div>
+                    <div class="phase-content">
+                        <p><%- content['casestudy.phase_1_body'] %></p>
+                    </div>
+                </div>
+                <div class="case-phase">
+                    <div class="phase-label"><%- content['casestudy.phase_2_label'] %></div>
+                    <div class="phase-content">
+                        <p><%- content['casestudy.phase_2_body'] %></p>
+                    </div>
+                </div>
+                <div class="case-phase">
+                    <div class="phase-label"><%- content['casestudy.phase_3_label'] %></div>
+                    <div class="phase-content">
+                        <p><%- content['casestudy.phase_3_body'] %></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- HONEST QUESTIONS -->
+<section class="assessment" id="questions">
+    <div class="section-inner cms-section" data-section="assessment">
+        <% if (user) { %><button class="cms-edit-btn" data-section="assessment" title="Edit section">&#9998;</button><% } %>
+        <div class="assessment-inner">
+            <p class="section-label"><%- content['assessment.label'] %></p>
+            <h2 class="section-heading"><%- content['assessment.heading'] %></h2>
+            <p><%- content['assessment.intro'] %></p>
+            <div class="assessment-questions">
+                <div class="aq"><%- content['assessment.q_1'] %></div>
+                <div class="aq"><%- content['assessment.q_2'] %></div>
+                <div class="aq"><%- content['assessment.q_3'] %></div>
+                <div class="aq"><%- content['assessment.q_4'] %></div>
+                <div class="aq"><%- content['assessment.q_5'] %></div>
+                <div class="aq"><%- content['assessment.q_6'] %></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FILTER -->
+<section class="filter">
+    <div class="section-inner cms-section" data-section="filter">
+        <% if (user) { %><button class="cms-edit-btn" data-section="filter" title="Edit section">&#9998;</button><% } %>
+        <div class="filter-inner">
+            <p class="section-label"><%- content['filter.label'] %></p>
+            <h2 class="section-heading"><%- content['filter.heading'] %></h2>
+            <p><%- content['filter.p1'] %></p>
+            <p><%- content['filter.p2'] %></p>
+        </div>
+    </div>
+</section>
+
+<!-- CONVERSATION -->
+<section class="contact" id="conversation">
+    <div class="section-inner cms-section" data-section="contact">
+        <% if (user) { %><button class="cms-edit-btn" data-section="contact" title="Edit section">&#9998;</button><% } %>
+        <div class="contact-inner">
+            <p class="section-label"><%- content['contact.label'] %></p>
+            <h2 class="section-heading"><%- content['contact.heading'] %></h2>
+            <p><%- content['contact.body'] %></p>
+            <div class="contact-details">
+                <a href="mailto:<%- content['contact.email'] %>"><%- content['contact.email'] %></a>
+                <a href="tel:+441752477026"><%- content['contact.phone'] %></a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+    <div class="footer-inner">
+        <span>&copy; 2026 Arrington Business Consultancy</span>
+    </div>
+</footer>
+
+<script>
+    window.addEventListener('scroll', () => {
+        document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+        a.addEventListener('click', e => {
+            e.preventDefault();
+            const target = document.querySelector(a.getAttribute('href'));
+            if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    });
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.step, .insight-card, .case-phase, .aq, .credential-block').forEach(el => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(16px)';
+        el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+        observer.observe(el);
+    });
+</script>
+
+<% if (user) { %>
+<%- include('partials/edit-modal') %>
+<%- include('partials/admin-menu') %>
+<script src="/js/admin.js"></script>
+<% } %>
+
+</body>
+</html>
