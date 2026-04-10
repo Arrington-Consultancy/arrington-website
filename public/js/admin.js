@@ -216,13 +216,15 @@
     const confirmCancel = document.getElementById('cmsConfirmCancel');
     const confirmReset = document.getElementById('cmsConfirmReset');
 
-    adminToggle.addEventListener('click', () => {
-        adminPanel.classList.toggle('active');
-    });
+    if (adminToggle) {
+        adminToggle.addEventListener('click', () => {
+            adminPanel.classList.toggle('active');
+        });
+    }
 
     // Close panel when clicking outside
     document.addEventListener('click', (e) => {
-        if (!adminPanel.contains(e.target) && e.target !== adminToggle) {
+        if (adminPanel && !adminPanel.contains(e.target) && e.target !== adminToggle) {
             adminPanel.classList.remove('active');
         }
     });
@@ -359,7 +361,7 @@
     const restoreMsg = document.getElementById('cmsRestoreMsg');
     let restoreId = null;
 
-    backupBtn.addEventListener('click', async () => {
+    if (backupBtn) backupBtn.addEventListener('click', async () => {
         backupBtn.textContent = 'Backing up...';
         backupBtn.disabled = true;
         try {
@@ -384,7 +386,7 @@
         }
     });
 
-    backupsListBtn.addEventListener('click', async () => {
+    if (backupsListBtn) backupsListBtn.addEventListener('click', async () => {
         backupsListSection.style.display = backupsListSection.style.display === 'none' ? 'block' : 'none';
         if (backupsListSection.style.display === 'block') {
             backupsEntries.innerHTML = '<span style="color:#5a5650;font-size:0.78rem">Loading...</span>';
@@ -431,19 +433,19 @@
         }
     });
 
-    restoreCancel.addEventListener('click', () => {
+    if (restoreCancel) restoreCancel.addEventListener('click', () => {
         restoreConfirmOverlay.classList.remove('active');
         restoreId = null;
     });
 
-    restoreConfirmOverlay.addEventListener('click', (e) => {
+    if (restoreConfirmOverlay) restoreConfirmOverlay.addEventListener('click', (e) => {
         if (e.target === restoreConfirmOverlay) {
             restoreConfirmOverlay.classList.remove('active');
             restoreId = null;
         }
     });
 
-    restoreConfirmBtn.addEventListener('click', async () => {
+    if (restoreConfirmBtn) restoreConfirmBtn.addEventListener('click', async () => {
         if (!restoreId) return;
         restoreConfirmBtn.disabled = true;
         restoreConfirmBtn.textContent = 'Restoring...';

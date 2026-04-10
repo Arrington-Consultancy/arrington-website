@@ -9,7 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
     <% if (user) { %>
     <meta name="csrf-token" content="<%= csrfToken %>">
-    <link rel="stylesheet" href="/css/admin.css">
+    <link rel="stylesheet" href="/css/admin.css?v=<%= Date.now() %>">
     <% } %>
     <style>
         *, *::before, *::after {
@@ -969,7 +969,7 @@
 <% if (user) { %>
 <%- include('partials/edit-modal') %>
 <%- include('partials/admin-menu') %>
-<script src="/js/admin.js"></script>
+<script src="/js/admin.js?v=<%= Date.now() %>"></script>
 <% } %>
 
 </body>
