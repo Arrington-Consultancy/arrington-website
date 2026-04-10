@@ -129,13 +129,17 @@ app.get('/', async (req, res) => {
     rows.forEach(r => { content[r.section_key] = r.content; });
     const activeTheme = content['site.theme'] || 'dark';
     const theme = themes[activeTheme] || themes.dark;
-    const defaultOrder = ['hero','credentials','biography','approach','insights','casestudy','assessment','filter','contact'];
+    const defaultOrder = ['hero','credentials','biography','approach','insights','casestudy','casestudy2','assessment','filter','contact'];
     let sectionOrder = defaultOrder;
     try {
       if (content['site.section_order']) {
         const parsed = JSON.parse(content['site.section_order']);
-        if (Array.isArray(parsed) && parsed.length === defaultOrder.length) {
-          sectionOrder = parsed;
+        if (Array.isArray(parsed)) {
+          // Add any new sections not yet in the stored order
+          const missing = defaultOrder.filter(s => !parsed.includes(s));
+          const merged = [...parsed, ...missing];
+          // Remove any sections no longer valid
+          sectionOrder = merged.filter(s => defaultOrder.includes(s));
         }
       }
     } catch (e) { /* use default */ }

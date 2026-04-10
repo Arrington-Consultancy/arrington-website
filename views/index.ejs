@@ -492,6 +492,47 @@
             color: var(--text-bright);
         }
 
+        /* ---- CASE STUDY 2 (TRISTAN) ---- */
+        .casestudy2 {
+            background: var(--dark-grey);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .casestudy2-inner {
+            max-width: 760px;
+        }
+
+        .casestudy2-intro {
+            font-family: 'DM Serif Display', serif;
+            font-size: clamp(1.15rem, 2vw, 1.35rem);
+            color: var(--text-bright);
+            line-height: 1.55;
+            margin-top: 2rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .casestudy2-body {
+            font-size: 1.05rem;
+            color: var(--text-muted);
+            line-height: 1.75;
+            margin-bottom: 2.5rem;
+        }
+
+        .casestudy2-outcome {
+            background: var(--charcoal);
+            border-left: 3px solid var(--accent);
+            border-radius: 4px;
+            padding: 1.5rem 1.75rem;
+            font-size: 1rem;
+            color: var(--text);
+            line-height: 1.7;
+        }
+
+        .casestudy2-outcome strong {
+            color: var(--text-bright);
+        }
+
         /* ---- ASSESSMENT ---- */
         .assessment {
             background: var(--near-black);
@@ -911,6 +952,26 @@
                         <p><%- content['casestudy.phase_3_body'] %></p>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</section>
+<% } %>
+
+<% if (_sid === 'casestudy2') { %>
+<!-- CASE STUDY 2 - TRISTAN -->
+<section class="casestudy2" data-section-id="casestudy2">
+    <div class="section-inner cms-section" data-section="casestudy2">
+        <% if (user) { %><button class="cms-edit-btn" data-section="casestudy2" title="Edit section">&#9998;</button><% } %>
+        <% if (user) { %><button class="cms-move-btn cms-move-up" data-section-id="casestudy2" title="Move up">&#9650;</button><% } %>
+        <% if (user) { %><button class="cms-move-btn cms-move-down" data-section-id="casestudy2" title="Move down">&#9660;</button><% } %>
+        <div class="casestudy2-inner">
+            <p class="section-label"><%- content['casestudy2.label'] %></p>
+            <h2 class="section-heading"><%- content['casestudy2.heading'] %></h2>
+            <p class="casestudy2-intro"><%- content['casestudy2.intro'] %></p>
+            <p class="casestudy2-body"><%- content['casestudy2.body'] %></p>
+            <div class="casestudy2-outcome">
+                <p><%- content['casestudy2.outcome'] %></p>
             </div>
         </div>
     </div>

@@ -64,18 +64,18 @@ router.put('/', requireAuth, async (req, res) => {
 });
 
 // Update section order
-const VALID_SECTIONS = ['hero','credentials','biography','approach','insights','casestudy','assessment','filter','contact'];
+const VALID_SECTIONS = ['hero','credentials','biography','approach','insights','casestudy','casestudy2','assessment','filter','contact'];
 
 router.put('/order', requireAuth, async (req, res) => {
   const { order } = req.body;
 
-  if (!Array.isArray(order) || order.length !== VALID_SECTIONS.length) {
+  if (!Array.isArray(order)) {
     return res.status(400).json({ error: 'Invalid order array' });
   }
 
-  const sorted = [...order].sort();
-  const expected = [...VALID_SECTIONS].sort();
-  if (JSON.stringify(sorted) !== JSON.stringify(expected)) {
+  const orderSet = new Set(order);
+  const validSet = new Set(VALID_SECTIONS);
+  if (order.length !== VALID_SECTIONS.length || order.some(s => !validSet.has(s)) || orderSet.size !== order.length) {
     return res.status(400).json({ error: 'Order must contain exactly the valid section IDs' });
   }
 

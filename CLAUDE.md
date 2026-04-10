@@ -31,29 +31,29 @@ db/
   seed.js              Idempotent seed script (tables, users, content, images)
 routes/
   auth.js              Login/logout (POST /login, POST /logout)
-  content.js           Content API (GET/PUT /api/content, PUT /api/content/image/:key)
+  content.js           Content API (GET/PUT /api/content, PUT /api/content/image/:key, PUT /api/content/order)
   admin.js             Admin API (activity log, content reset, theme, backups, restore)
 middleware/
   auth.js              requireAuth, requireAdmin middleware
 views/
-  index.ejs            Main page template (content + theme from DB)
+  index.ejs            Main page template (content + theme from DB, section order loop)
   login.ejs            Login page (follows active theme)
   partials/
     edit-modal.ejs      Content editing modal
     admin-menu.ejs      Admin panel overlay (theme swatches, backups, log, logout)
 public/
-  css/admin.css         CMS UI styles (edit buttons, modal, admin panel, theme selector)
-  js/admin.js           Client-side editing, image upload, theme switching, backup logic
+  css/admin.css         CMS UI styles (edit buttons, move buttons, modal, admin panel, theme selector)
+  js/admin.js           Client-side editing, image upload, theme switching, backup logic, section reorder
 ```
 
 ## Database tables
 
 - **users** -- seeded admin (nat) and content (tom) accounts
-- **content** -- key-value store for all editable text (~61 keys) + site.theme
+- **content** -- key-value store for all editable text (~67 keys) + site.theme + site.section_order
 - **images** -- binary image storage (logo, headshot, oxford badge) for persistence across deploys
 - **backups** -- full snapshots of content + images (JSONB)
 - **session** -- express-session store (connect-pg-simple)
-- **audit_log** -- all user actions (login, logout, edits, theme changes, backups, restores)
+- **audit_log** -- all user actions (login, logout, edits, theme changes, backups, restores, section reorders)
 
 ## Users
 
@@ -70,6 +70,27 @@ Users are seeded on first run. No registration route exists.
 - Clicking opens a modal with all editable fields for that section
 - Content sanitised on save (only `<strong>`, `<p>`, `<br>`, `<em>` allowed)
 - Credentials section split into two independently editable blocks (Oxford + statistic)
+
+## Section reordering
+
+- Logged-in users see up/down arrow buttons (▲ ▼) on hover, next to the edit pencil
+- Clicking swaps the section with its neighbour in the DOM and saves the order via `PUT /api/content/order`
+- Order stored as JSON array in `site.section_order` content key
+- Rendered server-side (EJS loop over `sectionOrder`) so all visitors see the saved layout
+- 10 movable sections: hero, credentials, biography, approach, insights, casestudy, casestudy2, assessment, filter, contact
+- Server auto-merges new sections into stored order on load (forward-compatible with future additions)
+- Nav and footer are fixed (not movable)
+- Credentials two-column blocks move as one unit (single `<section>`)
+- First non-hero section gets extra top padding (`20rem` desktop, `8rem` mobile) to clear the fixed nav
+- Viewport scrolls to follow the moved section after each swap
+
+## Case studies
+
+Two case studies with distinct layouts:
+- **Orca Marine** (`casestudy`) -- timeline/phases layout (three labelled phases: mess, steady hand, result)
+- **The Tristan Story** (`casestudy2`) -- editorial layout (serif pull-quote intro, body narrative, highlighted outcome block with accent border)
+
+Both are fully editable via the CMS and reorderable like all other sections.
 
 ## Image management
 

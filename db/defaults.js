@@ -59,6 +59,13 @@ const defaults = {
   'casestudy.phase_3_label': 'The result',
   'casestudy.phase_3_body': '<strong>The business went from chaos to a professional footing.</strong> Creditors were paid down on terms. The directors could make decisions based on real numbers. It stopped being a crisis and started being a business again.',
 
+  // Case Study 2 - Tristan
+  'casestudy2.label': 'Case study',
+  'casestudy2.heading': 'The VAT Intervention',
+  'casestudy2.intro': 'I walked into a business where the growth was real but the oversight was non-existent. Tristan had built a success, but the back office was a black hole.',
+  'casestudy2.body': 'The VAT had been incorrectly managed for over a year, creating a hidden liability that was threatening to swallow the company\'s entire cash reserve. I didn\'t just find the error; I sat in the room, untangled eighteen months of forensic data, and rebuilt the reconciliation process from scratch.',
+  'casestudy2.outcome': 'We corrected the filing, secured the position with HMRC, and saved the business from a <strong>six-figure cash flow collapse</strong>. It wasn\'t about "consultancy". It was about having the stomach to fix the mess the owner was too busy to see.',
+
   // Assessment
   'assessment.label': 'Honest questions',
   'assessment.heading': 'Before you ring anyone, ask yourself these',
@@ -78,7 +85,7 @@ const defaults = {
 
   // Site settings
   'site.theme': 'dark',
-  'site.section_order': JSON.stringify(['hero','credentials','biography','approach','insights','casestudy','assessment','filter','contact']),
+  'site.section_order': JSON.stringify(['hero','credentials','biography','approach','insights','casestudy','casestudy2','assessment','filter','contact']),
 
   // Contact
   'contact.label': 'Start a conversation',
