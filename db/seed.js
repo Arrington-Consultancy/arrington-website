@@ -45,7 +45,8 @@ async function seed() {
   // Seed images (idempotent: ON CONFLICT DO NOTHING)
   const images = [
     { key: 'logo', file: 'logo.avif', mime: 'image/avif' },
-    { key: 'headshot', file: 'headshot.png', mime: 'image/png' }
+    { key: 'headshot', file: 'headshot.png', mime: 'image/png' },
+    { key: 'oxford', file: 'oxford.png', mime: 'image/png' }
   ];
 
   for (const img of images) {

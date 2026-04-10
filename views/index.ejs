@@ -248,6 +248,13 @@
             padding: 2.5rem 0;
         }
 
+        .credential-badge {
+            width: 200px;
+            height: auto;
+            margin-bottom: 1.25rem;
+            border-radius: 4px;
+        }
+
         .credential-block h3 {
             font-family: 'DM Serif Display', serif;
             font-size: 1.1rem;
@@ -742,6 +749,7 @@
         <% if (user) { %><button class="cms-edit-btn" data-section="credentials" title="Edit section">&#9998;</button><% } %>
         <div class="credentials-inner">
             <div class="credential-block">
+                <img src="/img/oxford" alt="Said Business School, University of Oxford" class="credential-badge">
                 <h3><%- content['credentials.block_1_title'] %></h3>
                 <p><%- content['credentials.block_1_text'] %></p>
             </div>
