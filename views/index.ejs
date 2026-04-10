@@ -118,7 +118,7 @@
         .hero-inner {
             max-width: 1100px;
             margin: 0 auto;
-            padding: 8rem 2rem 6rem;
+            padding: 18rem 2rem 6rem;
             display: grid;
             grid-template-columns: 1fr 400px;
             gap: 4rem;
@@ -632,10 +632,18 @@
 
         /* ---- MOBILE ---- */
         @media (max-width: 900px) {
+            .nav-logo-img {
+                width: 200px;
+            }
+
+            .nav-inner {
+                height: 80px;
+            }
+
             .hero-inner {
                 grid-template-columns: 1fr;
                 gap: 2.5rem;
-                padding-top: 6rem;
+                padding-top: 8rem;
             }
 
             .hero-photo {
@@ -714,7 +722,10 @@
 <!-- NAV -->
 <nav id="nav">
     <div class="nav-inner">
-        <a href="#" class="nav-logo"><img src="/logo.avif" alt="Arrington Business Consultancy" class="nav-logo-img"></a>
+        <a href="#" class="nav-logo">
+            <img src="/img/logo" alt="Arrington Business Consultancy" class="nav-logo-img">
+            <% if (user) { %><button class="cms-img-btn" data-image="logo" title="Change logo">&#9998;</button><% } %>
+        </a>
         <a href="#conversation" class="nav-cta">Start a conversation</a>
     </div>
 </nav>
@@ -729,7 +740,8 @@
             <a href="#conversation" class="btn btn-primary"><%- content['hero.cta'] %></a>
         </div>
         <div class="hero-photo">
-            <img src="/headshot.png" alt="Arrington Business Consultancy">
+            <img src="/img/headshot" alt="Arrington Business Consultancy">
+            <% if (user) { %><button class="cms-img-btn" data-image="headshot" title="Change photo">&#9998;</button><% } %>
         </div>
     </div>
 </section>

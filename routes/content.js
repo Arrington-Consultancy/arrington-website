@@ -63,4 +63,45 @@ router.put('/', requireAuth, async (req, res) => {
   }
 });
 
+// Upload image
+const ALLOWED_MIME = ['image/png', 'image/jpeg', 'image/webp', 'image/avif', 'image/gif'];
+const MAX_SIZE = 4 * 1024 * 1024; // 4MB
+
+router.put('/image/:key', requireAuth, async (req, res) => {
+  const { key } = req.params;
+  const { data, mimeType } = req.body;
+
+  if (!data || !mimeType) {
+    return res.status(400).json({ error: 'Missing image data or type' });
+  }
+
+  if (!ALLOWED_MIME.includes(mimeType)) {
+    return res.status(400).json({ error: 'Unsupported image format' });
+  }
+
+  const buffer = Buffer.from(data, 'base64');
+
+  if (buffer.length > MAX_SIZE) {
+    return res.status(400).json({ error: 'Image too large (max 4MB)' });
+  }
+
+  try {
+    await db.query(
+      `UPDATE images SET data = $1, mime_type = $2, updated_at = NOW(), updated_by = $3
+       WHERE image_key = $4`,
+      [buffer, mimeType, req.session.user.id, key]
+    );
+
+    await db.query(
+      'INSERT INTO audit_log (user_id, action, section_key, detail) VALUES ($1, $2, $3, $4)',
+      [req.session.user.id, 'image_update', key, `Image "${key}" updated by ${req.session.user.username}`]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Image upload error:', err);
+    res.status(500).json({ error: 'Failed to save image' });
+  }
+});
+
 module.exports = router;

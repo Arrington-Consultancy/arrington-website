@@ -22,6 +22,15 @@ CREATE TABLE IF NOT EXISTS content (
     updated_by INTEGER REFERENCES users(id)
 );
 
+CREATE TABLE IF NOT EXISTS images (
+    id SERIAL PRIMARY KEY,
+    image_key VARCHAR(50) UNIQUE NOT NULL,
+    data BYTEA NOT NULL,
+    mime_type VARCHAR(50) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_by INTEGER REFERENCES users(id)
+);
+
 CREATE TABLE IF NOT EXISTS audit_log (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id),

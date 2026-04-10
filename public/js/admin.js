@@ -264,6 +264,56 @@
         });
     }
 
+    // ---- IMAGE UPLOAD ----
+    const imageInput = document.createElement('input');
+    imageInput.type = 'file';
+    imageInput.id = 'cmsImageInput';
+    imageInput.accept = 'image/png,image/jpeg,image/webp,image/avif,image/gif';
+    document.body.appendChild(imageInput);
+
+    let currentImageKey = null;
+
+    document.querySelectorAll('.cms-img-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            currentImageKey = btn.dataset.image;
+            imageInput.click();
+        });
+    });
+
+    imageInput.addEventListener('change', async () => {
+        const file = imageInput.files[0];
+        if (!file || !currentImageKey) return;
+
+        if (file.size > 4 * 1024 * 1024) {
+            alert('Image too large. Maximum size is 4MB.');
+            imageInput.value = '';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = async () => {
+            const base64 = reader.result.split(',')[1];
+            try {
+                const res = await fetch(`/api/content/image/${currentImageKey}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify({ data: base64, mimeType: file.type })
+                });
+                if (!res.ok) throw new Error('Upload failed');
+                window.location.reload();
+            } catch (err) {
+                alert('Failed to upload image. Please try again.');
+            }
+        };
+        reader.readAsDataURL(file);
+        imageInput.value = '';
+    });
+
     // Content reset (admin only)
     if (resetBtn) {
         resetBtn.addEventListener('click', () => {

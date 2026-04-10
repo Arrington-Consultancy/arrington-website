@@ -37,17 +37,30 @@ app.use(helmet({
 // Cookie parsing (required by csrf-csrf)
 app.use(cookieParser());
 
-// Body parsing
-app.use(express.json());
+// Body parsing (5mb limit for image uploads)
+app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: false }));
 
 // Static files
 app.use(express.static(path.join(__dirname, 'public')));
-app.get('/headshot.png', (req, res) => {
-  res.sendFile(path.join(__dirname, 'headshot.png'));
-});
-app.get('/logo.avif', (req, res) => {
-  res.sendFile(path.join(__dirname, 'logo.avif'));
+
+// Serve images from database (with fallback to disk for first deploy)
+app.get('/img/:key', async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      'SELECT data, mime_type FROM images WHERE image_key = $1',
+      [req.params.key]
+    );
+    if (rows.length > 0) {
+      res.set('Content-Type', rows[0].mime_type);
+      res.set('Cache-Control', 'public, max-age=3600');
+      return res.send(rows[0].data);
+    }
+    res.status(404).send('Image not found');
+  } catch (err) {
+    console.error('Image serve error:', err);
+    res.status(500).send('Server error');
+  }
 });
 
 // Sessions

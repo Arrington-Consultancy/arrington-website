@@ -42,6 +42,26 @@ async function seed() {
   }
   console.log(`Content seeded (${Object.keys(defaults).length} keys).`);
 
+  // Seed images (idempotent: ON CONFLICT DO NOTHING)
+  const images = [
+    { key: 'logo', file: 'logo.avif', mime: 'image/avif' },
+    { key: 'headshot', file: 'headshot.png', mime: 'image/png' }
+  ];
+
+  for (const img of images) {
+    const filePath = path.join(__dirname, '..', img.file);
+    if (fs.existsSync(filePath)) {
+      const data = fs.readFileSync(filePath);
+      await db.query(
+        `INSERT INTO images (image_key, data, mime_type)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (image_key) DO NOTHING`,
+        [img.key, data, img.mime]
+      );
+    }
+  }
+  console.log('Images seeded.');
+
   console.log('Seed complete.');
 }
 
