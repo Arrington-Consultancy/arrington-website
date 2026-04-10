@@ -3,6 +3,7 @@ const path = require('path');
 const session = require('express-session');
 const PgSession = require('connect-pg-simple')(session);
 const helmet = require('helmet');
+const cookieParser = require('cookie-parser');
 const { doubleCsrf } = require('csrf-csrf');
 const db = require('./db/pool');
 const authRoutes = require('./routes/auth');
@@ -29,6 +30,9 @@ app.use(helmet({
     }
   }
 }));
+
+// Cookie parsing (required by csrf-csrf)
+app.use(cookieParser());
 
 // Body parsing
 app.use(express.json());
