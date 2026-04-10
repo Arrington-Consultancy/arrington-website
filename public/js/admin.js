@@ -311,24 +311,16 @@
             return;
         }
 
-        // Check aspect ratio before uploading
-        const img = new Image();
-        const objectUrl = URL.createObjectURL(file);
-        img.onload = async () => {
-            URL.revokeObjectURL(objectUrl);
+        // Read file as base64 first (before clearing input)
+        const reader = new FileReader();
+        reader.onload = async () => {
+            const base64 = reader.result.split(',')[1];
 
-            if (!checkAspectRatio(img.width, img.height, currentImageKey)) {
-                const expected = expectedRatios[currentImageKey];
-                const ratioLabels = { headshot: '3:4 portrait', logo: '2:1 landscape', oxford: '4:3 landscape' };
-                const ratioLabel = ratioLabels[currentImageKey] || 'the same as the original';
-                alert(`This image has the wrong aspect ratio. The ${currentImageKey} needs to be approximately ${ratioLabel}. Please crop or resize your image and try again.`);
-                imageInput.value = '';
-                return;
-            }
+            // Check aspect ratio via Image element
+            const img = new Image();
+            const objectUrl = URL.createObjectURL(file);
 
-            const reader = new FileReader();
-            reader.onload = async () => {
-                const base64 = reader.result.split(',')[1];
+            const upload = async () => {
                 try {
                     const res = await fetch(`/api/content/image/${currentImageKey}`, {
                         method: 'PUT',
@@ -344,9 +336,27 @@
                     alert('Failed to upload image. Please try again.');
                 }
             };
-            reader.readAsDataURL(file);
+
+            img.onload = async () => {
+                URL.revokeObjectURL(objectUrl);
+                if (!checkAspectRatio(img.width, img.height, currentImageKey)) {
+                    const ratioLabels = { headshot: '3:4 portrait', logo: '2:1 landscape', oxford: '4:3 landscape' };
+                    const ratioLabel = ratioLabels[currentImageKey] || 'the same as the original';
+                    alert(`This image has the wrong aspect ratio. The ${currentImageKey} needs to be approximately ${ratioLabel}. Please crop or resize your image and try again.`);
+                    return;
+                }
+                await upload();
+            };
+
+            // If browser can't decode the format (e.g. AVIF), skip ratio check and upload anyway
+            img.onerror = async () => {
+                URL.revokeObjectURL(objectUrl);
+                await upload();
+            };
+
+            img.src = objectUrl;
         };
-        img.src = objectUrl;
+        reader.readAsDataURL(file);
         imageInput.value = '';
     });
 
