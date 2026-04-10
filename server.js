@@ -46,6 +46,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/headshot.png', (req, res) => {
   res.sendFile(path.join(__dirname, 'headshot.png'));
 });
+app.get('/logo.avif', (req, res) => {
+  res.sendFile(path.join(__dirname, 'logo.avif'));
+});
 
 // Sessions
 app.use(session({
