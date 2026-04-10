@@ -8,11 +8,13 @@ const defaults = {
   'hero.subtext': 'Trying to improve a business from a textbook is like trying to cross the Channel by reading tide charts. I have run the trade. I have done the hours. I know what actually moves the needle.',
   'hero.cta': 'Start a conversation',
 
-  // Credentials
-  'credentials.block_1_title': 'Oxford University',
-  'credentials.block_1_text': 'Executive Strategy Programme. Distinction.',
-  'credentials.block_2_stat': '15x',
-  'credentials.block_2_text': 'Revenue growth over 19 years. From a standing start to a million-pound exit.',
+  // Credentials - Oxford
+  'credentials_oxford.title': 'Oxford University',
+  'credentials_oxford.text': 'Executive Strategy Programme. Distinction.',
+
+  // Credentials - Stat
+  'credentials_stat.stat': '15x',
+  'credentials_stat.text': 'Revenue growth over 19 years. From a standing start to a million-pound exit.',
 
   // Biography
   'biography.label': 'The trade',

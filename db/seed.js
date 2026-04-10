@@ -40,6 +40,28 @@ async function seed() {
       [key, content]
     );
   }
+  // Migrate old credentials keys to new split keys
+  const migrations = [
+    { from: 'credentials.block_1_title', to: 'credentials_oxford.title' },
+    { from: 'credentials.block_1_text', to: 'credentials_oxford.text' },
+    { from: 'credentials.block_2_stat', to: 'credentials_stat.stat' },
+    { from: 'credentials.block_2_text', to: 'credentials_stat.text' }
+  ];
+  for (const { from, to } of migrations) {
+    // Copy old value to new key if old exists and new doesn't
+    await db.query(
+      `INSERT INTO content (section_key, content)
+       SELECT $1, content FROM content WHERE section_key = $2
+       ON CONFLICT (section_key) DO NOTHING`,
+      [to, from]
+    );
+  }
+  // Clean up old keys
+  await db.query(
+    `DELETE FROM content WHERE section_key IN ($1, $2, $3, $4)`,
+    ['credentials.block_1_title', 'credentials.block_1_text', 'credentials.block_2_stat', 'credentials.block_2_text']
+  );
+
   console.log(`Content seeded (${Object.keys(defaults).length} keys).`);
 
   // Seed images (idempotent: ON CONFLICT DO NOTHING)

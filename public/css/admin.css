@@ -43,7 +43,8 @@
 
 /* ---- IMAGE EDIT BUTTONS ---- */
 .nav-logo,
-.hero-photo {
+.hero-photo,
+.credential-badge-wrap {
     position: relative;
 }
 
@@ -71,6 +72,7 @@
 
 .nav-logo:hover .cms-img-btn,
 .hero-photo:hover .cms-img-btn,
+.credential-badge-wrap:hover .cms-img-btn,
 .cms-img-btn:focus {
     opacity: 1;
 }

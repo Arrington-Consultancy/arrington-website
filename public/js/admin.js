@@ -8,10 +8,10 @@
         'hero.heading': 'Heading',
         'hero.subtext': 'Subtext',
         'hero.cta': 'Button text',
-        'credentials.block_1_title': 'Credential 1 title',
-        'credentials.block_1_text': 'Credential 1 text',
-        'credentials.block_2_stat': 'Statistic',
-        'credentials.block_2_text': 'Statistic description',
+        'credentials_oxford.title': 'Title',
+        'credentials_oxford.text': 'Description',
+        'credentials_stat.stat': 'Statistic',
+        'credentials_stat.text': 'Statistic description',
         'biography.label': 'Section label',
         'biography.heading': 'Heading',
         'biography.col_1_p1': 'Left column, paragraph 1',
@@ -69,7 +69,8 @@
 
     const sectionTitles = {
         hero: 'Hero',
-        credentials: 'Credentials',
+        credentials_oxford: 'Oxford Credential',
+        credentials_stat: 'Revenue Statistic',
         biography: 'Biography',
         approach: 'Approach',
         insights: 'Insights',
@@ -276,7 +277,8 @@
     // Expected aspect ratios (width/height) with 10% tolerance
     const expectedRatios = {
         logo: 511 / 243,     // ~2.1:1 landscape
-        headshot: 3 / 4      // 0.75 portrait
+        headshot: 3 / 4,     // 0.75 portrait
+        oxford: 900 / 677    // ~1.33:1 landscape
     };
 
     function checkAspectRatio(width, height, key) {
@@ -315,7 +317,8 @@
 
             if (!checkAspectRatio(img.width, img.height, currentImageKey)) {
                 const expected = expectedRatios[currentImageKey];
-                const ratioLabel = currentImageKey === 'headshot' ? '3:4 portrait' : '2:1 landscape';
+                const ratioLabels = { headshot: '3:4 portrait', logo: '2:1 landscape', oxford: '4:3 landscape' };
+                const ratioLabel = ratioLabels[currentImageKey] || 'the same as the original';
                 alert(`This image has the wrong aspect ratio. The ${currentImageKey} needs to be approximately ${ratioLabel}. Please crop or resize your image and try again.`);
                 imageInput.value = '';
                 return;
