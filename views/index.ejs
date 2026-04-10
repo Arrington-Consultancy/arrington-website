@@ -633,6 +633,11 @@
             color: var(--text);
         }
 
+        /* ---- FIRST-SECTION NAV CLEARANCE ---- */
+        #cms-sections > section:first-child:not(.hero) {
+            padding-top: 20rem;
+        }
+
         /* ---- MOBILE ---- */
         @media (max-width: 900px) {
             .nav-logo-img {
@@ -685,6 +690,10 @@
                 flex-direction: column;
                 gap: 1rem;
             }
+
+            #cms-sections > section:first-child:not(.hero) {
+                padding-top: 8rem;
+            }
         }
 
         @media (max-width: 600px) {
@@ -733,11 +742,18 @@
     </div>
 </nav>
 
+<div id="cms-sections">
+<% for (let _i = 0; _i < sectionOrder.length; _i++) { %>
+<% const _sid = sectionOrder[_i]; %>
+
+<% if (_sid === 'hero') { %>
 <!-- HERO -->
-<section class="hero">
+<section class="hero" data-section-id="hero">
     <div class="hero-inner">
         <div class="hero-text cms-section" data-section="hero">
             <% if (user) { %><button class="cms-edit-btn" data-section="hero" title="Edit section">&#9998;</button><% } %>
+            <% if (user) { %><button class="cms-move-btn cms-move-up" data-section-id="hero" title="Move up">&#9650;</button><% } %>
+            <% if (user) { %><button class="cms-move-btn cms-move-down" data-section-id="hero" title="Move down">&#9660;</button><% } %>
             <h1><%- content['hero.heading'] %></h1>
             <p class="sub"><%- content['hero.subtext'] %></p>
             <a href="#conversation" class="btn btn-primary"><%- content['hero.cta'] %></a>
@@ -748,13 +764,17 @@
         </div>
     </div>
 </section>
+<% } %>
 
+<% if (_sid === 'credentials') { %>
 <!-- CREDENTIALS -->
-<section class="credentials">
+<section class="credentials" data-section-id="credentials">
     <div class="section-inner">
         <div class="credentials-inner">
             <div class="credential-block cms-section" data-section="credentials_oxford">
                 <% if (user) { %><button class="cms-edit-btn" data-section="credentials_oxford" title="Edit section">&#9998;</button><% } %>
+                <% if (user) { %><button class="cms-move-btn cms-move-up" data-section-id="credentials" title="Move up">&#9650;</button><% } %>
+                <% if (user) { %><button class="cms-move-btn cms-move-down" data-section-id="credentials" title="Move down">&#9660;</button><% } %>
                 <div class="credential-badge-wrap">
                     <img src="/img/oxford" alt="Said Business School, University of Oxford" class="credential-badge">
                     <% if (user) { %><button class="cms-img-btn" data-image="oxford" title="Change badge">&#9998;</button><% } %>
@@ -770,11 +790,15 @@
         </div>
     </div>
 </section>
+<% } %>
 
+<% if (_sid === 'biography') { %>
 <!-- BIOGRAPHY -->
-<section class="problem">
+<section class="problem" data-section-id="biography">
     <div class="section-inner cms-section" data-section="biography">
         <% if (user) { %><button class="cms-edit-btn" data-section="biography" title="Edit section">&#9998;</button><% } %>
+        <% if (user) { %><button class="cms-move-btn cms-move-up" data-section-id="biography" title="Move up">&#9650;</button><% } %>
+        <% if (user) { %><button class="cms-move-btn cms-move-down" data-section-id="biography" title="Move down">&#9660;</button><% } %>
         <p class="section-label"><%- content['biography.label'] %></p>
         <h2 class="section-heading"><%- content['biography.heading'] %></h2>
         <div class="problem-grid">
@@ -789,11 +813,15 @@
         </div>
     </div>
 </section>
+<% } %>
 
+<% if (_sid === 'approach') { %>
 <!-- APPROACH -->
-<section class="approach">
+<section class="approach" data-section-id="approach">
     <div class="section-inner cms-section" data-section="approach">
         <% if (user) { %><button class="cms-edit-btn" data-section="approach" title="Edit section">&#9998;</button><% } %>
+        <% if (user) { %><button class="cms-move-btn cms-move-up" data-section-id="approach" title="Move up">&#9650;</button><% } %>
+        <% if (user) { %><button class="cms-move-btn cms-move-down" data-section-id="approach" title="Move down">&#9660;</button><% } %>
         <p class="section-label"><%- content['approach.label'] %></p>
         <h2 class="section-heading"><%- content['approach.heading'] %></h2>
         <div class="approach-steps">
@@ -815,11 +843,15 @@
         </div>
     </div>
 </section>
+<% } %>
 
+<% if (_sid === 'insights') { %>
 <!-- INSIGHTS -->
-<section class="insights">
+<section class="insights" data-section-id="insights">
     <div class="section-inner cms-section" data-section="insights">
         <% if (user) { %><button class="cms-edit-btn" data-section="insights" title="Edit section">&#9998;</button><% } %>
+        <% if (user) { %><button class="cms-move-btn cms-move-up" data-section-id="insights" title="Move up">&#9650;</button><% } %>
+        <% if (user) { %><button class="cms-move-btn cms-move-down" data-section-id="insights" title="Move down">&#9660;</button><% } %>
         <div class="insights-header">
             <p class="section-label"><%- content['insights.label'] %></p>
             <h2 class="section-heading"><%- content['insights.heading'] %></h2>
@@ -847,11 +879,15 @@
         </div>
     </div>
 </section>
+<% } %>
 
+<% if (_sid === 'casestudy') { %>
 <!-- CASE STUDY -->
-<section class="case-study">
+<section class="case-study" data-section-id="casestudy">
     <div class="section-inner cms-section" data-section="casestudy">
         <% if (user) { %><button class="cms-edit-btn" data-section="casestudy" title="Edit section">&#9998;</button><% } %>
+        <% if (user) { %><button class="cms-move-btn cms-move-up" data-section-id="casestudy" title="Move up">&#9650;</button><% } %>
+        <% if (user) { %><button class="cms-move-btn cms-move-down" data-section-id="casestudy" title="Move down">&#9660;</button><% } %>
         <div class="case-inner">
             <p class="section-label"><%- content['casestudy.label'] %></p>
             <h2 class="section-heading"><%- content['casestudy.heading'] %></h2>
@@ -879,11 +915,15 @@
         </div>
     </div>
 </section>
+<% } %>
 
+<% if (_sid === 'assessment') { %>
 <!-- HONEST QUESTIONS -->
-<section class="assessment" id="questions">
+<section class="assessment" id="questions" data-section-id="assessment">
     <div class="section-inner cms-section" data-section="assessment">
         <% if (user) { %><button class="cms-edit-btn" data-section="assessment" title="Edit section">&#9998;</button><% } %>
+        <% if (user) { %><button class="cms-move-btn cms-move-up" data-section-id="assessment" title="Move up">&#9650;</button><% } %>
+        <% if (user) { %><button class="cms-move-btn cms-move-down" data-section-id="assessment" title="Move down">&#9660;</button><% } %>
         <div class="assessment-inner">
             <p class="section-label"><%- content['assessment.label'] %></p>
             <h2 class="section-heading"><%- content['assessment.heading'] %></h2>
@@ -899,11 +939,15 @@
         </div>
     </div>
 </section>
+<% } %>
 
+<% if (_sid === 'filter') { %>
 <!-- FILTER -->
-<section class="filter">
+<section class="filter" data-section-id="filter">
     <div class="section-inner cms-section" data-section="filter">
         <% if (user) { %><button class="cms-edit-btn" data-section="filter" title="Edit section">&#9998;</button><% } %>
+        <% if (user) { %><button class="cms-move-btn cms-move-up" data-section-id="filter" title="Move up">&#9650;</button><% } %>
+        <% if (user) { %><button class="cms-move-btn cms-move-down" data-section-id="filter" title="Move down">&#9660;</button><% } %>
         <div class="filter-inner">
             <p class="section-label"><%- content['filter.label'] %></p>
             <h2 class="section-heading"><%- content['filter.heading'] %></h2>
@@ -912,11 +956,15 @@
         </div>
     </div>
 </section>
+<% } %>
 
+<% if (_sid === 'contact') { %>
 <!-- CONVERSATION -->
-<section class="contact" id="conversation">
+<section class="contact" id="conversation" data-section-id="contact">
     <div class="section-inner cms-section" data-section="contact">
         <% if (user) { %><button class="cms-edit-btn" data-section="contact" title="Edit section">&#9998;</button><% } %>
+        <% if (user) { %><button class="cms-move-btn cms-move-up" data-section-id="contact" title="Move up">&#9650;</button><% } %>
+        <% if (user) { %><button class="cms-move-btn cms-move-down" data-section-id="contact" title="Move down">&#9660;</button><% } %>
         <div class="contact-inner">
             <p class="section-label"><%- content['contact.label'] %></p>
             <h2 class="section-heading"><%- content['contact.heading'] %></h2>
@@ -928,6 +976,10 @@
         </div>
     </div>
 </section>
+<% } %>
+
+<% } %>
+</div>
 
 <!-- FOOTER -->
 <footer>

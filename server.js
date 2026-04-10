@@ -129,7 +129,17 @@ app.get('/', async (req, res) => {
     rows.forEach(r => { content[r.section_key] = r.content; });
     const activeTheme = content['site.theme'] || 'dark';
     const theme = themes[activeTheme] || themes.dark;
-    res.render('index', { content, theme, activeTheme, themes });
+    const defaultOrder = ['hero','credentials','biography','approach','insights','casestudy','assessment','filter','contact'];
+    let sectionOrder = defaultOrder;
+    try {
+      if (content['site.section_order']) {
+        const parsed = JSON.parse(content['site.section_order']);
+        if (Array.isArray(parsed) && parsed.length === defaultOrder.length) {
+          sectionOrder = parsed;
+        }
+      }
+    } catch (e) { /* use default */ }
+    res.render('index', { content, theme, activeTheme, themes, sectionOrder });
   } catch (err) {
     console.error('Error loading content:', err);
     res.status(500).send('Server error');

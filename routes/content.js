@@ -63,6 +63,41 @@ router.put('/', requireAuth, async (req, res) => {
   }
 });
 
+// Update section order
+const VALID_SECTIONS = ['hero','credentials','biography','approach','insights','casestudy','assessment','filter','contact'];
+
+router.put('/order', requireAuth, async (req, res) => {
+  const { order } = req.body;
+
+  if (!Array.isArray(order) || order.length !== VALID_SECTIONS.length) {
+    return res.status(400).json({ error: 'Invalid order array' });
+  }
+
+  const sorted = [...order].sort();
+  const expected = [...VALID_SECTIONS].sort();
+  if (JSON.stringify(sorted) !== JSON.stringify(expected)) {
+    return res.status(400).json({ error: 'Order must contain exactly the valid section IDs' });
+  }
+
+  try {
+    await db.query(
+      `UPDATE content SET content = $1, updated_at = NOW(), updated_by = $2
+       WHERE section_key = 'site.section_order'`,
+      [JSON.stringify(order), req.session.user.id]
+    );
+
+    await db.query(
+      'INSERT INTO audit_log (user_id, action, section_key, detail) VALUES ($1, $2, $3, $4)',
+      [req.session.user.id, 'section_reorder', 'site.section_order', `Reordered by ${req.session.user.username}`]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Section order update error:', err);
+    res.status(500).json({ error: 'Failed to save section order' });
+  }
+});
+
 // Upload image
 const ALLOWED_MIME = ['image/png', 'image/jpeg', 'image/webp', 'image/avif', 'image/gif'];
 const MAX_SIZE = 2 * 1024 * 1024; // 2MB

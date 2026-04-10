@@ -205,6 +205,83 @@
         if (e.key === 'Escape' && modal.classList.contains('active')) closeModal();
     });
 
+    // ---- SECTION REORDER ----
+    const sectionsContainer = document.getElementById('cms-sections');
+
+    function updateMoveButtons() {
+        const sections = sectionsContainer.querySelectorAll('section[data-section-id]');
+        document.querySelectorAll('.cms-move-btn').forEach(btn => {
+            const sectionId = btn.dataset.sectionId;
+            const section = document.querySelector(`section[data-section-id="${sectionId}"]`);
+            const sectionsList = Array.from(sections);
+            const index = sectionsList.indexOf(section);
+            if (btn.classList.contains('cms-move-up')) {
+                btn.disabled = (index === 0);
+            } else {
+                btn.disabled = (index === sectionsList.length - 1);
+            }
+        });
+    }
+
+    function getOrderFromDom() {
+        return Array.from(sectionsContainer.querySelectorAll('section[data-section-id]'))
+            .map(s => s.dataset.sectionId);
+    }
+
+    async function saveOrder(order) {
+        try {
+            const res = await fetch('/api/content/order', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify({ order })
+            });
+            if (!res.ok) throw new Error('Save failed');
+        } catch (err) {
+            alert('Failed to save section order. Please try again.');
+        }
+    }
+
+    function scrollToSection(section) {
+        const navHeight = document.getElementById('nav').offsetHeight;
+        const top = section.getBoundingClientRect().top + window.scrollY - navHeight - 16;
+        window.scrollTo({ top, behavior: 'instant' });
+    }
+
+    document.querySelectorAll('.cms-move-up').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const section = document.querySelector(`section[data-section-id="${btn.dataset.sectionId}"]`);
+            const prev = section.previousElementSibling;
+            if (prev && prev.matches('section[data-section-id]')) {
+                sectionsContainer.insertBefore(section, prev);
+                updateMoveButtons();
+                scrollToSection(section);
+                await saveOrder(getOrderFromDom());
+            }
+        });
+    });
+
+    document.querySelectorAll('.cms-move-down').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const section = document.querySelector(`section[data-section-id="${btn.dataset.sectionId}"]`);
+            const next = section.nextElementSibling;
+            if (next && next.matches('section[data-section-id]')) {
+                sectionsContainer.insertBefore(next, section);
+                updateMoveButtons();
+                scrollToSection(section);
+                await saveOrder(getOrderFromDom());
+            }
+        });
+    });
+
+    updateMoveButtons();
+
     // ---- ADMIN PANEL ----
     const adminToggle = document.getElementById('cmsAdminToggle');
     const adminPanel = document.getElementById('cmsAdminPanel');

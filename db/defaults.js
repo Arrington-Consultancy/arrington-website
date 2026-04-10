@@ -78,6 +78,7 @@ const defaults = {
 
   // Site settings
   'site.theme': 'dark',
+  'site.section_order': JSON.stringify(['hero','credentials','biography','approach','insights','casestudy','assessment','filter','contact']),
 
   // Contact
   'contact.label': 'Start a conversation',

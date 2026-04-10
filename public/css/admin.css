@@ -41,6 +41,69 @@
     }
 }
 
+/* ---- SECTION MOVE BUTTONS ---- */
+.cms-move-up {
+    position: absolute;
+    top: 0.75rem;
+    right: 3rem;
+    z-index: 50;
+}
+
+.cms-move-down {
+    position: absolute;
+    top: 0.75rem;
+    right: 5.25rem;
+    z-index: 50;
+}
+
+.cms-move-btn {
+    width: 32px;
+    height: 32px;
+    background: rgba(196, 122, 58, 0.15);
+    border: 1px solid rgba(196, 122, 58, 0.3);
+    border-radius: 4px;
+    color: #c47a3a;
+    font-size: 10px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s, background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    padding: 0;
+}
+
+.cms-section:hover .cms-move-btn,
+.cms-move-btn:focus {
+    opacity: 1;
+}
+
+.cms-move-btn:hover {
+    background: rgba(196, 122, 58, 0.3);
+}
+
+.cms-move-btn:disabled {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.cms-section:hover .cms-move-btn:disabled {
+    opacity: 0.2;
+    pointer-events: none;
+    cursor: not-allowed;
+    background: rgba(196, 122, 58, 0.08);
+}
+
+@media (max-width: 900px) {
+    .cms-move-btn {
+        opacity: 0.7;
+    }
+    .cms-move-btn:disabled {
+        opacity: 0.2;
+    }
+}
+
 /* ---- IMAGE EDIT BUTTONS ---- */
 .nav-logo,
 .hero-photo,
