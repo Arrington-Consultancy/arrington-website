@@ -65,7 +65,7 @@ router.put('/', requireAuth, async (req, res) => {
 
 // Upload image
 const ALLOWED_MIME = ['image/png', 'image/jpeg', 'image/webp', 'image/avif', 'image/gif'];
-const MAX_SIZE = 4 * 1024 * 1024; // 4MB
+const MAX_SIZE = 2 * 1024 * 1024; // 2MB
 
 router.put('/image/:key', requireAuth, async (req, res) => {
   const { key } = req.params;

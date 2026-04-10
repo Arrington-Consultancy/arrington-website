@@ -732,9 +732,9 @@
 
 <!-- HERO -->
 <section class="hero">
-    <div class="hero-inner cms-section" data-section="hero">
-        <% if (user) { %><button class="cms-edit-btn" data-section="hero" title="Edit section">&#9998;</button><% } %>
-        <div class="hero-text">
+    <div class="hero-inner">
+        <div class="hero-text cms-section" data-section="hero">
+            <% if (user) { %><button class="cms-edit-btn" data-section="hero" title="Edit section">&#9998;</button><% } %>
             <h1><%- content['hero.heading'] %></h1>
             <p class="sub"><%- content['hero.subtext'] %></p>
             <a href="#conversation" class="btn btn-primary"><%- content['hero.cta'] %></a>

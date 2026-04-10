@@ -273,6 +273,21 @@
 
     let currentImageKey = null;
 
+    // Expected aspect ratios (width/height) with 10% tolerance
+    const expectedRatios = {
+        logo: 511 / 243,     // ~2.1:1 landscape
+        headshot: 3 / 4      // 0.75 portrait
+    };
+
+    function checkAspectRatio(width, height, key) {
+        const expected = expectedRatios[key];
+        if (!expected) return true;
+        const actual = width / height;
+        const tolerance = 0.1;
+        const ratio = actual / expected;
+        return ratio >= (1 - tolerance) && ratio <= (1 + tolerance);
+    }
+
     document.querySelectorAll('.cms-img-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -286,31 +301,47 @@
         const file = imageInput.files[0];
         if (!file || !currentImageKey) return;
 
-        if (file.size > 4 * 1024 * 1024) {
-            alert('Image too large. Maximum size is 4MB.');
+        if (file.size > 2 * 1024 * 1024) {
+            alert('Image too large. Maximum size is 2MB.');
             imageInput.value = '';
             return;
         }
 
-        const reader = new FileReader();
-        reader.onload = async () => {
-            const base64 = reader.result.split(',')[1];
-            try {
-                const res = await fetch(`/api/content/image/${currentImageKey}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': csrfToken
-                    },
-                    body: JSON.stringify({ data: base64, mimeType: file.type })
-                });
-                if (!res.ok) throw new Error('Upload failed');
-                window.location.reload();
-            } catch (err) {
-                alert('Failed to upload image. Please try again.');
+        // Check aspect ratio before uploading
+        const img = new Image();
+        const objectUrl = URL.createObjectURL(file);
+        img.onload = async () => {
+            URL.revokeObjectURL(objectUrl);
+
+            if (!checkAspectRatio(img.width, img.height, currentImageKey)) {
+                const expected = expectedRatios[currentImageKey];
+                const ratioLabel = currentImageKey === 'headshot' ? '3:4 portrait' : '2:1 landscape';
+                alert(`This image has the wrong aspect ratio. The ${currentImageKey} needs to be approximately ${ratioLabel}. Please crop or resize your image and try again.`);
+                imageInput.value = '';
+                return;
             }
+
+            const reader = new FileReader();
+            reader.onload = async () => {
+                const base64 = reader.result.split(',')[1];
+                try {
+                    const res = await fetch(`/api/content/image/${currentImageKey}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': csrfToken
+                        },
+                        body: JSON.stringify({ data: base64, mimeType: file.type })
+                    });
+                    if (!res.ok) throw new Error('Upload failed');
+                    window.location.reload();
+                } catch (err) {
+                    alert('Failed to upload image. Please try again.');
+                }
+            };
+            reader.readAsDataURL(file);
         };
-        reader.readAsDataURL(file);
+        img.src = objectUrl;
         imageInput.value = '';
     });
 
