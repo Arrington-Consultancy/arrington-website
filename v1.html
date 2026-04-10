@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arrington Business Consultancy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --navy: #1a2744;
+            --deep-blue: #2c3e6b;
+            --warm-white: #faf9f7;
+            --cream: #f3f0eb;
+            --accent: #c47a3a;
+            --accent-hover: #a8632e;
+            --text: #3a3a3a;
+            --text-light: #6b6b6b;
+            --text-on-dark: #e0ddd8;
+            --border: #e0dcd5;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            font-size: 16px;
+        }
+
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text);
+            background: var(--warm-white);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ---- NAV ---- */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: rgba(26, 39, 68, 0.97);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            transition: box-shadow 0.3s;
+        }
+
+        nav.scrolled {
+            box-shadow: 0 2px 24px rgba(0,0,0,0.15);
+        }
+
+        .nav-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 72px;
+        }
+
+        .nav-logo {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.25rem;
+            color: #fff;
+            text-decoration: none;
+            letter-spacing: -0.01em;
+        }
+
+        .nav-logo span {
+            color: var(--accent);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: var(--text-on-dark);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: #fff;
+        }
+
+        .nav-cta {
+            background: var(--accent);
+            color: #fff !important;
+            padding: 0.6rem 1.4rem;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .nav-cta:hover {
+            background: var(--accent-hover);
+        }
+
+        .nav-toggle {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+
+        .nav-toggle span {
+            display: block;
+            width: 24px;
+            height: 2px;
+            background: #fff;
+            margin: 5px 0;
+            transition: 0.3s;
+        }
+
+        /* ---- HERO ---- */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            background: var(--navy);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 70%;
+            height: 200%;
+            background: radial-gradient(ellipse, rgba(196, 122, 58, 0.08) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 8rem 2rem 6rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+        }
+
+        .hero-text h1 {
+            font-family: 'DM Serif Display', serif;
+            font-size: clamp(2.4rem, 4.5vw, 3.6rem);
+            color: #fff;
+            line-height: 1.15;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .hero-text h1 em {
+            color: var(--accent);
+            font-style: normal;
+        }
+
+        .hero-text p {
+            font-size: 1.15rem;
+            color: var(--text-on-dark);
+            margin-bottom: 2rem;
+            max-width: 520px;
+            line-height: 1.75;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.85rem 2rem;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.25);
+        }
+
+        .btn-secondary:hover {
+            border-color: rgba(255,255,255,0.5);
+            background: rgba(255,255,255,0.05);
+        }
+
+        .hero-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 2.5rem;
+            backdrop-filter: blur(8px);
+        }
+
+        .hero-card h3 {
+            font-family: 'DM Serif Display', serif;
+            color: #fff;
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .hero-card ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .hero-card li {
+            color: var(--text-on-dark);
+            font-size: 0.95rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            line-height: 1.5;
+        }
+
+        .hero-card li::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            min-width: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+            margin-top: 0.45rem;
+        }
+
+        /* ---- SECTIONS (general) ---- */
+        section {
+            padding: 6rem 2rem;
+        }
+
+        .section-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 0.75rem;
+        }
+
+        .section-heading {
+            font-family: 'DM Serif Display', serif;
+            font-size: clamp(1.8rem, 3vw, 2.4rem);
+            color: var(--navy);
+            margin-bottom: 1rem;
+            letter-spacing: -0.01em;
+            line-height: 1.2;
+        }
+
+        .section-sub {
+            font-size: 1.1rem;
+            color: var(--text-light);
+            max-width: 640px;
+            line-height: 1.75;
+        }
+
+        /* ---- APPROACH ---- */
+        .approach {
+            background: var(--cream);
+        }
+
+        .approach-header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .approach-header .section-sub {
+            margin: 0.75rem auto 0;
+        }
+
+        .approach-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+        }
+
+        .approach-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 2.5rem 2rem;
+            border: 1px solid var(--border);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .approach-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.06);
+        }
+
+        .approach-number {
+            font-family: 'DM Serif Display', serif;
+            font-size: 2.5rem;
+            color: var(--accent);
+            opacity: 0.3;
+            line-height: 1;
+            margin-bottom: 1rem;
+        }
+
+        .approach-card h3 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.2rem;
+            color: var(--navy);
+            margin-bottom: 0.75rem;
+        }
+
+        .approach-card p {
+            color: var(--text-light);
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
+
+        /* ---- PHILOSOPHY ---- */
+        .philosophy {
+            background: var(--navy);
+            color: #fff;
+        }
+
+        .philosophy-inner {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .philosophy .section-heading {
+            color: #fff;
+        }
+
+        .philosophy blockquote {
+            font-family: 'DM Serif Display', serif;
+            font-size: clamp(1.3rem, 2.5vw, 1.7rem);
+            line-height: 1.5;
+            color: var(--text-on-dark);
+            margin: 2rem 0;
+            padding: 0 1rem;
+            font-style: italic;
+        }
+
+        .philosophy .byline {
+            font-size: 0.9rem;
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        /* ---- RESULTS ---- */
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .result-card {
+            background: var(--cream);
+            border-radius: 12px;
+            padding: 2.5rem;
+            border: 1px solid var(--border);
+        }
+
+        .result-card .result-context {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 1rem;
+        }
+
+        .result-card blockquote {
+            font-size: 1.05rem;
+            line-height: 1.7;
+            color: var(--text);
+            margin-bottom: 1.25rem;
+            font-style: italic;
+        }
+
+        .result-card .result-outcome {
+            font-size: 0.95rem;
+            color: var(--text-light);
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+            line-height: 1.6;
+        }
+
+        .result-card .result-outcome strong {
+            color: var(--navy);
+        }
+
+        /* ---- INSIGHTS ---- */
+        .insights {
+            background: var(--cream);
+        }
+
+        .insights-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 3rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+        }
+
+        .insight-card {
+            background: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .insight-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.06);
+        }
+
+        .insight-bar {
+            height: 4px;
+            background: var(--accent);
+        }
+
+        .insight-body {
+            padding: 2rem;
+        }
+
+        .insight-tag {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 0.75rem;
+        }
+
+        .insight-card h3 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.15rem;
+            color: var(--navy);
+            margin-bottom: 0.75rem;
+            line-height: 1.3;
+        }
+
+        .insight-card p {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            line-height: 1.7;
+            margin-bottom: 1rem;
+        }
+
+        .insight-card a {
+            font-size: 0.85rem;
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .insight-card a:hover {
+            text-decoration: underline;
+        }
+
+        /* ---- DIAGNOSTIC ---- */
+        .diagnostic {
+            background: linear-gradient(135deg, var(--navy) 0%, var(--deep-blue) 100%);
+            color: #fff;
+        }
+
+        .diagnostic-inner {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+        }
+
+        .diagnostic .section-heading {
+            color: #fff;
+        }
+
+        .diagnostic p {
+            color: var(--text-on-dark);
+            font-size: 1.05rem;
+            line-height: 1.75;
+            margin-bottom: 1.5rem;
+        }
+
+        .diagnostic-features {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-bottom: 2rem;
+        }
+
+        .diagnostic-features li {
+            color: var(--text-on-dark);
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .diagnostic-features li::before {
+            content: '\2713';
+            color: var(--accent);
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        .diagnostic-preview {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 2.5rem;
+        }
+
+        .diagnostic-preview h3 {
+            font-family: 'DM Serif Display', serif;
+            color: #fff;
+            font-size: 1.15rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .diagnostic-preview .preview-sub {
+            font-size: 0.85rem;
+            color: var(--text-on-dark);
+            margin-bottom: 1.5rem;
+        }
+
+        .diag-question {
+            background: rgba(255,255,255,0.06);
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.9rem;
+            color: var(--text-on-dark);
+            border-left: 3px solid var(--accent);
+        }
+
+        .diag-question:last-of-type {
+            margin-bottom: 1.5rem;
+        }
+
+        .diagnostic-preview .btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        /* ---- CONVERSATION / CTA ---- */
+        .conversation {
+            background: var(--warm-white);
+            text-align: center;
+        }
+
+        .conversation-inner {
+            max-width: 680px;
+            margin: 0 auto;
+        }
+
+        .conversation .section-heading {
+            margin-bottom: 1.5rem;
+        }
+
+        .conversation p {
+            font-size: 1.1rem;
+            color: var(--text-light);
+            line-height: 1.75;
+            margin-bottom: 2rem;
+        }
+
+        .conversation-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+
+        .btn-dark {
+            background: var(--navy);
+            color: #fff;
+        }
+
+        .btn-dark:hover {
+            background: var(--deep-blue);
+            transform: translateY(-1px);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--navy);
+            border: 1px solid var(--border);
+        }
+
+        .btn-outline:hover {
+            border-color: var(--navy);
+            background: rgba(26, 39, 68, 0.03);
+        }
+
+        .conversation .direct {
+            font-size: 0.95rem;
+            color: var(--text-light);
+        }
+
+        .conversation .direct a {
+            color: var(--navy);
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .conversation .direct a:hover {
+            color: var(--accent);
+        }
+
+        /* ---- FOOTER ---- */
+        footer {
+            background: var(--navy);
+            color: var(--text-on-dark);
+            padding: 4rem 2rem 2rem;
+        }
+
+        .footer-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .footer-top {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 3rem;
+            margin-bottom: 3rem;
+        }
+
+        .footer-brand {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.2rem;
+            color: #fff;
+            margin-bottom: 1rem;
+        }
+
+        .footer-brand span {
+            color: var(--accent);
+        }
+
+        .footer-desc {
+            font-size: 0.9rem;
+            line-height: 1.7;
+            color: var(--text-on-dark);
+            max-width: 320px;
+        }
+
+        .footer-col h4 {
+            color: #fff;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 1rem;
+        }
+
+        .footer-col ul {
+            list-style: none;
+        }
+
+        .footer-col li {
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-col a {
+            color: var(--text-on-dark);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+
+        .footer-col a:hover {
+            color: #fff;
+        }
+
+        .footer-contact-item {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-bottom {
+            border-top: 1px solid rgba(255,255,255,0.08);
+            padding-top: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.4);
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        /* ---- MOBILE ---- */
+        @media (max-width: 900px) {
+            .hero-inner {
+                grid-template-columns: 1fr;
+                gap: 2.5rem;
+                padding-top: 7rem;
+            }
+
+            .approach-grid,
+            .insights-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .diagnostic-inner {
+                grid-template-columns: 1fr;
+                gap: 2.5rem;
+            }
+
+            .footer-top {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+
+            .nav-links {
+                display: none;
+                position: absolute;
+                top: 72px;
+                left: 0;
+                right: 0;
+                background: var(--navy);
+                flex-direction: column;
+                padding: 1.5rem 2rem;
+                gap: 0.25rem;
+                border-top: 1px solid rgba(255,255,255,0.06);
+            }
+
+            .nav-links li {
+                width: 100%;
+            }
+
+            .nav-links a {
+                display: block;
+                padding: 0.75rem 0;
+                font-size: 1rem;
+            }
+
+            .nav-links .nav-cta {
+                display: block;
+                text-align: center;
+                margin-top: 0.5rem;
+                padding: 0.85rem 1.4rem;
+            }
+
+            .nav-links.open {
+                display: flex;
+            }
+
+            .nav-toggle {
+                display: block;
+            }
+
+            .hero-card {
+                padding: 2rem 1.5rem;
+            }
+
+            .hero-actions {
+                flex-direction: column;
+            }
+
+            .hero-actions .btn {
+                width: 100%;
+                justify-content: center;
+                text-align: center;
+            }
+
+            .conversation-actions {
+                flex-direction: column;
+            }
+
+            .conversation-actions .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .diagnostic-preview {
+                padding: 2rem 1.5rem;
+            }
+
+            .philosophy blockquote {
+                font-size: 1.15rem;
+            }
+        }
+
+        @media (max-width: 600px) {
+            section {
+                padding: 4rem 1.25rem;
+            }
+
+            .hero-inner {
+                padding: 6rem 1.25rem 4rem;
+            }
+
+            .hero-text h1 {
+                font-size: 1.9rem;
+            }
+
+            .hero-text p {
+                font-size: 1rem;
+            }
+
+            .approach-card,
+            .result-card {
+                padding: 2rem 1.5rem;
+            }
+
+            .section-heading {
+                font-size: 1.6rem;
+            }
+
+            .insight-body {
+                padding: 1.5rem;
+            }
+
+            .footer-bottom {
+                flex-direction: column;
+                text-align: centre;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="nav">
+    <div class="nav-inner">
+        <a href="#" class="nav-logo">Arrington<span>.</span></a>
+        <button class="nav-toggle" onclick="document.querySelector('.nav-links').classList.toggle('open')" aria-label="Menu">
+            <span></span><span></span><span></span>
+        </button>
+        <ul class="nav-links">
+            <li><a href="#approach">How we work</a></li>
+            <li><a href="#results">Results</a></li>
+            <li><a href="#insights">Insights</a></li>
+            <li><a href="#diagnostic">Free diagnostic</a></li>
+            <li><a href="#conversation" class="nav-cta">Let's talk</a></li>
+        </ul>
+    </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+    <div class="hero-inner">
+        <div class="hero-text">
+            <h1>You know your business could run better. <em>Let's find out where.</em></h1>
+            <p>Most consultancies start by telling you how good they are. We'd rather start by understanding what keeps you up at night. Our job is to work out whether we can genuinely help, and be honest if we can't.</p>
+            <div class="hero-actions">
+                <a href="#conversation" class="btn btn-primary">Book a free conversation</a>
+                <a href="#diagnostic" class="btn btn-secondary">Try the free diagnostic</a>
+            </div>
+        </div>
+        <div class="hero-card">
+            <h3>Sound familiar?</h3>
+            <ul>
+                <li>Your team is busy but progress feels slow</li>
+                <li>You're not sure where the money is actually going</li>
+                <li>The business runs, but it relies too much on you</li>
+                <li>You know something needs to change but you're not sure what</li>
+                <li>Growth has stalled and the old approaches aren't working</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<!-- APPROACH -->
+<section class="approach" id="approach">
+    <div class="section-inner">
+        <div class="approach-header">
+            <p class="section-label">How we work</p>
+            <h2 class="section-heading">We start with you, not with us</h2>
+            <p class="section-sub">Every business is different. Rather than arriving with a pre-packaged solution, we take the time to understand your specific situation before we recommend anything.</p>
+        </div>
+        <div class="approach-grid">
+            <div class="approach-card">
+                <div class="approach-number">01</div>
+                <h3>Listen first</h3>
+                <p>We begin with a no-obligation conversation. No pitch, no slides. Just an honest discussion about where you are now, where you want to be, and what's getting in the way.</p>
+            </div>
+            <div class="approach-card">
+                <div class="approach-number">02</div>
+                <h3>Diagnose together</h3>
+                <p>We work alongside you to identify the real constraints, not just the symptoms. Often the biggest opportunities are in places you've stopped noticing because you're too close to them.</p>
+            </div>
+            <div class="approach-card">
+                <div class="approach-number">03</div>
+                <h3>Act with purpose</h3>
+                <p>We focus on practical changes that make a measurable difference. No 80-page reports that gather dust. Just clear priorities, delivered with you, not to you.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- PHILOSOPHY -->
+<section class="philosophy">
+    <div class="section-inner">
+        <div class="philosophy-inner">
+            <p class="section-label">Our belief</p>
+            <h2 class="section-heading">The best advice starts with generosity</h2>
+            <blockquote>"Instead of asking what we need from our clients, we ask what our clients need from us. That shift changes everything: the conversations, the solutions, the outcomes."</blockquote>
+            <p class="byline">Arrington Business Consultancy</p>
+        </div>
+    </div>
+</section>
+
+<!-- RESULTS -->
+<section id="results">
+    <div class="section-inner">
+        <p class="section-label">Real outcomes</p>
+        <h2 class="section-heading">What changed for businesses like yours</h2>
+        <p class="section-sub">We don't measure success by hours billed. We measure it by the difference it made.</p>
+        <div class="results-grid">
+            <div class="result-card">
+                <p class="result-context">Manufacturing, 45 employees</p>
+                <blockquote>"We knew we were losing money somewhere but couldn't pinpoint it. Within three months of working with Arrington, we'd identified where and restructured accordingly."</blockquote>
+                <p class="result-outcome"><strong>Result:</strong> Overheads reduced by 18% within six months. Production throughput up 12% with no additional headcount.</p>
+            </div>
+            <div class="result-card">
+                <p class="result-context">Professional services, owner-managed</p>
+                <blockquote>"I was working 60-hour weeks and the business still couldn't function without me. They helped me see that the problem wasn't my team; it was my systems."</blockquote>
+                <p class="result-outcome"><strong>Result:</strong> Owner reduced to 40-hour weeks within four months. Revenue grew 15% in the following year.</p>
+            </div>
+            <div class="result-card">
+                <p class="result-context">Retail chain, 8 locations</p>
+                <blockquote>"We'd tried two other consultants who gave us thick reports and not much else. Arrington rolled their sleeves up and actually worked alongside our managers."</blockquote>
+                <p class="result-outcome"><strong>Result:</strong> Stock wastage halved. Staff retention improved by 30% after operational changes were embedded.</p>
+            </div>
+            <div class="result-card">
+                <p class="result-context">Construction, family business</p>
+                <blockquote>"We'd grown fast and the back office hadn't kept up. They helped us put the right structure in place without making everything feel corporate."</blockquote>
+                <p class="result-outcome"><strong>Result:</strong> Financial reporting lag reduced from six weeks to five days. Cash flow visibility transformed.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- INSIGHTS -->
+<section class="insights" id="insights">
+    <div class="section-inner">
+        <div class="insights-header">
+            <div>
+                <p class="section-label">Insights</p>
+                <h2 class="section-heading">Useful thinking, freely shared</h2>
+            </div>
+        </div>
+        <div class="insights-grid">
+            <article class="insight-card">
+                <div class="insight-bar"></div>
+                <div class="insight-body">
+                    <p class="insight-tag">Operations</p>
+                    <h3>Three signs your operations are costing you money you don't know about</h3>
+                    <p>Most operational waste isn't dramatic. It's the steady drip of small inefficiencies that everyone has got used to. Here's how to spot them.</p>
+                    <a href="#">Read more</a>
+                </div>
+            </article>
+            <article class="insight-card">
+                <div class="insight-bar"></div>
+                <div class="insight-body">
+                    <p class="insight-tag">Leadership</p>
+                    <h3>Why your business can't grow past you (and what to do about it)</h3>
+                    <p>The skills that built your business are often the same ones holding it back. Delegation isn't about trust; it's about structure.</p>
+                    <a href="#">Read more</a>
+                </div>
+            </article>
+            <article class="insight-card">
+                <div class="insight-bar"></div>
+                <div class="insight-body">
+                    <p class="insight-tag">Strategy</p>
+                    <h3>The profit you can't see on your P&amp;L</h3>
+                    <p>Revenue is vanity, profit is sanity. But the real question is: which activities are actually generating your margin, and which are quietly eroding it?</p>
+                    <a href="#">Read more</a>
+                </div>
+            </article>
+        </div>
+    </div>
+</section>
+
+<!-- DIAGNOSTIC -->
+<section class="diagnostic" id="diagnostic">
+    <div class="section-inner">
+        <div class="diagnostic-inner">
+            <div>
+                <p class="section-label">Free resource</p>
+                <h2 class="section-heading">The 5-minute business health check</h2>
+                <p>Before you speak to anyone, get a clear picture of where your business stands. Our free diagnostic asks the questions most business owners don't think to ask themselves.</p>
+                <ul class="diagnostic-features">
+                    <li>Takes less than 5 minutes</li>
+                    <li>Covers operations, finance, leadership, and growth</li>
+                    <li>Instant results with actionable takeaways</li>
+                    <li>Completely free, no email required</li>
+                    <li>No sales follow-up unless you ask for one</li>
+                </ul>
+                <a href="#" class="btn btn-primary">Start the diagnostic</a>
+            </div>
+            <div class="diagnostic-preview">
+                <h3>Sample questions</h3>
+                <p class="preview-sub">A taste of what the diagnostic covers:</p>
+                <div class="diag-question">Could your business run for a month without you being involved day to day?</div>
+                <div class="diag-question">Do you know, right now, which of your products or services is most profitable?</div>
+                <div class="diag-question">When did you last review a process and ask "why do we still do it this way?"</div>
+                <div class="diag-question">If your best employee left tomorrow, is their knowledge documented anywhere?</div>
+                <a href="#" class="btn btn-primary">Take the full diagnostic</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CONVERSATION CTA -->
+<section class="conversation" id="conversation">
+    <div class="section-inner">
+        <div class="conversation-inner">
+            <p class="section-label">Get in touch</p>
+            <h2 class="section-heading">Let's have a conversation</h2>
+            <p>30 minutes, no pitch, no obligation. Just an honest look at whether we can help. If we can't, we'll tell you, and if we know someone better suited, we'll point you in their direction.</p>
+            <div class="conversation-actions">
+                <a href="#" class="btn btn-dark">Book a free 30-minute call</a>
+                <a href="mailto:hello@arringtonconsultancy.com" class="btn btn-outline">Send an email</a>
+            </div>
+            <p class="direct">Or call directly: <a href="tel:+441234567890">01onal 234 5678</a></p>
+        </div>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+    <div class="footer-inner">
+        <div class="footer-top">
+            <div>
+                <div class="footer-brand">Arrington<span>.</span></div>
+                <p class="footer-desc">Business consultancy built on a simple idea: start with what you need, not what we sell.</p>
+            </div>
+            <div class="footer-col">
+                <h4>Navigate</h4>
+                <ul>
+                    <li><a href="#approach">How we work</a></li>
+                    <li><a href="#results">Results</a></li>
+                    <li><a href="#insights">Insights</a></li>
+                    <li><a href="#diagnostic">Free diagnostic</a></li>
+                    <li><a href="#conversation">Get in touch</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Contact</h4>
+                <p class="footer-contact-item">hello@arringtonconsultancy.com</p>
+                <p class="footer-contact-item">01onal 234 5678</p>
+                <p class="footer-contact-item" style="margin-top: 1rem;">Devon, United Kingdom</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <span>&copy; 2026 Arrington Business Consultancy. All rights reserved.</span>
+            <span>Privacy Policy</span>
+        </div>
+    </div>
+</footer>
+
+<script>
+    // Navbar scroll effect
+    window.addEventListener('scroll', () => {
+        document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+        a.addEventListener('click', e => {
+            e.preventDefault();
+            const target = document.querySelector(a.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                document.querySelector('.nav-links')?.classList.remove('open');
+            }
+        });
+    });
+
+    // Simple scroll-triggered fade-in
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.approach-card, .result-card, .insight-card, .diag-question').forEach(el => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(20px)';
+        el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        observer.observe(el);
+    });
+</script>
+
+</body>
+</html>
