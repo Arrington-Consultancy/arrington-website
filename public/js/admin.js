@@ -1,6 +1,13 @@
 (function () {
     'use strict';
 
+    // After an "Add section" click we reload the page and then scroll to the
+    // newly-added section. Browser scroll restoration would otherwise snap
+    // back to the previous scroll position just after our scroll fires.
+    if ('scrollRestoration' in history) {
+        history.scrollRestoration = 'manual';
+    }
+
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 
     // Section field labels for readable modal fields
