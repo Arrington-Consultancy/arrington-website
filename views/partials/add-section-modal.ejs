@@ -1,0 +1,34 @@
+<%
+// Template metadata — kept in sync with VALID_SECTIONS server-side.
+const templates = [
+    { id: 'hero',         label: 'Hero',                blurb: 'Headline, subtext, call-to-action and photo' },
+    { id: 'credentials',  label: 'Credentials',         blurb: 'Two columns: badge and headline statistic' },
+    { id: 'biography',    label: 'Biography',           blurb: 'Label, heading and two-column body text' },
+    { id: 'intervention', label: 'Intervention',        blurb: 'Centred statement block' },
+    { id: 'approach',     label: 'Approach',            blurb: 'Three numbered steps' },
+    { id: 'insights',     label: 'Insights',            blurb: 'Three-card grid with tags' },
+    { id: 'casestudy',    label: 'Case Study (timeline)', blurb: 'Three-phase horizontal timeline' },
+    { id: 'casestudy2',   label: 'Case Study (editorial)', blurb: 'Pull-quote intro, body and outcome block' },
+    { id: 'assessment',   label: 'Assessment',          blurb: 'Stacked question list' },
+    { id: 'filter',       label: 'Filter',              blurb: 'Short statement with two paragraphs' },
+    { id: 'contact',      label: 'Contact',             blurb: 'Heading, body and contact details' }
+];
+%>
+<div class="cms-modal-overlay" id="cmsAddSectionModal">
+    <div class="cms-modal cms-modal-wide">
+        <div class="cms-modal-header">
+            <span class="cms-modal-title">Add section</span>
+            <button class="cms-modal-close" id="cmsAddSectionClose" title="Close">&times;</button>
+        </div>
+        <p class="cms-add-intro">Choose a template. The new section will be added to the bottom of the page. Duplicates are allowed.</p>
+        <div class="cms-template-grid" id="cmsTemplateGrid">
+            <% for (const t of templates) { %>
+            <button class="cms-template-card" data-template-id="<%= t.id %>">
+                <img src="/img/templates/<%= t.id %>.svg" alt="" class="cms-template-thumb">
+                <div class="cms-template-label"><%= t.label %></div>
+                <div class="cms-template-blurb"><%= t.blurb %></div>
+            </button>
+            <% } %>
+        </div>
+    </div>
+</div>

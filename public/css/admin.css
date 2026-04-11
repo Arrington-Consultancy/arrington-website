@@ -41,18 +41,39 @@
     }
 }
 
-/* ---- SECTION MOVE BUTTONS ---- */
+/* ---- SECTION ACTION BUTTONS (edit, hide, up, down, delete) ----
+   Visual order left→right: edit ✎ · hide 👁 · up ▲ · down ▼ · delete ✕
+   Edit is leftmost, delete rightmost. Edit already lives at right:0.75rem
+   for legacy reasons, so we override it here alongside the new buttons. */
+.cms-section .cms-edit-btn {
+    right: 9.75rem;
+}
+
+.cms-hide-btn {
+    position: absolute;
+    top: 0.75rem;
+    right: 7.5rem;
+    z-index: 50;
+}
+
 .cms-move-up {
     position: absolute;
     top: 0.75rem;
-    right: 3rem;
+    right: 5.25rem;
     z-index: 50;
 }
 
 .cms-move-down {
     position: absolute;
     top: 0.75rem;
-    right: 5.25rem;
+    right: 3rem;
+    z-index: 50;
+}
+
+.cms-delete-btn {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
     z-index: 50;
 }
 
@@ -74,6 +95,11 @@
     padding: 0;
 }
 
+.cms-hide-btn,
+.cms-delete-btn {
+    font-size: 14px;
+}
+
 .cms-section:hover .cms-move-btn,
 .cms-move-btn:focus {
     opacity: 1;
@@ -93,6 +119,45 @@
     pointer-events: none;
     cursor: not-allowed;
     background: rgba(196, 122, 58, 0.08);
+}
+
+/* Hide button in "on" state (section currently hidden from public) */
+.cms-hide-btn-on {
+    background: rgba(196, 122, 58, 0.35);
+    border-color: rgba(196, 122, 58, 0.6);
+}
+
+/* Delete button: red accent to flag destructive action */
+.cms-delete-btn {
+    background: rgba(200, 60, 60, 0.15);
+    border-color: rgba(200, 60, 60, 0.35);
+    color: #d45a5a;
+}
+
+.cms-delete-btn:hover {
+    background: rgba(200, 60, 60, 0.3);
+}
+
+/* Dim sections that are hidden from the public (logged-in view only) */
+.cms-section-hidden {
+    opacity: 0.35;
+    position: relative;
+}
+
+.cms-section-hidden::after {
+    content: 'Hidden from public';
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    background: rgba(0, 0, 0, 0.6);
+    color: #c47a3a;
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    pointer-events: none;
+    z-index: 60;
 }
 
 @media (max-width: 900px) {
@@ -180,6 +245,92 @@
     max-height: 85vh;
     overflow-y: auto;
     padding: 2rem;
+}
+
+.cms-modal-wide {
+    max-width: 920px;
+}
+
+/* ---- ADD SECTION TEMPLATE PICKER ---- */
+.cms-add-intro {
+    color: #8a8680;
+    font-size: 0.85rem;
+    margin: 0 0 1.25rem;
+}
+
+.cms-add-empty {
+    color: #8a8680;
+    font-size: 0.9rem;
+    text-align: center;
+    padding: 2rem 1rem;
+    border: 1px dashed rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+}
+
+.cms-template-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.9rem;
+}
+
+.cms-template-card {
+    background: #141414;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 6px;
+    padding: 0.75rem;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    transition: border-color 0.15s, transform 0.15s, background 0.15s;
+}
+
+.cms-template-card:hover {
+    border-color: rgba(196, 122, 58, 0.55);
+    background: #181818;
+    transform: translateY(-1px);
+}
+
+.cms-template-card:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.cms-template-thumb {
+    width: 100%;
+    height: auto;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    display: block;
+    background: #1a1a1a;
+}
+
+.cms-template-label {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1rem;
+    color: #f0ece6;
+    margin-top: 0.25rem;
+}
+
+.cms-template-blurb {
+    font-size: 0.75rem;
+    color: #8a8680;
+    line-height: 1.35;
+}
+
+/* Brief highlight flash when a newly-added section is scrolled to */
+.cms-section-just-added {
+    animation: cms-section-flash 1.4s ease-out;
+}
+
+@keyframes cms-section-flash {
+    0%   { box-shadow: inset 0 0 0 3px rgba(196, 122, 58, 0); }
+    20%  { box-shadow: inset 0 0 0 3px rgba(196, 122, 58, 0.7); }
+    100% { box-shadow: inset 0 0 0 3px rgba(196, 122, 58, 0); }
 }
 
 .cms-modal-header {

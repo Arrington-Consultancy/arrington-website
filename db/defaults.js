@@ -90,6 +90,8 @@ const defaults = {
   // Site settings
   'site.theme': 'dark',
   'site.section_order': JSON.stringify(['hero','credentials','biography','intervention','approach','insights','casestudy','casestudy2','assessment','filter','contact']),
+  'site.hidden_sections': '[]',
+  'site.deleted_sections': '[]',
 
   // Contact
   'contact.label': 'Start a conversation',

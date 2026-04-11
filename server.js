@@ -199,33 +199,69 @@ app.get('/', async (req, res, next) => {
     rows.forEach(r => { content[r.section_key] = r.content; });
     const activeTheme = content['site.theme'] || 'dark';
     const theme = themes[activeTheme] || themes.dark;
-    const defaultOrder = ['hero','credentials','biography','intervention','approach','insights','casestudy','casestudy2','assessment','filter','contact'];
-    let sectionOrder = defaultOrder;
+    const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','casestudy','casestudy2','assessment','filter','contact'];
+    const defaultOrder = VALID_TEMPLATES.slice();
+    // Section instance IDs: either `{template}` or `{template}__N`.
+    const baseOf = (id) => {
+      const m = /^([a-z0-9]+)(?:__(\d+))?$/.exec(id || '');
+      return m && VALID_TEMPLATES.includes(m[1]) ? m[1] : null;
+    };
+    const isValid = (id) => baseOf(id) !== null;
+
+    let deletedSections = [];
+    try {
+      const parsed = JSON.parse(content['site.deleted_sections'] || '[]');
+      if (Array.isArray(parsed)) deletedSections = parsed.filter(s => VALID_TEMPLATES.includes(s));
+    } catch (e) { /* ignore */ }
+    let hiddenSections = [];
+    try {
+      const parsed = JSON.parse(content['site.hidden_sections'] || '[]');
+      if (Array.isArray(parsed)) hiddenSections = parsed.filter(isValid);
+    } catch (e) { /* ignore */ }
+
+    let sectionOrder = defaultOrder.filter(s => !deletedSections.includes(s));
     try {
       if (content['site.section_order']) {
         const parsed = JSON.parse(content['site.section_order']);
         if (Array.isArray(parsed)) {
-          // Start from the stored order, then insert any sections that are
-          // new since the order was last saved. Each new section is placed
-          // immediately after the section that precedes it in defaultOrder,
-          // so additions land in their natural position instead of being
-          // dumped at the end of the page.
-          const merged = parsed.filter(s => defaultOrder.includes(s));
-          const missing = defaultOrder.filter(s => !merged.includes(s));
-          for (const s of missing) {
-            const idx = defaultOrder.indexOf(s);
+          // Keep valid instance IDs. Drop any base instance that was later
+          // deleted (suffixed instances are fine — they aren't auto-merged).
+          const merged = parsed.filter(s => {
+            if (!isValid(s)) return false;
+            const base = baseOf(s);
+            if (s === base && deletedSections.includes(base)) return false;
+            return true;
+          });
+          // Auto-merge only base templates that have NO instance on the page
+          // and are not in deleted_sections (so genuinely new templates get
+          // picked up on existing deploys without stomping on user state).
+          const presentTemplates = new Set(merged.map(baseOf));
+          const missing = defaultOrder.filter(t => !presentTemplates.has(t) && !deletedSections.includes(t));
+          for (const t of missing) {
+            const idx = defaultOrder.indexOf(t);
             let insertAt = merged.length;
             for (let i = idx - 1; i >= 0; i--) {
-              const prevPos = merged.indexOf(defaultOrder[i]);
+              const prev = defaultOrder[i];
+              const prevPos = merged.indexOf(prev);
               if (prevPos !== -1) { insertAt = prevPos + 1; break; }
             }
-            merged.splice(insertAt, 0, s);
+            merged.splice(insertAt, 0, t);
           }
           sectionOrder = merged;
         }
       }
     } catch (e) { /* use default */ }
-    res.render('index', { content, theme, activeTheme, themes, sectionOrder });
+
+    // Instance → template map for the view loop.
+    const instanceTemplates = {};
+    for (const iid of sectionOrder) instanceTemplates[iid] = baseOf(iid);
+
+    // Public visitors never see hidden sections. Logged-in users still see
+    // them (dimmed) so they can unhide them.
+    const renderOrder = res.locals.user
+      ? sectionOrder
+      : sectionOrder.filter(s => !hiddenSections.includes(s));
+    res.render('index', { content, theme, activeTheme, themes, sectionOrder: renderOrder, hiddenSections, instanceTemplates });
   } catch (err) {
     next(err);
   }

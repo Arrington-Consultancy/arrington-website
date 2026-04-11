@@ -113,9 +113,17 @@
 
     let currentSection = null;
 
+    // Instance IDs of the form `{template}__N` carry an extra suffix that
+    // fieldLabels and sectionTitles don't know about. Strip the suffix before
+    // lookup so duplicates share their template's labels.
+    function normalizeKey(key) {
+        return key.replace(/__\d+/, '');
+    }
+
     async function openModal(section) {
         currentSection = section;
-        modalTitle.textContent = 'Edit: ' + (sectionTitles[section] || section);
+        const titleKey = normalizeKey(section);
+        modalTitle.textContent = 'Edit: ' + (sectionTitles[titleKey] || titleKey);
         modalFields.innerHTML = '<p class="cms-modal-loading">Loading...</p>';
         modal.classList.add('active');
 
@@ -133,7 +141,7 @@
 
                 const label = document.createElement('label');
                 label.className = 'cms-field-label';
-                label.textContent = fieldLabels[key] || key.split('.').pop().replace(/_/g, ' ');
+                label.textContent = fieldLabels[normalizeKey(key)] || key.split('.').pop().replace(/_/g, ' ');
                 div.appendChild(label);
 
                 const textarea = document.createElement('textarea');
@@ -219,10 +227,10 @@
 
     function updateMoveButtons() {
         const sections = sectionsContainer.querySelectorAll('section[data-section-id]');
-        document.querySelectorAll('.cms-move-btn').forEach(btn => {
+        const sectionsList = Array.from(sections);
+        document.querySelectorAll('.cms-move-up, .cms-move-down').forEach(btn => {
             const sectionId = btn.dataset.sectionId;
             const section = document.querySelector(`section[data-section-id="${sectionId}"]`);
-            const sectionsList = Array.from(sections);
             const index = sectionsList.indexOf(section);
             if (btn.classList.contains('cms-move-up')) {
                 btn.disabled = (index === 0);
@@ -290,6 +298,156 @@
     });
 
     updateMoveButtons();
+
+    // ---- HIDE / SHOW SECTION ----
+    async function setHidden(sectionId, hidden) {
+        try {
+            const res = await fetch('/api/content/visibility', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify({ sectionId, hidden })
+            });
+            if (!res.ok) throw new Error('Visibility update failed');
+            return true;
+        } catch (err) {
+            alert('Failed to update section visibility. Please try again.');
+            return false;
+        }
+    }
+
+    document.querySelectorAll('.cms-hide-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const sectionId = btn.dataset.sectionId;
+            const section = document.querySelector(`section[data-section-id="${sectionId}"]`);
+            if (!section) return;
+            const willHide = !section.classList.contains('cms-section-hidden');
+            const ok = await setHidden(sectionId, willHide);
+            if (!ok) return;
+            section.classList.toggle('cms-section-hidden', willHide);
+            // Update all hide buttons for this section id (credentials has one,
+            // but this keeps things robust if we ever add more).
+            document.querySelectorAll(`.cms-hide-btn[data-section-id="${sectionId}"]`).forEach(b => {
+                b.classList.toggle('cms-hide-btn-on', willHide);
+                b.title = willHide ? 'Show section' : 'Hide section';
+            });
+        });
+    });
+
+    // ---- DELETE SECTION ----
+    document.querySelectorAll('.cms-delete-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const sectionId = btn.dataset.sectionId;
+            const confirmed = window.confirm(
+                `Delete the "${sectionId}" section?\n\n` +
+                `It will be removed from the page permanently. The content stays in the database, so it can be brought back via "Reset to defaults" in the admin panel.`
+            );
+            if (!confirmed) return;
+
+            try {
+                const res = await fetch(`/api/content/section/${encodeURIComponent(sectionId)}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    }
+                });
+                if (!res.ok) throw new Error('Delete failed');
+                const section = document.querySelector(`section[data-section-id="${sectionId}"]`);
+                if (section) section.remove();
+                updateMoveButtons();
+            } catch (err) {
+                alert('Failed to delete section. Please try again.');
+            }
+        });
+    });
+
+    // ---- ADD SECTION ----
+    const addSectionBtn = document.getElementById('cmsAddSectionBtn');
+    const addSectionModal = document.getElementById('cmsAddSectionModal');
+    const addSectionClose = document.getElementById('cmsAddSectionClose');
+    const templateGrid = document.getElementById('cmsTemplateGrid');
+
+    function openAddSectionModal() {
+        // All 11 templates are always selectable — duplicates allowed.
+        addSectionModal.classList.add('active');
+        adminPanel?.classList.remove('active');
+    }
+
+    function closeAddSectionModal() {
+        addSectionModal.classList.remove('active');
+    }
+
+    if (addSectionBtn) {
+        addSectionBtn.addEventListener('click', openAddSectionModal);
+    }
+    if (addSectionClose) {
+        addSectionClose.addEventListener('click', closeAddSectionModal);
+    }
+    if (addSectionModal) {
+        addSectionModal.addEventListener('click', (e) => {
+            if (e.target === addSectionModal) closeAddSectionModal();
+        });
+    }
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && addSectionModal?.classList.contains('active')) {
+            closeAddSectionModal();
+        }
+    });
+
+    if (templateGrid) {
+        templateGrid.querySelectorAll('.cms-template-card').forEach(card => {
+            card.addEventListener('click', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (card.disabled) return;
+                const templateId = card.dataset.templateId;
+                card.disabled = true;
+                try {
+                    const res = await fetch(`/api/content/section/${encodeURIComponent(templateId)}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': csrfToken
+                        }
+                    });
+                    if (!res.ok) throw new Error('Add failed');
+                    const data = await res.json().catch(() => ({}));
+                    // Server returns the actual instance ID it allocated; flag
+                    // it so we can scroll to the right element after reload.
+                    const instanceId = data.instanceId || templateId;
+                    try { sessionStorage.setItem('cmsJustAdded', instanceId); } catch (err) {}
+                    window.location.reload();
+                } catch (err) {
+                    card.disabled = false;
+                    alert('Failed to add section. Please try again.');
+                }
+            });
+        });
+    }
+
+    // After a reload triggered by "Add section", scroll to and highlight it.
+    try {
+        const justAdded = sessionStorage.getItem('cmsJustAdded');
+        if (justAdded) {
+            sessionStorage.removeItem('cmsJustAdded');
+            const target = document.querySelector(`section[data-section-id="${justAdded}"]`);
+            if (target) {
+                // Defer slightly so layout and fonts have settled.
+                setTimeout(() => {
+                    scrollToSection(target);
+                    target.classList.add('cms-section-just-added');
+                    setTimeout(() => target.classList.remove('cms-section-just-added'), 1500);
+                }, 80);
+            }
+        }
+    } catch (err) { /* sessionStorage may be disabled */ }
 
     // ---- ADMIN PANEL ----
     const adminToggle = document.getElementById('cmsAdminToggle');
