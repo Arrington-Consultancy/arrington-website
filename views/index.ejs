@@ -11,7 +11,7 @@
     <meta name="csrf-token" content="<%= csrfToken %>">
     <link rel="stylesheet" href="/css/admin.css?v=<%= Date.now() %>">
     <% } %>
-    <style>
+    <style nonce="<%= nonce %>">
         *, *::before, *::after {
             margin: 0;
             padding: 0;
@@ -1046,7 +1046,7 @@
     </div>
 </footer>
 
-<script>
+<script nonce="<%= nonce %>">
     window.addEventListener('scroll', () => {
         document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 20);
     });
@@ -1079,7 +1079,7 @@
 <% if (user) { %>
 <%- include('partials/edit-modal') %>
 <%- include('partials/admin-menu') %>
-<script src="/js/admin.js?v=<%= Date.now() %>"></script>
+<script nonce="<%= nonce %>" src="/js/admin.js?v=<%= Date.now() %>"></script>
 <% } %>
 
 </body>

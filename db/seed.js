@@ -15,21 +15,36 @@ async function seed() {
   console.log('Tables created/verified.');
 
   // Seed users (idempotent: ON CONFLICT DO NOTHING)
-  const users = [
-    { username: 'nat', password: '$caryBee14', role: 'admin' },
-    { username: 'tom', password: 'hotwife', role: 'content' }
-  ];
+  // Passwords must come from env vars — never commit credentials.
+  // If the users already exist we skip this step entirely so redeploys
+  // don't require NAT_PASSWORD / TOM_PASSWORD to be present.
+  const { rows: existingUsers } = await db.query('SELECT username FROM users');
+  const existingNames = new Set(existingUsers.map(r => r.username));
+  const allSeeded = ['nat', 'tom'].every(u => existingNames.has(u));
 
-  for (const user of users) {
-    const hash = await bcrypt.hash(user.password, BCRYPT_ROUNDS);
-    await db.query(
-      `INSERT INTO users (username, password_hash, role)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (username) DO NOTHING`,
-      [user.username, hash, user.role]
-    );
+  if (allSeeded) {
+    console.log('Users already seeded, skipping.');
+  } else {
+    const natPassword = process.env.NAT_PASSWORD;
+    const tomPassword = process.env.TOM_PASSWORD;
+    if (!natPassword || !tomPassword) {
+      throw new Error('NAT_PASSWORD and TOM_PASSWORD must be set the first time seeding runs.');
+    }
+    const users = [
+      { username: 'nat', password: natPassword, role: 'admin' },
+      { username: 'tom', password: tomPassword, role: 'content' }
+    ];
+    for (const user of users) {
+      const hash = await bcrypt.hash(user.password, BCRYPT_ROUNDS);
+      await db.query(
+        `INSERT INTO users (username, password_hash, role)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (username) DO NOTHING`,
+        [user.username, hash, user.role]
+      );
+    }
+    console.log('Users seeded.');
   }
-  console.log('Users seeded.');
 
   // Seed content (idempotent: ON CONFLICT DO NOTHING)
   for (const [key, content] of Object.entries(defaults)) {

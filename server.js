@@ -1,9 +1,12 @@
+const crypto = require('crypto');
 const express = require('express');
 const path = require('path');
 const session = require('express-session');
 const PgSession = require('connect-pg-simple')(session);
 const helmet = require('helmet');
+const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
+const rateLimit = require('express-rate-limit');
 const { doubleCsrf } = require('csrf-csrf');
 const db = require('./db/pool');
 const themes = require('./db/themes');
@@ -15,24 +18,70 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const isProd = !!process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 'production';
 
-// Trust Railway's proxy (required for rate limiting and secure cookies behind reverse proxy)
+// Fail fast if SESSION_SECRET is missing in production — we never want to
+// fall back to a hardcoded dev secret on the real domain.
+if (isProd && !process.env.SESSION_SECRET) {
+  console.error('FATAL: SESSION_SECRET must be set in production.');
+  process.exit(1);
+}
+const sessionSecret = process.env.SESSION_SECRET || 'dev-only-secret-change-me';
+
+// Trust Railway's proxy (required for rate limiting, secure cookies, and
+// x-forwarded-proto detection behind the reverse proxy).
 app.set('trust proxy', 1);
 
 // View engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// Security headers (relaxed CSP for inline styles/scripts from original site)
+// HTTPS enforcement in production (belt and braces — Railway already terminates
+// TLS, but this guarantees any plain HTTP request is redirected).
+app.use((req, res, next) => {
+  if (isProd && req.header('x-forwarded-proto') !== 'https') {
+    return res.redirect(301, `https://${req.header('host')}${req.url}`);
+  }
+  next();
+});
+
+// Request logging
+app.use(morgan(isProd ? 'combined' : 'dev', {
+  skip: (req) => req.url.startsWith('/img/')
+}));
+
+// Per-request CSP nonce for inline <style> / <script> blocks in the
+// rendered views. A fresh nonce per request means an attacker cannot
+// inject a <script> that the browser will execute.
+app.use((req, res, next) => {
+  res.locals.nonce = crypto.randomBytes(16).toString('base64');
+  next();
+});
+
+// Security headers — strict CSP for the app, HSTS on in prod.
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:"]
+      styleSrc: [
+        "'self'",
+        (req, res) => `'nonce-${res.locals.nonce}'`,
+        'https://fonts.googleapis.com'
+      ],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+      scriptSrc: [
+        "'self'",
+        (req, res) => `'nonce-${res.locals.nonce}'`
+      ],
+      imgSrc: ["'self'", 'data:'],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      frameAncestors: ["'self'"]
     }
-  }
+  },
+  hsts: isProd ? {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  } : false
 }));
 
 // Cookie parsing (required by csrf-csrf)
@@ -42,11 +91,14 @@ app.use(cookieParser());
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: false }));
 
+// Health check endpoint for Railway / uptime monitors
+app.get('/health', (req, res) => res.json({ ok: true }));
+
 // Static files
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Serve images from database (with fallback to disk for first deploy)
-app.get('/img/:key', async (req, res) => {
+app.get('/img/:key', async (req, res, next) => {
   try {
     const { rows } = await db.query(
       'SELECT data, mime_type FROM images WHERE image_key = $1',
@@ -59,8 +111,7 @@ app.get('/img/:key', async (req, res) => {
     }
     res.status(404).send('Image not found');
   } catch (err) {
-    console.error('Image serve error:', err);
-    res.status(500).send('Server error');
+    next(err);
   }
 });
 
@@ -71,7 +122,7 @@ app.use(session({
     tableName: 'session',
     createTableIfMissing: false
   }),
-  secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
+  secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -84,7 +135,7 @@ app.use(session({
 
 // CSRF protection
 const { generateToken, doubleCsrfProtection } = doubleCsrf({
-  getSecret: () => process.env.SESSION_SECRET || 'dev-secret-change-in-production',
+  getSecret: () => sessionSecret,
   cookieName: '_csrf',
   cookieOptions: {
     httpOnly: true,
@@ -111,18 +162,37 @@ app.use((req, res, next) => {
   next();
 });
 
+// Per-session (or per-IP, when logged out) rate limiter for authenticated
+// content/admin endpoints. Prevents a compromised session or chatty client
+// from hammering the DB, filling images, or DoS'ing image processing.
+const authedWriteLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.session?.user?.id ? `u:${req.session.user.id}` : `ip:${req.ip}`,
+  message: { error: 'Too many requests. Slow down.' }
+});
+
 // Routes
 app.use(authRoutes);
-app.use('/api/content', contentRoutes);
-app.use('/api/admin', adminRoutes);
+app.use('/api/content', authedWriteLimiter, contentRoutes);
+app.use('/api/admin', authedWriteLimiter, adminRoutes);
 
-// Serve v1.html as static
+// Serve v1.html as static with a relaxed CSP (legacy static page has
+// inline <style>/<script> blocks that predate the nonce setup).
 app.get('/v1.html', (req, res) => {
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+    "font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; " +
+    "img-src 'self' data:; object-src 'none'; base-uri 'self'"
+  );
   res.sendFile(path.join(__dirname, 'v1.html'));
 });
 
 // Main page
-app.get('/', async (req, res) => {
+app.get('/', async (req, res, next) => {
   try {
     const { rows } = await db.query('SELECT section_key, content FROM content');
     const content = {};
@@ -135,21 +205,47 @@ app.get('/', async (req, res) => {
       if (content['site.section_order']) {
         const parsed = JSON.parse(content['site.section_order']);
         if (Array.isArray(parsed)) {
-          // Add any new sections not yet in the stored order
           const missing = defaultOrder.filter(s => !parsed.includes(s));
           const merged = [...parsed, ...missing];
-          // Remove any sections no longer valid
           sectionOrder = merged.filter(s => defaultOrder.includes(s));
         }
       }
     } catch (e) { /* use default */ }
     res.render('index', { content, theme, activeTheme, themes, sectionOrder });
   } catch (err) {
-    console.error('Error loading content:', err);
-    res.status(500).send('Server error');
+    next(err);
   }
 });
 
+// 404 handler — must come after all routes
+app.use((req, res) => {
+  if (req.accepts('html')) {
+    return res.status(404).send('Not found');
+  }
+  res.status(404).json({ error: 'Not found' });
+});
+
+// Central error handler — must be the last middleware
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  const status = err.status || 500;
+  const body = { error: isProd ? 'Internal server error' : err.message };
+  if (req.accepts('json') && !req.accepts('html')) {
+    return res.status(status).json(body);
+  }
+  res.status(status).send(body.error);
+});
+
+// Process-level safety nets
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled promise rejection:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception:', err);
+  process.exit(1);
+});
+
 app.listen(PORT, () => {
-  console.log(`Arrington CMS running on port ${PORT}`);
+  console.log(`[${isProd ? 'PROD' : 'DEV'}] Arrington CMS running on port ${PORT}`);
 });

@@ -527,3 +527,58 @@
     gap: 0.75rem;
     justify-content: center;
 }
+
+.cms-hidden {
+    display: none;
+}
+
+.cms-inline-form {
+    margin: 0;
+}
+
+.cms-btn-danger-solid {
+    background: #e85d5d;
+    border: none;
+    color: #fff;
+}
+
+/* Helper classes that replace inline style= attributes (kept out of the
+   markup so the page can run under a strict CSP without 'unsafe-inline'). */
+.cms-modal-loading {
+    color: #8a8680;
+    font-size: 0.85rem;
+}
+
+.cms-modal-error {
+    color: #e85d5d;
+    font-size: 0.85rem;
+}
+
+.cms-log-loading,
+.cms-log-empty {
+    color: #5a5650;
+    font-size: 0.78rem;
+}
+
+.cms-log-error {
+    color: #e85d5d;
+    font-size: 0.78rem;
+}
+
+.cms-backup-entry {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.cms-backup-restore {
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #d4d0c8;
+    padding: 0.3rem 0.6rem;
+    border-radius: 3px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    white-space: nowrap;
+    margin-left: 0.5rem;
+}

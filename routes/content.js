@@ -117,7 +117,7 @@ router.put('/image/:key', requireAuth, async (req, res) => {
   const buffer = Buffer.from(data, 'base64');
 
   if (buffer.length > MAX_SIZE) {
-    return res.status(400).json({ error: 'Image too large (max 4MB)' });
+    return res.status(400).json({ error: 'Image too large (max 2MB)' });
   }
 
   try {

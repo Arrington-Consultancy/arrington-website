@@ -2,12 +2,16 @@
   "name": "arrington-prototype",
   "version": "2.0.0",
   "private": true,
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "start": "node db/seed.js && node server.js",
+    "seed": "node db/seed.js",
     "dev": "node db/seed.js && npx nodemon server.js"
   },
   "dependencies": {
-    "bcrypt": "^5.1.1",
+    "bcrypt": "^6.0.0",
     "connect-pg-simple": "^10.0.0",
     "cookie-parser": "^1.4.7",
     "csrf-csrf": "^3.0.6",
@@ -16,6 +20,7 @@
     "express-rate-limit": "^7.5.0",
     "express-session": "^1.18.1",
     "helmet": "^8.0.0",
+    "morgan": "^1.10.1",
     "pg": "^8.13.1",
     "sanitize-html": "^2.14.0"
   }

@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
-    <style>
+    <style nonce="<%= nonce %>">
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
             <% for (const [prop, val] of Object.entries(theme.vars)) { %>

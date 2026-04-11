@@ -113,7 +113,7 @@
     async function openModal(section) {
         currentSection = section;
         modalTitle.textContent = 'Edit: ' + (sectionTitles[section] || section);
-        modalFields.innerHTML = '<p style="color:#8a8680;font-size:0.85rem">Loading...</p>';
+        modalFields.innerHTML = '<p class="cms-modal-loading">Loading...</p>';
         modal.classList.add('active');
 
         try {
@@ -150,7 +150,7 @@
                 modalFields.appendChild(div);
             }
         } catch (err) {
-            modalFields.innerHTML = '<p style="color:#e85d5d;font-size:0.85rem">Failed to load content. Please try again.</p>';
+            modalFields.innerHTML = '<p class="cms-modal-error">Failed to load content. Please try again.</p>';
         }
     }
 
@@ -315,9 +315,9 @@
     // Activity log
     if (logBtn) {
         logBtn.addEventListener('click', async () => {
-            logSection.style.display = logSection.style.display === 'none' ? 'block' : 'none';
-            if (logSection.style.display === 'block') {
-                logEntries.innerHTML = '<span style="color:#5a5650;font-size:0.78rem">Loading...</span>';
+            const wasHidden = logSection.classList.toggle('cms-hidden');
+            if (!wasHidden) {
+                logEntries.innerHTML = '<span class="cms-log-loading">Loading...</span>';
                 try {
                     const res = await fetch('/api/admin/log', {
                         headers: { 'X-CSRF-Token': csrfToken }
@@ -325,7 +325,7 @@
                     const data = await res.json();
 
                     if (data.log.length === 0) {
-                        logEntries.innerHTML = '<span style="color:#5a5650;font-size:0.78rem">No activity yet.</span>';
+                        logEntries.innerHTML = '<span class="cms-log-empty">No activity yet.</span>';
                         return;
                     }
 
@@ -344,7 +344,7 @@
                         </div>`;
                     }).join('');
                 } catch (err) {
-                    logEntries.innerHTML = '<span style="color:#e85d5d;font-size:0.78rem">Failed to load log.</span>';
+                    logEntries.innerHTML = '<span class="cms-log-error">Failed to load log.</span>';
                 }
             }
         });
@@ -480,9 +480,9 @@
     });
 
     if (backupsListBtn) backupsListBtn.addEventListener('click', async () => {
-        backupsListSection.style.display = backupsListSection.style.display === 'none' ? 'block' : 'none';
-        if (backupsListSection.style.display === 'block') {
-            backupsEntries.innerHTML = '<span style="color:#5a5650;font-size:0.78rem">Loading...</span>';
+        const wasHidden = backupsListSection.classList.toggle('cms-hidden');
+        if (!wasHidden) {
+            backupsEntries.innerHTML = '<span class="cms-log-loading">Loading...</span>';
             try {
                 const res = await fetch('/api/admin/backups', {
                     headers: { 'X-CSRF-Token': csrfToken }
@@ -490,7 +490,7 @@
                 const data = await res.json();
 
                 if (data.backups.length === 0) {
-                    backupsEntries.innerHTML = '<span style="color:#5a5650;font-size:0.78rem">No backups yet.</span>';
+                    backupsEntries.innerHTML = '<span class="cms-log-empty">No backups yet.</span>';
                     return;
                 }
 
@@ -500,13 +500,12 @@
                         day: '2-digit', month: 'short', year: 'numeric',
                         hour: '2-digit', minute: '2-digit'
                     });
-                    return `<div class="cms-log-entry" style="display:flex;justify-content:space-between;align-items:center">
+                    return `<div class="cms-log-entry cms-backup-entry">
                         <div>
                             <span class="log-action">${b.label}</span><br>
                             <span class="log-time">${b.username} &middot; ${timeStr}</span>
                         </div>
-                        <button class="cms-backup-restore" data-id="${b.id}" data-label="${b.label}"
-                                style="background:none;border:1px solid rgba(255,255,255,0.1);color:#d4d0c8;padding:0.3rem 0.6rem;border-radius:3px;font-size:0.7rem;cursor:pointer;white-space:nowrap;margin-left:0.5rem">
+                        <button class="cms-backup-restore" data-id="${b.id}" data-label="${b.label}">
                             Restore
                         </button>
                     </div>`;
@@ -521,7 +520,7 @@
                     });
                 });
             } catch (err) {
-                backupsEntries.innerHTML = '<span style="color:#e85d5d;font-size:0.78rem">Failed to load backups.</span>';
+                backupsEntries.innerHTML = '<span class="cms-log-error">Failed to load backups.</span>';
             }
         }
     });
@@ -560,6 +559,14 @@
     });
 
     // ---- THEME SWITCHER ----
+    // Apply each swatch's background from its data-swatch attribute so the
+    // admin-menu partial doesn't need an inline style= attribute (CSP).
+    document.querySelectorAll('.cms-theme-swatch').forEach(swatch => {
+        if (swatch.dataset.swatch) {
+            swatch.style.background = swatch.dataset.swatch;
+        }
+    });
+
     document.querySelectorAll('.cms-theme-swatch').forEach(swatch => {
         swatch.addEventListener('click', async () => {
             const theme = swatch.dataset.theme;

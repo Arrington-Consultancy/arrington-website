@@ -89,7 +89,7 @@ const defaults = {
 
   // Contact
   'contact.label': 'Start a conversation',
-  'contact.heading': 'We start with a coffee',
+  'contact.heading': 'I start with a coffee',
   'contact.body': 'If I cannot add significant value, I will not take your money. That is not a slogan. It is how I work.',
   'contact.email': 'tom@arringtonconsultancy.com',
   'contact.phone': '01752 477026'

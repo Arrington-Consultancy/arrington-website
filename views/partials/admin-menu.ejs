@@ -14,8 +14,8 @@
                 <% for (const [key, t] of Object.entries(themes)) { %>
                 <button class="cms-theme-swatch<%= key === activeTheme ? ' active' : '' %>"
                         data-theme="<%= key %>"
-                        title="<%= t.label %>"
-                        style="background: <%= t.swatch %>">
+                        data-swatch="<%= t.swatch %>"
+                        title="<%= t.label %>">
                 </button>
                 <% } %>
             </div>
@@ -30,16 +30,16 @@
         <% } %>
         <button class="cms-admin-action" id="cmsLogBtn">Activity log</button>
         <div class="cms-admin-divider"></div>
-        <form method="POST" action="/logout" style="margin:0">
+        <form method="POST" action="/logout" class="cms-inline-form">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <button type="submit" class="cms-admin-action">Log out</button>
         </form>
     </div>
-    <div class="cms-admin-log" id="cmsAdminLog" style="display:none">
+    <div class="cms-admin-log cms-hidden" id="cmsAdminLog">
         <div class="cms-admin-log-title">Recent activity</div>
         <div id="cmsLogEntries">Loading...</div>
     </div>
-    <div class="cms-admin-log" id="cmsBackupsList" style="display:none">
+    <div class="cms-admin-log cms-hidden" id="cmsBackupsList">
         <div class="cms-admin-log-title">Backups</div>
         <div id="cmsBackupsEntries">Loading...</div>
     </div>
@@ -50,7 +50,7 @@
         <p>Are you sure? This will revert all content to the original version. Any edits will be lost.</p>
         <div class="cms-confirm-actions">
             <button class="cms-btn cms-btn-cancel" id="cmsConfirmCancel">Cancel</button>
-            <button class="cms-btn cms-btn-save cms-admin-action danger" id="cmsConfirmReset" style="background:#e85d5d;border:none;color:#fff">Reset</button>
+            <button class="cms-btn cms-btn-save cms-admin-action danger cms-btn-danger-solid" id="cmsConfirmReset">Reset</button>
         </div>
     </div>
 </div>
