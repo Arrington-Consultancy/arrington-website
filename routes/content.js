@@ -64,7 +64,7 @@ router.put('/', requireAuth, async (req, res) => {
 });
 
 // Update section order
-const VALID_SECTIONS = ['hero','credentials','biography','approach','insights','casestudy','casestudy2','assessment','filter','contact'];
+const VALID_SECTIONS = ['hero','credentials','biography','intervention','approach','insights','casestudy','casestudy2','assessment','filter','contact'];
 
 router.put('/order', requireAuth, async (req, res) => {
   const { order } = req.body;

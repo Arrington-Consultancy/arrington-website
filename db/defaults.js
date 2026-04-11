@@ -48,6 +48,10 @@ const defaults = {
   'insights.card_3_title': 'If you are the only person who can answer the phone, you do not have a business',
   'insights.card_3_body': 'You have a trade that depends on you being present. That is fine if you want it. It is a problem if you want to sell, retire, or just take a holiday.',
 
+  // Intervention
+  'intervention.heading': '<strong>The Intervention</strong>',
+  'intervention.subtext': 'Most businesses are built on the owner\u2019s pulse. If you stop, the momentum stops. I identify the structural fault-lines that prevent scale and install the operational systems required for a <strong>clean exit</strong>.',
+
   // Case Study
   'casestudy.label': 'Case study',
   'casestudy.heading': 'Orca Marine',
@@ -85,7 +89,7 @@ const defaults = {
 
   // Site settings
   'site.theme': 'dark',
-  'site.section_order': JSON.stringify(['hero','credentials','biography','approach','insights','casestudy','casestudy2','assessment','filter','contact']),
+  'site.section_order': JSON.stringify(['hero','credentials','biography','intervention','approach','insights','casestudy','casestudy2','assessment','filter','contact']),
 
   // Contact
   'contact.label': 'Start a conversation',

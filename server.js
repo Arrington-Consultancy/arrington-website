@@ -199,15 +199,29 @@ app.get('/', async (req, res, next) => {
     rows.forEach(r => { content[r.section_key] = r.content; });
     const activeTheme = content['site.theme'] || 'dark';
     const theme = themes[activeTheme] || themes.dark;
-    const defaultOrder = ['hero','credentials','biography','approach','insights','casestudy','casestudy2','assessment','filter','contact'];
+    const defaultOrder = ['hero','credentials','biography','intervention','approach','insights','casestudy','casestudy2','assessment','filter','contact'];
     let sectionOrder = defaultOrder;
     try {
       if (content['site.section_order']) {
         const parsed = JSON.parse(content['site.section_order']);
         if (Array.isArray(parsed)) {
-          const missing = defaultOrder.filter(s => !parsed.includes(s));
-          const merged = [...parsed, ...missing];
-          sectionOrder = merged.filter(s => defaultOrder.includes(s));
+          // Start from the stored order, then insert any sections that are
+          // new since the order was last saved. Each new section is placed
+          // immediately after the section that precedes it in defaultOrder,
+          // so additions land in their natural position instead of being
+          // dumped at the end of the page.
+          const merged = parsed.filter(s => defaultOrder.includes(s));
+          const missing = defaultOrder.filter(s => !merged.includes(s));
+          for (const s of missing) {
+            const idx = defaultOrder.indexOf(s);
+            let insertAt = merged.length;
+            for (let i = idx - 1; i >= 0; i--) {
+              const prevPos = merged.indexOf(defaultOrder[i]);
+              if (prevPos !== -1) { insertAt = prevPos + 1; break; }
+            }
+            merged.splice(insertAt, 0, s);
+          }
+          sectionOrder = merged;
         }
       }
     } catch (e) { /* use default */ }

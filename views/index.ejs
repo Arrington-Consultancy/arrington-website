@@ -603,6 +603,31 @@
             font-style: italic;
         }
 
+        /* ---- INTERVENTION ---- */
+        .intervention {
+            background: var(--dark-grey);
+            border-top: 1px solid var(--border);
+        }
+
+        .intervention .section-inner {
+            max-width: 760px;
+            text-align: center;
+        }
+
+        .intervention .section-heading {
+            margin-bottom: 1.5rem;
+        }
+
+        .intervention-body {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            line-height: 1.75;
+        }
+
+        .intervention-body strong {
+            color: var(--text-bright);
+        }
+
         /* ---- FILTER ---- */
         .filter {
             background: var(--black);
@@ -870,6 +895,19 @@
                 <p><%- content['biography.col_2_p2'] %></p>
             </div>
         </div>
+    </div>
+</section>
+<% } %>
+
+<% if (_sid === 'intervention') { %>
+<!-- INTERVENTION -->
+<section class="intervention" data-section-id="intervention">
+    <div class="section-inner cms-section" data-section="intervention">
+        <% if (user) { %><button class="cms-edit-btn" data-section="intervention" title="Edit section">&#9998;</button><% } %>
+        <% if (user) { %><button class="cms-move-btn cms-move-up" data-section-id="intervention" title="Move up">&#9650;</button><% } %>
+        <% if (user) { %><button class="cms-move-btn cms-move-down" data-section-id="intervention" title="Move down">&#9660;</button><% } %>
+        <h2 class="section-heading"><%- content['intervention.heading'] %></h2>
+        <p class="intervention-body"><%- content['intervention.subtext'] %></p>
     </div>
 </section>
 <% } %>
