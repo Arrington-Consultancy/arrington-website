@@ -27,6 +27,8 @@
         <% if (user.role === 'admin') { %>
         <button class="cms-admin-action danger" id="cmsResetBtn">Reset all content to defaults</button>
         <div class="cms-admin-divider"></div>
+        <button class="cms-admin-action" id="cmsCspBtn">CSP violations</button>
+        <div class="cms-admin-divider"></div>
         <% } %>
         <button class="cms-admin-action" id="cmsLogBtn">Activity log</button>
         <div class="cms-admin-divider"></div>
@@ -43,6 +45,12 @@
         <div class="cms-admin-log-title">Backups</div>
         <div id="cmsBackupsEntries">Loading...</div>
     </div>
+    <% if (user.role === 'admin') { %>
+    <div class="cms-admin-log cms-hidden" id="cmsCspList">
+        <div class="cms-admin-log-title">CSP violations on this page</div>
+        <div id="cmsCspEntries">None.</div>
+    </div>
+    <% } %>
 </div>
 
 <div class="cms-confirm-overlay" id="cmsConfirm">

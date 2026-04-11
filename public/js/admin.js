@@ -294,6 +294,9 @@
     const logBtn = document.getElementById('cmsLogBtn');
     const logSection = document.getElementById('cmsAdminLog');
     const logEntries = document.getElementById('cmsLogEntries');
+    const cspBtn = document.getElementById('cmsCspBtn');
+    const cspList = document.getElementById('cmsCspList');
+    const cspEntries = document.getElementById('cmsCspEntries');
     const resetBtn = document.getElementById('cmsResetBtn');
     const confirmOverlay = document.getElementById('cmsConfirm');
     const confirmCancel = document.getElementById('cmsConfirmCancel');
@@ -347,6 +350,35 @@
                     logEntries.innerHTML = '<span class="cms-log-error">Failed to load log.</span>';
                 }
             }
+        });
+    }
+
+    // ---- CSP VIOLATIONS (admin only) ----
+    function escapeHtml(s) {
+        return String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    if (cspBtn && cspList && cspEntries) {
+        cspBtn.addEventListener('click', () => {
+            const nowHidden = cspList.classList.toggle('cms-hidden');
+            if (nowHidden) return;
+            const violations = window.__cspViolations || [];
+            if (violations.length === 0) {
+                cspEntries.innerHTML = '<span class="cms-log-empty">No CSP violations on this page. Reload the page to refresh.</span>';
+                return;
+            }
+            cspEntries.innerHTML = violations.map(v => {
+                const where = v.source ? `${escapeHtml(v.source)}:${v.line}` : '';
+                return `<div class="cms-log-entry">
+                    <span class="log-action">${escapeHtml(v.directive)}</span><br>
+                    <span class="log-time">blocked: ${escapeHtml(v.blocked)}${where ? ' — ' + where : ''}</span>
+                </div>`;
+            }).join('');
         });
     }
 

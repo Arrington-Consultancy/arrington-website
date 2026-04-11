@@ -10,6 +10,24 @@
     <% if (user) { %>
     <meta name="csrf-token" content="<%= csrfToken %>">
     <link rel="stylesheet" href="/css/admin.css?v=<%= Date.now() %>">
+    <% if (user.role === 'admin') { %>
+    <script nonce="<%= nonce %>">
+        // Capture CSP violations as they happen so the admin menu can show
+        // them (registered in <head> so we don't miss any fired during
+        // initial page load).
+        window.__cspViolations = [];
+        document.addEventListener('securitypolicyviolation', function (e) {
+            window.__cspViolations.push({
+                directive: e.violatedDirective,
+                blocked: e.blockedURI || '(inline)',
+                source: e.sourceFile || '',
+                line: e.lineNumber || 0,
+                sample: e.sample || '',
+                time: new Date().toISOString()
+            });
+        });
+    </script>
+    <% } %>
     <% } %>
     <style nonce="<%= nonce %>">
         *, *::before, *::after {
