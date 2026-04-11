@@ -38,36 +38,51 @@ db/
                        redeploys don't need NAT_PASSWORD/TOM_PASSWORD set
 routes/
   auth.js              POST /login (rate-limited), POST /logout
-  content.js           GET/PUT content, PUT image, PUT section order
-                       (VALID_SECTIONS includes intervention)
+  content.js           GET/PUT content, PUT image, PUT section order,
+                       PUT visibility, POST /section/:template (add/duplicate),
+                       DELETE /section/:id. Holds VALID_TEMPLATES, the
+                       baseTemplate / isValidInstance / contentPrefixes
+                       helpers, and the instance ID allocator.
   admin.js             Activity log, reset, backup, restore, theme
 middleware/
   auth.js              requireAuth, requireAdmin
 views/
   index.ejs            Main page. Big inline <style> and <script> blocks
                        carry nonce="<%= nonce %>" so they pass the strict
-                       CSP. Sections rendered via a loop over sectionOrder.
+                       CSP. Sections rendered via a loop over sectionOrder
+                       that yields _iid + _tpl for each instance. Inline
+                       script also reassembles the obfuscated contact
+                       email/phone before any other anchor handling.
   login.ejs            Login page, also nonced, follows active theme
   partials/
-    edit-modal.ejs     Content editing modal
-    admin-menu.ejs     Gear-icon panel (theme swatches, backups, log,
-                       CSP violations panel for admins, logout)
+    edit-modal.ejs         Content editing modal
+    add-section-modal.ejs  Template picker grid (11 cards with SVG thumbnails)
+    admin-menu.ejs         Gear-icon panel (Add section, theme swatches,
+                           backups, log, CSP violations panel for admins,
+                           logout)
 public/
   css/admin.css        All CMS UI styles. Also holds helper classes
                        (cms-hidden, cms-inline-form, cms-btn-danger-solid,
                        cms-modal-loading, cms-log-empty, cms-backup-entry,
                        cms-backup-restore, etc.) that replaced the inline
-                       style="" attributes we removed for strict CSP.
+                       style="" attributes we removed for strict CSP. Adds
+                       hide/delete button styles, .cms-section-hidden dim
+                       state, the wide template-picker modal grid, and
+                       the cms-section-just-added flash keyframe.
   js/admin.js          Client-side editing, image upload, theme switch
                        (swatch backgrounds set via JS from data-swatch),
-                       backup logic, section reorder, CSP violations
-                       reader
+                       backup logic, section reorder, hide/delete/add
+                       handlers, CSP violations reader. Sets
+                       history.scrollRestoration = 'manual' so add-section
+                       reload-then-scroll isn't fought by the browser.
+  img/templates/       11 SVG wireframe thumbnails (one per template)
+                       used by the add-section modal.
 ```
 
 ## Database tables
 
 - **users** — seeded admin (`nat`) and content (`tom`) accounts
-- **content** — key-value store for all editable text (**69 keys** after the Intervention section was added) + `site.theme` + `site.section_order`
+- **content** — key-value store for all editable text (**71 keys** baseline) + `site.theme`, `site.section_order`, `site.hidden_sections`, `site.deleted_sections`. When a section is duplicated the new instance's content keys are seeded into this same table under the new instance ID's prefix.
 - **images** — binary image storage (logo, headshot, oxford badge) for persistence across Railway redeploys
 - **backups** — full snapshots of content + images (JSONB)
 - **session** — express-session store (connect-pg-simple)
@@ -91,18 +106,70 @@ Users are seeded on first run only — `db/seed.js` checks whether `nat` and `to
 - Content sanitised on save via `sanitize-html` (only `<strong>`, `<p>`, `<br>`, `<em>` allowed)
 - Credentials section split into two independently editable blocks (Oxford + statistic)
 
-## Section reordering
+## Section management (reorder, hide, delete, add, duplicate)
 
-- Logged-in users see up/down arrow buttons (▲ ▼) on hover, next to the edit pencil
-- Clicking swaps the section with its neighbour in the DOM and saves the order via `PUT /api/content/order`
-- Order stored as JSON array in the `site.section_order` content key
+Each editable section has five hover-revealed buttons in this visual order, left to right: ✎ edit · 👁 hide · ▲ up · ▼ down · ✕ delete. Edit and the up/down arrows behave as before; the rest are described below.
+
+### Reorder
+- ▲ / ▼ swap the section with its neighbour in the DOM and save the order via `PUT /api/content/order`
+- Order stored as a JSON array in the `site.section_order` content key
 - Rendered server-side (EJS loop over `sectionOrder`) so all visitors see the saved layout
-- **11 movable sections:** hero, credentials, biography, **intervention**, approach, insights, casestudy, casestudy2, assessment, filter, contact
-- Server auto-inserts any newly-added default sections at their natural default-order position (not just appended to the end), so additions land in the right place on existing deployments without a DB update
+- **11 base templates:** hero, credentials, biography, intervention, approach, insights, casestudy, casestudy2, assessment, filter, contact
+- Server auto-inserts any newly-added default templates at their natural default-order position on existing deployments without a DB update — but only when no instance of that template is already on the page
 - Nav and footer are fixed (not movable)
 - Credentials two-column blocks move as one unit (single `<section>`)
 - First non-hero section gets extra top padding (`20rem` desktop, `8rem` mobile) to clear the fixed nav
 - Viewport scrolls to follow the moved section after each swap
+- `updateMoveButtons` only toggles the up/down buttons — the hide/delete buttons stay live at the page ends
+
+### Hide / show (eye)
+- Toggling the eye writes the instance ID into the `site.hidden_sections` JSON array via `PUT /api/content/visibility`
+- Public visitors never see hidden sections (filtered out of `sectionOrder` server-side before render)
+- Logged-in users still see them, dimmed to 0.35 opacity with a "Hidden from public" badge in the top-left, so they can unhide
+- The eye button has a `cms-hide-btn-on` state when the section is currently hidden
+
+### Delete (cross)
+- Confirms with `window.confirm`, then `DELETE /api/content/section/:id`
+- Removes the instance from `site.section_order`
+- If the deleted instance is a **base** instance (no `__N` suffix), it is also added to `site.deleted_sections` so the auto-merge-new-defaults logic doesn't resurrect it on the next boot. Suffixed duplicate instances just disappear from the order
+- Content rows stay in the DB — they can be brought back via "Reset to defaults" in the admin panel, or by re-adding the same template (which restores the base instance ID's existing content)
+
+### Add section (template picker)
+- "Add section" button in the admin menu opens a wide modal showing all 11 templates with SVG wireframe thumbnails (in `public/img/templates/`), a serif label, and a one-line blurb
+- All 11 templates are always selectable — duplicates are explicitly allowed
+- One click → `POST /api/content/section/:template`, the server allocates an instance ID (see model below), seeds content for it, appends to `section_order`, returns `{ instanceId }`
+- Client stores the new instance ID in `sessionStorage.cmsJustAdded` and reloads
+- After reload, admin.js scrolls to the new section and adds the `cms-section-just-added` class which runs a 1.4s orange flash animation
+- `history.scrollRestoration = 'manual'` is set at the top of admin.js so the browser doesn't snap the scroll position back to where the user was before the click — that bug only showed up on prod (where the page loads slowly enough that the browser's restore fired after admin.js's scroll)
+
+### Duplicate sections (instance/template model)
+- A section on the page is an **instance** of a **template**. The 11 base template names live in `VALID_TEMPLATES` in both `routes/content.js` and `server.js`.
+- Instance IDs have the form `{template}` (the first/base instance) or `{template}__N` for additional copies, where `N` is an integer ≥ 2 separated by a **double** underscore (so `casestudy2` the template doesn't collide with `casestudy__2` the duplicate).
+- Validation regex: `^([a-z0-9]+)(?:__(\d+))?$`. Helpers `baseTemplate(id)` and `isValidInstance(id)` live in `routes/content.js`; `server.js` carries its own copies for the render path.
+- `site.section_order` stores instance IDs, not template names. Existing prod data with `["hero","credentials",...]` still works because base instance ID == template name.
+- Content keys are scoped per instance: `{instanceId}.field` for most templates. **Credentials is the special case** with two sub-prefixes per instance: `{instanceId}_oxford.*` and `{instanceId}_stat.*`. The helper `contentPrefixes(instanceId)` returns the right list.
+- The EJS view loop yields `_iid` (instance ID) and `_tpl` (template). Each section block declares `<% const _k = _iid; %>` (and additionally `_kOx` / `_kSt` for credentials) and looks up content via `content[_k + '.field']`. All `data-section[-id]` attributes use `_iid` so reorder/hide/delete operate on the right instance. The instance → template map is built in `server.js` and passed to the view as `instanceTemplates`.
+- The EJS partial `views/partials/add-section-modal.ejs` keeps the template metadata (id, label, blurb) and renders the picker grid.
+
+### Add-section instance allocation
+When the user clicks a template card, the server picks the smallest unused instance ID, with a deliberate priority:
+1. If the base instance ID (e.g. `hero`) is **not** in `section_order`, reuse it. This means re-adding a previously-deleted section restores the original content from the DB. If the base ID was in `deleted_sections`, it is also removed from there.
+2. Otherwise, allocate the smallest unused `{template}__N` for `N` ∈ [2, 99], copy the base template's current content rows into the new instance's prefixes (handles credentials' two sub-prefixes), and append it to the order.
+3. Cap at `__99` — beyond that the POST returns 400.
+
+### admin.js label normalisation
+`fieldLabels` and `sectionTitles` in `public/js/admin.js` are keyed by the base template / template prefix (e.g. `hero.heading`, `credentials_oxford`). For duplicate instances, `normalizeKey()` strips `__N` from the instance ID or content key before lookup, so `hero__2.heading` falls back to the `hero.heading` label, and the edit modal title for `credentials__2` resolves to "Credentials".
+
+## Anti-harvest contact protection
+
+The Contact section's email address and phone number are obfuscated server-side so naive scrapers can't pull them out of the rendered HTML.
+
+- Stored values (`contact.email`, `contact.phone`) are still edited normally in the CMS — only the rendered HTML is munged
+- Email: split at the `@` into `data-u` and `data-d` attributes on the anchor; rendered text is `tom <span aria-hidden>[at]</span> arringtonconsultancy.com` with `href="#"`
+- Phone: split into roughly equal halves both for display (with an invisible `<span aria-hidden>` containing a zero-width space between them, so the digit run is interrupted in source) and as `data-pa` / `data-pb` attributes for the `tel:` URL; the visible text still reads as the original phone number to a human
+- A small block at the top of the existing nonced inline `<script>` in `views/index.ejs` reassembles the real `mailto:` and `tel:` `href`s and replaces the email text with the real address. It runs **before** the smooth-scroll handler attaches so the placeholder `href="#"` anchors don't get caught by `a[href^="#"]`
+- Verified against four common harvest regexes (full email, `+44…`, `0xxxx xxxxxx`, 10+ digit run) — zero matches in the anon HTML
+- Defends against scrapers that fetch HTML and regex-scan. A determined scraper running a headless browser will still get the values after JS runs — if junk persists, next steps would be a contact form or a click-to-reveal pattern
 
 ## Case studies
 
