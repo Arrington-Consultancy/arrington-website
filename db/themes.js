@@ -17,7 +17,7 @@ const themes = {
       '--warm-white': '#f5f3ef',
       '--cream': '#eae6df',
       '--text': '#d4d0c8',
-      '--text-muted': '#8a8680',
+      '--text-muted': '#a8a49e',
       '--text-bright': '#f0ece6',
       '--border': 'rgba(255,255,255,0.06)'
     }
@@ -36,7 +36,7 @@ const themes = {
       '--warm-white': '#f5f3ef',
       '--cream': '#e8e4da',
       '--text': '#c8d0dc',
-      '--text-muted': '#7a8a9e',
+      '--text-muted': '#9aaabe',
       '--text-bright': '#e8edf4',
       '--border': 'rgba(255,255,255,0.08)'
     }
@@ -74,7 +74,7 @@ const themes = {
       '--warm-white': '#f0f2f5',
       '--cream': '#e0e4ea',
       '--text': '#b8c0cc',
-      '--text-muted': '#728098',
+      '--text-muted': '#94a0b4',
       '--text-bright': '#e4e8f0',
       '--border': 'rgba(255,255,255,0.07)'
     }
@@ -93,7 +93,7 @@ const themes = {
       '--warm-white': '#f5efe8',
       '--cream': '#e8ddd2',
       '--text': '#d0c4b8',
-      '--text-muted': '#8a7e72',
+      '--text-muted': '#a89c90',
       '--text-bright': '#f0e8de',
       '--border': 'rgba(255,255,255,0.06)'
     }
