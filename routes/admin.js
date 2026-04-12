@@ -11,26 +11,13 @@ router.get('/log', requireAuth, async (req, res) => {
   try {
     let query, params;
 
-    if (req.session.user.role === 'admin') {
-      // Admin sees all activity
-      query = `SELECT a.action, a.section_key, a.detail, a.created_at,
-                      u.username
-               FROM audit_log a
-               LEFT JOIN users u ON a.user_id = u.id
-               ORDER BY a.created_at DESC
-               LIMIT 50`;
-      params = [];
-    } else {
-      // Content users see only their own activity
-      query = `SELECT a.action, a.section_key, a.detail, a.created_at,
-                      u.username
-               FROM audit_log a
-               LEFT JOIN users u ON a.user_id = u.id
-               WHERE a.user_id = $1
-               ORDER BY a.created_at DESC
-               LIMIT 50`;
-      params = [req.session.user.id];
-    }
+    query = `SELECT a.action, a.section_key, a.detail, a.created_at,
+                    u.username
+             FROM audit_log a
+             LEFT JOIN users u ON a.user_id = u.id
+             ORDER BY a.created_at DESC
+             LIMIT 50`;
+    params = [];
 
     const { rows } = await db.query(query, params);
     res.json({ log: rows });

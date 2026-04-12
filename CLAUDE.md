@@ -93,7 +93,7 @@ public/
 | Username | Role | Capabilities |
 |----------|------|-------------|
 | nat | admin | Edit content, change images, change theme, view all activity, backup, restore, reset to defaults, view CSP violations panel |
-| tom | content | Edit content, change images, change theme, view own activity, backup, restore |
+| tom | content | Edit content, change images, change theme, view all activity, backup, restore |
 
 Users are seeded on first run only — `db/seed.js` checks whether `nat` and `tom` already exist and skips creation if they do. First-time seed reads `NAT_PASSWORD` and `TOM_PASSWORD` from the environment; subsequent deploys don't need these env vars set. No registration route exists.
 
