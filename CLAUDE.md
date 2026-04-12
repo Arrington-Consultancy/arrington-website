@@ -46,9 +46,19 @@ routes/
                        baseTemplate / isValidInstance / contentPrefixes
                        helpers, and the instance ID allocator.
   admin.js             Activity log, reset, backup, restore, theme,
-                       page CRUD (create, rename, hide, delete, reorder)
+                       page CRUD (create, rename, hide, delete, reorder),
+                       user CRUD (scoped by caller role), permissions
+                       matrix API (GET/PUT), page access API (GET/PUT,
+                       plus by-slug convenience route)
 middleware/
-  auth.js              requireAuth, requireAdmin
+  auth.js              requireAuth, requireAdmin (legacy convenience)
+  permissions.js       Role-based capability engine. In-memory cache
+                       loaded from role_permissions table at startup.
+                       Exports: loadPermissions, hasCapability,
+                       requireCapability (middleware factory),
+                       getCapabilitiesForRole, getPermissionsMatrix,
+                       refreshPermissions. Falls back to hardcoded
+                       defaults if the table is empty or missing.
 views/
   index.ejs            Main page. Big inline <style> and <script> blocks
                        carry nonce="<%= nonce %>" so they pass the strict
@@ -60,9 +70,13 @@ views/
   partials/
     edit-modal.ejs         Content editing modal
     add-section-modal.ejs  Template picker grid (11 cards with SVG thumbnails)
-    admin-menu.ejs         Gear-icon panel (Add section, theme swatches,
-                           backups, log, CSP violations panel for admins,
-                           logout)
+    admin-menu.ejs         Gear-icon panel with collapsible sections
+                           (Appearance, Page, Content, Users, System)
+                           and a slide-over detail view for sub-panels
+                           (Users, Backups, Activity log, Permissions
+                           matrix, Page access, CSP violations).
+                           All buttons gated on the user's capabilities
+                           object passed from renderPage.
 public/
   css/admin.css        All CMS UI styles. Also holds helper classes
                        (cms-hidden, cms-inline-form, cms-btn-danger-solid,
@@ -75,33 +89,66 @@ public/
   js/admin.js          Client-side editing, image upload, theme switch
                        (swatch backgrounds set via JS from data-swatch),
                        backup logic, section reorder, hide/delete/add
-                       handlers, CSP violations reader. Sets
-                       history.scrollRestoration = 'manual' so add-section
-                       reload-then-scroll isn't fought by the browser.
+                       handlers, CSP violations reader. Implements the
+                       detail view system (openDetail/closeDetail) and
+                       collapsible section toggles for the admin panel.
+                       Includes permissions matrix and page access UIs.
+                       Sets history.scrollRestoration = 'manual' so
+                       add-section reload-then-scroll isn't fought by
+                       the browser.
   img/templates/       11 SVG wireframe thumbnails (one per template)
                        used by the add-section modal.
 ```
 
 ## Database tables
 
-- **users** — seeded admin (`nat`) and content (`tom`) accounts
+- **users** — seeded admin (`nat`) and content (`tom`) accounts. Role CHECK constraint allows `admin`, `content`, `client`.
 - **content** — key-value store for all editable text (**71 keys** baseline) + `site.theme`. When a section is duplicated the new instance's content keys are seeded into this same table under the new instance ID's prefix. (The legacy `site.section_order`, `site.hidden_sections`, `site.deleted_sections` keys remain in the DB but are no longer read; that state now lives in the pages table.)
 - **pages** — multi-page support. Each row is a page with `slug` (unique), `title`, `sort_order`, `hidden` (boolean), and per-page JSONB arrays: `section_order`, `hidden_sections`, `deleted_sections`. The main page has slug `main` and cannot be hidden or deleted.
+- **role_permissions** — stores the permissions matrix. Composite PK `(role, capability)`, boolean `enabled`. 11 capabilities x 3 roles = 33 rows. Seeded with defaults on first run (`ON CONFLICT DO NOTHING`).
+- **page_access** — per-user page visibility for client users. Composite PK `(page_id, user_id)` with CASCADE deletes. If a page has any `page_access` rows it is automatically restricted: invisible to public visitors and to clients not in the list. Admin and content always see all pages.
 - **images** — binary image storage (logo, headshot, oxford badge) for persistence across Railway redeploys
 - **backups** — full snapshots of content + images (JSONB)
 - **session** — express-session store (connect-pg-simple)
-- **audit_log** — all user actions (login, logout, edits, theme changes, backups, restores, section reorders)
+- **audit_log** — all user actions (login, logout, edits, theme changes, backups, restores, section reorders, permission changes, page access changes)
 
-## Users
+## Users and permissions
 
-| Username | Role | Capabilities |
-|----------|------|-------------|
-| nat | admin | Edit content, change images, change theme, view all activity, backup, restore, reset to defaults, view CSP violations panel |
-| tom | content | Edit content, change images, change theme, view all activity, backup, restore |
+Three roles in descending privilege: **admin > content > client**.
 
-Users are seeded on first run only — `db/seed.js` checks whether `nat` and `tom` already exist and skips creation if they do. First-time seed reads `NAT_PASSWORD` and `TOM_PASSWORD` from the environment; subsequent deploys don't need these env vars set. No registration route exists.
+| Username | Role | Default capabilities |
+|----------|------|---------------------|
+| nat | admin | All 11 capabilities (edit content, manage sections, manage pages, backups, theme, activity log, manage users, page access, reset content, CSP violations, permissions matrix) |
+| tom | content | Same as admin except: no reset content, no CSP violations, no permissions matrix. Can manage users but scoped to client-level accounts only. |
+| (created via CMS) | client | No editing capabilities. Sees the public site plus any pages granted via page access. Gets a minimal "Log out" button instead of the admin panel. |
+
+### Capabilities (11 total)
+
+`edit_content`, `manage_sections`, `manage_pages`, `manage_backups`, `manage_theme`, `view_activity`, `manage_users`, `manage_page_access`, `reset_content`, `view_csp`, `manage_permissions`
+
+Stored in the `role_permissions` table. Admin can reconfigure via the Permissions panel (except `manage_permissions` which is locked to admin). The permissions engine (`middleware/permissions.js`) caches the matrix in memory and falls back to hardcoded defaults if the table is empty.
+
+### Route guards
+
+All API routes use `requireCapability('capability_name')` instead of the old `requireAuth`/`requireAdmin`. The `manage_users` capability has scoped behaviour: content users can only see/create/edit/delete client users. Admin can manage all levels.
+
+### User seeding
+
+Users are seeded on first run only — `db/seed.js` checks whether `nat` and `tom` already exist and skips creation if they do. First-time seed reads `NAT_PASSWORD` and `TOM_PASSWORD` from the environment; subsequent deploys don't need these env vars set. No registration route exists. Additional users (including client accounts) are created via the Manage Users panel.
 
 **Password rotation:** delete the user rows in the Railway Postgres console, set fresh `NAT_PASSWORD` / `TOM_PASSWORD` env vars on the service, redeploy once, then remove the env vars again.
+
+## Page access
+
+Pages can be restricted to specific client users. When a page has any `page_access` entries:
+- **Public visitors** cannot see or visit it (404)
+- **Clients without access** cannot see or visit it (404)
+- **Clients with access** see it in the nav and can visit it
+- **Admin and content users** always see all pages
+
+Page access is managed via the "Page access" button in the admin panel's Page section. It shows a checklist of all client users; ticking a user grants them access to the current page. The API uses `GET/PUT /api/admin/page-access/:pageId` (plus a `by-slug` convenience route for the client JS).
+
+A page does not need to be hidden to be restricted. Any page with at least one `page_access` row is automatically invisible to the public and to unauthorised clients.
 
 ## Content editing
 
@@ -115,10 +162,10 @@ Users are seeded on first run only — `db/seed.js` checks whether `nat` and `to
 The site supports multiple pages. Each page is a row in the `pages` table with its own slug, title, sort order, visibility, and section arrays.
 
 - **URL scheme:** `/` for the main page (slug `main`), `/{slug}` for additional pages
-- **Page menu:** a subtle fixed bar below the nav, only rendered when 2+ pages exist. Links styled with theme CSS variables; active page highlighted with accent colour. Hidden pages shown dimmed (italic, low opacity) for logged-in users only.
+- **Page menu:** a subtle fixed bar below the nav, only rendered when 2+ pages exist. Links styled with theme CSS variables; active page highlighted with accent colour. Hidden pages shown dimmed (italic, low opacity) for users with edit capability only. Restricted pages (those with `page_access` entries) are invisible to public visitors and unauthorised clients.
 - **Instance IDs are globally unique across all pages.** A new page's hero becomes `hero__2` if `hero` is already on the main page. The content table doesn't change; each page just owns a different subset of instance IDs.
 - **Default new page layout:** hero + case study (timeline) + contact
-- **Page controls** (in admin panel, both users): Add page, Rename page, Hide/Show page (not main), Delete page (not main, with confirmation)
+- **Page controls** (in admin panel, users with `manage_pages`): Add page, Rename page, Hide/Show page (not main), Delete page (not main, with confirmation), Page access (assign client users)
 - **Slug generation:** auto-generated from title (lowercase, hyphens). Reserved slugs rejected: `login`, `logout`, `health`, `api`, `img`, `js`, `css`, `public`, `main`
 - **Main page protection:** cannot be hidden or deleted (server enforces)
 - **Backups:** pages snapshot stored under the `__pages__` key inside `content_snapshot`. Old backups without `__pages__` restore content only, leaving pages untouched.
@@ -223,9 +270,9 @@ Active theme stored in DB, applied via CSS variables. Affects main site and logi
 
 ## Backups
 
-- Both users can create content snapshots (all text + all images)
+- Users with `manage_backups` capability (admin and content by default) can create content snapshots (all text + all images)
 - View backups list shows date, user, and restore button
-- Admin can restore from any backup (replaces all current content and images)
+- Any user with the capability can restore from any backup (replaces all current content and images)
 
 ## Security posture (hardened 2026-04-11)
 
@@ -241,7 +288,7 @@ Active theme stored in DB, applied via CSS variables. Affects main site and logi
 - **404 handler + central error middleware** — stack traces never leak in prod
 - **Process-level handlers** for `unhandledRejection` and `uncaughtException`
 - **`/health`** endpoint returns `{"ok":true}` for uptime checks
-- **Admin-only CSP violations panel** — captures `securitypolicyviolation` events fired from page load onwards via a nonced inline script in `<head>` (registered only for admin role), surfaced in the admin menu. Use this to diagnose any CSP issue without opening browser devtools.
+- **CSP violations panel** (gated on `view_csp` capability, admin by default) — captures `securitypolicyviolation` events fired from page load onwards via a nonced inline script in `<head>`, surfaced in the admin menu's System section. Use this to diagnose any CSP issue without opening browser devtools.
 
 ## Voice and tone
 
