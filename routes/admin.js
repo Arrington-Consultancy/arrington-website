@@ -1,6 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
-const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { requireAuth } = require('../middleware/auth');
+const { requireCapability, getPermissionsMatrix, refreshPermissions, ALL_CAPABILITIES, ALL_ROLES } = require('../middleware/permissions');
 const db = require('../db/pool');
 const defaults = require('../db/defaults');
 const themes = require('../db/themes');
@@ -41,7 +42,7 @@ function sourcePrefixes(template) {
 }
 
 // Activity log
-router.get('/log', requireAuth, async (req, res) => {
+router.get('/log', requireCapability('view_activity'), async (req, res) => {
   try {
     let query, params;
 
@@ -62,7 +63,7 @@ router.get('/log', requireAuth, async (req, res) => {
 });
 
 // Reset all content to defaults (admin only)
-router.post('/reset', requireAdmin, async (req, res) => {
+router.post('/reset', requireCapability('reset_content'), async (req, res) => {
   try {
     for (const [key, content] of Object.entries(defaults)) {
       await db.query(
@@ -85,7 +86,7 @@ router.post('/reset', requireAdmin, async (req, res) => {
 });
 
 // Create backup
-router.post('/backup', requireAuth, async (req, res) => {
+router.post('/backup', requireCapability('manage_backups'), async (req, res) => {
   try {
     // Snapshot all content
     const { rows: contentRows } = await db.query('SELECT section_key, content FROM content');
@@ -133,7 +134,7 @@ router.post('/backup', requireAuth, async (req, res) => {
 });
 
 // List backups
-router.get('/backups', requireAuth, async (req, res) => {
+router.get('/backups', requireCapability('manage_backups'), async (req, res) => {
   try {
     const { rows } = await db.query(
       `SELECT b.id, b.label, b.created_at, u.username
@@ -150,7 +151,7 @@ router.get('/backups', requireAuth, async (req, res) => {
 });
 
 // Restore backup
-router.post('/backup/:id/restore', requireAuth, async (req, res) => {
+router.post('/backup/:id/restore', requireCapability('manage_backups'), async (req, res) => {
   try {
     const { rows } = await db.query(
       'SELECT content_snapshot, images_snapshot, label FROM backups WHERE id = $1',
@@ -224,7 +225,7 @@ router.post('/backup/:id/restore', requireAuth, async (req, res) => {
 });
 
 // Set theme
-router.put('/theme', requireAuth, async (req, res) => {
+router.put('/theme', requireCapability('manage_theme'), async (req, res) => {
   const { theme } = req.body;
 
   if (!theme || !themes[theme]) {
@@ -253,7 +254,7 @@ router.put('/theme', requireAuth, async (req, res) => {
 // --- Page management (both users) ---
 
 // Create a new page
-router.post('/page', requireAuth, async (req, res) => {
+router.post('/page', requireCapability('manage_pages'), async (req, res) => {
   const { title } = req.body;
   if (!title || typeof title !== 'string' || title.trim().length === 0) {
     return res.status(400).json({ error: 'Page title required' });
@@ -348,7 +349,7 @@ router.post('/page', requireAuth, async (req, res) => {
 });
 
 // Update a page (title, hidden)
-router.put('/page/:slug', requireAuth, async (req, res) => {
+router.put('/page/:slug', requireCapability('manage_pages'), async (req, res) => {
   const { slug } = req.params;
   const { title, hidden } = req.body;
 
@@ -405,7 +406,7 @@ router.put('/page/:slug', requireAuth, async (req, res) => {
 });
 
 // Delete a page
-router.delete('/page/:slug', requireAuth, async (req, res) => {
+router.delete('/page/:slug', requireCapability('manage_pages'), async (req, res) => {
   const { slug } = req.params;
 
   if (slug === 'main') {
@@ -429,7 +430,7 @@ router.delete('/page/:slug', requireAuth, async (req, res) => {
 });
 
 // Reorder pages
-router.put('/page-order', requireAuth, async (req, res) => {
+router.put('/page-order', requireCapability('manage_pages'), async (req, res) => {
   const { order } = req.body;
   if (!Array.isArray(order)) {
     return res.status(400).json({ error: 'Invalid order array' });
@@ -455,23 +456,25 @@ router.put('/page-order', requireAuth, async (req, res) => {
   }
 });
 
-// --- User management (admin only) ---
+// --- User management (scoped by role) ---
 
-// List all users
-router.get('/users', requireAdmin, async (req, res) => {
+// List users — content users only see client users
+router.get('/users', requireCapability('manage_users'), async (req, res) => {
   try {
-    const { rows } = await db.query(
-      'SELECT id, username, role, created_at FROM users ORDER BY created_at'
-    );
-    res.json({ users: rows });
+    const isAdmin = req.session.user.role === 'admin';
+    const query = isAdmin
+      ? 'SELECT id, username, role, created_at FROM users ORDER BY created_at'
+      : "SELECT id, username, role, created_at FROM users WHERE role = 'client' ORDER BY created_at";
+    const { rows } = await db.query(query);
+    res.json({ users: rows, callerRole: req.session.user.role });
   } catch (err) {
     console.error('List users error:', err);
     res.status(500).json({ error: 'Failed to list users' });
   }
 });
 
-// Add a new user
-router.post('/user', requireAdmin, async (req, res) => {
+// Add a new user — content users can only create client users
+router.post('/user', requireCapability('manage_users'), async (req, res) => {
   const { username, password, role } = req.body;
 
   if (!username || typeof username !== 'string' || username.trim().length < 2) {
@@ -480,8 +483,12 @@ router.post('/user', requireAdmin, async (req, res) => {
   if (!password || typeof password !== 'string' || password.length < 6) {
     return res.status(400).json({ error: 'Password must be at least 6 characters' });
   }
-  if (!role || !['admin', 'content'].includes(role)) {
-    return res.status(400).json({ error: 'Role must be "admin" or "content"' });
+  if (!role || !['admin', 'content', 'client'].includes(role)) {
+    return res.status(400).json({ error: 'Invalid role' });
+  }
+  // Content users can only create client users
+  if (req.session.user.role !== 'admin' && role !== 'client') {
+    return res.status(403).json({ error: 'You can only create client users' });
   }
 
   const cleanUsername = username.trim().toLowerCase();
@@ -512,8 +519,8 @@ router.post('/user', requireAdmin, async (req, res) => {
   }
 });
 
-// Change a user's password
-router.put('/user/:id/password', requireAdmin, async (req, res) => {
+// Change a user's password — content users can only change client passwords
+router.put('/user/:id/password', requireCapability('manage_users'), async (req, res) => {
   const userId = parseInt(req.params.id, 10);
   const { password } = req.body;
 
@@ -522,8 +529,12 @@ router.put('/user/:id/password', requireAdmin, async (req, res) => {
   }
 
   try {
-    const { rows } = await db.query('SELECT username FROM users WHERE id = $1', [userId]);
+    const { rows } = await db.query('SELECT username, role FROM users WHERE id = $1', [userId]);
     if (rows.length === 0) return res.status(404).json({ error: 'User not found' });
+
+    if (req.session.user.role !== 'admin' && rows[0].role !== 'client') {
+      return res.status(403).json({ error: 'You can only manage client users' });
+    }
 
     const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
     await db.query(
@@ -543,8 +554,8 @@ router.put('/user/:id/password', requireAdmin, async (req, res) => {
   }
 });
 
-// Delete a user
-router.delete('/user/:id', requireAdmin, async (req, res) => {
+// Delete a user — content users can only delete client users
+router.delete('/user/:id', requireCapability('manage_users'), async (req, res) => {
   const userId = parseInt(req.params.id, 10);
 
   // Cannot delete yourself
@@ -553,8 +564,12 @@ router.delete('/user/:id', requireAdmin, async (req, res) => {
   }
 
   try {
-    const { rows } = await db.query('SELECT username FROM users WHERE id = $1', [userId]);
+    const { rows } = await db.query('SELECT username, role FROM users WHERE id = $1', [userId]);
     if (rows.length === 0) return res.status(404).json({ error: 'User not found' });
+
+    if (req.session.user.role !== 'admin' && rows[0].role !== 'client') {
+      return res.status(403).json({ error: 'You can only manage client users' });
+    }
 
     // Clear FK references before deleting
     await db.query('UPDATE content SET updated_by = NULL WHERE updated_by = $1', [userId]);
@@ -574,6 +589,135 @@ router.delete('/user/:id', requireAdmin, async (req, res) => {
   } catch (err) {
     console.error('Delete user error:', err);
     res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+// --- Permissions matrix (admin only) ---
+
+router.get('/permissions', requireCapability('manage_permissions'), (req, res) => {
+  res.json({ matrix: getPermissionsMatrix(), capabilities: ALL_CAPABILITIES, roles: ALL_ROLES });
+});
+
+router.put('/permissions', requireCapability('manage_permissions'), async (req, res) => {
+  const { matrix } = req.body;
+  if (!matrix || typeof matrix !== 'object') {
+    return res.status(400).json({ error: 'Invalid permissions data' });
+  }
+
+  try {
+    for (const role of ALL_ROLES) {
+      if (!matrix[role]) continue;
+      for (const cap of ALL_CAPABILITIES) {
+        if (matrix[role][cap] === undefined) continue;
+        // manage_permissions is locked to admin only
+        if (cap === 'manage_permissions' && role !== 'admin') continue;
+        // admin always keeps manage_permissions
+        if (cap === 'manage_permissions' && role === 'admin') continue;
+
+        await db.query(
+          `INSERT INTO role_permissions (role, capability, enabled) VALUES ($1, $2, $3)
+           ON CONFLICT (role, capability) DO UPDATE SET enabled = EXCLUDED.enabled`,
+          [role, cap, !!matrix[role][cap]]
+        );
+      }
+    }
+
+    await refreshPermissions();
+
+    await db.query(
+      'INSERT INTO audit_log (user_id, action, detail) VALUES ($1, $2, $3)',
+      [req.session.user.id, 'permissions_update', `Permissions updated by ${req.session.user.username}`]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Permissions update error:', err);
+    res.status(500).json({ error: 'Failed to update permissions' });
+  }
+});
+
+// --- Page access (for client users) ---
+
+router.get('/page-access/by-slug/:slug', requireCapability('manage_page_access'), async (req, res) => {
+  try {
+    const { rows: pageRows } = await db.query('SELECT id FROM pages WHERE slug = $1', [req.params.slug]);
+    if (pageRows.length === 0) return res.status(404).json({ error: 'Page not found' });
+    const pageId = pageRows[0].id;
+
+    const { rows: clients } = await db.query(
+      "SELECT id, username FROM users WHERE role = 'client' ORDER BY username"
+    );
+    const { rows: access } = await db.query(
+      'SELECT user_id FROM page_access WHERE page_id = $1',
+      [pageId]
+    );
+    const accessSet = new Set(access.map(r => r.user_id));
+    const result = clients.map(c => ({
+      id: c.id,
+      username: c.username,
+      hasAccess: accessSet.has(c.id)
+    }));
+    res.json({ clients: result, pageId });
+  } catch (err) {
+    console.error('Page access fetch error:', err);
+    res.status(500).json({ error: 'Failed to load page access' });
+  }
+});
+
+router.get('/page-access/:pageId', requireCapability('manage_page_access'), async (req, res) => {
+  const pageId = parseInt(req.params.pageId, 10);
+  try {
+    const { rows: clients } = await db.query(
+      "SELECT id, username FROM users WHERE role = 'client' ORDER BY username"
+    );
+    const { rows: access } = await db.query(
+      'SELECT user_id FROM page_access WHERE page_id = $1',
+      [pageId]
+    );
+    const accessSet = new Set(access.map(r => r.user_id));
+    const result = clients.map(c => ({
+      id: c.id,
+      username: c.username,
+      hasAccess: accessSet.has(c.id)
+    }));
+    res.json({ clients: result, pageId });
+  } catch (err) {
+    console.error('Page access fetch error:', err);
+    res.status(500).json({ error: 'Failed to load page access' });
+  }
+});
+
+router.put('/page-access/:pageId', requireCapability('manage_page_access'), async (req, res) => {
+  const pageId = parseInt(req.params.pageId, 10);
+  const { userIds } = req.body;
+
+  if (!Array.isArray(userIds)) {
+    return res.status(400).json({ error: 'Invalid user IDs' });
+  }
+
+  try {
+    // Verify page exists
+    const { rows: pageRows } = await db.query('SELECT slug FROM pages WHERE id = $1', [pageId]);
+    if (pageRows.length === 0) return res.status(404).json({ error: 'Page not found' });
+
+    // Replace all access for this page
+    await db.query('DELETE FROM page_access WHERE page_id = $1', [pageId]);
+    for (const uid of userIds) {
+      await db.query(
+        'INSERT INTO page_access (page_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+        [pageId, uid]
+      );
+    }
+
+    await db.query(
+      'INSERT INTO audit_log (user_id, action, section_key, detail) VALUES ($1, $2, $3, $4)',
+      [req.session.user.id, 'page_access_update', pageRows[0].slug, `Page access updated for "${pageRows[0].slug}" by ${req.session.user.username}`]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Page access update error:', err);
+    res.status(500).json({ error: 'Failed to update page access' });
   }
 });
 

@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    role VARCHAR(20) NOT NULL CHECK (role IN ('admin', 'content')),
+    role VARCHAR(20) NOT NULL CHECK (role IN ('admin', 'content', 'client')),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -52,6 +52,19 @@ CREATE TABLE IF NOT EXISTS pages (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     updated_by INTEGER REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS role_permissions (
+    role VARCHAR(20) NOT NULL,
+    capability VARCHAR(50) NOT NULL,
+    enabled BOOLEAN NOT NULL DEFAULT false,
+    PRIMARY KEY (role, capability)
+);
+
+CREATE TABLE IF NOT EXISTS page_access (
+    page_id INTEGER NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    PRIMARY KEY (page_id, user_id)
 );
 
 CREATE TABLE IF NOT EXISTS audit_log (

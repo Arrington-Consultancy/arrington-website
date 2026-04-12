@@ -11,8 +11,8 @@
     <meta name="csrf-token" content="<%= csrfToken %>">
     <meta name="page-slug" content="<%= currentPage.slug %>">
     <meta name="page-hidden" content="<%= currentPage.hidden ? 'true' : 'false' %>">
-    <link rel="stylesheet" href="/css/admin.css?v=<%= Date.now() %>">
-    <% if (user.role === 'admin') { %>
+    <% if (showAdminPanel) { %><link rel="stylesheet" href="/css/admin.css?v=<%= Date.now() %>"><% } %>
+    <% if (capabilities.view_csp) { %>
     <script nonce="<%= nonce %>">
         // Capture CSP violations as they happen so the admin menu can show
         // them (registered in <head> so we don't miss any fired during
@@ -875,7 +875,7 @@
     <div class="nav-inner">
         <a href="#" class="nav-logo">
             <img src="/img/logo" alt="Arrington Business Consultancy" class="nav-logo-img">
-            <% if (user) { %><button class="cms-img-btn" data-image="logo" title="Change logo">&#9998;</button><% } %>
+            <% if (canEdit) { %><button class="cms-img-btn" data-image="logo" title="Change logo">&#9998;</button><% } %>
         </a>
         <% if (hasContact) { %><a href="#conversation" class="nav-cta">Start a conversation</a><% } %>
     </div>
@@ -886,7 +886,7 @@
     <div class="page-menu-inner">
         <% for (const _p of allPages) { %>
         <a href="<%= _p.slug === 'main' ? '/' : '/' + _p.slug %>"
-           class="page-menu-link<%= _p.slug === currentPage.slug ? ' active' : '' %><%= _p.hidden ? ' page-menu-hidden' : '' %>">
+           class="page-menu-link<%= _p.slug === currentPage.slug ? ' active' : '' %><%= (_p.hidden && canEdit) ? ' page-menu-hidden' : '' %>">
             <%= _p.title %>
         </a>
         <% } %>
@@ -905,18 +905,18 @@
 <section class="hero<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
     <div class="hero-inner">
         <div class="hero-text cms-section" data-section="<%= _k %>">
-            <% if (user) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
-            <% if (user) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
-            <% if (user) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
+            <% if (canEdit) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
+            <% if (canEdit) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
+            <% if (canEdit) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
             <h1><%- content[_k + '.heading'] %></h1>
             <p class="sub"><%- content[_k + '.subtext'] %></p>
             <a href="#conversation" class="btn btn-primary"><%- content[_k + '.cta'] %></a>
         </div>
         <div class="hero-photo">
             <img src="/img/headshot" alt="Arrington Business Consultancy">
-            <% if (user) { %><button class="cms-img-btn" data-image="headshot" title="Change photo">&#9998;</button><% } %>
+            <% if (canEdit) { %><button class="cms-img-btn" data-image="headshot" title="Change photo">&#9998;</button><% } %>
         </div>
     </div>
 </section>
@@ -931,19 +931,19 @@
     <div class="section-inner">
         <div class="credentials-inner">
             <div class="credential-block cms-section" data-section="<%= _kSt %>">
-                <% if (user) { %><button class="cms-edit-btn" data-section="<%= _kSt %>" title="Edit section">&#9998;</button><% } %>
-                <% if (user) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
-                <% if (user) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
+                <% if (canEdit) { %><button class="cms-edit-btn" data-section="<%= _kSt %>" title="Edit section">&#9998;</button><% } %>
+                <% if (canEdit) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
+                <% if (canEdit) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
                 <div class="credential-stat"><%- content[_kSt + '.stat'] %></div>
                 <p><%- content[_kSt + '.text'] %></p>
             </div>
             <div class="credential-block cms-section" data-section="<%= _kOx %>">
-                <% if (user) { %><button class="cms-edit-btn" data-section="<%= _kOx %>" title="Edit section">&#9998;</button><% } %>
+                <% if (canEdit) { %><button class="cms-edit-btn" data-section="<%= _kOx %>" title="Edit section">&#9998;</button><% } %>
                 <div class="credential-badge-wrap">
                     <img src="/img/oxford" alt="Said Business School, University of Oxford" class="credential-badge">
-                    <% if (user) { %><button class="cms-img-btn" data-image="oxford" title="Change badge">&#9998;</button><% } %>
+                    <% if (canEdit) { %><button class="cms-img-btn" data-image="oxford" title="Change badge">&#9998;</button><% } %>
                 </div>
                 <h3><%- content[_kOx + '.title'] %></h3>
                 <p><%- content[_kOx + '.text'] %></p>
@@ -958,11 +958,11 @@
 <!-- BIOGRAPHY -->
 <section class="problem<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
     <div class="section-inner cms-section" data-section="<%= _k %>">
-        <% if (user) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
+        <% if (canEdit) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
         <p class="section-label"><%- content[_k + '.label'] %></p>
         <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
         <div class="problem-grid">
@@ -984,11 +984,11 @@
 <!-- INTERVENTION -->
 <section class="intervention<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
     <div class="section-inner cms-section" data-section="<%= _k %>">
-        <% if (user) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
+        <% if (canEdit) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
         <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
         <p class="intervention-body"><%- content[_k + '.subtext'] %></p>
     </div>
@@ -1000,11 +1000,11 @@
 <!-- APPROACH -->
 <section class="approach<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
     <div class="section-inner cms-section" data-section="<%= _k %>">
-        <% if (user) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
+        <% if (canEdit) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
         <p class="section-label"><%- content[_k + '.label'] %></p>
         <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
         <div class="approach-steps">
@@ -1033,11 +1033,11 @@
 <!-- INSIGHTS -->
 <section class="insights<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
     <div class="section-inner cms-section" data-section="<%= _k %>">
-        <% if (user) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
+        <% if (canEdit) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
         <div class="insights-header">
             <p class="section-label"><%- content[_k + '.label'] %></p>
             <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
@@ -1069,11 +1069,11 @@
 <!-- CASE STUDY -->
 <section class="case-study<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
     <div class="section-inner cms-section" data-section="<%= _k %>">
-        <% if (user) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
+        <% if (canEdit) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
         <div class="case-inner">
             <p class="section-label"><%- content[_k + '.label'] %></p>
             <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
@@ -1108,11 +1108,11 @@
 <!-- CASE STUDY 2 - TRISTAN -->
 <section class="casestudy2<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
     <div class="section-inner cms-section" data-section="<%= _k %>">
-        <% if (user) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
+        <% if (canEdit) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
         <div class="casestudy2-inner">
             <p class="section-label"><%- content[_k + '.label'] %></p>
             <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
@@ -1131,11 +1131,11 @@
 <!-- HONEST QUESTIONS -->
 <section class="assessment<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" id="questions" data-section-id="<%= _iid %>">
     <div class="section-inner cms-section" data-section="<%= _k %>">
-        <% if (user) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
+        <% if (canEdit) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
         <div class="assessment-inner">
             <p class="section-label"><%- content[_k + '.label'] %></p>
             <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
@@ -1158,11 +1158,11 @@
 <!-- FILTER -->
 <section class="filter<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
     <div class="section-inner cms-section" data-section="<%= _k %>">
-        <% if (user) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
+        <% if (canEdit) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
         <div class="filter-inner">
             <p class="section-label"><%- content[_k + '.label'] %></p>
             <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
@@ -1178,11 +1178,11 @@
 <!-- CONVERSATION -->
 <section class="contact<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" id="conversation" data-section-id="<%= _iid %>">
     <div class="section-inner cms-section" data-section="<%= _k %>">
-        <% if (user) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
-        <% if (user) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
+        <% if (canEdit) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
         <div class="contact-inner">
             <p class="section-label"><%- content[_k + '.label'] %></p>
             <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
@@ -1230,7 +1230,7 @@
         const u = a.dataset.u, d = a.dataset.d;
         if (!u || !d) return;
         const addr = u + '@' + d;
-        a.href = 'mailto:' + addr;
+        a.href = 'mailto:' + addr + '?subject=Let%27s%20talk';
         a.textContent = addr;
     });
     document.querySelectorAll('.js-phone-link').forEach(a => {
@@ -1269,11 +1269,24 @@
     });
 </script>
 
-<% if (user) { %>
+<% if (showAdminPanel) { %>
 <%- include('partials/edit-modal') %>
 <%- include('partials/add-section-modal') %>
 <%- include('partials/admin-menu') %>
 <script nonce="<%= nonce %>" src="/js/admin.js?v=<%= Date.now() %>"></script>
+<% } %>
+<% if (user && !showAdminPanel) { %>
+<div class="client-logout">
+    <form method="POST" action="/logout">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <button type="submit" class="client-logout-btn">Log out</button>
+    </form>
+</div>
+<style nonce="<%= nonce %>">
+    .client-logout { position: fixed; bottom: 1rem; right: 1rem; z-index: 100; }
+    .client-logout-btn { background: var(--charcoal); color: var(--text); border: 1px solid var(--border); padding: 0.4rem 0.9rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+    .client-logout-btn:hover { background: var(--mid-grey); }
+</style>
 <% } %>
 
 </body>

@@ -673,6 +673,123 @@
     margin: 0;
 }
 
+/* ---- COLLAPSIBLE SECTIONS ---- */
+.cms-section-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    color: var(--text-bright);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.65rem 1.25rem;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.cms-section-toggle::after {
+    content: '\25B8';
+    font-size: 0.65rem;
+    transition: transform 0.15s;
+}
+
+.cms-section-toggle.open::after {
+    transform: rotate(90deg);
+}
+
+.cms-section-toggle:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.cms-section-body {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.cms-section-body .cms-admin-action {
+    padding-left: 1.75rem;
+    font-size: 0.78rem;
+}
+
+.cms-section-body .cms-theme-section {
+    padding: 0.5rem 1.25rem 0.65rem;
+}
+
+.cms-section-body .cms-page-actions {
+    padding: 0;
+}
+
+.cms-section-body .cms-page-actions .cms-admin-action {
+    padding-left: 1.75rem;
+}
+
+/* ---- DETAIL VIEW (slide-over) ---- */
+.cms-panel-menu,
+.cms-panel-detail {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.cms-panel-detail {
+    max-height: calc(80vh - 4rem);
+    overflow-y: auto;
+}
+
+.cms-detail-back {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    color: var(--accent);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.75rem 1.25rem;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.cms-detail-back:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.cms-detail-content {
+    padding: 1rem 1.25rem;
+}
+
+.cms-detail-title {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-bright);
+    margin-bottom: 0.75rem;
+}
+
+.cms-detail-pane {
+    /* Shown/hidden via cms-hidden */
+}
+
+.cms-detail-trigger {
+    /* Visual hint that this opens a detail view */
+}
+
+.cms-detail-trigger::after {
+    content: '\25B8';
+    float: right;
+    font-size: 0.65rem;
+    opacity: 0.5;
+}
+
 .cms-admin-log {
     padding: 1rem 1.25rem;
     overflow-y: auto;
@@ -941,5 +1058,86 @@ select.cms-user-input {
 
 .cms-page-actions .cms-admin-action {
     font-size: 0.78rem;
+}
+
+/* ---- PERMISSIONS MATRIX ---- */
+.cms-perms-grid {
+    overflow-x: auto;
+    margin-bottom: 0.75rem;
+}
+
+.cms-perms-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.72rem;
+}
+
+.cms-perms-table th,
+.cms-perms-table td {
+    padding: 0.35rem 0.4rem;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    white-space: nowrap;
+}
+
+.cms-perms-table th {
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.cms-perms-table th:first-child,
+.cms-perms-table td:first-child {
+    text-align: left;
+    padding-left: 0;
+}
+
+.cms-perms-role {
+    font-weight: 600;
+    color: var(--text-bright);
+    text-transform: capitalize;
+}
+
+.cms-perms-table input[type="checkbox"] {
+    cursor: pointer;
+    accent-color: var(--accent);
+    width: 14px;
+    height: 14px;
+}
+
+.cms-perms-table input[type="checkbox"]:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.cms-perms-save {
+    margin-top: 0.5rem;
+    font-size: 0.78rem;
+}
+
+/* ---- PAGE ACCESS ---- */
+.cms-page-access-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.cms-page-access-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text);
+    cursor: pointer;
+}
+
+.cms-page-access-item input[type="checkbox"] {
+    accent-color: var(--accent);
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
 }
 

@@ -1,87 +1,166 @@
 <button class="cms-admin-toggle" id="cmsAdminToggle" title="Admin menu">&#9881;</button>
 
 <div class="cms-admin-panel" id="cmsAdminPanel">
-    <div class="cms-admin-header">
-        <div class="cms-admin-user">
-            Signed in as <strong><%= user.username %></strong>
-            <span class="cms-admin-role"><%= user.role %></span>
-        </div>
-    </div>
-    <div class="cms-admin-actions">
-        <div class="cms-theme-section">
-            <div class="cms-theme-label">Theme</div>
-            <div class="cms-theme-swatches">
-                <% for (const [key, t] of Object.entries(themes)) { %>
-                <button class="cms-theme-swatch<%= key === activeTheme ? ' active' : '' %>"
-                        data-theme="<%= key %>"
-                        data-swatch="<%= t.swatch %>"
-                        title="<%= t.label %>">
-                </button>
-                <% } %>
+
+    <%# ---- MENU VIEW (default) ---- %>
+    <div class="cms-panel-menu" id="cmsPanelMenu">
+        <div class="cms-admin-header">
+            <div class="cms-admin-user">
+                Signed in as <strong><%= user.username %></strong>
+                <span class="cms-admin-role"><%= user.role %></span>
             </div>
         </div>
-        <div class="cms-admin-divider"></div>
-        <div class="cms-page-section">
-            <div class="cms-theme-label">Page: <strong><%= currentPage.title %></strong></div>
-            <div class="cms-page-actions">
-                <button class="cms-admin-action" id="cmsAddPageBtn">Add page</button>
-                <button class="cms-admin-action" id="cmsRenamePageBtn">Rename page</button>
-                <% if (currentPage.slug !== 'main') { %>
-                <button class="cms-admin-action" id="cmsHidePageBtn"><%= currentPage.hidden ? 'Show page' : 'Hide page' %></button>
-                <button class="cms-admin-action danger" id="cmsDeletePageBtn">Delete page</button>
+        <div class="cms-admin-actions">
+
+            <% if (capabilities.manage_theme) { %>
+            <button class="cms-section-toggle" data-section="cmsAppearance">Appearance</button>
+            <div class="cms-section-body cms-hidden" id="cmsAppearance">
+                <div class="cms-theme-section">
+                    <div class="cms-theme-swatches">
+                        <% for (const [key, t] of Object.entries(themes)) { %>
+                        <button class="cms-theme-swatch<%= key === activeTheme ? ' active' : '' %>"
+                                data-theme="<%= key %>"
+                                data-swatch="<%= t.swatch %>"
+                                title="<%= t.label %>">
+                        </button>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+            <% } %>
+
+            <% if (capabilities.manage_pages || capabilities.manage_sections || capabilities.manage_page_access) { %>
+            <button class="cms-section-toggle" data-section="cmsPageSection">Page: <%= currentPage.title %></button>
+            <div class="cms-section-body cms-hidden" id="cmsPageSection">
+                <% if (capabilities.manage_pages) { %>
+                <div class="cms-page-actions">
+                    <button class="cms-admin-action" id="cmsAddPageBtn">Add page</button>
+                    <button class="cms-admin-action" id="cmsRenamePageBtn">Rename page</button>
+                    <% if (currentPage.slug !== 'main') { %>
+                    <button class="cms-admin-action" id="cmsHidePageBtn"><%= currentPage.hidden ? 'Show page' : 'Hide page' %></button>
+                    <button class="cms-admin-action danger" id="cmsDeletePageBtn">Delete page</button>
+                    <% } %>
+                </div>
+                <% } %>
+                <% if (capabilities.manage_sections) { %>
+                <button class="cms-admin-action" id="cmsAddSectionBtn">Add section</button>
+                <% } %>
+                <% if (capabilities.manage_page_access) { %>
+                <button class="cms-admin-action cms-detail-trigger" data-detail="cmsPageAccessDetail">Page access</button>
                 <% } %>
             </div>
+            <% } %>
+
+            <% if (capabilities.manage_backups || capabilities.reset_content) { %>
+            <button class="cms-section-toggle" data-section="cmsContentSection">Content</button>
+            <div class="cms-section-body cms-hidden" id="cmsContentSection">
+                <% if (capabilities.manage_backups) { %>
+                <button class="cms-admin-action" id="cmsBackupBtn">Backup current content</button>
+                <button class="cms-admin-action cms-detail-trigger" data-detail="cmsBackupsDetail">View backups</button>
+                <% } %>
+                <% if (capabilities.reset_content) { %>
+                <button class="cms-admin-action danger" id="cmsResetBtn">Reset all content to defaults</button>
+                <% } %>
+            </div>
+            <% } %>
+
+            <% if (capabilities.manage_users || capabilities.manage_permissions) { %>
+            <button class="cms-section-toggle" data-section="cmsUsersSection">Users</button>
+            <div class="cms-section-body cms-hidden" id="cmsUsersSection">
+                <% if (capabilities.manage_users) { %>
+                <button class="cms-admin-action cms-detail-trigger" data-detail="cmsUsersDetail">Manage users</button>
+                <% } %>
+                <% if (capabilities.manage_permissions) { %>
+                <button class="cms-admin-action cms-detail-trigger" data-detail="cmsPermissionsDetail">Permissions</button>
+                <% } %>
+            </div>
+            <% } %>
+
+            <% if (capabilities.view_activity || capabilities.view_csp) { %>
+            <button class="cms-section-toggle" data-section="cmsSystemSection">System</button>
+            <div class="cms-section-body cms-hidden" id="cmsSystemSection">
+                <% if (capabilities.view_activity) { %>
+                <button class="cms-admin-action cms-detail-trigger" data-detail="cmsLogDetail">Activity log</button>
+                <% } %>
+                <% if (capabilities.view_csp) { %>
+                <button class="cms-admin-action cms-detail-trigger" data-detail="cmsCspDetail">CSP violations</button>
+                <% } %>
+            </div>
+            <% } %>
+
+            <div class="cms-admin-divider"></div>
+            <form method="POST" action="/logout" class="cms-inline-form">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button type="submit" class="cms-admin-action">Log out</button>
+            </form>
         </div>
-        <div class="cms-admin-divider"></div>
-        <button class="cms-admin-action" id="cmsAddSectionBtn">Add section</button>
-        <button class="cms-admin-action" id="cmsBackupBtn">Backup current content</button>
-        <button class="cms-admin-action" id="cmsBackupsListBtn">View backups</button>
-        <div class="cms-admin-divider"></div>
-        <% if (user.role === 'admin') { %>
-        <button class="cms-admin-action danger" id="cmsResetBtn">Reset all content to defaults</button>
-        <div class="cms-admin-divider"></div>
-        <button class="cms-admin-action" id="cmsUsersBtn">Manage users</button>
-        <div class="cms-admin-divider"></div>
-        <button class="cms-admin-action" id="cmsCspBtn">CSP violations</button>
-        <div class="cms-admin-divider"></div>
-        <% } %>
-        <button class="cms-admin-action" id="cmsLogBtn">Activity log</button>
-        <div class="cms-admin-divider"></div>
-        <form method="POST" action="/logout" class="cms-inline-form">
-            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-            <button type="submit" class="cms-admin-action">Log out</button>
-        </form>
     </div>
-    <div class="cms-admin-log cms-hidden" id="cmsAdminLog">
-        <div class="cms-admin-log-title">Recent activity</div>
-        <div id="cmsLogEntries">Loading...</div>
-    </div>
-    <div class="cms-admin-log cms-hidden" id="cmsBackupsList">
-        <div class="cms-admin-log-title">Backups</div>
-        <div id="cmsBackupsEntries">Loading...</div>
-    </div>
-    <% if (user.role === 'admin') { %>
-    <div class="cms-admin-log cms-hidden" id="cmsUsersList">
-        <div class="cms-admin-log-title">Users</div>
-        <div id="cmsUsersEntries">Loading...</div>
-        <div class="cms-users-add">
-            <div class="cms-admin-log-title">Add user</div>
-            <input type="text" id="cmsNewUsername" placeholder="Username" class="cms-user-input">
-            <input type="password" id="cmsNewPassword" placeholder="Password (min 6 chars)" class="cms-user-input">
-            <select id="cmsNewRole" class="cms-user-input">
-                <option value="content">Content</option>
-                <option value="admin">Admin</option>
-            </select>
-            <button class="cms-btn cms-btn-save cms-user-add-btn" id="cmsAddUserBtn">Add user</button>
+
+    <%# ---- DETAIL VIEW (replaces menu when active) ---- %>
+    <div class="cms-panel-detail cms-hidden" id="cmsPanelDetail">
+        <button class="cms-detail-back" id="cmsDetailBack">&#9664; Back</button>
+        <div class="cms-detail-content" id="cmsDetailContent">
+
+            <% if (capabilities.view_activity) { %>
+            <div class="cms-detail-pane cms-hidden" id="cmsLogDetail">
+                <div class="cms-detail-title">Activity log</div>
+                <div id="cmsLogEntries">Loading...</div>
+            </div>
+            <% } %>
+
+            <% if (capabilities.manage_backups) { %>
+            <div class="cms-detail-pane cms-hidden" id="cmsBackupsDetail">
+                <div class="cms-detail-title">Backups</div>
+                <div id="cmsBackupsEntries">Loading...</div>
+            </div>
+            <% } %>
+
+            <% if (capabilities.manage_users) { %>
+            <div class="cms-detail-pane cms-hidden" id="cmsUsersDetail">
+                <div class="cms-detail-title">Users</div>
+                <div id="cmsUsersEntries">Loading...</div>
+                <div class="cms-users-add">
+                    <div class="cms-detail-title" style="margin-top: 1rem;">Add user</div>
+                    <input type="text" id="cmsNewUsername" placeholder="Username" class="cms-user-input">
+                    <input type="password" id="cmsNewPassword" placeholder="Password (min 6 chars)" class="cms-user-input">
+                    <select id="cmsNewRole" class="cms-user-input">
+                        <option value="client">Client</option>
+                        <% if (user.role === 'admin') { %>
+                        <option value="content">Content</option>
+                        <option value="admin">Admin</option>
+                        <% } %>
+                    </select>
+                    <button class="cms-btn cms-btn-save cms-user-add-btn" id="cmsAddUserBtn">Add user</button>
+                </div>
+            </div>
+            <% } %>
+
+            <% if (capabilities.manage_permissions) { %>
+            <div class="cms-detail-pane cms-hidden" id="cmsPermissionsDetail">
+                <div class="cms-detail-title">Role permissions</div>
+                <div id="cmsPermissionsEntries">Loading...</div>
+            </div>
+            <% } %>
+
+            <% if (capabilities.manage_page_access) { %>
+            <div class="cms-detail-pane cms-hidden" id="cmsPageAccessDetail">
+                <div class="cms-detail-title">Page access: <strong><%= currentPage.title %></strong></div>
+                <div id="cmsPageAccessEntries">Loading...</div>
+            </div>
+            <% } %>
+
+            <% if (capabilities.view_csp) { %>
+            <div class="cms-detail-pane cms-hidden" id="cmsCspDetail">
+                <div class="cms-detail-title">CSP violations</div>
+                <div id="cmsCspEntries">None.</div>
+            </div>
+            <% } %>
+
         </div>
     </div>
-    <div class="cms-admin-log cms-hidden" id="cmsCspList">
-        <div class="cms-admin-log-title">CSP violations on this page</div>
-        <div id="cmsCspEntries">None.</div>
-    </div>
-    <% } %>
 </div>
 
+<% if (capabilities.reset_content) { %>
 <div class="cms-confirm-overlay" id="cmsConfirm">
     <div class="cms-confirm-box">
         <p>Are you sure? This will revert all content to the original version. Any edits will be lost.</p>
@@ -91,7 +170,9 @@
         </div>
     </div>
 </div>
+<% } %>
 
+<% if (capabilities.manage_backups) { %>
 <div class="cms-confirm-overlay" id="cmsRestoreConfirm">
     <div class="cms-confirm-box">
         <p id="cmsRestoreMsg">Are you sure you want to restore this backup? All current content and images will be replaced.</p>
@@ -101,7 +182,9 @@
         </div>
     </div>
 </div>
+<% } %>
 
+<% if (capabilities.manage_pages) { %>
 <div class="cms-confirm-overlay" id="cmsDeletePageConfirm">
     <div class="cms-confirm-box">
         <p id="cmsDeletePageMsg">Are you sure you want to delete this page? The page and its layout will be removed. Section content stays in the database and can be reused on other pages.</p>
@@ -111,3 +194,4 @@
         </div>
     </div>
 </div>
+<% } %>

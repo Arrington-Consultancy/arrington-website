@@ -278,7 +278,7 @@ npm run dev
 - **Production detection:** checks for `RAILWAY_ENVIRONMENT` or `NODE_ENV=production`
 - **Trust proxy:** enabled (required for rate limiting, secure cookies, and HTTPS redirect behind Railway's reverse proxy)
 - **Start command:** `node db/seed.js && node server.js` (seed is idempotent; skips user creation after first run)
-- **Deploy:** `railway up` from project root. Auto-deploy on push to `main` is configured but unreliable; don't rely on it
+- **Deploy:** `railway up` from project root. Auto-deploy on push to `main` is configured but unreliable — always run `railway up` after pushing to ensure the deploy goes out
 - **GitHub:** `github.com/natparnell/arrington-prototype` (private)
 
 ## Custom domains

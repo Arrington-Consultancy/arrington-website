@@ -1,6 +1,7 @@
 const express = require('express');
 const sanitizeHtml = require('sanitize-html');
 const { requireAuth } = require('../middleware/auth');
+const { requireCapability } = require('../middleware/permissions');
 const db = require('../db/pool');
 
 const router = express.Router();
@@ -15,7 +16,7 @@ function sanitise(text) {
 }
 
 // List orphaned section instances — content exists in the DB but not on any page
-router.get('/orphaned-sections', requireAuth, async (req, res) => {
+router.get('/orphaned-sections', requireCapability('manage_sections'), async (req, res) => {
   try {
     // Gather all instance IDs across all pages
     const { rows: pageRows } = await db.query('SELECT section_order FROM pages');
@@ -79,7 +80,7 @@ router.get('/orphaned-sections', requireAuth, async (req, res) => {
 });
 
 // Get all content for a section prefix
-router.get('/:prefix', requireAuth, async (req, res) => {
+router.get('/:prefix', requireCapability('edit_content'), async (req, res) => {
   try {
     const { rows } = await db.query(
       'SELECT section_key, content FROM content WHERE section_key LIKE $1 ORDER BY section_key',
@@ -95,7 +96,7 @@ router.get('/:prefix', requireAuth, async (req, res) => {
 });
 
 // Update content fields
-router.put('/', requireAuth, async (req, res) => {
+router.put('/', requireCapability('edit_content'), async (req, res) => {
   const { fields } = req.body;
 
   if (!fields || !Array.isArray(fields) || fields.length === 0) {
@@ -166,7 +167,7 @@ function sourcePrefixes(template) {
   return [template];
 }
 
-router.put('/order', requireAuth, async (req, res) => {
+router.put('/order', requireCapability('manage_sections'), async (req, res) => {
   const { order, pageSlug } = req.body;
 
   if (!Array.isArray(order)) {
@@ -202,7 +203,7 @@ router.put('/order', requireAuth, async (req, res) => {
 });
 
 // Toggle section visibility (hide/show)
-router.put('/visibility', requireAuth, async (req, res) => {
+router.put('/visibility', requireCapability('manage_sections'), async (req, res) => {
   const { sectionId, hidden, pageSlug } = req.body;
 
   if (!isValidInstance(sectionId) || typeof hidden !== 'boolean') {
@@ -275,7 +276,7 @@ async function savePageArrays(slug, updates, userId) {
 // Delete a section instance. If deleting a BASE instance (no __N suffix),
 // also record it in deleted_sections so the auto-merge doesn't resurrect it
 // on next boot. Suffixed instances just drop out of the order.
-router.delete('/section/:id', requireAuth, async (req, res) => {
+router.delete('/section/:id', requireCapability('manage_sections'), async (req, res) => {
   const sectionId = req.params.id;
   const pageSlug = req.body.pageSlug || req.query.pageSlug;
 
@@ -319,7 +320,7 @@ router.delete('/section/:id', requireAuth, async (req, res) => {
 // re-adding a previously-deleted section restores its existing content from
 // the DB. Otherwise allocate the smallest unused `{template}__N` suffix and
 // seed it by copying the base template's current content.
-router.post('/section/:template', requireAuth, async (req, res) => {
+router.post('/section/:template', requireCapability('manage_sections'), async (req, res) => {
   const template = req.params.template;
   const pageSlug = req.body.pageSlug;
 
@@ -415,7 +416,7 @@ router.post('/section/:template', requireAuth, async (req, res) => {
 });
 
 // Permanently delete an orphaned section's content from the database
-router.delete('/orphaned-section/:id', requireAuth, async (req, res) => {
+router.delete('/orphaned-section/:id', requireCapability('manage_sections'), async (req, res) => {
   const instanceId = req.params.id;
 
   if (!isValidInstance(instanceId)) {
@@ -456,7 +457,7 @@ router.delete('/orphaned-section/:id', requireAuth, async (req, res) => {
 });
 
 // Reuse an orphaned section instance — add an existing instance ID to a page
-router.post('/section-reuse', requireAuth, async (req, res) => {
+router.post('/section-reuse', requireCapability('manage_sections'), async (req, res) => {
   const { instanceId, pageSlug } = req.body;
 
   if (!instanceId || !isValidInstance(instanceId)) {
@@ -529,7 +530,7 @@ router.post('/section-reuse', requireAuth, async (req, res) => {
 const ALLOWED_MIME = ['image/png', 'image/jpeg', 'image/webp', 'image/avif', 'image/gif'];
 const MAX_SIZE = 2 * 1024 * 1024; // 2MB
 
-router.put('/image/:key', requireAuth, async (req, res) => {
+router.put('/image/:key', requireCapability('edit_content'), async (req, res) => {
   const { key } = req.params;
   const { data, mimeType } = req.body;
 

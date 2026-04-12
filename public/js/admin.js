@@ -610,11 +610,10 @@
     // ---- ADMIN PANEL ----
     const adminToggle = document.getElementById('cmsAdminToggle');
     const adminPanel = document.getElementById('cmsAdminPanel');
-    const logBtn = document.getElementById('cmsLogBtn');
-    const logSection = document.getElementById('cmsAdminLog');
+    const panelMenu = document.getElementById('cmsPanelMenu');
+    const panelDetail = document.getElementById('cmsPanelDetail');
+    const detailBack = document.getElementById('cmsDetailBack');
     const logEntries = document.getElementById('cmsLogEntries');
-    const cspBtn = document.getElementById('cmsCspBtn');
-    const cspList = document.getElementById('cmsCspList');
     const cspEntries = document.getElementById('cmsCspEntries');
     const resetBtn = document.getElementById('cmsResetBtn');
     const confirmOverlay = document.getElementById('cmsConfirm');
@@ -634,43 +633,81 @@
         }
     });
 
-    // Activity log
-    if (logBtn) {
-        logBtn.addEventListener('click', async () => {
-            const wasHidden = logSection.classList.toggle('cms-hidden');
-            if (!wasHidden) {
-                logEntries.innerHTML = '<span class="cms-log-loading">Loading...</span>';
-                try {
-                    const res = await fetch('/api/admin/log', {
-                        headers: { 'X-CSRF-Token': csrfToken }
-                    });
-                    const data = await res.json();
-
-                    if (data.log.length === 0) {
-                        logEntries.innerHTML = '<span class="cms-log-empty">No activity yet.</span>';
-                        return;
-                    }
-
-                    logEntries.innerHTML = data.log.map(entry => {
-                        const date = new Date(entry.created_at);
-                        const timeStr = date.toLocaleDateString('en-GB', {
-                            day: '2-digit', month: 'short', year: 'numeric',
-                            hour: '2-digit', minute: '2-digit'
-                        });
-                        const action = entry.action.replace(/_/g, ' ');
-                        const section = entry.section_key ? ` (${entry.section_key})` : '';
-                        return `<div class="cms-log-entry">
-                            <span class="log-user">${entry.username}</span>
-                            <span class="log-action">${action}${section}</span><br>
-                            <span class="log-time">${timeStr}</span>
-                        </div>`;
-                    }).join('');
-                } catch (err) {
-                    logEntries.innerHTML = '<span class="cms-log-error">Failed to load log.</span>';
-                }
-            }
+    // Collapsible section toggles
+    document.querySelectorAll('.cms-section-toggle').forEach(toggle => {
+        toggle.addEventListener('click', () => {
+            const targetId = toggle.dataset.section;
+            const body = document.getElementById(targetId);
+            if (!body) return;
+            const isHidden = body.classList.toggle('cms-hidden');
+            toggle.classList.toggle('open', !isHidden);
         });
+    });
+
+    // Detail view open/close system
+    const detailLoaders = {};
+
+    function openDetail(paneId) {
+        if (!panelMenu || !panelDetail) return;
+        // Hide all detail panes, show the target one
+        document.querySelectorAll('.cms-detail-pane').forEach(p => p.classList.add('cms-hidden'));
+        const pane = document.getElementById(paneId);
+        if (pane) pane.classList.remove('cms-hidden');
+        panelMenu.classList.add('cms-hidden');
+        panelDetail.classList.remove('cms-hidden');
+        // Trigger data loader if registered
+        if (detailLoaders[paneId]) detailLoaders[paneId]();
     }
+
+    function closeDetail() {
+        if (!panelMenu || !panelDetail) return;
+        panelDetail.classList.add('cms-hidden');
+        panelMenu.classList.remove('cms-hidden');
+    }
+
+    if (detailBack) {
+        detailBack.addEventListener('click', closeDetail);
+    }
+
+    // Wire up all detail triggers
+    document.querySelectorAll('.cms-detail-trigger').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const paneId = btn.dataset.detail;
+            if (paneId) openDetail(paneId);
+        });
+    });
+
+    // Activity log loader
+    detailLoaders['cmsLogDetail'] = async () => {
+        if (!logEntries) return;
+        logEntries.innerHTML = '<span class="cms-log-loading">Loading...</span>';
+        try {
+            const res = await fetch('/api/admin/log', {
+                headers: { 'X-CSRF-Token': csrfToken }
+            });
+            const data = await res.json();
+            if (data.log.length === 0) {
+                logEntries.innerHTML = '<span class="cms-log-empty">No activity yet.</span>';
+                return;
+            }
+            logEntries.innerHTML = data.log.map(entry => {
+                const date = new Date(entry.created_at);
+                const timeStr = date.toLocaleDateString('en-GB', {
+                    day: '2-digit', month: 'short', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                });
+                const action = entry.action.replace(/_/g, ' ');
+                const section = entry.section_key ? ` (${entry.section_key})` : '';
+                return `<div class="cms-log-entry">
+                    <span class="log-user">${entry.username}</span>
+                    <span class="log-action">${action}${section}</span><br>
+                    <span class="log-time">${timeStr}</span>
+                </div>`;
+            }).join('');
+        } catch (err) {
+            logEntries.innerHTML = '<span class="cms-log-error">Failed to load log.</span>';
+        }
+    };
 
     // ---- CSP VIOLATIONS (admin only) ----
     function escapeHtml(s) {
@@ -682,28 +719,24 @@
             .replace(/'/g, '&#39;');
     }
 
-    if (cspBtn && cspList && cspEntries) {
-        cspBtn.addEventListener('click', () => {
-            const nowHidden = cspList.classList.toggle('cms-hidden');
-            if (nowHidden) return;
-            const violations = window.__cspViolations || [];
-            if (violations.length === 0) {
-                cspEntries.innerHTML = '<span class="cms-log-empty">No CSP violations on this page. Reload the page to refresh.</span>';
-                return;
-            }
-            cspEntries.innerHTML = violations.map(v => {
-                const where = v.source ? `${escapeHtml(v.source)}:${v.line}` : '';
-                return `<div class="cms-log-entry">
-                    <span class="log-action">${escapeHtml(v.directive)}</span><br>
-                    <span class="log-time">blocked: ${escapeHtml(v.blocked)}${where ? ' — ' + where : ''}</span>
-                </div>`;
-            }).join('');
-        });
-    }
+    // CSP violations loader
+    detailLoaders['cmsCspDetail'] = () => {
+        if (!cspEntries) return;
+        const violations = window.__cspViolations || [];
+        if (violations.length === 0) {
+            cspEntries.innerHTML = '<span class="cms-log-empty">No CSP violations on this page. Reload to refresh.</span>';
+            return;
+        }
+        cspEntries.innerHTML = violations.map(v => {
+            const where = v.source ? `${escapeHtml(v.source)}:${v.line}` : '';
+            return `<div class="cms-log-entry">
+                <span class="log-action">${escapeHtml(v.directive)}</span><br>
+                <span class="log-time">blocked: ${escapeHtml(v.blocked)}${where ? ' — ' + where : ''}</span>
+            </div>`;
+        }).join('');
+    };
 
-    // ---- USER MANAGEMENT (admin only) ----
-    const usersBtn = document.getElementById('cmsUsersBtn');
-    const usersList = document.getElementById('cmsUsersList');
+    // ---- USER MANAGEMENT ----
     const usersEntries = document.getElementById('cmsUsersEntries');
     const addUserBtn = document.getElementById('cmsAddUserBtn');
 
@@ -785,12 +818,7 @@
         }
     }
 
-    if (usersBtn && usersList) {
-        usersBtn.addEventListener('click', () => {
-            const wasHidden = usersList.classList.toggle('cms-hidden');
-            if (!wasHidden) loadUsers();
-        });
-    }
+    detailLoaders['cmsUsersDetail'] = () => loadUsers();
 
     if (addUserBtn) {
         addUserBtn.addEventListener('click', async () => {
@@ -822,7 +850,7 @@
                 if (!r.ok) throw new Error(data.error);
                 document.getElementById('cmsNewUsername').value = '';
                 document.getElementById('cmsNewPassword').value = '';
-                document.getElementById('cmsNewRole').value = 'content';
+                document.getElementById('cmsNewRole').selectedIndex = 0;
                 loadUsers();
             } catch (err) {
                 alert(err.message || 'Failed to add user.');
@@ -927,8 +955,6 @@
 
     // ---- BACKUPS ----
     const backupBtn = document.getElementById('cmsBackupBtn');
-    const backupsListBtn = document.getElementById('cmsBackupsListBtn');
-    const backupsListSection = document.getElementById('cmsBackupsList');
     const backupsEntries = document.getElementById('cmsBackupsEntries');
     const restoreConfirmOverlay = document.getElementById('cmsRestoreConfirm');
     const restoreCancel = document.getElementById('cmsRestoreCancel');
@@ -961,51 +987,45 @@
         }
     });
 
-    if (backupsListBtn) backupsListBtn.addEventListener('click', async () => {
-        const wasHidden = backupsListSection.classList.toggle('cms-hidden');
-        if (!wasHidden) {
-            backupsEntries.innerHTML = '<span class="cms-log-loading">Loading...</span>';
-            try {
-                const res = await fetch('/api/admin/backups', {
-                    headers: { 'X-CSRF-Token': csrfToken }
-                });
-                const data = await res.json();
-
-                if (data.backups.length === 0) {
-                    backupsEntries.innerHTML = '<span class="cms-log-empty">No backups yet.</span>';
-                    return;
-                }
-
-                backupsEntries.innerHTML = data.backups.map(b => {
-                    const date = new Date(b.created_at);
-                    const timeStr = date.toLocaleDateString('en-GB', {
-                        day: '2-digit', month: 'short', year: 'numeric',
-                        hour: '2-digit', minute: '2-digit'
-                    });
-                    return `<div class="cms-log-entry cms-backup-entry">
-                        <div>
-                            <span class="log-action">${b.label}</span><br>
-                            <span class="log-time">${b.username} &middot; ${timeStr}</span>
-                        </div>
-                        <button class="cms-backup-restore" data-id="${b.id}" data-label="${b.label}">
-                            Restore
-                        </button>
-                    </div>`;
-                }).join('');
-
-                // Attach restore handlers
-                backupsEntries.querySelectorAll('.cms-backup-restore').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        restoreId = btn.dataset.id;
-                        restoreMsg.textContent = `Restore backup "${btn.dataset.label}"? All current content and images will be replaced.`;
-                        restoreConfirmOverlay.classList.add('active');
-                    });
-                });
-            } catch (err) {
-                backupsEntries.innerHTML = '<span class="cms-log-error">Failed to load backups.</span>';
+    detailLoaders['cmsBackupsDetail'] = async () => {
+        if (!backupsEntries) return;
+        backupsEntries.innerHTML = '<span class="cms-log-loading">Loading...</span>';
+        try {
+            const res = await fetch('/api/admin/backups', {
+                headers: { 'X-CSRF-Token': csrfToken }
+            });
+            const data = await res.json();
+            if (data.backups.length === 0) {
+                backupsEntries.innerHTML = '<span class="cms-log-empty">No backups yet.</span>';
+                return;
             }
+            backupsEntries.innerHTML = data.backups.map(b => {
+                const date = new Date(b.created_at);
+                const timeStr = date.toLocaleDateString('en-GB', {
+                    day: '2-digit', month: 'short', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                });
+                return `<div class="cms-log-entry cms-backup-entry">
+                    <div>
+                        <span class="log-action">${b.label}</span><br>
+                        <span class="log-time">${b.username} &middot; ${timeStr}</span>
+                    </div>
+                    <button class="cms-backup-restore" data-id="${b.id}" data-label="${b.label}">
+                        Restore
+                    </button>
+                </div>`;
+            }).join('');
+            backupsEntries.querySelectorAll('.cms-backup-restore').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    restoreId = btn.dataset.id;
+                    restoreMsg.textContent = `Restore backup "${btn.dataset.label}"? All current content and images will be replaced.`;
+                    restoreConfirmOverlay.classList.add('active');
+                });
+            });
+        } catch (err) {
+            backupsEntries.innerHTML = '<span class="cms-log-error">Failed to load backups.</span>';
         }
-    });
+    };
 
     if (restoreCancel) restoreCancel.addEventListener('click', () => {
         restoreConfirmOverlay.classList.remove('active');
@@ -1221,4 +1241,149 @@
             }
         });
     }
+
+    // ---- PERMISSIONS MATRIX ----
+    const permissionsEntries = document.getElementById('cmsPermissionsEntries');
+
+    const capLabels = {
+        edit_content: 'Edit content',
+        manage_sections: 'Sections',
+        manage_pages: 'Pages',
+        manage_backups: 'Backups',
+        manage_theme: 'Theme',
+        view_activity: 'Activity',
+        manage_users: 'Users',
+        manage_page_access: 'Page access',
+        reset_content: 'Reset',
+        view_csp: 'CSP',
+        manage_permissions: 'Permissions'
+    };
+
+    async function loadPermissions() {
+        if (!permissionsEntries) return;
+        permissionsEntries.innerHTML = '<span class="cms-log-loading">Loading...</span>';
+        try {
+            const res = await fetch('/api/admin/permissions', {
+                headers: { 'X-CSRF-Token': csrfToken }
+            });
+            const data = await res.json();
+            if (!data.matrix) { permissionsEntries.innerHTML = 'Failed to load.'; return; }
+
+            const caps = data.capabilities;
+            const roles = data.roles;
+            const matrix = data.matrix;
+
+            let html = '<div class="cms-perms-grid">';
+            html += '<table class="cms-perms-table"><thead><tr><th>Role</th>';
+            for (const cap of caps) {
+                html += `<th title="${capLabels[cap] || cap}">${capLabels[cap] || cap}</th>`;
+            }
+            html += '</tr></thead><tbody>';
+            for (const role of roles) {
+                html += `<tr><td class="cms-perms-role">${role}</td>`;
+                for (const cap of caps) {
+                    const checked = matrix[role][cap] ? 'checked' : '';
+                    // manage_permissions is locked: always on for admin, always off for others
+                    const locked = cap === 'manage_permissions' || role === 'admin';
+                    const disabled = locked ? 'disabled' : '';
+                    html += `<td><input type="checkbox" ${checked} ${disabled} data-role="${role}" data-cap="${cap}"></td>`;
+                }
+                html += '</tr>';
+            }
+            html += '</tbody></table></div>';
+            html += '<button class="cms-btn cms-btn-save cms-perms-save" id="cmsPermsSaveBtn">Save permissions</button>';
+            permissionsEntries.innerHTML = html;
+
+            document.getElementById('cmsPermsSaveBtn').addEventListener('click', async () => {
+                const saveBtn = document.getElementById('cmsPermsSaveBtn');
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Saving...';
+                const updated = {};
+                for (const role of roles) { updated[role] = {}; }
+                permissionsEntries.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                    const r = cb.dataset.role;
+                    const c = cb.dataset.cap;
+                    if (r && c) updated[r][c] = cb.checked;
+                });
+                try {
+                    const r = await fetch('/api/admin/permissions', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                        body: JSON.stringify({ matrix: updated })
+                    });
+                    if (!r.ok) throw new Error('Save failed');
+                    saveBtn.textContent = 'Saved';
+                    setTimeout(() => { saveBtn.textContent = 'Save permissions'; saveBtn.disabled = false; }, 1500);
+                } catch (err) {
+                    alert('Failed to save permissions.');
+                    saveBtn.textContent = 'Save permissions';
+                    saveBtn.disabled = false;
+                }
+            });
+        } catch (err) {
+            permissionsEntries.innerHTML = '<span class="cms-log-error">Failed to load permissions.</span>';
+        }
+    }
+
+    detailLoaders['cmsPermissionsDetail'] = () => loadPermissions();
+
+    // ---- PAGE ACCESS ----
+    const pageAccessEntries = document.getElementById('cmsPageAccessEntries');
+
+    async function loadPageAccess() {
+        if (!pageAccessEntries) return;
+        pageAccessEntries.innerHTML = '<span class="cms-log-loading">Loading...</span>';
+        try {
+            const pgRes = await fetch(`/api/admin/page-access/by-slug/${encodeURIComponent(pageSlug)}`, {
+                headers: { 'X-CSRF-Token': csrfToken }
+            });
+            const data = await pgRes.json();
+            if (!pgRes.ok) throw new Error(data.error || 'Failed');
+
+            if (!data.clients || data.clients.length === 0) {
+                pageAccessEntries.innerHTML = '<span class="cms-log-empty">No client users exist yet. Create a client user first.</span>';
+                return;
+            }
+
+            let html = '<div class="cms-page-access-list">';
+            for (const c of data.clients) {
+                html += `<label class="cms-page-access-item">
+                    <input type="checkbox" ${c.hasAccess ? 'checked' : ''} data-uid="${c.id}">
+                    <span>${escapeHtml(c.username)}</span>
+                </label>`;
+            }
+            html += '</div>';
+            html += `<button class="cms-btn cms-btn-save cms-perms-save" id="cmsPageAccessSaveBtn" data-page-id="${data.pageId}">Save access</button>`;
+            pageAccessEntries.innerHTML = html;
+
+            document.getElementById('cmsPageAccessSaveBtn').addEventListener('click', async () => {
+                const saveBtn = document.getElementById('cmsPageAccessSaveBtn');
+                const pid = saveBtn.dataset.pageId;
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Saving...';
+                const userIds = [];
+                pageAccessEntries.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                    if (cb.checked) userIds.push(parseInt(cb.dataset.uid, 10));
+                });
+                try {
+                    const r = await fetch(`/api/admin/page-access/${pid}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                        body: JSON.stringify({ userIds })
+                    });
+                    if (!r.ok) throw new Error('Save failed');
+                    saveBtn.textContent = 'Saved';
+                    setTimeout(() => { saveBtn.textContent = 'Save access'; saveBtn.disabled = false; }, 1500);
+                } catch (err) {
+                    alert('Failed to save page access.');
+                    saveBtn.textContent = 'Save access';
+                    saveBtn.disabled = false;
+                }
+            });
+        } catch (err) {
+            pageAccessEntries.innerHTML = '<span class="cms-log-error">Failed to load page access.</span>';
+        }
+    }
+
+    detailLoaders['cmsPageAccessDetail'] = () => loadPageAccess();
 })();

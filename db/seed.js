@@ -14,6 +14,32 @@ async function seed() {
   await db.query(schema);
   console.log('Tables created/verified.');
 
+  // Migrate users CHECK constraint to include 'client' role
+  await db.query(`
+    DO $$ BEGIN
+      ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+      ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'content', 'client'));
+    EXCEPTION WHEN others THEN NULL;
+    END $$;
+  `);
+
+  // Seed default role permissions (idempotent: ON CONFLICT DO NOTHING)
+  const DEFAULT_PERMISSIONS = {
+    admin:   { edit_content: true, manage_sections: true, manage_pages: true, manage_backups: true, manage_theme: true, view_activity: true, manage_users: true, manage_page_access: true, reset_content: true, view_csp: true, manage_permissions: true },
+    content: { edit_content: true, manage_sections: true, manage_pages: true, manage_backups: true, manage_theme: true, view_activity: true, manage_users: true, manage_page_access: true, reset_content: false, view_csp: false, manage_permissions: false },
+    client:  { edit_content: false, manage_sections: false, manage_pages: false, manage_backups: false, manage_theme: false, view_activity: false, manage_users: false, manage_page_access: false, reset_content: false, view_csp: false, manage_permissions: false }
+  };
+  for (const [role, caps] of Object.entries(DEFAULT_PERMISSIONS)) {
+    for (const [cap, enabled] of Object.entries(caps)) {
+      await db.query(
+        `INSERT INTO role_permissions (role, capability, enabled) VALUES ($1, $2, $3)
+         ON CONFLICT (role, capability) DO NOTHING`,
+        [role, cap, enabled]
+      );
+    }
+  }
+  console.log('Role permissions seeded.');
+
   // Seed users (idempotent: ON CONFLICT DO NOTHING)
   // Passwords must come from env vars — never commit credentials.
   // If the users already exist we skip this step entirely so redeploys

@@ -10,6 +10,7 @@ const rateLimit = require('express-rate-limit');
 const { doubleCsrf } = require('csrf-csrf');
 const db = require('./db/pool');
 const themes = require('./db/themes');
+const { loadPermissions, hasCapability, getCapabilitiesForRole } = require('./middleware/permissions');
 const authRoutes = require('./routes/auth');
 const contentRoutes = require('./routes/content');
 const adminRoutes = require('./routes/admin');
@@ -213,19 +214,47 @@ async function renderPage(req, res, next, pageSlug) {
     }
     const currentPage = pageRows[0];
 
-    // Hidden pages are 404 for public visitors
-    if (currentPage.hidden && !res.locals.user) {
+    // Work out which pages are restricted (have any page_access entries)
+    const { rows: allAccessRows } = await db.query('SELECT DISTINCT page_id FROM page_access');
+    const restrictedPageIds = new Set(allAccessRows.map(r => r.page_id));
+    const isRestricted = restrictedPageIds.has(currentPage.id);
+
+    // Restricted or hidden pages: 404 for public visitors
+    if ((currentPage.hidden || isRestricted) && !res.locals.user) {
       return res.status(404).send('Not found');
+    }
+    // Clients only see restricted/hidden pages they have explicit access to
+    if ((currentPage.hidden || isRestricted) && res.locals.user?.role === 'client') {
+      const { rows: access } = await db.query(
+        'SELECT 1 FROM page_access WHERE page_id = $1 AND user_id = $2',
+        [currentPage.id, res.locals.user.id]
+      );
+      if (access.length === 0) {
+        return res.status(404).send('Not found');
+      }
     }
 
     // Load all pages for the page menu
     const { rows: allPagesRows } = await db.query(
-      'SELECT slug, title, hidden, sort_order FROM pages ORDER BY sort_order, created_at'
+      'SELECT id, slug, title, hidden, sort_order FROM pages ORDER BY sort_order, created_at'
     );
-    // Public visitors only see non-hidden pages; logged-in users see all
-    const allPages = res.locals.user
-      ? allPagesRows
-      : allPagesRows.filter(p => !p.hidden);
+
+    // Filter pages by role: admin/content see all, client sees unrestricted + granted, public sees unrestricted non-hidden
+    let allPages;
+    if (!res.locals.user) {
+      allPages = allPagesRows.filter(p => !p.hidden && !restrictedPageIds.has(p.id));
+    } else if (res.locals.user.role === 'client') {
+      const { rows: accessRows } = await db.query(
+        'SELECT page_id FROM page_access WHERE user_id = $1',
+        [res.locals.user.id]
+      );
+      const accessibleIds = new Set(accessRows.map(r => r.page_id));
+      allPages = allPagesRows.filter(p =>
+        accessibleIds.has(p.id) || (!p.hidden && !restrictedPageIds.has(p.id))
+      );
+    } else {
+      allPages = allPagesRows;
+    }
 
     // Load content
     const { rows } = await db.query('SELECT section_key, content FROM content');
@@ -279,7 +308,13 @@ async function renderPage(req, res, next, pageSlug) {
     const instanceTemplates = {};
     for (const iid of sectionOrder) instanceTemplates[iid] = baseOf(iid);
 
-    const renderOrder = res.locals.user
+    // Clients with no editing capabilities see the same as public
+    const userRole = res.locals.user?.role;
+    const canEdit = res.locals.user ? hasCapability(userRole, 'edit_content') : false;
+    const capabilities = res.locals.user ? getCapabilitiesForRole(userRole) : {};
+    const showAdminPanel = res.locals.user && Object.values(capabilities).some(v => v);
+
+    const renderOrder = (res.locals.user && canEdit)
       ? sectionOrder
       : sectionOrder.filter(s => !hiddenSections.includes(s));
 
@@ -289,7 +324,8 @@ async function renderPage(req, res, next, pageSlug) {
     res.render('index', {
       content, theme, activeTheme, themes,
       sectionOrder: renderOrder, hiddenSections, instanceTemplates,
-      currentPage, allPages, hasContact
+      currentPage, allPages, hasContact,
+      canEdit, capabilities, showAdminPanel
     });
   } catch (err) {
     next(err);
@@ -337,6 +373,14 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 
-app.listen(PORT, () => {
-  console.log(`[${isProd ? 'PROD' : 'DEV'}] Arrington CMS running on port ${PORT}`);
+loadPermissions().then(() => {
+  app.listen(PORT, () => {
+    console.log(`[${isProd ? 'PROD' : 'DEV'}] Arrington CMS running on port ${PORT}`);
+  });
+}).catch(err => {
+  console.error('Failed to load permissions:', err);
+  // Start anyway — hasCapability falls back to hardcoded defaults
+  app.listen(PORT, () => {
+    console.log(`[${isProd ? 'PROD' : 'DEV'}] Arrington CMS running on port ${PORT} (permissions fallback)`);
+  });
 });
