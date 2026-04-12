@@ -266,6 +266,7 @@
 
         .credential-block {
             padding: 2.5rem 0;
+            text-align: center;
         }
 
         .credential-badge-wrap {
@@ -928,23 +929,23 @@
 <section class="credentials<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
     <div class="section-inner">
         <div class="credentials-inner">
-            <div class="credential-block cms-section" data-section="<%= _kOx %>">
-                <% if (user) { %><button class="cms-edit-btn" data-section="<%= _kOx %>" title="Edit section">&#9998;</button><% } %>
+            <div class="credential-block cms-section" data-section="<%= _kSt %>">
+                <% if (user) { %><button class="cms-edit-btn" data-section="<%= _kSt %>" title="Edit section">&#9998;</button><% } %>
                 <% if (user) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
                 <% if (user) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
         <% if (user) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
         <% if (user) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
+                <div class="credential-stat"><%- content[_kSt + '.stat'] %></div>
+                <p><%- content[_kSt + '.text'] %></p>
+            </div>
+            <div class="credential-block cms-section" data-section="<%= _kOx %>">
+                <% if (user) { %><button class="cms-edit-btn" data-section="<%= _kOx %>" title="Edit section">&#9998;</button><% } %>
                 <div class="credential-badge-wrap">
                     <img src="/img/oxford" alt="Said Business School, University of Oxford" class="credential-badge">
                     <% if (user) { %><button class="cms-img-btn" data-image="oxford" title="Change badge">&#9998;</button><% } %>
                 </div>
                 <h3><%- content[_kOx + '.title'] %></h3>
                 <p><%- content[_kOx + '.text'] %></p>
-            </div>
-            <div class="credential-block cms-section" data-section="<%= _kSt %>">
-                <% if (user) { %><button class="cms-edit-btn" data-section="<%= _kSt %>" title="Edit section">&#9998;</button><% } %>
-                <div class="credential-stat"><%- content[_kSt + '.stat'] %></div>
-                <p><%- content[_kSt + '.text'] %></p>
             </div>
         </div>
     </div>
