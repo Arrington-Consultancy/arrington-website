@@ -121,8 +121,8 @@ router.get('/backups', requireAuth, async (req, res) => {
   }
 });
 
-// Restore backup (admin only)
-router.post('/backup/:id/restore', requireAdmin, async (req, res) => {
+// Restore backup
+router.post('/backup/:id/restore', requireAuth, async (req, res) => {
   try {
     const { rows } = await db.query(
       'SELECT content_snapshot, images_snapshot, label FROM backups WHERE id = $1',

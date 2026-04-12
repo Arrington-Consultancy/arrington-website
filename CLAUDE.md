@@ -93,7 +93,7 @@ public/
 | Username | Role | Capabilities |
 |----------|------|-------------|
 | nat | admin | Edit content, change images, change theme, view all activity, backup, restore, reset to defaults, view CSP violations panel |
-| tom | content | Edit content, change images, change theme, view own activity, backup |
+| tom | content | Edit content, change images, change theme, view own activity, backup, restore |
 
 Users are seeded on first run only — `db/seed.js` checks whether `nat` and `tom` already exist and skips creation if they do. First-time seed reads `NAT_PASSWORD` and `TOM_PASSWORD` from the environment; subsequent deploys don't need these env vars set. No registration route exists.
 
@@ -260,7 +260,7 @@ npm run dev
 - **Production detection:** checks for `RAILWAY_ENVIRONMENT` or `NODE_ENV=production`
 - **Trust proxy:** enabled (required for rate limiting, secure cookies, and HTTPS redirect behind Railway's reverse proxy)
 - **Start command:** `node db/seed.js && node server.js` (seed is idempotent; skips user creation after first run)
-- **Deploy:** `railway up` from project root, or push to `main` on GitHub for auto-deploy
+- **Deploy:** `railway up` from project root. Auto-deploy on push to `main` is configured but unreliable; don't rely on it
 - **GitHub:** `github.com/natparnell/arrington-prototype` (private)
 
 ## Custom domains
