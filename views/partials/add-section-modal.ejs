@@ -13,6 +13,10 @@ const templates = [
     { id: 'filter',       label: 'Filter',              blurb: 'Short statement with two paragraphs' },
     { id: 'contact',      label: 'Contact',             blurb: 'Heading, body and contact details' }
 ];
+
+// Section title lookup for orphan cards
+const templateLabels = {};
+templates.forEach(t => { templateLabels[t.id] = t.label; });
 %>
 <div class="cms-modal-overlay" id="cmsAddSectionModal">
     <div class="cms-modal cms-modal-wide">
@@ -20,15 +24,27 @@ const templates = [
             <span class="cms-modal-title">Add section</span>
             <button class="cms-modal-close" id="cmsAddSectionClose" title="Close">&times;</button>
         </div>
-        <p class="cms-add-intro">Choose a template. The new section will be added to the bottom of the page. Duplicates are allowed.</p>
-        <div class="cms-template-grid" id="cmsTemplateGrid">
-            <% for (const t of templates) { %>
-            <button class="cms-template-card" data-template-id="<%= t.id %>">
-                <img src="/img/templates/<%= t.id %>.svg" alt="" class="cms-template-thumb">
-                <div class="cms-template-label"><%= t.label %></div>
-                <div class="cms-template-blurb"><%= t.blurb %></div>
-            </button>
-            <% } %>
+        <div class="cms-add-tabs">
+            <button class="cms-add-tab active" data-tab="new">New section</button>
+            <button class="cms-add-tab" data-tab="reuse">Reuse existing</button>
+        </div>
+        <div class="cms-add-tab-panel" id="cmsTabNew">
+            <p class="cms-add-intro">Choose a template. The new section will be added to the bottom of the page. Duplicates are allowed.</p>
+            <div class="cms-template-grid" id="cmsTemplateGrid">
+                <% for (const t of templates) { %>
+                <button class="cms-template-card" data-template-id="<%= t.id %>">
+                    <img src="/img/templates/<%= t.id %>.svg" alt="" class="cms-template-thumb">
+                    <div class="cms-template-label"><%= t.label %></div>
+                    <div class="cms-template-blurb"><%= t.blurb %></div>
+                </button>
+                <% } %>
+            </div>
+        </div>
+        <div class="cms-add-tab-panel cms-hidden" id="cmsTabReuse">
+            <p class="cms-add-intro">Previously removed sections with their original content. Click to add one back to this page.</p>
+            <div id="cmsOrphanGrid" class="cms-template-grid">
+                <p class="cms-add-empty">Loading...</p>
+            </div>
         </div>
     </div>
 </div>

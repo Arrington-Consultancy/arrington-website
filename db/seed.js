@@ -79,6 +79,34 @@ async function seed() {
 
   console.log(`Content seeded (${Object.keys(defaults).length} keys).`);
 
+  // Migrate main page into pages table (idempotent)
+  const { rows: existingPages } = await db.query("SELECT slug FROM pages WHERE slug = 'main'");
+  if (existingPages.length === 0) {
+    // Read existing site.* keys from content table
+    const { rows: siteRows } = await db.query(
+      "SELECT section_key, content FROM content WHERE section_key IN ('site.section_order', 'site.hidden_sections', 'site.deleted_sections')"
+    );
+    const siteData = {};
+    siteRows.forEach(r => { siteData[r.section_key] = r.content; });
+
+    let sectionOrder = '[]';
+    try { const p = JSON.parse(siteData['site.section_order'] || '[]'); if (Array.isArray(p)) sectionOrder = JSON.stringify(p); } catch (e) { /* ignore */ }
+    let hiddenSections = '[]';
+    try { const p = JSON.parse(siteData['site.hidden_sections'] || '[]'); if (Array.isArray(p)) hiddenSections = JSON.stringify(p); } catch (e) { /* ignore */ }
+    let deletedSections = '[]';
+    try { const p = JSON.parse(siteData['site.deleted_sections'] || '[]'); if (Array.isArray(p)) deletedSections = JSON.stringify(p); } catch (e) { /* ignore */ }
+
+    await db.query(
+      `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections)
+       VALUES ('main', 'Home', 0, $1::jsonb, $2::jsonb, $3::jsonb)
+       ON CONFLICT (slug) DO NOTHING`,
+      [sectionOrder, hiddenSections, deletedSections]
+    );
+    console.log('Main page migrated to pages table.');
+  } else {
+    console.log('Pages table already has main page, skipping migration.');
+  }
+
   // Seed images (idempotent: ON CONFLICT DO NOTHING)
   const images = [
     { key: 'logo', file: 'logo.avif', mime: 'image/avif' },

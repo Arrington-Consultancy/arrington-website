@@ -40,6 +40,20 @@ CREATE TABLE IF NOT EXISTS backups (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS pages (
+    id SERIAL PRIMARY KEY,
+    slug VARCHAR(60) UNIQUE NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    hidden BOOLEAN NOT NULL DEFAULT false,
+    section_order JSONB NOT NULL DEFAULT '[]'::jsonb,
+    hidden_sections JSONB NOT NULL DEFAULT '[]'::jsonb,
+    deleted_sections JSONB NOT NULL DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_by INTEGER REFERENCES users(id)
+);
+
 CREATE TABLE IF NOT EXISTS audit_log (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id),

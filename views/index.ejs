@@ -3,12 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arrington Business Consultancy</title>
+    <title><%= currentPage.slug !== 'main' ? currentPage.title + ' | ' : '' %>Arrington Business Consultancy</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
     <% if (user) { %>
     <meta name="csrf-token" content="<%= csrfToken %>">
+    <meta name="page-slug" content="<%= currentPage.slug %>">
+    <meta name="page-hidden" content="<%= currentPage.hidden ? 'true' : 'false' %>">
     <link rel="stylesheet" href="/css/admin.css?v=<%= Date.now() %>">
     <% if (user.role === 'admin') { %>
     <script nonce="<%= nonce %>">
@@ -717,6 +719,53 @@
             color: var(--text);
         }
 
+        /* ---- PAGE MENU ---- */
+        .page-menu {
+            position: fixed;
+            top: 260px;
+            left: 0;
+            right: 0;
+            z-index: 99;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .page-menu-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            gap: 1.5rem;
+            height: 36px;
+            align-items: center;
+        }
+
+        .page-menu-link {
+            font-size: 0.78rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-decoration: none;
+            letter-spacing: 0.03em;
+            padding: 0.35rem 0;
+            border-bottom: 2px solid transparent;
+            transition: color 0.2s, border-color 0.2s;
+        }
+
+        .page-menu-link:hover {
+            color: var(--text-bright);
+        }
+
+        .page-menu-link.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .page-menu-link.page-menu-hidden {
+            opacity: 0.4;
+            font-style: italic;
+        }
+
         /* ---- FIRST-SECTION NAV CLEARANCE ---- */
         #cms-sections > section:first-child:not(.hero) {
             padding-top: 20rem;
@@ -724,6 +773,10 @@
 
         /* ---- MOBILE ---- */
         @media (max-width: 900px) {
+            .page-menu {
+                top: 64px;
+            }
+
             .nav-logo-img {
                 width: 140px;
             }
@@ -822,9 +875,22 @@
             <img src="/img/logo" alt="Arrington Business Consultancy" class="nav-logo-img">
             <% if (user) { %><button class="cms-img-btn" data-image="logo" title="Change logo">&#9998;</button><% } %>
         </a>
-        <a href="#conversation" class="nav-cta">Start a conversation</a>
+        <% if (hasContact) { %><a href="#conversation" class="nav-cta">Start a conversation</a><% } %>
     </div>
 </nav>
+
+<% if (allPages.length > 1) { %>
+<div class="page-menu" id="pageMenu">
+    <div class="page-menu-inner">
+        <% for (const _p of allPages) { %>
+        <a href="<%= _p.slug === 'main' ? '/' : '/' + _p.slug %>"
+           class="page-menu-link<%= _p.slug === currentPage.slug ? ' active' : '' %><%= _p.hidden ? ' page-menu-hidden' : '' %>">
+            <%= _p.title %>
+        </a>
+        <% } %>
+    </div>
+</div>
+<% } %>
 
 <div id="cms-sections">
 <% for (let _i = 0; _i < sectionOrder.length; _i++) { %>

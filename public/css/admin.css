@@ -252,6 +252,39 @@
 }
 
 /* ---- ADD SECTION TEMPLATE PICKER ---- */
+.cms-add-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    margin-bottom: 1rem;
+}
+
+.cms-add-tab {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: #8a8680;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 0.6rem 1.25rem;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.cms-add-tab:hover {
+    color: #d4d0c8;
+}
+
+.cms-add-tab.active {
+    color: #f0ece6;
+    border-bottom-color: rgba(196, 122, 58, 0.8);
+}
+
+.cms-add-tab-panel {
+    /* no extra styles needed — visibility toggled via cms-hidden */
+}
+
 .cms-add-intro {
     color: #8a8680;
     font-size: 0.85rem;
@@ -320,6 +353,84 @@
     font-size: 0.75rem;
     color: #8a8680;
     line-height: 1.35;
+}
+
+/* ---- ORPHAN SECTION CARDS ---- */
+.cms-orphan-card {
+    cursor: default;
+}
+
+.cms-orphan-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    align-items: center;
+}
+
+.cms-orphan-reuse {
+    background: rgba(196, 122, 58, 0.15);
+    border: 1px solid rgba(196, 122, 58, 0.3);
+    color: #d4a05a;
+    font-family: inherit;
+    font-size: 0.72rem;
+    font-weight: 500;
+    padding: 0.3rem 0.7rem;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.cms-orphan-reuse:hover {
+    background: rgba(196, 122, 58, 0.3);
+}
+
+.cms-orphan-reuse:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.cms-orphan-remove {
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #8a8680;
+    font-size: 1rem;
+    line-height: 1;
+    width: 24px;
+    height: 24px;
+    border-radius: 3px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s, border-color 0.15s;
+    margin-left: auto;
+}
+
+.cms-orphan-remove:hover {
+    color: #e85d5d;
+    border-color: rgba(232, 93, 93, 0.3);
+}
+
+.cms-orphan-clear {
+    background: none;
+    border: 1px solid rgba(232, 93, 93, 0.2);
+    color: #e85d5d;
+    font-family: inherit;
+    font-size: 0.78rem;
+    padding: 0.4rem 0.9rem;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-bottom: 1rem;
+    transition: background 0.15s;
+}
+
+.cms-orphan-clear:hover {
+    background: rgba(232, 93, 93, 0.08);
+}
+
+.cms-orphan-clear:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 /* Brief highlight flash when a newly-added section is scrolled to */
@@ -687,7 +798,8 @@
     margin: 0;
 }
 
-.cms-btn-danger-solid {
+.cms-btn-danger-solid,
+.cms-admin-action.danger.cms-btn-danger-solid {
     background: #e85d5d;
     border: none;
     color: #fff;
@@ -733,3 +845,101 @@
     white-space: nowrap;
     margin-left: 0.5rem;
 }
+
+/* ---- PAGE MANAGEMENT ---- */
+/* ---- USER MANAGEMENT ---- */
+.cms-user-entry {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.cms-user-info {
+    flex: 1;
+}
+
+.cms-user-btns {
+    display: flex;
+    gap: 0.4rem;
+    margin-left: 0.5rem;
+}
+
+.cms-user-pw-btn,
+.cms-user-del-btn {
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #8a8680;
+    font-size: 0.75rem;
+    width: 26px;
+    height: 26px;
+    border-radius: 3px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.cms-user-pw-btn:hover {
+    color: #d4a05a;
+    border-color: rgba(196, 122, 58, 0.3);
+}
+
+.cms-user-del-btn:hover {
+    color: #e85d5d;
+    border-color: rgba(232, 93, 93, 0.3);
+}
+
+.cms-users-add {
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    margin-top: 0.75rem;
+    padding-top: 0.5rem;
+}
+
+.cms-user-input {
+    display: block;
+    width: 100%;
+    background: #141414;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #d4d0c8;
+    font-family: inherit;
+    font-size: 0.78rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: 3px;
+    margin-bottom: 0.4rem;
+}
+
+.cms-user-input:focus {
+    outline: none;
+    border-color: rgba(196, 122, 58, 0.4);
+}
+
+select.cms-user-input {
+    appearance: auto;
+}
+
+.cms-user-add-btn {
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.78rem;
+    padding: 0.45rem;
+}
+
+.cms-page-section {
+    padding: 0.5rem 0 0.5rem 0.75rem;
+}
+
+.cms-page-section .cms-theme-label {
+    margin-bottom: 0.5rem;
+}
+
+.cms-page-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.cms-page-actions .cms-admin-action {
+    font-size: 0.78rem;
+}
+

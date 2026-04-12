@@ -9,6 +9,8 @@
     }
 
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+    const pageSlug = document.querySelector('meta[name="page-slug"]')?.content || 'main';
+    const pageHidden = document.querySelector('meta[name="page-hidden"]')?.content === 'true';
 
     // Section field labels for readable modal fields
     const fieldLabels = {
@@ -260,7 +262,7 @@
                     'Content-Type': 'application/json',
                     'X-CSRF-Token': csrfToken
                 },
-                body: JSON.stringify({ order })
+                body: JSON.stringify({ order, pageSlug })
             });
             if (!res.ok) throw new Error('Save failed');
         } catch (err) {
@@ -315,7 +317,7 @@
                     'Content-Type': 'application/json',
                     'X-CSRF-Token': csrfToken
                 },
-                body: JSON.stringify({ sectionId, hidden })
+                body: JSON.stringify({ sectionId, hidden, pageSlug })
             });
             if (!res.ok) throw new Error('Visibility update failed');
             return true;
@@ -352,8 +354,8 @@
             e.stopPropagation();
             const sectionId = btn.dataset.sectionId;
             const confirmed = window.confirm(
-                `Delete the "${sectionId}" section?\n\n` +
-                `It will be removed from the page permanently. The content stays in the database, so it can be brought back via "Reset to defaults" in the admin panel.`
+                `Delete the "${sectionId}" section from this page?\n\n` +
+                `It will be removed from this page only. The content stays in the database and can be restored via "Reset to defaults" or by re-adding the section.`
             );
             if (!confirmed) return;
 
@@ -363,7 +365,8 @@
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-Token': csrfToken
-                    }
+                    },
+                    body: JSON.stringify({ pageSlug })
                 });
                 if (!res.ok) throw new Error('Delete failed');
                 const section = document.querySelector(`section[data-section-id="${sectionId}"]`);
@@ -380,15 +383,164 @@
     const addSectionModal = document.getElementById('cmsAddSectionModal');
     const addSectionClose = document.getElementById('cmsAddSectionClose');
     const templateGrid = document.getElementById('cmsTemplateGrid');
+    const orphanGrid = document.getElementById('cmsOrphanGrid');
+    const tabNew = document.getElementById('cmsTabNew');
+    const tabReuse = document.getElementById('cmsTabReuse');
+
+    const templateLabels = {
+        hero: 'Hero', credentials: 'Credentials', biography: 'Biography',
+        intervention: 'Intervention', approach: 'Approach', insights: 'Insights',
+        casestudy: 'Case Study (timeline)', casestudy2: 'Case Study (editorial)',
+        assessment: 'Assessment', filter: 'Filter', contact: 'Contact'
+    };
+
+    let orphansLoaded = false;
 
     function openAddSectionModal() {
-        // All 11 templates are always selectable — duplicates allowed.
         addSectionModal.classList.add('active');
         adminPanel?.classList.remove('active');
     }
 
     function closeAddSectionModal() {
         addSectionModal.classList.remove('active');
+    }
+
+    // Tab switching
+    document.querySelectorAll('.cms-add-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.cms-add-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            const target = tab.dataset.tab;
+            if (target === 'new') {
+                tabNew.classList.remove('cms-hidden');
+                tabReuse.classList.add('cms-hidden');
+            } else {
+                tabNew.classList.add('cms-hidden');
+                tabReuse.classList.remove('cms-hidden');
+                if (!orphansLoaded) loadOrphans();
+            }
+        });
+    });
+
+    async function deleteOrphan(instanceId, cardEl) {
+        try {
+            const r = await fetch(`/api/content/orphaned-section/${encodeURIComponent(instanceId)}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                }
+            });
+            if (!r.ok) throw new Error('Delete failed');
+            cardEl.remove();
+            // If no cards left, show the empty message
+            if (!orphanGrid.querySelector('.cms-orphan-card')) {
+                orphanGrid.innerHTML = '<p class="cms-add-empty">No removed sections to reuse. Sections you remove from pages will appear here.</p>';
+                const clearBtn = document.getElementById('cmsClearOrphansBtn');
+                if (clearBtn) clearBtn.remove();
+            }
+        } catch (err) {
+            alert('Failed to delete. Please try again.');
+        }
+    }
+
+    function buildOrphanCard(o) {
+        const card = document.createElement('div');
+        card.className = 'cms-template-card cms-orphan-card';
+        card.dataset.instanceId = o.instanceId;
+        const label = templateLabels[o.template] || o.template;
+        const suffix = o.instanceId !== o.template ? ` (${o.instanceId})` : '';
+
+        const reuseBtn = document.createElement('button');
+        reuseBtn.className = 'cms-orphan-reuse';
+        reuseBtn.textContent = 'Add to page';
+        reuseBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            reuseBtn.disabled = true;
+            reuseBtn.textContent = 'Adding...';
+            try {
+                const r = await fetch('/api/content/section-reuse', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify({ instanceId: o.instanceId, pageSlug })
+                });
+                if (!r.ok) throw new Error('Reuse failed');
+                try { sessionStorage.setItem('cmsJustAdded', o.instanceId); } catch (err) {}
+                window.location.reload();
+            } catch (err) {
+                reuseBtn.disabled = false;
+                reuseBtn.textContent = 'Add to page';
+                alert('Failed to reuse section. Please try again.');
+            }
+        });
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'cms-orphan-remove';
+        removeBtn.title = 'Delete permanently';
+        removeBtn.textContent = '\u00d7';
+        removeBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (!confirm(`Permanently delete "${label}${suffix}"? This cannot be undone.`)) return;
+            removeBtn.disabled = true;
+            await deleteOrphan(o.instanceId, card);
+        });
+
+        card.innerHTML =
+            `<div class="cms-template-label">${label}${suffix}</div>` +
+            `<div class="cms-template-blurb">${o.preview || 'No preview available'}</div>`;
+        const actions = document.createElement('div');
+        actions.className = 'cms-orphan-actions';
+        actions.appendChild(reuseBtn);
+        actions.appendChild(removeBtn);
+        card.appendChild(actions);
+        return card;
+    }
+
+    async function loadOrphans() {
+        orphansLoaded = true;
+        orphanGrid.innerHTML = '<p class="cms-add-empty">Loading...</p>';
+        try {
+            const res = await fetch('/api/content/orphaned-sections', {
+                headers: { 'X-CSRF-Token': csrfToken }
+            });
+            const data = await res.json();
+            if (!data.orphans || data.orphans.length === 0) {
+                orphanGrid.innerHTML = '<p class="cms-add-empty">No removed sections to reuse. Sections you remove from pages will appear here.</p>';
+                return;
+            }
+            orphanGrid.innerHTML = '';
+
+            // Clear all button
+            const clearBtn = document.createElement('button');
+            clearBtn.className = 'cms-orphan-clear';
+            clearBtn.id = 'cmsClearOrphansBtn';
+            clearBtn.textContent = 'Delete all unused sections';
+            clearBtn.addEventListener('click', async () => {
+                if (!confirm(`Permanently delete all ${data.orphans.length} unused sections? This cannot be undone.`)) return;
+                clearBtn.disabled = true;
+                clearBtn.textContent = 'Deleting...';
+                for (const o of data.orphans) {
+                    try {
+                        await fetch(`/api/content/orphaned-section/${encodeURIComponent(o.instanceId)}`, {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken }
+                        });
+                    } catch (err) { /* continue */ }
+                }
+                orphanGrid.innerHTML = '<p class="cms-add-empty">No removed sections to reuse. Sections you remove from pages will appear here.</p>';
+                clearBtn.remove();
+            });
+            orphanGrid.parentElement.insertBefore(clearBtn, orphanGrid);
+
+            for (const o of data.orphans) {
+                orphanGrid.appendChild(buildOrphanCard(o));
+            }
+        } catch (err) {
+            orphanGrid.innerHTML = '<p class="cms-add-empty">Failed to load sections.</p>';
+        }
     }
 
     if (addSectionBtn) {
@@ -422,12 +574,11 @@
                         headers: {
                             'Content-Type': 'application/json',
                             'X-CSRF-Token': csrfToken
-                        }
+                        },
+                        body: JSON.stringify({ pageSlug })
                     });
                     if (!res.ok) throw new Error('Add failed');
                     const data = await res.json().catch(() => ({}));
-                    // Server returns the actual instance ID it allocated; flag
-                    // it so we can scroll to the right element after reload.
                     const instanceId = data.instanceId || templateId;
                     try { sessionStorage.setItem('cmsJustAdded', instanceId); } catch (err) {}
                     window.location.reload();
@@ -547,6 +698,137 @@
                     <span class="log-time">blocked: ${escapeHtml(v.blocked)}${where ? ' — ' + where : ''}</span>
                 </div>`;
             }).join('');
+        });
+    }
+
+    // ---- USER MANAGEMENT (admin only) ----
+    const usersBtn = document.getElementById('cmsUsersBtn');
+    const usersList = document.getElementById('cmsUsersList');
+    const usersEntries = document.getElementById('cmsUsersEntries');
+    const addUserBtn = document.getElementById('cmsAddUserBtn');
+
+    async function loadUsers() {
+        usersEntries.innerHTML = '<span class="cms-log-loading">Loading...</span>';
+        try {
+            const res = await fetch('/api/admin/users', {
+                headers: { 'X-CSRF-Token': csrfToken }
+            });
+            const data = await res.json();
+            if (!data.users || data.users.length === 0) {
+                usersEntries.innerHTML = '<span class="cms-log-empty">No users.</span>';
+                return;
+            }
+            usersEntries.innerHTML = data.users.map(u => {
+                const date = new Date(u.created_at);
+                const timeStr = date.toLocaleDateString('en-GB', {
+                    day: '2-digit', month: 'short', year: 'numeric'
+                });
+                return `<div class="cms-log-entry cms-user-entry" data-user-id="${u.id}">
+                    <div class="cms-user-info">
+                        <span class="log-user">${escapeHtml(u.username)}</span>
+                        <span class="cms-admin-role">${u.role}</span><br>
+                        <span class="log-time">Created ${timeStr}</span>
+                    </div>
+                    <div class="cms-user-btns">
+                        <button class="cms-user-pw-btn" data-id="${u.id}" data-name="${escapeHtml(u.username)}" title="Change password">&#128273;</button>
+                        <button class="cms-user-del-btn" data-id="${u.id}" data-name="${escapeHtml(u.username)}" title="Delete user">&#10005;</button>
+                    </div>
+                </div>`;
+            }).join('');
+
+            // Password change handlers
+            usersEntries.querySelectorAll('.cms-user-pw-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const newPw = prompt(`New password for "${btn.dataset.name}" (min 6 characters):`);
+                    if (!newPw || newPw.length < 6) {
+                        if (newPw !== null) alert('Password must be at least 6 characters.');
+                        return;
+                    }
+                    try {
+                        const r = await fetch(`/api/admin/user/${btn.dataset.id}/password`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-Token': csrfToken
+                            },
+                            body: JSON.stringify({ password: newPw })
+                        });
+                        if (!r.ok) { const d = await r.json(); throw new Error(d.error); }
+                        alert(`Password changed for "${btn.dataset.name}".`);
+                    } catch (err) {
+                        alert(err.message || 'Failed to change password.');
+                    }
+                });
+            });
+
+            // Delete user handlers
+            usersEntries.querySelectorAll('.cms-user-del-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    if (!confirm(`Delete user "${btn.dataset.name}"? This cannot be undone.`)) return;
+                    try {
+                        const r = await fetch(`/api/admin/user/${btn.dataset.id}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-Token': csrfToken
+                            }
+                        });
+                        if (!r.ok) { const d = await r.json(); throw new Error(d.error); }
+                        loadUsers();
+                    } catch (err) {
+                        alert(err.message || 'Failed to delete user.');
+                    }
+                });
+            });
+        } catch (err) {
+            usersEntries.innerHTML = '<span class="cms-log-error">Failed to load users.</span>';
+        }
+    }
+
+    if (usersBtn && usersList) {
+        usersBtn.addEventListener('click', () => {
+            const wasHidden = usersList.classList.toggle('cms-hidden');
+            if (!wasHidden) loadUsers();
+        });
+    }
+
+    if (addUserBtn) {
+        addUserBtn.addEventListener('click', async () => {
+            const username = document.getElementById('cmsNewUsername').value.trim();
+            const password = document.getElementById('cmsNewPassword').value;
+            const role = document.getElementById('cmsNewRole').value;
+
+            if (!username || username.length < 2) {
+                alert('Username must be at least 2 characters.');
+                return;
+            }
+            if (!password || password.length < 6) {
+                alert('Password must be at least 6 characters.');
+                return;
+            }
+
+            addUserBtn.disabled = true;
+            addUserBtn.textContent = 'Adding...';
+            try {
+                const r = await fetch('/api/admin/user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify({ username, password, role })
+                });
+                const data = await r.json();
+                if (!r.ok) throw new Error(data.error);
+                document.getElementById('cmsNewUsername').value = '';
+                document.getElementById('cmsNewPassword').value = '';
+                document.getElementById('cmsNewRole').value = 'content';
+                loadUsers();
+            } catch (err) {
+                alert(err.message || 'Failed to add user.');
+            }
+            addUserBtn.disabled = false;
+            addUserBtn.textContent = 'Add user';
         });
     }
 
@@ -819,6 +1101,124 @@
 
         confirmOverlay.addEventListener('click', (e) => {
             if (e.target === confirmOverlay) confirmOverlay.classList.remove('active');
+        });
+    }
+
+    // ---- PAGE MANAGEMENT ----
+    const addPageBtn = document.getElementById('cmsAddPageBtn');
+    const renamePageBtn = document.getElementById('cmsRenamePageBtn');
+    const hidePageBtn = document.getElementById('cmsHidePageBtn');
+    const deletePageBtn = document.getElementById('cmsDeletePageBtn');
+    const deletePageConfirmOverlay = document.getElementById('cmsDeletePageConfirm');
+    const deletePageCancel = document.getElementById('cmsDeletePageCancel');
+    const deletePageConfirmBtn = document.getElementById('cmsDeletePageConfirmBtn');
+
+    if (addPageBtn) {
+        addPageBtn.addEventListener('click', async () => {
+            const title = prompt('Enter a name for the new page:');
+            if (!title || !title.trim()) return;
+            addPageBtn.disabled = true;
+            addPageBtn.textContent = 'Creating...';
+            try {
+                const res = await fetch('/api/admin/page', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify({ title: title.trim() })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to create page');
+                window.location.href = '/' + data.slug;
+            } catch (err) {
+                addPageBtn.disabled = false;
+                addPageBtn.textContent = 'Add page';
+                alert(err.message || 'Failed to create page. Please try again.');
+            }
+        });
+    }
+
+    if (renamePageBtn) {
+        renamePageBtn.addEventListener('click', async () => {
+            const current = document.querySelector('.cms-theme-label strong')?.textContent || '';
+            const title = prompt('Rename this page:', current);
+            if (!title || !title.trim() || title.trim() === current) return;
+            try {
+                const res = await fetch(`/api/admin/page/${encodeURIComponent(pageSlug)}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify({ title: title.trim() })
+                });
+                if (!res.ok) throw new Error('Rename failed');
+                window.location.reload();
+            } catch (err) {
+                alert('Failed to rename page. Please try again.');
+            }
+        });
+    }
+
+    if (hidePageBtn) {
+        hidePageBtn.addEventListener('click', async () => {
+            const willHide = !pageHidden;
+            try {
+                const res = await fetch(`/api/admin/page/${encodeURIComponent(pageSlug)}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify({ hidden: willHide })
+                });
+                if (!res.ok) throw new Error('Toggle failed');
+                window.location.reload();
+            } catch (err) {
+                alert('Failed to update page visibility. Please try again.');
+            }
+        });
+    }
+
+    const deletePageMsg = document.getElementById('cmsDeletePageMsg');
+
+    if (deletePageBtn && deletePageConfirmOverlay) {
+        deletePageBtn.addEventListener('click', () => {
+            const pageName = document.querySelector('.cms-page-section .cms-theme-label strong')?.textContent || pageSlug;
+            if (deletePageMsg) {
+                deletePageMsg.textContent = `Are you sure you want to delete "${pageName}"? The page and its layout will be removed. Section content stays in the database and can be reused on other pages.`;
+            }
+            deletePageConfirmOverlay.classList.add('active');
+            adminPanel?.classList.remove('active');
+        });
+
+        deletePageCancel.addEventListener('click', () => {
+            deletePageConfirmOverlay.classList.remove('active');
+        });
+
+        deletePageConfirmOverlay.addEventListener('click', (e) => {
+            if (e.target === deletePageConfirmOverlay) deletePageConfirmOverlay.classList.remove('active');
+        });
+
+        deletePageConfirmBtn.addEventListener('click', async () => {
+            deletePageConfirmBtn.disabled = true;
+            deletePageConfirmBtn.textContent = 'Deleting...';
+            try {
+                const res = await fetch(`/api/admin/page/${encodeURIComponent(pageSlug)}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    }
+                });
+                if (!res.ok) throw new Error('Delete failed');
+                window.location.href = '/';
+            } catch (err) {
+                deletePageConfirmBtn.disabled = false;
+                deletePageConfirmBtn.textContent = 'Delete page';
+                alert('Failed to delete page. Please try again.');
+            }
         });
     }
 })();

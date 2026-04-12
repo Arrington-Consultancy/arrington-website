@@ -191,50 +191,74 @@ app.get('/v1.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'v1.html'));
 });
 
-// Main page
-app.get('/', async (req, res, next) => {
+// Valid section templates (shared with routes/content.js)
+const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','casestudy','casestudy2','assessment','filter','contact'];
+const defaultOrder = VALID_TEMPLATES.slice();
+
+const baseOf = (id) => {
+  const m = /^([a-z0-9]+)(?:__(\d+))?$/.exec(id || '');
+  return m && VALID_TEMPLATES.includes(m[1]) ? m[1] : null;
+};
+const isValid = (id) => baseOf(id) !== null;
+
+// Shared page renderer — serves both GET / and GET /:slug
+async function renderPage(req, res, next, pageSlug) {
   try {
+    // Load the requested page
+    const { rows: pageRows } = await db.query(
+      'SELECT * FROM pages WHERE slug = $1', [pageSlug]
+    );
+    if (pageRows.length === 0) {
+      return res.status(404).send('Not found');
+    }
+    const currentPage = pageRows[0];
+
+    // Hidden pages are 404 for public visitors
+    if (currentPage.hidden && !res.locals.user) {
+      return res.status(404).send('Not found');
+    }
+
+    // Load all pages for the page menu
+    const { rows: allPagesRows } = await db.query(
+      'SELECT slug, title, hidden, sort_order FROM pages ORDER BY sort_order, created_at'
+    );
+    // Public visitors only see non-hidden pages; logged-in users see all
+    const allPages = res.locals.user
+      ? allPagesRows
+      : allPagesRows.filter(p => !p.hidden);
+
+    // Load content
     const { rows } = await db.query('SELECT section_key, content FROM content');
     const content = {};
     rows.forEach(r => { content[r.section_key] = r.content; });
     const activeTheme = content['site.theme'] || 'dark';
     const theme = themes[activeTheme] || themes.dark;
-    const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','casestudy','casestudy2','assessment','filter','contact'];
-    const defaultOrder = VALID_TEMPLATES.slice();
-    // Section instance IDs: either `{template}` or `{template}__N`.
-    const baseOf = (id) => {
-      const m = /^([a-z0-9]+)(?:__(\d+))?$/.exec(id || '');
-      return m && VALID_TEMPLATES.includes(m[1]) ? m[1] : null;
-    };
-    const isValid = (id) => baseOf(id) !== null;
 
+    // Read section state from the page row (not from site.* content keys)
     let deletedSections = [];
     try {
-      const parsed = JSON.parse(content['site.deleted_sections'] || '[]');
+      const parsed = currentPage.deleted_sections || [];
       if (Array.isArray(parsed)) deletedSections = parsed.filter(s => VALID_TEMPLATES.includes(s));
     } catch (e) { /* ignore */ }
     let hiddenSections = [];
     try {
-      const parsed = JSON.parse(content['site.hidden_sections'] || '[]');
+      const parsed = currentPage.hidden_sections || [];
       if (Array.isArray(parsed)) hiddenSections = parsed.filter(isValid);
     } catch (e) { /* ignore */ }
 
+    // Build section order from the page's stored order
     let sectionOrder = defaultOrder.filter(s => !deletedSections.includes(s));
     try {
-      if (content['site.section_order']) {
-        const parsed = JSON.parse(content['site.section_order']);
-        if (Array.isArray(parsed)) {
-          // Keep valid instance IDs. Drop any base instance that was later
-          // deleted (suffixed instances are fine — they aren't auto-merged).
-          const merged = parsed.filter(s => {
-            if (!isValid(s)) return false;
-            const base = baseOf(s);
-            if (s === base && deletedSections.includes(base)) return false;
-            return true;
-          });
-          // Auto-merge only base templates that have NO instance on the page
-          // and are not in deleted_sections (so genuinely new templates get
-          // picked up on existing deploys without stomping on user state).
+      const stored = currentPage.section_order || [];
+      if (Array.isArray(stored) && stored.length > 0) {
+        const merged = stored.filter(s => {
+          if (!isValid(s)) return false;
+          const base = baseOf(s);
+          if (s === base && deletedSections.includes(base)) return false;
+          return true;
+        });
+        // Auto-merge only for the main page (new pages get explicit orders)
+        if (pageSlug === 'main') {
           const presentTemplates = new Set(merged.map(baseOf));
           const missing = defaultOrder.filter(t => !presentTemplates.has(t) && !deletedSections.includes(t));
           for (const t of missing) {
@@ -247,24 +271,41 @@ app.get('/', async (req, res, next) => {
             }
             merged.splice(insertAt, 0, t);
           }
-          sectionOrder = merged;
         }
+        sectionOrder = merged;
       }
     } catch (e) { /* use default */ }
 
-    // Instance → template map for the view loop.
     const instanceTemplates = {};
     for (const iid of sectionOrder) instanceTemplates[iid] = baseOf(iid);
 
-    // Public visitors never see hidden sections. Logged-in users still see
-    // them (dimmed) so they can unhide them.
     const renderOrder = res.locals.user
       ? sectionOrder
       : sectionOrder.filter(s => !hiddenSections.includes(s));
-    res.render('index', { content, theme, activeTheme, themes, sectionOrder: renderOrder, hiddenSections, instanceTemplates });
+
+    // Check if current page has a contact section (for nav CTA visibility)
+    const hasContact = renderOrder.some(s => baseOf(s) === 'contact');
+
+    res.render('index', {
+      content, theme, activeTheme, themes,
+      sectionOrder: renderOrder, hiddenSections, instanceTemplates,
+      currentPage, allPages, hasContact
+    });
   } catch (err) {
     next(err);
   }
+}
+
+// Main page
+app.get('/', (req, res, next) => renderPage(req, res, next, 'main'));
+
+// Additional pages — placed after all fixed routes, before 404 handler
+app.get('/:slug', (req, res, next) => {
+  const slug = req.params.slug;
+  // Don't catch routes that belong to other handlers
+  if (/\.\w+$/.test(slug)) return next(); // file extensions (v1.html etc.)
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return next(); // only lowercase-hyphenated slugs
+  renderPage(req, res, next, slug);
 });
 
 // 404 handler — must come after all routes

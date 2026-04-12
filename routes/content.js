@@ -14,6 +14,70 @@ function sanitise(text) {
   return sanitizeHtml(text, sanitiseOptions).trim();
 }
 
+// List orphaned section instances — content exists in the DB but not on any page
+router.get('/orphaned-sections', requireAuth, async (req, res) => {
+  try {
+    // Gather all instance IDs across all pages
+    const { rows: pageRows } = await db.query('SELECT section_order FROM pages');
+    const inUse = new Set();
+    for (const p of pageRows) {
+      const arr = Array.isArray(p.section_order) ? p.section_order : [];
+      arr.forEach(s => inUse.add(s));
+    }
+
+    // Find all content keys that look like instance-scoped fields
+    const { rows: contentRows } = await db.query(
+      "SELECT section_key, content FROM content WHERE section_key NOT LIKE 'site.%'"
+    );
+
+    // Group content by instance ID prefix and find orphans
+    const instanceContent = {};
+    for (const row of contentRows) {
+      // Extract instance ID: everything before the first `.`
+      // But credentials uses `{iid}_oxford.field` and `{iid}_stat.field`
+      const key = row.section_key;
+      const dotIdx = key.indexOf('.');
+      if (dotIdx === -1) continue;
+      let prefix = key.slice(0, dotIdx);
+
+      // For credentials sub-prefixes like `credentials__2_oxford`, derive the instance ID
+      const oxfordMatch = prefix.match(/^(.+)_oxford$/);
+      const statMatch = prefix.match(/^(.+)_stat$/);
+      let instanceId = prefix;
+      if (oxfordMatch) instanceId = oxfordMatch[1];
+      else if (statMatch) instanceId = statMatch[1];
+
+      // Only consider valid instance IDs
+      if (!isValidInstance(instanceId)) continue;
+
+      // Skip if this instance is on a page
+      if (inUse.has(instanceId)) continue;
+
+      if (!instanceContent[instanceId]) {
+        instanceContent[instanceId] = { instanceId, template: baseTemplate(instanceId), fields: {} };
+      }
+      instanceContent[instanceId].fields[key] = row.content;
+    }
+
+    // Build a preview-friendly list
+    const orphans = Object.values(instanceContent).map(o => {
+      // Find a heading/title field for the preview
+      const headingKey = Object.keys(o.fields).find(k =>
+        k.endsWith('.heading') || k.endsWith('.title') || k.endsWith('.label')
+      );
+      const preview = headingKey
+        ? o.fields[headingKey].replace(/<[^>]+>/g, '').slice(0, 80)
+        : '';
+      return { instanceId: o.instanceId, template: o.template, preview };
+    });
+
+    res.json({ orphans });
+  } catch (err) {
+    console.error('Orphaned sections error:', err);
+    res.status(500).json({ error: 'Failed to load orphaned sections' });
+  }
+});
+
 // Get all content for a section prefix
 router.get('/:prefix', requireAuth, async (req, res) => {
   try {
@@ -103,10 +167,13 @@ function sourcePrefixes(template) {
 }
 
 router.put('/order', requireAuth, async (req, res) => {
-  const { order } = req.body;
+  const { order, pageSlug } = req.body;
 
   if (!Array.isArray(order)) {
     return res.status(400).json({ error: 'Invalid order array' });
+  }
+  if (!pageSlug || typeof pageSlug !== 'string') {
+    return res.status(400).json({ error: 'Missing pageSlug' });
   }
 
   const orderSet = new Set(order);
@@ -115,15 +182,16 @@ router.put('/order', requireAuth, async (req, res) => {
   }
 
   try {
-    await db.query(
-      `UPDATE content SET content = $1, updated_at = NOW(), updated_by = $2
-       WHERE section_key = 'site.section_order'`,
-      [JSON.stringify(order), req.session.user.id]
+    const { rowCount } = await db.query(
+      `UPDATE pages SET section_order = $1::jsonb, updated_at = NOW(), updated_by = $2
+       WHERE slug = $3`,
+      [JSON.stringify(order), req.session.user.id, pageSlug]
     );
+    if (rowCount === 0) return res.status(404).json({ error: 'Page not found' });
 
     await db.query(
       'INSERT INTO audit_log (user_id, action, section_key, detail) VALUES ($1, $2, $3, $4)',
-      [req.session.user.id, 'section_reorder', 'site.section_order', `Reordered by ${req.session.user.username}`]
+      [req.session.user.id, 'section_reorder', pageSlug, `Reordered on "${pageSlug}" by ${req.session.user.username}`]
     );
 
     res.json({ success: true });
@@ -135,18 +203,22 @@ router.put('/order', requireAuth, async (req, res) => {
 
 // Toggle section visibility (hide/show)
 router.put('/visibility', requireAuth, async (req, res) => {
-  const { sectionId, hidden } = req.body;
+  const { sectionId, hidden, pageSlug } = req.body;
 
   if (!isValidInstance(sectionId) || typeof hidden !== 'boolean') {
     return res.status(400).json({ error: 'Invalid section or state' });
   }
+  if (!pageSlug || typeof pageSlug !== 'string') {
+    return res.status(400).json({ error: 'Missing pageSlug' });
+  }
 
   try {
-    const { rows } = await db.query(
-      `SELECT content FROM content WHERE section_key = 'site.hidden_sections'`
+    const { rows: pageRows } = await db.query(
+      'SELECT hidden_sections FROM pages WHERE slug = $1', [pageSlug]
     );
-    let list = [];
-    try { list = JSON.parse(rows[0]?.content || '[]'); } catch (e) { list = []; }
+    if (pageRows.length === 0) return res.status(404).json({ error: 'Page not found' });
+
+    let list = pageRows[0].hidden_sections || [];
     if (!Array.isArray(list)) list = [];
 
     const set = new Set(list.filter(s => isValidInstance(s)));
@@ -154,14 +226,14 @@ router.put('/visibility', requireAuth, async (req, res) => {
     const next = Array.from(set);
 
     await db.query(
-      `UPDATE content SET content = $1, updated_at = NOW(), updated_by = $2
-       WHERE section_key = 'site.hidden_sections'`,
-      [JSON.stringify(next), req.session.user.id]
+      `UPDATE pages SET hidden_sections = $1::jsonb, updated_at = NOW(), updated_by = $2
+       WHERE slug = $3`,
+      [JSON.stringify(next), req.session.user.id, pageSlug]
     );
 
     await db.query(
       'INSERT INTO audit_log (user_id, action, section_key, detail) VALUES ($1, $2, $3, $4)',
-      [req.session.user.id, hidden ? 'section_hide' : 'section_show', sectionId, `${hidden ? 'Hidden' : 'Shown'} by ${req.session.user.username}`]
+      [req.session.user.id, hidden ? 'section_hide' : 'section_show', sectionId, `${hidden ? 'Hidden' : 'Shown'} on "${pageSlug}" by ${req.session.user.username}`]
     );
 
     res.json({ success: true, hidden: next });
@@ -171,22 +243,32 @@ router.put('/visibility', requireAuth, async (req, res) => {
   }
 });
 
-// Helpers for loading/saving the three site-level JSON arrays
-async function loadJsonArray(key) {
+// Helpers for loading/saving page-level JSON arrays from the pages table
+async function loadPageArray(slug, column) {
   const { rows } = await db.query(
-    `SELECT content FROM content WHERE section_key = $1`, [key]
+    `SELECT ${column} FROM pages WHERE slug = $1`, [slug]
   );
-  try {
-    const parsed = JSON.parse(rows[0]?.content || '[]');
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (e) { return []; }
+  const val = rows[0]?.[column];
+  return Array.isArray(val) ? val : [];
 }
 
-async function saveJsonArray(key, value, userId) {
+async function savePageArrays(slug, updates, userId) {
+  const sets = [];
+  const params = [];
+  let idx = 1;
+  for (const [col, val] of Object.entries(updates)) {
+    sets.push(`${col} = $${idx}::jsonb`);
+    params.push(JSON.stringify(val));
+    idx++;
+  }
+  sets.push(`updated_at = NOW()`);
+  sets.push(`updated_by = $${idx}`);
+  params.push(userId);
+  idx++;
+  params.push(slug);
   await db.query(
-    `UPDATE content SET content = $1, updated_at = NOW(), updated_by = $2
-     WHERE section_key = $3`,
-    [JSON.stringify(value), userId, key]
+    `UPDATE pages SET ${sets.join(', ')} WHERE slug = $${idx}`,
+    params
   );
 }
 
@@ -195,29 +277,34 @@ async function saveJsonArray(key, value, userId) {
 // on next boot. Suffixed instances just drop out of the order.
 router.delete('/section/:id', requireAuth, async (req, res) => {
   const sectionId = req.params.id;
+  const pageSlug = req.body.pageSlug || req.query.pageSlug;
 
   if (!isValidInstance(sectionId)) {
     return res.status(400).json({ error: 'Invalid section' });
   }
+  if (!pageSlug || typeof pageSlug !== 'string') {
+    return res.status(400).json({ error: 'Missing pageSlug' });
+  }
 
   try {
-    let order = (await loadJsonArray('site.section_order')).filter(s => isValidInstance(s) && s !== sectionId);
-    let hidden = (await loadJsonArray('site.hidden_sections')).filter(s => isValidInstance(s) && s !== sectionId);
+    let order = (await loadPageArray(pageSlug, 'section_order')).filter(s => isValidInstance(s) && s !== sectionId);
+    let hidden = (await loadPageArray(pageSlug, 'hidden_sections')).filter(s => isValidInstance(s) && s !== sectionId);
 
-    let deleted = (await loadJsonArray('site.deleted_sections')).filter(s => VALID_TEMPLATES.includes(s));
+    let deleted = (await loadPageArray(pageSlug, 'deleted_sections')).filter(s => VALID_TEMPLATES.includes(s));
     const base = baseTemplate(sectionId);
     if (sectionId === base) {
-      // Only base instances go into deleted_sections (affects auto-merge).
       if (!deleted.includes(base)) deleted.push(base);
     }
 
-    await saveJsonArray('site.section_order', order, req.session.user.id);
-    await saveJsonArray('site.hidden_sections', hidden, req.session.user.id);
-    await saveJsonArray('site.deleted_sections', deleted, req.session.user.id);
+    await savePageArrays(pageSlug, {
+      section_order: order,
+      hidden_sections: hidden,
+      deleted_sections: deleted
+    }, req.session.user.id);
 
     await db.query(
       'INSERT INTO audit_log (user_id, action, section_key, detail) VALUES ($1, $2, $3, $4)',
-      [req.session.user.id, 'section_delete', sectionId, `Deleted by ${req.session.user.username}`]
+      [req.session.user.id, 'section_delete', sectionId, `Deleted from "${pageSlug}" by ${req.session.user.username}`]
     );
 
     res.json({ success: true });
@@ -227,30 +314,41 @@ router.delete('/section/:id', requireAuth, async (req, res) => {
   }
 });
 
-// Add a new instance of a template. If the base instance ID is unused (i.e.
-// the section was never created or has been deleted), reuse it — that way
+// Add a new instance of a template. If the base instance ID is unused on the
+// target page (and not in use on any other page), reuse it — that way
 // re-adding a previously-deleted section restores its existing content from
 // the DB. Otherwise allocate the smallest unused `{template}__N` suffix and
 // seed it by copying the base template's current content.
 router.post('/section/:template', requireAuth, async (req, res) => {
   const template = req.params.template;
+  const pageSlug = req.body.pageSlug;
 
   if (!VALID_TEMPLATES.includes(template)) {
     return res.status(400).json({ error: 'Invalid template' });
   }
+  if (!pageSlug || typeof pageSlug !== 'string') {
+    return res.status(400).json({ error: 'Missing pageSlug' });
+  }
 
   try {
-    let order = (await loadJsonArray('site.section_order')).filter(isValidInstance);
-    const inUse = new Set(order);
+    // Gather all instance IDs across ALL pages for global uniqueness
+    const { rows: allPageRows } = await db.query('SELECT slug, section_order FROM pages');
+    const globalInUse = new Set();
+    let pageOrder = [];
+    for (const p of allPageRows) {
+      const arr = Array.isArray(p.section_order) ? p.section_order : [];
+      arr.filter(isValidInstance).forEach(s => globalInUse.add(s));
+      if (p.slug === pageSlug) pageOrder = arr.filter(isValidInstance);
+    }
 
     let instanceId;
-    if (!inUse.has(template)) {
+    if (!globalInUse.has(template)) {
       instanceId = template;
     } else {
       instanceId = null;
       for (let n = 2; n <= MAX_INSTANCE_SUFFIX; n++) {
         const candidate = `${template}__${n}`;
-        if (!inUse.has(candidate)) { instanceId = candidate; break; }
+        if (!globalInUse.has(candidate)) { instanceId = candidate; break; }
       }
       if (!instanceId) {
         return res.status(400).json({ error: 'Too many copies of that template' });
@@ -271,7 +369,7 @@ router.post('/section/:template', requireAuth, async (req, res) => {
           [`${src}.%`]
         );
         for (const row of rows) {
-          const suffix = row.section_key.slice(src.length); // starts with `.`
+          const suffix = row.section_key.slice(src.length);
           const newKey = `${dst}${suffix}`;
           await db.query(
             `INSERT INTO content (section_key, content, updated_by)
@@ -283,28 +381,147 @@ router.post('/section/:template', requireAuth, async (req, res) => {
       }
     }
 
-    // Append instance to order
-    order.push(instanceId);
-    await saveJsonArray('site.section_order', order, req.session.user.id);
+    // Append instance to this page's order
+    pageOrder.push(instanceId);
+    await db.query(
+      `UPDATE pages SET section_order = $1::jsonb, updated_at = NOW(), updated_by = $2
+       WHERE slug = $3`,
+      [JSON.stringify(pageOrder), req.session.user.id, pageSlug]
+    );
 
     // Remove from deleted_sections if we just reused a base ID
     if (instanceId === template) {
-      let deleted = (await loadJsonArray('site.deleted_sections')).filter(s => VALID_TEMPLATES.includes(s));
+      let deleted = (await loadPageArray(pageSlug, 'deleted_sections')).filter(s => VALID_TEMPLATES.includes(s));
       if (deleted.includes(template)) {
         deleted = deleted.filter(s => s !== template);
-        await saveJsonArray('site.deleted_sections', deleted, req.session.user.id);
+        await db.query(
+          `UPDATE pages SET deleted_sections = $1::jsonb, updated_at = NOW(), updated_by = $2
+           WHERE slug = $3`,
+          [JSON.stringify(deleted), req.session.user.id, pageSlug]
+        );
       }
     }
 
     await db.query(
       'INSERT INTO audit_log (user_id, action, section_key, detail) VALUES ($1, $2, $3, $4)',
-      [req.session.user.id, 'section_add', instanceId, `Added by ${req.session.user.username}`]
+      [req.session.user.id, 'section_add', instanceId, `Added to "${pageSlug}" by ${req.session.user.username}`]
     );
 
     res.json({ success: true, instanceId });
   } catch (err) {
     console.error('Section add error:', err);
     res.status(500).json({ error: 'Failed to add section' });
+  }
+});
+
+// Permanently delete an orphaned section's content from the database
+router.delete('/orphaned-section/:id', requireAuth, async (req, res) => {
+  const instanceId = req.params.id;
+
+  if (!isValidInstance(instanceId)) {
+    return res.status(400).json({ error: 'Invalid instance ID' });
+  }
+
+  try {
+    // Verify it's truly orphaned — not on any page
+    const { rows: pageRows } = await db.query('SELECT section_order FROM pages');
+    for (const p of pageRows) {
+      const arr = Array.isArray(p.section_order) ? p.section_order : [];
+      if (arr.includes(instanceId)) {
+        return res.status(400).json({ error: 'That section is still on a page' });
+      }
+    }
+
+    // Delete all content rows for this instance
+    const prefixes = contentPrefixes(instanceId);
+    let deleted = 0;
+    for (const pfx of prefixes) {
+      const { rowCount } = await db.query(
+        'DELETE FROM content WHERE section_key LIKE $1',
+        [`${pfx}.%`]
+      );
+      deleted += rowCount;
+    }
+
+    await db.query(
+      'INSERT INTO audit_log (user_id, action, section_key, detail) VALUES ($1, $2, $3, $4)',
+      [req.session.user.id, 'section_purge', instanceId, `Permanently deleted ${deleted} content rows for "${instanceId}" by ${req.session.user.username}`]
+    );
+
+    res.json({ success: true, deleted });
+  } catch (err) {
+    console.error('Orphan delete error:', err);
+    res.status(500).json({ error: 'Failed to delete section content' });
+  }
+});
+
+// Reuse an orphaned section instance — add an existing instance ID to a page
+router.post('/section-reuse', requireAuth, async (req, res) => {
+  const { instanceId, pageSlug } = req.body;
+
+  if (!instanceId || !isValidInstance(instanceId)) {
+    return res.status(400).json({ error: 'Invalid instance ID' });
+  }
+  if (!pageSlug || typeof pageSlug !== 'string') {
+    return res.status(400).json({ error: 'Missing pageSlug' });
+  }
+
+  try {
+    // Check the instance isn't already on any page
+    const { rows: allPageRows } = await db.query('SELECT slug, section_order FROM pages');
+    for (const p of allPageRows) {
+      const arr = Array.isArray(p.section_order) ? p.section_order : [];
+      if (arr.includes(instanceId)) {
+        return res.status(400).json({ error: 'That section is already on a page' });
+      }
+    }
+
+    // Verify content actually exists for this instance
+    const prefixes = contentPrefixes(instanceId);
+    let hasContent = false;
+    for (const pfx of prefixes) {
+      const { rows } = await db.query(
+        'SELECT 1 FROM content WHERE section_key LIKE $1 LIMIT 1',
+        [`${pfx}.%`]
+      );
+      if (rows.length > 0) { hasContent = true; break; }
+    }
+    if (!hasContent) {
+      return res.status(404).json({ error: 'No content found for that section' });
+    }
+
+    // Append to the page's section order
+    const pageOrder = (await loadPageArray(pageSlug, 'section_order')).filter(isValidInstance);
+    pageOrder.push(instanceId);
+    await db.query(
+      `UPDATE pages SET section_order = $1::jsonb, updated_at = NOW(), updated_by = $2
+       WHERE slug = $3`,
+      [JSON.stringify(pageOrder), req.session.user.id, pageSlug]
+    );
+
+    // Remove from deleted_sections if it's a base instance
+    const base = baseTemplate(instanceId);
+    if (instanceId === base) {
+      let deleted = (await loadPageArray(pageSlug, 'deleted_sections')).filter(s => VALID_TEMPLATES.includes(s));
+      if (deleted.includes(base)) {
+        deleted = deleted.filter(s => s !== base);
+        await db.query(
+          `UPDATE pages SET deleted_sections = $1::jsonb, updated_at = NOW(), updated_by = $2
+           WHERE slug = $3`,
+          [JSON.stringify(deleted), req.session.user.id, pageSlug]
+        );
+      }
+    }
+
+    await db.query(
+      'INSERT INTO audit_log (user_id, action, section_key, detail) VALUES ($1, $2, $3, $4)',
+      [req.session.user.id, 'section_reuse', instanceId, `Reused on "${pageSlug}" by ${req.session.user.username}`]
+    );
+
+    res.json({ success: true, instanceId });
+  } catch (err) {
+    console.error('Section reuse error:', err);
+    res.status(500).json({ error: 'Failed to reuse section' });
   }
 });
 

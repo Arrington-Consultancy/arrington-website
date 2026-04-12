@@ -33,9 +33,11 @@ db/
   schema.sql           Table definitions (idempotent CREATE IF NOT EXISTS)
   defaults.js          Original content values (used by seed + reset)
   themes.js            5 colour themes (dark, oxford, light, slate, ember)
-  seed.js              Idempotent seed (tables, users, content, images).
+  seed.js              Idempotent seed (tables, users, content, images, pages).
                        Skips user creation once nat/tom already exist, so
-                       redeploys don't need NAT_PASSWORD/TOM_PASSWORD set
+                       redeploys don't need NAT_PASSWORD/TOM_PASSWORD set.
+                       Migrates existing site.* content keys into the pages table
+                       on first run after the multi-page update.
 routes/
   auth.js              POST /login (rate-limited), POST /logout
   content.js           GET/PUT content, PUT image, PUT section order,
@@ -43,7 +45,8 @@ routes/
                        DELETE /section/:id. Holds VALID_TEMPLATES, the
                        baseTemplate / isValidInstance / contentPrefixes
                        helpers, and the instance ID allocator.
-  admin.js             Activity log, reset, backup, restore, theme
+  admin.js             Activity log, reset, backup, restore, theme,
+                       page CRUD (create, rename, hide, delete, reorder)
 middleware/
   auth.js              requireAuth, requireAdmin
 views/
@@ -82,7 +85,8 @@ public/
 ## Database tables
 
 - **users** — seeded admin (`nat`) and content (`tom`) accounts
-- **content** — key-value store for all editable text (**71 keys** baseline) + `site.theme`, `site.section_order`, `site.hidden_sections`, `site.deleted_sections`. When a section is duplicated the new instance's content keys are seeded into this same table under the new instance ID's prefix.
+- **content** — key-value store for all editable text (**71 keys** baseline) + `site.theme`. When a section is duplicated the new instance's content keys are seeded into this same table under the new instance ID's prefix. (The legacy `site.section_order`, `site.hidden_sections`, `site.deleted_sections` keys remain in the DB but are no longer read; that state now lives in the pages table.)
+- **pages** — multi-page support. Each row is a page with `slug` (unique), `title`, `sort_order`, `hidden` (boolean), and per-page JSONB arrays: `section_order`, `hidden_sections`, `deleted_sections`. The main page has slug `main` and cannot be hidden or deleted.
 - **images** — binary image storage (logo, headshot, oxford badge) for persistence across Railway redeploys
 - **backups** — full snapshots of content + images (JSONB)
 - **session** — express-session store (connect-pg-simple)
@@ -105,6 +109,20 @@ Users are seeded on first run only — `db/seed.js` checks whether `nat` and `to
 - Clicking opens a modal with all editable fields for that section
 - Content sanitised on save via `sanitize-html` (only `<strong>`, `<p>`, `<br>`, `<em>` allowed)
 - Credentials section split into two independently editable blocks (Oxford + statistic)
+
+## Multi-page support
+
+The site supports multiple pages. Each page is a row in the `pages` table with its own slug, title, sort order, visibility, and section arrays.
+
+- **URL scheme:** `/` for the main page (slug `main`), `/{slug}` for additional pages
+- **Page menu:** a subtle fixed bar below the nav, only rendered when 2+ pages exist. Links styled with theme CSS variables; active page highlighted with accent colour. Hidden pages shown dimmed (italic, low opacity) for logged-in users only.
+- **Instance IDs are globally unique across all pages.** A new page's hero becomes `hero__2` if `hero` is already on the main page. The content table doesn't change; each page just owns a different subset of instance IDs.
+- **Default new page layout:** hero + case study (timeline) + contact
+- **Page controls** (in admin panel, both users): Add page, Rename page, Hide/Show page (not main), Delete page (not main, with confirmation)
+- **Slug generation:** auto-generated from title (lowercase, hyphens). Reserved slugs rejected: `login`, `logout`, `health`, `api`, `img`, `js`, `css`, `public`, `main`
+- **Main page protection:** cannot be hidden or deleted (server enforces)
+- **Backups:** pages snapshot stored under the `__pages__` key inside `content_snapshot`. Old backups without `__pages__` restore content only, leaving pages untouched.
+- **Section API calls** now include `pageSlug` in the request body so operations target the correct page's arrays in the pages table.
 
 ## Section management (reorder, hide, delete, add, duplicate)
 

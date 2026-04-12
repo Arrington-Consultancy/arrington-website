@@ -21,12 +21,26 @@
             </div>
         </div>
         <div class="cms-admin-divider"></div>
+        <div class="cms-page-section">
+            <div class="cms-theme-label">Page: <strong><%= currentPage.title %></strong></div>
+            <div class="cms-page-actions">
+                <button class="cms-admin-action" id="cmsAddPageBtn">Add page</button>
+                <button class="cms-admin-action" id="cmsRenamePageBtn">Rename page</button>
+                <% if (currentPage.slug !== 'main') { %>
+                <button class="cms-admin-action" id="cmsHidePageBtn"><%= currentPage.hidden ? 'Show page' : 'Hide page' %></button>
+                <button class="cms-admin-action danger" id="cmsDeletePageBtn">Delete page</button>
+                <% } %>
+            </div>
+        </div>
+        <div class="cms-admin-divider"></div>
         <button class="cms-admin-action" id="cmsAddSectionBtn">Add section</button>
         <button class="cms-admin-action" id="cmsBackupBtn">Backup current content</button>
         <button class="cms-admin-action" id="cmsBackupsListBtn">View backups</button>
         <div class="cms-admin-divider"></div>
         <% if (user.role === 'admin') { %>
         <button class="cms-admin-action danger" id="cmsResetBtn">Reset all content to defaults</button>
+        <div class="cms-admin-divider"></div>
+        <button class="cms-admin-action" id="cmsUsersBtn">Manage users</button>
         <div class="cms-admin-divider"></div>
         <button class="cms-admin-action" id="cmsCspBtn">CSP violations</button>
         <div class="cms-admin-divider"></div>
@@ -47,6 +61,20 @@
         <div id="cmsBackupsEntries">Loading...</div>
     </div>
     <% if (user.role === 'admin') { %>
+    <div class="cms-admin-log cms-hidden" id="cmsUsersList">
+        <div class="cms-admin-log-title">Users</div>
+        <div id="cmsUsersEntries">Loading...</div>
+        <div class="cms-users-add">
+            <div class="cms-admin-log-title">Add user</div>
+            <input type="text" id="cmsNewUsername" placeholder="Username" class="cms-user-input">
+            <input type="password" id="cmsNewPassword" placeholder="Password (min 6 chars)" class="cms-user-input">
+            <select id="cmsNewRole" class="cms-user-input">
+                <option value="content">Content</option>
+                <option value="admin">Admin</option>
+            </select>
+            <button class="cms-btn cms-btn-save cms-user-add-btn" id="cmsAddUserBtn">Add user</button>
+        </div>
+    </div>
     <div class="cms-admin-log cms-hidden" id="cmsCspList">
         <div class="cms-admin-log-title">CSP violations on this page</div>
         <div id="cmsCspEntries">None.</div>
@@ -70,6 +98,16 @@
         <div class="cms-confirm-actions">
             <button class="cms-btn cms-btn-cancel" id="cmsRestoreCancel">Cancel</button>
             <button class="cms-btn cms-btn-save" id="cmsRestoreConfirmBtn">Restore</button>
+        </div>
+    </div>
+</div>
+
+<div class="cms-confirm-overlay" id="cmsDeletePageConfirm">
+    <div class="cms-confirm-box">
+        <p id="cmsDeletePageMsg">Are you sure you want to delete this page? The page and its layout will be removed. Section content stays in the database and can be reused on other pages.</p>
+        <div class="cms-confirm-actions">
+            <button class="cms-btn cms-btn-cancel" id="cmsDeletePageCancel">Cancel</button>
+            <button class="cms-btn cms-btn-save cms-admin-action danger cms-btn-danger-solid" id="cmsDeletePageConfirmBtn">Delete page</button>
         </div>
     </div>
 </div>
