@@ -6,7 +6,7 @@ const PgSession = require('connect-pg-simple')(session);
 const helmet = require('helmet');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
-const rateLimit = require('express-rate-limit');
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const { doubleCsrf } = require('csrf-csrf');
 const db = require('./db/pool');
 const themes = require('./db/themes');
@@ -135,15 +135,21 @@ app.use(session({
 }));
 
 // CSRF protection
-const { generateToken, doubleCsrfProtection } = doubleCsrf({
+const { generateCsrfToken, doubleCsrfProtection } = doubleCsrf({
   getSecret: () => sessionSecret,
+  // Use session ID when available (logged-in users), otherwise fall back to a
+  // fixed value. The double-submit cookie itself provides request binding; the
+  // session identifier adds an extra layer but must be stable across the
+  // GET (form render) → POST (form submit) pair. With saveUninitialized:false,
+  // anonymous visitors have no persisted session, so we use a constant.
+  getSessionIdentifier: (req) => req.session?.user ? req.session.id : 'anonymous',
   cookieName: '_csrf',
   cookieOptions: {
     httpOnly: true,
     secure: isProd,
     sameSite: 'lax'
   },
-  getTokenFromRequest: (req) => {
+  getCsrfTokenFromRequest: (req) => {
     return req.headers['x-csrf-token'] || req.body._csrf;
   }
 });
@@ -158,7 +164,7 @@ app.use((req, res, next) => {
 
 // Make CSRF token available to all views
 app.use((req, res, next) => {
-  res.locals.csrfToken = generateToken(req, res);
+  res.locals.csrfToken = generateCsrfToken(req, res);
   res.locals.user = req.session.user || null;
   next();
 });
@@ -171,7 +177,7 @@ const authedWriteLimiter = rateLimit({
   max: 60,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => req.session?.user?.id ? `u:${req.session.user.id}` : `ip:${req.ip}`,
+  keyGenerator: (req) => req.session?.user?.id ? `u:${req.session.user.id}` : `ip:${ipKeyGenerator(req)}`,
   message: { error: 'Too many requests. Slow down.' }
 });
 
