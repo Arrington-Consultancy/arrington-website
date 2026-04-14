@@ -253,6 +253,19 @@ router.put('/theme', requireCapability('manage_theme'), async (req, res) => {
 
 // --- Page management (both users) ---
 
+// List all pages (used by the reorder-pages UI)
+router.get('/pages', requireCapability('manage_pages'), async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      'SELECT id, slug, title, sort_order, hidden FROM pages ORDER BY sort_order, created_at'
+    );
+    res.json({ pages: rows });
+  } catch (err) {
+    console.error('Pages list error:', err);
+    res.status(500).json({ error: 'Failed to list pages' });
+  }
+});
+
 // Create a new page
 router.post('/page', requireCapability('manage_pages'), async (req, res) => {
   const { title } = req.body;

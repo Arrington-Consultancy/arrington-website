@@ -36,6 +36,9 @@
                 <div class="cms-page-actions">
                     <button class="cms-admin-action" id="cmsAddPageBtn">Add page</button>
                     <button class="cms-admin-action" id="cmsRenamePageBtn">Rename page</button>
+                    <% if (allPages.length > 1) { %>
+                    <button class="cms-admin-action cms-detail-trigger" data-detail="cmsReorderPagesDetail">Reorder pages</button>
+                    <% } %>
                     <% if (currentPage.slug !== 'main') { %>
                     <button class="cms-admin-action" id="cmsHidePageBtn"><%= currentPage.hidden ? 'Show page' : 'Hide page' %></button>
                     <button class="cms-admin-action danger" id="cmsDeletePageBtn">Delete page</button>
@@ -146,6 +149,13 @@
             <div class="cms-detail-pane cms-hidden" id="cmsPageAccessDetail">
                 <div class="cms-detail-title">Page access: <strong><%= currentPage.title %></strong></div>
                 <div id="cmsPageAccessEntries">Loading...</div>
+            </div>
+            <% } %>
+
+            <% if (capabilities.manage_pages) { %>
+            <div class="cms-detail-pane cms-hidden" id="cmsReorderPagesDetail">
+                <div class="cms-detail-title">Reorder pages</div>
+                <div id="cmsReorderPagesEntries">Loading...</div>
             </div>
             <% } %>
 

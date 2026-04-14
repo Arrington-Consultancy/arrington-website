@@ -1401,4 +1401,81 @@
     }
 
     detailLoaders['cmsPageAccessDetail'] = () => loadPageAccess();
+
+    // ---- REORDER PAGES ----
+    const reorderPagesEntries = document.getElementById('cmsReorderPagesEntries');
+    let reorderPagesList = [];  // [{slug, title, hidden}]
+
+    function renderReorderPages() {
+        if (!reorderPagesEntries) return;
+        if (reorderPagesList.length === 0) {
+            reorderPagesEntries.innerHTML = '<span class="cms-log-empty">No pages.</span>';
+            return;
+        }
+        let html = '<div class="cms-reorder-list">';
+        for (let i = 0; i < reorderPagesList.length; i++) {
+            const p = reorderPagesList[i];
+            const isFirst = i === 0;
+            const isLast = i === reorderPagesList.length - 1;
+            html += `<div class="cms-reorder-item">
+                <span class="cms-reorder-title${p.hidden ? ' cms-reorder-hidden' : ''}">${escapeHtml(p.title)}</span>
+                <div class="cms-reorder-btns">
+                    <button class="cms-reorder-btn" data-dir="up" data-idx="${i}"${isFirst ? ' disabled' : ''} title="Move up">&#9650;</button>
+                    <button class="cms-reorder-btn" data-dir="down" data-idx="${i}"${isLast ? ' disabled' : ''} title="Move down">&#9660;</button>
+                </div>
+            </div>`;
+        }
+        html += '</div><div class="cms-reorder-status" id="cmsReorderStatus"></div>';
+        reorderPagesEntries.innerHTML = html;
+
+        reorderPagesEntries.querySelectorAll('.cms-reorder-btn').forEach(btn => {
+            btn.addEventListener('click', () => movePage(parseInt(btn.dataset.idx, 10), btn.dataset.dir));
+        });
+    }
+
+    async function movePage(idx, dir) {
+        const j = dir === 'up' ? idx - 1 : idx + 1;
+        if (j < 0 || j >= reorderPagesList.length) return;
+        // Swap locally
+        const tmp = reorderPagesList[idx];
+        reorderPagesList[idx] = reorderPagesList[j];
+        reorderPagesList[j] = tmp;
+        renderReorderPages();
+
+        const status = document.getElementById('cmsReorderStatus');
+        if (status) status.textContent = 'Saving...';
+        try {
+            const r = await fetch('/api/admin/page-order', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                body: JSON.stringify({ order: reorderPagesList.map(p => p.slug) })
+            });
+            if (!r.ok) throw new Error('Save failed');
+            if (status) {
+                status.textContent = 'Saved. Reload to see the new order in the menu.';
+            }
+        } catch (err) {
+            if (status) status.textContent = 'Save failed. Try again.';
+        }
+    }
+
+    async function loadReorderPages() {
+        if (!reorderPagesEntries) return;
+        reorderPagesEntries.innerHTML = '<span class="cms-log-loading">Loading...</span>';
+        try {
+            const r = await fetch('/api/admin/pages', {
+                headers: { 'X-CSRF-Token': csrfToken }
+            });
+            const data = await r.json();
+            if (!r.ok) throw new Error(data.error || 'Failed');
+            reorderPagesList = (data.pages || []).map(p => ({
+                slug: p.slug, title: p.title, hidden: p.hidden
+            }));
+            renderReorderPages();
+        } catch (err) {
+            reorderPagesEntries.innerHTML = '<span class="cms-log-error">Failed to load pages.</span>';
+        }
+    }
+
+    detailLoaders['cmsReorderPagesDetail'] = () => loadReorderPages();
 })();

@@ -1141,3 +1141,73 @@ select.cms-user-input {
     cursor: pointer;
 }
 
+/* ---- REORDER PAGES ---- */
+.cms-reorder-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 0.75rem;
+}
+
+.cms-reorder-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.5rem 0.6rem;
+    background: #141414;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 4px;
+}
+
+.cms-reorder-title {
+    font-size: 0.85rem;
+    color: #d4d0c8;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cms-reorder-title.cms-reorder-hidden {
+    opacity: 0.5;
+    font-style: italic;
+}
+
+.cms-reorder-btns {
+    display: flex;
+    gap: 0.3rem;
+}
+
+.cms-reorder-btn {
+    width: 26px;
+    height: 26px;
+    background: rgba(196, 122, 58, 0.15);
+    border: 1px solid rgba(196, 122, 58, 0.3);
+    border-radius: 3px;
+    color: #c47a3a;
+    font-size: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+}
+
+.cms-reorder-btn:hover {
+    background: rgba(196, 122, 58, 0.3);
+}
+
+.cms-reorder-btn:disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+}
+
+.cms-reorder-status {
+    font-size: 0.72rem;
+    color: #8a8680;
+    padding: 0.3rem 0.1rem;
+    min-height: 1em;
+}
+
