@@ -116,6 +116,90 @@
             color: var(--text-bright);
         }
 
+        /* ---- HAMBURGER ---- */
+        .nav-hamburger {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.5rem;
+            z-index: 110;
+        }
+
+        .nav-hamburger span {
+            display: block;
+            width: 22px;
+            height: 2px;
+            background: var(--text-bright);
+            border-radius: 1px;
+            transition: transform 0.3s, opacity 0.3s;
+        }
+
+        .nav-hamburger span + span {
+            margin-top: 5px;
+        }
+
+        .nav-hamburger.open span:nth-child(1) {
+            transform: translateY(7px) rotate(45deg);
+        }
+
+        .nav-hamburger.open span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .nav-hamburger.open span:nth-child(3) {
+            transform: translateY(-7px) rotate(-45deg);
+        }
+
+        /* ---- MOBILE MENU ---- */
+        .mobile-menu {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 105;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(20px);
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+        }
+
+        .mobile-menu.open {
+            display: flex;
+        }
+
+        .mobile-menu a {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.4rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .mobile-menu a:hover,
+        .mobile-menu a.active {
+            color: var(--accent);
+        }
+
+        .mobile-menu .mobile-menu-divider {
+            width: 40px;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .mobile-menu .mobile-menu-cta {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--accent);
+        }
+
         /* ---- HERO ---- */
         .hero {
             min-height: 100vh;
@@ -655,33 +739,36 @@
             margin-bottom: 0.75rem;
         }
 
-        /* ---- CONTACT ---- */
-        .contact {
+        /* ---- CONTACT (in footer) ---- */
+
+        /* ---- FOOTER ---- */
+        footer {
             background: var(--dark-grey);
             border-top: 1px solid var(--border);
         }
 
-        .contact-inner {
+        .footer-contact {
             text-align: center;
             max-width: 580px;
             margin: 0 auto;
+            padding: 5rem 2rem;
         }
 
-        .contact p {
+        .footer-contact p {
             font-size: 1rem;
             color: var(--text);
             line-height: 1.7;
             margin-bottom: 1.5rem;
         }
 
-        .contact-details {
+        .footer-contact .contact-details {
             display: flex;
             justify-content: center;
             gap: 2.5rem;
             flex-wrap: wrap;
         }
 
-        .contact-details a {
+        .footer-contact .contact-details a {
             color: var(--text-bright);
             text-decoration: none;
             font-size: 0.95rem;
@@ -689,36 +776,8 @@
             transition: color 0.2s;
         }
 
-        .contact-details a:hover {
+        .footer-contact .contact-details a:hover {
             color: var(--accent);
-        }
-
-        /* ---- FOOTER ---- */
-        footer {
-            background: var(--black);
-            border-top: 1px solid var(--border);
-            padding: 2rem;
-        }
-
-        .footer-inner {
-            max-width: 1100px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            flex-wrap: wrap;
-            gap: 0.5rem;
-        }
-
-        .footer-inner a {
-            color: var(--text-muted);
-            text-decoration: none;
-        }
-
-        .footer-inner a:hover {
-            color: var(--text);
         }
 
         /* ---- PAGE MENU ---- */
@@ -775,8 +834,16 @@
 
         /* ---- MOBILE ---- */
         @media (max-width: 900px) {
+            .nav-hamburger {
+                display: block;
+            }
+
+            .nav-cta {
+                display: none;
+            }
+
             .page-menu {
-                top: 64px;
+                display: none;
             }
 
             .nav-logo-img {
@@ -825,7 +892,7 @@
                 gap: 0.5rem;
             }
 
-            .contact-details {
+            .footer-contact .contact-details {
                 flex-direction: column;
                 gap: 1rem;
             }
@@ -877,9 +944,29 @@
             <img src="/img/logo" alt="Arrington Business Consultancy" class="nav-logo-img">
             <% if (canEdit) { %><button class="cms-img-btn" data-image="logo" title="Change logo">&#9998;</button><% } %>
         </a>
-        <% if (hasContact) { %><a href="#conversation" class="nav-cta">Start a conversation</a><% } %>
+        <a href="#conversation" class="nav-cta">Start a conversation</a>
+        <button class="nav-hamburger" id="navHamburger" aria-label="Menu" aria-expanded="false">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
     </div>
 </nav>
+
+<div class="mobile-menu" id="mobileMenu">
+    <% if (allPages.length > 1) { %>
+        <% for (const _p of allPages) { %>
+            <% if (!_p.hidden || canEdit) { %>
+            <a href="<%= _p.slug === 'main' ? '/' : '/' + _p.slug %>"
+               class="<%= _p.slug === currentPage.slug ? 'active' : '' %>">
+                <%= _p.title %>
+            </a>
+            <% } %>
+        <% } %>
+        <div class="mobile-menu-divider"></div>
+    <% } %>
+    <a href="#conversation" class="mobile-menu-cta">Start a conversation</a>
+</div>
 
 <% if (allPages.length > 1) { %>
 <div class="page-menu" id="pageMenu">
@@ -1174,51 +1261,37 @@
 <% } %>
 
 <% if (_tpl === 'contact') { %>
-<% const _k = _iid; %>
-<!-- CONVERSATION -->
-<section class="contact<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" id="conversation" data-section-id="<%= _iid %>">
-    <div class="section-inner cms-section" data-section="<%= _k %>">
-        <% if (canEdit) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
-        <% if (canEdit) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
-        <% if (canEdit) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
-        <% if (canEdit) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
-        <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
-        <div class="contact-inner">
-            <p class="section-label"><%- content[_k + '.label'] %></p>
-            <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
-            <p><%- content[_k + '.body'] %></p>
-            <%
-              // Obfuscate email/phone so naive scrapers can't harvest them.
-              // Stored values are still edited normally via the CMS.
-              const _rawEmail = (content[_k + '.email'] || '').trim();
-              const _atIdx = _rawEmail.indexOf('@');
-              const _eU = _atIdx >= 0 ? _rawEmail.slice(0, _atIdx) : _rawEmail;
-              const _eD = _atIdx >= 0 ? _rawEmail.slice(_atIdx + 1) : '';
-              const _rawPhone = (content[_k + '.phone'] || '').trim();
-              const _pMid = Math.ceil(_rawPhone.length / 2);
-              const _pA = _rawPhone.slice(0, _pMid);
-              const _pB = _rawPhone.slice(_pMid);
-              const _pDigits = _rawPhone.replace(/[^0-9+]/g, '');
-              const _pDigitsMid = Math.ceil(_pDigits.length / 2);
-              const _pDigitsA = _pDigits.slice(0, _pDigitsMid);
-              const _pDigitsB = _pDigits.slice(_pDigitsMid);
-            %>
-            <div class="contact-details">
-                <a href="#" class="js-email-link" data-u="<%= _eU %>" data-d="<%= _eD %>" rel="nofollow"><%= _eU %> <span aria-hidden="true">[at]</span> <%= _eD %></a>
-                <a href="#" class="js-phone-link" data-pa="<%= _pDigitsA %>" data-pb="<%= _pDigitsB %>" rel="nofollow"><%= _pA %><span aria-hidden="true">&#8203;</span><%= _pB %></a>
-            </div>
-        </div>
-    </div>
-</section>
+<!-- contact now rendered in footer -->
 <% } %>
 
 <% } %>
 </div>
 
-<!-- FOOTER -->
-<footer>
-    <div class="footer-inner">
-        <span>&copy; 2026 Arrington Business Consultancy</span>
+<!-- FOOTER / CONTACT -->
+<footer id="conversation">
+    <div class="footer-contact cms-section" data-section="contact">
+        <% if (canEdit) { %><button class="cms-edit-btn" data-section="contact" title="Edit section">&#9998;</button><% } %>
+        <p class="section-label"><%- content['contact.label'] %></p>
+        <h2 class="section-heading"><%- content['contact.heading'] %></h2>
+        <p><%- content['contact.body'] %></p>
+        <%
+          const _rawEmail = (content['contact.email'] || '').trim();
+          const _atIdx = _rawEmail.indexOf('@');
+          const _eU = _atIdx >= 0 ? _rawEmail.slice(0, _atIdx) : _rawEmail;
+          const _eD = _atIdx >= 0 ? _rawEmail.slice(_atIdx + 1) : '';
+          const _rawPhone = (content['contact.phone'] || '').trim();
+          const _pMid = Math.ceil(_rawPhone.length / 2);
+          const _pA = _rawPhone.slice(0, _pMid);
+          const _pB = _rawPhone.slice(_pMid);
+          const _pDigits = _rawPhone.replace(/[^0-9+]/g, '');
+          const _pDigitsMid = Math.ceil(_pDigits.length / 2);
+          const _pDigitsA = _pDigits.slice(0, _pDigitsMid);
+          const _pDigitsB = _pDigits.slice(_pDigitsMid);
+        %>
+        <div class="contact-details">
+            <a href="#" class="js-email-link" data-u="<%= _eU %>" data-d="<%= _eD %>" rel="nofollow"><%= _eU %> <span aria-hidden="true">[at]</span> <%= _eD %></a>
+            <a href="#" class="js-phone-link" data-pa="<%= _pDigitsA %>" data-pb="<%= _pDigitsB %>" rel="nofollow"><%= _pA %><span aria-hidden="true">&#8203;</span><%= _pB %></a>
+        </div>
     </div>
 </footer>
 
@@ -1243,6 +1316,30 @@
     window.addEventListener('scroll', () => {
         document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 20);
     });
+
+    // Hamburger menu toggle
+    (function () {
+        const btn = document.getElementById('navHamburger');
+        const menu = document.getElementById('mobileMenu');
+        if (!btn || !menu) return;
+
+        btn.addEventListener('click', () => {
+            const open = btn.classList.toggle('open');
+            menu.classList.toggle('open', open);
+            btn.setAttribute('aria-expanded', open);
+            document.body.style.overflow = open ? 'hidden' : '';
+        });
+
+        // Close menu when a link is tapped
+        menu.querySelectorAll('a').forEach(a => {
+            a.addEventListener('click', () => {
+                btn.classList.remove('open');
+                menu.classList.remove('open');
+                btn.setAttribute('aria-expanded', 'false');
+                document.body.style.overflow = '';
+            });
+        });
+    })();
 
     document.querySelectorAll('a[href^="#"]').forEach(a => {
         a.addEventListener('click', e => {

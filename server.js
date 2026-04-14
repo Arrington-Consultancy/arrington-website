@@ -324,13 +324,10 @@ async function renderPage(req, res, next, pageSlug) {
       ? sectionOrder
       : sectionOrder.filter(s => !hiddenSections.includes(s));
 
-    // Check if current page has a contact section (for nav CTA visibility)
-    const hasContact = renderOrder.some(s => baseOf(s) === 'contact');
-
     res.render('index', {
       content, theme, activeTheme, themes,
       sectionOrder: renderOrder, hiddenSections, instanceTemplates,
-      currentPage, allPages, hasContact,
+      currentPage, allPages,
       canEdit, capabilities, showAdminPanel
     });
   } catch (err) {
