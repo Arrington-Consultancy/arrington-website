@@ -14,10 +14,12 @@ const router = express.Router();
 const RESERVED_SLUGS = ['login', 'logout', 'health', 'api', 'img', 'js', 'css', 'public', 'main'];
 
 // Valid section templates (matches routes/content.js and server.js)
-const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','casestudy','casestudy2','assessment','filter','contact'];
+const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','fourcards','casestudy','casestudy2','assessment','filter','contact'];
 
-// Default sections for a new page
-const NEW_PAGE_TEMPLATES = ['hero', 'casestudy', 'contact'];
+// Default sections for a new page. 'contact' omitted — it now renders
+// globally in the footer, so including it here would either duplicate
+// the footer or render as an empty section body.
+const NEW_PAGE_TEMPLATES = ['hero', 'casestudy'];
 
 // Generate a URL slug from a title
 function slugify(title) {

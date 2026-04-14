@@ -32,12 +32,21 @@ db/
   pool.js              PostgreSQL connection pool (DATABASE_URL)
   schema.sql           Table definitions (idempotent CREATE IF NOT EXISTS)
   defaults.js          Original content values (used by seed + reset)
+  lorem.js             Lorem-ipsum placeholder content keyed by template
+                       prefix. Used by routes/content.js when a template
+                       is picked from the Add-section modal so new picks
+                       start neutral instead of cloning live content.
   themes.js            5 colour themes (dark, oxford, light, slate, ember)
   seed.js              Idempotent seed (tables, users, content, images, pages).
                        Skips user creation once nat/tom already exist, so
                        redeploys don't need NAT_PASSWORD/TOM_PASSWORD set.
-                       Migrates existing site.* content keys into the pages table
+                       Migrates site.* content keys into the pages table
                        on first run after the multi-page update.
+                       On every boot strips any `contact` / `contact__N`
+                       instances out of every page's section_order /
+                       hidden_sections / deleted_sections arrays because
+                       contact now renders globally in the footer (no-op
+                       once stripped).
 routes/
   auth.js              POST /login (rate-limited), POST /logout
   content.js           GET/PUT content, PUT image, PUT section order,
@@ -46,10 +55,13 @@ routes/
                        baseTemplate / isValidInstance / contentPrefixes
                        helpers, and the instance ID allocator.
   admin.js             Activity log, reset, backup, restore, theme,
-                       page CRUD (create, rename, hide, delete, reorder),
-                       user CRUD (scoped by caller role), permissions
-                       matrix API (GET/PUT), page access API (GET/PUT,
-                       plus by-slug convenience route)
+                       page CRUD (list, create, rename, hide, delete,
+                       reorder), user CRUD (scoped by caller role),
+                       permissions matrix API (GET/PUT), page access API
+                       (GET/PUT, plus by-slug convenience route).
+                       Holds NEW_PAGE_TEMPLATES (the default sections
+                       seeded when a page is created — currently
+                       ['hero','casestudy']).
 middleware/
   auth.js              requireAuth, requireAdmin (legacy convenience)
   permissions.js       Role-based capability engine. In-memory cache
@@ -66,17 +78,28 @@ views/
                        that yields _iid + _tpl for each instance. Inline
                        script also reassembles the obfuscated contact
                        email/phone before any other anchor handling.
+                       Contact is NOT part of the section loop — it lives
+                       in a dedicated <footer id="conversation"> block so
+                       it appears on every page. The nav contains a
+                       hamburger button that, on ≤900px, replaces the
+                       desktop CTA and opens a full-screen overlay menu
+                       with page links and the "Start a conversation" CTA.
   login.ejs            Login page, also nonced, follows active theme
   partials/
     edit-modal.ejs         Content editing modal
-    add-section-modal.ejs  Template picker grid (11 cards with SVG thumbnails)
+    add-section-modal.ejs  Template picker grid with SVG thumbnails.
+                           11 picker entries: hero, credentials,
+                           biography, intervention, approach, insights,
+                           fourcards, casestudy, casestudy2, assessment,
+                           filter. 'contact' is intentionally omitted —
+                           it lives globally in the footer.
     admin-menu.ejs         Gear-icon panel with collapsible sections
                            (Appearance, Page, Content, Users, System)
                            and a slide-over detail view for sub-panels
                            (Users, Backups, Activity log, Permissions
-                           matrix, Page access, CSP violations).
-                           All buttons gated on the user's capabilities
-                           object passed from renderPage.
+                           matrix, Page access, Reorder pages, CSP
+                           violations). All buttons gated on the user's
+                           capabilities object passed from renderPage.
 public/
   css/admin.css        All CMS UI styles. Also holds helper classes
                        (cms-hidden, cms-inline-form, cms-btn-danger-solid,
@@ -92,18 +115,21 @@ public/
                        handlers, CSP violations reader. Implements the
                        detail view system (openDetail/closeDetail) and
                        collapsible section toggles for the admin panel.
-                       Includes permissions matrix and page access UIs.
-                       Sets history.scrollRestoration = 'manual' so
+                       Includes permissions matrix, page access, and
+                       reorder-pages UIs. Sets
+                       history.scrollRestoration = 'manual' so
                        add-section reload-then-scroll isn't fought by
                        the browser.
-  img/templates/       11 SVG wireframe thumbnails (one per template)
-                       used by the add-section modal.
+  img/templates/       12 SVG wireframe thumbnails — one per template
+                       in VALID_TEMPLATES, used by the add-section modal
+                       (contact.svg is kept for completeness even though
+                       contact is no longer picker-listed).
 ```
 
 ## Database tables
 
 - **users** — seeded admin (`nat`) and content (`tom`) accounts. Role CHECK constraint allows `admin`, `content`, `client`.
-- **content** — key-value store for all editable text (**71 keys** baseline) + `site.theme`. When a section is duplicated the new instance's content keys are seeded into this same table under the new instance ID's prefix. (The legacy `site.section_order`, `site.hidden_sections`, `site.deleted_sections` keys remain in the DB but are no longer read; that state now lives in the pages table.)
+- **content** — key-value store for all editable text (**85 keys** after the fourcards template was added: 71 original + 14 fourcards.* rows) + `site.theme`. When a section is duplicated the new instance's content keys are seeded into this same table under the new instance ID's prefix (with lorem-ipsum placeholders rather than cloning the base — see Section management below). Legacy `site.section_order`, `site.hidden_sections`, `site.deleted_sections` keys remain in the DB but are no longer read; that state now lives in the pages table. `contact.*` keys are still present and edited in place — they power the global footer block.
 - **pages** — multi-page support. Each row is a page with `slug` (unique), `title`, `sort_order`, `hidden` (boolean), and per-page JSONB arrays: `section_order`, `hidden_sections`, `deleted_sections`. The main page has slug `main` and cannot be hidden or deleted.
 - **role_permissions** — stores the permissions matrix. Composite PK `(role, capability)`, boolean `enabled`. 11 capabilities x 3 roles = 33 rows. Seeded with defaults on first run (`ON CONFLICT DO NOTHING`).
 - **page_access** — per-user page visibility for client users. Composite PK `(page_id, user_id)` with CASCADE deletes. If a page has any `page_access` rows it is automatically restricted: invisible to public visitors and to clients not in the list. Admin and content always see all pages.
@@ -162,14 +188,16 @@ A page does not need to be hidden to be restricted. Any page with at least one `
 The site supports multiple pages. Each page is a row in the `pages` table with its own slug, title, sort order, visibility, and section arrays.
 
 - **URL scheme:** `/` for the main page (slug `main`), `/{slug}` for additional pages
-- **Page menu:** a subtle fixed bar below the nav, only rendered when 2+ pages exist. Links styled with theme CSS variables; active page highlighted with accent colour. Hidden pages shown dimmed (italic, low opacity) for users with edit capability only. Restricted pages (those with `page_access` entries) are invisible to public visitors and unauthorised clients.
+- **Page menu:** a subtle fixed bar below the nav, only rendered when 2+ pages exist. Desktop only — on ≤900px it is hidden and the page links move into the hamburger menu overlay. Links styled with theme CSS variables; active page highlighted with accent colour. Hidden pages shown dimmed (italic, low opacity) for users with edit capability only. Restricted pages (those with `page_access` entries) are invisible to public visitors and unauthorised clients.
 - **Instance IDs are globally unique across all pages.** A new page's hero becomes `hero__2` if `hero` is already on the main page. The content table doesn't change; each page just owns a different subset of instance IDs.
-- **Default new page layout:** hero + case study (timeline) + contact
-- **Page controls** (in admin panel, users with `manage_pages`): Add page, Rename page, Hide/Show page (not main), Delete page (not main, with confirmation), Page access (assign client users)
+- **Default new page layout:** hero + case study (timeline). Contact is no longer seeded per page — the global footer provides it on every page. Defined by `NEW_PAGE_TEMPLATES` in `routes/admin.js`.
+- **Empty pages render empty.** An explicit empty `section_order` (e.g. after a page loses all its sections) renders as nav + footer only — no fallback to the default section set.
+- **Page controls** (in admin panel, users with `manage_pages`): Add page, Rename page, Reorder pages (slide-over with ▲/▼ arrows per page; saves immediately via `PUT /api/admin/page-order`; shown when 2+ pages exist), Hide/Show page (not main), Delete page (not main, with confirmation), Page access (assign client users).
 - **Slug generation:** auto-generated from title (lowercase, hyphens). Reserved slugs rejected: `login`, `logout`, `health`, `api`, `img`, `js`, `css`, `public`, `main`
 - **Main page protection:** cannot be hidden or deleted (server enforces)
 - **Backups:** pages snapshot stored under the `__pages__` key inside `content_snapshot`. Old backups without `__pages__` restore content only, leaving pages untouched.
 - **Section API calls** now include `pageSlug` in the request body so operations target the correct page's arrays in the pages table.
+- **Listing pages:** `GET /api/admin/pages` (gated on `manage_pages`) returns every page for the reorder UI.
 
 ## Section management (reorder, hide, delete, add, duplicate)
 
@@ -177,10 +205,11 @@ Each editable section has five hover-revealed buttons in this visual order, left
 
 ### Reorder
 - ▲ / ▼ swap the section with its neighbour in the DOM and save the order via `PUT /api/content/order`
-- Order stored as a JSON array in the `site.section_order` content key
+- Order stored as a JSON array in the page row's `section_order` column
 - Rendered server-side (EJS loop over `sectionOrder`) so all visitors see the saved layout
-- **11 base templates:** hero, credentials, biography, intervention, approach, insights, casestudy, casestudy2, assessment, filter, contact
-- Server auto-inserts any newly-added default templates at their natural default-order position on existing deployments without a DB update — but only when no instance of that template is already on the page
+- **12 valid templates:** hero, credentials, biography, intervention, approach, insights, fourcards, casestudy, casestudy2, assessment, filter, contact. Of these, `contact` renders only in the global footer (never via the section loop) and `fourcards` is picker-only.
+- **Default auto-merge order** (in `server.js`) deliberately excludes `contact` (footer-only) and `fourcards` (picker-only) so adding those templates never auto-injects them into the main page.
+- Server auto-inserts any newly-added default templates at their natural default-order position on the main page without a DB update — but only when no instance of that template is already on the page, only when the stored order is non-empty, and only for the main page (other pages own their explicit order).
 - Nav and footer are fixed (not movable)
 - Credentials two-column blocks move as one unit (single `<section>`)
 - First non-hero section gets extra top padding (`20rem` desktop, `8rem` mobile) to clear the fixed nav
@@ -200,15 +229,16 @@ Each editable section has five hover-revealed buttons in this visual order, left
 - Content rows stay in the DB — they can be brought back via "Reset to defaults" in the admin panel, or by re-adding the same template (which restores the base instance ID's existing content)
 
 ### Add section (template picker)
-- "Add section" button in the admin menu opens a wide modal showing all 11 templates with SVG wireframe thumbnails (in `public/img/templates/`), a serif label, and a one-line blurb
-- All 11 templates are always selectable — duplicates are explicitly allowed
-- One click → `POST /api/content/section/:template`, the server allocates an instance ID (see model below), seeds content for it, appends to `section_order`, returns `{ instanceId }`
+- "Add section" button in the admin menu opens a wide modal with two tabs: **New section** (the template picker) and **Reuse existing** (orphaned instances whose content is still in the DB but isn't on any page)
+- **New section** lists 11 templates (every `VALID_TEMPLATES` entry except `contact`) with SVG wireframe thumbnails, a serif label, and a one-line blurb. Duplicates are explicitly allowed.
+- One click → `POST /api/content/section/:template`, the server allocates an instance ID (see model below), **seeds lorem-ipsum placeholder content from `db/lorem.js` into every content key the instance owns** (so the new section always starts neutral instead of cloning another page's content), appends to `section_order`, returns `{ instanceId }`. Seeding happens on both the base-reuse path and the suffixed path — there is no "restore original content by re-adding" behaviour any more; use the "Reuse existing" tab to bring orphaned content back.
+- **Reuse existing** lists orphaned instance IDs with a heading preview, and lets the user re-attach them to the current page without overwriting their content.
 - Client stores the new instance ID in `sessionStorage.cmsJustAdded` and reloads
 - After reload, admin.js scrolls to the new section and adds the `cms-section-just-added` class which runs a 1.4s orange flash animation
 - `history.scrollRestoration = 'manual'` is set at the top of admin.js so the browser doesn't snap the scroll position back to where the user was before the click — that bug only showed up on prod (where the page loads slowly enough that the browser's restore fired after admin.js's scroll)
 
 ### Duplicate sections (instance/template model)
-- A section on the page is an **instance** of a **template**. The 11 base template names live in `VALID_TEMPLATES` in both `routes/content.js` and `server.js`.
+- A section on the page is an **instance** of a **template**. The 12 valid template names live in `VALID_TEMPLATES` in `routes/content.js`, `routes/admin.js`, and `server.js` (kept in sync manually — if you add a new template, update all three).
 - Instance IDs have the form `{template}` (the first/base instance) or `{template}__N` for additional copies, where `N` is an integer ≥ 2 separated by a **double** underscore (so `casestudy2` the template doesn't collide with `casestudy__2` the duplicate).
 - Validation regex: `^([a-z0-9]+)(?:__(\d+))?$`. Helpers `baseTemplate(id)` and `isValidInstance(id)` live in `routes/content.js`; `server.js` carries its own copies for the render path.
 - `site.section_order` stores instance IDs, not template names. Existing prod data with `["hero","credentials",...]` still works because base instance ID == template name.
@@ -218,16 +248,33 @@ Each editable section has five hover-revealed buttons in this visual order, left
 
 ### Add-section instance allocation
 When the user clicks a template card, the server picks the smallest unused instance ID, with a deliberate priority:
-1. If the base instance ID (e.g. `hero`) is **not** in `section_order`, reuse it. This means re-adding a previously-deleted section restores the original content from the DB. If the base ID was in `deleted_sections`, it is also removed from there.
-2. Otherwise, allocate the smallest unused `{template}__N` for `N` ∈ [2, 99], copy the base template's current content rows into the new instance's prefixes (handles credentials' two sub-prefixes), and append it to the order.
+1. If the base instance ID (e.g. `hero`) is **not** in use on any page, reuse it.
+2. Otherwise, allocate the smallest unused `{template}__N` for `N` ∈ [2, 99].
 3. Cap at `__99` — beyond that the POST returns 400.
+
+In either case the server then **overwrites** the target content prefixes (handles credentials' two sub-prefixes) with lorem-ipsum from `db/lorem.js`, so every pick lands with fresh placeholder text regardless of path. If the base reuse is happening, the instance is also removed from `deleted_sections` on the current page.
 
 ### admin.js label normalisation
 `fieldLabels` and `sectionTitles` in `public/js/admin.js` are keyed by the base template / template prefix (e.g. `hero.heading`, `credentials_oxford`). For duplicate instances, `normalizeKey()` strips `__N` from the instance ID or content key before lookup, so `hero__2.heading` falls back to the `hero.heading` label, and the edit modal title for `credentials__2` resolves to "Credentials".
 
+## Global footer contact block
+
+The contact details live in `<footer id="conversation">` at the bottom of every page, outside the section loop. It is rendered directly from the `contact.*` content keys (label, heading, body, email, phone).
+
+- A single pencil edit button on the block opens the standard edit modal and fetches `/api/content/contact` — no special-case wiring, just the existing per-prefix content API
+- The nav's "Start a conversation" CTA (and the mobile menu's equivalent) always anchor to `#conversation` in the footer
+- Because the footer is universal, `contact` is intentionally missing from the picker, the `NEW_PAGE_TEMPLATES` list, and the main-page auto-merge order. A seed-time migration also strips any `contact` / `contact__N` entries out of every page's JSONB arrays — that migration is idempotent and runs on every boot.
+
+## Mobile navigation (hamburger)
+
+At ≤900px the desktop nav CTA and the separate `.page-menu` bar are both hidden. In their place:
+- A three-bar hamburger button (`#navHamburger`) replaces the CTA in the nav. It animates into an X when open.
+- `#mobileMenu` is a full-screen fixed overlay (`z-index: 105`, `rgba(0,0,0,0.95)` with `backdrop-filter: blur(20px)`) containing each visible page's link, a divider, and the "Start a conversation" CTA. Clicking any link closes the menu; `<body>` gets `overflow: hidden` while open.
+- Desktop (>900px) hides the hamburger and shows the CTA + page-menu bar as before.
+
 ## Anti-harvest contact protection
 
-The Contact section's email address and phone number are obfuscated server-side so naive scrapers can't pull them out of the rendered HTML.
+The footer's email address and phone number are obfuscated server-side so naive scrapers can't pull them out of the rendered HTML.
 
 - Stored values (`contact.email`, `contact.phone`) are still edited normally in the CMS — only the rendered HTML is munged
 - Email: split at the `@` into `data-u` and `data-d` attributes on the anchor; rendered text is `tom <span aria-hidden>[at]</span> arringtonconsultancy.com` with `href="#"`
@@ -247,6 +294,15 @@ Both are fully editable via the CMS and reorderable like all other sections.
 ## The Intervention section
 
 Added between Biography and Approach. Simple centred block (heading + body paragraph), styled to mirror the `.filter` section. Two editable fields: `intervention.heading` and `intervention.subtext`. Both allow the standard sanitised HTML tags (`<strong>` used in the default copy).
+
+## Four-card template
+
+`fourcards` is a four-card grid template for feature-style layouts. Each card has three editable fields: **number** (e.g. "01"), **title**, **body** — keys follow the pattern `fourcards.card_N_{number|title|body}` for `N` ∈ [1..4]. Section-level fields are `fourcards.label` and `fourcards.heading`.
+
+- Grid: 4 columns on desktop → 2×2 at ≤900px → single column at ≤600px
+- Picker-only: deliberately excluded from the main-page auto-merge, so it never appears unless a user explicitly adds it
+- `admin.js` adds `_number` to the "short" textarea class heuristic so the number field renders as a small single-line input in the edit modal
+- Thumbnail lives at `public/img/templates/fourcards.svg`
 
 ## Image management
 
