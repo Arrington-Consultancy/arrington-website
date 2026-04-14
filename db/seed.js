@@ -133,6 +133,36 @@ async function seed() {
     console.log('Pages table already has main page, skipping migration.');
   }
 
+  // Migration: strip `contact` (and any `contact__N`) instances from every
+  // page's section_order / hidden_sections / deleted_sections arrays. Contact
+  // now renders in the global footer, so leaving it in a page's order results
+  // in an empty page body (the view loop no longer renders the contact block).
+  // Idempotent: only writes when something actually needed stripping.
+  {
+    const isContactId = (s) => typeof s === 'string' && /^contact(__\d+)?$/.test(s);
+    const { rows: pagesToCheck } = await db.query(
+      'SELECT slug, section_order, hidden_sections, deleted_sections FROM pages'
+    );
+    let stripped = 0;
+    for (const p of pagesToCheck) {
+      const so  = Array.isArray(p.section_order)    ? p.section_order    : [];
+      const hs  = Array.isArray(p.hidden_sections)  ? p.hidden_sections  : [];
+      const ds  = Array.isArray(p.deleted_sections) ? p.deleted_sections : [];
+      const nextSo = so.filter(s => !isContactId(s));
+      const nextHs = hs.filter(s => !isContactId(s));
+      const nextDs = ds.filter(s => s !== 'contact');
+      if (nextSo.length !== so.length || nextHs.length !== hs.length || nextDs.length !== ds.length) {
+        await db.query(
+          `UPDATE pages SET section_order = $1::jsonb, hidden_sections = $2::jsonb, deleted_sections = $3::jsonb
+           WHERE slug = $4`,
+          [JSON.stringify(nextSo), JSON.stringify(nextHs), JSON.stringify(nextDs), p.slug]
+        );
+        stripped++;
+      }
+    }
+    if (stripped > 0) console.log(`Stripped contact instances from ${stripped} page(s).`);
+  }
+
   // Seed images (idempotent: ON CONFLICT DO NOTHING)
   const images = [
     { key: 'logo', file: 'logo.avif', mime: 'image/avif' },

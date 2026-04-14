@@ -200,10 +200,9 @@ app.get('/v1.html', (req, res) => {
 
 // Valid section templates (shared with routes/content.js)
 const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','fourcards','casestudy','casestudy2','assessment','filter','contact'];
-// Default auto-merge order — excludes 'fourcards' so adding it to
-// VALID_TEMPLATES doesn't auto-inject the new template into existing pages.
-// Users pick it explicitly from the "Add section" modal when they want it.
-const defaultOrder = ['hero','credentials','biography','intervention','approach','insights','casestudy','casestudy2','assessment','filter','contact'];
+// Default auto-merge order — excludes 'contact' (now rendered globally in
+// the footer) and 'fourcards' (picker-only). Users pick those explicitly.
+const defaultOrder = ['hero','credentials','biography','intervention','approach','insights','casestudy','casestudy2','assessment','filter'];
 
 const baseOf = (id) => {
   const m = /^([a-z0-9]+)(?:__(\d+))?$/.exec(id || '');
