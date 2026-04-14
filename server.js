@@ -283,35 +283,39 @@ async function renderPage(req, res, next, pageSlug) {
       if (Array.isArray(parsed)) hiddenSections = parsed.filter(isValid);
     } catch (e) { /* ignore */ }
 
-    // Build section order from the page's stored order
-    let sectionOrder = defaultOrder.filter(s => !deletedSections.includes(s));
-    try {
-      const stored = currentPage.section_order || [];
-      if (Array.isArray(stored) && stored.length > 0) {
-        const merged = stored.filter(s => {
-          if (!isValid(s)) return false;
-          const base = baseOf(s);
-          if (s === base && deletedSections.includes(base)) return false;
-          return true;
-        });
-        // Auto-merge only for the main page (new pages get explicit orders)
-        if (pageSlug === 'main') {
-          const presentTemplates = new Set(merged.map(baseOf));
-          const missing = defaultOrder.filter(t => !presentTemplates.has(t) && !deletedSections.includes(t));
-          for (const t of missing) {
-            const idx = defaultOrder.indexOf(t);
-            let insertAt = merged.length;
-            for (let i = idx - 1; i >= 0; i--) {
-              const prev = defaultOrder[i];
-              const prevPos = merged.indexOf(prev);
-              if (prevPos !== -1) { insertAt = prevPos + 1; break; }
-            }
-            merged.splice(insertAt, 0, t);
+    // Build section order from the page's stored order. An explicit empty
+    // array means "this page has no sections" — render it empty rather than
+    // falling through to the full default order.
+    let sectionOrder = [];
+    const stored = currentPage.section_order;
+    if (Array.isArray(stored)) {
+      const merged = stored.filter(s => {
+        if (!isValid(s)) return false;
+        const base = baseOf(s);
+        if (s === base && deletedSections.includes(base)) return false;
+        return true;
+      });
+      // Auto-merge only for the main page (new pages get explicit orders)
+      if (pageSlug === 'main' && merged.length > 0) {
+        const presentTemplates = new Set(merged.map(baseOf));
+        const missing = defaultOrder.filter(t => !presentTemplates.has(t) && !deletedSections.includes(t));
+        for (const t of missing) {
+          const idx = defaultOrder.indexOf(t);
+          let insertAt = merged.length;
+          for (let i = idx - 1; i >= 0; i--) {
+            const prev = defaultOrder[i];
+            const prevPos = merged.indexOf(prev);
+            if (prevPos !== -1) { insertAt = prevPos + 1; break; }
           }
+          merged.splice(insertAt, 0, t);
         }
-        sectionOrder = merged;
       }
-    } catch (e) { /* use default */ }
+      sectionOrder = merged;
+    } else {
+      // No stored order at all (shouldn't happen — seed sets it). Fall back
+      // to defaults only in that edge case.
+      sectionOrder = defaultOrder.filter(s => !deletedSections.includes(s));
+    }
 
     const instanceTemplates = {};
     for (const iid of sectionOrder) instanceTemplates[iid] = baseOf(iid);
