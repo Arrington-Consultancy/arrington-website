@@ -551,6 +551,62 @@
             }
         }
 
+        /* ---- FOUR CARDS ---- */
+        .fourcards {
+            background: var(--black);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .fourcards-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin-top: 3rem;
+        }
+
+        .fourcard {
+            padding: 2rem 1.5rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--charcoal);
+        }
+
+        .fourcard-number {
+            font-family: 'DM Serif Display', serif;
+            font-size: 2rem;
+            color: var(--accent);
+            opacity: 0.4;
+            line-height: 1;
+            margin-bottom: 1rem;
+        }
+
+        .fourcard h3 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.05rem;
+            color: var(--text-bright);
+            margin-bottom: 0.75rem;
+            line-height: 1.3;
+        }
+
+        .fourcard p {
+            font-size: 0.88rem;
+            color: var(--text);
+            line-height: 1.7;
+        }
+
+        @media (max-width: 900px) {
+            .fourcards-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .fourcards-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
         /* ---- CASE STUDY ---- */
         .case-study {
             background: var(--black);
@@ -1151,6 +1207,31 @@
 </section>
 <% } %>
 
+<% if (_tpl === 'fourcards') { %>
+<% const _k = _iid; %>
+<!-- FOUR CARDS -->
+<section class="fourcards<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
+    <div class="section-inner cms-section" data-section="<%= _k %>">
+        <% if (canEdit) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
+        <p class="section-label"><%- content[_k + '.label'] %></p>
+        <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
+        <div class="fourcards-grid">
+            <% for (let _n = 1; _n <= 4; _n++) { %>
+            <article class="fourcard">
+                <div class="fourcard-number"><%- content[_k + '.card_' + _n + '_number'] %></div>
+                <h3><%- content[_k + '.card_' + _n + '_title'] %></h3>
+                <p><%- content[_k + '.card_' + _n + '_body'] %></p>
+            </article>
+            <% } %>
+        </div>
+    </div>
+</section>
+<% } %>
+
 <% if (_tpl === 'casestudy') { %>
 <% const _k = _iid; %>
 <!-- CASE STUDY -->
@@ -1358,7 +1439,7 @@
         });
     }, { threshold: 0.1 });
 
-    document.querySelectorAll('.step, .insight-card, .case-phase, .aq, .credential-block').forEach(el => {
+    document.querySelectorAll('.step, .insight-card, .fourcard, .case-phase, .aq, .credential-block').forEach(el => {
         el.style.opacity = '0';
         el.style.transform = 'translateY(16px)';
         el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';

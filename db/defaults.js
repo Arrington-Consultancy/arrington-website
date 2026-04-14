@@ -48,6 +48,22 @@ const defaults = {
   'insights.card_3_title': 'If you are the only person who can answer the phone, you do not have a business',
   'insights.card_3_body': 'You have a trade that depends on you being present. That is fine if you want it. It is a problem if you want to sell, retire, or just take a holiday.',
 
+  // Four cards (lorem defaults — only surfaces when user picks this template)
+  'fourcards.label': 'Lorem ipsum',
+  'fourcards.heading': 'Lorem ipsum dolor sit amet consectetur',
+  'fourcards.card_1_number': '01',
+  'fourcards.card_1_title': 'Lorem ipsum',
+  'fourcards.card_1_body': 'Lorem ipsum dolor sit amet, consectetur adipiscing elit sed do eiusmod.',
+  'fourcards.card_2_number': '02',
+  'fourcards.card_2_title': 'Dolor sit',
+  'fourcards.card_2_body': 'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.',
+  'fourcards.card_3_number': '03',
+  'fourcards.card_3_title': 'Amet consectetur',
+  'fourcards.card_3_body': 'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum.',
+  'fourcards.card_4_number': '04',
+  'fourcards.card_4_title': 'Adipiscing elit',
+  'fourcards.card_4_body': 'Excepteur sint occaecat cupidatat non proident sunt in culpa qui officia.',
+
   // Intervention
   'intervention.heading': '<strong>The Intervention</strong>',
   'intervention.subtext': 'Most businesses are built on the owner\u2019s pulse. If you stop, the momentum stops. I identify the structural fault-lines that prevent scale and install the operational systems required for a <strong>clean exit</strong>.',

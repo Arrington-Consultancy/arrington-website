@@ -3,6 +3,7 @@ const sanitizeHtml = require('sanitize-html');
 const { requireAuth } = require('../middleware/auth');
 const { requireCapability } = require('../middleware/permissions');
 const db = require('../db/pool');
+const lorem = require('../db/lorem');
 
 const router = express.Router();
 
@@ -134,7 +135,7 @@ router.put('/', requireCapability('edit_content'), async (req, res) => {
 // Content keys are stored per instance: `{instanceId}.field` for most sections.
 // Credentials is a special case with two content sub-prefixes:
 //   `{instanceId}_oxford.*` and `{instanceId}_stat.*`.
-const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','casestudy','casestudy2','assessment','filter','contact'];
+const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','fourcards','casestudy','casestudy2','assessment','filter','contact'];
 const MAX_INSTANCE_SUFFIX = 99;
 
 function baseTemplate(instanceId) {
@@ -356,29 +357,24 @@ router.post('/section/:template', requireCapability('manage_sections'), async (r
       }
     }
 
-    // Seed content for the new instance by copying from base prefixes, but
-    // only when the instance is a suffixed duplicate. When reusing the base
-    // instance ID, content already lives under those keys.
-    if (instanceId !== template) {
-      const sources = sourcePrefixes(template);
-      const targets = contentPrefixes(instanceId);
-      for (let i = 0; i < sources.length; i++) {
-        const src = sources[i];
-        const dst = targets[i];
-        const { rows } = await db.query(
-          `SELECT section_key, content FROM content WHERE section_key LIKE $1`,
-          [`${src}.%`]
+    // Seed fresh lorem ipsum content for the new instance, so picking a
+    // template from the modal always produces neutral placeholder text
+    // regardless of whether we're reusing the base ID or allocating a suffix.
+    // (The "Reuse existing" tab is how users pull old content back onto a page.)
+    const sources = sourcePrefixes(template); // e.g. ['credentials_oxford','credentials_stat']
+    const targets = contentPrefixes(instanceId);
+    for (let i = 0; i < sources.length; i++) {
+      const src = sources[i];   // lorem key prefix (matches base template)
+      const dst = targets[i];   // new instance's content prefix
+      const loremFields = lorem[src] || {};
+      for (const [suffix, value] of Object.entries(loremFields)) {
+        const newKey = `${dst}.${suffix}`;
+        await db.query(
+          `INSERT INTO content (section_key, content, updated_by)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content, updated_by = EXCLUDED.updated_by, updated_at = NOW()`,
+          [newKey, value, req.session.user.id]
         );
-        for (const row of rows) {
-          const suffix = row.section_key.slice(src.length);
-          const newKey = `${dst}${suffix}`;
-          await db.query(
-            `INSERT INTO content (section_key, content, updated_by)
-             VALUES ($1, $2, $3)
-             ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content, updated_by = EXCLUDED.updated_by, updated_at = NOW()`,
-            [newKey, row.content, req.session.user.id]
-          );
-        }
       }
     }
 

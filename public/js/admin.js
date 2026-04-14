@@ -49,6 +49,20 @@
         'insights.card_3_tag': 'Card 3 tag',
         'insights.card_3_title': 'Card 3 title',
         'insights.card_3_body': 'Card 3 body',
+        'fourcards.label': 'Section label',
+        'fourcards.heading': 'Heading',
+        'fourcards.card_1_number': 'Card 1 number',
+        'fourcards.card_1_title': 'Card 1 title',
+        'fourcards.card_1_body': 'Card 1 body',
+        'fourcards.card_2_number': 'Card 2 number',
+        'fourcards.card_2_title': 'Card 2 title',
+        'fourcards.card_2_body': 'Card 2 body',
+        'fourcards.card_3_number': 'Card 3 number',
+        'fourcards.card_3_title': 'Card 3 title',
+        'fourcards.card_3_body': 'Card 3 body',
+        'fourcards.card_4_number': 'Card 4 number',
+        'fourcards.card_4_title': 'Card 4 title',
+        'fourcards.card_4_body': 'Card 4 body',
         'casestudy.label': 'Section label',
         'casestudy.heading': 'Heading',
         'casestudy.subtext': 'Subtext',
@@ -91,6 +105,7 @@
         intervention: 'Intervention',
         approach: 'Approach',
         insights: 'Insights',
+        fourcards: 'Four cards',
         casestudy: 'Case Study',
         casestudy2: 'Case Study: Tristan',
         assessment: 'Assessment',
@@ -102,7 +117,7 @@
     function heightClass(key) {
         if (key.includes('label') || key.includes('tag') || key.includes('stat') ||
             key.includes('cta') || key.includes('email') || key.includes('phone') ||
-            key.includes('_title')) {
+            key.includes('_title') || key.includes('_number')) {
             return 'short';
         }
         if (key.includes('body') || key.includes('_p1') || key.includes('_p2') ||
