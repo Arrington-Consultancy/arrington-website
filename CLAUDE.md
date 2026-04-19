@@ -129,7 +129,7 @@ public/
 ## Database tables
 
 - **users** — seeded admin (`nat`) and content (`tom`) accounts. Role CHECK constraint allows `admin`, `content`, `client`.
-- **content** — key-value store for all editable text (**85 keys** after the fourcards template was added: 71 original + 14 fourcards.* rows) + `site.theme`. When a section is duplicated the new instance's content keys are seeded into this same table under the new instance ID's prefix (with lorem-ipsum placeholders rather than cloning the base — see Section management below). Legacy `site.section_order`, `site.hidden_sections`, `site.deleted_sections` keys remain in the DB but are no longer read; that state now lives in the pages table. `contact.*` keys are still present and edited in place — they power the global footer block.
+- **content** — key-value store for all editable text (**89 keys**: 71 original + 14 fourcards.* rows + 2 intervention button rows + 2 filter button rows) + `site.theme`. When a section is duplicated the new instance's content keys are seeded into this same table under the new instance ID's prefix (with lorem-ipsum placeholders rather than cloning the base — see Section management below). Legacy `site.section_order`, `site.hidden_sections`, `site.deleted_sections` keys remain in the DB but are no longer read; that state now lives in the pages table. `contact.*` keys are still present and edited in place — they power the global footer block.
 - **pages** — multi-page support. Each row is a page with `slug` (unique), `title`, `sort_order`, `hidden` (boolean), and per-page JSONB arrays: `section_order`, `hidden_sections`, `deleted_sections`. The main page has slug `main` and cannot be hidden or deleted.
 - **role_permissions** — stores the permissions matrix. Composite PK `(role, capability)`, boolean `enabled`. 11 capabilities x 3 roles = 33 rows. Seeded with defaults on first run (`ON CONFLICT DO NOTHING`).
 - **page_access** — per-user page visibility for client users. Composite PK `(page_id, user_id)` with CASCADE deletes. If a page has any `page_access` rows it is automatically restricted: invisible to public visitors and to clients not in the list. Admin and content always see all pages.
@@ -293,7 +293,11 @@ Both are fully editable via the CMS and reorderable like all other sections.
 
 ## The Intervention section
 
-Added between Biography and Approach. Simple centred block (heading + body paragraph), styled to mirror the `.filter` section. Two editable fields: `intervention.heading` and `intervention.subtext`. Both allow the standard sanitised HTML tags (`<strong>` used in the default copy).
+Added between Biography and Approach. Simple centred block (heading + body paragraph), styled to mirror the `.filter` section. Editable fields: `intervention.heading`, `intervention.subtext`, `intervention.button_text`, `intervention.button_link`. Heading and subtext allow the standard sanitised HTML tags (`<strong>` used in the default copy).
+
+The button mirrors the hero's `.btn-primary` styling (so it picks up `--accent` per theme). It only renders when `button_text` is non-empty (after stripping HTML), so the field defaults to empty and the button is hidden until a user fills it in. `button_link` is a page slug picker — the edit modal renders a `<select>` populated from a `<meta name="all-pages">` tag (only emitted for logged-in users) listing every page the current viewer can see. The render path resolves `main` to `/` and any other slug to `/{slug}`; an invalid/missing slug falls back to `#conversation`. Slugs are validated against `^[a-z0-9]+(?:-[a-z0-9]+)*$` server-side. The seed includes a one-time idempotent migration that backfills `button_text=''` and `button_link='main'` for any pre-existing intervention or filter instance so the edit modal exposes both fields on legacy duplicates.
+
+The **filter** template has the same `button_text` / `button_link` pair (`filter.button_text`, `filter.button_link`) and renders identically. The picker dropdown and edit-modal labels are shared with intervention.
 
 ## Four-card template
 

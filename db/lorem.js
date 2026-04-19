@@ -31,7 +31,9 @@ const lorem = {
   },
   intervention: {
     'heading': '<strong>Lorem Ipsum</strong>',
-    'subtext': 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna <strong>aliqua enim ad minim</strong>.'
+    'subtext': 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna <strong>aliqua enim ad minim</strong>.',
+    'button_text': '',
+    'button_link': 'main'
   },
   approach: {
     'label': 'Lorem ipsum',
@@ -106,7 +108,9 @@ const lorem = {
     'label': 'Lorem ipsum',
     'heading': 'Lorem ipsum dolor sit amet',
     'p1': 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
-    'p2': 'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.'
+    'p2': 'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
+    'button_text': '',
+    'button_link': 'main'
   },
   contact: {
     'label': 'Lorem ipsum',

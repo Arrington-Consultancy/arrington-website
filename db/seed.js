@@ -163,6 +163,28 @@ async function seed() {
     if (stripped > 0) console.log(`Stripped contact instances from ${stripped} page(s).`);
   }
 
+  // Migration: ensure every existing intervention / filter instance has
+  // button_text / button_link rows. Without this, edit modals on pre-existing
+  // duplicates wouldn't expose the new button fields. Idempotent.
+  for (const tpl of ['intervention', 'filter']) {
+    const { rows: prefixRows } = await db.query(
+      "SELECT DISTINCT split_part(section_key, '.', 1) AS instance_id " +
+      "FROM content WHERE section_key ~ $1",
+      [`^${tpl}(__[0-9]+)?\\.`]
+    );
+    for (const r of prefixRows) {
+      const iid = r.instance_id;
+      await db.query(
+        "INSERT INTO content (section_key, content) VALUES ($1, '') ON CONFLICT (section_key) DO NOTHING",
+        [`${iid}.button_text`]
+      );
+      await db.query(
+        "INSERT INTO content (section_key, content) VALUES ($1, 'main') ON CONFLICT (section_key) DO NOTHING",
+        [`${iid}.button_link`]
+      );
+    }
+  }
+
   // Seed images (idempotent: ON CONFLICT DO NOTHING)
   const images = [
     { key: 'logo', file: 'logo.avif', mime: 'image/avif' },

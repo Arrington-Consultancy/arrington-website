@@ -11,6 +11,10 @@
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
     const pageSlug = document.querySelector('meta[name="page-slug"]')?.content || 'main';
     const pageHidden = document.querySelector('meta[name="page-hidden"]')?.content === 'true';
+    let allPagesList = [];
+    try {
+        allPagesList = JSON.parse(document.querySelector('meta[name="all-pages"]')?.content || '[]');
+    } catch (err) { /* leave empty */ }
 
     // Section field labels for readable modal fields
     const fieldLabels = {
@@ -29,6 +33,8 @@
         'biography.col_2_p2': 'Right column, paragraph 2',
         'intervention.heading': 'Heading',
         'intervention.subtext': 'Body text',
+        'intervention.button_text': 'Button text (leave empty to hide button)',
+        'intervention.button_link': 'Button links to',
         'approach.label': 'Section label',
         'approach.heading': 'Heading',
         'approach.step_1_title': 'Step 1 title',
@@ -90,6 +96,8 @@
         'filter.heading': 'Heading',
         'filter.p1': 'Paragraph 1',
         'filter.p2': 'Paragraph 2',
+        'filter.button_text': 'Button text (leave empty to hide button)',
+        'filter.button_link': 'Button links to',
         'contact.label': 'Section label',
         'contact.heading': 'Heading',
         'contact.body': 'Body text',
@@ -117,7 +125,8 @@
     function heightClass(key) {
         if (key.includes('label') || key.includes('tag') || key.includes('stat') ||
             key.includes('cta') || key.includes('email') || key.includes('phone') ||
-            key.includes('_title') || key.includes('_number')) {
+            key.includes('_title') || key.includes('_number') ||
+            key.includes('button_text') || key.includes('button_link')) {
             return 'short';
         }
         if (key.includes('body') || key.includes('_p1') || key.includes('_p2') ||
@@ -168,18 +177,33 @@
                 label.textContent = fieldLabels[normalizeKey(key)] || key.split('.').pop().replace(/_/g, ' ');
                 div.appendChild(label);
 
-                const textarea = document.createElement('textarea');
-                textarea.className = heightClass(key);
-                textarea.dataset.key = key;
-                textarea.value = data.fields[key];
-                div.appendChild(textarea);
+                if (key.endsWith('.button_link')) {
+                    const select = document.createElement('select');
+                    select.className = 'cms-field-select';
+                    select.dataset.key = key;
+                    const current = data.fields[key] || '';
+                    for (const p of allPagesList) {
+                        const opt = document.createElement('option');
+                        opt.value = p.slug;
+                        opt.textContent = p.title;
+                        if (p.slug === current) opt.selected = true;
+                        select.appendChild(opt);
+                    }
+                    div.appendChild(select);
+                } else {
+                    const textarea = document.createElement('textarea');
+                    textarea.className = heightClass(key);
+                    textarea.dataset.key = key;
+                    textarea.value = data.fields[key];
+                    div.appendChild(textarea);
 
-                // Hint for fields that might contain HTML
-                if (data.fields[key].includes('<strong>') || key.includes('body') || key.includes('_p')) {
-                    const hint = document.createElement('div');
-                    hint.className = 'cms-field-hint';
-                    hint.textContent = 'You may use <strong> for bold text.';
-                    div.appendChild(hint);
+                    // Hint for fields that might contain HTML
+                    if (data.fields[key].includes('<strong>') || key.includes('body') || key.includes('_p')) {
+                        const hint = document.createElement('div');
+                        hint.className = 'cms-field-hint';
+                        hint.textContent = 'You may use <strong> for bold text.';
+                        div.appendChild(hint);
+                    }
                 }
 
                 modalFields.appendChild(div);
@@ -195,10 +219,10 @@
     }
 
     async function saveContent() {
-        const textareas = modalFields.querySelectorAll('textarea');
+        const inputs = modalFields.querySelectorAll('textarea, select');
         const fields = [];
-        textareas.forEach(ta => {
-            fields.push({ key: ta.dataset.key, content: ta.value });
+        inputs.forEach(el => {
+            fields.push({ key: el.dataset.key, content: el.value });
         });
 
         saveBtn.disabled = true;

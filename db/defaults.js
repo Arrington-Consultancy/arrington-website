@@ -67,6 +67,8 @@ const defaults = {
   // Intervention
   'intervention.heading': '<strong>The Intervention</strong>',
   'intervention.subtext': 'Most businesses are built on the owner\u2019s pulse. If you stop, the momentum stops. I identify the structural fault-lines that prevent scale and install the operational systems required for a <strong>clean exit</strong>.',
+  'intervention.button_text': '',
+  'intervention.button_link': 'main',
 
   // Case Study
   'casestudy.label': 'Case study',
@@ -102,6 +104,8 @@ const defaults = {
   'filter.heading': 'I am not for everyone',
   'filter.p1': 'I review every submission personally to establish if your operational challenges align with my capacity to deliver a measurable impact.',
   'filter.p2': 'If I can help, I will tell you exactly how. If I can\'t, I will tell you that too. There is no sales process. There is a conversation.',
+  'filter.button_text': '',
+  'filter.button_link': 'main',
 
   // Site settings
   'site.theme': 'dark',

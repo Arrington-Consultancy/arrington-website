@@ -519,6 +519,24 @@
     min-height: 120px;
 }
 
+.cms-field-select {
+    width: 100%;
+    padding: 0.65rem 1rem;
+    background: #141414;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 4px;
+    color: #f0ece6;
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.cms-field-select:focus {
+    border-color: #c47a3a;
+}
+
 .cms-modal-actions {
     display: flex;
     gap: 0.75rem;

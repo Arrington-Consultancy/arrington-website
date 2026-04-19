@@ -11,6 +11,7 @@
     <meta name="csrf-token" content="<%= csrfToken %>">
     <meta name="page-slug" content="<%= currentPage.slug %>">
     <meta name="page-hidden" content="<%= currentPage.hidden ? 'true' : 'false' %>">
+    <meta name="all-pages" content="<%= JSON.stringify(allPages.map(p => ({ slug: p.slug, title: p.title }))) %>">
     <% if (showAdminPanel) { %><link rel="stylesheet" href="/css/admin.css?v=<%= Date.now() %>"><% } %>
     <% if (capabilities.view_csp) { %>
     <script nonce="<%= nonce %>">
@@ -772,6 +773,11 @@
             color: var(--text-bright);
         }
 
+        .intervention .btn {
+            display: inline-flex;
+            margin-top: 2.25rem;
+        }
+
         /* ---- FILTER ---- */
         .filter {
             background: var(--black);
@@ -793,6 +799,11 @@
             color: var(--text);
             line-height: 1.75;
             margin-bottom: 0.75rem;
+        }
+
+        .filter .btn {
+            display: inline-flex;
+            margin-top: 2.25rem;
         }
 
         /* ---- CONTACT (in footer) ---- */
@@ -1134,6 +1145,15 @@
         <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
         <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
         <p class="intervention-body"><%- content[_k + '.subtext'] %></p>
+        <%
+          const _btnText = (content[_k + '.button_text'] || '').replace(/<[^>]+>/g, '').trim();
+          const _btnSlug = (content[_k + '.button_link'] || '').trim();
+          const _validSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(_btnSlug);
+          const _btnHref = _btnSlug === 'main' ? '/' : (_validSlug ? '/' + _btnSlug : '#conversation');
+        %>
+        <% if (_btnText) { %>
+        <a href="<%= _btnHref %>" class="btn btn-primary"><%- content[_k + '.button_text'] %></a>
+        <% } %>
     </div>
 </section>
 <% } %>
@@ -1336,6 +1356,15 @@
             <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
             <p><%- content[_k + '.p1'] %></p>
             <p><%- content[_k + '.p2'] %></p>
+            <%
+              const _fBtnText = (content[_k + '.button_text'] || '').replace(/<[^>]+>/g, '').trim();
+              const _fBtnSlug = (content[_k + '.button_link'] || '').trim();
+              const _fValidSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(_fBtnSlug);
+              const _fBtnHref = _fBtnSlug === 'main' ? '/' : (_fValidSlug ? '/' + _fBtnSlug : '#conversation');
+            %>
+            <% if (_fBtnText) { %>
+            <a href="<%= _fBtnHref %>" class="btn btn-primary"><%- content[_k + '.button_text'] %></a>
+            <% } %>
         </div>
     </div>
 </section>
