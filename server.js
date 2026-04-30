@@ -70,9 +70,26 @@ app.use(helmet({
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       scriptSrc: [
         "'self'",
-        (req, res) => `'nonce-${res.locals.nonce}'`
+        (req, res) => `'nonce-${res.locals.nonce}'`,
+        'https://www.googletagmanager.com',
+        'https://www.googleadservices.com'
       ],
-      imgSrc: ["'self'", 'data:'],
+      imgSrc: [
+        "'self'",
+        'data:',
+        'https://www.googletagmanager.com',
+        'https://www.google-analytics.com',
+        'https://www.googleadservices.com',
+        'https://googleads.g.doubleclick.net'
+      ],
+      connectSrc: [
+        "'self'",
+        'https://www.googletagmanager.com',
+        'https://www.google-analytics.com',
+        'https://www.googleadservices.com',
+        'https://googleads.g.doubleclick.net'
+      ],
+      frameSrc: ["'self'", 'https://td.doubleclick.net'],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       frameAncestors: ["'self'"]
