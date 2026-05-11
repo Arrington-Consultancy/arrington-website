@@ -123,9 +123,17 @@ router.post('/backup', requireCapability('manage_backups'), async (req, res) => 
       [label, JSON.stringify(fullSnapshot), JSON.stringify(imagesSnapshot), req.session.user.id]
     );
 
+    // Keep only the 3 most recent backups; drop anything older.
+    const { rowCount: prunedCount } = await db.query(
+      `DELETE FROM backups
+       WHERE id NOT IN (
+         SELECT id FROM backups ORDER BY created_at DESC LIMIT 3
+       )`
+    );
+
     await db.query(
       'INSERT INTO audit_log (user_id, action, detail) VALUES ($1, $2, $3)',
-      [req.session.user.id, 'backup_created', `Backup "${label}" created by ${req.session.user.username}`]
+      [req.session.user.id, 'backup_created', `Backup "${label}" created by ${req.session.user.username}${prunedCount ? ` (pruned ${prunedCount} older)` : ''}`]
     );
 
     res.json({ success: true });

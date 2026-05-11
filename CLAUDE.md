@@ -336,6 +336,7 @@ Active theme stored in DB, applied via CSS variables. Affects main site and logi
 - Users with `manage_backups` capability (admin and content by default) can create content snapshots (all text + all images)
 - View backups list shows date, user, and restore button
 - Any user with the capability can restore from any backup (replaces all current content and images)
+- **Retention: 3 most recent only.** The POST `/api/admin/backup` handler runs a DELETE-keep-3 prune after each insert, and `db/seed.js` runs the same prune at boot (idempotent: no-op when ≤3). Pruned count is recorded in `audit_log` when triggered from a backup creation. To change the limit, update both `routes/admin.js` and `db/seed.js`.
 
 ## Security posture (hardened 2026-04-11)
 

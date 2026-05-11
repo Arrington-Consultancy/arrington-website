@@ -185,6 +185,15 @@ async function seed() {
     }
   }
 
+  // Keep only the 3 most recent backups. Idempotent: no-op when there are ≤3.
+  const { rowCount: prunedBackups } = await db.query(
+    `DELETE FROM backups
+     WHERE id NOT IN (
+       SELECT id FROM backups ORDER BY created_at DESC LIMIT 3
+     )`
+  );
+  if (prunedBackups > 0) console.log(`Pruned ${prunedBackups} old backup(s); keeping the 3 most recent.`);
+
   // Seed images (idempotent: ON CONFLICT DO NOTHING)
   const images = [
     { key: 'logo', file: 'logo.avif', mime: 'image/avif' },
