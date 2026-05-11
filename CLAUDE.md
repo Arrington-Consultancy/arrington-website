@@ -12,6 +12,8 @@ Single-page website for Arrington Business Consultancy (Tom Arrington), with a C
 - **Login:** append `/login` to any of the above
 - **V1 (preserved, no public link):** `/v1.html` (warm palette, "We" voice, Outward Mindset approach — served with a per-route relaxed CSP because it's a static page that predates the nonce setup)
 
+**Brand naming:** the browser tab uses the short form "Arrington Consultancy" (set in `views/index.ejs` `<title>`). The full business name "Arrington Business Consultancy" is still used in the logo alt text, hero photo alt, and on-page copy — only the tab/page title is shortened.
+
 ## Tech stack
 
 - **Server:** Express.js with EJS templating
