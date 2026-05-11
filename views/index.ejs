@@ -854,6 +854,15 @@
             color: var(--accent);
         }
 
+        .footer-credit {
+            position: relative;
+            text-align: center;
+            padding: 1.5rem 2rem 2.25rem;
+            font-size: 0.78rem;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+        }
+
         /* ---- PAGE MENU ---- */
         .page-menu {
             position: fixed;
@@ -1409,6 +1418,10 @@
             <a href="#" class="js-email-link" data-u="<%= _eU %>" data-d="<%= _eD %>" rel="nofollow"><%= _eU %> <span aria-hidden="true">[at]</span> <%= _eD %></a>
             <a href="#" class="js-phone-link" data-pa="<%= _pDigitsA %>" data-pb="<%= _pDigitsB %>" rel="nofollow"><%= _pA %><span aria-hidden="true">&#8203;</span><%= _pB %></a>
         </div>
+    </div>
+    <div class="footer-credit cms-section" data-section="footer">
+        <% if (canEdit) { %><button class="cms-edit-btn" data-section="footer" title="Edit name">&#9998;</button><% } %>
+        <%= content['footer.name'] || '' %>
     </div>
 </footer>
 

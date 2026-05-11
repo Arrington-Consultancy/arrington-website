@@ -129,7 +129,7 @@ public/
 ## Database tables
 
 - **users** — seeded admin (`nat`) and content (`tom`) accounts. Role CHECK constraint allows `admin`, `content`, `client`.
-- **content** — key-value store for all editable text (**89 keys**: 71 original + 14 fourcards.* rows + 2 intervention button rows + 2 filter button rows) + `site.theme`. When a section is duplicated the new instance's content keys are seeded into this same table under the new instance ID's prefix (with lorem-ipsum placeholders rather than cloning the base — see Section management below). Legacy `site.section_order`, `site.hidden_sections`, `site.deleted_sections` keys remain in the DB but are no longer read; that state now lives in the pages table. `contact.*` keys are still present and edited in place — they power the global footer block.
+- **content** — key-value store for all editable text (**90 keys**: 71 original + 14 fourcards.* rows + 2 intervention button rows + 2 filter button rows + 1 footer.name row) + `site.theme`. When a section is duplicated the new instance's content keys are seeded into this same table under the new instance ID's prefix (with lorem-ipsum placeholders rather than cloning the base — see Section management below). Legacy `site.section_order`, `site.hidden_sections`, `site.deleted_sections` keys remain in the DB but are no longer read; that state now lives in the pages table. `contact.*` keys are still present and edited in place — they power the global footer block.
 - **pages** — multi-page support. Each row is a page with `slug` (unique), `title`, `sort_order`, `hidden` (boolean), and per-page JSONB arrays: `section_order`, `hidden_sections`, `deleted_sections`. The main page has slug `main` and cannot be hidden or deleted.
 - **role_permissions** — stores the permissions matrix. Composite PK `(role, capability)`, boolean `enabled`. 11 capabilities x 3 roles = 33 rows. Seeded with defaults on first run (`ON CONFLICT DO NOTHING`).
 - **page_access** — per-user page visibility for client users. Composite PK `(page_id, user_id)` with CASCADE deletes. If a page has any `page_access` rows it is automatically restricted: invisible to public visitors and to clients not in the list. Admin and content always see all pages.
@@ -264,6 +264,7 @@ The contact details live in `<footer id="conversation">` at the bottom of every 
 - A single pencil edit button on the block opens the standard edit modal and fetches `/api/content/contact` — no special-case wiring, just the existing per-prefix content API
 - The nav's "Start a conversation" CTA (and the mobile menu's equivalent) always anchor to `#conversation` in the footer
 - Because the footer is universal, `contact` is intentionally missing from the picker, the `NEW_PAGE_TEMPLATES` list, and the main-page auto-merge order. A seed-time migration also strips any `contact` / `contact__N` entries out of every page's JSONB arrays — that migration is idempotent and runs on every boot.
+- Below the contact block, a small `.footer-credit` line renders the editable name from `footer.name` (default "Tom Arrington"). Same global pattern as contact: outside the section loop, single content prefix (`footer.*`), pencil edit button on hover for users with `edit_content`, edits via the standard modal at `/api/content/footer`. `admin.js` knows the section title (`footer: 'Footer'`) and the field label (`footer.name: 'Name'`).
 
 ## Mobile navigation (hamburger)
 
@@ -401,6 +402,50 @@ DNS records currently in Wix:
 - MX, SPF, DKIM, Google site verification — left alone (Tom's email is Google Workspace)
 
 If the apex ever needs to be re-added in Railway, Railway may generate a new internal CNAME target (e.g. `47owmwpk.up.railway.app`), but Tom's DNS doesn't need to change because the A records point at Fastly's edge, which routes by Host header regardless of the internal target name.
+
+## Contact form + Resend (parked on `feature/contact-form`)
+
+A contact form was implemented end-to-end on the `feature/contact-form` branch (single commit, sits ~1 commit ahead of main, never pushed). It replaces the displayed email/phone in the footer with a name/email/message form that POSTs to `/api/contact` and sends via Resend. Recipient is read from `contact.email` at request time, subject is the literal `"Let's talk"` (matches the previous mailto subject), Reply-To is the visitor's email so Tom can reply directly. Honeypot + global CSRF + 5-per-hour-per-IP rate limit. New content keys: `contact.form_button`, `contact.form_success`. New file: `routes/contact.js`. The csrf-token meta tag was promoted out of the `if(user)` gate so anonymous visitors get a token.
+
+Required env var: `RESEND_API_KEY`. Optional: `CONTACT_FROM` once the sending domain is verified in Resend (defaults to `Arrington Consultancy <onboarding@resend.dev>` until then).
+
+To resume: `git checkout feature/contact-form`. The branch is local-only and not pushed. Don't deploy until either (a) the Cloudflare DNS migration completes and the domain verifies in Resend, or (b) we accept staying on `onboarding@resend.dev` as the visible sender.
+
+The blocker is DNS, not code. See below.
+
+## DNS migration to Cloudflare (parked, awaiting Wix support)
+
+Resend wants four records to fully verify the domain for sending: a DKIM TXT on `resend._domainkey`, an SPF TXT on `send`, an MX on `send` (for bounce handling), and an optional DMARC TXT on `_dmarc`. **Wix doesn't allow MX records on subdomains** (only at the apex) — their UI shows an explicit warning when you try, and there is no workaround inside Wix. The plan is to move DNS to Cloudflare (free), the same approach used for `loveword.co.uk` and `idsr.org.uk` per the parent `~/CLAUDE.md`.
+
+State as of 2026-05-03:
+
+- **Cloudflare side: complete and waiting.** `arringtonconsultancy.com` added to the existing Cloudflare account (the same one with `assistantdave.co.uk`, `idsr.org.uk`, `lovenumber.co.uk`, `loveword.co.uk`). All 9 existing Wix records imported, including the Fastly A records, the Railway `www` CNAME, both `_railway-verify` TXT rows, the Google MX, the Google SPF TXT, the Google site-verification TXT, and the leftover `en` Wix CDN CNAME. Every imported row set to **DNS only** (grey cloud), not Proxied, because Cloudflare's proxy breaks Railway's SSL provisioning. All 4 Resend records added on top. The "Continue to activation" button is sat waiting for the nameserver swap.
+- **Cloudflare-issued nameservers for this domain:** `nico.ns.cloudflare.com` and `walk.ns.cloudflare.com`.
+- **Wix side: blocked.** Wix has no self-service "change nameservers" option in their dashboard. Per https://blog.coreyh.uk/posts/migrating-a-wix-domain-to-cloudflare/, the only path is to open a Wix support ticket and ask for escalation to the **Advanced Domain Team**, who change it manually. Typical wait per the blog: ~6 days. The "Unassign from this site" path that Wix nudges you towards is risky because it (a) might wipe the existing DNS records and (b) definitely breaks the `.co.uk` redirect (see next section).
+
+To resume: open a Wix support ticket (chat or email) saying:
+> "Please change the nameservers on `arringtonconsultancy.com` to `nico.ns.cloudflare.com` and `walk.ns.cloudflare.com`. Keep the domain registered with Wix and assigned to my site. Please escalate to the Advanced Domain Team."
+
+When the change goes through, all Cloudflare records take over with no further work needed in Cloudflare. Then verify the four rows in Resend's domain page (they should turn green within minutes), set `CONTACT_FROM` on Railway to a real `@arringtonconsultancy.com` address, and deploy `feature/contact-form`.
+
+## `arringtonconsultancy.co.uk` redirect (will break with the Cloudflare move)
+
+The `.co.uk` domain currently redirects to `arringtonconsultancy.com` via Wix's platform-level redirect (not via DNS, not via our Express app). Wix flagged this in the "Unassign domain" warning dialog. Once the `.com` nameservers move to Cloudflare and Wix is no longer DNS authority, this redirect stops working.
+
+Fix as part of the Cloudflare migration: add `arringtonconsultancy.co.uk` to the same Cloudflare account, and create a Cloudflare bulk redirect (free) sending all `*.arringtonconsultancy.co.uk/*` traffic to `https://www.arringtonconsultancy.com/$1`. Same nameserver-change process applies to the `.co.uk` (also requires Wix support escalation).
+
+## Partial Wix-only workaround if Cloudflare migration stalls
+
+Wix DOES allow TXT records on subdomains, only MX is restricted. So 3 of Resend's 4 records can be added directly to Wix without any nameserver change:
+
+| Record | Type | Wix supports? |
+|---|---|---|
+| `resend._domainkey` (DKIM) | TXT | yes |
+| `send` (SPF) | TXT | yes |
+| `_dmarc` (DMARC, optional) | TXT | yes |
+| `send` (bounce handling) | MX | NO |
+
+DKIM is what actually authorises Resend's outbound mail; SPF on `send` strengthens deliverability. There is a decent chance Resend marks the domain as Verified on these three alone and lets us send from `tom@arringtonconsultancy.com` (the MX is for inbound bounce handling, not outbound). Worth trying as a fallback if the Wix support escalation drags. If Resend insists on the MX before going green, stay on `onboarding@resend.dev` until the Cloudflare migration completes.
 
 ## Static files kept for reference
 

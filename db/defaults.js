@@ -118,7 +118,10 @@ const defaults = {
   'contact.heading': 'I start with a coffee',
   'contact.body': 'If I cannot add significant value, I will not take your money. That is not a slogan. It is how I work.',
   'contact.email': 'tom@arringtonconsultancy.com',
-  'contact.phone': '01752 477026'
+  'contact.phone': '01752 477026',
+
+  // Footer credit (rendered globally below the contact block)
+  'footer.name': 'Tom Arrington'
 };
 
 module.exports = defaults;

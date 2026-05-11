@@ -102,7 +102,8 @@
         'contact.heading': 'Heading',
         'contact.body': 'Body text',
         'contact.email': 'Email address',
-        'contact.phone': 'Phone number'
+        'contact.phone': 'Phone number',
+        'footer.name': 'Name'
     };
 
     const sectionTitles = {
@@ -118,7 +119,8 @@
         casestudy2: 'Case Study: Tristan',
         assessment: 'Assessment',
         filter: 'Filter',
-        contact: 'Contact'
+        contact: 'Contact',
+        footer: 'Footer'
     };
 
     // Determine textarea height class based on expected content length
