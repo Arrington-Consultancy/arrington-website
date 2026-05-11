@@ -1027,7 +1027,7 @@
             <img src="/img/logo" alt="Arrington Business Consultancy" class="nav-logo-img">
             <% if (canEdit) { %><button class="cms-img-btn" data-image="logo" title="Change logo">&#9998;</button><% } %>
         </a>
-        <a href="#conversation" class="nav-cta">Start a conversation</a>
+        <a href="#conversation" class="nav-cta"><%= content['contact.label'] %></a>
         <button class="nav-hamburger" id="navHamburger" aria-label="Menu" aria-expanded="false">
             <span></span>
             <span></span>
@@ -1048,7 +1048,7 @@
         <% } %>
         <div class="mobile-menu-divider"></div>
     <% } %>
-    <a href="#conversation" class="mobile-menu-cta">Start a conversation</a>
+    <a href="#conversation" class="mobile-menu-cta"><%= content['contact.label'] %></a>
 </div>
 
 <% if (allPages.length > 1) { %>
