@@ -286,6 +286,15 @@ The footer's email address and phone number are obfuscated server-side so naive 
 - Verified against four common harvest regexes (full email, `+44…`, `0xxxx xxxxxx`, 10+ digit run) — zero matches in the anon HTML
 - Defends against scrapers that fetch HTML and regex-scan. A determined scraper running a headless browser will still get the values after JS runs — if junk persists, next steps would be a contact form or a click-to-reveal pattern
 
+## Google Ads conversion tracking
+
+Tom runs Google Ads campaigns pointing at the site. Conversion tracking is wired up directly in `views/index.ejs` (no GTM) so it lives on every page the EJS template renders (`/` and every `/:slug`).
+
+- **Base tag** at the top of `<head>`: async loader for `gtagjs?id=AW-18129914078` plus a nonced inline `gtag('config', 'AW-18129914078')` initialiser
+- **Conversion event** fires on click of any `tel:` or `mailto:` anchor, calling `gtag('event','conversion',{send_to:'AW-18129914078/h_2rCJeH8aYcEN6RgsVD'})`. The listener is attached **after** the email/phone reassembly inside the same nonced script block, so by the time it queries `a[href^="tel:"], a[href^="mailto:"]` the obfuscated anchors have real hrefs and will be picked up. New `tel:`/`mailto:` links anywhere on the page get auto-tracked too.
+- **CSP allowlist** in `server.js` already permits the required Google domains in `scriptSrc`, `imgSrc`, `connectSrc`, and `frameSrc`: `www.googletagmanager.com`, `www.googleadservices.com`, `www.google-analytics.com`, `googleads.g.doubleclick.net`, `td.doubleclick.net`. Don't strip these unless the ad campaign ends.
+- **Conversion ID / label** are owned by Tom's Google Ads account. If Tom rotates the conversion action, only the `AW-…/…` string in the gtag call needs to change; the base tag and CSP stay as-is.
+
 ## Case studies
 
 Two case studies with distinct layouts:

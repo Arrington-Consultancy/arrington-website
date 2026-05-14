@@ -1443,6 +1443,16 @@
         a.href = 'tel:' + digits;
     });
 
+    // Google Ads conversion: visitor tapped a phone or email link.
+    // Runs after the reassembly above so the href prefixes are live.
+    document.querySelectorAll('a[href^="tel:"], a[href^="mailto:"]').forEach(a => {
+        a.addEventListener('click', () => {
+            if (typeof gtag === 'function') {
+                gtag('event', 'conversion', { 'send_to': 'AW-18129914078/h_2rCJeH8aYcEN6RgsVD' });
+            }
+        });
+    });
+
     window.addEventListener('scroll', () => {
         document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 20);
     });
