@@ -99,6 +99,15 @@ const defaults = {
   'assessment.q_5': 'Can you tell me your gross margin this month without looking it up?',
   'assessment.q_6': 'If you sold tomorrow, what would a buyer actually be buying?',
 
+  // Proof strip (picker-only — text-led list of verb + client, no logos)
+  'proofstrip.label': 'What I have done',
+  'proofstrip.row_1_action': 'Built and exited',
+  'proofstrip.row_1_client': 'Abacus and Falmouth Taxis',
+  'proofstrip.row_2_action': 'Turned around',
+  'proofstrip.row_2_client': 'Devon marine firm',
+  'proofstrip.row_3_action': 'Improved margin',
+  'proofstrip.row_3_client': 'South West aesthetic clinics',
+
   // Filter
   'filter.label': 'A note',
   'filter.heading': 'I am not for everyone',

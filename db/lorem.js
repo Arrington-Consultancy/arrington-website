@@ -112,6 +112,15 @@ const lorem = {
     'button_text': '',
     'button_link': 'main'
   },
+  proofstrip: {
+    'label': 'What I have done',
+    'row_1_action': 'Built and exited',
+    'row_1_client': 'Abacus and Falmouth Taxis',
+    'row_2_action': 'Turned around',
+    'row_2_client': 'Devon marine firm',
+    'row_3_action': 'Improved margin',
+    'row_3_client': 'South West aesthetic clinics'
+  },
   contact: {
     'label': 'Lorem ipsum',
     'heading': 'Lorem ipsum dolor sit amet',

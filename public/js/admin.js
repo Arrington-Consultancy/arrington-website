@@ -98,6 +98,13 @@
         'filter.p2': 'Paragraph 2',
         'filter.button_text': 'Button text (leave empty to hide button)',
         'filter.button_link': 'Button links to',
+        'proofstrip.label': 'Section label (leave empty to hide)',
+        'proofstrip.row_1_action': 'Row 1 action',
+        'proofstrip.row_1_client': 'Row 1 client',
+        'proofstrip.row_2_action': 'Row 2 action',
+        'proofstrip.row_2_client': 'Row 2 client',
+        'proofstrip.row_3_action': 'Row 3 action',
+        'proofstrip.row_3_client': 'Row 3 client',
         'contact.label': 'Section label',
         'contact.heading': 'Heading',
         'contact.body': 'Body text',
@@ -119,6 +126,7 @@
         casestudy2: 'Case Study: Tristan',
         assessment: 'Assessment',
         filter: 'Filter',
+        proofstrip: 'Proof strip',
         contact: 'Contact',
         footer: 'Footer'
     };
@@ -128,6 +136,7 @@
         if (key.includes('label') || key.includes('tag') || key.includes('stat') ||
             key.includes('cta') || key.includes('email') || key.includes('phone') ||
             key.includes('_title') || key.includes('_number') ||
+            key.includes('_action') || key.includes('_client') ||
             key.includes('button_text') || key.includes('button_link')) {
             return 'short';
         }
@@ -917,8 +926,15 @@
         oxford: 900 / 677    // ~1.33:1 landscape
     };
 
+    // Image keys can be base (`headshot`) or instance-scoped (`headshot__hero__2`).
+    // The base prefix determines the expected ratio for either form.
+    function imageBaseKey(key) {
+        const i = key.indexOf('__');
+        return i > 0 ? key.slice(0, i) : key;
+    }
+
     function checkAspectRatio(width, height, key) {
-        const expected = expectedRatios[key];
+        const expected = expectedRatios[imageBaseKey(key)];
         if (!expected) return true;
         const actual = width / height;
         const tolerance = 0.1;
@@ -975,8 +991,9 @@
                 URL.revokeObjectURL(objectUrl);
                 if (!checkAspectRatio(img.width, img.height, currentImageKey)) {
                     const ratioLabels = { headshot: '3:4 portrait', logo: '2:1 landscape', oxford: '4:3 landscape' };
-                    const ratioLabel = ratioLabels[currentImageKey] || 'the same as the original';
-                    alert(`This image has the wrong aspect ratio. The ${currentImageKey} needs to be approximately ${ratioLabel}. Please crop or resize your image and try again.`);
+                    const base = imageBaseKey(currentImageKey);
+                    const ratioLabel = ratioLabels[base] || 'the same as the original';
+                    alert(`This image has the wrong aspect ratio. The ${base} needs to be approximately ${ratioLabel}. Please crop or resize your image and try again.`);
                     return;
                 }
                 await upload();

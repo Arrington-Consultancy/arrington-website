@@ -135,7 +135,7 @@ router.put('/', requireCapability('edit_content'), async (req, res) => {
 // Content keys are stored per instance: `{instanceId}.field` for most sections.
 // Credentials is a special case with two content sub-prefixes:
 //   `{instanceId}_oxford.*` and `{instanceId}_stat.*`.
-const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','fourcards','casestudy','casestudy2','assessment','filter','contact'];
+const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','fourcards','casestudy','casestudy2','assessment','filter','proofstrip','contact'];
 const MAX_INSTANCE_SUFFIX = 99;
 
 function baseTemplate(instanceId) {
@@ -526,10 +526,25 @@ router.post('/section-reuse', requireCapability('manage_sections'), async (req, 
 const ALLOWED_MIME = ['image/png', 'image/jpeg', 'image/webp', 'image/avif', 'image/gif'];
 const MAX_SIZE = 2 * 1024 * 1024; // 2MB
 
+// Base image keys that map to fixed UI slots. Instance-scoped keys take the
+// form `{base}__{instanceId}` (e.g. `headshot__hero__2`).
+const BASE_IMAGE_KEYS = new Set(['logo', 'headshot', 'oxford']);
+
+function validImageKey(key) {
+  if (typeof key !== 'string' || key.length === 0 || key.length > 50) return false;
+  if (!/^[a-z0-9]+(?:__[a-z0-9]+)*$/.test(key)) return false;
+  const sep = key.indexOf('__');
+  const base = sep > 0 ? key.slice(0, sep) : key;
+  return BASE_IMAGE_KEYS.has(base);
+}
+
 router.put('/image/:key', requireCapability('edit_content'), async (req, res) => {
   const { key } = req.params;
   const { data, mimeType } = req.body;
 
+  if (!validImageKey(key)) {
+    return res.status(400).json({ error: 'Invalid image key' });
+  }
   if (!data || !mimeType) {
     return res.status(400).json({ error: 'Missing image data or type' });
   }
@@ -545,10 +560,13 @@ router.put('/image/:key', requireCapability('edit_content'), async (req, res) =>
   }
 
   try {
+    // UPSERT so per-instance image keys (which have no seeded row) work too.
     await db.query(
-      `UPDATE images SET data = $1, mime_type = $2, updated_at = NOW(), updated_by = $3
-       WHERE image_key = $4`,
-      [buffer, mimeType, req.session.user.id, key]
+      `INSERT INTO images (image_key, data, mime_type, updated_by)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (image_key) DO UPDATE SET data = EXCLUDED.data, mime_type = EXCLUDED.mime_type,
+         updated_by = EXCLUDED.updated_by, updated_at = NOW()`,
+      [key, buffer, mimeType, req.session.user.id]
     );
 
     await db.query(

@@ -115,17 +115,26 @@ app.get('/health', (req, res) => res.json({ ok: true }));
 // Static files
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Serve images from database (with fallback to disk for first deploy)
+// Serve images from database. Instance-scoped keys (e.g. `headshot__hero__2`)
+// fall back to the base key (`headshot`) when the per-instance image has not
+// yet been uploaded — that way a freshly-duplicated hero shows the default
+// photo until Tom uploads a different one.
 app.get('/img/:key', async (req, res, next) => {
   try {
-    const { rows } = await db.query(
-      'SELECT data, mime_type FROM images WHERE image_key = $1',
-      [req.params.key]
-    );
-    if (rows.length > 0) {
-      res.set('Content-Type', rows[0].mime_type);
-      res.set('Cache-Control', 'no-cache');
-      return res.send(rows[0].data);
+    const requested = req.params.key;
+    const candidates = [requested];
+    const sep = requested.indexOf('__');
+    if (sep > 0) candidates.push(requested.slice(0, sep));
+    for (const key of candidates) {
+      const { rows } = await db.query(
+        'SELECT data, mime_type FROM images WHERE image_key = $1',
+        [key]
+      );
+      if (rows.length > 0) {
+        res.set('Content-Type', rows[0].mime_type);
+        res.set('Cache-Control', 'no-cache');
+        return res.send(rows[0].data);
+      }
     }
     res.status(404).send('Image not found');
   } catch (err) {
@@ -216,9 +225,10 @@ app.get('/v1.html', (req, res) => {
 });
 
 // Valid section templates (shared with routes/content.js)
-const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','fourcards','casestudy','casestudy2','assessment','filter','contact'];
+const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','fourcards','casestudy','casestudy2','assessment','filter','proofstrip','contact'];
 // Default auto-merge order — excludes 'contact' (now rendered globally in
-// the footer) and 'fourcards' (picker-only). Users pick those explicitly.
+// the footer), 'fourcards' and 'proofstrip' (picker-only). Users pick those
+// explicitly.
 const defaultOrder = ['hero','credentials','biography','intervention','approach','insights','casestudy','casestudy2','assessment','filter'];
 
 const baseOf = (id) => {

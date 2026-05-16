@@ -90,11 +90,11 @@ views/
   partials/
     edit-modal.ejs         Content editing modal
     add-section-modal.ejs  Template picker grid with SVG thumbnails.
-                           11 picker entries: hero, credentials,
+                           12 picker entries: hero, credentials,
                            biography, intervention, approach, insights,
                            fourcards, casestudy, casestudy2, assessment,
-                           filter. 'contact' is intentionally omitted —
-                           it lives globally in the footer.
+                           filter, proofstrip. 'contact' is intentionally
+                           omitted — it lives globally in the footer.
     admin-menu.ejs         Gear-icon panel with collapsible sections
                            (Appearance, Page, Content, Users, System)
                            and a slide-over detail view for sub-panels
@@ -122,7 +122,7 @@ public/
                        history.scrollRestoration = 'manual' so
                        add-section reload-then-scroll isn't fought by
                        the browser.
-  img/templates/       12 SVG wireframe thumbnails — one per template
+  img/templates/       13 SVG wireframe thumbnails — one per template
                        in VALID_TEMPLATES, used by the add-section modal
                        (contact.svg is kept for completeness even though
                        contact is no longer picker-listed).
@@ -209,7 +209,7 @@ Each editable section has five hover-revealed buttons in this visual order, left
 - ▲ / ▼ swap the section with its neighbour in the DOM and save the order via `PUT /api/content/order`
 - Order stored as a JSON array in the page row's `section_order` column
 - Rendered server-side (EJS loop over `sectionOrder`) so all visitors see the saved layout
-- **12 valid templates:** hero, credentials, biography, intervention, approach, insights, fourcards, casestudy, casestudy2, assessment, filter, contact. Of these, `contact` renders only in the global footer (never via the section loop) and `fourcards` is picker-only.
+- **13 valid templates:** hero, credentials, biography, intervention, approach, insights, fourcards, casestudy, casestudy2, assessment, filter, proofstrip, contact. Of these, `contact` renders only in the global footer (never via the section loop); `fourcards` and `proofstrip` are picker-only.
 - **Default auto-merge order** (in `server.js`) deliberately excludes `contact` (footer-only) and `fourcards` (picker-only) so adding those templates never auto-injects them into the main page.
 - Server auto-inserts any newly-added default templates at their natural default-order position on the main page without a DB update — but only when no instance of that template is already on the page, only when the stored order is non-empty, and only for the main page (other pages own their explicit order).
 - Nav and footer are fixed (not movable)
@@ -232,7 +232,7 @@ Each editable section has five hover-revealed buttons in this visual order, left
 
 ### Add section (template picker)
 - "Add section" button in the admin menu opens a wide modal with two tabs: **New section** (the template picker) and **Reuse existing** (orphaned instances whose content is still in the DB but isn't on any page)
-- **New section** lists 11 templates (every `VALID_TEMPLATES` entry except `contact`) with SVG wireframe thumbnails, a serif label, and a one-line blurb. Duplicates are explicitly allowed.
+- **New section** lists 12 templates (every `VALID_TEMPLATES` entry except `contact`) with SVG wireframe thumbnails, a serif label, and a one-line blurb. Duplicates are explicitly allowed.
 - One click → `POST /api/content/section/:template`, the server allocates an instance ID (see model below), **seeds lorem-ipsum placeholder content from `db/lorem.js` into every content key the instance owns** (so the new section always starts neutral instead of cloning another page's content), appends to `section_order`, returns `{ instanceId }`. Seeding happens on both the base-reuse path and the suffixed path — there is no "restore original content by re-adding" behaviour any more; use the "Reuse existing" tab to bring orphaned content back.
 - **Reuse existing** lists orphaned instance IDs with a heading preview, and lets the user re-attach them to the current page without overwriting their content.
 - Client stores the new instance ID in `sessionStorage.cmsJustAdded` and reloads
@@ -240,7 +240,7 @@ Each editable section has five hover-revealed buttons in this visual order, left
 - `history.scrollRestoration = 'manual'` is set at the top of admin.js so the browser doesn't snap the scroll position back to where the user was before the click — that bug only showed up on prod (where the page loads slowly enough that the browser's restore fired after admin.js's scroll)
 
 ### Duplicate sections (instance/template model)
-- A section on the page is an **instance** of a **template**. The 12 valid template names live in `VALID_TEMPLATES` in `routes/content.js`, `routes/admin.js`, and `server.js` (kept in sync manually — if you add a new template, update all three).
+- A section on the page is an **instance** of a **template**. The 13 valid template names live in `VALID_TEMPLATES` in `routes/content.js`, `routes/admin.js`, and `server.js` (kept in sync manually — if you add a new template, update all three).
 - Instance IDs have the form `{template}` (the first/base instance) or `{template}__N` for additional copies, where `N` is an integer ≥ 2 separated by a **double** underscore (so `casestudy2` the template doesn't collide with `casestudy__2` the duplicate).
 - Validation regex: `^([a-z0-9]+)(?:__(\d+))?$`. Helpers `baseTemplate(id)` and `isValidInstance(id)` live in `routes/content.js`; `server.js` carries its own copies for the render path.
 - `site.section_order` stores instance IDs, not template names. Existing prod data with `["hero","credentials",...]` still works because base instance ID == template name.
@@ -321,6 +321,16 @@ The **filter** template has the same `button_text` / `button_link` pair (`filter
 - `admin.js` adds `_number` to the "short" textarea class heuristic so the number field renders as a small single-line input in the edit modal
 - Thumbnail lives at `public/img/templates/fourcards.svg`
 
+## Proof strip template
+
+`proofstrip` is a text-only three-column strip designed as a restrained alternative to a logo wall. Each column is an **action** (verb phrase, accent-coloured small caps) plus a **client** (serif display). Keys: `proofstrip.label`, `proofstrip.row_N_action`, `proofstrip.row_N_client` for `N` ∈ [1..3]. The section label hides when empty so the strip can stand alone.
+
+- Grid: 3 columns desktop, stacks at ≤900px. Vertical dividers between columns desktop, horizontal between rows on mobile.
+- Picker-only: deliberately excluded from the main-page auto-merge (`defaultOrder` and `NEW_PAGE_TEMPLATES`), so it only appears when a user picks it.
+- `admin.js` adds `_action` and `_client` to the "short" textarea heuristic so all six row fields render as single-line inputs.
+- `lorem.proofstrip` contains Tom's real example copy ("Built and exited / Abacus and Falmouth Taxis", etc.) rather than neutral lorem, because the section's whole purpose is naming real client work — neutral placeholder ("Lorem ipsum / Dolor sit amet") obscures what the template is for. Duplicates therefore land with the same example copy; users edit per-instance.
+- Thumbnail lives at `public/img/templates/proofstrip.svg`
+
 ## Image management
 
 - Logo, headshot, and Oxford badge are stored as binary in PostgreSQL
@@ -329,6 +339,15 @@ The **filter** template has the same `button_text` / `button_link` pair (`filter
 - Aspect ratio validation: logo ~2:1 landscape, headshot 3:4 portrait, oxford ~4:3 landscape
 - Maximum upload size: 2MB (enforced at the route level and surfaced as a 2MB error message)
 - Images served with `Cache-Control: no-cache` so uploads appear immediately on reload
+
+### Per-instance hero images
+
+Each hero instance owns its own image so a duplicate hero on another page can have a different photo. The base `hero` instance keeps using the existing global image key `headshot` (no migration). Duplicates (`hero__2`, `hero__3`, …) use instance-scoped keys `headshot__hero__2`, `headshot__hero__3`, etc.
+
+- The EJS hero block computes the key as `_iid === 'hero' ? 'headshot' : 'headshot__' + _iid` and passes it to both the `<img src>` and the upload button's `data-image`.
+- The `/img/:key` route in `server.js` falls back: if the requested key has a `__` and isn't found, it retries with the substring before the first `__` (e.g. `headshot__hero__2` → `headshot`). That way a freshly-duplicated hero shows the default photo until Tom uploads a per-instance one.
+- The `PUT /api/content/image/:key` route is UPSERT (was UPDATE), so per-instance keys with no seeded row are created on first upload. Image keys are validated against `^[a-z0-9]+(?:__[a-z0-9]+)*$` and the base segment must be one of `logo`, `headshot`, `oxford`.
+- `public/js/admin.js` strips the suffix when computing aspect ratio: `headshot__hero__2` validates against the headshot 3:4 portrait ratio.
 
 ## Colour themes
 
