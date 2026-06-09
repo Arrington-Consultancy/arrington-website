@@ -206,7 +206,11 @@ Every page exposes a full set of SEO fields, editable per-page (and gated on the
 
 **Admin UI:** two buttons in the admin panel's Page section — "SEO: this page" (per-page form with live character counters on title/description at Google's ~60/~160 thresholds) and "SEO: site defaults". Both are slide-over detail panes wired in `public/js/admin.js` (`loadPageSeo` / `loadSeoDefaults`).
 
-**API:** `GET/PUT /api/admin/seo/:slug` (per-page; GET also returns the site defaults so the form can show fallbacks) and `GET/PUT /api/admin/seo-defaults` (site-wide). All four gated on `manage_seo`. The per-page SEO columns are included in the backup snapshot and restore.
+**API:** `GET/PUT /api/admin/seo/:slug` (per-page; GET also returns the site defaults so the form can show fallbacks) and `GET/PUT /api/admin/seo-defaults` (site-wide). All four gated on `manage_seo`. `og_image` / `canonical_url` (per-page) and `seo.default_og_image` (site) are validated server-side to be `https?://` or root-relative. The per-page SEO columns are included in the backup snapshot and restore.
+
+**Sitemap + robots:** `server.js` serves a dynamic `/sitemap.xml` (lists only public pages: not hidden, not `noindex`, not `page_access`-restricted; each with a `lastmod` from `updated_at`) and `/robots.txt` (allows all, disallows `/login`, points at the sitemap). Both build URLs from the request host so they work on any domain.
+
+**Google Search Console (pending Tom action, flagged 09/06/2026):** the sitemap is live but should be submitted once in Search Console (search.google.com/search-console → add/verify the `https://www.arringtonconsultancy.com` URL-prefix property → Sitemaps → submit `sitemap.xml`) so Google crawls faster. Tom signs in with his Google Ads account. If ownership verification stalls, Nat can add the HTML-tag verification (the CSP `scriptSrc` already allows the Google domains). No code change needed; the sitemap self-updates.
 
 ## Content editing
 
