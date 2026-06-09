@@ -186,6 +186,8 @@ A page does not need to be hidden to be restricted. Any page with at least one `
 
 ## SEO metadata
 
+**Shipped and live 09/06/2026** (committed to `main`, deployed via `railway up`, verified on www.arringtonconsultancy.com). The boot-time `ALTER TABLE` migration has already run on the production DB, so the SEO columns and `manage_seo` rows exist there.
+
 Every page exposes a full set of SEO fields, editable per-page (and gated on the `manage_seo` capability, which admin and content both have by default; client does not).
 
 **Per-page fields** (columns on the `pages` table): `meta_title` (the `<title>` / search-result link), `meta_description`, `meta_keywords`, `og_title`, `og_description`, `og_image`, `canonical_url`, and a `noindex` boolean. All text fields default to `''`.
