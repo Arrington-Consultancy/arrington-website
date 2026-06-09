@@ -1229,3 +1229,74 @@ select.cms-user-input {
     min-height: 1em;
 }
 
+/* ---- SEO form ---- */
+.cms-seo-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.cms-seo-label {
+    display: block;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: #c9c5bd;
+    margin-bottom: 0.5rem;
+}
+
+.cms-seo-hint {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 400;
+    color: #8a8680;
+    margin: 0.1rem 0 0.3rem;
+    line-height: 1.4;
+}
+
+.cms-seo-input {
+    margin-top: 0.1rem;
+}
+
+.cms-seo-textarea {
+    resize: vertical;
+    line-height: 1.4;
+}
+
+.cms-seo-subhead {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #8a8680;
+    margin: 0.6rem 0 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cms-seo-count {
+    display: block;
+    text-align: right;
+    font-size: 0.66rem;
+    color: #8a8680;
+    margin-top: -0.2rem;
+}
+
+.cms-seo-count-over {
+    color: #d98a5a;
+}
+
+.cms-seo-check {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.74rem;
+    color: #c9c5bd;
+    margin: 0.4rem 0 0.6rem;
+    cursor: pointer;
+}
+
+.cms-seo-check input {
+    width: auto;
+    margin: 0;
+}
+

@@ -3,7 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= currentPage.slug !== 'main' ? currentPage.title + ' | ' : '' %>Arrington Consultancy</title>
+    <title><%= seo.title %></title>
+    <% if (seo.description) { %><meta name="description" content="<%= seo.description %>"><% } %>
+    <% if (seo.keywords) { %><meta name="keywords" content="<%= seo.keywords %>"><% } %>
+    <% if (seo.noindex) { %><meta name="robots" content="noindex, nofollow"><% } %>
+    <link rel="canonical" href="<%= seo.canonical %>">
+    <%# ---- Open Graph (Facebook, LinkedIn, etc.) ---- %>
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="<%= seo.siteName %>">
+    <meta property="og:title" content="<%= seo.ogTitle %>">
+    <% if (seo.ogDescription) { %><meta property="og:description" content="<%= seo.ogDescription %>"><% } %>
+    <meta property="og:url" content="<%= seo.ogUrl %>">
+    <% if (seo.ogImage) { %><meta property="og:image" content="<%= seo.ogImage %>"><% } %>
+    <%# ---- Twitter card (falls back to the Open Graph values) ---- %>
+    <meta name="twitter:card" content="<%= seo.ogImage ? 'summary_large_image' : 'summary' %>">
+    <% if (seo.twitterHandle) { %><meta name="twitter:site" content="<%= seo.twitterHandle %>"><% } %>
+    <meta name="twitter:title" content="<%= seo.ogTitle %>">
+    <% if (seo.ogDescription) { %><meta name="twitter:description" content="<%= seo.ogDescription %>"><% } %>
+    <% if (seo.ogImage) { %><meta name="twitter:image" content="<%= seo.ogImage %>"><% } %>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">

@@ -14,6 +14,21 @@ async function seed() {
   await db.query(schema);
   console.log('Tables created/verified.');
 
+  // Migration: add per-page SEO columns to an existing pages table. The
+  // CREATE TABLE IF NOT EXISTS above only adds them on a fresh DB, so existing
+  // deployments need these ALTERs. All idempotent (IF NOT EXISTS).
+  await db.query(`
+    ALTER TABLE pages ADD COLUMN IF NOT EXISTS meta_title       VARCHAR(255) NOT NULL DEFAULT '';
+    ALTER TABLE pages ADD COLUMN IF NOT EXISTS meta_description TEXT         NOT NULL DEFAULT '';
+    ALTER TABLE pages ADD COLUMN IF NOT EXISTS meta_keywords    TEXT         NOT NULL DEFAULT '';
+    ALTER TABLE pages ADD COLUMN IF NOT EXISTS og_title         VARCHAR(255) NOT NULL DEFAULT '';
+    ALTER TABLE pages ADD COLUMN IF NOT EXISTS og_description   TEXT         NOT NULL DEFAULT '';
+    ALTER TABLE pages ADD COLUMN IF NOT EXISTS og_image         TEXT         NOT NULL DEFAULT '';
+    ALTER TABLE pages ADD COLUMN IF NOT EXISTS canonical_url    TEXT         NOT NULL DEFAULT '';
+    ALTER TABLE pages ADD COLUMN IF NOT EXISTS noindex          BOOLEAN      NOT NULL DEFAULT false;
+  `);
+  console.log('Page SEO columns verified.');
+
   // Migrate users CHECK constraint to include 'client' role
   await db.query(`
     DO $$ BEGIN
@@ -25,9 +40,9 @@ async function seed() {
 
   // Seed default role permissions (idempotent: ON CONFLICT DO NOTHING)
   const DEFAULT_PERMISSIONS = {
-    admin:   { edit_content: true, manage_sections: true, manage_pages: true, manage_backups: true, manage_theme: true, view_activity: true, manage_users: true, manage_page_access: true, reset_content: true, view_csp: true, manage_permissions: true },
-    content: { edit_content: true, manage_sections: true, manage_pages: true, manage_backups: true, manage_theme: true, view_activity: true, manage_users: true, manage_page_access: true, reset_content: false, view_csp: false, manage_permissions: false },
-    client:  { edit_content: false, manage_sections: false, manage_pages: false, manage_backups: false, manage_theme: false, view_activity: false, manage_users: false, manage_page_access: false, reset_content: false, view_csp: false, manage_permissions: false }
+    admin:   { edit_content: true, manage_sections: true, manage_pages: true, manage_backups: true, manage_theme: true, view_activity: true, manage_users: true, manage_page_access: true, manage_seo: true, reset_content: true, view_csp: true, manage_permissions: true },
+    content: { edit_content: true, manage_sections: true, manage_pages: true, manage_backups: true, manage_theme: true, view_activity: true, manage_users: true, manage_page_access: true, manage_seo: true, reset_content: false, view_csp: false, manage_permissions: false },
+    client:  { edit_content: false, manage_sections: false, manage_pages: false, manage_backups: false, manage_theme: false, view_activity: false, manage_users: false, manage_page_access: false, manage_seo: false, reset_content: false, view_csp: false, manage_permissions: false }
   };
   for (const [role, caps] of Object.entries(DEFAULT_PERMISSIONS)) {
     for (const [cap, enabled] of Object.entries(caps)) {

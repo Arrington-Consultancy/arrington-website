@@ -105,8 +105,8 @@ router.post('/backup', requireCapability('manage_backups'), async (req, res) => 
       };
     });
 
-    // Snapshot all pages
-    const { rows: pageRows } = await db.query('SELECT slug, title, sort_order, hidden, section_order, hidden_sections, deleted_sections FROM pages ORDER BY sort_order');
+    // Snapshot all pages (including per-page SEO fields)
+    const { rows: pageRows } = await db.query('SELECT slug, title, sort_order, hidden, section_order, hidden_sections, deleted_sections, meta_title, meta_description, meta_keywords, og_title, og_description, og_image, canonical_url, noindex FROM pages ORDER BY sort_order');
     const pagesSnapshot = pageRows;
 
     const label = req.body.label || new Date().toLocaleDateString('en-GB', {
@@ -202,8 +202,9 @@ router.post('/backup/:id/restore', requireCapability('manage_backups'), async (r
       await db.query("DELETE FROM pages WHERE slug != 'main'");
       for (const p of pagesSnapshot) {
         await db.query(
-          `INSERT INTO pages (slug, title, sort_order, hidden, section_order, hidden_sections, deleted_sections, updated_by)
-           VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8)
+          `INSERT INTO pages (slug, title, sort_order, hidden, section_order, hidden_sections, deleted_sections,
+             meta_title, meta_description, meta_keywords, og_title, og_description, og_image, canonical_url, noindex, updated_by)
+           VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8, $9, $10, $11, $12, $13, $14, $15, $16)
            ON CONFLICT (slug) DO UPDATE SET
              title = EXCLUDED.title,
              sort_order = EXCLUDED.sort_order,
@@ -211,12 +212,23 @@ router.post('/backup/:id/restore', requireCapability('manage_backups'), async (r
              section_order = EXCLUDED.section_order,
              hidden_sections = EXCLUDED.hidden_sections,
              deleted_sections = EXCLUDED.deleted_sections,
+             meta_title = EXCLUDED.meta_title,
+             meta_description = EXCLUDED.meta_description,
+             meta_keywords = EXCLUDED.meta_keywords,
+             og_title = EXCLUDED.og_title,
+             og_description = EXCLUDED.og_description,
+             og_image = EXCLUDED.og_image,
+             canonical_url = EXCLUDED.canonical_url,
+             noindex = EXCLUDED.noindex,
              updated_at = NOW(),
              updated_by = EXCLUDED.updated_by`,
           [p.slug, p.title, p.sort_order, p.hidden || false,
            JSON.stringify(p.section_order || []),
            JSON.stringify(p.hidden_sections || []),
            JSON.stringify(p.deleted_sections || []),
+           p.meta_title || '', p.meta_description || '', p.meta_keywords || '',
+           p.og_title || '', p.og_description || '', p.og_image || '',
+           p.canonical_url || '', p.noindex || false,
            req.session.user.id]
         );
       }
@@ -476,6 +488,133 @@ router.put('/page-order', requireCapability('manage_pages'), async (req, res) =>
   } catch (err) {
     console.error('Page reorder error:', err);
     res.status(500).json({ error: 'Failed to reorder pages' });
+  }
+});
+
+// --- SEO: per-page metadata + site-wide defaults ---
+
+// The per-page SEO fields that live as columns on the pages table.
+const SEO_FIELDS = ['meta_title', 'meta_description', 'meta_keywords', 'og_title', 'og_description', 'og_image', 'canonical_url'];
+// The site-wide default content keys (fallbacks for blank per-page fields).
+const SEO_DEFAULT_KEYS = ['seo.site_name', 'seo.default_description', 'seo.default_og_image', 'seo.twitter_handle'];
+
+// Get site-wide SEO defaults
+router.get('/seo-defaults', requireCapability('manage_seo'), async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      'SELECT section_key, content FROM content WHERE section_key = ANY($1)', [SEO_DEFAULT_KEYS]
+    );
+    const defaults = {};
+    rows.forEach(r => { defaults[r.section_key] = r.content; });
+    for (const k of SEO_DEFAULT_KEYS) if (!(k in defaults)) defaults[k] = '';
+    res.json({ defaults });
+  } catch (err) {
+    console.error('Get SEO defaults error:', err);
+    res.status(500).json({ error: 'Failed to load SEO defaults' });
+  }
+});
+
+// Update site-wide SEO defaults
+router.put('/seo-defaults', requireCapability('manage_seo'), async (req, res) => {
+  const incoming = req.body && typeof req.body === 'object' ? req.body : {};
+  try {
+    for (const key of SEO_DEFAULT_KEYS) {
+      if (incoming[key] === undefined) continue;
+      const value = typeof incoming[key] === 'string' ? incoming[key].trim() : '';
+      await db.query(
+        `INSERT INTO content (section_key, content, updated_by)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content, updated_at = NOW(), updated_by = EXCLUDED.updated_by`,
+        [key, value, req.session.user.id]
+      );
+    }
+    await db.query(
+      'INSERT INTO audit_log (user_id, action, detail) VALUES ($1, $2, $3)',
+      [req.session.user.id, 'seo_defaults_update', `Site SEO defaults updated by ${req.session.user.username}`]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Update SEO defaults error:', err);
+    res.status(500).json({ error: 'Failed to save SEO defaults' });
+  }
+});
+
+// Get a page's SEO fields (plus the site defaults so the form can show what
+// each blank field falls back to)
+router.get('/seo/:slug', requireCapability('manage_seo'), async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT slug, title, meta_title, meta_description, meta_keywords,
+              og_title, og_description, og_image, canonical_url, noindex
+       FROM pages WHERE slug = $1`, [req.params.slug]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'Page not found' });
+
+    const { rows: defRows } = await db.query(
+      'SELECT section_key, content FROM content WHERE section_key = ANY($1)', [SEO_DEFAULT_KEYS]
+    );
+    const defaults = {};
+    defRows.forEach(r => { defaults[r.section_key] = r.content; });
+    for (const k of SEO_DEFAULT_KEYS) if (!(k in defaults)) defaults[k] = '';
+
+    res.json({ page: rows[0], defaults });
+  } catch (err) {
+    console.error('Get page SEO error:', err);
+    res.status(500).json({ error: 'Failed to load page SEO' });
+  }
+});
+
+// Update a page's SEO fields
+router.put('/seo/:slug', requireCapability('manage_seo'), async (req, res) => {
+  const { slug } = req.params;
+  const body = req.body && typeof req.body === 'object' ? req.body : {};
+  try {
+    const { rows } = await db.query('SELECT id FROM pages WHERE slug = $1', [slug]);
+    if (rows.length === 0) return res.status(404).json({ error: 'Page not found' });
+
+    const updates = [];
+    const params = [];
+    let idx = 1;
+
+    for (const field of SEO_FIELDS) {
+      if (body[field] === undefined) continue;
+      let value = typeof body[field] === 'string' ? body[field].trim() : '';
+      // Length guards mirror the column definitions (VARCHAR(255) for the
+      // two *_title columns; the rest are TEXT).
+      if ((field === 'meta_title' || field === 'og_title') && value.length > 255) {
+        value = value.slice(0, 255);
+      }
+      updates.push(`${field} = $${idx}`);
+      params.push(value);
+      idx++;
+    }
+    if (body.noindex !== undefined) {
+      updates.push(`noindex = $${idx}`);
+      params.push(body.noindex === true || body.noindex === 'true');
+      idx++;
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'Nothing to update' });
+    }
+
+    updates.push(`updated_at = NOW()`);
+    updates.push(`updated_by = $${idx}`);
+    params.push(req.session.user.id);
+    idx++;
+    params.push(slug);
+
+    await db.query(`UPDATE pages SET ${updates.join(', ')} WHERE slug = $${idx}`, params);
+
+    await db.query(
+      'INSERT INTO audit_log (user_id, action, section_key, detail) VALUES ($1, $2, $3, $4)',
+      [req.session.user.id, 'seo_update', slug, `SEO updated for page "${slug}" by ${req.session.user.username}`]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Update page SEO error:', err);
+    res.status(500).json({ error: 'Failed to save page SEO' });
   }
 });
 

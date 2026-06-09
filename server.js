@@ -357,10 +357,43 @@ async function renderPage(req, res, next, pageSlug) {
       ? sectionOrder
       : sectionOrder.filter(s => !hiddenSections.includes(s));
 
+    // Resolve SEO metadata. Per-page columns (on the pages row) override the
+    // site-wide defaults held in the seo.* content keys; a blank per-page
+    // field falls back to the default. Canonical/OG URL default to the
+    // current request URL unless the page sets an explicit canonical.
+    const siteName = (content['seo.site_name'] || 'Arrington Business Consultancy').trim();
+    const defaultDesc = (content['seo.default_description'] || '').trim();
+    const defaultOgImage = (content['seo.default_og_image'] || '').trim();
+    const twitterHandle = (content['seo.twitter_handle'] || '').trim();
+
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const pagePath = currentPage.slug === 'main' ? '/' : `/${currentPage.slug}`;
+    const computedTitle = currentPage.slug !== 'main'
+      ? `${currentPage.title} | Arrington Consultancy`
+      : 'Arrington Consultancy';
+
+    const metaTitle = (currentPage.meta_title || '').trim() || computedTitle;
+    const metaDescription = (currentPage.meta_description || '').trim() || defaultDesc;
+    const canonical = (currentPage.canonical_url || '').trim() || `${baseUrl}${pagePath}`;
+    const ogImage = (currentPage.og_image || '').trim() || defaultOgImage;
+    const seo = {
+      title: metaTitle,
+      description: metaDescription,
+      keywords: (currentPage.meta_keywords || '').trim(),
+      canonical,
+      ogTitle: (currentPage.og_title || '').trim() || metaTitle,
+      ogDescription: (currentPage.og_description || '').trim() || metaDescription,
+      ogImage,
+      ogUrl: canonical,
+      siteName,
+      twitterHandle,
+      noindex: currentPage.noindex === true
+    };
+
     res.render('index', {
       content, theme, activeTheme, themes,
       sectionOrder: renderOrder, hiddenSections, instanceTemplates,
-      currentPage, allPages,
+      currentPage, allPages, seo,
       canEdit, capabilities, showAdminPanel
     });
   } catch (err) {

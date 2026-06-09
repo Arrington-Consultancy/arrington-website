@@ -130,7 +130,14 @@ const defaults = {
   'contact.phone': '01752 477026',
 
   // Footer credit (rendered globally below the contact block)
-  'footer.name': 'Tom Arrington'
+  'footer.name': 'Tom Arrington',
+
+  // Site-wide SEO defaults. Each page can override these per-field via the
+  // pages table; where a page leaves a field blank it falls back to these.
+  'seo.site_name': 'Arrington Business Consultancy',
+  'seo.default_description': 'Tom Arrington helps owner-managed businesses in the South West get a grip on the numbers, the cash flow and the decisions that matter. Direct, practical business consultancy.',
+  'seo.default_og_image': '',
+  'seo.twitter_handle': ''
 };
 
 module.exports = defaults;

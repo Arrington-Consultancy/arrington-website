@@ -60,7 +60,9 @@ routes/
                        page CRUD (list, create, rename, hide, delete,
                        reorder), user CRUD (scoped by caller role),
                        permissions matrix API (GET/PUT), page access API
-                       (GET/PUT, plus by-slug convenience route).
+                       (GET/PUT, plus by-slug convenience route), SEO API
+                       (per-page GET/PUT /seo/:slug and site-wide
+                       GET/PUT /seo-defaults, gated on manage_seo).
                        Holds NEW_PAGE_TEMPLATES (the default sections
                        seeded when a page is created — currently
                        ['hero','casestudy']).
@@ -74,7 +76,11 @@ middleware/
                        refreshPermissions. Falls back to hardcoded
                        defaults if the table is empty or missing.
 views/
-  index.ejs            Main page. Big inline <style> and <script> blocks
+  index.ejs            Main page. The <head> renders the resolved SEO
+                       tags (title, description, keywords, canonical,
+                       robots, Open Graph, Twitter) from the `seo` object
+                       built in server.js (see SEO metadata below). Big
+                       inline <style> and <script> blocks
                        carry nonce="<%= nonce %>" so they pass the strict
                        CSP. Sections rendered via a loop over sectionOrder
                        that yields _iid + _tpl for each instance. Inline
@@ -131,14 +137,14 @@ public/
 ## Database tables
 
 - **users** — seeded admin (`nat`) and content (`tom`) accounts. Role CHECK constraint allows `admin`, `content`, `client`.
-- **content** — key-value store for all editable text (**90 keys**: 71 original + 14 fourcards.* rows + 2 intervention button rows + 2 filter button rows + 1 footer.name row) + `site.theme`. When a section is duplicated the new instance's content keys are seeded into this same table under the new instance ID's prefix (with lorem-ipsum placeholders rather than cloning the base — see Section management below). Legacy `site.section_order`, `site.hidden_sections`, `site.deleted_sections` keys remain in the DB but are no longer read; that state now lives in the pages table. `contact.*` keys are still present and edited in place — they power the global footer block.
-- **pages** — multi-page support. Each row is a page with `slug` (unique), `title`, `sort_order`, `hidden` (boolean), and per-page JSONB arrays: `section_order`, `hidden_sections`, `deleted_sections`. The main page has slug `main` and cannot be hidden or deleted.
-- **role_permissions** — stores the permissions matrix. Composite PK `(role, capability)`, boolean `enabled`. 11 capabilities x 3 roles = 33 rows. Seeded with defaults on first run (`ON CONFLICT DO NOTHING`).
+- **content** — key-value store for all editable text (**94 keys**: 71 original + 14 fourcards.* rows + 2 intervention button rows + 2 filter button rows + 1 footer.name row + 4 site-wide SEO default rows) + `site.theme`. When a section is duplicated the new instance's content keys are seeded into this same table under the new instance ID's prefix (with lorem-ipsum placeholders rather than cloning the base — see Section management below). Legacy `site.section_order`, `site.hidden_sections`, `site.deleted_sections` keys remain in the DB but are no longer read; that state now lives in the pages table. `contact.*` keys are still present and edited in place — they power the global footer block. The four `seo.*` keys (`seo.site_name`, `seo.default_description`, `seo.default_og_image`, `seo.twitter_handle`) hold site-wide SEO fallbacks — see SEO metadata below.
+- **pages** — multi-page support. Each row is a page with `slug` (unique), `title`, `sort_order`, `hidden` (boolean), per-page JSONB arrays (`section_order`, `hidden_sections`, `deleted_sections`), and per-page SEO columns (`meta_title`, `meta_description`, `meta_keywords`, `og_title`, `og_description`, `og_image`, `canonical_url` — all `TEXT`/`VARCHAR` defaulting to `''` — plus `noindex BOOLEAN`). The main page has slug `main` and cannot be hidden or deleted. The SEO columns are added by `CREATE TABLE` on fresh DBs and by an idempotent `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` block in `db/seed.js` for existing deployments.
+- **role_permissions** — stores the permissions matrix. Composite PK `(role, capability)`, boolean `enabled`. 12 capabilities x 3 roles = 36 rows. Seeded with defaults on first run (`ON CONFLICT DO NOTHING`).
 - **page_access** — per-user page visibility for client users. Composite PK `(page_id, user_id)` with CASCADE deletes. If a page has any `page_access` rows it is automatically restricted: invisible to public visitors and to clients not in the list. Admin and content always see all pages.
 - **images** — binary image storage (logo, headshot, oxford badge) for persistence across Railway redeploys
 - **backups** — full snapshots of content + images (JSONB)
 - **session** — express-session store (connect-pg-simple)
-- **audit_log** — all user actions (login, logout, edits, theme changes, backups, restores, section reorders, permission changes, page access changes)
+- **audit_log** — all user actions (login, logout, edits, theme changes, backups, restores, section reorders, permission changes, page access changes, SEO changes)
 
 ## Users and permissions
 
@@ -146,13 +152,13 @@ Three roles in descending privilege: **admin > content > client**.
 
 | Username | Role | Default capabilities |
 |----------|------|---------------------|
-| nat | admin | All 11 capabilities (edit content, manage sections, manage pages, backups, theme, activity log, manage users, page access, reset content, CSP violations, permissions matrix) |
-| tom | content | Same as admin except: no reset content, no CSP violations, no permissions matrix. Can manage users but scoped to client-level accounts only. |
+| nat | admin | All 12 capabilities (edit content, manage sections, manage pages, backups, theme, activity log, manage users, page access, SEO, reset content, CSP violations, permissions matrix) |
+| tom | content | Same as admin except: no reset content, no CSP violations, no permissions matrix. Has SEO (`manage_seo`). Can manage users but scoped to client-level accounts only. |
 | (created via CMS) | client | No editing capabilities. Sees the public site plus any pages granted via page access. Gets a minimal "Log out" button instead of the admin panel. |
 
-### Capabilities (11 total)
+### Capabilities (12 total)
 
-`edit_content`, `manage_sections`, `manage_pages`, `manage_backups`, `manage_theme`, `view_activity`, `manage_users`, `manage_page_access`, `reset_content`, `view_csp`, `manage_permissions`
+`edit_content`, `manage_sections`, `manage_pages`, `manage_backups`, `manage_theme`, `view_activity`, `manage_users`, `manage_page_access`, `manage_seo`, `reset_content`, `view_csp`, `manage_permissions`
 
 Stored in the `role_permissions` table. Admin can reconfigure via the Permissions panel (except `manage_permissions` which is locked to admin). The permissions engine (`middleware/permissions.js`) caches the matrix in memory and falls back to hardcoded defaults if the table is empty.
 
@@ -177,6 +183,28 @@ Pages can be restricted to specific client users. When a page has any `page_acce
 Page access is managed via the "Page access" button in the admin panel's Page section. It shows a checklist of all client users; ticking a user grants them access to the current page. The API uses `GET/PUT /api/admin/page-access/:pageId` (plus a `by-slug` convenience route for the client JS).
 
 A page does not need to be hidden to be restricted. Any page with at least one `page_access` row is automatically invisible to the public and to unauthorised clients.
+
+## SEO metadata
+
+Every page exposes a full set of SEO fields, editable per-page (and gated on the `manage_seo` capability, which admin and content both have by default; client does not).
+
+**Per-page fields** (columns on the `pages` table): `meta_title` (the `<title>` / search-result link), `meta_description`, `meta_keywords`, `og_title`, `og_description`, `og_image`, `canonical_url`, and a `noindex` boolean. All text fields default to `''`.
+
+**Site-wide defaults** (`seo.*` content keys, edited via "SEO: site defaults"): `seo.site_name`, `seo.default_description`, `seo.default_og_image`, `seo.twitter_handle`. Any blank per-page field falls back to the matching default.
+
+**Resolution (in `server.js` `renderPage`, passed to the view as a `seo` object):**
+- Title: `meta_title` → else `"{page title} | Arrington Consultancy"` (or just `"Arrington Consultancy"` for the main page).
+- Description: `meta_description` → `seo.default_description`.
+- Canonical / `og:url`: `canonical_url` → else the current request URL (`${req.protocol}://${req.get('host')}{path}`).
+- `og:title`: `og_title` → resolved title. `og:description`: `og_description` → resolved description. `og:image`: `og_image` → `seo.default_og_image`.
+- Twitter card: `summary_large_image` when an image resolves, else `summary`; Twitter title/description/image mirror the OG values; `twitter:site` from `seo.twitter_handle`.
+- `robots: noindex, nofollow` emitted only when `noindex` is true.
+
+**Rendering:** all tags live in the `<head>` of `views/index.ejs` (title, description, keywords, canonical, robots, Open Graph, Twitter), conditionally emitted so blank fields produce no tag. Tags are escaped via EJS `<%= %>`, so they are visible to all visitors (not gated on login).
+
+**Admin UI:** two buttons in the admin panel's Page section — "SEO: this page" (per-page form with live character counters on title/description at Google's ~60/~160 thresholds) and "SEO: site defaults". Both are slide-over detail panes wired in `public/js/admin.js` (`loadPageSeo` / `loadSeoDefaults`).
+
+**API:** `GET/PUT /api/admin/seo/:slug` (per-page; GET also returns the site defaults so the form can show fallbacks) and `GET/PUT /api/admin/seo-defaults` (site-wide). All four gated on `manage_seo`. The per-page SEO columns are included in the backup snapshot and restore.
 
 ## Content editing
 

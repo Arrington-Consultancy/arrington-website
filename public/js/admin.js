@@ -1312,6 +1312,7 @@
         view_activity: 'Activity',
         manage_users: 'Users',
         manage_page_access: 'Page access',
+        manage_seo: 'SEO',
         reset_content: 'Reset',
         view_csp: 'CSP',
         manage_permissions: 'Permissions'
@@ -1521,4 +1522,200 @@
     }
 
     detailLoaders['cmsReorderPagesDetail'] = () => loadReorderPages();
+
+    // ---- SEO: per-page metadata ----
+    const seoEntries = document.getElementById('cmsSeoEntries');
+
+    // Recommended display lengths Google tends to show before truncating.
+    const SEO_LIMITS = { meta_title: 60, meta_description: 160 };
+
+    function seoCounter(field, value) {
+        const limit = SEO_LIMITS[field];
+        if (!limit) return '';
+        const len = (value || '').length;
+        const over = len > limit ? ' cms-seo-count-over' : '';
+        return `<span class="cms-seo-count${over}" data-count-for="${field}">${len} / ${limit}</span>`;
+    }
+
+    async function loadPageSeo() {
+        if (!seoEntries) return;
+        seoEntries.innerHTML = '<span class="cms-log-loading">Loading...</span>';
+        try {
+            const r = await fetch(`/api/admin/seo/${encodeURIComponent(pageSlug)}`, {
+                headers: { 'X-CSRF-Token': csrfToken }
+            });
+            const data = await r.json();
+            if (!r.ok) throw new Error(data.error || 'Failed');
+            const p = data.page;
+            const defs = data.defaults || {};
+
+            const titleFallback = pageSlug === 'main'
+                ? 'Arrington Consultancy'
+                : `${p.title} | Arrington Consultancy`;
+            const descFallback = defs['seo.default_description'] || '(no site default set)';
+            const ogImgFallback = defs['seo.default_og_image'] || '';
+
+            let html = '<div class="cms-seo-form">';
+
+            html += `<label class="cms-seo-label">Page title
+                <span class="cms-seo-hint">The browser tab and Google's blue link. Leave blank to use: ${escapeHtml(titleFallback)}</span>
+                <input type="text" class="cms-user-input cms-seo-input" data-seo="meta_title" value="${escapeHtml(p.meta_title || '')}" placeholder="${escapeHtml(titleFallback)}">
+                ${seoCounter('meta_title', p.meta_title || '')}
+            </label>`;
+
+            html += `<label class="cms-seo-label">Meta description
+                <span class="cms-seo-hint">The grey summary under the link in search results. Leave blank to use the site default.</span>
+                <textarea class="cms-user-input cms-seo-input cms-seo-textarea" data-seo="meta_description" rows="3" placeholder="${escapeHtml(descFallback)}">${escapeHtml(p.meta_description || '')}</textarea>
+                ${seoCounter('meta_description', p.meta_description || '')}
+            </label>`;
+
+            html += `<label class="cms-seo-label">Keywords <span class="cms-seo-hint">Comma-separated. Largely ignored by Google now; safe to leave blank.</span>
+                <input type="text" class="cms-user-input cms-seo-input" data-seo="meta_keywords" value="${escapeHtml(p.meta_keywords || '')}" placeholder="business consultancy, Plymouth, cash flow">
+            </label>`;
+
+            html += `<label class="cms-seo-label">Canonical URL <span class="cms-seo-hint">The preferred address for this page. Leave blank to use this page's own URL.</span>
+                <input type="text" class="cms-user-input cms-seo-input" data-seo="canonical_url" value="${escapeHtml(p.canonical_url || '')}" placeholder="https://www.arringtonconsultancy.com${pageSlug === 'main' ? '/' : '/' + pageSlug}">
+            </label>`;
+
+            html += '<div class="cms-seo-subhead">Social sharing (Facebook, LinkedIn, X)</div>';
+
+            html += `<label class="cms-seo-label">Social title <span class="cms-seo-hint">Shown when the page is shared. Leave blank to use the page title above.</span>
+                <input type="text" class="cms-user-input cms-seo-input" data-seo="og_title" value="${escapeHtml(p.og_title || '')}" placeholder="Uses the page title">
+            </label>`;
+
+            html += `<label class="cms-seo-label">Social description <span class="cms-seo-hint">Leave blank to use the meta description above.</span>
+                <textarea class="cms-user-input cms-seo-input cms-seo-textarea" data-seo="og_description" rows="2" placeholder="Uses the meta description">${escapeHtml(p.og_description || '')}</textarea>
+            </label>`;
+
+            html += `<label class="cms-seo-label">Social image URL <span class="cms-seo-hint">Full URL to a share image (ideally 1200x630). ${ogImgFallback ? 'Leave blank to use the site default.' : 'Leave blank for no image.'}</span>
+                <input type="text" class="cms-user-input cms-seo-input" data-seo="og_image" value="${escapeHtml(p.og_image || '')}" placeholder="${escapeHtml(ogImgFallback || 'https://www.arringtonconsultancy.com/img/share.jpg')}">
+            </label>`;
+
+            html += `<label class="cms-seo-check">
+                <input type="checkbox" data-seo="noindex" ${p.noindex ? 'checked' : ''}>
+                <span>Hide this page from search engines (noindex)</span>
+            </label>`;
+
+            html += `<button class="cms-btn cms-btn-save cms-perms-save" id="cmsSeoSaveBtn">Save SEO</button>`;
+            html += '<div class="cms-reorder-status" id="cmsSeoStatus"></div>';
+            html += '</div>';
+
+            seoEntries.innerHTML = html;
+
+            // Live character counters
+            seoEntries.querySelectorAll('[data-seo="meta_title"], [data-seo="meta_description"]').forEach(el => {
+                el.addEventListener('input', () => {
+                    const field = el.dataset.seo;
+                    const counter = seoEntries.querySelector(`[data-count-for="${field}"]`);
+                    if (counter) {
+                        const limit = SEO_LIMITS[field];
+                        counter.textContent = `${el.value.length} / ${limit}`;
+                        counter.classList.toggle('cms-seo-count-over', el.value.length > limit);
+                    }
+                });
+            });
+
+            document.getElementById('cmsSeoSaveBtn').addEventListener('click', async () => {
+                const btn = document.getElementById('cmsSeoSaveBtn');
+                const status = document.getElementById('cmsSeoStatus');
+                btn.disabled = true;
+                btn.textContent = 'Saving...';
+                const payload = {};
+                seoEntries.querySelectorAll('[data-seo]').forEach(el => {
+                    if (el.type === 'checkbox') payload[el.dataset.seo] = el.checked;
+                    else payload[el.dataset.seo] = el.value;
+                });
+                try {
+                    const sr = await fetch(`/api/admin/seo/${encodeURIComponent(pageSlug)}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!sr.ok) throw new Error('Save failed');
+                    btn.textContent = 'Saved';
+                    if (status) status.textContent = 'Saved. Reload the page to see the new tags in the page source.';
+                    setTimeout(() => { btn.textContent = 'Save SEO'; btn.disabled = false; }, 1500);
+                } catch (err) {
+                    if (status) status.textContent = 'Save failed. Try again.';
+                    btn.textContent = 'Save SEO';
+                    btn.disabled = false;
+                }
+            });
+        } catch (err) {
+            seoEntries.innerHTML = '<span class="cms-log-error">Failed to load SEO settings.</span>';
+        }
+    }
+
+    detailLoaders['cmsSeoDetail'] = () => loadPageSeo();
+
+    // ---- SEO: site-wide defaults ----
+    const seoDefaultsEntries = document.getElementById('cmsSeoDefaultsEntries');
+
+    async function loadSeoDefaults() {
+        if (!seoDefaultsEntries) return;
+        seoDefaultsEntries.innerHTML = '<span class="cms-log-loading">Loading...</span>';
+        try {
+            const r = await fetch('/api/admin/seo-defaults', {
+                headers: { 'X-CSRF-Token': csrfToken }
+            });
+            const data = await r.json();
+            if (!r.ok) throw new Error(data.error || 'Failed');
+            const d = data.defaults || {};
+
+            let html = '<div class="cms-seo-form">';
+            html += '<p class="cms-seo-hint">These apply to any page where you leave the matching SEO field blank.</p>';
+
+            html += `<label class="cms-seo-label">Site name <span class="cms-seo-hint">Used in social share cards.</span>
+                <input type="text" class="cms-user-input cms-seo-input" data-seodef="seo.site_name" value="${escapeHtml(d['seo.site_name'] || '')}" placeholder="Arrington Business Consultancy">
+            </label>`;
+
+            html += `<label class="cms-seo-label">Default meta description <span class="cms-seo-hint">Fallback summary for pages without their own.</span>
+                <textarea class="cms-user-input cms-seo-input cms-seo-textarea" data-seodef="seo.default_description" rows="3">${escapeHtml(d['seo.default_description'] || '')}</textarea>
+            </label>`;
+
+            html += `<label class="cms-seo-label">Default social image URL <span class="cms-seo-hint">Full URL to a default share image (1200x630).</span>
+                <input type="text" class="cms-user-input cms-seo-input" data-seodef="seo.default_og_image" value="${escapeHtml(d['seo.default_og_image'] || '')}" placeholder="https://www.arringtonconsultancy.com/img/share.jpg">
+            </label>`;
+
+            html += `<label class="cms-seo-label">X / Twitter handle <span class="cms-seo-hint">Optional, including the @.</span>
+                <input type="text" class="cms-user-input cms-seo-input" data-seodef="seo.twitter_handle" value="${escapeHtml(d['seo.twitter_handle'] || '')}" placeholder="@arrington">
+            </label>`;
+
+            html += `<button class="cms-btn cms-btn-save cms-perms-save" id="cmsSeoDefaultsSaveBtn">Save defaults</button>`;
+            html += '<div class="cms-reorder-status" id="cmsSeoDefaultsStatus"></div>';
+            html += '</div>';
+
+            seoDefaultsEntries.innerHTML = html;
+
+            document.getElementById('cmsSeoDefaultsSaveBtn').addEventListener('click', async () => {
+                const btn = document.getElementById('cmsSeoDefaultsSaveBtn');
+                const status = document.getElementById('cmsSeoDefaultsStatus');
+                btn.disabled = true;
+                btn.textContent = 'Saving...';
+                const payload = {};
+                seoDefaultsEntries.querySelectorAll('[data-seodef]').forEach(el => {
+                    payload[el.dataset.seodef] = el.value;
+                });
+                try {
+                    const sr = await fetch('/api/admin/seo-defaults', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!sr.ok) throw new Error('Save failed');
+                    btn.textContent = 'Saved';
+                    if (status) status.textContent = 'Saved.';
+                    setTimeout(() => { btn.textContent = 'Save defaults'; btn.disabled = false; }, 1500);
+                } catch (err) {
+                    if (status) status.textContent = 'Save failed. Try again.';
+                    btn.textContent = 'Save defaults';
+                    btn.disabled = false;
+                }
+            });
+        } catch (err) {
+            seoDefaultsEntries.innerHTML = '<span class="cms-log-error">Failed to load SEO defaults.</span>';
+        }
+    }
+
+    detailLoaders['cmsSeoDefaultsDetail'] = () => loadSeoDefaults();
 })();

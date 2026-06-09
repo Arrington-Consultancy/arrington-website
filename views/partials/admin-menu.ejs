@@ -29,7 +29,7 @@
             </div>
             <% } %>
 
-            <% if (capabilities.manage_pages || capabilities.manage_sections || capabilities.manage_page_access) { %>
+            <% if (capabilities.manage_pages || capabilities.manage_sections || capabilities.manage_page_access || capabilities.manage_seo) { %>
             <button class="cms-section-toggle" data-section="cmsPageSection">Page: <%= currentPage.title %></button>
             <div class="cms-section-body cms-hidden" id="cmsPageSection">
                 <% if (capabilities.manage_pages) { %>
@@ -50,6 +50,10 @@
                 <% } %>
                 <% if (capabilities.manage_page_access) { %>
                 <button class="cms-admin-action cms-detail-trigger" data-detail="cmsPageAccessDetail">Page access</button>
+                <% } %>
+                <% if (capabilities.manage_seo) { %>
+                <button class="cms-admin-action cms-detail-trigger" data-detail="cmsSeoDetail">SEO: this page</button>
+                <button class="cms-admin-action cms-detail-trigger" data-detail="cmsSeoDefaultsDetail">SEO: site defaults</button>
                 <% } %>
             </div>
             <% } %>
@@ -156,6 +160,17 @@
             <div class="cms-detail-pane cms-hidden" id="cmsReorderPagesDetail">
                 <div class="cms-detail-title">Reorder pages</div>
                 <div id="cmsReorderPagesEntries">Loading...</div>
+            </div>
+            <% } %>
+
+            <% if (capabilities.manage_seo) { %>
+            <div class="cms-detail-pane cms-hidden" id="cmsSeoDetail">
+                <div class="cms-detail-title">SEO: <strong><%= currentPage.title %></strong></div>
+                <div id="cmsSeoEntries">Loading...</div>
+            </div>
+            <div class="cms-detail-pane cms-hidden" id="cmsSeoDefaultsDetail">
+                <div class="cms-detail-title">SEO: site defaults</div>
+                <div id="cmsSeoDefaultsEntries">Loading...</div>
             </div>
             <% } %>
 
