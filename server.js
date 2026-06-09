@@ -105,8 +105,12 @@ app.use(helmet({
 // Cookie parsing (required by csrf-csrf)
 app.use(cookieParser());
 
-// Body parsing (5mb limit for image uploads)
-app.use(express.json({ limit: '5mb' }));
+// Body parsing. Only the image upload route carries a large base64 payload, so
+// it gets a 5mb limit; every other JSON endpoint gets a small default, which
+// keeps the request surface tight. express.json won't double-parse, so the
+// path-scoped parser wins for the image route and the global one covers the rest.
+app.use('/api/content/image', express.json({ limit: '5mb' }));
+app.use(express.json({ limit: '512kb' }));
 app.use(express.urlencoded({ extended: false }));
 
 // Health check endpoint for Railway / uptime monitors
@@ -137,6 +141,46 @@ app.get('/img/:key', async (req, res, next) => {
       }
     }
     res.status(404).send('Image not found');
+  } catch (err) {
+    next(err);
+  }
+});
+
+// robots.txt — allow crawling, point at the sitemap, keep the login page out
+// of the index. Built from the request host so it works on every domain.
+app.get('/robots.txt', (req, res) => {
+  const base = `${req.protocol}://${req.get('host')}`;
+  res.type('text/plain').send(
+    `User-agent: *\nAllow: /\nDisallow: /login\n\nSitemap: ${base}/sitemap.xml\n`
+  );
+});
+
+// sitemap.xml — lists only publicly indexable pages: not hidden, not noindex,
+// and not restricted via page_access.
+const escapeXml = (s) => String(s)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+
+app.get('/sitemap.xml', async (req, res, next) => {
+  try {
+    const base = `${req.protocol}://${req.get('host')}`;
+    const { rows: restricted } = await db.query('SELECT DISTINCT page_id FROM page_access');
+    const restrictedIds = new Set(restricted.map(r => r.page_id));
+    const { rows } = await db.query(
+      'SELECT id, slug, hidden, noindex, updated_at FROM pages ORDER BY sort_order, created_at'
+    );
+    const pubPages = rows.filter(p => !p.hidden && !p.noindex && !restrictedIds.has(p.id));
+    const urls = pubPages.map(p => {
+      const loc = p.slug === 'main' ? `${base}/` : `${base}/${p.slug}`;
+      let lastmod = '';
+      if (p.updated_at) {
+        try { lastmod = `<lastmod>${new Date(p.updated_at).toISOString().slice(0, 10)}</lastmod>`; } catch (e) { /* skip */ }
+      }
+      return `  <url><loc>${escapeXml(loc)}</loc>${lastmod}</url>`;
+    }).join('\n');
+    res.type('application/xml').send(
+      `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
+    );
   } catch (err) {
     next(err);
   }

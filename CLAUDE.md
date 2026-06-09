@@ -368,6 +368,7 @@ The **filter** template has the same `button_text` / `button_link` pair (`filter
 - Image upload buttons appear on hover when logged in
 - Aspect ratio validation: logo ~2:1 landscape, headshot 3:4 portrait, oxford ~4:3 landscape
 - Maximum upload size: 2MB (enforced at the route level and surfaced as a 2MB error message)
+- Format validated by **magic bytes** (`bytesMatchMime`), not just the declared MIME; SVG is not allowed. Mismatched bytes are rejected with "File contents do not match the declared image type".
 - Images served with `Cache-Control: no-cache` so uploads appear immediately on reload
 
 ### Per-instance hero images
@@ -406,12 +407,18 @@ Active theme stored in DB, applied via CSS variables. Affects main site and logi
 - **CSRF:** `csrf-csrf` double-submit on all non-GET routes, token exposed via `<meta name="csrf-token">` for the client
 - **Sessions:** `httpOnly`, `secure` (in prod), `sameSite: lax`, 8-hour maxAge, stored in Postgres via `connect-pg-simple`
 - **SESSION_SECRET required in prod** — app refuses to boot with a FATAL error if missing
-- **bcrypt cost 12**
+- **bcrypt cost 12**. Login runs a constant-time dummy `bcrypt.compare` (against a startup `DUMMY_HASH`) when the username is unknown, so response timing does not reveal whether an account exists. Failed logins are written to `audit_log` (`login_failed`).
 - **Parameterised SQL** everywhere — no string concatenation
+- **JSON body limits:** 5mb only on `/api/content/image` (base64 upload); 512kb default everywhere else, to keep the request surface tight
+- **Upload validation:** image uploads check magic bytes against the declared MIME (`bytesMatchMime` in `routes/content.js`), reject mismatches, and never allow SVG. 2MB cap. Served with `X-Content-Type-Options: nosniff`.
+- **SEO URL fields** (`og_image`, `canonical_url`, `seo.default_og_image`) are validated server-side to be `https?://` or root-relative, so no `javascript:`/`data:` scheme can reach a rendered `href`/`content` attribute (defence-in-depth on top of EJS escaping).
 - **404 handler + central error middleware** — stack traces never leak in prod
 - **Process-level handlers** for `unhandledRejection` and `uncaughtException`
 - **`/health`** endpoint returns `{"ok":true}` for uptime checks
+- **`/robots.txt` + `/sitemap.xml`** generated dynamically; the sitemap lists only public pages (not hidden, not `noindex`, not restricted via `page_access`); robots disallows `/login`.
+- **DB transport:** the Postgres pool connects over Railway's private network (`postgres.railway.internal`); `rejectUnauthorized: false` is intentional there (self-signed internal cert, no public-internet path) — do not flip it without testing, it will break connectivity.
 - **CSP violations panel** (gated on `view_csp` capability, admin by default) — captures `securitypolicyviolation` events fired from page load onwards via a nonced inline script in `<head>`, surfaced in the admin menu's System section. Use this to diagnose any CSP issue without opening browser devtools.
+- **Security reviews** logged under `~/.claude/securityharden/reports/` (latest: `2026-06-09-full.md`, verdict LOW). Rerun via `/securityharden`.
 
 ## Voice and tone
 

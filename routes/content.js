@@ -526,6 +526,37 @@ router.post('/section-reuse', requireCapability('manage_sections'), async (req, 
 const ALLOWED_MIME = ['image/png', 'image/jpeg', 'image/webp', 'image/avif', 'image/gif'];
 const MAX_SIZE = 2 * 1024 * 1024; // 2MB
 
+// Defence-in-depth: verify the decoded bytes actually match the declared MIME
+// type via magic-byte signatures, so a caller cannot store arbitrary content
+// labelled as an allowed image type. SVG is deliberately not in the allowlist
+// (it can carry script), so this only has to recognise raster/container formats.
+function bytesMatchMime(buf, mime) {
+  if (!Buffer.isBuffer(buf) || buf.length < 12) return false;
+  switch (mime) {
+    case 'image/png':
+      return buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47 &&
+             buf[4] === 0x0d && buf[5] === 0x0a && buf[6] === 0x1a && buf[7] === 0x0a;
+    case 'image/jpeg':
+      return buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff;
+    case 'image/gif': {
+      const sig = buf.slice(0, 6).toString('latin1');
+      return sig === 'GIF87a' || sig === 'GIF89a';
+    }
+    case 'image/webp':
+      // RIFF....WEBP container
+      return buf.slice(0, 4).toString('latin1') === 'RIFF' &&
+             buf.slice(8, 12).toString('latin1') === 'WEBP';
+    case 'image/avif': {
+      // ISOBMFF: <size>"ftyp"<brand...>; require an AVIF-family brand near the head
+      if (buf.slice(4, 8).toString('latin1') !== 'ftyp') return false;
+      const head = buf.slice(8, 32).toString('latin1');
+      return ['avif', 'avis', 'mif1', 'msf1'].some(b => head.includes(b));
+    }
+    default:
+      return false;
+  }
+}
+
 // Base image keys that map to fixed UI slots. Instance-scoped keys take the
 // form `{base}__{instanceId}` (e.g. `headshot__hero__2`).
 const BASE_IMAGE_KEYS = new Set(['logo', 'headshot', 'oxford']);
@@ -557,6 +588,10 @@ router.put('/image/:key', requireCapability('edit_content'), async (req, res) =>
 
   if (buffer.length > MAX_SIZE) {
     return res.status(400).json({ error: 'Image too large (max 2MB)' });
+  }
+
+  if (!bytesMatchMime(buffer, mimeType)) {
+    return res.status(400).json({ error: 'File contents do not match the declared image type' });
   }
 
   try {

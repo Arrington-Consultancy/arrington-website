@@ -497,6 +497,16 @@ router.put('/page-order', requireCapability('manage_pages'), async (req, res) =>
 const SEO_FIELDS = ['meta_title', 'meta_description', 'meta_keywords', 'og_title', 'og_description', 'og_image', 'canonical_url'];
 // The site-wide default content keys (fallbacks for blank per-page fields).
 const SEO_DEFAULT_KEYS = ['seo.site_name', 'seo.default_description', 'seo.default_og_image', 'seo.twitter_handle'];
+// SEO fields that hold URLs — restricted to http(s) or root-relative so a
+// stored value can never carry a javascript:/data: scheme into a rendered
+// href/content attribute (defence-in-depth on top of EJS escaping).
+const SEO_URL_FIELDS = new Set(['og_image', 'canonical_url']);
+
+function isSafeSeoUrl(value) {
+  if (value === '') return true;            // blank clears the field
+  if (value.startsWith('/')) return true;   // root-relative
+  return /^https?:\/\/\S+$/i.test(value);   // absolute http(s)
+}
 
 // Get site-wide SEO defaults
 router.get('/seo-defaults', requireCapability('manage_seo'), async (req, res) => {
@@ -521,6 +531,9 @@ router.put('/seo-defaults', requireCapability('manage_seo'), async (req, res) =>
     for (const key of SEO_DEFAULT_KEYS) {
       if (incoming[key] === undefined) continue;
       const value = typeof incoming[key] === 'string' ? incoming[key].trim() : '';
+      if (key === 'seo.default_og_image' && !isSafeSeoUrl(value)) {
+        return res.status(400).json({ error: 'Default social image URL must start with https:// or /' });
+      }
       await db.query(
         `INSERT INTO content (section_key, content, updated_by)
          VALUES ($1, $2, $3)
@@ -579,6 +592,10 @@ router.put('/seo/:slug', requireCapability('manage_seo'), async (req, res) => {
     for (const field of SEO_FIELDS) {
       if (body[field] === undefined) continue;
       let value = typeof body[field] === 'string' ? body[field].trim() : '';
+      // URL fields must be http(s) or root-relative.
+      if (SEO_URL_FIELDS.has(field) && !isSafeSeoUrl(value)) {
+        return res.status(400).json({ error: `${field === 'og_image' ? 'Social image URL' : 'Canonical URL'} must start with https:// or /` });
+      }
       // Length guards mirror the column definitions (VARCHAR(255) for the
       // two *_title columns; the rest are TEXT).
       if ((field === 'meta_title' || field === 'og_title') && value.length > 255) {
