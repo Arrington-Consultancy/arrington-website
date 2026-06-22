@@ -200,6 +200,25 @@ async function seed() {
     }
   }
 
+  // Migration: ensure every existing hero instance has an optional `whatsapp`
+  // row so the edit modal exposes the field. The booking-page hero (hero__3)
+  // is seeded with the live wa.me link; all other heroes start empty (button
+  // hidden until filled). Idempotent (ON CONFLICT DO NOTHING preserves any
+  // value Tom later sets, including clearing it).
+  const HERO_WHATSAPP = 'https://wa.me/441752477026?text=Hi%20Tom%2C%20I%27d%20like%20to%20speak%20to%20you%20about%20Arrington%20Consultancy';
+  const { rows: heroRows } = await db.query(
+    "SELECT DISTINCT split_part(section_key, '.', 1) AS instance_id " +
+    "FROM content WHERE section_key ~ $1",
+    ['^hero(__[0-9]+)?\\.']
+  );
+  for (const r of heroRows) {
+    const iid = r.instance_id;
+    await db.query(
+      "INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING",
+      [`${iid}.whatsapp`, iid === 'hero__3' ? HERO_WHATSAPP : '']
+    );
+  }
+
   // Keep only the 3 most recent backups. Idempotent: no-op when there are ≤3.
   const { rowCount: prunedBackups } = await db.query(
     `DELETE FROM backups

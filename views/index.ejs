@@ -127,6 +127,12 @@
             height: 260px;
         }
 
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 1.75rem;
+        }
+
         .nav-cta {
             font-size: 0.85rem;
             color: var(--accent);
@@ -139,6 +145,14 @@
 
         .nav-cta:hover {
             color: var(--text-bright);
+        }
+
+        .nav-cta-whatsapp {
+            color: #25D366;
+        }
+
+        .nav-cta-whatsapp:hover {
+            color: #1da851;
         }
 
         /* ---- HAMBURGER ---- */
@@ -223,6 +237,10 @@
             letter-spacing: 0.04em;
             text-transform: uppercase;
             color: var(--accent);
+        }
+
+        .mobile-menu .mobile-menu-whatsapp {
+            color: #25D366;
         }
 
         /* ---- HERO ---- */
@@ -315,6 +333,22 @@
 
         .btn-outline:hover {
             border-color: rgba(255,255,255,0.35);
+        }
+
+        .btn-whatsapp {
+            background: #25D366;
+            color: #fff;
+        }
+
+        .btn-whatsapp:hover {
+            background: #1da851;
+        }
+
+        .hero-cta-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
         }
 
         /* ---- SECTIONS ---- */
@@ -909,6 +943,7 @@
         .footer-contact .contact-details {
             display: flex;
             justify-content: center;
+            align-items: center;
             gap: 2.5rem;
             flex-wrap: wrap;
         }
@@ -992,7 +1027,7 @@
                 display: block;
             }
 
-            .nav-cta {
+            .nav-actions {
                 display: none;
             }
 
@@ -1111,7 +1146,13 @@
             <img src="/img/logo" alt="Arrington Business Consultancy" class="nav-logo-img">
             <% if (canEdit) { %><button class="cms-img-btn" data-image="logo" title="Change logo">&#9998;</button><% } %>
         </a>
-        <a href="#conversation" class="nav-cta"><%= content['contact.label'] %></a>
+        <div class="nav-actions">
+            <a href="#conversation" class="nav-cta"><%= content['contact.label'] %></a>
+            <% const _navWa = (content['contact.whatsapp'] || '').trim(); %>
+            <% if (/^https:\/\/(wa\.me|api\.whatsapp\.com)\//.test(_navWa)) { %>
+            <a href="<%= _navWa %>" class="nav-cta nav-cta-whatsapp" target="_blank" rel="noopener nofollow">WhatsApp us</a>
+            <% } %>
+        </div>
         <button class="nav-hamburger" id="navHamburger" aria-label="Menu" aria-expanded="false">
             <span></span>
             <span></span>
@@ -1133,6 +1174,10 @@
         <div class="mobile-menu-divider"></div>
     <% } %>
     <a href="#conversation" class="mobile-menu-cta"><%= content['contact.label'] %></a>
+    <% const _mWa = (content['contact.whatsapp'] || '').trim(); %>
+    <% if (/^https:\/\/(wa\.me|api\.whatsapp\.com)\//.test(_mWa)) { %>
+    <a href="<%= _mWa %>" class="mobile-menu-cta mobile-menu-whatsapp" target="_blank" rel="noopener nofollow">WhatsApp us</a>
+    <% } %>
 </div>
 
 <% if (allPages.length > 1) { %>
@@ -1167,7 +1212,16 @@
         <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
             <h1><%- content[_k + '.heading'] %></h1>
             <p class="sub"><%- content[_k + '.subtext'] %></p>
-            <a href="#conversation" class="btn btn-primary"><%- content[_k + '.cta'] %></a>
+            <%
+              const _heroWa = (content[_k + '.whatsapp'] || '').trim();
+              const _heroWaValid = /^https:\/\/(wa\.me|api\.whatsapp\.com)\//.test(_heroWa);
+            %>
+            <div class="hero-cta-row">
+                <a href="#conversation" class="btn btn-primary"><%- content[_k + '.cta'] %></a>
+                <% if (_heroWaValid) { %>
+                <a href="<%= _heroWa %>" class="btn btn-whatsapp" target="_blank" rel="noopener nofollow">WhatsApp us</a>
+                <% } %>
+            </div>
         </div>
         <div class="hero-photo">
             <img src="/img/<%= _heroImg %>" alt="Arrington Business Consultancy">
@@ -1529,10 +1583,15 @@
           const _pDigitsMid = Math.ceil(_pDigits.length / 2);
           const _pDigitsA = _pDigits.slice(0, _pDigitsMid);
           const _pDigitsB = _pDigits.slice(_pDigitsMid);
+          const _waUrl = (content['contact.whatsapp'] || '').trim();
+          const _waValid = /^https:\/\/(wa\.me|api\.whatsapp\.com)\//.test(_waUrl);
         %>
         <div class="contact-details">
             <a href="#" class="js-email-link" data-u="<%= _eU %>" data-d="<%= _eD %>" rel="nofollow"><%= _eU %> <span aria-hidden="true">[at]</span> <%= _eD %></a>
             <a href="#" class="js-phone-link" data-pa="<%= _pDigitsA %>" data-pb="<%= _pDigitsB %>" rel="nofollow"><%= _pA %><span aria-hidden="true">&#8203;</span><%= _pB %></a>
+            <% if (_waValid) { %>
+            <a href="<%= _waUrl %>" class="btn btn-whatsapp" target="_blank" rel="noopener nofollow">WhatsApp us</a>
+            <% } %>
         </div>
     </div>
     <div class="footer-credit cms-section" data-section="footer">

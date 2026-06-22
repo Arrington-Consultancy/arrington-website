@@ -128,6 +128,7 @@ const defaults = {
   'contact.body': 'If I cannot add significant value, I will not take your money. That is not a slogan. It is how I work.',
   'contact.email': 'tom@arringtonconsultancy.com',
   'contact.phone': '01752 477026',
+  'contact.whatsapp': 'https://wa.me/441752477026?text=Hi%20Tom%2C%20I%27d%20like%20to%20speak%20to%20you%20about%20Arrington%20Consultancy',
 
   // Footer credit (rendered globally below the contact block)
   'footer.name': 'Tom Arrington',

@@ -21,6 +21,7 @@
         'hero.heading': 'Heading',
         'hero.subtext': 'Subtext',
         'hero.cta': 'Button text',
+        'hero.whatsapp': 'WhatsApp link (leave empty to hide the WhatsApp button)',
         'credentials_oxford.title': 'Title',
         'credentials_oxford.text': 'Description',
         'credentials_stat.stat': 'Statistic',
@@ -110,6 +111,7 @@
         'contact.body': 'Body text',
         'contact.email': 'Email address',
         'contact.phone': 'Phone number',
+        'contact.whatsapp': 'WhatsApp link (leave empty to hide the WhatsApp button)',
         'footer.name': 'Name'
     };
 
