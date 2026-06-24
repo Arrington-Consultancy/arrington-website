@@ -1618,11 +1618,13 @@
         a.href = 'tel:' + digits;
     });
 
-    // Google Ads conversion: visitor tapped a phone or email link.
+    // Google Ads conversion: visitor tapped a phone, email or WhatsApp link.
     // Runs after the reassembly above so the href prefixes are live.
-    document.querySelectorAll('a[href^="tel:"], a[href^="mailto:"]').forEach(a => {
+    document.querySelectorAll('a[href^="tel:"], a[href^="mailto:"], a[href^="https://wa.me/"], a[href^="https://api.whatsapp.com/"]').forEach(a => {
         a.addEventListener('click', () => {
-            const kind = a.href.indexOf('tel:') === 0 ? 'phone' : 'email';
+            const kind = a.href.indexOf('tel:') === 0 ? 'phone'
+                : a.href.indexOf('mailto:') === 0 ? 'email'
+                : 'whatsapp';
             console.log('[Google Ads] conversion fired:', {
                 action: 'AW-18129914078/h_2rCJeH8aYcEN6RgsVD',
                 trigger: kind + ' link click',
