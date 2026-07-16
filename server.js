@@ -113,8 +113,20 @@ app.use('/api/content/image', express.json({ limit: '5mb' }));
 app.use(express.json({ limit: '512kb' }));
 app.use(express.urlencoded({ extended: false }));
 
-// Health check endpoint for Railway / uptime monitors
-app.get('/health', (req, res) => res.json({ ok: true }));
+// Health check endpoint for Railway / uptime monitors. This queries the database
+// on purpose: every page worth serving needs Postgres, so a check that skips it
+// reports healthy while the site is unusable (it did exactly that for 7 hours on
+// 15/07/2026). Returns 503 so a monitor can alert on status alone; the body keeps
+// the `"ok":true` string for keyword-based checks.
+app.get('/health', async (req, res) => {
+  try {
+    await db.query('SELECT 1');
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Health check failed:', err.message);
+    res.status(503).json({ ok: false, error: 'database unavailable' });
+  }
+});
 
 // Static files
 app.use(express.static(path.join(__dirname, 'public')));
