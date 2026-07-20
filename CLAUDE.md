@@ -559,6 +559,24 @@ Wix DOES allow TXT records on subdomains, only MX is restricted. So 3 of Resend'
 
 DKIM is what actually authorises Resend's outbound mail; SPF on `send` strengthens deliverability. There is a decent chance Resend marks the domain as Verified on these three alone and lets us send from `tom@arringtonconsultancy.com` (the MX is for inbound bounce handling, not outbound). Worth trying as a fallback if the Wix support escalation drags. If Resend insists on the MX before going green, stay on `onboarding@resend.dev` until the Cloudflare migration completes.
 
+## Copy review (`review/`, 20/07/2026)
+
+`review/copy-review-2026-07-20.pdf` is a six-page A4 document for Tom listing every cliche and borrowed metaphor across the eight live pages and the four public PDFs, ranked most to least noticeable, each with a plain-English replacement. `review/copy-review-2026-07-20.html` is the source; re-render after edits with:
+
+```bash
+cd ~/arrington-prototype/review && "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+  --headless --disable-gpu --no-pdf-header-footer \
+  --print-to-pdf=copy-review-2026-07-20.pdf copy-review-2026-07-20.html
+```
+
+Gotcha: the `cd` does not always stick in an agent shell, so check where the PDF actually landed rather than assuming.
+
+**Findings worth knowing even without opening it.** Two repeating habits matter more than any single line: the **"not X, it is Y" construction** appears at least fourteen times across the site and PDFs (it is one of the strongest machine-written tells), and **"real" / "properly" / "actually"** carry roughly one sentence in three, usually sitting where a specific fact would be stronger. The heaviest single items are the **football conceit** running through the Half-Time Team Talk (half-time, substituted, final whistle, red card, scoreboard, first-team money), the **stadium metaphor** through The Mind That Built the Business, and the third-person **"Tom Verdict" / "The Tom Rules"** headings on nine pages of the latter. The site's own worst offenders are both in the hero: "constant firefighting" and the "Tell us about your fires" button.
+
+The document is written as a note from Nat to Tom, deliberately leads with what is good about the copy, and marks a few lines as nearly earning their place rather than listing them flatly as faults. **Testimonial quotations (Nick, Tristan, Dan, Simon) are reviewed but deliberately left unedited** because they are direct quotes. Nothing has been changed in the live copy: the review is advisory and awaits Tom's decision.
+
+`review/` sits outside `public/`, so it is not served by the site.
+
 ## Static files kept for reference
 
 - `public/pdfs/` — the four public/redacted client documents served by the documents template
