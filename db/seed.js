@@ -178,6 +178,114 @@ async function seed() {
     if (stripped > 0) console.log(`Stripped contact instances from ${stripped} page(s).`);
   }
 
+  // Migration: build the "What the work looks like" page. Tom created the page
+  // in the CMS; this fills it with the documents section (four redacted client
+  // PDFs, served from public/pdfs with page previews in public/img/docs) and a
+  // closing call to action. Runs only while the page has no documents section,
+  // so it will not fight later edits, reordering or deletion.
+  {
+    const WORK_SLUG = 'what-the-work-looks-like';
+    const { rows: workPage } = await db.query(
+      'SELECT slug, section_order FROM pages WHERE slug = $1', [WORK_SLUG]
+    );
+    if (workPage.length > 0) {
+      const order = Array.isArray(workPage[0].section_order) ? workPage[0].section_order : [];
+      const hasDocuments = order.some(s => /^documents(__\d+)?$/.test(s));
+      if (!hasDocuments) {
+        // Instance IDs are unique across every page, and reusing one whose
+        // content rows still exist would silently inherit that old content.
+        // Collect both sources before allocating.
+        const { rows: orderRows } = await db.query('SELECT section_order FROM pages');
+        const used = new Set();
+        for (const r of orderRows) {
+          if (Array.isArray(r.section_order)) r.section_order.forEach(s => used.add(s));
+        }
+        const { rows: prefixRows } = await db.query(
+          "SELECT DISTINCT split_part(section_key, '.', 1) AS instance_id FROM content"
+        );
+        prefixRows.forEach(r => used.add(r.instance_id));
+
+        const allocate = (tpl) => {
+          if (!used.has(tpl)) { used.add(tpl); return tpl; }
+          for (let n = 2; n <= 99; n++) {
+            const id = `${tpl}__${n}`;
+            if (!used.has(id)) { used.add(id); return id; }
+          }
+          return null;
+        };
+
+        const docsId = allocate('documents');
+        const ctaId = allocate('intervention');
+        if (docsId && ctaId) {
+          const docs = [
+            {
+              title: 'Half-Time Team Talk',
+              blurb: 'What became clear after spending time inside the business and following the evidence.',
+              meta: 'PDF, 4 pages',
+              file: '/pdfs/half-time-team-talk.pdf',
+              image: '/img/docs/half-time-team-talk.jpg'
+            },
+            {
+              title: 'The Mind That Built the Business Keeps Building the Next Stadium',
+              blurb: 'A direct commercial review of the projects, systems and unfinished decisions absorbing time, money and attention.',
+              meta: 'PDF, 15 pages',
+              file: '/pdfs/the-mind-that-built-the-business.pdf',
+              image: '/img/docs/the-mind-that-built-the-business.jpg'
+            },
+            {
+              title: '90-Day Action Plan',
+              blurb: 'The findings turned into practical actions, owners, deadlines and evidence of completion.',
+              meta: 'PDF, 7 pages',
+              file: '/pdfs/90-day-action-plan.pdf',
+              image: '/img/docs/90-day-action-plan.jpg'
+            },
+            {
+              title: 'Enactment Sheet',
+              blurb: 'How the recommendations become operating rules that can actually be followed and checked.',
+              meta: 'PDF, 2 pages',
+              file: '/pdfs/enactment-sheet.pdf',
+              image: '/img/docs/enactment-sheet.jpg'
+            }
+          ];
+
+          const rows = [
+            [`${docsId}.label`, 'Examples'],
+            [`${docsId}.heading`, 'What the work looks like'],
+            [`${docsId}.intro`, 'These are genuine examples of work produced during a proper commercial review. Names, organisations, locations and other identifying details have been removed or generalised, but the commercial findings and recommendations remain unchanged.'],
+            [`${ctaId}.heading`, 'Every business is different'],
+            [`${ctaId}.subtext`, 'The work follows the evidence, but the aim is always the same: clearer decisions, better control and a business that relies less heavily on the owner.'],
+            [`${ctaId}.button_text`, 'Tell us what is going on'],
+            // Empty slug means the button scrolls to the contact block in the footer.
+            [`${ctaId}.button_link`, '']
+          ];
+          docs.forEach((d, i) => {
+            const n = i + 1;
+            rows.push([`${docsId}.doc_${n}_title`, d.title]);
+            rows.push([`${docsId}.doc_${n}_blurb`, d.blurb]);
+            rows.push([`${docsId}.doc_${n}_meta`, d.meta]);
+            rows.push([`${docsId}.doc_${n}_file`, d.file]);
+            rows.push([`${docsId}.doc_${n}_image`, d.image]);
+          });
+
+          for (const [key, value] of rows) {
+            await db.query(
+              `INSERT INTO content (section_key, content) VALUES ($1, $2)
+               ON CONFLICT (section_key) DO NOTHING`,
+              [key, value]
+            );
+          }
+
+          const nextOrder = order.concat([docsId, ctaId]);
+          await db.query(
+            'UPDATE pages SET section_order = $1::jsonb WHERE slug = $2',
+            [JSON.stringify(nextOrder), WORK_SLUG]
+          );
+          console.log(`Seeded documents section (${docsId}) on /${WORK_SLUG}.`);
+        }
+      }
+    }
+  }
+
   // Migration: ensure every existing intervention / filter instance has
   // button_text / button_link rows. Without this, edit modals on pre-existing
   // duplicates wouldn't expose the new button fields. Idempotent.

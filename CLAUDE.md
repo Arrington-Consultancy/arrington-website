@@ -96,10 +96,10 @@ views/
   partials/
     edit-modal.ejs         Content editing modal
     add-section-modal.ejs  Template picker grid with SVG thumbnails.
-                           12 picker entries: hero, credentials,
+                           13 picker entries: hero, credentials,
                            biography, intervention, approach, insights,
-                           fourcards, casestudy, casestudy2, assessment,
-                           filter, proofstrip. 'contact' is intentionally
+                           fourcards, documents, casestudy, casestudy2,
+                           assessment, filter, proofstrip. 'contact' is intentionally
                            omitted — it lives globally in the footer.
     admin-menu.ejs         Gear-icon panel with collapsible sections
                            (Appearance, Page, Content, Users, System)
@@ -128,7 +128,7 @@ public/
                        history.scrollRestoration = 'manual' so
                        add-section reload-then-scroll isn't fought by
                        the browser.
-  img/templates/       13 SVG wireframe thumbnails — one per template
+  img/templates/       14 SVG wireframe thumbnails — one per template
                        in VALID_TEMPLATES, used by the add-section modal
                        (contact.svg is kept for completeness even though
                        contact is no longer picker-listed).
@@ -137,7 +137,7 @@ public/
 ## Database tables
 
 - **users** — seeded admin (`nat`) and content (`tom`) accounts. Role CHECK constraint allows `admin`, `content`, `client`.
-- **content** — key-value store for all editable text (**95 keys**: 71 original + 14 fourcards.* rows + 2 intervention button rows + 2 filter button rows + 1 footer.name row + 4 site-wide SEO default rows + 1 `contact.whatsapp` row) + `site.theme`. (Per-hero `{iid}.whatsapp` rows are added on top by `db/seed.js` and lorem seeding — see WhatsApp contact links below.) When a section is duplicated the new instance's content keys are seeded into this same table under the new instance ID's prefix (with lorem-ipsum placeholders rather than cloning the base — see Section management below). Legacy `site.section_order`, `site.hidden_sections`, `site.deleted_sections` keys remain in the DB but are no longer read; that state now lives in the pages table. `contact.*` keys are still present and edited in place — they power the global footer block. The four `seo.*` keys (`seo.site_name`, `seo.default_description`, `seo.default_og_image`, `seo.twitter_handle`) hold site-wide SEO fallbacks — see SEO metadata below.
+- **content** — key-value store for all editable text (**95 keys**: 71 original + 14 fourcards.* rows + 2 intervention button rows + 2 filter button rows + 1 footer.name row + 4 site-wide SEO default rows + 1 `contact.whatsapp` row) + `site.theme`. (Per-hero `{iid}.whatsapp` rows are added on top by `db/seed.js` and lorem seeding — see WhatsApp contact links below. The 23 `documents.*` rows and the closing intervention's rows are likewise added by a seed migration, not by `db/defaults.js` — see Documents template below.) When a section is duplicated the new instance's content keys are seeded into this same table under the new instance ID's prefix (with lorem-ipsum placeholders rather than cloning the base — see Section management below). Legacy `site.section_order`, `site.hidden_sections`, `site.deleted_sections` keys remain in the DB but are no longer read; that state now lives in the pages table. `contact.*` keys are still present and edited in place — they power the global footer block. The four `seo.*` keys (`seo.site_name`, `seo.default_description`, `seo.default_og_image`, `seo.twitter_handle`) hold site-wide SEO fallbacks — see SEO metadata below.
 - **pages** — multi-page support. Each row is a page with `slug` (unique), `title`, `sort_order`, `hidden` (boolean), per-page JSONB arrays (`section_order`, `hidden_sections`, `deleted_sections`), and per-page SEO columns (`meta_title`, `meta_description`, `meta_keywords`, `og_title`, `og_description`, `og_image`, `canonical_url` — all `TEXT`/`VARCHAR` defaulting to `''` — plus `noindex BOOLEAN`). The main page has slug `main` and cannot be hidden or deleted. The SEO columns are added by `CREATE TABLE` on fresh DBs and by an idempotent `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` block in `db/seed.js` for existing deployments.
 - **role_permissions** — stores the permissions matrix. Composite PK `(role, capability)`, boolean `enabled`. 12 capabilities x 3 roles = 36 rows. Seeded with defaults on first run (`ON CONFLICT DO NOTHING`).
 - **page_access** — per-user page visibility for client users. Composite PK `(page_id, user_id)` with CASCADE deletes. If a page has any `page_access` rows it is automatically restricted: invisible to public visitors and to clients not in the list. Admin and content always see all pages.
@@ -243,8 +243,8 @@ Each editable section has five hover-revealed buttons in this visual order, left
 - ▲ / ▼ swap the section with its neighbour in the DOM and save the order via `PUT /api/content/order`
 - Order stored as a JSON array in the page row's `section_order` column
 - Rendered server-side (EJS loop over `sectionOrder`) so all visitors see the saved layout
-- **13 valid templates:** hero, credentials, biography, intervention, approach, insights, fourcards, casestudy, casestudy2, assessment, filter, proofstrip, contact. Of these, `contact` renders only in the global footer (never via the section loop); `fourcards` and `proofstrip` are picker-only.
-- **Default auto-merge order** (in `server.js`) deliberately excludes `contact` (footer-only) and `fourcards` (picker-only) so adding those templates never auto-injects them into the main page.
+- **14 valid templates:** hero, credentials, biography, intervention, approach, insights, fourcards, documents, casestudy, casestudy2, assessment, filter, proofstrip, contact. Of these, `contact` renders only in the global footer (never via the section loop); `fourcards`, `documents` and `proofstrip` are picker-only.
+- **Default auto-merge order** (in `server.js`) deliberately excludes `contact` (footer-only) and `fourcards`, `documents` and `proofstrip` (picker-only) so adding those templates never auto-injects them into the main page.
 - Server auto-inserts any newly-added default templates at their natural default-order position on the main page without a DB update — but only when no instance of that template is already on the page, only when the stored order is non-empty, and only for the main page (other pages own their explicit order).
 - Nav and footer are fixed (not movable)
 - Credentials two-column blocks move as one unit (single `<section>`)
@@ -266,7 +266,7 @@ Each editable section has five hover-revealed buttons in this visual order, left
 
 ### Add section (template picker)
 - "Add section" button in the admin menu opens a wide modal with two tabs: **New section** (the template picker) and **Reuse existing** (orphaned instances whose content is still in the DB but isn't on any page)
-- **New section** lists 12 templates (every `VALID_TEMPLATES` entry except `contact`) with SVG wireframe thumbnails, a serif label, and a one-line blurb. Duplicates are explicitly allowed.
+- **New section** lists 13 templates (every `VALID_TEMPLATES` entry except `contact`) with SVG wireframe thumbnails, a serif label, and a one-line blurb. Duplicates are explicitly allowed.
 - One click → `POST /api/content/section/:template`, the server allocates an instance ID (see model below), **seeds lorem-ipsum placeholder content from `db/lorem.js` into every content key the instance owns** (so the new section always starts neutral instead of cloning another page's content), appends to `section_order`, returns `{ instanceId }`. Seeding happens on both the base-reuse path and the suffixed path — there is no "restore original content by re-adding" behaviour any more; use the "Reuse existing" tab to bring orphaned content back.
 - **Reuse existing** lists orphaned instance IDs with a heading preview, and lets the user re-attach them to the current page without overwriting their content.
 - Client stores the new instance ID in `sessionStorage.cmsJustAdded` and reloads
@@ -274,7 +274,7 @@ Each editable section has five hover-revealed buttons in this visual order, left
 - `history.scrollRestoration = 'manual'` is set at the top of admin.js so the browser doesn't snap the scroll position back to where the user was before the click — that bug only showed up on prod (where the page loads slowly enough that the browser's restore fired after admin.js's scroll)
 
 ### Duplicate sections (instance/template model)
-- A section on the page is an **instance** of a **template**. The 13 valid template names live in `VALID_TEMPLATES` in `routes/content.js`, `routes/admin.js`, and `server.js` (kept in sync manually — if you add a new template, update all three).
+- A section on the page is an **instance** of a **template**. The 14 valid template names live in `VALID_TEMPLATES` in `routes/content.js`, `routes/admin.js`, and `server.js` (kept in sync manually — if you add a new template, update all three).
 - Instance IDs have the form `{template}` (the first/base instance) or `{template}__N` for additional copies, where `N` is an integer ≥ 2 separated by a **double** underscore (so `casestudy2` the template doesn't collide with `casestudy__2` the duplicate).
 - Validation regex: `^([a-z0-9]+)(?:__(\d+))?$`. Helpers `baseTemplate(id)` and `isValidInstance(id)` live in `routes/content.js`; `server.js` carries its own copies for the render path.
 - `site.section_order` stores instance IDs, not template names. Existing prod data with `["hero","credentials",...]` still works because base instance ID == template name.
@@ -363,6 +363,29 @@ The **filter** template has the same `button_text` / `button_link` pair (`filter
 - Picker-only: deliberately excluded from the main-page auto-merge, so it never appears unless a user explicitly adds it
 - `admin.js` adds `_number` to the "short" textarea class heuristic so the number field renders as a small single-line input in the edit modal
 - Thumbnail lives at `public/img/templates/fourcards.svg`
+
+## Documents template ("What the work looks like")
+
+`documents` shows up to four downloadable PDFs, each with a first-page preview, and a fanned montage of the same previews in the section header. Built 20/07/2026 for Tom's `/what-the-work-looks-like` page (four redacted public versions of real client deliverables).
+
+**Content keys** (23 per instance): `documents.label` (hides when empty), `documents.heading`, `documents.intro`, then per document `N` ∈ [1..4]: `doc_N_title`, `doc_N_blurb`, `doc_N_meta` (the small uppercase detail line, e.g. "PDF, 15 pages"), `doc_N_file` (path to the PDF) and `doc_N_image` (path to the preview). A document with an empty **title** is skipped entirely, so a section can show fewer than four.
+
+**Where the assets live.** The PDFs are static files in `public/pdfs/` and the previews are static JPEGs in `public/img/docs/`, both served by `express.static` — they are NOT in the `images` DB table (that table is for the CMS-uploadable logo/headshot/oxford images, whose keys are whitelisted). The `pdfs/` folder at the project root holds the originals as received and is gitignored.
+
+**Regenerating a preview** (needs poppler, `brew install poppler`):
+
+```bash
+pdftoppm -jpeg -jpegopt quality=80 -r 110 -f 1 -l 1 -singlefile \
+  public/pdfs/<name>.pdf public/img/docs/<name>
+```
+
+Gotcha: a PDF downloaded through Chrome carries a `com.apple.quarantine` xattr that makes `pdftoppm` fail with "Operation not permitted". Run `xattr -c public/pdfs/*.pdf` first.
+
+**Path validation.** `doc_N_file` and `doc_N_image` are validated at render time against `^\/[A-Za-z0-9._\-\/]*\.pdf$` and `...\.(jpe?g|png|webp|avif)$` (and rejected if they contain `..`). Root-relative only, so no `javascript:`, `data:` or protocol-relative value can reach an `href`/`src`. A path that fails validation renders nothing rather than erroring: the PDF button or the thumbnail simply disappears. Same defence-in-depth approach as the SEO URL fields and the WhatsApp links.
+
+**Layout.** Header is a two-column grid (text left, montage right) collapsing to one column at ≤900px. The montage is four absolutely-positioned sheets fanned by `nth-child` rules — positioning lives in CSS classes, not `style=""` attributes, because the strict CSP blocks inline styles. Cards are `190px 1fr` on desktop, stacked at ≤900px; a card with no preview image gets `.document-card-noimg` (full width). The CMS edit/move buttons inside `.documents` carry `z-index: 5` and a dark backing so they stay visible and legible over the montage sheets.
+
+**Page seeding.** `db/seed.js` fills the `what-the-work-looks-like` page on boot: it appends a `documents` instance (with Tom's real copy and the four PDFs) plus a closing `intervention` instance ("Every business is different" / "Tell us what is going on"). The guard is "page exists AND has no documents instance", so it will not fight later edits, reordering or deletion. Content rows use `ON CONFLICT DO NOTHING`, so Tom's edits survive redeploys. The closing button's `button_link` is deliberately empty, which the render path resolves to `#conversation` (the global footer contact block); the edit modal now offers that as an explicit "Contact section (footer)" option on every intervention/filter button.
 
 ## Proof strip template
 
@@ -536,6 +559,8 @@ DKIM is what actually authorises Resend's outbound mail; SPF on `send` strengthe
 
 ## Static files kept for reference
 
+- `public/pdfs/` — the four public/redacted client documents served by the documents template
+- `public/img/docs/` — first-page preview JPEGs for those PDFs (generated with `pdftoppm`)
 - `index.html` — original static V2 (pre-CMS)
 - `v1.html` — original V1 (warm palette, "We" voice), served with a per-route relaxed CSP
 - `headshot.png` — original hero photo (now served from DB)

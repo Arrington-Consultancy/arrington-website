@@ -281,10 +281,10 @@ app.get('/v1.html', (req, res) => {
 });
 
 // Valid section templates (shared with routes/content.js)
-const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','fourcards','casestudy','casestudy2','assessment','filter','proofstrip','contact'];
+const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','fourcards','documents','casestudy','casestudy2','assessment','filter','proofstrip','contact'];
 // Default auto-merge order — excludes 'contact' (now rendered globally in
-// the footer), 'fourcards' and 'proofstrip' (picker-only). Users pick those
-// explicitly.
+// the footer), 'fourcards', 'documents' and 'proofstrip' (picker-only). Users
+// pick those explicitly.
 const defaultOrder = ['hero','credentials','biography','intervention','approach','insights','casestudy','casestudy2','assessment','filter'];
 
 const baseOf = (id) => {

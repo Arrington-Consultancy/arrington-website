@@ -70,6 +70,29 @@
         'fourcards.card_4_number': 'Card 4 number',
         'fourcards.card_4_title': 'Card 4 title',
         'fourcards.card_4_body': 'Card 4 body',
+        'documents.label': 'Section label (leave empty to hide)',
+        'documents.heading': 'Heading',
+        'documents.intro': 'Introduction',
+        'documents.doc_1_title': 'Document 1 title',
+        'documents.doc_1_blurb': 'Document 1 description',
+        'documents.doc_1_meta': 'Document 1 detail line (e.g. PDF, 4 pages)',
+        'documents.doc_1_file': 'Document 1 PDF path (e.g. /pdfs/example.pdf)',
+        'documents.doc_1_image': 'Document 1 preview image path',
+        'documents.doc_2_title': 'Document 2 title',
+        'documents.doc_2_blurb': 'Document 2 description',
+        'documents.doc_2_meta': 'Document 2 detail line (e.g. PDF, 4 pages)',
+        'documents.doc_2_file': 'Document 2 PDF path (e.g. /pdfs/example.pdf)',
+        'documents.doc_2_image': 'Document 2 preview image path',
+        'documents.doc_3_title': 'Document 3 title',
+        'documents.doc_3_blurb': 'Document 3 description',
+        'documents.doc_3_meta': 'Document 3 detail line (e.g. PDF, 4 pages)',
+        'documents.doc_3_file': 'Document 3 PDF path (e.g. /pdfs/example.pdf)',
+        'documents.doc_3_image': 'Document 3 preview image path',
+        'documents.doc_4_title': 'Document 4 title',
+        'documents.doc_4_blurb': 'Document 4 description',
+        'documents.doc_4_meta': 'Document 4 detail line (e.g. PDF, 4 pages)',
+        'documents.doc_4_file': 'Document 4 PDF path (e.g. /pdfs/example.pdf)',
+        'documents.doc_4_image': 'Document 4 preview image path',
         'casestudy.label': 'Section label',
         'casestudy.heading': 'Heading',
         'casestudy.subtext': 'Subtext',
@@ -124,6 +147,7 @@
         approach: 'Approach',
         insights: 'Insights',
         fourcards: 'Four cards',
+        documents: 'Documents',
         casestudy: 'Case Study',
         casestudy2: 'Case Study: Tristan',
         assessment: 'Assessment',
@@ -139,6 +163,7 @@
             key.includes('cta') || key.includes('email') || key.includes('phone') ||
             key.includes('_title') || key.includes('_number') ||
             key.includes('_action') || key.includes('_client') ||
+            key.includes('_file') || key.includes('_image') || key.includes('_meta') ||
             key.includes('button_text') || key.includes('button_link')) {
             return 'short';
         }
@@ -195,6 +220,14 @@
                     select.className = 'cms-field-select';
                     select.dataset.key = key;
                     const current = data.fields[key] || '';
+                    // An empty value means "scroll to the contact block in the
+                    // footer" (what the render path falls back to). Offer it
+                    // explicitly so it can be chosen, not just inherited.
+                    const contactOpt = document.createElement('option');
+                    contactOpt.value = '';
+                    contactOpt.textContent = 'Contact section (footer)';
+                    if (current === '') contactOpt.selected = true;
+                    select.appendChild(contactOpt);
                     for (const p of allPagesList) {
                         const opt = document.createElement('option');
                         opt.value = p.slug;

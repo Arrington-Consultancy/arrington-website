@@ -3,3 +3,6 @@ node_modules/
 .DS_Store
 *.log
 npm-debug.log*
+
+# Incoming source files (the served copies live in public/pdfs)
+/pdfs/

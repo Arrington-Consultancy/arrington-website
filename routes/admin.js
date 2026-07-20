@@ -14,7 +14,7 @@ const router = express.Router();
 const RESERVED_SLUGS = ['login', 'logout', 'health', 'api', 'img', 'js', 'css', 'public', 'main'];
 
 // Valid section templates (matches routes/content.js and server.js)
-const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','fourcards','casestudy','casestudy2','assessment','filter','proofstrip','contact'];
+const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','fourcards','documents','casestudy','casestudy2','assessment','filter','proofstrip','contact'];
 
 // Default sections for a new page. 'contact' omitted — it now renders
 // globally in the footer, so including it here would either duplicate
