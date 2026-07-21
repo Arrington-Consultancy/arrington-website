@@ -1,5 +1,15 @@
 # Arrington Business Consultancy Prototype
 
+## HANDED OVER TO TOM (21/07/2026)
+
+This site was handed over to Tom Arrington to self-manage. Read `HANDOVER.md` first: it is the authority on the handover.
+
+- **Code** now also lives in Tom's GitHub org: `github.com/Arrington-Consultancy/arrington-website` (Nat is an org owner). `natparnell/arrington-prototype` is now an archive copy.
+- **Hosting** was transferred via Railway's "Transfer Project" onto Tom's own **Railway Pro** account (service + Postgres + both custom domains moved intact, no downtime, nothing in Wix changed). Nat no longer deploys or controls it, so the `railway up` deploy instructions further down apply to Tom's account, not Nat's.
+- **Live content** (all pages, copy, images, permissions) moved with the database. A point-in-time snapshot is committed at `handover/live-content-export-2026-07-21.sql` (idempotent upserts), regenerable via `handover/regenerate-export.js`.
+- **Loose end:** the bare `arringtonconsultancy.co.uk` apex still needs adding as a custom domain in Railway (long-standing, pre-handover; see Custom domains).
+- On the same day the 19 agreed copy-review changes were applied to the live site (see Copy review below).
+
 ## What this is
 
 Single-page website for Arrington Business Consultancy (Tom Arrington), with a CMS backend for content editing. Express.js + PostgreSQL, deployed to Railway, fronted by Railway's anycast edge (`69.46.46.x`; was Fastly until Railway's edge migration, see Custom domains).
@@ -576,6 +586,10 @@ Gotcha: the `cd` does not always stick in an agent shell, so check where the PDF
 The document is written as a note from Nat to Tom, deliberately leads with what is good about the copy, and marks a few lines as nearly earning their place rather than listing them flatly as faults. **Testimonial quotations (Nick, Tristan, Dan, Simon) are reviewed but deliberately left unedited** because they are direct quotes. Nothing has been changed in the live copy: the review is advisory and awaits Tom's decision.
 
 `review/` sits outside `public/`, so it is not served by the site.
+
+### Agreed changes applied (21/07/2026)
+
+Tom returned an agreed-changes brief (`arrington_copy_review_agreed_changes_20_july_2026.pdf`, not in the repo) accepting/modifying/keeping each point. **19 website changes were applied directly to the live Postgres `content` table** (not the repo, since copy lives in the DB): a new hero heading ("...everything runs through you?") and CTA ("Tell us what is going on"), the intervention "1%" line, the Numbers/Margin/outcome case-study lines, the founder origin line, the filter respect line, the credentials tagline deleted, and the assessment questions with their branded test names ("Holiday Test", "Pricing Gamble", etc.) stripped and two rewritten. **PDF-only items were deliberately skipped** (the brief's football/stadium/Tom-Verdict items and roughly half of the numbered decisions live in the four PDFs, not the site copy). The broad "reduce not-X-it-is-Y / real / properly" sweep was applied only where a specific numbered decision called for it, per the brief's own "make only the agreed changes" rule. All 19 are captured in the `handover/` export snapshot.
 
 ## Static files kept for reference
 
