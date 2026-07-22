@@ -797,6 +797,13 @@
     /* Shown/hidden via cms-hidden */
 }
 
+.cms-detail-subtitle {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin: -0.4rem 0 0.9rem;
+}
+
 .cms-detail-trigger {
     /* Visual hint that this opens a detail view */
 }
@@ -1227,6 +1234,41 @@ select.cms-user-input {
     color: #8a8680;
     padding: 0.3rem 0.1rem;
     min-height: 1em;
+}
+
+.cms-nav-item {
+    flex-wrap: wrap;
+    row-gap: 0.45rem;
+}
+
+.cms-nav-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.72rem;
+    color: #8a8680;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.cms-nav-toggle input {
+    cursor: pointer;
+}
+
+.cms-nav-label {
+    flex: 1 1 100%;
+    min-width: 0;
+    background: #0d0d0d;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 3px;
+    color: #d4d0c8;
+    font-size: 0.78rem;
+    padding: 0.35rem 0.6rem;
+    font-family: inherit;
+}
+
+.cms-nav-label::placeholder {
+    color: #6a6660;
 }
 
 /* ---- SEO form ---- */

@@ -293,7 +293,7 @@ router.put('/theme', requireCapability('manage_theme'), async (req, res) => {
 router.get('/pages', requireCapability('manage_pages'), async (req, res) => {
   try {
     const { rows } = await db.query(
-      'SELECT id, slug, title, sort_order, hidden FROM pages ORDER BY sort_order, created_at'
+      'SELECT id, slug, title, sort_order, hidden, show_in_nav, nav_label FROM pages ORDER BY sort_order, created_at'
     );
     res.json({ pages: rows });
   } catch (err) {
@@ -400,30 +400,49 @@ router.post('/page', requireCapability('manage_pages'), async (req, res) => {
 // Update a page (title, hidden)
 router.put('/page/:slug', requireCapability('manage_pages'), async (req, res) => {
   const { slug } = req.params;
-  const { title, hidden } = req.body;
+  const { title, hidden, show_in_nav, nav_label } = req.body;
 
   try {
     const { rows } = await db.query('SELECT * FROM pages WHERE slug = $1', [slug]);
     if (rows.length === 0) return res.status(404).json({ error: 'Page not found' });
 
-    // Cannot hide the main page
+    // Cannot hide the main page, and it must always stay in the main nav
     if (slug === 'main' && hidden === true) {
       return res.status(400).json({ error: 'Cannot hide the home page' });
+    }
+    if (slug === 'main' && show_in_nav === false) {
+      return res.status(400).json({ error: 'The home page must stay in the main navigation' });
     }
 
     const updates = [];
     const params = [];
     let idx = 1;
+    const detailParts = [];
 
     if (title !== undefined && typeof title === 'string' && title.trim().length > 0) {
       updates.push(`title = $${idx}`);
       params.push(title.trim());
       idx++;
+      detailParts.push(`renamed to "${title.trim()}"`);
     }
     if (hidden !== undefined && typeof hidden === 'boolean') {
       updates.push(`hidden = $${idx}`);
       params.push(hidden);
       idx++;
+      detailParts.push(hidden ? 'hidden' : 'shown');
+    }
+    if (show_in_nav !== undefined && typeof show_in_nav === 'boolean') {
+      updates.push(`show_in_nav = $${idx}`);
+      params.push(show_in_nav);
+      idx++;
+      detailParts.push(show_in_nav ? 'shown in main nav' : 'removed from main nav');
+    }
+    if (nav_label !== undefined && typeof nav_label === 'string') {
+      const trimmed = nav_label.trim().slice(0, 200);
+      updates.push(`nav_label = $${idx}`);
+      params.push(trimmed);
+      idx++;
+      detailParts.push(trimmed ? `nav label set to "${trimmed}"` : 'nav label cleared');
     }
 
     if (updates.length === 0) {
@@ -441,7 +460,7 @@ router.put('/page/:slug', requireCapability('manage_pages'), async (req, res) =>
       params
     );
 
-    const detail = title !== undefined ? `Renamed to "${title.trim()}"` : (hidden ? 'Hidden' : 'Shown');
+    const detail = detailParts.join(', ') || 'updated';
     await db.query(
       'INSERT INTO audit_log (user_id, action, section_key, detail) VALUES ($1, $2, $3, $4)',
       [req.session.user.id, 'page_update', slug, `Page "${slug}" ${detail} by ${req.session.user.username}`]

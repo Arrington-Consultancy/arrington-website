@@ -57,6 +57,8 @@ CREATE TABLE IF NOT EXISTS pages (
     og_image TEXT NOT NULL DEFAULT '',
     canonical_url TEXT NOT NULL DEFAULT '',
     noindex BOOLEAN NOT NULL DEFAULT false,
+    show_in_nav BOOLEAN NOT NULL DEFAULT true,
+    nav_label VARCHAR(200) NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     updated_by INTEGER REFERENCES users(id)

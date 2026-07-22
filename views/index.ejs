@@ -1266,6 +1266,24 @@
             color: var(--text-muted);
         }
 
+        .footer-links {
+            text-align: center;
+            padding: 0 2rem;
+        }
+
+        .footer-links a {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: color 0.2s, border-color 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: var(--text-bright);
+            border-bottom-color: var(--text-bright);
+        }
+
         /* ---- PAGE MENU ---- */
         .page-menu {
             position: fixed;
@@ -1464,7 +1482,7 @@
             <% if (!_p.hidden || canEdit) { %>
             <a href="<%= _p.slug === 'main' ? '/' : '/' + _p.slug %>"
                class="<%= _p.slug === currentPage.slug ? 'active' : '' %>">
-                <%= _p.title %>
+                <%= _p.nav_label || _p.title %>
             </a>
             <% } %>
         <% } %>
@@ -1482,8 +1500,9 @@
     <div class="page-menu-inner">
         <% for (const _p of allPages) { %>
         <a href="<%= _p.slug === 'main' ? '/' : '/' + _p.slug %>"
-           class="page-menu-link<%= _p.slug === currentPage.slug ? ' active' : '' %><%= (_p.hidden && canEdit) ? ' page-menu-hidden' : '' %>">
-            <%= _p.title %>
+           class="page-menu-link<%= _p.slug === currentPage.slug ? ' active' : '' %><%= ((_p.hidden || !_p.show_in_nav) && canEdit) ? ' page-menu-hidden' : '' %>"
+           <% if (canEdit && !_p.hidden && !_p.show_in_nav) { %>title="Out of the main nav (Show in nav is off), but reachable by direct URL and indexed"<% } %>>
+            <%= _p.nav_label || _p.title %>
         </a>
         <% } %>
     </div>
@@ -1978,6 +1997,9 @@
             <a href="<%= _waUrl %>" class="btn btn-whatsapp" target="_blank" rel="noopener nofollow">WhatsApp us</a>
             <% } %>
         </div>
+    </div>
+    <div class="footer-links">
+        <a href="/useful-thinking">For more on how we think, see Useful Thinking</a>
     </div>
     <div class="footer-credit cms-section" data-section="footer">
         <% if (canEdit) { %><button class="cms-edit-btn" data-section="footer" title="Edit name">&#9998;</button><% } %>

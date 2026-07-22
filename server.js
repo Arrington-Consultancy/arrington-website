@@ -337,13 +337,19 @@ async function renderPage(req, res, next, pageSlug) {
 
     // Load all pages for the page menu
     const { rows: allPagesRows } = await db.query(
-      'SELECT id, slug, title, hidden, sort_order FROM pages ORDER BY sort_order, created_at'
+      'SELECT id, slug, title, hidden, sort_order, show_in_nav, nav_label FROM pages ORDER BY sort_order, created_at'
     );
 
-    // Filter pages by role: admin/content see all, client sees unrestricted + granted, public sees unrestricted non-hidden
+    // Filter pages by role: admin/content see all (for editing/management —
+    // dimmed in the view for hidden/nav-excluded pages), client sees
+    // unrestricted+nav-visible plus anything explicitly granted to them,
+    // public sees unrestricted and nav-visible only. show_in_nav is a pure
+    // display toggle for the nav/mobile menu — it has no effect on whether a
+    // page is reachable by direct URL, indexable, or in the sitemap; those
+    // are controlled by `hidden`/`noindex` exactly as before.
     let allPages;
     if (!res.locals.user) {
-      allPages = allPagesRows.filter(p => !p.hidden && !restrictedPageIds.has(p.id));
+      allPages = allPagesRows.filter(p => !p.hidden && !restrictedPageIds.has(p.id) && p.show_in_nav);
     } else if (res.locals.user.role === 'client') {
       const { rows: accessRows } = await db.query(
         'SELECT page_id FROM page_access WHERE user_id = $1',
@@ -351,7 +357,7 @@ async function renderPage(req, res, next, pageSlug) {
       );
       const accessibleIds = new Set(accessRows.map(r => r.page_id));
       allPages = allPagesRows.filter(p =>
-        accessibleIds.has(p.id) || (!p.hidden && !restrictedPageIds.has(p.id))
+        accessibleIds.has(p.id) || (!p.hidden && !restrictedPageIds.has(p.id) && p.show_in_nav)
       );
     } else {
       allPages = allPagesRows;

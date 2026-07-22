@@ -247,6 +247,18 @@ The site supports multiple pages. Each page is a row in the `pages` table with i
 - **Section API calls** now include `pageSlug` in the request body so operations target the correct page's arrays in the pages table.
 - **Listing pages:** `GET /api/admin/pages` (gated on `manage_pages`) returns every page for the reorder UI.
 
+### Navigation visibility vs. hidden (added 22/07/2026)
+
+Two independent per-page settings now control what visitors see, and they are easy to conflate:
+
+- **`hidden`** controls whether a page is reachable at all: excluded from `/sitemap.xml`, and (as of the 22/07/2026 fix earlier in this file) still reachable by direct URL — `hidden` alone no longer 404s a page for the public. Use it for a page that isn't ready yet, or a Google Ads/SEO landing page you don't want appearing in organic listings.
+- **`show_in_nav`** (`BOOLEAN NOT NULL DEFAULT true`) controls only whether a page appears in the desktop page-menu bar and the mobile hamburger menu. It has zero effect on `hidden`, `noindex`, the sitemap, or direct-URL access. A page can be `show_in_nav = false` and still be fully public, indexed, and linked to from elsewhere in the site — that's the point of it: a "supporting page" that's discoverable through contextual links rather than the primary nav.
+- **`nav_label`** (`VARCHAR(200) NOT NULL DEFAULT ''`) overrides only the text shown in the nav bar and mobile menu. Falls back to the page's `title` when blank. Deliberately decoupled from `title` so a nav-only rename never touches the page's own heading, the mobile menu's other reference to it, or the SEO `<title>` fallback (which still reads from `title`, not `nav_label`).
+
+**Admin UI:** both live in the existing "Reorder pages" panel (renamed "Reorder & navigation" in the panel body, button label unchanged), one row per page: a "Show in nav" checkbox and a nav-label text input, saving instantly via the existing `PUT /api/admin/page/:slug` route (extended to accept `show_in_nav` and `nav_label` alongside the existing `title`/`hidden`). The home page (`slug = 'main'`) cannot have `show_in_nav` set to `false` — enforced server-side, same pattern as "cannot hide the home page."
+
+**Current site structure (22/07/2026):** main nav is Home, What We Do, What We Have Done, What the Work Looks Like (nav label "See how we work"), About Us, 30 Minute Conversation. Useful Thinking and What Business Owners Say are `show_in_nav = false` but fully indexed/accessible, discovered instead through contextual links added to What We Have Done, What the Work Looks Like (nav-labelled "See how we work"), What We Do, About Us, 30 Minute Conversation, and the global footer. Business Consultant Devon stays `hidden = true` (Google Ads landing page, not in the sitemap) and `show_in_nav = false`, linked once from a new About Us section. See the git log around this date for the exact new `intervention` instances (`__9` through `__16`) and their placement.
+
 ## Section management (reorder, hide, delete, add, duplicate)
 
 Each editable section has five hover-revealed buttons in this visual order, left to right: ✎ edit · 👁 hide · ▲ up · ▼ down · ✕ delete. Edit and the up/down arrows behave as before; the rest are described below.

@@ -1519,9 +1519,9 @@
 
     detailLoaders['cmsPageAccessDetail'] = () => loadPageAccess();
 
-    // ---- REORDER PAGES ----
+    // ---- REORDER PAGES & NAVIGATION ----
     const reorderPagesEntries = document.getElementById('cmsReorderPagesEntries');
-    let reorderPagesList = [];  // [{slug, title, hidden}]
+    let reorderPagesList = [];  // [{slug, title, hidden, show_in_nav, nav_label}]
 
     function renderReorderPages() {
         if (!reorderPagesEntries) return;
@@ -1534,12 +1534,18 @@
             const p = reorderPagesList[i];
             const isFirst = i === 0;
             const isLast = i === reorderPagesList.length - 1;
-            html += `<div class="cms-reorder-item">
+            const isMain = p.slug === 'main';
+            html += `<div class="cms-reorder-item cms-nav-item">
                 <span class="cms-reorder-title${p.hidden ? ' cms-reorder-hidden' : ''}">${escapeHtml(p.title)}</span>
                 <div class="cms-reorder-btns">
                     <button class="cms-reorder-btn" data-dir="up" data-idx="${i}"${isFirst ? ' disabled' : ''} title="Move up">&#9650;</button>
                     <button class="cms-reorder-btn" data-dir="down" data-idx="${i}"${isLast ? ' disabled' : ''} title="Move down">&#9660;</button>
                 </div>
+                <label class="cms-nav-toggle">
+                    <input type="checkbox" class="cms-nav-show" data-slug="${escapeHtml(p.slug)}" ${p.show_in_nav ? 'checked' : ''} ${isMain ? 'disabled' : ''}>
+                    Show in nav
+                </label>
+                <input type="text" class="cms-nav-label" data-slug="${escapeHtml(p.slug)}" value="${escapeHtml(p.nav_label || '')}" placeholder="Nav label (defaults to &quot;${escapeHtml(p.title)}&quot;)">
             </div>`;
         }
         html += '</div><div class="cms-reorder-status" id="cmsReorderStatus"></div>';
@@ -1548,6 +1554,33 @@
         reorderPagesEntries.querySelectorAll('.cms-reorder-btn').forEach(btn => {
             btn.addEventListener('click', () => movePage(parseInt(btn.dataset.idx, 10), btn.dataset.dir));
         });
+
+        reorderPagesEntries.querySelectorAll('.cms-nav-show').forEach(cb => {
+            cb.addEventListener('change', () => saveNavSetting(cb.dataset.slug, { show_in_nav: cb.checked }));
+        });
+
+        reorderPagesEntries.querySelectorAll('.cms-nav-label').forEach(inp => {
+            inp.addEventListener('change', () => saveNavSetting(inp.dataset.slug, { nav_label: inp.value }));
+        });
+    }
+
+    async function saveNavSetting(slug, body) {
+        const status = document.getElementById('cmsReorderStatus');
+        if (status) status.textContent = 'Saving...';
+        try {
+            const r = await fetch(`/api/admin/page/${encodeURIComponent(slug)}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                body: JSON.stringify(body)
+            });
+            const data = await r.json();
+            if (!r.ok) throw new Error(data.error || 'Save failed');
+            const entry = reorderPagesList.find(p => p.slug === slug);
+            if (entry) Object.assign(entry, body);
+            if (status) status.textContent = 'Saved. Reload to see it reflected in the menu.';
+        } catch (err) {
+            if (status) status.textContent = err.message || 'Save failed. Try again.';
+        }
     }
 
     async function movePage(idx, dir) {
@@ -1586,7 +1619,8 @@
             const data = await r.json();
             if (!r.ok) throw new Error(data.error || 'Failed');
             reorderPagesList = (data.pages || []).map(p => ({
-                slug: p.slug, title: p.title, hidden: p.hidden
+                slug: p.slug, title: p.title, hidden: p.hidden,
+                show_in_nav: p.show_in_nav, nav_label: p.nav_label
             }));
             renderReorderPages();
         } catch (err) {

@@ -29,6 +29,16 @@ async function seed() {
   `);
   console.log('Page SEO columns verified.');
 
+  // Migration: per-page navigation settings, added 22/07/2026. Defaults
+  // preserve current behaviour exactly (show_in_nav true, nav_label empty
+  // so the nav falls back to the page's existing title) — this migration
+  // is inert on any page until someone explicitly changes a value.
+  await db.query(`
+    ALTER TABLE pages ADD COLUMN IF NOT EXISTS show_in_nav BOOLEAN      NOT NULL DEFAULT true;
+    ALTER TABLE pages ADD COLUMN IF NOT EXISTS nav_label   VARCHAR(200) NOT NULL DEFAULT '';
+  `);
+  console.log('Page navigation columns verified.');
+
   // Migrate users CHECK constraint to include 'client' role
   await db.query(`
     DO $$ BEGIN
