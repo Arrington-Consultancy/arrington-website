@@ -314,12 +314,18 @@ async function renderPage(req, res, next, pageSlug) {
     const restrictedPageIds = new Set(allAccessRows.map(r => r.page_id));
     const isRestricted = restrictedPageIds.has(currentPage.id);
 
-    // Restricted or hidden pages: 404 for public visitors
-    if ((currentPage.hidden || isRestricted) && !res.locals.user) {
+    // Restricted pages: 404 for public visitors. A merely-hidden page (no
+    // page_access rows) stays reachable by direct URL — "Hide" only takes a
+    // page out of the nav menu and sitemap, it doesn't take it offline. This
+    // matters for pages like a Google Ads landing page: deliberately kept
+    // out of the nav, but must still work when someone clicks the ad.
+    if (isRestricted && !res.locals.user) {
       return res.status(404).send('Not found');
     }
-    // Clients only see restricted/hidden pages they have explicit access to
-    if ((currentPage.hidden || isRestricted) && res.locals.user?.role === 'client') {
+    // Clients only see restricted pages they have explicit access to.
+    // Hidden-but-unrestricted pages are visible to clients the same as the
+    // public, for the same reason as above.
+    if (isRestricted && res.locals.user?.role === 'client') {
       const { rows: access } = await db.query(
         'SELECT 1 FROM page_access WHERE page_id = $1 AND user_id = $2',
         [currentPage.id, res.locals.user.id]

@@ -194,6 +194,8 @@ Page access is managed via the "Page access" button in the admin panel's Page se
 
 A page does not need to be hidden to be restricted. Any page with at least one `page_access` row is automatically invisible to the public and to unauthorised clients.
 
+**"Hidden" alone does not 404 (bug fixed 22/07/2026).** Until this fix, `server.js`'s `renderPage` 404'd a hidden-but-unrestricted page for public visitors and for clients without explicit access — contradicting this section, which was always written to describe "hidden" as a nav/sitemap-visibility toggle only. This surfaced as a real problem: a Google Ads landing page (`business-consultant-devon`, hidden to keep it out of the main nav) was 404ing for every visitor who clicked the ad. The fix scoped both 404 checks in `renderPage` to `isRestricted` only, dropping `currentPage.hidden` from the condition. **Current behaviour:** hidden pages stay out of the nav menu and `/sitemap.xml` (unchanged), but are reachable by direct URL for everyone, public and client alike — only a `page_access` restriction actually takes a page offline. Use "Hide" for "keep it out of the menu" (ads/campaign landing pages, pages not ready to link to yet); use "Page access" for genuine visitor restriction.
+
 ## SEO metadata
 
 **Shipped and live 09/06/2026** (committed to `main`, deployed via `railway up`, verified on www.arringtonconsultancy.com). The boot-time `ALTER TABLE` migration has already run on the production DB, so the SEO columns and `manage_seo` rows exist there.
