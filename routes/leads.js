@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const sanitizeHtml = require('sanitize-html');
+const nodemailer = require('nodemailer');
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const db = require('../db/pool');
 
@@ -11,6 +12,44 @@ const router = express.Router();
 const PDF_DIR = path.join(__dirname, '..', 'private', 'pdfs');
 const TOKEN_SECRET = process.env.SESSION_SECRET || 'dev-only-secret-change-me';
 const TOKEN_TTL_MS = 15 * 60 * 1000; // 15 minutes
+
+// Notification email on new leads, sent via Gmail SMTP using an app password
+// (tom@arringtonconsultancy.com is Google Workspace, so no third-party email
+// service or domain-verification is needed). GMAIL_APP_PASSWORD is optional —
+// if unset (e.g. local dev), notifications are skipped with a console warning
+// rather than breaking the actual lead submission.
+const NOTIFY_FROM = 'tom@arringtonconsultancy.com';
+const transporter = process.env.GMAIL_APP_PASSWORD
+  ? nodemailer.createTransport({
+      service: 'gmail',
+      auth: { user: NOTIFY_FROM, pass: process.env.GMAIL_APP_PASSWORD }
+    })
+  : null;
+
+async function getNotifyEmail() {
+  try {
+    const { rows } = await db.query(`SELECT content FROM content WHERE section_key = 'contact.email'`);
+    return (rows[0]?.content || '').trim() || NOTIFY_FROM;
+  } catch (err) {
+    return NOTIFY_FROM;
+  }
+}
+
+// Fire-and-forget: never lets an email problem fail the lead submission
+// itself, since the database row (visible in the admin panel) is always the
+// source of truth. Errors are logged, not thrown.
+async function notify({ subject, text, replyTo }) {
+  if (!transporter) {
+    console.warn('GMAIL_APP_PASSWORD not set — skipping lead notification email.');
+    return;
+  }
+  try {
+    const to = await getNotifyEmail();
+    await transporter.sendMail({ from: NOTIFY_FROM, to, subject, text, replyTo });
+  } catch (err) {
+    console.error('Lead notification email failed:', err.message);
+  }
+}
 
 const plainText = (s) => sanitizeHtml(String(s || ''), { allowedTags: [], allowedAttributes: {} }).trim();
 const isValidEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s) && s.length <= 255;
@@ -81,6 +120,18 @@ router.post('/api/leads', publicFormLimiter, async (req, res) => {
     );
 
     res.json({ ok: true });
+
+    notify({
+      subject: `New website enquiry from ${name}`,
+      text: [
+        `Name: ${name}`,
+        `Email: ${email}`,
+        phone && `Phone: ${phone}`,
+        preferredTime && `Preferred time: ${preferredTime}`,
+        message && `Message:\n${message}`
+      ].filter(Boolean).join('\n\n'),
+      replyTo: email
+    });
   } catch (err) {
     console.error('Lead submission error:', err);
     res.status(500).json({ error: 'Something went wrong. Please try again or email us directly.' });
@@ -113,6 +164,12 @@ router.post('/api/documents/request', publicFormLimiter, async (req, res) => {
     );
 
     res.json({ ok: true, url: makeDownloadUrl(doc) });
+
+    notify({
+      subject: `PDF download request: ${doc}`,
+      text: `Email: ${email}\nDocument: ${doc}`,
+      replyTo: email
+    });
   } catch (err) {
     console.error('Document request error:', err);
     res.status(500).json({ error: 'Something went wrong. Please try again.' });
