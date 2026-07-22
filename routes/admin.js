@@ -64,6 +64,20 @@ router.get('/log', requireCapability('view_activity'), async (req, res) => {
   }
 });
 
+// Leads & booking requests (footer form + gated PDF downloads)
+router.get('/leads', requireCapability('view_activity'), async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT id, kind, name, email, phone, message, preferred_time, document, created_at
+       FROM leads ORDER BY created_at DESC LIMIT 100`
+    );
+    res.json({ leads: rows });
+  } catch (err) {
+    console.error('Leads list error:', err);
+    res.status(500).json({ error: 'Failed to load leads' });
+  }
+});
+
 // Reset all content to defaults (admin only)
 router.post('/reset', requireCapability('reset_content'), async (req, res) => {
   try {

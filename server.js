@@ -14,6 +14,7 @@ const { loadPermissions, hasCapability, getCapabilitiesForRole } = require('./mi
 const authRoutes = require('./routes/auth');
 const contentRoutes = require('./routes/content');
 const adminRoutes = require('./routes/admin');
+const leadRoutes = require('./routes/leads');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -267,6 +268,9 @@ const authedWriteLimiter = rateLimit({
 app.use(authRoutes);
 app.use('/api/content', authedWriteLimiter, contentRoutes);
 app.use('/api/admin', authedWriteLimiter, adminRoutes);
+// Public lead capture (contact/booking form + gated PDF downloads) — no
+// session required, so it carries its own rate limiters (see routes/leads.js).
+app.use(leadRoutes);
 
 // Serve v1.html as static with a relaxed CSP (legacy static page has
 // inline <style>/<script> blocks that predate the nonce setup).

@@ -76,22 +76,22 @@
         'documents.doc_1_title': 'Document 1 title',
         'documents.doc_1_blurb': 'Document 1 description',
         'documents.doc_1_meta': 'Document 1 detail line (e.g. PDF, 4 pages)',
-        'documents.doc_1_file': 'Document 1 PDF path (e.g. /pdfs/example.pdf)',
+        'documents.doc_1_file': 'Document 1 PDF filename (must exist in private/pdfs/, e.g. /pdfs/example.pdf)',
         'documents.doc_1_image': 'Document 1 preview image path',
         'documents.doc_2_title': 'Document 2 title',
         'documents.doc_2_blurb': 'Document 2 description',
         'documents.doc_2_meta': 'Document 2 detail line (e.g. PDF, 4 pages)',
-        'documents.doc_2_file': 'Document 2 PDF path (e.g. /pdfs/example.pdf)',
+        'documents.doc_2_file': 'Document 2 PDF filename (must exist in private/pdfs/, e.g. /pdfs/example.pdf)',
         'documents.doc_2_image': 'Document 2 preview image path',
         'documents.doc_3_title': 'Document 3 title',
         'documents.doc_3_blurb': 'Document 3 description',
         'documents.doc_3_meta': 'Document 3 detail line (e.g. PDF, 4 pages)',
-        'documents.doc_3_file': 'Document 3 PDF path (e.g. /pdfs/example.pdf)',
+        'documents.doc_3_file': 'Document 3 PDF filename (must exist in private/pdfs/, e.g. /pdfs/example.pdf)',
         'documents.doc_3_image': 'Document 3 preview image path',
         'documents.doc_4_title': 'Document 4 title',
         'documents.doc_4_blurb': 'Document 4 description',
         'documents.doc_4_meta': 'Document 4 detail line (e.g. PDF, 4 pages)',
-        'documents.doc_4_file': 'Document 4 PDF path (e.g. /pdfs/example.pdf)',
+        'documents.doc_4_file': 'Document 4 PDF filename (must exist in private/pdfs/, e.g. /pdfs/example.pdf)',
         'documents.doc_4_image': 'Document 4 preview image path',
         'casestudy.label': 'Section label',
         'casestudy.heading': 'Heading',
@@ -791,6 +791,44 @@
             }).join('');
         } catch (err) {
             logEntries.innerHTML = '<span class="cms-log-error">Failed to load log.</span>';
+        }
+    };
+
+    // Leads & bookings loader. Unlike the activity log above, this data is
+    // raw visitor input (name/email/phone/message), so every field is passed
+    // through escapeHtml before it reaches innerHTML.
+    const leadsEntries = document.getElementById('cmsLeadsEntries');
+    detailLoaders['cmsLeadsDetail'] = async () => {
+        if (!leadsEntries) return;
+        leadsEntries.innerHTML = '<span class="cms-log-loading">Loading...</span>';
+        try {
+            const res = await fetch('/api/admin/leads', {
+                headers: { 'X-CSRF-Token': csrfToken }
+            });
+            const data = await res.json();
+            if (!data.leads || data.leads.length === 0) {
+                leadsEntries.innerHTML = '<span class="cms-log-empty">No leads yet.</span>';
+                return;
+            }
+            leadsEntries.innerHTML = data.leads.map(lead => {
+                const date = new Date(lead.created_at);
+                const timeStr = date.toLocaleDateString('en-GB', {
+                    day: '2-digit', month: 'short', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                });
+                const kindLabel = lead.kind === 'pdf_download' ? 'PDF download' : 'Contact / booking';
+                const parts = [`<span class="log-action">${escapeHtml(kindLabel)}</span><br>`];
+                if (lead.name) parts.push(`<strong>${escapeHtml(lead.name)}</strong> `);
+                parts.push(`${escapeHtml(lead.email)}<br>`);
+                if (lead.phone) parts.push(`${escapeHtml(lead.phone)}<br>`);
+                if (lead.preferred_time) parts.push(`Preferred time: ${escapeHtml(lead.preferred_time)}<br>`);
+                if (lead.document) parts.push(`Document: ${escapeHtml(lead.document)}<br>`);
+                if (lead.message) parts.push(`"${escapeHtml(lead.message)}"<br>`);
+                parts.push(`<span class="log-time">${timeStr}</span>`);
+                return `<div class="cms-log-entry">${parts.join('')}</div>`;
+            }).join('');
+        } catch (err) {
+            leadsEntries.innerHTML = '<span class="cms-log-error">Failed to load leads.</span>';
         }
     };
 

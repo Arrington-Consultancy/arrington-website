@@ -88,6 +88,7 @@
             <div class="cms-section-body cms-hidden" id="cmsSystemSection">
                 <% if (capabilities.view_activity) { %>
                 <button class="cms-admin-action cms-detail-trigger" data-detail="cmsLogDetail">Activity log</button>
+                <button class="cms-admin-action cms-detail-trigger" data-detail="cmsLeadsDetail">Leads &amp; bookings</button>
                 <% } %>
                 <% if (capabilities.view_csp) { %>
                 <button class="cms-admin-action cms-detail-trigger" data-detail="cmsCspDetail">CSP violations</button>
@@ -112,6 +113,10 @@
             <div class="cms-detail-pane cms-hidden" id="cmsLogDetail">
                 <div class="cms-detail-title">Activity log</div>
                 <div id="cmsLogEntries">Loading...</div>
+            </div>
+            <div class="cms-detail-pane cms-hidden" id="cmsLeadsDetail">
+                <div class="cms-detail-title">Leads &amp; bookings</div>
+                <div id="cmsLeadsEntries">Loading...</div>
             </div>
             <% } %>
 

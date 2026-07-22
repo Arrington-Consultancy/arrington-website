@@ -31,8 +31,8 @@
         gtag('js', new Date());
         gtag('config', 'AW-18129914078');
     </script>
-    <% if (user) { %>
     <meta name="csrf-token" content="<%= csrfToken %>">
+    <% if (user) { %>
     <meta name="page-slug" content="<%= currentPage.slug %>">
     <meta name="page-hidden" content="<%= currentPage.hidden ? 'true' : 'false' %>">
     <meta name="all-pages" content="<%= JSON.stringify(allPages.map(p => ({ slug: p.slug, title: p.title }))) %>">
@@ -1112,6 +1112,151 @@
             color: var(--accent);
         }
 
+        .lead-form {
+            text-align: left;
+            margin: 0 0 2rem;
+        }
+
+        .lead-hp {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .lead-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.9rem;
+            margin-bottom: 0.9rem;
+        }
+
+        .lead-form input,
+        .lead-form textarea {
+            width: 100%;
+            background: var(--charcoal);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 0.8rem 1rem;
+            font-family: inherit;
+            font-size: 0.92rem;
+            color: var(--text-bright);
+        }
+
+        .lead-form textarea {
+            margin-bottom: 1.1rem;
+            resize: vertical;
+        }
+
+        .lead-form input::placeholder,
+        .lead-form textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        .lead-form input:focus,
+        .lead-form textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .lead-form-status {
+            margin: 0.9rem 0 0;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            min-height: 1.2em;
+        }
+
+        .lead-form-status.lead-form-error {
+            color: #e07a6d;
+        }
+
+        .lead-form-alt {
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem !important;
+        }
+
+        @media (max-width: 600px) {
+            .lead-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ---- GATED PDF DOWNLOAD MODAL ---- */
+        .doc-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(6px);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        .doc-modal-overlay.open {
+            display: flex;
+        }
+
+        .doc-modal {
+            position: relative;
+            background: var(--dark-grey);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 2.5rem;
+            max-width: 420px;
+            width: 100%;
+        }
+
+        .doc-modal h3 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.4rem;
+            margin-bottom: 0.6rem;
+            color: var(--text-bright);
+        }
+
+        .doc-modal p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 1.2rem;
+        }
+
+        .doc-modal input {
+            width: 100%;
+            background: var(--charcoal);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 0.8rem 1rem;
+            font-family: inherit;
+            font-size: 0.92rem;
+            color: var(--text-bright);
+            margin-bottom: 1rem;
+        }
+
+        .doc-modal input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .doc-modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .doc-modal-close:hover {
+            color: var(--text-bright);
+        }
+
         .footer-credit {
             position: relative;
             text-align: center;
@@ -1578,6 +1723,7 @@
       blurb: content[_k + '.doc_' + _n + '_blurb'] || '',
       meta: (content[_k + '.doc_' + _n + '_meta'] || '').replace(/<[^>]+>/g, '').trim(),
       file: _docPdf((content[_k + '.doc_' + _n + '_file'] || '').trim()),
+      basename: _docPdf((content[_k + '.doc_' + _n + '_file'] || '').trim()).split('/').pop(),
       image: _docImg((content[_k + '.doc_' + _n + '_image'] || '').trim())
     });
   }
@@ -1619,7 +1765,7 @@
                     <p><%- _d.blurb %></p>
                     <% if (_d.meta) { %><p class="document-meta"><%= _d.meta %></p><% } %>
                     <% if (_d.file) { %>
-                    <a href="<%= _d.file %>" class="btn btn-outline" target="_blank" rel="noopener">Open the full PDF</a>
+                    <button type="button" class="btn btn-outline js-doc-request" data-doc="<%= _d.basename %>" data-title="<%- _d.title %>">Get the full PDF</button>
                     <% } %>
                 </div>
             </article>
@@ -1808,6 +1954,23 @@
           const _waUrl = (content['contact.whatsapp'] || '').trim();
           const _waValid = /^https:\/\/(wa\.me|api\.whatsapp\.com)\//.test(_waUrl);
         %>
+        <form class="lead-form" id="leadForm">
+            <div class="lead-hp" aria-hidden="true">
+                <label>Leave this field blank<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+            </div>
+            <div class="lead-row">
+                <input type="text" name="name" placeholder="Your name" maxlength="200" required>
+                <input type="email" name="email" placeholder="Your email" maxlength="255" required>
+            </div>
+            <div class="lead-row">
+                <input type="tel" name="phone" placeholder="Phone (optional)" maxlength="50">
+                <input type="text" name="preferred_time" placeholder="Best day/time for a 30 min call (optional)" maxlength="255">
+            </div>
+            <textarea name="message" placeholder="Tell us where the pressure is showing" maxlength="2000" rows="4"></textarea>
+            <button type="submit" class="btn btn-primary">Send</button>
+            <p class="lead-form-status" id="leadFormStatus" aria-live="polite"></p>
+        </form>
+        <p class="lead-form-alt">Prefer to call, email or WhatsApp instead?</p>
         <div class="contact-details">
             <a href="#" class="js-email-link" data-u="<%= _eU %>" data-d="<%= _eD %>" rel="nofollow"><%= _eU %> <span aria-hidden="true">[at]</span> <%= _eD %></a>
             <a href="#" class="js-phone-link" data-pa="<%= _pDigitsA %>" data-pb="<%= _pDigitsB %>" rel="nofollow"><%= _pA %><span aria-hidden="true">&#8203;</span><%= _pB %></a>
@@ -1821,6 +1984,22 @@
         <%= content['footer.name'] || '' %>
     </div>
 </footer>
+
+<div class="doc-modal-overlay" id="docModalOverlay">
+    <div class="doc-modal">
+        <button type="button" class="doc-modal-close" id="docModalClose" aria-label="Close">&#10005;</button>
+        <h3 id="docModalTitle">Get the full PDF</h3>
+        <p>Enter your email and we will send you straight to the download.</p>
+        <form id="docModalForm">
+            <div class="lead-hp" aria-hidden="true">
+                <label>Leave this field blank<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+            </div>
+            <input type="email" name="email" placeholder="Your email" maxlength="255" required>
+            <button type="submit" class="btn btn-primary">Get the PDF</button>
+            <p class="lead-form-status" id="docModalStatus" aria-live="polite"></p>
+        </form>
+    </div>
+</div>
 
 <script nonce="<%= nonce %>">
     // Reveal obfuscated email / phone links. Runs before any generic anchor
@@ -1859,6 +2038,102 @@
             }
         });
     });
+
+    // Footer contact/booking form.
+    (function () {
+        const form = document.getElementById('leadForm');
+        if (!form) return;
+        const status = document.getElementById('leadFormStatus');
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = form.querySelector('button[type="submit"]');
+            const data = Object.fromEntries(new FormData(form).entries());
+            btn.disabled = true;
+            status.textContent = 'Sending...';
+            status.classList.remove('lead-form-error');
+            try {
+                const res = await fetch('/api/leads', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                if (!res.ok) throw new Error(result.error || 'Something went wrong.');
+                form.reset();
+                status.textContent = 'Thanks — I will get back to you shortly.';
+                if (typeof gtag === 'function') {
+                    gtag('event', 'conversion', { 'send_to': 'AW-18129914078/h_2rCJeH8aYcEN6RgsVD' });
+                }
+            } catch (err) {
+                status.textContent = err.message || 'Something went wrong. Please try again or email us directly.';
+                status.classList.add('lead-form-error');
+            } finally {
+                btn.disabled = false;
+            }
+        });
+    })();
+
+    // Gated PDF downloads: click "Get the full PDF" -> email-capture modal ->
+    // server logs the lead and hands back a short-lived signed download link.
+    (function () {
+        const overlay = document.getElementById('docModalOverlay');
+        const form = document.getElementById('docModalForm');
+        if (!overlay || !form) return;
+        const titleEl = document.getElementById('docModalTitle');
+        const status = document.getElementById('docModalStatus');
+        const closeBtn = document.getElementById('docModalClose');
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+        let currentDoc = '';
+
+        function openModal(doc, title) {
+            currentDoc = doc;
+            titleEl.textContent = title ? `Get "${title}"` : 'Get the full PDF';
+            status.textContent = '';
+            status.classList.remove('lead-form-error');
+            form.reset();
+            overlay.classList.add('open');
+        }
+        function closeModal() {
+            overlay.classList.remove('open');
+        }
+
+        document.querySelectorAll('.js-doc-request').forEach(btn => {
+            btn.addEventListener('click', () => openModal(btn.dataset.doc, btn.dataset.title));
+        });
+        closeBtn.addEventListener('click', closeModal);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = form.querySelector('button[type="submit"]');
+            const data = Object.fromEntries(new FormData(form).entries());
+            data.doc = currentDoc;
+            btn.disabled = true;
+            status.textContent = 'One moment...';
+            status.classList.remove('lead-form-error');
+            try {
+                const res = await fetch('/api/documents/request', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                if (!res.ok) throw new Error(result.error || 'Something went wrong.');
+                if (typeof gtag === 'function') {
+                    gtag('event', 'conversion', { 'send_to': 'AW-18129914078/h_2rCJeH8aYcEN6RgsVD' });
+                }
+                if (result.url) window.location.href = result.url;
+                status.textContent = 'Your download is starting...';
+            } catch (err) {
+                status.textContent = err.message || 'Something went wrong. Please try again.';
+                status.classList.add('lead-form-error');
+            } finally {
+                btn.disabled = false;
+            }
+        });
+    })();
 
     window.addEventListener('scroll', () => {
         document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 20);

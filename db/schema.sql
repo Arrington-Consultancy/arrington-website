@@ -83,3 +83,19 @@ CREATE TABLE IF NOT EXISTS audit_log (
     detail TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Public lead capture: the footer contact/booking form ('contact') and the
+-- gated case-study PDF downloads ('pdf_download'). No user_id — these come
+-- from anonymous visitors.
+CREATE TABLE IF NOT EXISTS leads (
+    id SERIAL PRIMARY KEY,
+    kind VARCHAR(20) NOT NULL DEFAULT 'contact',
+    name VARCHAR(200) NOT NULL DEFAULT '',
+    email VARCHAR(255) NOT NULL,
+    phone VARCHAR(50) NOT NULL DEFAULT '',
+    message TEXT NOT NULL DEFAULT '',
+    preferred_time VARCHAR(255) NOT NULL DEFAULT '',
+    document VARCHAR(100) NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_leads_created_at ON leads (created_at DESC);
