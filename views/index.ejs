@@ -723,6 +723,19 @@
             line-height: 1.7;
         }
 
+        .fourcard-link {
+            display: inline-block;
+            margin-top: 0.9rem;
+            font-size: 0.82rem;
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .fourcard-link:hover {
+            color: var(--text-bright);
+        }
+
         @media (max-width: 900px) {
             .fourcards-grid {
                 grid-template-columns: repeat(2, 1fr);
@@ -1123,6 +1136,10 @@
             line-height: 1.75;
             margin-bottom: 0.75rem;
             text-align: left;
+        }
+
+        .filter-proof-rows {
+            margin-top: 1.5rem;
         }
 
         .filter .btn {
@@ -1854,10 +1871,17 @@
         <% } %>
         <div class="fourcards-grid">
             <% for (let _n = 1; _n <= 4; _n++) { %>
+            <%
+              const _fcSlug = (content[_k + '.card_' + _n + '_link'] || '').trim();
+              const _fcValidSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(_fcSlug);
+            %>
             <article class="fourcard">
                 <div class="fourcard-number"><%- content[_k + '.card_' + _n + '_number'] %></div>
                 <h3><%- content[_k + '.card_' + _n + '_title'] %></h3>
                 <p><%- content[_k + '.card_' + _n + '_body'] %></p>
+                <% if (_fcValidSlug) { %>
+                <a href="/<%= _fcSlug %>" class="fourcard-link">Read the full story</a>
+                <% } %>
             </article>
             <% } %>
         </div>
@@ -2054,7 +2078,22 @@
             <p class="section-label"><%- content[_k + '.label'] %></p>
             <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
             <div class="filter-body"><%- content[_k + '.p1'] %></div>
+            <% if ((content[_k + '.row_1_action'] || '').trim()) { %>
+            <div class="proofstrip-rows filter-proof-rows">
+                <% for (let _r = 1; _r <= 3; _r++) { %>
+                <% const _fAction = content[_k + '.row_' + _r + '_action']; %>
+                <% const _fClient = content[_k + '.row_' + _r + '_client']; %>
+                <% if ((_fAction || _fClient) && ((_fAction || '') + (_fClient || '')).trim()) { %>
+                <div class="proof-row">
+                    <div class="proof-action"><%- _fAction %></div>
+                    <div class="proof-client"><%- _fClient %></div>
+                </div>
+                <% } %>
+                <% } %>
+            </div>
+            <% } else { %>
             <div class="filter-body"><%- content[_k + '.p2'] %></div>
+            <% } %>
             <%
               const _fBtnText = (content[_k + '.button_text'] || '').replace(/<[^>]+>/g, '').trim();
               const _fBtnSlug = (content[_k + '.button_link'] || '').trim();
