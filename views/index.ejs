@@ -390,6 +390,69 @@
             margin-bottom: 1.5rem;
         }
 
+        /* ---- STAT CALLOUT ---- */
+        .stat-callout {
+            display: inline-flex;
+            align-items: baseline;
+            gap: 0.85rem;
+            margin: 1.25rem 0 1.75rem;
+            padding: 0.9rem 1.35rem;
+            background: color-mix(in srgb, var(--accent) 10%, transparent);
+            border-left: 2px solid var(--accent);
+            border-radius: 3px;
+        }
+
+        .stat-callout .stat-num {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+
+        .stat-callout .stat-label {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text);
+            line-height: 1.4;
+            max-width: 260px;
+        }
+
+        @media (max-width: 640px) {
+            .stat-callout {
+                display: flex;
+            }
+            .stat-callout .stat-num {
+                white-space: normal;
+            }
+        }
+
+        /* ---- PULL QUOTE ---- */
+        .intervention-quote-mark {
+            font-family: 'DM Serif Display', serif;
+            font-size: 3rem;
+            color: var(--accent);
+            line-height: 0.4;
+            display: block;
+            margin-bottom: 0.75rem;
+        }
+
+        .intervention-quote-text {
+            font-family: 'DM Serif Display', serif;
+            font-style: italic;
+            font-size: 1.4rem;
+            color: var(--text-bright);
+            line-height: 1.5;
+            margin-bottom: 1rem;
+        }
+
+        .intervention-quote-attribution {
+            font-size: 0.95rem;
+            color: var(--text);
+        }
+
         /* ---- DIVIDER ---- */
         .divider {
             max-width: 1100px;
@@ -1639,6 +1702,12 @@
         <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
         <p class="section-label"><%- content[_k + '.label'] %></p>
         <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
+        <% if ((content[_k + '.stat_number'] || '').trim()) { %>
+        <div class="stat-callout">
+            <span class="stat-num"><%- content[_k + '.stat_number'] %></span>
+            <span class="stat-label"><%- content[_k + '.stat_label'] %></span>
+        </div>
+        <% } %>
         <div class="problem-grid">
             <div class="problem-right">
                 <p><%- content[_k + '.col_1_p1'] %></p>
@@ -1675,7 +1744,16 @@
         <% } else { %>
         <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
         <% } %>
+        <%
+          const _quoteAttribution = (content[_k + '.quote_attribution'] || '').trim();
+        %>
+        <% if (_quoteAttribution) { %>
+        <span class="intervention-quote-mark" aria-hidden="true">&rdquo;</span>
+        <p class="intervention-quote-text"><%- content[_k + '.subtext'] %></p>
+        <p class="intervention-quote-attribution">&mdash; <%- content[_k + '.quote_attribution'] %></p>
+        <% } else { %>
         <div class="intervention-body"><%- content[_k + '.subtext'] %></div>
+        <% } %>
         <%
           const _btnText = (content[_k + '.button_text'] || '').replace(/<[^>]+>/g, '').trim();
           const _btnSlug = (content[_k + '.button_link'] || '').trim();
@@ -1875,6 +1953,12 @@
             <p class="section-label"><%- content[_k + '.label'] %></p>
             <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
             <p class="section-sub"><%- content[_k + '.subtext'] %></p>
+            <% if ((content[_k + '.stat_number'] || '').trim()) { %>
+            <div class="stat-callout">
+                <span class="stat-num"><%- content[_k + '.stat_number'] %></span>
+                <span class="stat-label"><%- content[_k + '.stat_label'] %></span>
+            </div>
+            <% } %>
             <div class="case-timeline">
                 <div class="case-phase">
                     <div class="phase-label"><%- content[_k + '.phase_1_label'] %></div>
@@ -1914,6 +1998,12 @@
             <p class="section-label"><%- content[_k + '.label'] %></p>
             <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
             <p class="casestudy2-intro"><%- content[_k + '.intro'] %></p>
+            <% if ((content[_k + '.stat_number'] || '').trim()) { %>
+            <div class="stat-callout">
+                <span class="stat-num"><%- content[_k + '.stat_number'] %></span>
+                <span class="stat-label"><%- content[_k + '.stat_label'] %></span>
+            </div>
+            <% } %>
             <p class="casestudy2-body"><%- content[_k + '.body'] %></p>
             <div class="casestudy2-outcome">
                 <p><%- content[_k + '.outcome'] %></p>
