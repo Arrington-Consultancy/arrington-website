@@ -521,6 +521,26 @@
             margin-bottom: 1rem;
         }
 
+        .intervention-quote-attribution-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .intervention-quote-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'DM Serif Display', serif;
+            font-size: 1rem;
+            color: var(--accent);
+            flex-shrink: 0;
+        }
+
         .intervention-quote-attribution {
             font-size: 0.95rem;
             color: var(--text);
@@ -773,13 +793,33 @@
             background: var(--charcoal);
         }
 
+        .fourcard-header {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            margin-bottom: 1rem;
+        }
+
+        .fourcard-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 1px solid var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.1rem;
+            color: var(--accent);
+            flex-shrink: 0;
+        }
+
         .fourcard-number {
             font-family: 'DM Serif Display', serif;
             font-size: 2rem;
             color: var(--accent);
             opacity: 0.4;
             line-height: 1;
-            margin-bottom: 1rem;
         }
 
         .fourcard h3 {
@@ -1926,11 +1966,15 @@
         <% } %>
         <%
           const _quoteAttribution = (content[_k + '.quote_attribution'] || '').trim();
+          const _quoteInitial = _quoteAttribution.replace(/<[^>]+>/g, '').split(',')[0].trim().charAt(0).toUpperCase();
         %>
         <% if (_quoteAttribution) { %>
         <span class="intervention-quote-mark" aria-hidden="true">&rdquo;</span>
         <p class="intervention-quote-text"><%- content[_k + '.subtext'] %></p>
-        <p class="intervention-quote-attribution">&mdash; <%- content[_k + '.quote_attribution'] %></p>
+        <div class="intervention-quote-attribution-row">
+            <% if (_quoteInitial) { %><div class="intervention-quote-avatar" aria-hidden="true"><%= _quoteInitial %></div><% } %>
+            <p class="intervention-quote-attribution">&mdash; <%- content[_k + '.quote_attribution'] %></p>
+        </div>
         <% } else { %>
         <div class="intervention-body"><%- content[_k + '.subtext'] %></div>
         <% } %>
@@ -2040,9 +2084,13 @@
               // #casestudy2__2") rather than just the page.
               const _fcLink = (content[_k + '.card_' + _n + '_link'] || '').trim();
               const _fcMatch = /^([a-z0-9]+(?:-[a-z0-9]+)*)(?:#([a-z0-9]+(?:__[0-9]+)?))?$/.exec(_fcLink);
+              const _fcInitial = (content[_k + '.card_' + _n + '_number'] || '').replace(/<[^>]+>/g, '').trim().charAt(0).toUpperCase();
             %>
             <article class="fourcard">
-                <div class="fourcard-number"><%- content[_k + '.card_' + _n + '_number'] %></div>
+                <div class="fourcard-header">
+                    <% if (_fcInitial) { %><div class="fourcard-avatar" aria-hidden="true"><%= _fcInitial %></div><% } %>
+                    <div class="fourcard-number"><%- content[_k + '.card_' + _n + '_number'] %></div>
+                </div>
                 <h3><%- content[_k + '.card_' + _n + '_title'] %></h3>
                 <p><%- content[_k + '.card_' + _n + '_body'] %></p>
                 <% if (_fcMatch) { %>
