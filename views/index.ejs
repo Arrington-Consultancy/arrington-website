@@ -332,12 +332,12 @@
         }
 
         .btn-whatsapp {
-            background: #25D366;
+            background: #3d6b52;
             color: #fff;
         }
 
         .btn-whatsapp:hover {
-            background: #1da851;
+            background: #2f5540;
         }
 
         .hero-cta-row {
@@ -935,6 +935,14 @@
             margin-bottom: 1.5rem;
         }
 
+        .assessment-body {
+            font-size: 1.05rem;
+            color: var(--text);
+            line-height: 1.75;
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
         .assessment-questions {
             text-align: left;
             margin: 2.5rem 0;
@@ -983,6 +991,7 @@
             font-size: 1.1rem;
             color: var(--text);
             line-height: 1.75;
+            text-align: left;
         }
 
         .intervention-body strong {
@@ -1017,6 +1026,14 @@
             margin-bottom: 0.75rem;
         }
 
+        .filter-body {
+            font-size: 1.05rem;
+            color: var(--text);
+            line-height: 1.75;
+            margin-bottom: 0.75rem;
+            text-align: left;
+        }
+
         .filter .btn {
             display: inline-flex;
             margin-top: 2.25rem;
@@ -1024,7 +1041,7 @@
 
         /* ---- PROOF STRIP ---- */
         .proofstrip {
-            background: var(--bg);
+            background: var(--charcoal);
             border-top: 1px solid var(--border);
             border-bottom: 1px solid var(--border);
         }
@@ -1619,15 +1636,16 @@
         <% if (canEdit) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
         <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
         <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
-        <p class="intervention-body"><%- content[_k + '.subtext'] %></p>
+        <div class="intervention-body"><%- content[_k + '.subtext'] %></div>
         <%
           const _btnText = (content[_k + '.button_text'] || '').replace(/<[^>]+>/g, '').trim();
           const _btnSlug = (content[_k + '.button_link'] || '').trim();
           const _validSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(_btnSlug);
           const _btnHref = _btnSlug === 'main' ? '/' : (_validSlug ? '/' + _btnSlug : '#conversation');
+          const _isPrimaryCta = _btnSlug === '' || _btnSlug === 'book-a-30-minute-conversation';
         %>
         <% if (_btnText) { %>
-        <a href="<%= _btnHref %>" class="btn btn-primary"><%- content[_k + '.button_text'] %></a>
+        <a href="<%= _btnHref %>" class="btn <%= _isPrimaryCta ? 'btn-primary' : 'btn-outline' %>"><%- content[_k + '.button_text'] %></a>
         <% } %>
     </div>
 </section>
@@ -1879,7 +1897,7 @@
         <div class="assessment-inner">
             <p class="section-label"><%- content[_k + '.label'] %></p>
             <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
-            <p><%- content[_k + '.intro'] %></p>
+            <div class="assessment-body"><%- content[_k + '.intro'] %></div>
             <div class="assessment-questions">
                 <div class="aq"><%- content[_k + '.q_1'] %></div>
                 <div class="aq"><%- content[_k + '.q_2'] %></div>
@@ -1906,16 +1924,17 @@
         <div class="filter-inner">
             <p class="section-label"><%- content[_k + '.label'] %></p>
             <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
-            <p><%- content[_k + '.p1'] %></p>
-            <p><%- content[_k + '.p2'] %></p>
+            <div class="filter-body"><%- content[_k + '.p1'] %></div>
+            <div class="filter-body"><%- content[_k + '.p2'] %></div>
             <%
               const _fBtnText = (content[_k + '.button_text'] || '').replace(/<[^>]+>/g, '').trim();
               const _fBtnSlug = (content[_k + '.button_link'] || '').trim();
               const _fValidSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(_fBtnSlug);
               const _fBtnHref = _fBtnSlug === 'main' ? '/' : (_fValidSlug ? '/' + _fBtnSlug : '#conversation');
+              const _fIsPrimaryCta = _fBtnSlug === '' || _fBtnSlug === 'book-a-30-minute-conversation';
             %>
             <% if (_fBtnText) { %>
-            <a href="<%= _fBtnHref %>" class="btn btn-primary"><%- content[_k + '.button_text'] %></a>
+            <a href="<%= _fBtnHref %>" class="btn <%= _fIsPrimaryCta ? 'btn-primary' : 'btn-outline' %>"><%- content[_k + '.button_text'] %></a>
             <% } %>
         </div>
     </div>
