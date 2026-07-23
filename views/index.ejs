@@ -1692,9 +1692,15 @@
             <%
               const _heroWa = (content[_k + '.whatsapp'] || '').trim();
               const _heroWaValid = /^https:\/\/(wa\.me|api\.whatsapp\.com)\//.test(_heroWa);
+              const _heroCtaLink = (content[_k + '.cta_link'] || '').trim();
+              const _heroCtaLinkValid = /^https:\/\/calendar\.app\.google\//.test(_heroCtaLink);
             %>
             <div class="hero-cta-row">
+                <% if (_heroCtaLinkValid) { %>
+                <a href="<%= _heroCtaLink %>" class="btn btn-primary" target="_blank" rel="noopener"><%- content[_k + '.cta'] %></a>
+                <% } else { %>
                 <a href="#conversation" class="btn btn-primary"><%- content[_k + '.cta'] %></a>
+                <% } %>
                 <% if (_heroWaValid) { %>
                 <a href="<%= _heroWa %>" class="btn btn-whatsapp" target="_blank" rel="noopener nofollow">WhatsApp us</a>
                 <% } %>
