@@ -1237,7 +1237,10 @@
         }
 
         .filter-proof-rows {
-            margin-top: 1.5rem;
+            margin-top: 2rem;
+            background: var(--charcoal);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
         }
 
         .filter .btn {
@@ -2032,15 +2035,18 @@
         <div class="fourcards-grid">
             <% for (let _n = 1; _n <= 4; _n++) { %>
             <%
-              const _fcSlug = (content[_k + '.card_' + _n + '_link'] || '').trim();
-              const _fcValidSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(_fcSlug);
+              // Optional trailing #instance_id anchor lets a testimonial card
+              // deep-link to its specific case study (e.g. "what-we-have-done
+              // #casestudy2__2") rather than just the page.
+              const _fcLink = (content[_k + '.card_' + _n + '_link'] || '').trim();
+              const _fcMatch = /^([a-z0-9]+(?:-[a-z0-9]+)*)(?:#([a-z0-9]+(?:__[0-9]+)?))?$/.exec(_fcLink);
             %>
             <article class="fourcard">
                 <div class="fourcard-number"><%- content[_k + '.card_' + _n + '_number'] %></div>
                 <h3><%- content[_k + '.card_' + _n + '_title'] %></h3>
                 <p><%- content[_k + '.card_' + _n + '_body'] %></p>
-                <% if (_fcValidSlug) { %>
-                <a href="/<%= _fcSlug %>" class="fourcard-link">Read the full story</a>
+                <% if (_fcMatch) { %>
+                <a href="/<%= _fcMatch[1] %><%= _fcMatch[2] ? '#' + _fcMatch[2] : '' %>" class="fourcard-link">Read the full story</a>
                 <% } %>
             </article>
             <% } %>
@@ -2267,12 +2273,21 @@
                 <% for (let _r = 1; _r <= 3; _r++) { %>
                 <% const _fAction = content[_k + '.row_' + _r + '_action']; %>
                 <% const _fClient = content[_k + '.row_' + _r + '_client']; %>
+                <% const _fTarget = (caseStudyAnchors || [])[_r - 1]; %>
                 <% if ((_fAction || _fClient) && ((_fAction || '') + (_fClient || '')).trim()) { %>
+                <% if (_fTarget) { %>
+                <a class="proof-row proof-row-link" href="<%= _fTarget %>">
+                    <svg class="proof-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><%- PROOF_ICONS[_r - 1] %></svg>
+                    <div class="proof-action"><%- _fAction %></div>
+                    <div class="proof-client"><%- _fClient %></div>
+                </a>
+                <% } else { %>
                 <div class="proof-row">
                     <svg class="proof-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><%- PROOF_ICONS[_r - 1] %></svg>
                     <div class="proof-action"><%- _fAction %></div>
                     <div class="proof-client"><%- _fClient %></div>
                 </div>
+                <% } %>
                 <% } %>
                 <% } %>
             </div>
@@ -2297,15 +2312,11 @@
 <% if (_tpl === 'proofstrip') { %>
 <% const _k = _iid; %>
 <%
-  // Selected-examples rows jump to the evidence sections that follow this
-  // proof strip on the same page, in page order - so row 1 always lands on
-  // whichever case study comes first after the strip, and so on.
-  const _EVIDENCE_TPLS = ['biography', 'casestudy', 'casestudy2'];
-  const _proofTargets = [];
-  for (let _j = _i + 1; _j < sectionOrder.length && _proofTargets.length < 3; _j++) {
-    const _jIid = sectionOrder[_j];
-    if (_EVIDENCE_TPLS.includes(instanceTemplates[_jIid] || _jIid)) _proofTargets.push(_jIid);
-  }
+  // Selected-examples rows jump to the 3 case studies on What We Have Done,
+  // in order - caseStudyAnchors is computed once per request in server.js
+  // from that page's own section order, so this works whether this proof
+  // strip is rendered on that page itself or anywhere else.
+  const _proofTargets = caseStudyAnchors || [];
 %>
 <!-- PROOF STRIP -->
 <section class="proofstrip<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
@@ -2329,7 +2340,7 @@
                 <% const _target = _proofTargets[_r - 1]; %>
                 <% if ((_action || _client) && ((_action || '') + (_client || '')).trim()) { %>
                 <% if (_target) { %>
-                <a class="proof-row proof-row-link" href="#<%= _target %>">
+                <a class="proof-row proof-row-link" href="<%= _target %>">
                     <svg class="proof-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><%- PROOF_ICONS[_r - 1] %></svg>
                     <div class="proof-action"><%- _action %></div>
                     <div class="proof-client"><%- _client %></div>

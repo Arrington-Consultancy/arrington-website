@@ -492,6 +492,28 @@ async function renderPage(req, res, next, pageSlug) {
     const instanceTemplates = {};
     for (const iid of sectionOrder) instanceTemplates[iid] = baseOf(iid);
 
+    // Selected-examples proof-strip rows (on both the homepage's `filter`
+    // template and What We Have Done's own `proofstrip` template) jump to
+    // the 3 case studies on What We Have Done, in page order. Computed once
+    // per request from that page's own section order — not the current
+    // page's — since the homepage strip has no local case-study sections of
+    // its own to scroll to.
+    const EVIDENCE_TEMPLATES = ['biography', 'casestudy', 'casestudy2'];
+    let caseStudyAnchors = [];
+    if (pageSlug === 'what-we-have-done') {
+      caseStudyAnchors = sectionOrder
+        .filter(iid => EVIDENCE_TEMPLATES.includes(instanceTemplates[iid]))
+        .map(iid => `/what-we-have-done#${iid}`);
+    } else {
+      const { rows: wwhdRows } = await db.query(
+        "SELECT section_order FROM pages WHERE slug = 'what-we-have-done'"
+      );
+      const wwhdOrder = Array.isArray(wwhdRows[0]?.section_order) ? wwhdRows[0].section_order : [];
+      caseStudyAnchors = wwhdOrder
+        .filter(iid => EVIDENCE_TEMPLATES.includes(baseOf(iid)))
+        .map(iid => `/what-we-have-done#${iid}`);
+    }
+
     // Clients with no editing capabilities see the same as public
     const userRole = res.locals.user?.role;
     const canEdit = res.locals.user ? hasCapability(userRole, 'edit_content') : false;
@@ -538,7 +560,7 @@ async function renderPage(req, res, next, pageSlug) {
     res.render('index', {
       content, theme, activeTheme, themes,
       sectionOrder: renderOrder, hiddenSections, instanceTemplates,
-      currentPage, allPages, seo,
+      currentPage, allPages, seo, caseStudyAnchors,
       canEdit, capabilities, showAdminPanel,
       // Unset until the GA4 property exists — see deployment report for the
       // one external step needed before setting this on Railway.
