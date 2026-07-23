@@ -1198,6 +1198,13 @@
             border-right: 0;
         }
 
+        .proof-icon {
+            width: 26px;
+            height: 26px;
+            color: var(--accent);
+            margin: 0 auto;
+        }
+
         .proof-action {
             font-size: 0.72rem;
             text-transform: uppercase;
@@ -1652,6 +1659,17 @@
 </div>
 <% } %>
 
+
+<%
+  // Three line icons for the proof-strip rows (built/exited, turnaround,
+  // improved margin). Hand-drawn paths, single stroke weight, no fill -
+  // they inherit colour from .proof-icon via currentColor.
+  const PROOF_ICONS = [
+    '<path d="M7 17L17 7"/><path d="M9 7h8v8"/>',
+    '<path d="M4 12a8 8 0 1 0 8-8"/><path d="M4 12l4-4M4 12l4 4"/>',
+    '<path d="M5 19V13"/><path d="M12 19V9"/><path d="M19 19V5"/>'
+  ];
+%>
 <div id="cms-sections">
 <% for (let _i = 0; _i < sectionOrder.length; _i++) { %>
 <% const _iid = sectionOrder[_i]; %>
@@ -2126,6 +2144,7 @@
                 <% const _fClient = content[_k + '.row_' + _r + '_client']; %>
                 <% if ((_fAction || _fClient) && ((_fAction || '') + (_fClient || '')).trim()) { %>
                 <div class="proof-row">
+                    <svg class="proof-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><%- PROOF_ICONS[_r - 1] %></svg>
                     <div class="proof-action"><%- _fAction %></div>
                     <div class="proof-client"><%- _fClient %></div>
                 </div>
@@ -2173,6 +2192,7 @@
                 <% const _client = content[_k + '.row_' + _r + '_client']; %>
                 <% if ((_action || _client) && ((_action || '') + (_client || '')).trim()) { %>
                 <div class="proof-row">
+                    <svg class="proof-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><%- PROOF_ICONS[_r - 1] %></svg>
                     <div class="proof-action"><%- _action %></div>
                     <div class="proof-client"><%- _client %></div>
                 </div>
