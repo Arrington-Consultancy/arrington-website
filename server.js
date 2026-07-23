@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const express = require('express');
+const compression = require('compression');
 const path = require('path');
 const session = require('express-session');
 const PgSession = require('connect-pg-simple')(session);
@@ -36,11 +37,20 @@ app.set('trust proxy', 1);
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// HTTPS enforcement in production (belt and braces — Railway already terminates
-// TLS, but this guarantees any plain HTTP request is redirected).
+// Canonical host + HTTPS enforcement in production, combined into a single
+// 301 so a plain-HTTP request to the bare apex domain redirects straight to
+// https://www...<path> in one hop rather than two separate redirects. Only
+// the bare apex is rewritten to www — any other host (e.g. Railway's own
+// default domain) is left alone, it just gets the HTTPS check.
+const CANONICAL_HOST = 'www.arringtonconsultancy.com';
+const APEX_HOST = 'arringtonconsultancy.com';
 app.use((req, res, next) => {
-  if (isProd && req.header('x-forwarded-proto') !== 'https') {
-    return res.redirect(301, `https://${req.header('host')}${req.url}`);
+  if (!isProd) return next();
+  const host = (req.header('host') || '').toLowerCase();
+  const targetHost = host === APEX_HOST ? CANONICAL_HOST : host;
+  const isHttps = req.header('x-forwarded-proto') === 'https';
+  if (targetHost !== host || !isHttps) {
+    return res.redirect(301, `https://${targetHost}${req.url}`);
   }
   next();
 });
@@ -49,6 +59,11 @@ app.use((req, res, next) => {
 app.use(morgan(isProd ? 'combined' : 'dev', {
   skip: (req) => req.url.startsWith('/img/')
 }));
+
+// Gzip compression for text responses (HTML, CSS, JS, JSON, SVG). Images
+// served from /img/:key are already binary (JPEG/WebP), so compression
+// provides no benefit there and the middleware skips them automatically.
+app.use(compression());
 
 // Per-request CSP nonce for inline <style> / <script> blocks in the
 // rendered views. A fresh nonce per request means an attacker cannot
@@ -129,19 +144,33 @@ app.get('/health', async (req, res) => {
   }
 });
 
-// Static files
-app.use(express.static(path.join(__dirname, 'public')));
+// Static files. These only change on redeploy, so a 1-day browser cache is
+// safe; ETag (on by default) still forces revalidation before serving
+// anything actually stale past that window.
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: '1d'
+}));
 
 // Serve images from database. Instance-scoped keys (e.g. `headshot__hero__2`)
 // fall back to the base key (`headshot`) when the per-instance image has not
 // yet been uploaded — that way a freshly-duplicated hero shows the default
-// photo until Tom uploads a different one.
+// photo until Tom uploads a different one. A `.webp` suffix looks up the
+// `<key>__webp` row instead (same fallback rule applied to the webp variant),
+// so <picture><source> requests resolve without ever 404ing — a failed
+// <source> fetch has no defined fallback in the picture-element spec, so the
+// webp row must always exist wherever a <picture> element references one.
 app.get('/img/:key', async (req, res, next) => {
   try {
-    const requested = req.params.key;
-    const candidates = [requested];
+    let requested = req.params.key;
+    let wantsWebp = false;
+    if (requested.endsWith('.webp')) {
+      wantsWebp = true;
+      requested = requested.slice(0, -5);
+    }
+    const toLookupKey = (k) => wantsWebp ? `${k}__webp` : k;
+    const candidates = [toLookupKey(requested)];
     const sep = requested.indexOf('__');
-    if (sep > 0) candidates.push(requested.slice(0, sep));
+    if (sep > 0) candidates.push(toLookupKey(requested.slice(0, sep)));
     for (const key of candidates) {
       const { rows } = await db.query(
         'SELECT data, mime_type FROM images WHERE image_key = $1',
@@ -149,7 +178,11 @@ app.get('/img/:key', async (req, res, next) => {
       );
       if (rows.length > 0) {
         res.set('Content-Type', rows[0].mime_type);
-        res.set('Cache-Control', 'no-cache');
+        // Images rarely change and are content-addressed by key, but an
+        // admin can re-upload one under the same key - a moderate max-age
+        // with the automatic ETag Express sends keeps repeat visits fast
+        // without risking long-lived staleness after a real replacement.
+        res.set('Cache-Control', 'public, max-age=86400, must-revalidate');
         return res.send(rows[0].data);
       }
     }
@@ -180,19 +213,32 @@ app.get('/sitemap.xml', async (req, res, next) => {
     const { rows: restricted } = await db.query('SELECT DISTINCT page_id FROM page_access');
     const restrictedIds = new Set(restricted.map(r => r.page_id));
     const { rows } = await db.query(
-      'SELECT id, slug, hidden, noindex, updated_at FROM pages ORDER BY sort_order, created_at'
+      'SELECT id, slug, hidden, noindex, section_order FROM pages ORDER BY sort_order, created_at'
     );
     const pubPages = rows.filter(p => !p.hidden && !p.noindex && !restrictedIds.has(p.id));
-    const urls = pubPages.map(p => {
+    const urlEntries = await Promise.all(pubPages.map(async (p) => {
       const loc = p.slug === 'main' ? `${base}/` : `${base}/${p.slug}`;
       let lastmod = '';
-      if (p.updated_at) {
-        try { lastmod = `<lastmod>${new Date(p.updated_at).toISOString().slice(0, 10)}</lastmod>`; } catch (e) { /* skip */ }
+      // pages.updated_at also gets bumped by structural admin actions (section
+      // reorder, hide/show, nav sort) that aren't real content edits, so it
+      // can't be trusted as a "genuine change" signal. content.updated_at only
+      // changes when a section's actual text is edited, so the latest one
+      // across this page's own sections is the accurate lastmod value.
+      const order = Array.isArray(p.section_order) ? p.section_order : [];
+      if (order.length > 0) {
+        const { rows: contentRows } = await db.query(
+          'SELECT MAX(updated_at) AS max_updated FROM content WHERE section_key LIKE ANY($1)',
+          [order.map(iid => `${iid}.%`)]
+        );
+        const maxUpdated = contentRows[0] && contentRows[0].max_updated;
+        if (maxUpdated) {
+          try { lastmod = `<lastmod>${new Date(maxUpdated).toISOString().slice(0, 10)}</lastmod>`; } catch (e) { /* skip */ }
+        }
       }
       return `  <url><loc>${escapeXml(loc)}</loc>${lastmod}</url>`;
-    }).join('\n');
+    }));
     res.type('application/xml').send(
-      `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
+      `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urlEntries.join('\n')}\n</urlset>\n`
     );
   } catch (err) {
     next(err);
@@ -298,6 +344,33 @@ const baseOf = (id) => {
 const isValid = (id) => baseOf(id) !== null;
 
 // Shared page renderer — serves both GET / and GET /:slug
+// Shared branded 404 renderer — used both by the catch-all route at the
+// bottom of the file and by renderPage()'s own not-found/restricted-access
+// branches, so every kind of missing page gets the same on-brand result
+// instead of the bare "Not found" text a naive early-return would send.
+async function render404(req, res) {
+  if (!req.accepts('html')) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  try {
+    const { rows: allAccessRows } = await db.query('SELECT DISTINCT page_id FROM page_access');
+    const restrictedPageIds = new Set(allAccessRows.map(r => r.page_id));
+    const { rows: pageRows } = await db.query(
+      'SELECT id, slug, title, nav_label, hidden, show_in_nav FROM pages ORDER BY sort_order, created_at'
+    );
+    const pages = pageRows.filter(p => !p.hidden && !restrictedPageIds.has(p.id) && p.show_in_nav);
+    const { rows: themeRows } = await db.query(
+      "SELECT content FROM content WHERE section_key = 'site.theme'"
+    );
+    const activeTheme = (themeRows[0] && themeRows[0].content) || 'dark';
+    const theme = themes[activeTheme] || themes.dark;
+    res.status(404).render('404', { pages, theme });
+  } catch (err) {
+    console.error('404 handler failed:', err.message);
+    res.status(404).send('Not found');
+  }
+}
+
 async function renderPage(req, res, next, pageSlug) {
   try {
     // Load the requested page
@@ -305,7 +378,7 @@ async function renderPage(req, res, next, pageSlug) {
       'SELECT * FROM pages WHERE slug = $1', [pageSlug]
     );
     if (pageRows.length === 0) {
-      return res.status(404).send('Not found');
+      return render404(req, res);
     }
     const currentPage = pageRows[0];
 
@@ -320,7 +393,7 @@ async function renderPage(req, res, next, pageSlug) {
     // matters for pages like a Google Ads landing page: deliberately kept
     // out of the nav, but must still work when someone clicks the ad.
     if (isRestricted && !res.locals.user) {
-      return res.status(404).send('Not found');
+      return render404(req, res);
     }
     // Clients only see restricted pages they have explicit access to.
     // Hidden-but-unrestricted pages are visible to clients the same as the
@@ -331,7 +404,7 @@ async function renderPage(req, res, next, pageSlug) {
         [currentPage.id, res.locals.user.id]
       );
       if (access.length === 0) {
-        return res.status(404).send('Not found');
+        return render404(req, res);
       }
     }
 
@@ -466,7 +539,10 @@ async function renderPage(req, res, next, pageSlug) {
       content, theme, activeTheme, themes,
       sectionOrder: renderOrder, hiddenSections, instanceTemplates,
       currentPage, allPages, seo,
-      canEdit, capabilities, showAdminPanel
+      canEdit, capabilities, showAdminPanel,
+      // Unset until the GA4 property exists — see deployment report for the
+      // one external step needed before setting this on Railway.
+      ga4Id: process.env.GA4_MEASUREMENT_ID || ''
     });
   } catch (err) {
     next(err);
@@ -486,12 +562,7 @@ app.get('/:slug', (req, res, next) => {
 });
 
 // 404 handler — must come after all routes
-app.use((req, res) => {
-  if (req.accepts('html')) {
-    return res.status(404).send('Not found');
-  }
-  res.status(404).json({ error: 'Not found' });
-});
+app.use((req, res) => render404(req, res));
 
 // Central error handler — must be the last middleware
 // eslint-disable-next-line no-unused-vars

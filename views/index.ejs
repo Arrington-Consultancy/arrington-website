@@ -8,6 +8,11 @@
     <% if (seo.keywords) { %><meta name="keywords" content="<%= seo.keywords %>"><% } %>
     <% if (seo.noindex) { %><meta name="robots" content="noindex, nofollow"><% } %>
     <link rel="canonical" href="<%= seo.canonical %>">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" href="/icons/icon-32.png" type="image/png" sizes="32x32">
+    <link rel="icon" href="/icons/icon-16.png" type="image/png" sizes="16x16">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/site.webmanifest">
     <%# ---- Open Graph (Facebook, LinkedIn, etc.) ---- %>
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="<%= seo.siteName %>">
@@ -21,8 +26,65 @@
     <meta name="twitter:title" content="<%= seo.ogTitle %>">
     <% if (seo.ogDescription) { %><meta name="twitter:description" content="<%= seo.ogDescription %>"><% } %>
     <% if (seo.ogImage) { %><meta name="twitter:image" content="<%= seo.ogImage %>"><% } %>
+    <%# ---- Structured data (Schema.org). Verified facts only: legal name,
+         trading name, company number, phone, email, service area. No Review
+         or AggregateRating yet - added only once reviews are live on-site. ---- %>
+    <script type="application/ld+json" nonce="<%= nonce %>">
+    {
+      "@context": "https://schema.org",
+      "@type": ["Organization", "ProfessionalService"],
+      "name": "Arrington Consultancy",
+      "legalName": "Arrington Business Consultancy Ltd",
+      "alternateName": "Arrington Business Consultancy Ltd",
+      "url": "https://www.arringtonconsultancy.com/",
+      "telephone": "+441752477026",
+      "email": "tom@arringtonconsultancy.com",
+      "identifier": {
+        "@type": "PropertyValue",
+        "propertyID": "GB:CompanyNumber",
+        "value": "17122684"
+      },
+      "areaServed": [
+        { "@type": "AdministrativeArea", "name": "Devon" },
+        { "@type": "AdministrativeArea", "name": "Cornwall" }
+      ],
+      "founder": {
+        "@type": "Person",
+        "name": "Tom Arrington",
+        "jobTitle": "Managing Director"
+      },
+      "sameAs": [
+        "https://www.google.com/maps/place/Arrington+Business+Consultancy/data=!4m7!3m6!1s0x68ae21a1b13dfe61:0x1e5cd5fd5fd3d54a!8m2!3d47.73855!4d12.5088275!16s%2Fg%2F11z309prfq!19sChIJYf49saEhrmgRStXTX_3VXB4"
+      ]
+    }
+    </script>
+    <script type="application/ld+json" nonce="<%= nonce %>">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Arrington Consultancy",
+      "url": "https://www.arringtonconsultancy.com/"
+    }
+    </script>
+    <% if (currentPage.slug === 'about-us') { %>
+    <script type="application/ld+json" nonce="<%= nonce %>">
+    {
+      "@context": "https://schema.org",
+      "@type": "Person",
+      "name": "Tom Arrington",
+      "jobTitle": "Managing Director",
+      "worksFor": {
+        "@type": "Organization",
+        "name": "Arrington Consultancy",
+        "url": "https://www.arringtonconsultancy.com/"
+      },
+      "url": "https://www.arringtonconsultancy.com/about-us"
+    }
+    </script>
+    <% } %>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=DM+Serif+Display&display=swap">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
     <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18129914078"></script>
     <script nonce="<%= nonce %>">
@@ -30,6 +92,11 @@
         function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());
         gtag('config', 'AW-18129914078');
+        <% if (ga4Id) { %>
+        // GA4 shares the same gtag.js loader as the Ads tag above — no second
+        // script tag needed, just a second config call once the property exists.
+        gtag('config', '<%= ga4Id %>');
+        <% } %>
     </script>
     <meta name="csrf-token" content="<%= csrfToken %>">
     <% if (user) { %>
@@ -258,7 +325,7 @@
             align-items: center;
         }
 
-        .hero-text h1 {
+        .hero-text .hero-heading {
             font-family: 'DM Serif Display', serif;
             font-size: clamp(2.2rem, 4.5vw, 3.2rem);
             color: var(--text-bright);
@@ -288,6 +355,12 @@
             align-items: center;
             justify-content: center;
             overflow: hidden;
+        }
+
+        .hero-photo picture {
+            display: block;
+            width: 100%;
+            height: 100%;
         }
 
         .hero-photo img {
@@ -917,6 +990,12 @@
             margin: 1.75rem 0;
         }
 
+        .case-photo picture {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
         .case-photo img {
             width: 100%;
             height: 100%;
@@ -1096,6 +1175,11 @@
             margin-bottom: 1.5rem;
         }
 
+        .intervention-header picture {
+            display: block;
+            flex-shrink: 0;
+        }
+
         .intervention-photo {
             width: 100px;
             height: 125px;
@@ -1196,6 +1280,18 @@
 
         .proof-row:last-child {
             border-right: 0;
+        }
+
+        .proof-row-link {
+            color: inherit;
+            text-decoration: none;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+        }
+
+        .proof-row-link:hover,
+        .proof-row-link:focus-visible {
+            background-color: var(--surface-alt, rgba(0, 0, 0, 0.03));
         }
 
         .proof-icon {
@@ -1578,7 +1674,7 @@
                 padding: 5.5rem 1.25rem 3.5rem;
             }
 
-            .hero-text h1 {
+            .hero-text .hero-heading {
                 font-size: 1.85rem;
             }
 
@@ -1669,6 +1765,12 @@
     '<path d="M4 12a8 8 0 1 0 8-8"/><path d="M4 12l4-4M4 12l4 4"/>',
     '<path d="M5 19V13"/><path d="M12 19V9"/><path d="M19 19V5"/>'
   ];
+  // Every page must have exactly one H1. hero renders a real <h1> itself and
+  // flips this flag; every other template's main heading promotes to <h1>
+  // only if nothing has claimed it yet on this page, then falls back to <h2>
+  // for every subsequent heading - so page order determines which section's
+  // heading becomes the H1, and it's never duplicated.
+  let _h1Used = false;
 %>
 <div id="cms-sections">
 <% for (let _i = 0; _i < sectionOrder.length; _i++) { %>
@@ -1678,6 +1780,7 @@
 <% if (_tpl === 'hero') { %>
 <% const _k = _iid; %>
 <% const _heroImg = _iid === 'hero' ? 'headshot' : 'headshot__' + _iid; %>
+<% const _heroHTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %>
 <!-- HERO -->
 <section class="hero<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
     <div class="hero-inner">
@@ -1687,7 +1790,7 @@
             <% if (canEdit) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
         <% if (canEdit) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
         <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
-            <h1><%- content[_k + '.heading'] %></h1>
+            <<%= _heroHTag %> class="hero-heading"><%- content[_k + '.heading'] %></<%= _heroHTag %>>
             <p class="sub"><%- content[_k + '.subtext'] %></p>
             <%
               const _heroWa = (content[_k + '.whatsapp'] || '').trim();
@@ -1707,7 +1810,10 @@
             </div>
         </div>
         <div class="hero-photo">
-            <img src="/img/<%= _heroImg %>" alt="Arrington Business Consultancy">
+            <picture>
+                <source srcset="/img/<%= _heroImg %>.webp" type="image/webp">
+                <img src="/img/<%= _heroImg %>" alt="Arrington Business Consultancy"<%- _heroHTag === 'h2' ? ' loading="lazy"' : '' %>>
+            </picture>
             <% if (canEdit) { %><button class="cms-img-btn" data-image="<%= _heroImg %>" title="Change photo">&#9998;</button><% } %>
         </div>
     </div>
@@ -1748,7 +1854,7 @@
 <% if (_tpl === 'biography') { %>
 <% const _k = _iid; %>
 <!-- BIOGRAPHY -->
-<section class="problem<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
+<section class="problem<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" id="<%= _iid %>" data-section-id="<%= _iid %>">
     <div class="section-inner cms-section" data-section="<%= _k %>">
         <% if (canEdit) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
         <% if (canEdit) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
@@ -1756,7 +1862,7 @@
         <% if (canEdit) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
         <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
         <p class="section-label"><%- content[_k + '.label'] %></p>
-        <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
+        <% const _hTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %><<%= _hTag %> class="section-heading"><%- content[_k + '.heading'] %></<%= _hTag %>>
         <% if ((content[_k + '.stat_number'] || '').trim()) { %>
         <div class="stat-callout">
             <span class="stat-num"><%- content[_k + '.stat_number'] %></span>
@@ -1769,7 +1875,10 @@
         %>
         <% if (_hasBioPhoto) { %>
         <div class="case-photo">
-            <img src="/img/<%= _bioPhotoKey %>" alt="">
+            <picture>
+                <source srcset="/img/<%= _bioPhotoKey %>.webp" type="image/webp">
+                <img src="/img/<%= _bioPhotoKey %>" alt="Taxi office and vehicle, representative of the Abacus and Falmouth Taxis case study" loading="lazy">
+            </picture>
         </div>
         <% } %>
         <div class="problem-grid">
@@ -1801,12 +1910,16 @@
           const _hasPhoto = /^[a-z0-9_]+$/i.test(_photoKey);
         %>
         <% if (_hasPhoto) { %>
+        <% const _hTagP = _h1Used ? 'h2' : 'h1'; _h1Used = true; %>
         <div class="intervention-header">
-            <img src="/img/<%= _photoKey %>" alt="" class="intervention-photo">
-            <h2 class="section-heading intervention-heading-left"><%- content[_k + '.heading'] %></h2>
+            <picture>
+                <source srcset="/img/<%= _photoKey %>.webp" type="image/webp">
+                <img src="/img/<%= _photoKey %>" alt="Thomas Arrington, founder of Arrington Consultancy" class="intervention-photo">
+            </picture>
+            <<%= _hTagP %> class="section-heading intervention-heading-left"><%- content[_k + '.heading'] %></<%= _hTagP %>>
         </div>
         <% } else { %>
-        <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
+        <% const _hTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %><<%= _hTag %> class="section-heading"><%- content[_k + '.heading'] %></<%= _hTag %>>
         <% } %>
         <%
           const _quoteAttribution = (content[_k + '.quote_attribution'] || '').trim();
@@ -1843,7 +1956,7 @@
         <% if (canEdit) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
         <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
         <p class="section-label"><%- content[_k + '.label'] %></p>
-        <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
+        <% const _hTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %><<%= _hTag %> class="section-heading"><%- content[_k + '.heading'] %></<%= _hTag %>>
         <div class="approach-steps">
             <div class="step">
                 <div class="step-number">01</div>
@@ -1877,7 +1990,7 @@
         <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
         <div class="insights-header">
             <p class="section-label"><%- content[_k + '.label'] %></p>
-            <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
+            <% const _hTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %><<%= _hTag %> class="section-heading"><%- content[_k + '.heading'] %></<%= _hTag %>>
             <p class="section-sub"><%- content[_k + '.subtext'] %></p>
         </div>
         <div class="insights-grid">
@@ -1912,7 +2025,7 @@
         <% if (canEdit) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
         <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
         <p class="section-label"><%- content[_k + '.label'] %></p>
-        <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
+        <% const _hTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %><<%= _hTag %> class="section-heading"><%- content[_k + '.heading'] %></<%= _hTag %>>
         <% if ((content[_k + '.evidence_intro'] || '').trim()) { %>
         <p class="evidence-intro"><%- content[_k + '.evidence_intro'] %></p>
         <% } %>
@@ -1974,7 +2087,7 @@
                 <% if ((content[_k + '.label'] || '').trim()) { %>
                 <p class="section-label"><%- content[_k + '.label'] %></p>
                 <% } %>
-                <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
+                <% const _hTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %><<%= _hTag %> class="section-heading"><%- content[_k + '.heading'] %></<%= _hTag %>>
                 <% if ((content[_k + '.evidence_intro'] || '').trim()) { %>
                 <p class="evidence-intro"><%- content[_k + '.evidence_intro'] %></p>
                 <% } %>
@@ -2013,7 +2126,7 @@
 <% if (_tpl === 'casestudy') { %>
 <% const _k = _iid; %>
 <!-- CASE STUDY -->
-<section class="case-study<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
+<section class="case-study<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" id="<%= _iid %>" data-section-id="<%= _iid %>">
     <div class="section-inner cms-section" data-section="<%= _k %>">
         <% if (canEdit) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
         <% if (canEdit) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
@@ -2022,7 +2135,7 @@
         <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
         <div class="case-inner">
             <p class="section-label"><%- content[_k + '.label'] %></p>
-            <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
+            <% const _hTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %><<%= _hTag %> class="section-heading"><%- content[_k + '.heading'] %></<%= _hTag %>>
             <p class="section-sub"><%- content[_k + '.subtext'] %></p>
             <% if ((content[_k + '.stat_number'] || '').trim()) { %>
             <div class="stat-callout">
@@ -2036,7 +2149,10 @@
             %>
             <% if (_hasCasePhoto) { %>
             <div class="case-photo">
-                <img src="/img/<%= _casePhotoKey %>" alt="">
+                <picture>
+                    <source srcset="/img/<%= _casePhotoKey %>.webp" type="image/webp">
+                    <img src="/img/<%= _casePhotoKey %>" alt="Boatyard workshop, representative of the Devon marine firm turnaround case study" loading="lazy">
+                </picture>
             </div>
             <% } %>
             <div class="case-timeline">
@@ -2067,7 +2183,7 @@
 <% if (_tpl === 'casestudy2') { %>
 <% const _k = _iid; %>
 <!-- CASE STUDY 2 - TRISTAN -->
-<section class="casestudy2<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
+<section class="casestudy2<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" id="<%= _iid %>" data-section-id="<%= _iid %>">
     <div class="section-inner cms-section" data-section="<%= _k %>">
         <% if (canEdit) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
         <% if (canEdit) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
@@ -2076,7 +2192,7 @@
         <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
         <div class="casestudy2-inner">
             <p class="section-label"><%- content[_k + '.label'] %></p>
-            <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
+            <% const _hTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %><<%= _hTag %> class="section-heading"><%- content[_k + '.heading'] %></<%= _hTag %>>
             <p class="casestudy2-intro"><%- content[_k + '.intro'] %></p>
             <% if ((content[_k + '.stat_number'] || '').trim()) { %>
             <div class="stat-callout">
@@ -2090,7 +2206,10 @@
             %>
             <% if (_hasCs2Photo) { %>
             <div class="case-photo">
-                <img src="/img/<%= _cs2PhotoKey %>" alt="">
+                <picture>
+                    <source srcset="/img/<%= _cs2PhotoKey %>.webp" type="image/webp">
+                    <img src="/img/<%= _cs2PhotoKey %>" alt="Treatment room interior, representative of the aesthetic clinics case study" loading="lazy">
+                </picture>
             </div>
             <% } %>
             <p class="casestudy2-body"><%- content[_k + '.body'] %></p>
@@ -2114,7 +2233,7 @@
         <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
         <div class="assessment-inner">
             <p class="section-label"><%- content[_k + '.label'] %></p>
-            <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
+            <% const _hTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %><<%= _hTag %> class="section-heading"><%- content[_k + '.heading'] %></<%= _hTag %>>
             <div class="assessment-body"><%- content[_k + '.intro'] %></div>
             <div class="assessment-questions">
                 <div class="aq"><%- content[_k + '.q_1'] %></div>
@@ -2141,7 +2260,7 @@
         <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
         <div class="filter-inner">
             <p class="section-label"><%- content[_k + '.label'] %></p>
-            <h2 class="section-heading"><%- content[_k + '.heading'] %></h2>
+            <% const _hTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %><<%= _hTag %> class="section-heading"><%- content[_k + '.heading'] %></<%= _hTag %>>
             <div class="filter-body"><%- content[_k + '.p1'] %></div>
             <% if ((content[_k + '.row_1_action'] || '').trim()) { %>
             <div class="proofstrip-rows filter-proof-rows">
@@ -2177,6 +2296,17 @@
 
 <% if (_tpl === 'proofstrip') { %>
 <% const _k = _iid; %>
+<%
+  // Selected-examples rows jump to the evidence sections that follow this
+  // proof strip on the same page, in page order - so row 1 always lands on
+  // whichever case study comes first after the strip, and so on.
+  const _EVIDENCE_TPLS = ['biography', 'casestudy', 'casestudy2'];
+  const _proofTargets = [];
+  for (let _j = _i + 1; _j < sectionOrder.length && _proofTargets.length < 3; _j++) {
+    const _jIid = sectionOrder[_j];
+    if (_EVIDENCE_TPLS.includes(instanceTemplates[_jIid] || _jIid)) _proofTargets.push(_jIid);
+  }
+%>
 <!-- PROOF STRIP -->
 <section class="proofstrip<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
     <div class="section-inner cms-section" data-section="<%= _k %>">
@@ -2196,12 +2326,21 @@
                 <% for (let _r = 1; _r <= 3; _r++) { %>
                 <% const _action = content[_k + '.row_' + _r + '_action']; %>
                 <% const _client = content[_k + '.row_' + _r + '_client']; %>
+                <% const _target = _proofTargets[_r - 1]; %>
                 <% if ((_action || _client) && ((_action || '') + (_client || '')).trim()) { %>
+                <% if (_target) { %>
+                <a class="proof-row proof-row-link" href="#<%= _target %>">
+                    <svg class="proof-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><%- PROOF_ICONS[_r - 1] %></svg>
+                    <div class="proof-action"><%- _action %></div>
+                    <div class="proof-client"><%- _client %></div>
+                </a>
+                <% } else { %>
                 <div class="proof-row">
                     <svg class="proof-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><%- PROOF_ICONS[_r - 1] %></svg>
                     <div class="proof-action"><%- _action %></div>
                     <div class="proof-client"><%- _client %></div>
                 </div>
+                <% } %>
                 <% } %>
                 <% } %>
             </div>
@@ -2324,6 +2463,23 @@
                 gtag('event', 'conversion', { 'send_to': 'AW-18129914078/h_2rCJeH8aYcEN6RgsVD' });
             } else {
                 console.warn('[Google Ads] gtag not loaded — conversion not sent');
+            }
+        });
+    });
+
+    // Google Calendar booking link — its own named event, kept separate from
+    // the phone/email/WhatsApp conversion above since there is no dedicated
+    // Google Ads conversion label for it yet (see deployment report).
+    document.querySelectorAll('a[href^="https://calendar.app.google/"]').forEach(a => {
+        a.addEventListener('click', () => {
+            console.log('[Tracking] calendar_booking_click fired:', { href: a.href });
+            if (typeof gtag === 'function') {
+                gtag('event', 'calendar_booking_click', {
+                    event_category: 'booking',
+                    event_label: 'Book a 30 minute conversation'
+                });
+            } else {
+                console.warn('[Tracking] gtag not loaded — calendar_booking_click not sent');
             }
         });
     });
