@@ -1739,6 +1739,15 @@
             <span class="stat-label"><%- content[_k + '.stat_label'] %></span>
         </div>
         <% } %>
+        <%
+          const _bioPhotoKey = (content[_k + '.photo_key'] || '').trim();
+          const _hasBioPhoto = /^[a-z0-9_]+$/i.test(_bioPhotoKey);
+        %>
+        <% if (_hasBioPhoto) { %>
+        <div class="case-photo">
+            <img src="/img/<%= _bioPhotoKey %>" alt="">
+        </div>
+        <% } %>
         <div class="problem-grid">
             <div class="problem-right">
                 <p><%- content[_k + '.col_1_p1'] %></p>
