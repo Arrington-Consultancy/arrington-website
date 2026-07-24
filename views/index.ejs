@@ -1233,6 +1233,20 @@
             margin-bottom: 0;
         }
 
+        .intervention-monogram {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: 1px solid var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.4rem;
+            color: var(--accent);
+            flex-shrink: 0;
+        }
+
         @media (max-width: 640px) {
             .intervention-header {
                 flex-direction: column;
@@ -1962,7 +1976,19 @@
             <<%= _hTagP %> class="section-heading intervention-heading-left"><%- content[_k + '.heading'] %></<%= _hTagP %>>
         </div>
         <% } else { %>
+        <%
+          const _monogram = (content[_k + '.monogram'] || '').trim().charAt(0).toUpperCase();
+          const _hasMonogram = /^[A-Z]$/.test(_monogram);
+        %>
+        <% if (_hasMonogram) { %>
+        <% const _hTagM = _h1Used ? 'h2' : 'h1'; _h1Used = true; %>
+        <div class="intervention-header">
+            <div class="intervention-monogram" aria-hidden="true"><%= _monogram %></div>
+            <<%= _hTagM %> class="section-heading intervention-heading-left"><%- content[_k + '.heading'] %></<%= _hTagM %>>
+        </div>
+        <% } else { %>
         <% const _hTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %><<%= _hTag %> class="section-heading"><%- content[_k + '.heading'] %></<%= _hTag %>>
+        <% } %>
         <% } %>
         <%
           const _quoteAttribution = (content[_k + '.quote_attribution'] || '').trim();
