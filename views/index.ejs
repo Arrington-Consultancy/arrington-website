@@ -28,9 +28,12 @@
     <% if (seo.ogImage) { %><meta name="twitter:image" content="<%= seo.ogImage %>"><% } %>
     <%# ---- Structured data (Schema.org). Verified facts only: legal name,
          trading name, company number, phone, email, service area.
-         aggregateRating is only added on the page where real Google reviews
-         are actually displayed - schema.org guidance is that it shouldn't
-         appear where the reviews it summarizes aren't visible on the page. ---- %>
+         No aggregateRating/Review here: Google's own review-snippet policy
+         disqualifies markup where the reviewed entity controls the reviews
+         shown about itself on its own site - including via a Google Business
+         reviews widget, which is exactly what the reviews section is. That
+         data is real (pulled live from Google), but it's not eligible for
+         review-snippet structured data on this domain regardless. ---- %>
     <script type="application/ld+json" nonce="<%= nonce %>">
     {
       "@context": "https://schema.org",
@@ -57,13 +60,7 @@
       },
       "sameAs": [
         "https://www.google.com/maps/place/Arrington+Business+Consultancy/data=!4m7!3m6!1s0x68ae21a1b13dfe61:0x1e5cd5fd5fd3d54a!8m2!3d47.73855!4d12.5088275!16s%2Fg%2F11z309prfq!19sChIJYf49saEhrmgRStXTX_3VXB4"
-      ]<%
-        if (currentPage.slug === 'what-business-owners-say' && googleReviews) { %>,
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": <%= googleReviews.rating %>,
-        "reviewCount": <%= googleReviews.userRatingCount %>
-      }<% } %>
+      ]
     }
     </script>
     <script type="application/ld+json" nonce="<%= nonce %>">
