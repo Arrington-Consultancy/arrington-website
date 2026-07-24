@@ -33,6 +33,12 @@
             <% for (const [prop, val] of Object.entries(theme.vars)) { %>
             <%= prop %>: <%= val %>;
             <% } %>
+            --odr-red: #c0524a;
+            --odr-red-bg: rgba(192,82,74,0.12);
+            --odr-amber: #c98a3e;
+            --odr-amber-bg: rgba(201,138,62,0.12);
+            --odr-green: #4a8f6a;
+            --odr-green-bg: rgba(74,143,106,0.12);
         }
         * { box-sizing: border-box; }
         @media (prefers-reduced-motion: reduce) {
@@ -54,7 +60,7 @@
         }
         header img { height: 32px; width: auto; }
         main {
-            max-width: 620px;
+            max-width: 640px;
             margin: 0 auto;
             padding: 2.5rem 1.5rem 5rem;
         }
@@ -66,7 +72,7 @@
             color: var(--accent);
             margin-bottom: 0.9rem;
         }
-        h1, h2 {
+        h1, h2, h3 {
             font-family: 'DM Serif Display', serif;
             font-weight: 400;
             color: var(--text-bright);
@@ -75,6 +81,7 @@
         }
         h1 { font-size: clamp(1.7rem, 5vw, 2.2rem); }
         h2 { font-size: 1.4rem; }
+        h3 { font-size: 1.05rem; margin-bottom: 0.4rem; }
         p { color: var(--text); margin: 0 0 1.2rem; }
         .odr-meta {
             font-size: 0.88rem;
@@ -180,28 +187,72 @@
         .odr-back:hover, .odr-back:focus-visible { color: var(--text-bright); }
         .odr-back:disabled { visibility: hidden; }
 
-        .odr-result-item {
-            padding: 1.5rem 0;
-            border-top: 1px solid var(--border);
+        /* ---- results: score + band, shown first ---- */
+        .odr-score-block {
+            display: flex;
+            align-items: baseline;
+            gap: 1rem;
+            flex-wrap: wrap;
+            padding: 1.5rem 1.6rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            margin-bottom: 2rem;
         }
-        .odr-result-item:first-of-type { border-top: none; }
-        .odr-result-tag {
-            font-size: 0.7rem;
+        .odr-score-num {
+            font-family: 'DM Serif Display', serif;
+            font-size: 2.2rem;
+            color: var(--text-bright);
+            line-height: 1;
+        }
+        .odr-score-band {
+            font-size: 0.72rem;
             text-transform: uppercase;
             letter-spacing: 0.1em;
             font-weight: 700;
             color: var(--accent);
-            margin-bottom: 0.5rem;
         }
-        .odr-result-item p { margin: 0; font-size: 0.95rem; }
+        .odr-score-body {
+            flex-basis: 100%;
+            margin: 0.5rem 0 0;
+            font-size: 0.92rem;
+            color: var(--text-muted);
+        }
 
-        .odr-clear {
-            padding: 1.25rem 1.4rem;
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            background: rgba(61,107,82,0.06);
-            margin-bottom: 0.5rem;
+        /* ---- results: eight RAG rows ---- */
+        .odr-result-item {
+            padding: 1.25rem 0;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
         }
+        .odr-result-item:first-of-type { border-top: none; }
+        .odr-rag-pill {
+            flex-shrink: 0;
+            width: 64px;
+            text-align: center;
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 700;
+            padding: 0.3rem 0;
+            border-radius: 20px;
+            margin-top: 0.15rem;
+        }
+        .odr-rag-red { color: var(--odr-red); background: var(--odr-red-bg); }
+        .odr-rag-amber { color: var(--odr-amber); background: var(--odr-amber-bg); }
+        .odr-rag-green { color: var(--odr-green); background: var(--odr-green-bg); }
+        .odr-result-body h3 { font-size: 0.98rem; margin-bottom: 0.3rem; }
+        .odr-result-body p { margin: 0; font-size: 0.9rem; }
+
+        /* ---- results: commercial summary ---- */
+        .odr-summary {
+            margin-top: 2rem;
+            padding: 1.4rem 1.5rem;
+            background: var(--charcoal, rgba(255,255,255,0.03));
+            border-radius: 6px;
+        }
+        .odr-summary p { margin: 0; font-size: 0.95rem; color: var(--text-bright); }
 
         .odr-disclaimer {
             font-size: 0.82rem;
@@ -221,6 +272,8 @@
         @media (max-width: 480px) {
             .odr-cta-actions { flex-direction: column; }
             .odr-cta-actions .btn { text-align: center; }
+            .odr-result-item { flex-direction: column; gap: 0.5rem; }
+            .odr-rag-pill { width: auto; display: inline-block; padding: 0.3rem 0.75rem; }
         }
     </style>
 </head>
@@ -259,9 +312,18 @@
         <!-- RESULTS -->
         <section class="odr-screen" id="odr-results">
             <p class="odr-label">YOUR RESULT</p>
-            <h2 id="odr-results-heading">Where dependency is building up</h2>
+
+            <div class="odr-score-block">
+                <div class="odr-score-num" id="odr-score-num">0 / 16</div>
+                <div class="odr-score-band" id="odr-score-band">Low dependency</div>
+                <p class="odr-score-body" id="odr-score-body"></p>
+            </div>
+
             <div id="odr-results-list"></div>
-            <div id="odr-results-clear-wrap"></div>
+
+            <div class="odr-summary">
+                <p id="odr-summary-text"></p>
+            </div>
 
             <p class="odr-disclaimer">This is a general reflection tool based on common patterns in owner run businesses, not a professional assessment of your specific business. It does not replace proper financial, legal or commercial advice.</p>
 
@@ -278,118 +340,151 @@
 
     <script nonce="<%= nonce %>">
     (function () {
-        // Each question maps to one commercial-risk category from the brief.
-        // Answer index 0 = flagged as a risk area, 1 = flagged as partial,
-        // 2 = no flag. Observations are grounded in language already used
-        // elsewhere on the site (the "Useful Thinking" assessment/approach
-        // sections), not invented claims.
+        // ============================================================
+        // CONTENT CONFIGURATION - everything below this block and above
+        // the "MECHANISM" comment is pure data. Edit question text,
+        // options, indicator wording or result bands here without
+        // touching any of the scoring/rendering logic further down.
+        // Each option's "score" (2/1/0) maps directly to its category's
+        // Red/Amber/Green result - no separate calculation, so the
+        // indicator always traces back to the literal answer given.
+        // ============================================================
         var QUESTIONS = [
             {
-                id: 'decisions',
-                text: 'When something needs approving or deciding day to day, what usually happens?',
+                id: 'freedom',
+                category: 'Freedom from the business',
+                text: 'Could you take a proper two-week holiday, turn your phone off and trust the business to run without you?',
                 options: [
-                    'It waits for me, even for small things',
-                    'It depends who it lands with',
-                    'Most things get decided by whoever is doing the job'
+                    { text: 'No. I would expect calls, problems or things to stall without me.', score: 2 },
+                    { text: 'Probably, but I would still need to check in and stay available.', score: 1 },
+                    { text: 'Yes. The business would carry on properly without my involvement.', score: 0 }
                 ],
-                risk: {
-                    tag: 'Decision bottlenecks',
-                    body: 'Decisions, approvals and day to day issues are still landing with you. That is common, but it usually means the business is carrying more through one person than it needs to.'
+                indicator: {
+                    red: "You'd expect to be called, chased or needed while away.",
+                    amber: "You could step back briefly, but would still need to check in.",
+                    green: "The business would continue properly without you for a genuine break."
                 }
             },
             {
-                id: 'reliance',
-                text: 'If you took a genuine month off, no phone, no email, no involvement, what would happen?',
+                id: 'decisions',
+                category: 'Decision dependency',
+                text: 'When something needs to be decided, what is the first port of call?',
                 options: [
-                    'It would struggle within days',
-                    'It would be fine for a while, then need me',
-                    'It would run properly without me'
+                    { text: 'Me. Most decisions still come back to me, even when someone else should be able to make them.', score: 2 },
+                    { text: 'It depends who is involved. Some people decide for themselves, others still come to me.', score: 1 },
+                    { text: 'The person responsible usually makes the decision without needing me.', score: 0 }
                 ],
-                risk: {
-                    tag: 'Owner reliance',
-                    body: 'If the business would struggle without you for a month, it may look healthy on the outside while still carrying too much through one person.'
+                indicator: {
+                    red: "Most decisions still route through you, even ones others should be able to make.",
+                    amber: "Some people decide for themselves, others still come to you.",
+                    green: "The person responsible usually decides without needing you."
                 }
             },
             {
                 id: 'visibility',
-                text: 'How do you actually find out how the business is doing?',
+                category: 'Visibility',
+                text: 'How do you get a clear picture of how the business is running and whether everything is working properly?',
                 options: [
-                    'Mostly from being in it day to day, on instinct',
-                    'I get numbers, but not often or not ones I fully trust',
-                    'I have regular reporting I trust'
+                    { text: 'By being there, watching what is happening and picking things up myself.', score: 2 },
+                    { text: 'I get some updates and figures, but I still have to chase or join the dots.', score: 1 },
+                    { text: 'I get clear, regular information I trust without needing to dig for it.', score: 0 }
                 ],
-                risk: {
-                    tag: 'Poor visibility',
-                    body: 'Without information you trust, you often find out about problems once the damage is already done, rather than seeing them coming.'
+                indicator: {
+                    red: "You mainly know what's happening by being there and picking it up yourself.",
+                    amber: "You get some information, but still have to chase it.",
+                    green: "You get clear, regular information you trust without digging for it."
                 }
             },
             {
                 id: 'delegation',
-                text: 'When you delegate something, what usually happens?',
+                category: 'Delegation',
+                text: 'When you outsource a task, what normally happens?',
                 options: [
-                    'It tends to come back to me anyway',
-                    'Depends who it is given to',
-                    'It gets done properly without me checking'
+                    { text: 'I still end up checking it, chasing it or taking it back.', score: 2 },
+                    { text: 'It depends on the person or the task.', score: 1 },
+                    { text: 'It gets handled properly without coming back to me.', score: 0 }
                 ],
-                risk: {
-                    tag: 'Weak delegation',
-                    body: 'If delegated work tends to come back to you anyway, that is often a structural issue rather than a people issue - the decision was never really handed over.'
-                }
-            },
-            {
-                id: 'cash',
-                text: 'How closely do you track cash flow, not just overall profit?',
-                options: [
-                    'I mostly find out when there is a problem',
-                    'I check it, but not consistently',
-                    'I have real visibility, weekly or better'
-                ],
-                risk: {
-                    tag: 'Cash control',
-                    body: 'Profit and cash are different things. Finding out about cash problems after they appear, rather than seeing them coming weekly, limits how much control you actually have.'
-                }
-            },
-            {
-                id: 'margin',
-                text: 'Do you know your margin on what you actually sell, job by job or product by product?',
-                options: [
-                    'Not really, I know the overall picture',
-                    'Roughly, for some of it',
-                    'Yes, clearly'
-                ],
-                risk: {
-                    tag: 'Margin visibility',
-                    body: 'Without margin visibility at the job or product level, it is easy for a business to stay busy while quietly losing money on some of what it sells.'
+                indicator: {
+                    red: "Work you hand off tends to come back to you, one way or another.",
+                    amber: "It depends on the person or the task.",
+                    green: "What you delegate gets handled properly without returning to you."
                 }
             },
             {
                 id: 'management',
-                text: 'If a customer issue or a serious problem needs handling, who deals with it?',
+                category: 'Day-to-day management',
+                text: 'Who keeps the day-to-day running of the business on track?',
                 options: [
-                    'It comes to me',
-                    'Depends on the issue',
-                    'Someone else owns it properly'
+                    { text: "Me. If I'm not involved, standards quickly slip or things don't get done.", score: 2 },
+                    { text: 'I have people who help, but I still need to step in regularly.', score: 1 },
+                    { text: 'The business is well managed day to day without relying on me.', score: 0 }
                 ],
-                risk: {
-                    tag: 'Management structure',
-                    body: 'If serious issues still route to you by default, the business may not yet have a management layer that can absorb pressure without you.'
+                indicator: {
+                    red: "Standards or progress slip when you're not personally involved.",
+                    amber: "You have people helping, but still need to step in regularly.",
+                    green: "The business runs well day to day without relying on you."
+                }
+            },
+            {
+                id: 'commercial',
+                category: 'Commercial understanding',
+                text: 'If I asked what makes the business the most money and what is the biggest drain on its time and money, who could give me the right answer?',
+                options: [
+                    { text: 'It would have to be me. Nobody else really has that understanding.', score: 2 },
+                    { text: "One or two people could probably answer, but I'd still be the person everyone relies on.", score: 1 },
+                    { text: 'The people responsible understand the numbers and could answer confidently without me.', score: 0 }
+                ],
+                indicator: {
+                    red: "You're the only one who really understands what drives profit and cost.",
+                    amber: "One or two people could answer, but you're still the one everyone relies on.",
+                    green: "The people responsible understand the numbers and could answer confidently without you."
                 }
             },
             {
                 id: 'succession',
-                text: 'If you had to sell or step back in the next two years, how ready is the business to run without you?',
+                category: 'Succession readiness',
+                text: 'If you had to step away from the business permanently, what would happen?',
                 options: [
-                    'Not ready, too much depends on me',
-                    'Not sure, never really thought it through',
-                    'Reasonably ready'
+                    { text: 'The business would struggle because too much still depends on me.', score: 2 },
+                    { text: 'It could continue, but there would be disruption and someone would need to take over a lot of what I do.', score: 1 },
+                    { text: 'The business could continue under its existing structure without relying on me.', score: 0 }
                 ],
-                risk: {
-                    tag: 'Succession readiness',
-                    body: 'A business that depends heavily on its owner is harder to value and harder to sell. This matters whether stepping back is two years away or not yet decided.'
+                indicator: {
+                    red: "The business would struggle if you stepped away permanently.",
+                    amber: "It could continue, but there'd be real disruption.",
+                    green: "The business could continue under its existing structure without you."
+                }
+            },
+            {
+                id: 'cash',
+                category: 'Cash control',
+                text: 'How closely do you track cash in the business, not just overall profit?',
+                options: [
+                    { text: "I mostly find out about cash problems once they've already happened.", score: 2 },
+                    { text: "I check it, but not consistently, and I'm sometimes caught out by the position.", score: 1 },
+                    { text: 'I have clear, regular visibility of cash, weekly or better, and rarely find surprises.', score: 0 }
+                ],
+                indicator: {
+                    red: "You mostly find out about cash problems once they've happened.",
+                    amber: "You check cash, but not consistently, and are sometimes caught out.",
+                    green: "You have clear, regular visibility of cash and rarely find surprises."
                 }
             }
         ];
 
+        // Ordered low to high; "max" is the highest total score included in
+        // that band. Combined max score is 16 (8 questions x 2).
+        var BANDS = [
+            { max: 3, label: 'Low dependency', body: 'The business already runs largely independently of you day to day.' },
+            { max: 7, label: 'Emerging dependency', body: 'Some parts of the business still rely on you more than they need to.' },
+            { max: 11, label: 'Significant dependency', body: 'A meaningful share of decisions, oversight or knowledge still sits with you alone.' },
+            { max: 16, label: 'High dependency', body: "Most of the business's day-to-day running, decisions and knowledge currently depend on you directly." }
+        ];
+
+        // ============================================================
+        // MECHANISM - quiz flow, scoring and rendering. Shouldn't need
+        // to change when only the content above is edited.
+        // ============================================================
         var current = 0;
         var answers = new Array(QUESTIONS.length).fill(null);
 
@@ -408,6 +503,10 @@
             el.scrollIntoView({ block: 'start' });
         }
 
+        function ragClass(score) {
+            return score === 2 ? 'red' : (score === 1 ? 'amber' : 'green');
+        }
+
         function renderQuestion() {
             var q = QUESTIONS[current];
             var pct = Math.round(((current) / QUESTIONS.length) * 100);
@@ -421,7 +520,7 @@
                 var checked = answers[current] === i ? ' checked' : '';
                 html += '<div class="odr-option">' +
                     '<input type="radio" name="q_' + q.id + '" id="q_' + q.id + '_' + i + '" value="' + i + '"' + checked + '>' +
-                    '<label for="q_' + q.id + '_' + i + '">' + opt + '</label>' +
+                    '<label for="q_' + q.id + '_' + i + '">' + opt.text + '</label>' +
                     '</div>';
             });
             html += '</div></fieldset>';
@@ -470,33 +569,54 @@
 
         function showResults() {
             progressBar.style.width = '100%';
-            var flagged = [];
-            QUESTIONS.forEach(function (q, i) {
-                if (answers[i] === 0 || answers[i] === 1) {
-                    flagged.push(q.risk);
-                }
+
+            var total = 0;
+            var rows = QUESTIONS.map(function (q, i) {
+                var score = QUESTIONS[i].options[answers[i]].score;
+                total += score;
+                return { category: q.category, score: score, cls: ragClass(score), text: q.indicator[ragClass(score)] };
             });
 
-            var listEl = document.getElementById('odr-results-list');
-            var clearWrap = document.getElementById('odr-results-clear-wrap');
-            var heading = document.getElementById('odr-results-heading');
-
-            if (flagged.length === 0) {
-                heading.textContent = 'No significant dependency flagged';
-                clearWrap.innerHTML = '<div class="odr-clear"><p style="margin:0;">Based on your answers, decisions, visibility and delegation all look reasonably independent of you day to day. Worth revisiting occasionally as the business changes.</p></div>';
-                listEl.innerHTML = '';
-            } else {
-                heading.textContent = 'Where dependency is building up';
-                clearWrap.innerHTML = '';
-                listEl.innerHTML = flagged.map(function (r) {
-                    return '<div class="odr-result-item"><p class="odr-result-tag">' + r.tag + '</p><p>' + r.body + '</p></div>';
-                }).join('');
+            var band = BANDS[BANDS.length - 1];
+            for (var b = 0; b < BANDS.length; b++) {
+                if (total <= BANDS[b].max) { band = BANDS[b]; break; }
             }
+
+            document.getElementById('odr-score-num').textContent = total + ' / 16';
+            document.getElementById('odr-score-band').textContent = band.label;
+            document.getElementById('odr-score-body').textContent = band.body;
+
+            document.getElementById('odr-results-list').innerHTML = rows.map(function (r) {
+                return '<div class="odr-result-item">' +
+                    '<span class="odr-rag-pill odr-rag-' + r.cls + '">' + r.cls + '</span>' +
+                    '<div class="odr-result-body"><h3>' + r.category + '</h3><p>' + r.text + '</p></div>' +
+                    '</div>';
+            }).join('');
+
+            var reds = rows.filter(function (r) { return r.cls === 'red'; }).map(function (r) { return r.category; });
+            var ambers = rows.filter(function (r) { return r.cls === 'amber'; }).map(function (r) { return r.category; });
+            var summary;
+            if (reds.length > 0) {
+                var redPhrase = reds.length === QUESTIONS.length ? 'All eight areas checked are flagged red' :
+                    reds.length + ' of the eight areas checked ' + (reds.length === 1 ? 'is' : 'are') + ' flagged red';
+                summary = 'Based on your answers, ' + redPhrase +
+                    (ambers.length > 0 ? ' and ' + ambers.length + ' amber' : '') +
+                    '. The clearest pressure points are: ' + reds.join(', ') + '.';
+            } else if (ambers.length > 0) {
+                summary = "Based on your answers, nothing is under serious pressure, but " + ambers.join(', ') +
+                    ' ' + (ambers.length === 1 ? 'is' : 'are') + ' worth keeping an eye on as the business grows.';
+            } else {
+                summary = 'Based on your answers, none of the eight areas tested currently show meaningful dependency on you personally.';
+            }
+            document.getElementById('odr-summary-text').textContent = summary;
 
             if (typeof gtag === 'function') {
                 gtag('event', 'dependency_review_complete', {
                     event_category: 'tool',
-                    risk_areas_flagged: flagged.length
+                    score: total,
+                    band: band.label,
+                    red_count: reds.length,
+                    amber_count: ambers.length
                 });
             }
             showScreen(resultsEl);
