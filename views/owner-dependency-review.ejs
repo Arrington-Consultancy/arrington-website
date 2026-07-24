@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Owner Dependency Review | Arrington Consultancy</title>
+    <meta name="description" content="A free, practical 5 minute review to help you see where your business still depends too heavily on you as the owner. No email required, no diagnosis - just a clear, honest look.">
+    <link rel="canonical" href="https://www.arringtonconsultancy.com/owner-dependency-review">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Owner Dependency Review | Arrington Consultancy">
+    <meta property="og:description" content="A free, practical 5 minute review to help you see where your business still depends too heavily on you as the owner.">
+    <meta property="og:url" content="https://www.arringtonconsultancy.com/owner-dependency-review">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" href="/icons/icon-32.png" type="image/png" sizes="32x32">
+    <link rel="icon" href="/icons/icon-16.png" type="image/png" sizes="16x16">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18129914078"></script>
+    <script nonce="<%= nonce %>">
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'AW-18129914078');
+        <% if (ga4Id) { %>
+        gtag('config', '<%= ga4Id %>');
+        <% } %>
+    </script>
+    <style nonce="<%= nonce %>">
+        :root {
+            <% for (const [prop, val] of Object.entries(theme.vars)) { %>
+            <%= prop %>: <%= val %>;
+            <% } %>
+        }
+        * { box-sizing: border-box; }
+        @media (prefers-reduced-motion: reduce) {
+            * { transition: none !important; animation: none !important; }
+        }
+        body {
+            margin: 0;
+            font-family: 'DM Sans', sans-serif;
+            background: var(--black);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        header a {
+            display: inline-flex;
+        }
+        header img { height: 32px; width: auto; }
+        main {
+            max-width: 620px;
+            margin: 0 auto;
+            padding: 2.5rem 1.5rem 5rem;
+        }
+        .odr-label {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 0.9rem;
+        }
+        h1, h2 {
+            font-family: 'DM Serif Display', serif;
+            font-weight: 400;
+            color: var(--text-bright);
+            line-height: 1.25;
+            margin: 0 0 1rem;
+        }
+        h1 { font-size: clamp(1.7rem, 5vw, 2.2rem); }
+        h2 { font-size: 1.4rem; }
+        p { color: var(--text); margin: 0 0 1.2rem; }
+        .odr-meta {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+        }
+        .odr-meta span { color: var(--accent); font-weight: 600; }
+
+        .btn {
+            display: inline-block;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            padding: 0.85rem 1.75rem;
+            border-radius: 3px;
+            text-decoration: none;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        .btn-primary {
+            background: var(--accent);
+            color: var(--black);
+            border-color: var(--accent);
+        }
+        .btn-primary:hover, .btn-primary:focus-visible { background: var(--accent-hover); border-color: var(--accent-hover); }
+        .btn-outline {
+            background: transparent;
+            color: var(--text-bright);
+            border-color: var(--border);
+        }
+        .btn-outline:hover, .btn-outline:focus-visible { border-color: var(--accent); color: var(--accent); }
+        button.btn { font: inherit; }
+
+        .odr-screen { display: none; }
+        .odr-screen.active { display: block; }
+
+        .odr-progress {
+            height: 3px;
+            background: var(--border);
+            border-radius: 2px;
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+        .odr-progress-bar {
+            height: 100%;
+            background: var(--accent);
+            width: 0%;
+        }
+
+        fieldset {
+            border: none;
+            margin: 0 0 2rem;
+            padding: 0;
+        }
+        legend {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.3rem;
+            color: var(--text-bright);
+            margin-bottom: 1.25rem;
+            padding: 0;
+            line-height: 1.4;
+        }
+        .odr-options { display: flex; flex-direction: column; gap: 0.75rem; }
+        .odr-option {
+            display: block;
+            position: relative;
+        }
+        .odr-option input {
+            position: absolute;
+            opacity: 0;
+            width: 1px;
+            height: 1px;
+        }
+        .odr-option label {
+            display: block;
+            padding: 1rem 1.15rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.98rem;
+            color: var(--text);
+        }
+        .odr-option input:checked + label {
+            border-color: var(--accent);
+            color: var(--text-bright);
+            background: rgba(200,164,78,0.06);
+        }
+        .odr-option input:focus-visible + label {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        .odr-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; }
+        .odr-back {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            cursor: pointer;
+            padding: 0.5rem 0;
+        }
+        .odr-back:hover, .odr-back:focus-visible { color: var(--text-bright); }
+        .odr-back:disabled { visibility: hidden; }
+
+        .odr-result-item {
+            padding: 1.5rem 0;
+            border-top: 1px solid var(--border);
+        }
+        .odr-result-item:first-of-type { border-top: none; }
+        .odr-result-tag {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+        .odr-result-item p { margin: 0; font-size: 0.95rem; }
+
+        .odr-clear {
+            padding: 1.25rem 1.4rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: rgba(61,107,82,0.06);
+            margin-bottom: 0.5rem;
+        }
+
+        .odr-disclaimer {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-top: 2.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .odr-cta {
+            margin-top: 2.5rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+        }
+        .odr-cta-actions { display: flex; gap: 0.85rem; flex-wrap: wrap; margin-top: 1.25rem; }
+
+        @media (max-width: 480px) {
+            .odr-cta-actions { flex-direction: column; }
+            .odr-cta-actions .btn { text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="/" aria-label="Arrington Consultancy home">
+            <img src="/img/logo" alt="Arrington Business Consultancy">
+        </a>
+    </header>
+
+    <main>
+        <!-- INTRO -->
+        <section class="odr-screen active" id="odr-intro">
+            <p class="odr-label">FREE COMMERCIAL TOOL</p>
+            <h1>Owner Dependency Review</h1>
+            <p class="odr-meta">Takes about <span>5 minutes</span>. No email required. Results shown immediately.</p>
+            <p>A business can look healthy on the outside and still carry too much through one person. This short review asks eight practical questions about how your business actually runs day to day, and gives you a plain, honest look at where dependency on you might be building up.</p>
+            <p>This is not a personality test and not a professional diagnosis. It is a starting point for your own judgement, based on the same patterns we see across owner run businesses.</p>
+            <button type="button" class="btn btn-primary" id="odr-start">Start the review</button>
+        </section>
+
+        <!-- QUIZ -->
+        <section class="odr-screen" id="odr-quiz">
+            <div class="odr-progress" role="progressbar" aria-valuemin="1" aria-valuemax="8" aria-valuenow="1" id="odr-progress-track">
+                <div class="odr-progress-bar" id="odr-progress-bar"></div>
+            </div>
+            <form id="odr-form">
+                <div id="odr-questions"></div>
+            </form>
+            <div class="odr-nav">
+                <button type="button" class="odr-back" id="odr-back">&larr; Back</button>
+                <span id="odr-step-label" class="odr-meta" style="margin:0;"></span>
+            </div>
+        </section>
+
+        <!-- RESULTS -->
+        <section class="odr-screen" id="odr-results">
+            <p class="odr-label">YOUR RESULT</p>
+            <h2 id="odr-results-heading">Where dependency is building up</h2>
+            <div id="odr-results-list"></div>
+            <div id="odr-results-clear-wrap"></div>
+
+            <p class="odr-disclaimer">This is a general reflection tool based on common patterns in owner run businesses, not a professional assessment of your specific business. It does not replace proper financial, legal or commercial advice.</p>
+
+            <div class="odr-cta">
+                <h2>If any of this sounds familiar</h2>
+                <p>A straightforward 30 minute conversation is usually enough to work out whether a proper commercial review would actually help, with no pressure either way.</p>
+                <div class="odr-cta-actions">
+                    <a href="/book-a-30-minute-conversation" class="btn btn-primary" id="odr-cta-book">Book a 30 minute conversation</a>
+                    <button type="button" class="btn btn-outline" id="odr-restart">Start again</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script nonce="<%= nonce %>">
+    (function () {
+        // Each question maps to one commercial-risk category from the brief.
+        // Answer index 0 = flagged as a risk area, 1 = flagged as partial,
+        // 2 = no flag. Observations are grounded in language already used
+        // elsewhere on the site (the "Useful Thinking" assessment/approach
+        // sections), not invented claims.
+        var QUESTIONS = [
+            {
+                id: 'decisions',
+                text: 'When something needs approving or deciding day to day, what usually happens?',
+                options: [
+                    'It waits for me, even for small things',
+                    'It depends who it lands with',
+                    'Most things get decided by whoever is doing the job'
+                ],
+                risk: {
+                    tag: 'Decision bottlenecks',
+                    body: 'Decisions, approvals and day to day issues are still landing with you. That is common, but it usually means the business is carrying more through one person than it needs to.'
+                }
+            },
+            {
+                id: 'reliance',
+                text: 'If you took a genuine month off, no phone, no email, no involvement, what would happen?',
+                options: [
+                    'It would struggle within days',
+                    'It would be fine for a while, then need me',
+                    'It would run properly without me'
+                ],
+                risk: {
+                    tag: 'Owner reliance',
+                    body: 'If the business would struggle without you for a month, it may look healthy on the outside while still carrying too much through one person.'
+                }
+            },
+            {
+                id: 'visibility',
+                text: 'How do you actually find out how the business is doing?',
+                options: [
+                    'Mostly from being in it day to day, on instinct',
+                    'I get numbers, but not often or not ones I fully trust',
+                    'I have regular reporting I trust'
+                ],
+                risk: {
+                    tag: 'Poor visibility',
+                    body: 'Without information you trust, you often find out about problems once the damage is already done, rather than seeing them coming.'
+                }
+            },
+            {
+                id: 'delegation',
+                text: 'When you delegate something, what usually happens?',
+                options: [
+                    'It tends to come back to me anyway',
+                    'Depends who it is given to',
+                    'It gets done properly without me checking'
+                ],
+                risk: {
+                    tag: 'Weak delegation',
+                    body: 'If delegated work tends to come back to you anyway, that is often a structural issue rather than a people issue - the decision was never really handed over.'
+                }
+            },
+            {
+                id: 'cash',
+                text: 'How closely do you track cash flow, not just overall profit?',
+                options: [
+                    'I mostly find out when there is a problem',
+                    'I check it, but not consistently',
+                    'I have real visibility, weekly or better'
+                ],
+                risk: {
+                    tag: 'Cash control',
+                    body: 'Profit and cash are different things. Finding out about cash problems after they appear, rather than seeing them coming weekly, limits how much control you actually have.'
+                }
+            },
+            {
+                id: 'margin',
+                text: 'Do you know your margin on what you actually sell, job by job or product by product?',
+                options: [
+                    'Not really, I know the overall picture',
+                    'Roughly, for some of it',
+                    'Yes, clearly'
+                ],
+                risk: {
+                    tag: 'Margin visibility',
+                    body: 'Without margin visibility at the job or product level, it is easy for a business to stay busy while quietly losing money on some of what it sells.'
+                }
+            },
+            {
+                id: 'management',
+                text: 'If a customer issue or a serious problem needs handling, who deals with it?',
+                options: [
+                    'It comes to me',
+                    'Depends on the issue',
+                    'Someone else owns it properly'
+                ],
+                risk: {
+                    tag: 'Management structure',
+                    body: 'If serious issues still route to you by default, the business may not yet have a management layer that can absorb pressure without you.'
+                }
+            },
+            {
+                id: 'succession',
+                text: 'If you had to sell or step back in the next two years, how ready is the business to run without you?',
+                options: [
+                    'Not ready, too much depends on me',
+                    'Not sure, never really thought it through',
+                    'Reasonably ready'
+                ],
+                risk: {
+                    tag: 'Succession readiness',
+                    body: 'A business that depends heavily on its owner is harder to value and harder to sell. This matters whether stepping back is two years away or not yet decided.'
+                }
+            }
+        ];
+
+        var current = 0;
+        var answers = new Array(QUESTIONS.length).fill(null);
+
+        var introEl = document.getElementById('odr-intro');
+        var quizEl = document.getElementById('odr-quiz');
+        var resultsEl = document.getElementById('odr-results');
+        var questionsEl = document.getElementById('odr-questions');
+        var progressBar = document.getElementById('odr-progress-bar');
+        var progressTrack = document.getElementById('odr-progress-track');
+        var stepLabel = document.getElementById('odr-step-label');
+        var backBtn = document.getElementById('odr-back');
+
+        function showScreen(el) {
+            [introEl, quizEl, resultsEl].forEach(function (s) { s.classList.remove('active'); });
+            el.classList.add('active');
+            el.scrollIntoView({ block: 'start' });
+        }
+
+        function renderQuestion() {
+            var q = QUESTIONS[current];
+            var pct = Math.round(((current) / QUESTIONS.length) * 100);
+            progressBar.style.width = pct + '%';
+            progressTrack.setAttribute('aria-valuenow', current + 1);
+            stepLabel.textContent = 'Question ' + (current + 1) + ' of ' + QUESTIONS.length;
+            backBtn.disabled = current === 0;
+
+            var html = '<fieldset><legend>' + q.text + '</legend><div class="odr-options">';
+            q.options.forEach(function (opt, i) {
+                var checked = answers[current] === i ? ' checked' : '';
+                html += '<div class="odr-option">' +
+                    '<input type="radio" name="q_' + q.id + '" id="q_' + q.id + '_' + i + '" value="' + i + '"' + checked + '>' +
+                    '<label for="q_' + q.id + '_' + i + '">' + opt + '</label>' +
+                    '</div>';
+            });
+            html += '</div></fieldset>';
+            questionsEl.innerHTML = html;
+
+            questionsEl.querySelectorAll('input[type="radio"]').forEach(function (input) {
+                input.addEventListener('change', function () {
+                    answers[current] = parseInt(input.value, 10);
+                    if (typeof gtag === 'function') {
+                        gtag('event', 'dependency_review_question_answered', {
+                            event_category: 'tool',
+                            question: q.id,
+                            step: current + 1
+                        });
+                    }
+                    window.setTimeout(function () {
+                        if (current < QUESTIONS.length - 1) {
+                            current += 1;
+                            renderQuestion();
+                        } else {
+                            showResults();
+                        }
+                    }, 220);
+                });
+            });
+
+            var legend = questionsEl.querySelector('legend');
+            if (legend) { legend.setAttribute('tabindex', '-1'); legend.focus({ preventScroll: true }); }
+        }
+
+        backBtn.addEventListener('click', function () {
+            if (current > 0) {
+                current -= 1;
+                renderQuestion();
+            }
+        });
+
+        document.getElementById('odr-start').addEventListener('click', function () {
+            if (typeof gtag === 'function') {
+                gtag('event', 'dependency_review_start', { event_category: 'tool' });
+            }
+            current = 0;
+            showScreen(quizEl);
+            renderQuestion();
+        });
+
+        function showResults() {
+            progressBar.style.width = '100%';
+            var flagged = [];
+            QUESTIONS.forEach(function (q, i) {
+                if (answers[i] === 0 || answers[i] === 1) {
+                    flagged.push(q.risk);
+                }
+            });
+
+            var listEl = document.getElementById('odr-results-list');
+            var clearWrap = document.getElementById('odr-results-clear-wrap');
+            var heading = document.getElementById('odr-results-heading');
+
+            if (flagged.length === 0) {
+                heading.textContent = 'No significant dependency flagged';
+                clearWrap.innerHTML = '<div class="odr-clear"><p style="margin:0;">Based on your answers, decisions, visibility and delegation all look reasonably independent of you day to day. Worth revisiting occasionally as the business changes.</p></div>';
+                listEl.innerHTML = '';
+            } else {
+                heading.textContent = 'Where dependency is building up';
+                clearWrap.innerHTML = '';
+                listEl.innerHTML = flagged.map(function (r) {
+                    return '<div class="odr-result-item"><p class="odr-result-tag">' + r.tag + '</p><p>' + r.body + '</p></div>';
+                }).join('');
+            }
+
+            if (typeof gtag === 'function') {
+                gtag('event', 'dependency_review_complete', {
+                    event_category: 'tool',
+                    risk_areas_flagged: flagged.length
+                });
+            }
+            showScreen(resultsEl);
+        }
+
+        document.getElementById('odr-restart').addEventListener('click', function () {
+            current = 0;
+            answers = new Array(QUESTIONS.length).fill(null);
+            showScreen(introEl);
+        });
+
+        document.getElementById('odr-cta-book').addEventListener('click', function () {
+            if (typeof gtag === 'function') {
+                gtag('event', 'dependency_review_cta_click', { event_category: 'tool' });
+            }
+        });
+    })();
+    </script>
+</body>
+</html>

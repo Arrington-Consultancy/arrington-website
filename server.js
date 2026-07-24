@@ -194,6 +194,22 @@ app.get('/img/:key', async (req, res, next) => {
   }
 });
 
+// Owner Dependency Review — standalone interactive tool, not a CMS page.
+// Pure client-side quiz/results (no server round-trip, no email gate), so
+// this just needs the active theme for visual consistency and a nonce.
+app.get('/owner-dependency-review', async (req, res, next) => {
+  try {
+    const { rows: themeRows } = await db.query(
+      "SELECT content FROM content WHERE section_key = 'site.theme'"
+    );
+    const activeTheme = (themeRows[0] && themeRows[0].content) || 'dark';
+    const theme = themes[activeTheme] || themes.dark;
+    res.render('owner-dependency-review', { theme, ga4Id: process.env.GA4_MEASUREMENT_ID || '' });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // robots.txt — allow crawling, point at the sitemap, keep the login page out
 // of the index. Built from the request host so it works on every domain.
 app.get('/robots.txt', (req, res) => {
@@ -239,6 +255,9 @@ app.get('/sitemap.xml', async (req, res, next) => {
       }
       return `  <url><loc>${escapeXml(loc)}</loc>${lastmod}</url>`;
     }));
+    // Owner Dependency Review isn't a row in `pages` (it's a standalone
+    // interactive tool, not CMS content), so it needs its own explicit entry.
+    urlEntries.push(`  <url><loc>${escapeXml(`${base}/owner-dependency-review`)}</loc></url>`);
     res.type('application/xml').send(
       `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urlEntries.join('\n')}\n</urlset>\n`
     );
