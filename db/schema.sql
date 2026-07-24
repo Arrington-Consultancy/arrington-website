@@ -86,9 +86,11 @@ CREATE TABLE IF NOT EXISTS audit_log (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Public lead capture: the footer contact/booking form ('contact') and the
--- gated case-study PDF downloads ('pdf_download'). No user_id — these come
--- from anonymous visitors.
+-- Public lead capture: the footer contact/booking form ('contact'), the
+-- gated case-study PDF downloads ('pdf_download'), and voluntary "email me
+-- my result" requests from the Owner Dependency Review ('quiz_results',
+-- message column holds the score/band/RAG breakdown text). No user_id —
+-- these come from anonymous visitors.
 CREATE TABLE IF NOT EXISTS leads (
     id SERIAL PRIMARY KEY,
     kind VARCHAR(20) NOT NULL DEFAULT 'contact',

@@ -195,8 +195,12 @@ app.get('/img/:key', async (req, res, next) => {
 });
 
 // Owner Dependency Review — standalone interactive tool, not a CMS page.
-// Pure client-side quiz/results (no server round-trip, no email gate), so
-// this just needs the active theme for visual consistency and a nonce.
+// Client-side quiz/results with an optional server round-trip only for the
+// voluntary "email me my result" capture (POST /api/quiz/email-results in
+// routes/leads.js) — the result itself never requires one. Registered ahead
+// of the global CSRF-token-setting middleware further down, so the token
+// needed by that form has to be generated here rather than relied on from
+// res.locals.
 app.get('/owner-dependency-review', async (req, res, next) => {
   try {
     const { rows: themeRows } = await db.query(
@@ -204,7 +208,11 @@ app.get('/owner-dependency-review', async (req, res, next) => {
     );
     const activeTheme = (themeRows[0] && themeRows[0].content) || 'dark';
     const theme = themes[activeTheme] || themes.dark;
-    res.render('owner-dependency-review', { theme, ga4Id: process.env.GA4_MEASUREMENT_ID || '' });
+    res.render('owner-dependency-review', {
+      theme,
+      ga4Id: process.env.GA4_MEASUREMENT_ID || '',
+      csrfToken: generateCsrfToken(req, res)
+    });
   } catch (err) {
     next(err);
   }

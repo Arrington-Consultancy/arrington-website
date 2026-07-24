@@ -176,6 +176,93 @@ router.post('/api/documents/request', publicFormLimiter, async (req, res) => {
   }
 });
 
+const VALID_BANDS = ['Low dependency', 'Emerging dependency', 'Significant dependency', 'High dependency'];
+const QUIZ_URL = 'https://www.arringtonconsultancy.com/owner-dependency-review';
+
+async function getContactDetails() {
+  try {
+    const { rows } = await db.query(
+      `SELECT section_key, content FROM content WHERE section_key IN ('contact.email', 'contact.phone')`
+    );
+    const map = {};
+    rows.forEach((r) => { map[r.section_key] = (r.content || '').trim(); });
+    return map;
+  } catch (err) {
+    return {};
+  }
+}
+
+// POST /api/quiz/email-results — optional, visitor-initiated: emails the
+// requester their own Owner Dependency Review result. Fully separate from
+// showing the result itself (which never requires an email) and not tied to
+// social sharing. Reuses the leads table with kind='quiz_results' so it
+// surfaces in the admin panel and triggers the same owner notification as
+// every other lead; also sends a second, one-off transactional email to the
+// visitor's own address — no mailing list, no consent wording, since this is
+// only fulfilling their own request for a copy of their result.
+router.post('/api/quiz/email-results', publicFormLimiter, async (req, res) => {
+  try {
+    const body = req.body || {};
+    if (plainText(body.website)) {
+      return res.json({ ok: true });
+    }
+
+    const email = plainText(body.email).slice(0, 255);
+    const band = plainText(body.band).slice(0, 60);
+    const resultsText = plainText(body.resultsText).slice(0, 3000);
+    const score = Number(body.score);
+
+    if (!email || !isValidEmail(email)) {
+      return res.status(400).json({ error: 'Please enter a valid email address.' });
+    }
+    if (!Number.isInteger(score) || score < 0 || score > 16) {
+      return res.status(400).json({ error: 'Invalid result data.' });
+    }
+    if (!VALID_BANDS.includes(band)) {
+      return res.status(400).json({ error: 'Invalid result data.' });
+    }
+    if (!resultsText) {
+      return res.status(400).json({ error: 'Invalid result data.' });
+    }
+
+    await db.query(
+      `INSERT INTO leads (kind, email, message) VALUES ('quiz_results', $1, $2)`,
+      [email, resultsText]
+    );
+
+    res.json({ ok: true });
+
+    notify({
+      subject: `Owner Dependency Review result — ${score}/16 (${band})`,
+      text: `${email} completed the Owner Dependency Review and requested a copy of their result.\n\n${resultsText}`,
+      replyTo: email
+    });
+
+    if (transporter) {
+      const contact = await getContactDetails();
+      const contactLines = [
+        contact['contact.email'] && `Email: ${contact['contact.email']}`,
+        contact['contact.phone'] && `Phone: ${contact['contact.phone']}`
+      ].filter(Boolean).join('\n');
+
+      transporter.sendMail({
+        from: NOTIFY_FROM,
+        to: email,
+        subject: 'Your Owner Dependency Review result',
+        text: [
+          'Thanks for completing the Owner Dependency Review. Here is a copy of your result.',
+          resultsText,
+          `Retake or share the review: ${QUIZ_URL}`,
+          contactLines && `Arrington Consultancy\n${contactLines}`
+        ].filter(Boolean).join('\n\n')
+      }).catch((err) => console.error('Quiz result visitor email failed:', err.message));
+    }
+  } catch (err) {
+    console.error('Quiz email-results error:', err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
+  }
+});
+
 // GET /documents/download — serves a gated PDF only with a valid, unexpired
 // signed token from the request above. The files live outside public/ so
 // this route is the only way to reach them.
