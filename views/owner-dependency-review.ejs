@@ -804,6 +804,18 @@
             if (typeof gtag === 'function') {
                 gtag('event', 'dependency_review_share', { event_category: 'tool', platform: platform });
             }
+            if (lastResult) {
+                var csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+                fetch('/api/quiz/share-notify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                    body: JSON.stringify({
+                        platform: platform,
+                        score: lastResult.total,
+                        band: lastResult.band.label
+                    })
+                }).catch(function () {});
+            }
         }
 
         ['odr-share-linkedin', 'odr-share-facebook', 'odr-share-x'].forEach(function (id) {

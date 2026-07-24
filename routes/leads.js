@@ -67,6 +67,20 @@ const publicFormLimiter = rateLimit({
   message: { error: 'Too many requests. Please try again later.' }
 });
 
+// Share/copy clicks are anonymous, low-friction and can happen several times
+// in a single session (someone might click all three platforms plus both
+// copy buttons while deciding). Kept on its own limiter, separate from
+// publicFormLimiter, so a curious visitor clicking around can't burn the
+// budget meant for genuine leads (contact form, PDF requests, email-results).
+const shareNotifyLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => ipKeyGenerator(req),
+  message: { error: 'Too many requests.' }
+});
+
 // The signed download link gets a looser but still-bounded limiter — enough
 // headroom for a slow connection retrying a large PDF, tight enough to make
 // token brute-forcing impractical within the 15 minute expiry.
@@ -260,6 +274,49 @@ router.post('/api/quiz/email-results', publicFormLimiter, async (req, res) => {
   } catch (err) {
     console.error('Quiz email-results error:', err);
     res.status(500).json({ error: 'Something went wrong. Please try again.' });
+  }
+});
+
+const VALID_SHARE_PLATFORMS = ['linkedin', 'facebook', 'x', 'copy_text', 'copy_link'];
+const SHARE_PLATFORM_LABELS = {
+  linkedin: 'Share on LinkedIn',
+  facebook: 'Share on Facebook',
+  x: 'Share on X',
+  copy_text: 'Copy result text',
+  copy_link: 'Copy quiz link'
+};
+
+// POST /api/quiz/share-notify — fire-and-forget owner heads-up when a
+// visitor clicks a share/copy action on the results page. Sharing stays
+// anonymous by design (no email collected), so this never touches the leads
+// table — there's no visitor identity to record, just a live notification
+// so the owner knows the tool is being shared.
+router.post('/api/quiz/share-notify', shareNotifyLimiter, async (req, res) => {
+  try {
+    const body = req.body || {};
+    const platform = plainText(body.platform).slice(0, 30);
+    const band = plainText(body.band).slice(0, 60);
+    const score = Number(body.score);
+
+    if (!VALID_SHARE_PLATFORMS.includes(platform)) {
+      return res.status(400).json({ error: 'Invalid data.' });
+    }
+    if (!Number.isInteger(score) || score < 0 || score > 16) {
+      return res.status(400).json({ error: 'Invalid data.' });
+    }
+    if (!VALID_BANDS.includes(band)) {
+      return res.status(400).json({ error: 'Invalid data.' });
+    }
+
+    res.json({ ok: true });
+
+    notify({
+      subject: `Owner Dependency Review — ${SHARE_PLATFORM_LABELS[platform]}`,
+      text: `Someone clicked "${SHARE_PLATFORM_LABELS[platform]}" on the Owner Dependency Review.\n\nScore: ${score}/16 (${band})`
+    });
+  } catch (err) {
+    console.error('Share-notify error:', err);
+    res.status(500).json({ error: 'Something went wrong.' });
   }
 });
 
