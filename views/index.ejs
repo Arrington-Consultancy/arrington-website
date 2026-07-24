@@ -1144,21 +1144,38 @@
 
         .case-timeline {
             margin-top: 3rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0;
+            position: relative;
+            padding-left: 1.75rem;
+        }
+
+        .case-timeline::before {
+            content: '';
+            position: absolute;
+            left: 4px;
+            top: 6px;
+            bottom: 6px;
+            width: 1px;
+            background: var(--border);
         }
 
         .case-phase {
-            display: grid;
-            grid-template-columns: 160px 1fr;
-            gap: 2rem;
-            padding: 2rem 0;
-            border-bottom: 1px solid var(--border);
+            position: relative;
+            padding-bottom: 2.5rem;
         }
 
         .case-phase:last-child {
-            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .case-phase::before {
+            content: '';
+            position: absolute;
+            left: -1.75rem;
+            top: 0.35rem;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: var(--accent);
         }
 
         .phase-label {
@@ -1167,7 +1184,7 @@
             letter-spacing: 0.12em;
             font-weight: 700;
             color: var(--accent);
-            padding-top: 0.15rem;
+            margin-bottom: 0.6rem;
         }
 
         .phase-content p {
@@ -1177,6 +1194,14 @@
         }
 
         .phase-content p strong {
+            color: var(--text-bright);
+        }
+
+        .phase-capstone {
+            display: block;
+            margin-top: 0.85rem;
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.2rem;
             color: var(--text-bright);
         }
 
@@ -1794,9 +1819,12 @@
                 grid-template-columns: 1fr;
             }
 
-            .case-phase {
-                grid-template-columns: 1fr;
-                gap: 0.5rem;
+            .case-timeline {
+                padding-left: 1.4rem;
+            }
+
+            .case-phase::before {
+                left: -1.4rem;
             }
 
             .footer-contact .contact-details {
@@ -2317,12 +2345,6 @@
             <p class="section-label"><%- content[_k + '.label'] %></p>
             <% const _hTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %><<%= _hTag %> class="section-heading"><%- content[_k + '.heading'] %></<%= _hTag %>>
             <p class="section-sub"><%- content[_k + '.subtext'] %></p>
-            <% if ((content[_k + '.stat_number'] || '').trim()) { %>
-            <div class="stat-callout">
-                <span class="stat-num"><%- content[_k + '.stat_number'] %></span>
-                <span class="stat-label"><%- content[_k + '.stat_label'] %></span>
-            </div>
-            <% } %>
             <%
               const _casePhotoKey = (content[_k + '.photo_key'] || '').trim();
               const _hasCasePhoto = /^[a-z0-9_]+$/i.test(_casePhotoKey);
@@ -2352,6 +2374,9 @@
                     <div class="phase-label"><%- content[_k + '.phase_3_label'] %></div>
                     <div class="phase-content">
                         <p><%- content[_k + '.phase_3_body'] %></p>
+                        <% if ((content[_k + '.stat_number'] || '').trim()) { %>
+                        <span class="phase-capstone"><%- content[_k + '.stat_number'] %>, start to sale.</span>
+                        <% } %>
                     </div>
                 </div>
             </div>
