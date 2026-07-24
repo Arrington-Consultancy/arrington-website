@@ -194,21 +194,26 @@ app.get('/img/:key', async (req, res, next) => {
   }
 });
 
-// Owner Dependency Review — standalone interactive tool, not a CMS page.
+// Owner Dependency Quiz — standalone interactive tool, not a CMS page.
 // Client-side quiz/results with an optional server round-trip only for the
 // voluntary "email me my result" capture (POST /api/quiz/email-results in
 // routes/leads.js) — the result itself never requires one. Registered ahead
 // of the global CSRF-token-setting middleware further down, so the token
 // needed by that form has to be generated here rather than relied on from
 // res.locals.
-app.get('/owner-dependency-review', async (req, res, next) => {
+//
+// "Owner Dependency Quiz" is the governed public name (Brand Operating
+// System + Current Operating Position master governance rules) — the old
+// /owner-dependency-review URL previously used "Review" throughout before
+// that rule was checked, and now 301-redirects here permanently.
+app.get('/owner-dependency-quiz', async (req, res, next) => {
   try {
     const { rows: themeRows } = await db.query(
       "SELECT content FROM content WHERE section_key = 'site.theme'"
     );
     const activeTheme = (themeRows[0] && themeRows[0].content) || 'dark';
     const theme = themes[activeTheme] || themes.dark;
-    res.render('owner-dependency-review', {
+    res.render('owner-dependency-quiz', {
       theme,
       ga4Id: process.env.GA4_MEASUREMENT_ID || '',
       csrfToken: generateCsrfToken(req, res)
@@ -216,6 +221,10 @@ app.get('/owner-dependency-review', async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+app.get('/owner-dependency-review', (req, res) => {
+  res.redirect(301, '/owner-dependency-quiz');
 });
 
 // robots.txt — allow crawling, point at the sitemap, keep the login page out
@@ -263,9 +272,9 @@ app.get('/sitemap.xml', async (req, res, next) => {
       }
       return `  <url><loc>${escapeXml(loc)}</loc>${lastmod}</url>`;
     }));
-    // Owner Dependency Review isn't a row in `pages` (it's a standalone
+    // Owner Dependency Quiz isn't a row in `pages` (it's a standalone
     // interactive tool, not CMS content), so it needs its own explicit entry.
-    urlEntries.push(`  <url><loc>${escapeXml(`${base}/owner-dependency-review`)}</loc></url>`);
+    urlEntries.push(`  <url><loc>${escapeXml(`${base}/owner-dependency-quiz`)}</loc></url>`);
     res.type('application/xml').send(
       `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urlEntries.join('\n')}\n</urlset>\n`
     );

@@ -191,7 +191,7 @@ router.post('/api/documents/request', publicFormLimiter, async (req, res) => {
 });
 
 const VALID_BANDS = ['Low dependency', 'Emerging dependency', 'Significant dependency', 'High dependency'];
-const QUIZ_URL = 'https://www.arringtonconsultancy.com/owner-dependency-review';
+const QUIZ_URL = 'https://www.arringtonconsultancy.com/owner-dependency-quiz';
 
 async function getContactDetails() {
   try {
@@ -207,7 +207,7 @@ async function getContactDetails() {
 }
 
 // POST /api/quiz/email-results — optional, visitor-initiated: emails the
-// requester their own Owner Dependency Review result. Fully separate from
+// requester their own Owner Dependency Quiz result. Fully separate from
 // showing the result itself (which never requires an email) and not tied to
 // social sharing. Reuses the leads table with kind='quiz_results' so it
 // surfaces in the admin panel and triggers the same owner notification as
@@ -247,8 +247,8 @@ router.post('/api/quiz/email-results', publicFormLimiter, async (req, res) => {
     res.json({ ok: true });
 
     notify({
-      subject: `Owner Dependency Review result — ${score}/16 (${band})`,
-      text: `${email} completed the Owner Dependency Review and requested a copy of their result.\n\n${resultsText}`,
+      subject: `Owner Dependency Quiz result — ${score}/16 (${band})`,
+      text: `${email} completed the Owner Dependency Quiz and requested a copy of their result.\n\n${resultsText}`,
       replyTo: email
     });
 
@@ -262,11 +262,11 @@ router.post('/api/quiz/email-results', publicFormLimiter, async (req, res) => {
       transporter.sendMail({
         from: NOTIFY_FROM,
         to: email,
-        subject: 'Your Owner Dependency Review result',
+        subject: 'Your Owner Dependency Quiz result',
         text: [
-          'Thanks for completing the Owner Dependency Review. Here is a copy of your result.',
+          'Thanks for completing the Owner Dependency Quiz. Here is a copy of your result.',
           resultsText,
-          `Retake or share the review: ${QUIZ_URL}`,
+          `Retake or share the quiz: ${QUIZ_URL}`,
           contactLines && `Arrington Consultancy\n${contactLines}`
         ].filter(Boolean).join('\n\n')
       }).catch((err) => console.error('Quiz result visitor email failed:', err.message));
@@ -311,8 +311,8 @@ router.post('/api/quiz/share-notify', shareNotifyLimiter, async (req, res) => {
     res.json({ ok: true });
 
     notify({
-      subject: `Owner Dependency Review — ${SHARE_PLATFORM_LABELS[platform]}`,
-      text: `Someone clicked "${SHARE_PLATFORM_LABELS[platform]}" on the Owner Dependency Review.\n\nScore: ${score}/16 (${band})`
+      subject: `Owner Dependency Quiz — ${SHARE_PLATFORM_LABELS[platform]}`,
+      text: `Someone clicked "${SHARE_PLATFORM_LABELS[platform]}" on the Owner Dependency Quiz.\n\nScore: ${score}/16 (${band})`
     });
   } catch (err) {
     console.error('Share-notify error:', err);

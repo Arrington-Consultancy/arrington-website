@@ -817,7 +817,7 @@
                     hour: '2-digit', minute: '2-digit'
                 });
                 const kindLabel = lead.kind === 'pdf_download' ? 'PDF download'
-                    : lead.kind === 'quiz_results' ? 'Dependency review'
+                    : lead.kind === 'quiz_results' ? 'Dependency quiz'
                     : 'Contact / booking';
                 const parts = [`<span class="log-action">${escapeHtml(kindLabel)}</span><br>`];
                 if (lead.name) parts.push(`<strong>${escapeHtml(lead.name)}</strong> `);

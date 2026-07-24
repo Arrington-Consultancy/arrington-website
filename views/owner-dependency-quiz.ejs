@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Owner Dependency Review | Arrington Consultancy</title>
-    <meta name="description" content="A free, practical 5 minute review to help you see where your business still depends too heavily on you as the owner. No email required, no diagnosis - just a clear, honest look.">
-    <link rel="canonical" href="https://www.arringtonconsultancy.com/owner-dependency-review">
+    <title>Owner Dependency Quiz | Arrington Consultancy</title>
+    <meta name="description" content="A free, practical 5 minute quiz to help you see where your business still depends too heavily on you as the owner. No email required, no diagnosis - just a clear, honest look.">
+    <link rel="canonical" href="https://www.arringtonconsultancy.com/owner-dependency-quiz">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Owner Dependency Review | Arrington Consultancy">
-    <meta property="og:description" content="A free, practical 5 minute review to help you see where your business still depends too heavily on you as the owner.">
-    <meta property="og:url" content="https://www.arringtonconsultancy.com/owner-dependency-review">
+    <meta property="og:title" content="Owner Dependency Quiz | Arrington Consultancy">
+    <meta property="og:description" content="A free, practical 5 minute quiz to help you see where your business still depends too heavily on you as the owner.">
+    <meta property="og:url" content="https://www.arringtonconsultancy.com/owner-dependency-quiz">
     <meta name="csrf-token" content="<%= csrfToken %>">
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="icon" href="/icons/icon-32.png" type="image/png" sizes="32x32">
@@ -380,11 +380,11 @@
         <!-- INTRO -->
         <section class="odr-screen active" id="odr-intro">
             <p class="odr-label">FREE COMMERCIAL TOOL</p>
-            <h1>Owner Dependency Review</h1>
+            <h1>Owner Dependency Quiz</h1>
             <p class="odr-meta">Takes about <span>5 minutes</span>. No email required. Results shown immediately.</p>
-            <p>A business can look healthy on the outside and still carry too much through one person. This short review asks eight practical questions about how your business actually runs day to day, and gives you a plain, honest look at where dependency on you might be building up.</p>
+            <p>A business can look healthy on the outside and still carry too much through one person. This short quiz asks eight practical questions about how your business actually runs day to day, and gives you a plain, honest look at where dependency on you might be building up.</p>
             <p>This is not a personality test and not a professional diagnosis. It is a starting point for your own judgement, based on the same patterns we see across owner run businesses.</p>
-            <button type="button" class="btn btn-primary" id="odr-start">Start the review</button>
+            <button type="button" class="btn btn-primary" id="odr-start">Start the quiz</button>
         </section>
 
         <!-- QUIZ -->
@@ -442,7 +442,7 @@
 
             <div class="odr-email-capture">
                 <h2>Send me a copy of my result</h2>
-                <p>Enter your email and we'll send you your score and the areas highlighted in your review.</p>
+                <p>Enter your email and we'll send you your score and the areas highlighted in your quiz.</p>
                 <form id="odr-email-form" class="odr-email-form">
                     <div class="lead-hp" aria-hidden="true">
                         <label>Leave this field blank<input type="text" name="website" id="odr-email-hp" tabindex="-1" autocomplete="off"></label>
@@ -659,7 +659,7 @@
                 input.addEventListener('change', function () {
                     answers[current] = parseInt(input.value, 10);
                     if (typeof gtag === 'function') {
-                        gtag('event', 'dependency_review_question_answered', {
+                        gtag('event', 'dependency_quiz_question_answered', {
                             event_category: 'tool',
                             question: q.id,
                             step: current + 1
@@ -689,7 +689,7 @@
 
         document.getElementById('odr-start').addEventListener('click', function () {
             if (typeof gtag === 'function') {
-                gtag('event', 'dependency_review_start', { event_category: 'tool' });
+                gtag('event', 'dependency_quiz_start', { event_category: 'tool' });
             }
             current = 0;
             showScreen(quizEl);
@@ -742,8 +742,8 @@
             }
             document.getElementById('odr-summary-text').textContent = summary;
 
-            var shareUrl = location.origin + '/owner-dependency-review';
-            var shareMessage = "I scored " + total + "/16 (" + band.label + ") on Arrington Consultancy's Owner Dependency Review. It highlighted a few areas I'd been overlooking. Worth five minutes if you run an owner run business.";
+            var shareUrl = location.origin + '/owner-dependency-quiz';
+            var shareMessage = "I scored " + total + "/16 (" + band.label + ") on Arrington Consultancy's Owner Dependency Quiz. It highlighted a few areas I'd been overlooking. Worth five minutes if you run an owner run business.";
             var fullResultsText = 'Score: ' + total + '/16 (' + band.label + ')\n\n' +
                 rows.map(function (r) { return r.cls.toUpperCase() + ' - ' + r.category + ': ' + r.text; }).join('\n') +
                 '\n\n' + summary;
@@ -755,7 +755,7 @@
             document.getElementById('odr-share-linkedin').href = 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(shareUrl);
 
             if (typeof gtag === 'function') {
-                gtag('event', 'dependency_review_complete', {
+                gtag('event', 'dependency_quiz_complete', {
                     event_category: 'tool',
                     score: total,
                     band: band.label,
@@ -774,7 +774,7 @@
 
         document.getElementById('odr-cta-book').addEventListener('click', function () {
             if (typeof gtag === 'function') {
-                gtag('event', 'dependency_review_cta_click', { event_category: 'tool' });
+                gtag('event', 'dependency_quiz_cta_click', { event_category: 'tool' });
             }
         });
 
@@ -802,7 +802,7 @@
 
         function trackShare(platform) {
             if (typeof gtag === 'function') {
-                gtag('event', 'dependency_review_share', { event_category: 'tool', platform: platform });
+                gtag('event', 'dependency_quiz_share', { event_category: 'tool', platform: platform });
             }
             if (lastResult) {
                 var csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
@@ -881,7 +881,7 @@
                     statusEl.className = 'odr-email-status is-success';
                     emailForm.reset();
                     if (typeof gtag === 'function') {
-                        gtag('event', 'dependency_review_email_capture', {
+                        gtag('event', 'dependency_quiz_email_capture', {
                             event_category: 'tool',
                             score: lastResult.total,
                             band: lastResult.band.label
