@@ -54,11 +54,24 @@
         header {
             padding: 1.25rem 1.5rem;
             border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
         }
-        header a {
+        header a.odr-logo-link {
             display: inline-flex;
         }
         header img { height: 32px; width: auto; }
+        header .odr-back-link {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        header .odr-back-link:hover, header .odr-back-link:focus-visible {
+            color: var(--accent);
+        }
         main {
             max-width: 640px;
             margin: 0 auto;
@@ -222,9 +235,6 @@
         .odr-result-item {
             padding: 1.25rem 0;
             border-top: 1px solid var(--border);
-            display: flex;
-            gap: 1rem;
-            align-items: flex-start;
         }
         .odr-result-item:first-of-type { border-top: none; }
         .odr-rag-pill {
@@ -242,8 +252,9 @@
         .odr-rag-red { color: var(--odr-red); background: var(--odr-red-bg); }
         .odr-rag-amber { color: var(--odr-amber); background: var(--odr-amber-bg); }
         .odr-rag-green { color: var(--odr-green); background: var(--odr-green-bg); }
-        .odr-result-body h3 { font-size: 0.98rem; margin-bottom: 0.3rem; }
-        .odr-result-body p { margin: 0; font-size: 0.9rem; }
+        .odr-result-head { display: flex; gap: 1rem; align-items: flex-start; }
+        .odr-result-head h3 { font-size: 0.98rem; margin: 0; }
+        .odr-result-text { margin: 0.3rem 0 0; font-size: 0.9rem; padding-left: calc(64px + 1rem); }
 
         /* ---- results: commercial summary ---- */
         .odr-summary {
@@ -272,16 +283,20 @@
         @media (max-width: 480px) {
             .odr-cta-actions { flex-direction: column; }
             .odr-cta-actions .btn { text-align: center; }
-            .odr-result-item { flex-direction: column; gap: 0.5rem; }
-            .odr-rag-pill { width: auto; display: inline-block; padding: 0.3rem 0.75rem; }
+            .odr-result-item { padding: 0.85rem 0; }
+            .odr-result-head { gap: 0.6rem; align-items: center; }
+            .odr-result-head h3 { font-size: 0.92rem; }
+            .odr-rag-pill { width: auto; display: inline-block; padding: 0.2rem 0.65rem; font-size: 0.62rem; margin-top: 0; }
+            .odr-result-text { padding-left: 0; margin-top: 0.2rem; font-size: 0.86rem; }
         }
     </style>
 </head>
 <body>
     <header>
-        <a href="/" aria-label="Arrington Consultancy home">
+        <a href="/" class="odr-logo-link" aria-label="Arrington Consultancy home">
             <img src="/img/logo" alt="Arrington Business Consultancy">
         </a>
+        <a href="/" class="odr-back-link">&larr; Back to site</a>
     </header>
 
     <main>
@@ -588,8 +603,11 @@
 
             document.getElementById('odr-results-list').innerHTML = rows.map(function (r) {
                 return '<div class="odr-result-item">' +
+                    '<div class="odr-result-head">' +
                     '<span class="odr-rag-pill odr-rag-' + r.cls + '">' + r.cls + '</span>' +
-                    '<div class="odr-result-body"><h3>' + r.category + '</h3><p>' + r.text + '</p></div>' +
+                    '<h3>' + r.category + '</h3>' +
+                    '</div>' +
+                    '<p class="odr-result-text">' + r.text + '</p>' +
                     '</div>';
             }).join('');
 
