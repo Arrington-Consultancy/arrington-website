@@ -2238,7 +2238,12 @@
               // #casestudy2__2") rather than just the page.
               const _fcLink = (content[_k + '.card_' + _n + '_link'] || '').trim();
               const _fcMatch = /^([a-z0-9]+(?:-[a-z0-9]+)*)(?:#([a-z0-9]+(?:__[0-9]+)?))?$/.exec(_fcLink);
-              const _fcInitial = (content[_k + '.card_' + _n + '_number'] || '').replace(/<[^>]+>/g, '').trim().charAt(0).toUpperCase();
+              // This template is shared: on What Business Owners Say, card_N_number
+              // holds a person's name (avatar makes sense); on What We Do it holds a
+              // step numeral like "01" (avatar would show a meaningless "0"). Only
+              // show the avatar when the initial is actually a letter.
+              const _fcInitialRaw = (content[_k + '.card_' + _n + '_number'] || '').replace(/<[^>]+>/g, '').trim().charAt(0).toUpperCase();
+              const _fcInitial = /[A-Z]/.test(_fcInitialRaw) ? _fcInitialRaw : '';
             %>
             <article class="fourcard">
                 <div class="fourcard-header">
