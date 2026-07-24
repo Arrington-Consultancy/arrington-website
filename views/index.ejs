@@ -2581,7 +2581,7 @@
         <div class="google-reviews-summary">
             <span class="google-reviews-stars" aria-hidden="true"><%- _grStars(_grRating) %></span>
             <span class="google-reviews-score"><%= googleReviews.rating.toFixed(1) %></span>
-            <span class="google-reviews-count">from <%= googleReviews.userRatingCount %> <%= googleReviews.userRatingCount === 1 ? 'review' : 'reviews' %> on <a href="<%= googleReviews.googleMapsUri %>" target="_blank" rel="noopener">Google</a></span>
+            <span class="google-reviews-count">from <%= googleReviews.userRatingCount %> <%= googleReviews.userRatingCount === 1 ? 'review' : 'reviews' %> on <a href="<%= googleReviews.googleMapsUri %>" target="_blank" rel="noopener" class="js-google-review-link">Google</a></span>
         </div>
         <% if ((googleReviews.reviews || []).length > 0) { %>
         <div class="google-reviews-grid">
@@ -2706,6 +2706,10 @@
 
     // Google Ads conversion: visitor tapped a phone, email or WhatsApp link.
     // Runs after the reassembly above so the href prefixes are live.
+    // The three kinds currently share one Ads conversion label (Ads can't
+    // separate them yet - see the measurement doc for what needs creating
+    // there), but each fires its own distinct GA4 event alongside it so
+    // GA4 can already answer "which contact method do people actually use".
     document.querySelectorAll('a[href^="tel:"], a[href^="mailto:"], a[href^="https://wa.me/"], a[href^="https://api.whatsapp.com/"]').forEach(a => {
         a.addEventListener('click', () => {
             const kind = a.href.indexOf('tel:') === 0 ? 'phone'
@@ -2718,6 +2722,7 @@
             });
             if (typeof gtag === 'function') {
                 gtag('event', 'conversion', { 'send_to': 'AW-18129914078/h_2rCJeH8aYcEN6RgsVD' });
+                gtag('event', kind + '_click', { event_category: 'contact', page_path: location.pathname });
             } else {
                 console.warn('[Google Ads] gtag not loaded — conversion not sent');
             }
@@ -2767,6 +2772,7 @@
                 status.textContent = 'Thanks — I will get back to you shortly.';
                 if (typeof gtag === 'function') {
                     gtag('event', 'conversion', { 'send_to': 'AW-18129914078/h_2rCJeH8aYcEN6RgsVD' });
+                    gtag('event', 'contact_form_submit', { event_category: 'contact', page_path: location.pathname });
                 }
             } catch (err) {
                 status.textContent = err.message || 'Something went wrong. Please try again or email us directly.';
@@ -2796,6 +2802,9 @@
             status.classList.remove('lead-form-error');
             form.reset();
             overlay.classList.add('open');
+            if (typeof gtag === 'function') {
+                gtag('event', 'document_preview_open', { event_category: 'documents', document_name: doc || title || 'unknown' });
+            }
         }
         function closeModal() {
             overlay.classList.remove('open');
@@ -2825,6 +2834,7 @@
                 if (!res.ok) throw new Error(result.error || 'Something went wrong.');
                 if (typeof gtag === 'function') {
                     gtag('event', 'conversion', { 'send_to': 'AW-18129914078/h_2rCJeH8aYcEN6RgsVD' });
+                    gtag('event', 'document_request_submit', { event_category: 'documents', document_name: currentDoc || 'unknown' });
                 }
                 if (result.url) window.location.href = result.url;
                 status.textContent = 'Your download is starting...';
@@ -2835,6 +2845,62 @@
                 btn.disabled = false;
             }
         });
+    })();
+
+    // Case study clicks - proof-strip rows and testimonial back-links all
+    // point at #biography__N / #casestudy__N / #casestudy2__N, same page or
+    // cross-page. One listener covers every instance of that pattern so a
+    // future case study needs no tracking code of its own.
+    document.querySelectorAll('a[href*="#biography__"], a[href*="#casestudy__"], a[href*="#casestudy2__"]').forEach(a => {
+        a.addEventListener('click', () => {
+            const target = a.getAttribute('href').split('#')[1] || 'unknown';
+            if (typeof gtag === 'function') {
+                gtag('event', 'case_study_click', { event_category: 'proof', case_study: target, page_path: location.pathname });
+            }
+        });
+    });
+
+    // Google review link click - the "on Google" link in the reviews summary.
+    document.querySelectorAll('.js-google-review-link').forEach(a => {
+        a.addEventListener('click', () => {
+            if (typeof gtag === 'function') {
+                gtag('event', 'google_review_link_click', { event_category: 'trust', page_path: location.pathname });
+            }
+        });
+    });
+
+    // Outbound link clicks - anything leaving the site that doesn't already
+    // have its own named event above (tel/mailto/whatsapp/calendar/reviews),
+    // so it isn't double-counted under two event names.
+    document.querySelectorAll('a[href^="http"]').forEach(a => {
+        if (a.hostname === location.hostname) return;
+        if (a.matches('a[href^="https://wa.me/"], a[href^="https://api.whatsapp.com/"], a[href^="https://calendar.app.google/"], .js-google-review-link')) return;
+        a.addEventListener('click', () => {
+            if (typeof gtag === 'function') {
+                gtag('event', 'outbound_link_click', { event_category: 'outbound', destination: a.hostname, page_path: location.pathname });
+            }
+        });
+    });
+
+    // Scroll depth - fires once per threshold per page view. Answers "do
+    // people actually read this page" for long-form content like Useful
+    // Thinking, where there's no click to measure engagement by otherwise.
+    (function () {
+        const thresholds = [25, 50, 75, 90];
+        const fired = new Set();
+        window.addEventListener('scroll', () => {
+            const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+            if (scrollable <= 0) return;
+            const percent = (window.scrollY / scrollable) * 100;
+            thresholds.forEach(t => {
+                if (percent >= t && !fired.has(t)) {
+                    fired.add(t);
+                    if (typeof gtag === 'function') {
+                        gtag('event', 'scroll_depth', { event_category: 'engagement', percent: t, page_path: location.pathname });
+                    }
+                }
+            });
+        }, { passive: true });
     })();
 
     window.addEventListener('scroll', () => {
