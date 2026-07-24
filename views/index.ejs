@@ -2448,6 +2448,14 @@
                 <div class="aq"><%- content[_k + '.q_5'] %></div>
                 <div class="aq"><%- content[_k + '.q_6'] %></div>
             </div>
+            <%
+              const _asBtnText = (content[_k + '.button_text'] || '').replace(/<[^>]+>/g, '').trim();
+              const _asBtnSlug = (content[_k + '.button_link'] || '').trim();
+              const _asValidSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(_asBtnSlug);
+            %>
+            <% if (_asBtnText && _asValidSlug) { %>
+            <a href="/<%= _asBtnSlug %>" class="btn btn-primary"><%- content[_k + '.button_text'] %></a>
+            <% } %>
         </div>
     </div>
 </section>
