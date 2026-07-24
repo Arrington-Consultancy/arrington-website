@@ -11,6 +11,7 @@ const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const { doubleCsrf } = require('csrf-csrf');
 const db = require('./db/pool');
 const themes = require('./db/themes');
+const { getGoogleReviews } = require('./lib/googleReviews');
 const { loadPermissions, hasCapability, getCapabilitiesForRole } = require('./middleware/permissions');
 const authRoutes = require('./routes/auth');
 const contentRoutes = require('./routes/content');
@@ -96,7 +97,8 @@ app.use(helmet({
         'https://www.googletagmanager.com',
         'https://www.google-analytics.com',
         'https://www.googleadservices.com',
-        'https://googleads.g.doubleclick.net'
+        'https://googleads.g.doubleclick.net',
+        'https://lh3.googleusercontent.com'
       ],
       connectSrc: [
         "'self'",
@@ -331,7 +333,7 @@ app.get('/v1.html', (req, res) => {
 });
 
 // Valid section templates (shared with routes/content.js)
-const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','fourcards','documents','casestudy','casestudy2','assessment','filter','proofstrip','contact'];
+const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','fourcards','documents','casestudy','casestudy2','assessment','filter','proofstrip','contact','googlereviews'];
 // Default auto-merge order — excludes 'contact' (now rendered globally in
 // the footer), 'fourcards', 'documents' and 'proofstrip' (picker-only). Users
 // pick those explicitly.
@@ -514,6 +516,14 @@ async function renderPage(req, res, next, pageSlug) {
         .map(iid => `/what-we-have-done#${iid}`);
     }
 
+    // Only fetch/serve Google reviews on pages that actually have a
+    // googlereviews section — most pages never touch this, so the (cached)
+    // Places API call stays off their render path entirely.
+    let googleReviews = null;
+    if (sectionOrder.some(iid => instanceTemplates[iid] === 'googlereviews')) {
+      googleReviews = await getGoogleReviews();
+    }
+
     // Clients with no editing capabilities see the same as public
     const userRole = res.locals.user?.role;
     const canEdit = res.locals.user ? hasCapability(userRole, 'edit_content') : false;
@@ -560,7 +570,7 @@ async function renderPage(req, res, next, pageSlug) {
     res.render('index', {
       content, theme, activeTheme, themes,
       sectionOrder: renderOrder, hiddenSections, instanceTemplates,
-      currentPage, allPages, seo, caseStudyAnchors,
+      currentPage, allPages, seo, caseStudyAnchors, googleReviews,
       canEdit, capabilities, showAdminPanel,
       // Unset until the GA4 property exists — see deployment report for the
       // one external step needed before setting this on Railway.

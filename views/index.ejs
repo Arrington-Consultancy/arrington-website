@@ -27,8 +27,10 @@
     <% if (seo.ogDescription) { %><meta name="twitter:description" content="<%= seo.ogDescription %>"><% } %>
     <% if (seo.ogImage) { %><meta name="twitter:image" content="<%= seo.ogImage %>"><% } %>
     <%# ---- Structured data (Schema.org). Verified facts only: legal name,
-         trading name, company number, phone, email, service area. No Review
-         or AggregateRating yet - added only once reviews are live on-site. ---- %>
+         trading name, company number, phone, email, service area.
+         aggregateRating is only added on the page where real Google reviews
+         are actually displayed - schema.org guidance is that it shouldn't
+         appear where the reviews it summarizes aren't visible on the page. ---- %>
     <script type="application/ld+json" nonce="<%= nonce %>">
     {
       "@context": "https://schema.org",
@@ -55,7 +57,13 @@
       },
       "sameAs": [
         "https://www.google.com/maps/place/Arrington+Business+Consultancy/data=!4m7!3m6!1s0x68ae21a1b13dfe61:0x1e5cd5fd5fd3d54a!8m2!3d47.73855!4d12.5088275!16s%2Fg%2F11z309prfq!19sChIJYf49saEhrmgRStXTX_3VXB4"
-      ]
+      ]<%
+        if (currentPage.slug === 'what-business-owners-say' && googleReviews) { %>,
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": <%= googleReviews.rating %>,
+        "reviewCount": <%= googleReviews.userRatingCount %>
+      }<% } %>
     }
     </script>
     <script type="application/ld+json" nonce="<%= nonce %>">
@@ -847,6 +855,98 @@
 
         .fourcard-link:hover {
             color: var(--text-bright);
+        }
+
+        /* ---- GOOGLE REVIEWS ---- */
+        .google-reviews-summary {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            margin: 1rem 0 2.5rem;
+        }
+
+        .google-reviews-stars {
+            font-size: 1.3rem;
+            color: var(--accent);
+            letter-spacing: 0.1rem;
+        }
+
+        .google-reviews-score {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.3rem;
+            color: var(--text-bright);
+        }
+
+        .google-reviews-count {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .google-reviews-count a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .google-reviews-count a:hover {
+            color: var(--text-bright);
+        }
+
+        .google-reviews-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .google-review-card {
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--charcoal);
+        }
+
+        .google-review-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.85rem;
+        }
+
+        .google-review-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+
+        .google-review-author {
+            font-size: 0.92rem;
+            font-weight: 600;
+            color: var(--text-bright);
+            margin-bottom: 0.15rem;
+        }
+
+        .google-review-stars {
+            font-size: 0.85rem;
+            color: var(--accent);
+        }
+
+        .google-review-text {
+            font-size: 0.88rem;
+            color: var(--text);
+            line-height: 1.65;
+            display: -webkit-box;
+            -webkit-line-clamp: 6;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .google-review-time {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 0.75rem;
         }
 
         @media (max-width: 900px) {
@@ -2430,6 +2530,53 @@
                 <% } %>
             </div>
         </div>
+    </div>
+</section>
+<% } %>
+
+<% if (_tpl === 'googlereviews' && googleReviews) { %>
+<% const _k = _iid; %>
+<%
+  const _grRating = Math.round((googleReviews.rating || 0) * 2) / 2;
+  const _grStars = (n) => {
+    const full = Math.floor(n);
+    const half = n - full >= 0.5;
+    return '&#9733;'.repeat(full) + (half ? '&#189;' : '') + '&#9734;'.repeat(5 - full - (half ? 1 : 0));
+  };
+%>
+<!-- GOOGLE REVIEWS -->
+<section class="googlereviews<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
+    <div class="section-inner cms-section" data-section="<%= _k %>">
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
+        <p class="section-label"><%- content[_k + '.label'] || 'VERIFIED ON GOOGLE' %></p>
+        <% const _hTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %><<%= _hTag %> class="section-heading"><%- content[_k + '.heading'] || 'Real feedback from owners who have seen the work up close.' %></<%= _hTag %>>
+        <div class="google-reviews-summary">
+            <span class="google-reviews-stars" aria-hidden="true"><%- _grStars(_grRating) %></span>
+            <span class="google-reviews-score"><%= googleReviews.rating.toFixed(1) %></span>
+            <span class="google-reviews-count">from <%= googleReviews.userRatingCount %> <%= googleReviews.userRatingCount === 1 ? 'review' : 'reviews' %> on <a href="<%= googleReviews.googleMapsUri %>" target="_blank" rel="noopener">Google</a></span>
+        </div>
+        <% if ((googleReviews.reviews || []).length > 0) { %>
+        <div class="google-reviews-grid">
+            <% googleReviews.reviews.forEach(function(_rev) { %>
+            <article class="google-review-card">
+                <div class="google-review-header">
+                    <% if (_rev.authorAttribution && _rev.authorAttribution.photoUri) { %>
+                    <img src="<%= _rev.authorAttribution.photoUri %>" alt="" class="google-review-avatar" loading="lazy">
+                    <% } %>
+                    <div>
+                        <p class="google-review-author"><%= (_rev.authorAttribution && _rev.authorAttribution.displayName) || 'Google user' %></p>
+                        <span class="google-review-stars" aria-hidden="true"><%- _grStars(_rev.rating || 0) %></span>
+                    </div>
+                </div>
+                <p class="google-review-text"><%= (_rev.text && _rev.text.text) || '' %></p>
+                <p class="google-review-time"><%= _rev.relativePublishTimeDescription || '' %></p>
+            </article>
+            <% }); %>
+        </div>
+        <% } %>
     </div>
 </section>
 <% } %>
