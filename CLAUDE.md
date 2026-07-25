@@ -10,6 +10,38 @@ This site was handed over to Tom Arrington to self-manage. Read `HANDOVER.md` fi
 - **Loose end:** the bare `arringtonconsultancy.co.uk` apex still needs adding as a custom domain in Railway (long-standing, pre-handover; see Custom domains).
 - On the same day the 19 agreed copy-review changes were applied to the live site (see Copy review below).
 
+## Brand, voice and strategy: Google Drive is the authority, not this file
+
+This repo governs the **code**. It does not govern brand, tone, positioning,
+pricing or what the website is allowed to say. That lives in a separate,
+actively maintained Google Drive folder called **"ARRINGTON CONSULTANCY
+BRAIN"**, owned by tom@arringtonconsultancy.com. Start at the doc titled
+**"START HERE. ARRINGTON CONSULTANCY BRAIN INDEX"** inside it.
+
+The Brain's own authority stack (highest wins on conflict):
+
+1. **00 ARRINGTON BRAND OPERATING SYSTEM** — identity, positioning, language, tone. Changes rarely.
+2. **01 ARRINGTON CURRENT OPERATING POSITION** — live priorities and tactics. Changes monthly.
+3. **02 ARRINGTON COMMERCIAL POSITION** — pricing, deal structure, commercial boundaries. Changes quarterly.
+4. **Arrington Current Website State** — a snapshot of current public copy only, not a source of new wording.
+
+Everything else in the Brain (working frameworks, old chats, reports, PDFs) is
+raw material, not authority.
+
+**Why this section exists:** on 25/07/2026 a Claude session deleted a
+homepage hero variant containing the phrase "constant firefighting" on Tom's
+explicit instruction, only to then find a stale "MASTER GOVERNANCE RULE" in
+the Brand OS doc calling that exact CTA protected — a rule that had itself
+been superseded by a newer rule banning "firefighting" language, but nobody
+had gone back and removed the older, contradicting one. The deletion turned
+out to be correct, but it was only *confirmed* correct by going and reading
+the Drive doc directly. **Do not draft or change anything resembling brand
+copy, positioning or pricing language from memory, from this file, or from
+what a past chat said — go and read the current master doc in Drive first.**
+If something here (including the Voice and tone section below) ever
+contradicts the Brand OS, the Brand OS wins; flag the contradiction to Tom
+rather than silently picking one.
+
 ## What this is
 
 Single-page website for Arrington Business Consultancy (Tom Arrington), with a CMS backend for content editing. Express.js + PostgreSQL, deployed to Railway, fronted by Railway's anycast edge (`69.46.46.x`; was Fastly until Railway's edge migration, see Custom domains).
@@ -499,7 +531,15 @@ Active theme stored in DB, applied via CSS variables. Affects main site and logi
 
 ## Voice and tone
 
-- **First person** ("I", not "We") throughout
+**This section is a quick-reference summary only — the Brand Operating
+System in Drive (see above) is the actual authority and can change
+independently of this file. Check there before relying on this list,
+especially the pronoun rule below, which has changed at least once already.**
+
+- **Pronouns:** "we" in website copy and formal pages; "I" only in personal
+  outreach from Tom; Tom's own story is normally written in third person on
+  the website. (This reversed an earlier "I, not we" convention — confirmed
+  against the Brand OS on 25/07/2026.)
 - **British English** only (programme, organise, colour)
 - UK business language: VAT, the books, fixed overheads, cash flow, gross margin
 - Direct, dry, blunt. No AI cliches (unlocking, empowering, seamless, transformative, journey, potential, synergy)
