@@ -107,7 +107,11 @@ const QUESTIONS = [
   }
 ];
 
-const MIN_ANSWER_LENGTH = 40;
+// Tom's call: allow one-word answers if that's genuinely what someone wants
+// to give. This only blocks a fully blank submission, not a blunt one — the
+// brief's own instruction to judge substance, not writing ability, means the
+// quality control belongs in Claude's assessment, not a character gate.
+const MIN_ANSWER_LENGTH = 1;
 
 const SALE_TIMEFRAME_OPTIONS = [
   'Yes, actively',
