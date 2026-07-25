@@ -553,10 +553,12 @@ async function renderPage(req, res, next, pageSlug) {
     }
 
     // Only fetch/serve Google reviews on pages that actually have a
-    // googlereviews section — most pages never touch this, so the (cached)
-    // Places API call stays off their render path entirely.
+    // googlereviews section, plus the homepage (which shows a small real
+    // rating line next to its testimonial quote) — most other pages never
+    // touch this, so the (cached) Places API call stays off their render
+    // path entirely.
     let googleReviews = null;
-    if (sectionOrder.some(iid => instanceTemplates[iid] === 'googlereviews')) {
+    if (sectionOrder.some(iid => instanceTemplates[iid] === 'googlereviews') || currentPage.slug === 'main') {
       googleReviews = await getGoogleReviews();
     }
 
