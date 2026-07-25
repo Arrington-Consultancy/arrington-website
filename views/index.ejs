@@ -1122,18 +1122,24 @@
             margin-top: 4.5rem;
             display: flex;
             flex-direction: column;
-            gap: 2rem;
+            gap: 3.5rem;
         }
 
+        /* De-boxed to match fourcards/insight-cards: a top border only, not
+           a filled card — the document thumbnail's own drop shadow already
+           gives it plenty of visual weight against the flat page. */
         .document-card {
             display: grid;
             grid-template-columns: 190px 1fr;
             gap: 2.5rem;
             align-items: start;
-            padding: 2rem;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            background: var(--charcoal);
+            padding-top: 2.5rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .documents-list .document-card:first-child {
+            padding-top: 0;
+            border-top: none;
         }
 
         /* A document with no preview image set gets the full card width. */
@@ -1208,7 +1214,11 @@
             .document-card {
                 grid-template-columns: 1fr;
                 gap: 1.5rem;
-                padding: 1.5rem;
+                padding-top: 1.75rem;
+            }
+
+            .documents-list .document-card:first-child {
+                padding-top: 0;
             }
 
             .document-thumb {
