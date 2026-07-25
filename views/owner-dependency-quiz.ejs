@@ -3,13 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Owner Dependency Quiz | Arrington Consultancy</title>
-    <meta name="description" content="A free, practical 5 minute quiz to help you see where your business still depends too heavily on you as the owner. No email required, no diagnosis - just a clear, honest look.">
+    <%
+      // A shared result link (?score=N) gets its own title/description so the
+      // link preview on LinkedIn/Facebook/X actually shows the score and band
+      // instead of the same generic card every time. The canonical URL stays
+      // the clean, query-free page for SEO; only og:url follows the shared link.
+      const _pageTitle = shareResult
+        ? `I scored ${shareResult.score}/16 (${shareResult.bandLabel}) on the Owner Dependency Quiz | Arrington Consultancy`
+        : 'Owner Dependency Quiz | Arrington Consultancy';
+      const _pageDescription = shareResult
+        ? `See where a real business owner's own business still depends on them, then take the same free 5 minute quiz yourself.`
+        : 'A free, practical 5 minute quiz to help you see where your business still depends too heavily on you as the owner. No email required, no diagnosis - just a clear, honest look.';
+      const _ogUrl = shareResult ? requestUrl : 'https://www.arringtonconsultancy.com/owner-dependency-quiz';
+    %>
+    <title><%= _pageTitle %></title>
+    <meta name="description" content="<%= _pageDescription %>">
     <link rel="canonical" href="https://www.arringtonconsultancy.com/owner-dependency-quiz">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Owner Dependency Quiz | Arrington Consultancy">
-    <meta property="og:description" content="A free, practical 5 minute quiz to help you see where your business still depends too heavily on you as the owner.">
-    <meta property="og:url" content="https://www.arringtonconsultancy.com/owner-dependency-quiz">
+    <meta property="og:title" content="<%= _pageTitle %>">
+    <meta property="og:description" content="<%= _pageDescription %>">
+    <meta property="og:url" content="<%= _ogUrl %>">
     <meta name="csrf-token" content="<%= csrfToken %>">
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="icon" href="/icons/icon-32.png" type="image/png" sizes="32x32">
@@ -742,7 +755,10 @@
             }
             document.getElementById('odr-summary-text').textContent = summary;
 
-            var shareUrl = location.origin + '/owner-dependency-quiz';
+            // ?score=N lets the server render a personalised link-preview title
+            // (see server.js) so a LinkedIn/Facebook/X share actually shows the
+            // result instead of the same generic card every time.
+            var shareUrl = location.origin + '/owner-dependency-quiz?score=' + total;
             var shareMessage = "I scored " + total + "/16 (" + band.label + ") on Arrington Consultancy's Owner Dependency Quiz. It highlighted a few areas I'd been overlooking. Worth five minutes if you run an owner run business.";
             var fullResultsText = 'Score: ' + total + '/16 (' + band.label + ')\n\n' +
                 rows.map(function (r) { return r.cls.toUpperCase() + ' - ' + r.category + ': ' + r.text; }).join('\n') +

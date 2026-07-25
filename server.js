@@ -206,6 +206,16 @@ app.get('/img/:key', async (req, res, next) => {
 // System + Current Operating Position master governance rules) — the old
 // /owner-dependency-review URL previously used "Review" throughout before
 // that rule was checked, and now 301-redirects here permanently.
+// Score bands mirrored from the client-side quiz logic (views/owner-dependency-quiz.ejs)
+// so a shared link's score can be turned into the same band label server-side,
+// without trusting a client-supplied band string.
+const QUIZ_BANDS = [
+  { max: 3, label: 'Low dependency' },
+  { max: 7, label: 'Emerging dependency' },
+  { max: 11, label: 'Significant dependency' },
+  { max: 16, label: 'High dependency' }
+];
+
 app.get('/owner-dependency-quiz', async (req, res, next) => {
   try {
     const { rows: themeRows } = await db.query(
@@ -213,10 +223,24 @@ app.get('/owner-dependency-quiz', async (req, res, next) => {
     );
     const activeTheme = (themeRows[0] && themeRows[0].content) || 'dark';
     const theme = themes[activeTheme] || themes.dark;
+
+    // A shared result link (?score=N) gets a personalised share preview —
+    // title/description showing that score and band — so a LinkedIn/Facebook
+    // share actually carries the result through instead of always showing the
+    // same generic card. Anything outside 0-16 is treated as no score.
+    const scoreParam = parseInt(req.query.score, 10);
+    let shareResult = null;
+    if (Number.isInteger(scoreParam) && scoreParam >= 0 && scoreParam <= 16) {
+      const band = QUIZ_BANDS.find(b => scoreParam <= b.max) || QUIZ_BANDS[QUIZ_BANDS.length - 1];
+      shareResult = { score: scoreParam, bandLabel: band.label };
+    }
+
     res.render('owner-dependency-quiz', {
       theme,
       ga4Id: process.env.GA4_MEASUREMENT_ID || '',
-      csrfToken: generateCsrfToken(req, res)
+      csrfToken: generateCsrfToken(req, res),
+      shareResult,
+      requestUrl: `${req.protocol}://${req.get('host')}${req.originalUrl}`
     });
   } catch (err) {
     next(err);
