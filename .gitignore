@@ -7,5 +7,7 @@ npm-debug.log*
 # Incoming source files (the served copies live in public/pdfs)
 /pdfs/
 
-# Local Claude session state
-.claude/
+# Local Claude session state, but the shared skills folder IS version-controlled
+# (it carries /goodnight, see WORKING-METHOD.md)
+.claude/*
+!.claude/skills/

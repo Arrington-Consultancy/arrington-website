@@ -6,6 +6,8 @@ This note hands the website over from Nat (who built and hosted it) to Tom, who 
 
 There are no em dashes and UK spelling throughout, because that is the house style for this site. Please keep it.
 
+**Also read `WORKING-METHOD.md`** (added 25 July 2026). It is two pages on how to work on this project across a terminal, the Claude app and a code editor without the thread coming apart: one folder per project, every context window grounded in that folder, `CLAUDE.md` as the project's memory, and the `/goodnight` skill at the end of each session. The skill ships in this repo at `.claude/skills/goodnight/SKILL.md`, so it works as soon as the folder is cloned.
+
 ---
 
 ## 1. What this is, in one paragraph
