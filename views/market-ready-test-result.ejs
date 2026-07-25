@@ -45,6 +45,19 @@
         .mrt-score-rating { font-size: 0.95rem; color: var(--accent); font-weight: 600; flex-basis: 100%; }
         .mrt-confidence { font-size: 0.85rem; color: var(--text-muted); flex-basis: 100%; }
 
+        .mrt-share { margin: 0 0 1.75rem; padding: 1.1rem 1.3rem; border: 1px solid var(--border); border-radius: 6px; }
+        .mrt-share-label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; color: var(--text-muted); margin: 0 0 0.85rem; }
+        .mrt-share-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+        .mrt-share-btn {
+            display: inline-flex; align-items: center; gap: 0.45rem; font-family: 'DM Sans', sans-serif;
+            font-size: 0.85rem; font-weight: 600; padding: 0.55rem 1rem; border-radius: 3px;
+            border: 1px solid var(--border); background: transparent; color: var(--text-bright);
+            text-decoration: none; cursor: pointer;
+        }
+        .mrt-share-btn:hover, .mrt-share-btn:focus-visible { border-color: var(--accent); color: var(--accent); }
+        .mrt-share-icon { flex-shrink: 0; }
+        .mrt-share-status { margin: 0.75rem 0 0; font-size: 0.85rem; color: var(--accent); }
+
         .mrt-block { padding: 1.1rem 0; border-top: 1px solid var(--border); }
         .mrt-block:first-of-type { border-top: none; }
         .mrt-block h3 { margin-bottom: 0.35rem; }
@@ -104,6 +117,27 @@
             <div class="mrt-score-num"><%= report.overall_score %>/100</div>
             <div class="mrt-score-rating"><%= report.rating %></div>
             <div class="mrt-confidence">Confidence: <%= report.confidence %> &mdash; <%= report.confidence_reason %></div>
+        </div>
+
+        <div class="mrt-share">
+            <p class="mrt-share-label">Share your result</p>
+            <div class="mrt-share-actions">
+                <a href="#" id="mrt-share-linkedin" target="_blank" rel="noopener" class="mrt-share-btn">
+                    <svg class="mrt-share-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                    LinkedIn
+                </a>
+                <a href="#" id="mrt-share-facebook" target="_blank" rel="noopener" class="mrt-share-btn">
+                    <svg class="mrt-share-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22.675 0h-21.35C.6 0 0 .6 0 1.326v21.348C0 23.4.6 24 1.325 24h11.495v-9.294H9.692v-3.622h3.128V8.413c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24h-1.918c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12V24h6.116C23.4 24 24 23.4 24 22.674V1.326C24 .6 23.4 0 22.675 0"/></svg>
+                    Facebook
+                </a>
+                <a href="#" id="mrt-share-x" target="_blank" rel="noopener" class="mrt-share-btn">
+                    <svg class="mrt-share-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                    X
+                </a>
+                <button type="button" id="mrt-share-copy-text" class="mrt-share-btn">Copy result text</button>
+                <button type="button" id="mrt-share-copy-link" class="mrt-share-btn">Copy result link</button>
+            </div>
+            <p class="mrt-share-status" id="mrt-share-status" role="status" hidden></p>
         </div>
 
         <p><%= report.opening_assessment %></p>
@@ -221,6 +255,67 @@
 
     <script nonce="<%= nonce %>">
     (function () {
+        var score = <%= report.overall_score %>;
+        var rating = <%- JSON.stringify(report.rating) %>;
+        var resultToken = <%- JSON.stringify(resultToken) %>;
+        var shareUrl = window.location.href;
+        var shareMessage = 'I scored ' + score + '/100 (' + rating + ') on Arrington Consultancy\'s Market Ready Test, a straight assessment of how ready a business is to be taken over by a new owner. Worth five minutes if you run one.';
+
+        document.getElementById('mrt-share-x').href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareMessage) + '&url=' + encodeURIComponent(shareUrl);
+        document.getElementById('mrt-share-facebook').href = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(shareUrl);
+        document.getElementById('mrt-share-linkedin').href = 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(shareUrl);
+
+        function copyToClipboard(text, cb) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(cb, cb);
+            } else {
+                var ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                try { document.execCommand('copy'); } catch (e) {}
+                document.body.removeChild(ta);
+                cb();
+            }
+        }
+
+        function showShareStatus(text) {
+            var el = document.getElementById('mrt-share-status');
+            el.textContent = text;
+            el.hidden = false;
+        }
+
+        function notifyShare(platform) {
+            var csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+            fetch('/api/market-ready-test/share-notify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                body: JSON.stringify({ token: resultToken, platform: platform })
+            }).catch(function () {});
+        }
+
+        ['mrt-share-linkedin', 'mrt-share-facebook', 'mrt-share-x'].forEach(function (id) {
+            document.getElementById(id).addEventListener('click', function () {
+                notifyShare(id.replace('mrt-share-', ''));
+            });
+        });
+
+        document.getElementById('mrt-share-copy-text').addEventListener('click', function () {
+            copyToClipboard(shareMessage + ' ' + shareUrl, function () {
+                showShareStatus('Result text copied.');
+                notifyShare('copy_text');
+            });
+        });
+
+        document.getElementById('mrt-share-copy-link').addEventListener('click', function () {
+            copyToClipboard(shareUrl, function () {
+                showShareStatus('Link copied.');
+                notifyShare('copy_link');
+            });
+        });
+
         var btn = document.getElementById('mrt-ask-tom');
         var status = document.getElementById('mrt-request-status');
         btn.addEventListener('click', function () {
