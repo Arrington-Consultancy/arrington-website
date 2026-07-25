@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Ready Test | Arrington Consultancy</title>
+    <meta name="description" content="A ten-question written assessment of whether your business could be taken over successfully by a new owner.">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="csrf-token" content="<%= csrfToken %>">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <style nonce="<%= nonce %>">
+        :root {
+            <% for (const [prop, val] of Object.entries(theme.vars)) { %>
+            <%= prop %>: <%= val %>;
+            <% } %>
+        }
+        * { box-sizing: border-box; }
+        @media (prefers-reduced-motion: reduce) {
+            * { transition: none !important; animation: none !important; }
+        }
+        body {
+            margin: 0;
+            font-family: 'DM Sans', sans-serif;
+            background: var(--black);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+        header img { height: 32px; width: auto; }
+        header .mrt-back-link {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        header .mrt-back-link:hover, header .mrt-back-link:focus-visible { color: var(--accent); }
+        main {
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2.5rem 1.5rem 6rem;
+        }
+        .mrt-label {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 0.9rem;
+        }
+        h1, h2, h3 {
+            font-family: 'DM Serif Display', serif;
+            font-weight: 400;
+            color: var(--text-bright);
+            line-height: 1.25;
+            margin: 0 0 1rem;
+            text-wrap: balance;
+        }
+        h1 { font-size: clamp(1.8rem, 5vw, 2.4rem); }
+        h2 { font-size: 1.35rem; }
+        p { color: var(--text); margin: 0 0 1.2rem; }
+        .mrt-meta { font-size: 0.88rem; color: var(--text-muted); margin-bottom: 2rem; }
+
+        .btn {
+            display: inline-block;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            padding: 0.85rem 1.75rem;
+            border-radius: 3px;
+            text-decoration: none;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        .btn-primary { background: var(--accent); color: var(--black); border-color: var(--accent); }
+        .btn-primary:hover, .btn-primary:focus-visible { background: var(--accent-hover); border-color: var(--accent-hover); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-outline { background: transparent; color: var(--text-bright); border-color: var(--border); }
+        .btn-outline:hover, .btn-outline:focus-visible { border-color: var(--accent); color: var(--accent); }
+        button.btn { font: inherit; }
+
+        .mrt-screen { display: none; }
+        .mrt-screen.active { display: block; }
+
+        .mrt-progress { height: 3px; background: var(--border); border-radius: 2px; margin-bottom: 2rem; overflow: hidden; }
+        .mrt-progress-bar { height: 100%; background: var(--accent); width: 0%; transition: width 0.3s ease; }
+
+        .mrt-field { margin-bottom: 1.4rem; }
+        .mrt-field label { display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-bright); margin-bottom: 0.5rem; }
+        .mrt-field .mrt-optional { font-weight: 400; color: var(--text-muted); font-size: 0.82rem; }
+        .mrt-field input[type="text"], .mrt-field input[type="email"], .mrt-field input[type="tel"], .mrt-field select, .mrt-field textarea {
+            width: 100%;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            padding: 0.85rem 1rem;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-bright);
+        }
+        .mrt-field input:focus-visible, .mrt-field select:focus-visible, .mrt-field textarea:focus-visible {
+            outline: none; border-color: var(--accent);
+        }
+        .mrt-field textarea { min-height: 160px; resize: vertical; line-height: 1.6; }
+        .mrt-field-hint { font-size: 0.82rem; color: var(--text-muted); margin-top: 0.5rem; }
+        .mrt-field-error { font-size: 0.85rem; color: var(--odr-red, #c0524a); margin-top: 0.5rem; display: none; }
+        .mrt-field-error.visible { display: block; }
+        .mrt-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        @media (max-width: 560px) { .mrt-row-2 { grid-template-columns: 1fr; } }
+
+        .mrt-consent { display: flex; gap: 0.75rem; align-items: flex-start; margin-bottom: 1rem; }
+        .mrt-consent input[type="checkbox"] { margin-top: 0.3rem; flex-shrink: 0; width: 18px; height: 18px; }
+        .mrt-consent label { font-size: 0.92rem; color: var(--text); font-weight: 400; }
+
+        .mrt-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 1.75rem; gap: 1rem; }
+        .mrt-back { background: none; border: none; color: var(--text-muted); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; cursor: pointer; padding: 0.5rem 0; }
+        .mrt-back:hover, .mrt-back:focus-visible { color: var(--text-bright); }
+        .mrt-back:disabled { visibility: hidden; }
+
+        .mrt-callout {
+            padding: 1.1rem 1.3rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            margin-bottom: 1.75rem;
+            font-size: 0.92rem;
+            color: var(--text-muted);
+        }
+
+        .mrt-review-block { padding: 1rem 0; border-top: 1px solid var(--border); }
+        .mrt-review-block:first-of-type { border-top: none; }
+        .mrt-review-q { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.35rem; }
+        .mrt-review-a { font-size: 0.95rem; color: var(--text-bright); white-space: pre-wrap; }
+        .mrt-review-edit { font-size: 0.82rem; color: var(--accent); background: none; border: none; cursor: pointer; padding: 0; margin-top: 0.4rem; }
+
+        .mrt-loading { text-align: center; padding: 3rem 0; }
+        .mrt-loading-text { font-size: 1.05rem; color: var(--text-bright); min-height: 1.6em; }
+        .mrt-spinner {
+            width: 36px; height: 36px; margin: 0 auto 1.75rem;
+            border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%;
+            animation: mrt-spin 0.9s linear infinite;
+        }
+        @keyframes mrt-spin { to { transform: rotate(360deg); } }
+        @media (prefers-reduced-motion: reduce) { .mrt-spinner { animation: none; border-top-color: var(--border); } }
+
+        .mrt-error-box {
+            padding: 1.25rem 1.4rem; border: 1px solid var(--odr-red, #c0524a);
+            background: rgba(192,82,74,0.08); border-radius: 4px; margin-bottom: 1.5rem;
+        }
+        .mrt-error-box p { color: var(--text-bright); margin: 0; }
+
+        @media (max-width: 480px) {
+            .mrt-nav { flex-wrap: wrap; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="/" aria-label="Arrington Consultancy home"><img src="/img/logo" alt="Arrington Business Consultancy"></a>
+        <a href="/" class="mrt-back-link">&larr; Back to site</a>
+    </header>
+
+    <main>
+        <!-- INTRO -->
+        <section class="mrt-screen active" id="mrt-intro">
+            <p class="mrt-label">MARKET READY TEST</p>
+            <h1>How ready is your business for a new owner?</h1>
+            <p>The Market Ready Test looks beyond headline profit and asks the questions a serious buyer is likely to ask.</p>
+            <p>Answer ten questions honestly and receive a personalised New Owner Ready Score, including the strengths a buyer may value, the weaknesses they may challenge and the areas worth strengthening before a sale.</p>
+            <p class="mrt-meta">Around 10 minutes. Written answers. Personalised assessment.</p>
+
+            <div class="mrt-callout">
+                <p style="margin-bottom:0.9rem;">There are no perfect businesses and there are no perfect answers. This assessment is designed to understand how the business really works, where it may be exposed and how it could look through the eyes of a serious buyer. The more open you are, the more useful the result will be.</p>
+                <p style="margin-bottom:0;">This is not a valuation and it is not legal, accounting or financial advice.</p>
+            </div>
+
+            <div class="mrt-callout">
+                <p style="margin-bottom:0;">Your answers will be used to produce your assessment and may be reviewed by Arrington Consultancy if you ask us to contact you. We will email you a copy of your result so you can keep it and return to it later.</p>
+            </div>
+
+            <button type="button" class="btn btn-primary" id="mrt-start">Start the Market Ready Test</button>
+        </section>
+
+        <!-- BUSINESS DETAILS -->
+        <section class="mrt-screen" id="mrt-business">
+            <p class="mrt-label">ABOUT THE BUSINESS</p>
+            <h2>A few details about the business</h2>
+            <p class="mrt-meta">Nothing here is mandatory except the business name. Skip anything you'd rather not answer.</p>
+            <form id="mrt-business-form">
+                <div class="mrt-field">
+                    <label for="mrt-businessName">Business name</label>
+                    <input type="text" id="mrt-businessName" name="businessName" maxlength="255" required>
+                </div>
+                <div class="mrt-field">
+                    <label for="mrt-location">Business location <span class="mrt-optional">(optional)</span></label>
+                    <input type="text" id="mrt-location" name="location" maxlength="255">
+                </div>
+                <div class="mrt-field">
+                    <label for="mrt-industry">Industry or type of business <span class="mrt-optional">(optional)</span></label>
+                    <input type="text" id="mrt-industry" name="industry" maxlength="255">
+                </div>
+                <div class="mrt-row-2">
+                    <div class="mrt-field">
+                        <label for="mrt-employeeCount">Approximate number of people working in the business <span class="mrt-optional">(optional)</span></label>
+                        <input type="text" id="mrt-employeeCount" name="employeeCount" maxlength="100">
+                    </div>
+                    <div class="mrt-field">
+                        <label for="mrt-turnoverBand">Approximate annual turnover band <span class="mrt-optional">(optional)</span></label>
+                        <input type="text" id="mrt-turnoverBand" name="turnoverBand" maxlength="100" placeholder="e.g. £250k&ndash;£500k">
+                    </div>
+                </div>
+                <div class="mrt-field">
+                    <label for="mrt-saleTimeframe">Are you currently considering a sale? <span class="mrt-optional">(optional)</span></label>
+                    <select id="mrt-saleTimeframe" name="saleTimeframe">
+                        <option value="">Prefer not to say for now</option>
+                        <% saleTimeframeOptions.forEach(function(opt) { %>
+                        <option value="<%= opt %>"><%= opt %></option>
+                        <% }); %>
+                    </select>
+                </div>
+                <p class="mrt-field-error" id="mrt-business-error">Please enter the business name.</p>
+                <div class="mrt-nav">
+                    <button type="button" class="mrt-back" id="mrt-business-back">&larr; Back</button>
+                    <button type="submit" class="btn btn-primary">Continue</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- QUESTIONS -->
+        <section class="mrt-screen" id="mrt-questions">
+            <div class="mrt-progress" role="progressbar" aria-valuemin="1" aria-valuemax="<%= questions.length %>" id="mrt-progress-track">
+                <div class="mrt-progress-bar" id="mrt-progress-bar"></div>
+            </div>
+            <div id="mrt-question-body"></div>
+            <p class="mrt-field-error" id="mrt-answer-error"></p>
+            <div class="mrt-nav">
+                <button type="button" class="mrt-back" id="mrt-q-back">&larr; Back</button>
+                <span class="mrt-meta" id="mrt-step-label" style="margin:0;"></span>
+                <button type="button" class="btn btn-primary" id="mrt-q-continue">Continue</button>
+            </div>
+        </section>
+
+        <!-- CONTACT DETAILS -->
+        <section class="mrt-screen" id="mrt-contact">
+            <p class="mrt-label">YOUR DETAILS</p>
+            <h2>Where should we send your result?</h2>
+            <form id="mrt-contact-form">
+                <div class="mrt-row-2">
+                    <div class="mrt-field">
+                        <label for="mrt-firstName">First name</label>
+                        <input type="text" id="mrt-firstName" name="firstName" maxlength="200" required>
+                    </div>
+                    <div class="mrt-field">
+                        <label for="mrt-lastName">Last name <span class="mrt-optional">(optional)</span></label>
+                        <input type="text" id="mrt-lastName" name="lastName" maxlength="200">
+                    </div>
+                </div>
+                <div class="mrt-field">
+                    <label for="mrt-email">Email address</label>
+                    <input type="email" id="mrt-email" name="email" maxlength="255" required>
+                </div>
+                <div class="mrt-field">
+                    <label for="mrt-phone">Telephone number <span class="mrt-optional">(optional)</span></label>
+                    <input type="tel" id="mrt-phone" name="phone" maxlength="50">
+                </div>
+
+                <div class="mrt-hp" aria-hidden="true" style="position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;">
+                    <label>Leave this field blank<input type="text" name="website" id="mrt-website-hp" tabindex="-1" autocomplete="off"></label>
+                </div>
+
+                <div class="mrt-consent">
+                    <input type="checkbox" id="mrt-consent-result" required>
+                    <label for="mrt-consent-result">I agree to my answers being used to produce and email my Market Ready Test result.</label>
+                </div>
+                <div class="mrt-consent">
+                    <input type="checkbox" id="mrt-consent-tom">
+                    <label for="mrt-consent-tom">I would like Tom Arrington to review my result and contact me.</label>
+                </div>
+                <div class="mrt-consent">
+                    <input type="checkbox" id="mrt-consent-marketing">
+                    <label for="mrt-consent-marketing">I would like to receive occasional useful business thinking from Arrington Consultancy.</label>
+                </div>
+
+                <p class="mrt-field-error" id="mrt-contact-error">Please enter your first name, a valid email address, and agree to the first box above.</p>
+                <div class="mrt-nav">
+                    <button type="button" class="mrt-back" id="mrt-contact-back">&larr; Back</button>
+                    <button type="submit" class="btn btn-primary">Review my answers</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- REVIEW -->
+        <section class="mrt-screen" id="mrt-review">
+            <p class="mrt-label">REVIEW</p>
+            <h2>Check your answers before submitting</h2>
+            <p class="mrt-meta">You can go back and change anything before your result is generated.</p>
+            <div id="mrt-review-body"></div>
+            <div class="mrt-nav">
+                <button type="button" class="mrt-back" id="mrt-review-back">&larr; Back</button>
+                <button type="button" class="btn btn-primary" id="mrt-review-submit">Get my New Owner Ready Score</button>
+            </div>
+        </section>
+
+        <!-- LOADING -->
+        <section class="mrt-screen" id="mrt-loading">
+            <div class="mrt-loading">
+                <div class="mrt-spinner" aria-hidden="true"></div>
+                <p class="mrt-loading-text" id="mrt-loading-text" role="status">Reading your answers</p>
+            </div>
+        </section>
+
+        <!-- ERROR / RECOVERY -->
+        <section class="mrt-screen" id="mrt-error">
+            <p class="mrt-label">SOMETHING WENT WRONG</p>
+            <div class="mrt-error-box">
+                <p id="mrt-error-message">We could not complete your assessment properly. Your answers have been saved and no score has been guessed.</p>
+            </div>
+            <p>Your answers are still here — you can try again, or contact us directly.</p>
+            <div class="mrt-nav">
+                <button type="button" class="btn btn-outline" id="mrt-error-retry">Try again</button>
+                <a href="#" class="btn btn-primary" id="mrt-error-contact">Email tom@arringtonconsultancy.com</a>
+            </div>
+        </section>
+    </main>
+
+    <script nonce="<%= nonce %>">
+    (function () {
+        var QUESTIONS = <%- JSON.stringify(questions) %>;
+        var MIN_LEN = <%= minAnswerLength %>;
+        var STORAGE_KEY = 'mrt_progress_v1';
+
+        var state = {
+            business: {},
+            answers: new Array(QUESTIONS.length).fill(''),
+            contact: {},
+            consentTom: false,
+            consentMarketing: false
+        };
+
+        function saveProgress() {
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+        }
+        function loadProgress() {
+            try {
+                var raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return;
+                var parsed = JSON.parse(raw);
+                if (parsed && Array.isArray(parsed.answers) && parsed.answers.length === QUESTIONS.length) {
+                    state = Object.assign(state, parsed);
+                }
+            } catch (e) {}
+        }
+        function clearProgress() {
+            try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+        }
+        loadProgress();
+
+        var screens = ['mrt-intro', 'mrt-business', 'mrt-questions', 'mrt-contact', 'mrt-review', 'mrt-loading', 'mrt-error'].reduce(function (acc, id) {
+            acc[id] = document.getElementById(id);
+            return acc;
+        }, {});
+
+        function showScreen(id) {
+            Object.values(screens).forEach(function (s) { s.classList.remove('active'); });
+            screens[id].classList.add('active');
+            window.scrollTo({ top: 0, behavior: 'auto' });
+        }
+
+        document.getElementById('mrt-start').addEventListener('click', function () {
+            document.getElementById('mrt-businessName').value = state.business.businessName || '';
+            document.getElementById('mrt-location').value = state.business.location || '';
+            document.getElementById('mrt-industry').value = state.business.industry || '';
+            document.getElementById('mrt-employeeCount').value = state.business.employeeCount || '';
+            document.getElementById('mrt-turnoverBand').value = state.business.turnoverBand || '';
+            document.getElementById('mrt-saleTimeframe').value = state.business.saleTimeframe || '';
+            showScreen('mrt-business');
+        });
+
+        document.getElementById('mrt-business-back').addEventListener('click', function () { showScreen('mrt-intro'); });
+
+        document.getElementById('mrt-business-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            var businessName = document.getElementById('mrt-businessName').value.trim();
+            var errEl = document.getElementById('mrt-business-error');
+            if (!businessName) {
+                errEl.classList.add('visible');
+                return;
+            }
+            errEl.classList.remove('visible');
+            state.business = {
+                businessName: businessName,
+                location: document.getElementById('mrt-location').value.trim(),
+                industry: document.getElementById('mrt-industry').value.trim(),
+                employeeCount: document.getElementById('mrt-employeeCount').value.trim(),
+                turnoverBand: document.getElementById('mrt-turnoverBand').value.trim(),
+                saleTimeframe: document.getElementById('mrt-saleTimeframe').value
+            };
+            saveProgress();
+            currentQuestion = 0;
+            renderQuestion();
+            showScreen('mrt-questions');
+        });
+
+        // ---- Questions ----
+        var currentQuestion = 0;
+        var progressBar = document.getElementById('mrt-progress-bar');
+        var progressTrack = document.getElementById('mrt-progress-track');
+        var stepLabel = document.getElementById('mrt-step-label');
+        var qBody = document.getElementById('mrt-question-body');
+        var answerError = document.getElementById('mrt-answer-error');
+        var qBack = document.getElementById('mrt-q-back');
+        var qContinue = document.getElementById('mrt-q-continue');
+
+        function renderQuestion() {
+            var q = QUESTIONS[currentQuestion];
+            var pct = Math.round((currentQuestion / QUESTIONS.length) * 100);
+            progressBar.style.width = pct + '%';
+            progressTrack.setAttribute('aria-valuenow', currentQuestion + 1);
+            stepLabel.textContent = 'Question ' + (currentQuestion + 1) + ' of ' + QUESTIONS.length;
+            qBack.disabled = false;
+            answerError.classList.remove('visible');
+
+            qBody.innerHTML =
+                '<h2>' + q.text + '</h2>' +
+                '<div class="mrt-field">' +
+                '<textarea id="mrt-answer-input" maxlength="5000" placeholder="A few honest sentences are more useful than a polished answer.">' + (state.answers[currentQuestion] || '') + '</textarea>' +
+                '</div>';
+
+            var input = document.getElementById('mrt-answer-input');
+            input.addEventListener('input', function () {
+                state.answers[currentQuestion] = input.value;
+                saveProgress();
+            });
+            input.focus();
+        }
+
+        qBack.addEventListener('click', function () {
+            if (currentQuestion === 0) {
+                showScreen('mrt-business');
+                return;
+            }
+            currentQuestion -= 1;
+            renderQuestion();
+        });
+
+        qContinue.addEventListener('click', function () {
+            var input = document.getElementById('mrt-answer-input');
+            var val = input.value.trim();
+            if (val.length < MIN_LEN) {
+                answerError.textContent = 'Please add a little more detail. A few honest sentences will give you a much more useful result.';
+                answerError.classList.add('visible');
+                return;
+            }
+            state.answers[currentQuestion] = val;
+            saveProgress();
+            if (currentQuestion < QUESTIONS.length - 1) {
+                currentQuestion += 1;
+                renderQuestion();
+            } else {
+                document.getElementById('mrt-firstName').value = state.contact.firstName || '';
+                document.getElementById('mrt-lastName').value = state.contact.lastName || '';
+                document.getElementById('mrt-email').value = state.contact.email || '';
+                document.getElementById('mrt-phone').value = state.contact.phone || '';
+                document.getElementById('mrt-consent-tom').checked = !!state.consentTom;
+                document.getElementById('mrt-consent-marketing').checked = !!state.consentMarketing;
+                showScreen('mrt-contact');
+            }
+        });
+
+        // ---- Contact ----
+        document.getElementById('mrt-contact-back').addEventListener('click', function () {
+            currentQuestion = QUESTIONS.length - 1;
+            renderQuestion();
+            showScreen('mrt-questions');
+        });
+
+        function isValidEmail(s) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
+
+        document.getElementById('mrt-contact-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            var firstName = document.getElementById('mrt-firstName').value.trim();
+            var email = document.getElementById('mrt-email').value.trim();
+            var consentResult = document.getElementById('mrt-consent-result').checked;
+            var errEl = document.getElementById('mrt-contact-error');
+            if (!firstName || !isValidEmail(email) || !consentResult) {
+                errEl.classList.add('visible');
+                return;
+            }
+            errEl.classList.remove('visible');
+            state.contact = {
+                firstName: firstName,
+                lastName: document.getElementById('mrt-lastName').value.trim(),
+                email: email,
+                phone: document.getElementById('mrt-phone').value.trim()
+            };
+            state.consentTom = document.getElementById('mrt-consent-tom').checked;
+            state.consentMarketing = document.getElementById('mrt-consent-marketing').checked;
+            saveProgress();
+            renderReview();
+            showScreen('mrt-review');
+        });
+
+        // ---- Review ----
+        function renderReview() {
+            var body = document.getElementById('mrt-review-body');
+            var html = '<div class="mrt-review-block"><div class="mrt-review-q">Business</div><div class="mrt-review-a">' +
+                escapeHtml(state.business.businessName || '') + '</div></div>';
+            QUESTIONS.forEach(function (q, i) {
+                html += '<div class="mrt-review-block"><div class="mrt-review-q">' + escapeHtml(q.text) + '</div>' +
+                    '<div class="mrt-review-a">' + escapeHtml(state.answers[i] || '') + '</div>' +
+                    '<button type="button" class="mrt-review-edit" data-edit-q="' + i + '">Edit this answer</button></div>';
+            });
+            html += '<div class="mrt-review-block"><div class="mrt-review-q">Sending your result to</div><div class="mrt-review-a">' +
+                escapeHtml(state.contact.firstName + ' — ' + state.contact.email) + '</div></div>';
+            body.innerHTML = html;
+            body.querySelectorAll('[data-edit-q]').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    currentQuestion = parseInt(btn.getAttribute('data-edit-q'), 10);
+                    renderQuestion();
+                    showScreen('mrt-questions');
+                });
+            });
+        }
+
+        function escapeHtml(s) {
+            var d = document.createElement('div');
+            d.textContent = s;
+            return d.innerHTML;
+        }
+
+        document.getElementById('mrt-review-back').addEventListener('click', function () { showScreen('mrt-contact'); });
+
+        // ---- Loading messages ----
+        var LOADING_MESSAGES = [
+            'Reading your answers',
+            'Looking for patterns and points of fragility',
+            'Building your New Owner Ready Score',
+            'Preparing your report'
+        ];
+        var loadingInterval = null;
+        function startLoadingMessages() {
+            var el = document.getElementById('mrt-loading-text');
+            var i = 0;
+            el.textContent = LOADING_MESSAGES[0];
+            loadingInterval = setInterval(function () {
+                i = (i + 1) % LOADING_MESSAGES.length;
+                el.textContent = LOADING_MESSAGES[i];
+            }, 3200);
+        }
+        function stopLoadingMessages() {
+            if (loadingInterval) { clearInterval(loadingInterval); loadingInterval = null; }
+        }
+
+        // ---- Submit ----
+        document.getElementById('mrt-review-submit').addEventListener('click', function () {
+            showScreen('mrt-loading');
+            startLoadingMessages();
+
+            var csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+            fetch('/api/market-ready-test/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                body: JSON.stringify({
+                    website: document.getElementById('mrt-website-hp').value,
+                    firstName: state.contact.firstName,
+                    lastName: state.contact.lastName,
+                    email: state.contact.email,
+                    phone: state.contact.phone,
+                    businessName: state.business.businessName,
+                    location: state.business.location,
+                    industry: state.business.industry,
+                    employeeCount: state.business.employeeCount,
+                    turnoverBand: state.business.turnoverBand,
+                    saleTimeframe: state.business.saleTimeframe,
+                    answers: state.answers,
+                    consentTomReview: state.consentTom,
+                    consentMarketing: state.consentMarketing
+                })
+            }).then(function (res) {
+                return res.json().catch(function () { return {}; }).then(function (data) {
+                    return { ok: res.ok, data: data };
+                });
+            }).then(function (result) {
+                stopLoadingMessages();
+                if (result.ok && result.data && result.data.resultUrl) {
+                    clearProgress();
+                    window.location.href = result.data.resultUrl;
+                } else {
+                    document.getElementById('mrt-error-message').textContent =
+                        (result.data && result.data.error) || 'We could not complete your assessment properly. Your answers have been saved and no score has been guessed. Please try again or contact us at tom@arringtonconsultancy.com.';
+                    showScreen('mrt-error');
+                }
+            }).catch(function () {
+                stopLoadingMessages();
+                document.getElementById('mrt-error-message').textContent =
+                    'Something went wrong. Please try again or contact us at tom@arringtonconsultancy.com.';
+                showScreen('mrt-error');
+            });
+        });
+
+        document.getElementById('mrt-error-retry').addEventListener('click', function () {
+            showScreen('mrt-review');
+        });
+        document.getElementById('mrt-error-contact').addEventListener('click', function (e) {
+            e.preventDefault();
+            window.location.href = 'mailto:tom@arringtonconsultancy.com';
+        });
+    })();
+    </script>
+</body>
+</html>

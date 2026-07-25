@@ -17,6 +17,7 @@ const authRoutes = require('./routes/auth');
 const contentRoutes = require('./routes/content');
 const adminRoutes = require('./routes/admin');
 const leadRoutes = require('./routes/leads');
+const marketReadyTest = require('./routes/marketReadyTest');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -256,7 +257,10 @@ app.get('/owner-dependency-review', (req, res) => {
 app.get('/robots.txt', (req, res) => {
   const base = `${req.protocol}://${req.get('host')}`;
   res.type('text/plain').send(
-    `User-agent: *\nAllow: /\nDisallow: /login\n\nSitemap: ${base}/sitemap.xml\n`
+    // /market-ready-test is unpublished — see routes/marketReadyTest.js —
+    // disallowed here as belt-and-braces on top of the page's own
+    // noindex/nofollow meta tag, until Tom approves launch.
+    `User-agent: *\nAllow: /\nDisallow: /login\nDisallow: /market-ready-test\n\nSitemap: ${base}/sitemap.xml\n`
   );
 });
 
@@ -379,6 +383,14 @@ app.use('/api/admin', authedWriteLimiter, adminRoutes);
 // Public lead capture (contact/booking form + gated PDF downloads) — no
 // session required, so it carries its own rate limiters (see routes/leads.js).
 app.use(leadRoutes);
+
+// Market Ready Test — unpublished, standalone tool (see routes/marketReadyTest.js
+// for the full brief). Page routes registered directly (same pattern as the
+// Owner Dependency Quiz above) so the submit form's CSRF token is generated
+// here rather than relying on the global res.locals middleware; the POST
+// endpoint carries its own dedicated rate limiter.
+marketReadyTest.mountPageRoute(app, generateCsrfToken);
+app.use(marketReadyTest.router);
 
 // Serve v1.html as static with a relaxed CSP (legacy static page has
 // inline <style>/<script> blocks that predate the nonce setup).

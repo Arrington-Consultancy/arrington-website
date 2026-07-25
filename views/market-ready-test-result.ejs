@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your New Owner Ready Score | Arrington Consultancy</title>
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="csrf-token" content="<%= csrfToken %>">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <style nonce="<%= nonce %>">
+        :root {
+            <% for (const [prop, val] of Object.entries(theme.vars)) { %>
+            <%= prop %>: <%= val %>;
+            <% } %>
+            --mrt-red: #c0524a; --mrt-red-bg: rgba(192,82,74,0.12);
+            --mrt-amber: #c98a3e; --mrt-amber-bg: rgba(201,138,62,0.12);
+            --mrt-green: #4a8f6a; --mrt-green-bg: rgba(74,143,106,0.12);
+        }
+        * { box-sizing: border-box; }
+        @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+        body { margin: 0; font-family: 'DM Sans', sans-serif; background: var(--black); color: var(--text); line-height: 1.65; }
+        header {
+            padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+        }
+        header img { height: 32px; width: auto; }
+        header a.mrt-back-link { font-size: 0.85rem; color: var(--text-muted); text-decoration: none; white-space: nowrap; }
+        header a.mrt-back-link:hover { color: var(--accent); }
+        main { max-width: 700px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem; }
+        .mrt-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; color: var(--accent); margin-bottom: 0.9rem; }
+        h1, h2, h3 { font-family: 'DM Serif Display', serif; font-weight: 400; color: var(--text-bright); line-height: 1.25; margin: 0 0 1rem; text-wrap: balance; }
+        h1 { font-size: clamp(1.7rem, 5vw, 2.2rem); }
+        h2 { font-size: 1.3rem; margin-top: 2.5rem; }
+        h3 { font-size: 1.05rem; margin-bottom: 0.5rem; }
+        p { color: var(--text); margin: 0 0 1.1rem; }
+
+        .mrt-score-block {
+            display: flex; align-items: baseline; gap: 1rem; flex-wrap: wrap;
+            padding: 1.6rem 1.7rem; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 1.5rem;
+        }
+        .mrt-score-num { font-family: 'DM Serif Display', serif; font-size: 2.4rem; color: var(--text-bright); line-height: 1; font-variant-numeric: tabular-nums; }
+        .mrt-score-rating { font-size: 0.95rem; color: var(--accent); font-weight: 600; flex-basis: 100%; }
+        .mrt-confidence { font-size: 0.85rem; color: var(--text-muted); flex-basis: 100%; }
+
+        .mrt-block { padding: 1.1rem 0; border-top: 1px solid var(--border); }
+        .mrt-block:first-of-type { border-top: none; }
+        .mrt-block h3 { margin-bottom: 0.35rem; }
+        .mrt-block p { font-size: 0.95rem; }
+        .mrt-evidence-ref { font-size: 0.8rem; color: var(--text-muted); }
+
+        .mrt-flag { border-left: 3px solid var(--mrt-red); background: var(--mrt-red-bg); padding: 0.9rem 1.1rem; border-radius: 0 4px 4px 0; margin-bottom: 0.9rem; }
+        .mrt-flag h3 { color: var(--mrt-red); font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 0.95rem; }
+
+        .mrt-category { padding: 1rem 0; border-top: 1px solid var(--border); }
+        .mrt-category:first-of-type { border-top: none; }
+        .mrt-category-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+        .mrt-category-name { font-weight: 600; color: var(--text-bright); }
+        .mrt-category-score { font-variant-numeric: tabular-nums; color: var(--accent); font-weight: 700; }
+        .mrt-category p { font-size: 0.9rem; color: var(--text-muted); margin-top: 0.4rem; margin-bottom: 0; }
+
+        .mrt-priority { padding: 1.1rem 0; border-top: 1px solid var(--border); }
+        .mrt-priority:first-of-type { border-top: none; }
+        .mrt-priority-action { font-weight: 600; color: var(--text-bright); margin-bottom: 0.4rem; }
+        .mrt-priority-why, .mrt-priority-evidence { font-size: 0.9rem; margin-bottom: 0.3rem; }
+        .mrt-priority-evidence { color: var(--text-muted); }
+
+        ul.mrt-list { margin: 0 0 1.1rem; padding-left: 1.3rem; }
+        ul.mrt-list li { margin-bottom: 0.6rem; font-size: 0.95rem; }
+
+        .mrt-closing { padding: 1.2rem 1.3rem; background: var(--charcoal, rgba(255,255,255,0.03)); border-radius: 6px; margin: 1.5rem 0; }
+        .mrt-closing p { margin: 0; font-size: 0.92rem; color: var(--text-muted); }
+
+        .mrt-next-step { margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid var(--border); }
+        .mrt-cta-actions { display: flex; gap: 0.85rem; flex-wrap: wrap; margin-top: 1.25rem; }
+        .btn { display: inline-block; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 600; padding: 0.85rem 1.75rem; border-radius: 3px; text-decoration: none; cursor: pointer; border: 1px solid transparent; }
+        .btn-primary { background: var(--accent); color: var(--black); border-color: var(--accent); }
+        .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+        .btn-primary:disabled { opacity: 0.6; cursor: default; }
+        .btn-outline { background: transparent; color: var(--text-bright); border-color: var(--border); }
+        .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+        button.btn { font: inherit; }
+        .mrt-request-status { margin-top: 0.75rem; font-size: 0.85rem; color: var(--accent); }
+
+        @media (max-width: 480px) {
+            .mrt-cta-actions { flex-direction: column; }
+            .mrt-cta-actions .btn { text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="/" aria-label="Arrington Consultancy home"><img src="/img/logo" alt="Arrington Business Consultancy"></a>
+        <a href="/" class="mrt-back-link">&larr; Back to site</a>
+    </header>
+
+    <main>
+        <p class="mrt-label">YOUR RESULT</p>
+        <h1>Hello <%= firstName %>, here is your New Owner Ready Score</h1>
+
+        <div class="mrt-score-block">
+            <div class="mrt-score-num"><%= report.overall_score %>/100</div>
+            <div class="mrt-score-rating"><%= report.rating %></div>
+            <div class="mrt-confidence">Confidence: <%= report.confidence %> &mdash; <%= report.confidence_reason %></div>
+        </div>
+
+        <p><%= report.opening_assessment %></p>
+
+        <% if ((report.strengths || []).length) { %>
+        <h2>What strengthens the business</h2>
+        <% report.strengths.forEach(function(s) { %>
+        <div class="mrt-block">
+            <h3><%= s.title %></h3>
+            <p><%= s.explanation %></p>
+        </div>
+        <% }); %>
+        <% } %>
+
+        <% if ((report.concerns || []).length) { %>
+        <h2>What may make a buyer hesitate</h2>
+        <% report.concerns.forEach(function(c) { %>
+        <div class="mrt-block">
+            <h3><%= c.title %></h3>
+            <p><%= c.explanation %></p>
+        </div>
+        <% }); %>
+        <% } %>
+
+        <h2>Red flags</h2>
+        <% if ((report.red_flags || []).length) { %>
+        <% report.red_flags.forEach(function(r) { %>
+        <div class="mrt-flag">
+            <h3><%= r.title %></h3>
+            <p style="margin:0;"><%= r.explanation %></p>
+        </div>
+        <% }); %>
+        <% } else { %>
+        <p>No immediate red flags were identified from your answers, although several areas would still need documentary checking.</p>
+        <% } %>
+
+        <% if ((report.contradictions || []).length) { %>
+        <h2>Where your answers do not fully align</h2>
+        <% report.contradictions.forEach(function(c) { %>
+        <div class="mrt-block">
+            <h3><%= c.title %></h3>
+            <p><%= c.explanation %></p>
+        </div>
+        <% }); %>
+        <% } %>
+
+        <% if ((report.buyer_questions || []).length) { %>
+        <h2>What a serious buyer would ask next</h2>
+        <ul class="mrt-list">
+            <% report.buyer_questions.forEach(function(q) { %>
+            <li><%= q %></li>
+            <% }); %>
+        </ul>
+        <% } %>
+
+        <% if ((report.priorities || []).length) { %>
+        <h2>Three priorities before approaching the market</h2>
+        <% report.priorities.forEach(function(p) { %>
+        <div class="mrt-priority">
+            <div class="mrt-priority-action"><%= p.action %></div>
+            <div class="mrt-priority-why"><%= p.why_it_matters %></div>
+            <div class="mrt-priority-evidence">A buyer would expect to see: <%= p.evidence_a_buyer_would_expect %></div>
+        </div>
+        <% }); %>
+        <% } %>
+
+        <h2>Category scores</h2>
+        <%
+          const catLabels = {
+            transferability: ['Transferability', 20],
+            commercial_resilience: ['Commercial resilience', 20],
+            financial_credibility: ['Financial and evidential credibility', 15],
+            preparation_for_sale: ['Preparation for sale', 15],
+            buyer_confidence: ['Buyer confidence', 15],
+            owner_readiness: ['Owner readiness', 15]
+          };
+        %>
+        <% for (const [key, [label, max]] of Object.entries(catLabels)) { %>
+        <div class="mrt-category">
+            <div class="mrt-category-head">
+                <span class="mrt-category-name"><%= label %></span>
+                <span class="mrt-category-score"><%= report.category_scores[key] %>/<%= max %></span>
+            </div>
+            <% if (report.category_explanations && report.category_explanations[key]) { %>
+            <p><%= report.category_explanations[key] %></p>
+            <% } %>
+        </div>
+        <% } %>
+
+        <% if ((report.needs_checking || []).length) { %>
+        <h2>What still needs checking</h2>
+        <ul class="mrt-list">
+            <% report.needs_checking.forEach(function(item) { %>
+            <li><%= item %></li>
+            <% }); %>
+        </ul>
+        <% } %>
+
+        <div class="mrt-closing">
+            <p><%= report.closing_statement %></p>
+            <p style="margin-top:0.9rem;">This assessment is based entirely on what you told us. It is not a valuation and it does not replace legal, financial or tax advice.</p>
+        </div>
+
+        <div class="mrt-next-step">
+            <h2>Want Tom to challenge the result?</h2>
+            <p>The AI assessment can identify patterns in what you have written. It cannot walk through the business, test the evidence or challenge the assumptions behind your answers.</p>
+            <p>Tom Arrington has bought, built and sold owner run businesses himself. A proper commercial review looks at what is really happening, what a buyer is likely to question and what is worth strengthening before you approach the market.</p>
+            <div class="mrt-cta-actions">
+                <button type="button" class="btn btn-primary" id="mrt-ask-tom" data-token="<%= resultToken %>">Ask Tom to review my result</button>
+                <a href="/#conversation" class="btn btn-outline">Talk to us</a>
+            </div>
+            <p class="mrt-request-status" id="mrt-request-status" role="status" hidden></p>
+        </div>
+    </main>
+
+    <script nonce="<%= nonce %>">
+    (function () {
+        var btn = document.getElementById('mrt-ask-tom');
+        var status = document.getElementById('mrt-request-status');
+        btn.addEventListener('click', function () {
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+            var csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+            fetch('/api/market-ready-test/request-review', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                body: JSON.stringify({ token: btn.getAttribute('data-token') })
+            }).then(function (res) { return res.json().catch(function () { return {}; }); })
+              .then(function (data) {
+                status.hidden = false;
+                if (data && data.ok) {
+                    btn.textContent = 'Tom will be in touch';
+                    status.textContent = 'Thanks — Tom has been sent your result and will be in touch.';
+                } else {
+                    btn.disabled = false;
+                    btn.textContent = 'Ask Tom to review my result';
+                    status.textContent = (data && data.error) || 'Something went wrong. Please try again or email tom@arringtonconsultancy.com directly.';
+                }
+            }).catch(function () {
+                btn.disabled = false;
+                btn.textContent = 'Ask Tom to review my result';
+                status.hidden = false;
+                status.textContent = 'Something went wrong. Please try again or email tom@arringtonconsultancy.com directly.';
+            });
+        });
+    })();
+    </script>
+</body>
+</html>
