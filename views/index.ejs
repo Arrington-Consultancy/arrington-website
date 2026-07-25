@@ -824,19 +824,16 @@
         .insights-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 2rem;
+            gap: 3rem;
         }
 
+        /* De-boxed to match the fourcards treatment: a top border only,
+           not a filled card — this section already sits inside its own
+           distinct background band, so a card-within-a-card read as
+           doubled-up boxing. */
         .insight-card {
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            background: var(--charcoal);
-            padding: 2rem;
-            transition: border-color 0.2s;
-        }
-
-        .insight-card:hover {
-            border-color: rgba(255,255,255,0.12);
+            padding-top: 1.75rem;
+            border-top: 1px solid var(--border);
         }
 
         .insight-tag {
@@ -890,15 +887,17 @@
         .fourcards-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 1.5rem;
+            gap: 2.5rem;
             margin-top: 3rem;
         }
 
+        /* De-boxed to match the editorial, fewer-containers treatment used
+           elsewhere (credentials, proof strip): a top border only, not a
+           filled card around each item — the numbering and typography carry
+           the separation instead of a background/border box. */
         .fourcard {
-            padding: 2rem 1.5rem;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            background: var(--charcoal);
+            padding-top: 1.75rem;
+            border-top: 1px solid var(--border);
         }
 
         .fourcard-header {
