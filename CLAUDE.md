@@ -533,6 +533,7 @@ npm run dev
 - **Trust proxy:** enabled (required for rate limiting, secure cookies, and HTTPS redirect behind Railway's reverse proxy)
 - **Start command:** `node db/seed.js && node server.js` (seed is idempotent; skips user creation after first run)
 - **Deploy:** `railway up` from project root. Auto-deploy on push to `main` is configured but unreliable — always run `railway up` after pushing to ensure the deploy goes out
+- **GitHub Action (`.github/workflows/deploy.yml`, added 25/07/2026):** runs `railway up --detach` via the Railway CLI on every push to `main`, as a more reliable alternative to Railway's built-in GitHub auto-deploy. Requires a `RAILWAY_TOKEN` secret in the repo's GitHub Actions settings — must be a **project token** (Railway dashboard → the service → Settings → Tokens → create a token scoped to that service/environment), not a personal account token, so `railway up` needs no `railway link` step and can't accidentally target the wrong project. Manual `railway up` from a local checkout is still fine as a fallback/for out-of-band deploys.
 - **GitHub:** `github.com/natparnell/arrington-prototype` (private)
 
 ## Custom domains
