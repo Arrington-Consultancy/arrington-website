@@ -375,19 +375,24 @@
             object-position: center top;
         }
 
-        /* ---- HOMEPAGE HERO: full-bleed treatment (image as background,
-             text overlaid), carried over from the /homepage-concept design
-             exploration. Scoped to the homepage's own hero instance
-             (data-section-id="hero") only — About Us, Business Consultant
-             Devon and the 30 Minute Conversation page keep the side-by-side
-             hero-photo layout untouched. ---- */
-        .hero[data-section-id="hero"] {
+        /* ---- FULL-BLEED HERO: image as background, text overlaid, carried
+             over from the /homepage-concept design exploration. Scoped to the
+             three genuine page-opening heroes (homepage, Business Consultant
+             Devon, 30 Minute Conversation). About Us's hero instance sits at
+             the BOTTOM of that page as a closing section, not an opening one,
+             so it keeps the side-by-side hero-photo layout — full-bleed only
+             makes sense as a first impression. ---- */
+        .hero[data-section-id="hero"],
+        .hero[data-section-id="hero__3"],
+        .hero[data-section-id="hero__4"] {
             min-height: 100vh;
             align-items: flex-end;
             overflow: hidden;
         }
 
-        .hero[data-section-id="hero"]::after {
+        .hero[data-section-id="hero"]::after,
+        .hero[data-section-id="hero__3"]::after,
+        .hero[data-section-id="hero__4"]::after {
             content: '';
             position: absolute;
             inset: 0;
@@ -396,25 +401,33 @@
             pointer-events: none;
         }
 
-        .hero[data-section-id="hero"] .hero-inner {
+        .hero[data-section-id="hero"] .hero-inner,
+        .hero[data-section-id="hero__3"] .hero-inner,
+        .hero[data-section-id="hero__4"] .hero-inner {
             display: block;
             max-width: none;
             width: 100%;
             padding: 9.5rem 2rem 4.5rem;
         }
 
-        .hero[data-section-id="hero"] .hero-text {
+        .hero[data-section-id="hero"] .hero-text,
+        .hero[data-section-id="hero__3"] .hero-text,
+        .hero[data-section-id="hero__4"] .hero-text {
             position: relative;
             z-index: 2;
             max-width: 1100px;
             margin: 0 auto;
         }
 
-        .hero[data-section-id="hero"] .hero-text .sub {
+        .hero[data-section-id="hero"] .hero-text .sub,
+        .hero[data-section-id="hero__3"] .hero-text .sub,
+        .hero[data-section-id="hero__4"] .hero-text .sub {
             max-width: 560px;
         }
 
-        .hero[data-section-id="hero"] .hero-photo {
+        .hero[data-section-id="hero"] .hero-photo,
+        .hero[data-section-id="hero__3"] .hero-photo,
+        .hero[data-section-id="hero__4"] .hero-photo {
             position: absolute;
             inset: 0;
             z-index: 0;
@@ -427,14 +440,20 @@
             aspect-ratio: auto;
         }
 
-        .hero[data-section-id="hero"] .hero-photo img {
-            object-position: 60% 40%;
-        }
+        .hero[data-section-id="hero"] .hero-photo img { object-position: 60% 40%; }
+        .hero[data-section-id="hero__3"] .hero-photo img { object-position: 65% 50%; }
+        .hero[data-section-id="hero__4"] .hero-photo img { object-position: 60% 40%; }
 
         @media (max-width: 700px) {
-            .hero[data-section-id="hero"] { min-height: 92vh; }
+            .hero[data-section-id="hero"],
+            .hero[data-section-id="hero__3"],
+            .hero[data-section-id="hero__4"] { min-height: 92vh; }
             .hero[data-section-id="hero"] .hero-photo img { object-position: 70% 45%; }
-            .hero[data-section-id="hero"] .hero-inner { padding: 6.5rem 1.25rem 3.5rem; }
+            .hero[data-section-id="hero__3"] .hero-photo img { object-position: 75% 50%; }
+            .hero[data-section-id="hero__4"] .hero-photo img { object-position: 70% 45%; }
+            .hero[data-section-id="hero"] .hero-inner,
+            .hero[data-section-id="hero__3"] .hero-inner,
+            .hero[data-section-id="hero__4"] .hero-inner { padding: 6.5rem 1.25rem 3.5rem; }
         }
 
         /* ---- BUTTONS ---- */
