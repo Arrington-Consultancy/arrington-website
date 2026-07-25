@@ -1810,9 +1810,16 @@
             margin: 0 auto;
             padding: 0 2rem;
             display: flex;
-            gap: 1.5rem;
+            gap: 1.25rem;
             height: 36px;
             align-items: center;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scrollbar-width: none;
+        }
+
+        .page-menu-inner::-webkit-scrollbar {
+            display: none;
         }
 
         .page-menu-link {
@@ -1823,6 +1830,8 @@
             letter-spacing: 0.03em;
             padding: 0.35rem 0;
             border-bottom: 2px solid transparent;
+            white-space: nowrap;
+            flex-shrink: 0;
             transition: color 0.2s, border-color 0.2s;
         }
 
