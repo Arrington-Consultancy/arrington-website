@@ -103,3 +103,32 @@ CREATE TABLE IF NOT EXISTS leads (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_leads_created_at ON leads (created_at DESC);
+
+-- Market Ready Test — standalone, unpublished AI-assessed tool (not part of
+-- the pages/content CMS). Holds the business details, the ten written
+-- answers, and the full structured Claude assessment once generated.
+-- result_token is a long random opaque identifier (not derived from any PII)
+-- used for the private result URL; status tracks whether the AI assessment
+-- completed, is still pending, or failed validation twice and was abandoned
+-- rather than shown as a guessed/invented report.
+CREATE TABLE IF NOT EXISTS market_ready_submissions (
+    id SERIAL PRIMARY KEY,
+    result_token VARCHAR(64) UNIQUE NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed')),
+    first_name VARCHAR(200) NOT NULL DEFAULT '',
+    last_name VARCHAR(200) NOT NULL DEFAULT '',
+    business_name VARCHAR(255) NOT NULL DEFAULT '',
+    email VARCHAR(255) NOT NULL,
+    phone VARCHAR(50) NOT NULL DEFAULT '',
+    location VARCHAR(255) NOT NULL DEFAULT '',
+    industry VARCHAR(255) NOT NULL DEFAULT '',
+    employee_count VARCHAR(100) NOT NULL DEFAULT '',
+    turnover_band VARCHAR(100) NOT NULL DEFAULT '',
+    sale_timeframe VARCHAR(100) NOT NULL DEFAULT '',
+    answers JSONB NOT NULL DEFAULT '[]'::jsonb,
+    consent_tom_review BOOLEAN NOT NULL DEFAULT false,
+    consent_marketing BOOLEAN NOT NULL DEFAULT false,
+    report JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_market_ready_created_at ON market_ready_submissions (created_at DESC);
