@@ -2,7 +2,7 @@
 
 ## HANDED OVER TO TOM (21/07/2026)
 
-This site was handed over to Tom Arrington to self-manage. Read `HANDOVER.md` first: it is the authority on the handover.
+This site was handed over to Tom Arrington to self-manage. Read `HANDOVER.md` first: it is the authority on the handover. Read `WORKING-METHOD.md` too: it is short, and it explains how Tom works (one folder per project, ground every context window in it, `CLAUDE.md` as the project memory, `/goodnight` at the end of a session). The `/goodnight` skill itself ships in the repo at `.claude/skills/goodnight/SKILL.md`.
 
 - **Code** now also lives in Tom's GitHub org: `github.com/Arrington-Consultancy/arrington-website` (Nat is an org owner). `natparnell/arrington-prototype` is now an archive copy.
 - **Hosting** was transferred via Railway's "Transfer Project" onto Tom's own **Railway Pro** account (service + Postgres + both custom domains moved intact, no downtime, nothing in Wix changed). Nat no longer deploys or controls it, so the `railway up` deploy instructions further down apply to Tom's account, not Nat's.
