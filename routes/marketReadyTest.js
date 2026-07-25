@@ -400,6 +400,20 @@ const requestReviewLimiter = rateLimit({
   message: { error: 'Too many requests. Please try again later.' }
 });
 
+// Share/copy clicks are anonymous, low-friction actions and can happen
+// several times in one visit (someone might try more than one platform) —
+// same pattern and limits as the Owner Dependency Quiz's share-notify.
+const shareNotifyLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => ipKeyGenerator(req),
+  message: { error: 'Too many requests.' }
+});
+
+const VALID_SHARE_PLATFORMS = ['linkedin', 'facebook', 'x', 'copy_text', 'copy_link'];
+
 function mountPageRoute(app, generateCsrfToken) {
   app.get('/market-ready-test', async (req, res, next) => {
     try {
@@ -688,6 +702,46 @@ router.post('/api/market-ready-test/request-review', requestReviewLimiter, async
   } catch (err) {
     console.error('Market Ready Test request-review error:', err);
     res.status(500).json({ error: 'Something went wrong. Please try again or email tom@arringtonconsultancy.com directly.' });
+  }
+});
+
+// POST /api/market-ready-test/share-notify — fire-and-forget owner heads-up
+// when a visitor shares or copies their result. Sharing itself stays
+// anonymous (no separate identity captured here), same pattern as the Owner
+// Dependency Quiz's share-notify — the only difference is this one confirms
+// the token is real first, so the notification can include which business.
+router.post('/api/market-ready-test/share-notify', shareNotifyLimiter, async (req, res) => {
+  try {
+    const body = req.body || {};
+    const token = plainText(body.token, 64);
+    const platform = plainText(body.platform, 30);
+
+    if (!VALID_SHARE_PLATFORMS.includes(platform)) {
+      return res.status(400).json({ error: 'Invalid data.' });
+    }
+    if (!/^[a-f0-9]{48}$/.test(token)) {
+      return res.status(400).json({ error: 'Invalid data.' });
+    }
+
+    res.json({ ok: true });
+
+    if (transporter) {
+      const { rows } = await db.query(
+        'SELECT business_name, report FROM market_ready_submissions WHERE result_token = $1 AND status = $2',
+        [token, 'completed']
+      );
+      if (rows.length === 0) return;
+      const submission = rows[0];
+      transporter.sendMail({
+        from: NOTIFY_FROM,
+        to: NOTIFY_FROM,
+        subject: `Market Ready Test — shared (${platform})`,
+        text: `${submission.business_name || 'Someone'}'s Market Ready Test result was shared via ${platform}.\n\nScore: ${submission.report?.overall_score}/100 (${submission.report?.rating})\nResult link: /market-ready-test/result/${token}`
+      }).catch(err => console.error('Market Ready Test share-notify email failed:', err.message));
+    }
+  } catch (err) {
+    console.error('Market Ready Test share-notify error:', err);
+    res.status(500).json({ error: 'Something went wrong.' });
   }
 });
 
