@@ -161,7 +161,11 @@
             left: 0;
             right: 0;
             z-index: 100;
-            background: rgba(0, 0, 0, 0.9);
+            /* Tinted with the theme's own --black rather than plain black,
+               so the fixed bar matches the page's actual background colour
+               (navy in the Oxford theme) instead of reading as a different,
+               blacker colour once scrolled past the hero photo. */
+            background: color-mix(in srgb, var(--black) 90%, transparent);
             backdrop-filter: blur(16px);
             border-bottom: 1px solid var(--border);
             transition: box-shadow 0.3s;
@@ -267,7 +271,7 @@
             right: 0;
             bottom: 0;
             z-index: 105;
-            background: rgba(0, 0, 0, 0.95);
+            background: color-mix(in srgb, var(--black) 95%, transparent);
             backdrop-filter: blur(20px);
             flex-direction: column;
             align-items: center;
@@ -1818,7 +1822,7 @@
             left: 0;
             right: 0;
             z-index: 99;
-            background: rgba(0, 0, 0, 0.75);
+            background: color-mix(in srgb, var(--black) 75%, transparent);
             backdrop-filter: blur(12px);
             border-bottom: 1px solid var(--border);
         }
