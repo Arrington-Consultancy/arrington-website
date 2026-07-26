@@ -11,7 +11,6 @@
     "dev": "node db/seed.js && npx nodemon server.js"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.115.0",
     "bcrypt": "^6.0.0",
     "compression": "^1.8.1",
     "connect-pg-simple": "^10.0.0",

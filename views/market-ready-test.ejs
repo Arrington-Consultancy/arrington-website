@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Market Ready Test | Arrington Consultancy</title>
-    <meta name="description" content="A ten-question written assessment of whether your business could be taken over successfully by a new owner.">
+    <meta name="description" content="A ten-question assessment of whether your business could be taken over successfully by a new owner.">
     <meta name="robots" content="noindex, nofollow">
     <meta name="csrf-token" content="<%= csrfToken %>">
     <link rel="icon" href="/favicon.ico" sizes="any">
@@ -112,6 +112,15 @@
         }
         .mrt-field textarea { min-height: 160px; resize: vertical; line-height: 1.6; }
         .mrt-field-hint { font-size: 0.82rem; color: var(--text-muted); margin-top: 0.5rem; }
+
+        fieldset { border: none; margin: 0; padding: 0; }
+        legend { font-family: 'DM Serif Display', serif; font-size: 1.35rem; color: var(--text-bright); margin-bottom: 1.25rem; padding: 0; line-height: 1.3; text-wrap: balance; }
+        .mrt-options { display: flex; flex-direction: column; gap: 0.75rem; }
+        .mrt-option { display: block; position: relative; }
+        .mrt-option input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+        .mrt-option label { display: block; padding: 1rem 1.15rem; border: 1px solid var(--border); border-radius: 4px; cursor: pointer; font-size: 0.96rem; color: var(--text); }
+        .mrt-option input:checked + label { border-color: var(--accent); color: var(--text-bright); background: rgba(200,164,78,0.06); }
+        .mrt-option input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
         .mrt-field-error { font-size: 0.85rem; color: var(--odr-red, #c0524a); margin-top: 0.5rem; display: none; }
         .mrt-field-error.visible { display: block; }
         .mrt-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
@@ -174,8 +183,8 @@
             <p class="mrt-label">MARKET READY TEST</p>
             <h1>How ready is your business for a new owner?</h1>
             <p>The Market Ready Test looks beyond headline profit and asks the questions a serious buyer is likely to ask.</p>
-            <p>Answer ten questions honestly and receive a personalised New Owner Ready Score, including the strengths a buyer may value, the weaknesses they may challenge and the areas worth strengthening before a sale.</p>
-            <p class="mrt-meta">Around 10 minutes. Written answers. Personalised assessment.</p>
+            <p>Answer ten questions honestly and receive a New Owner Ready Score, including the strengths a buyer may value, the weaknesses they may challenge and the areas worth strengthening before a sale.</p>
+            <p class="mrt-meta">Around 5 minutes. Multiple choice, with space at the end for anything else.</p>
 
             <div class="mrt-callout">
                 <p style="margin-bottom:0.9rem;">There are no perfect businesses and there are no perfect answers. This assessment is designed to understand how the business really works, where it may be exposed and how it could look through the eyes of a serious buyer. The more open you are, the more useful the result will be.</p>
@@ -245,6 +254,21 @@
                 <button type="button" class="mrt-back" id="mrt-q-back">&larr; Back</button>
                 <span class="mrt-meta" id="mrt-step-label" style="margin:0;"></span>
                 <button type="button" class="btn btn-primary" id="mrt-q-continue">Continue</button>
+            </div>
+        </section>
+
+        <!-- CONTEXT -->
+        <section class="mrt-screen" id="mrt-context">
+            <p class="mrt-label">ANYTHING ELSE</p>
+            <h2>Anything else worth knowing?</h2>
+            <p class="mrt-meta">Optional. Use this for anything the questions did not cover. It is included in your result exactly as written.</p>
+            <div class="mrt-field">
+                <label for="mrt-context-input">Additional context <span class="mrt-optional">(optional)</span></label>
+                <textarea id="mrt-context-input" maxlength="2000"></textarea>
+            </div>
+            <div class="mrt-nav">
+                <button type="button" class="mrt-back" id="mrt-context-back">&larr; Back</button>
+                <button type="button" class="btn btn-primary" id="mrt-context-continue">Continue</button>
             </div>
         </section>
 
@@ -334,12 +358,12 @@
     <script nonce="<%= nonce %>">
     (function () {
         var QUESTIONS = <%- JSON.stringify(questions) %>;
-        var MIN_LEN = <%= minAnswerLength %>;
-        var STORAGE_KEY = 'mrt_progress_v1';
+        var STORAGE_KEY = 'mrt_progress_v2';
 
         var state = {
             business: {},
-            answers: new Array(QUESTIONS.length).fill(''),
+            answers: new Array(QUESTIONS.length).fill(null),
+            context: '',
             contact: {},
             consentTom: false,
             consentMarketing: false
@@ -363,7 +387,7 @@
         }
         loadProgress();
 
-        var screens = ['mrt-intro', 'mrt-business', 'mrt-questions', 'mrt-contact', 'mrt-review', 'mrt-loading', 'mrt-error'].reduce(function (acc, id) {
+        var screens = ['mrt-intro', 'mrt-business', 'mrt-questions', 'mrt-context', 'mrt-contact', 'mrt-review', 'mrt-loading', 'mrt-error'].reduce(function (acc, id) {
             acc[id] = document.getElementById(id);
             return acc;
         }, {});
@@ -428,18 +452,26 @@
             qBack.disabled = false;
             answerError.classList.remove('visible');
 
-            qBody.innerHTML =
-                '<h2>' + q.text + '</h2>' +
-                '<div class="mrt-field">' +
-                '<textarea id="mrt-answer-input" maxlength="5000" placeholder="A few honest sentences are more useful than a polished answer.">' + (state.answers[currentQuestion] || '') + '</textarea>' +
-                '</div>';
-
-            var input = document.getElementById('mrt-answer-input');
-            input.addEventListener('input', function () {
-                state.answers[currentQuestion] = input.value;
-                saveProgress();
+            var selected = state.answers[currentQuestion];
+            var html = '<fieldset><legend>' + escapeHtml(q.text) + '</legend><div class="mrt-options">';
+            q.options.forEach(function (optionText, i) {
+                var checked = selected === i ? ' checked' : '';
+                var id = 'mrt_opt_' + currentQuestion + '_' + i;
+                html += '<div class="mrt-option">' +
+                    '<input type="radio" name="mrt-option" id="' + id + '" value="' + i + '"' + checked + '>' +
+                    '<label for="' + id + '">' + escapeHtml(optionText) + '</label>' +
+                    '</div>';
             });
-            input.focus();
+            html += '</div></fieldset>';
+            qBody.innerHTML = html;
+
+            qBody.querySelectorAll('input[name="mrt-option"]').forEach(function (input) {
+                input.addEventListener('change', function () {
+                    state.answers[currentQuestion] = parseInt(input.value, 10);
+                    saveProgress();
+                    answerError.classList.remove('visible');
+                });
+            });
         }
 
         qBack.addEventListener('click', function () {
@@ -452,34 +484,43 @@
         });
 
         qContinue.addEventListener('click', function () {
-            var input = document.getElementById('mrt-answer-input');
-            var val = input.value.trim();
-            if (val.length < MIN_LEN) {
-                answerError.textContent = 'Please add a little more detail. A few honest sentences will give you a much more useful result.';
+            if (state.answers[currentQuestion] === null || state.answers[currentQuestion] === undefined) {
+                answerError.textContent = 'Please choose an answer before continuing.';
                 answerError.classList.add('visible');
                 return;
             }
-            state.answers[currentQuestion] = val;
-            saveProgress();
             if (currentQuestion < QUESTIONS.length - 1) {
                 currentQuestion += 1;
                 renderQuestion();
             } else {
-                document.getElementById('mrt-firstName').value = state.contact.firstName || '';
-                document.getElementById('mrt-lastName').value = state.contact.lastName || '';
-                document.getElementById('mrt-email').value = state.contact.email || '';
-                document.getElementById('mrt-phone').value = state.contact.phone || '';
-                document.getElementById('mrt-consent-tom').checked = !!state.consentTom;
-                document.getElementById('mrt-consent-marketing').checked = !!state.consentMarketing;
-                showScreen('mrt-contact');
+                document.getElementById('mrt-context-input').value = state.context || '';
+                showScreen('mrt-context');
             }
+        });
+
+        // ---- Context ----
+        document.getElementById('mrt-context-back').addEventListener('click', function () {
+            currentQuestion = QUESTIONS.length - 1;
+            renderQuestion();
+            showScreen('mrt-questions');
+        });
+
+        document.getElementById('mrt-context-continue').addEventListener('click', function () {
+            state.context = document.getElementById('mrt-context-input').value.trim();
+            saveProgress();
+            document.getElementById('mrt-firstName').value = state.contact.firstName || '';
+            document.getElementById('mrt-lastName').value = state.contact.lastName || '';
+            document.getElementById('mrt-email').value = state.contact.email || '';
+            document.getElementById('mrt-phone').value = state.contact.phone || '';
+            document.getElementById('mrt-consent-tom').checked = !!state.consentTom;
+            document.getElementById('mrt-consent-marketing').checked = !!state.consentMarketing;
+            showScreen('mrt-contact');
         });
 
         // ---- Contact ----
         document.getElementById('mrt-contact-back').addEventListener('click', function () {
-            currentQuestion = QUESTIONS.length - 1;
-            renderQuestion();
-            showScreen('mrt-questions');
+            document.getElementById('mrt-context-input').value = state.context || '';
+            showScreen('mrt-context');
         });
 
         function isValidEmail(s) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
@@ -514,10 +555,17 @@
             var html = '<div class="mrt-review-block"><div class="mrt-review-q">Business</div><div class="mrt-review-a">' +
                 escapeHtml(state.business.businessName || '') + '</div></div>';
             QUESTIONS.forEach(function (q, i) {
+                var optIndex = state.answers[i];
+                var answerText = (optIndex !== null && optIndex !== undefined) ? q.options[optIndex] : '';
                 html += '<div class="mrt-review-block"><div class="mrt-review-q">' + escapeHtml(q.text) + '</div>' +
-                    '<div class="mrt-review-a">' + escapeHtml(state.answers[i] || '') + '</div>' +
-                    '<button type="button" class="mrt-review-edit" data-edit-q="' + i + '">Edit this answer</button></div>';
+                    '<div class="mrt-review-a">' + escapeHtml(answerText) + '</div>' +
+                    '<button type="button" class="mrt-review-edit" data-edit-q="' + i + '">Change this answer</button></div>';
             });
+            if (state.context) {
+                html += '<div class="mrt-review-block"><div class="mrt-review-q">Additional context</div>' +
+                    '<div class="mrt-review-a">' + escapeHtml(state.context) + '</div>' +
+                    '<button type="button" class="mrt-review-edit" id="mrt-review-edit-context">Change this</button></div>';
+            }
             html += '<div class="mrt-review-block"><div class="mrt-review-q">Sending your result to</div><div class="mrt-review-a">' +
                 escapeHtml(state.contact.firstName + ' — ' + state.contact.email) + '</div></div>';
             body.innerHTML = html;
@@ -528,6 +576,13 @@
                     showScreen('mrt-questions');
                 });
             });
+            var editContext = document.getElementById('mrt-review-edit-context');
+            if (editContext) {
+                editContext.addEventListener('click', function () {
+                    document.getElementById('mrt-context-input').value = state.context || '';
+                    showScreen('mrt-context');
+                });
+            }
         }
 
         function escapeHtml(s) {
@@ -539,25 +594,10 @@
         document.getElementById('mrt-review-back').addEventListener('click', function () { showScreen('mrt-contact'); });
 
         // ---- Loading messages ----
-        var LOADING_MESSAGES = [
-            'Reading your answers',
-            'Looking for patterns and points of fragility',
-            'Building your New Owner Ready Score',
-            'Preparing your report'
-        ];
-        var loadingInterval = null;
         function startLoadingMessages() {
-            var el = document.getElementById('mrt-loading-text');
-            var i = 0;
-            el.textContent = LOADING_MESSAGES[0];
-            loadingInterval = setInterval(function () {
-                i = (i + 1) % LOADING_MESSAGES.length;
-                el.textContent = LOADING_MESSAGES[i];
-            }, 3200);
+            document.getElementById('mrt-loading-text').textContent = 'Building your New Owner Ready Score';
         }
-        function stopLoadingMessages() {
-            if (loadingInterval) { clearInterval(loadingInterval); loadingInterval = null; }
-        }
+        function stopLoadingMessages() {}
 
         // ---- Submit ----
         document.getElementById('mrt-review-submit').addEventListener('click', function () {
@@ -581,6 +621,7 @@
                     turnoverBand: state.business.turnoverBand,
                     saleTimeframe: state.business.saleTimeframe,
                     answers: state.answers,
+                    context: state.context,
                     consentTomReview: state.consentTom,
                     consentMarketing: state.consentMarketing
                 })

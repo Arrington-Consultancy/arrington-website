@@ -186,9 +186,10 @@ public/
                        (contact.svg is kept for completeness even though
                        contact is no longer picker-listed).
 market-ready-test.ejs        Market Ready Test assessment itself (business
-                             details → 10 questions → contact details →
-                             review → submit). Standalone page, not part of
-                             the pages/CMS system — see its own section below.
+                             details → 10 multiple-choice questions → optional
+                             free-text context → contact details → review →
+                             submit). Standalone page, not part of the
+                             pages/CMS system — see its own section below.
 market-ready-test-result.ejs Market Ready Test results page, rendered from a
                              stored report by result token. Also holds the
                              social share buttons (LinkedIn/Facebook/X/copy).
@@ -206,7 +207,7 @@ market-ready-test-result.ejs Market Ready Test results page, rendered from a
 - **session** — express-session store (connect-pg-simple)
 - **audit_log** — all user actions (login, logout, edits, theme changes, backups, restores, section reorders, permission changes, page access changes, SEO changes)
 - **leads** — anonymous public submissions: the footer contact/booking form (`kind='contact'`), gated PDF requests (`kind='pdf_download'`), and Owner Dependency Quiz email-results (`kind='quiz_results'`) — see Lead capture below. Market Ready Test submissions also mirror a summary row here (`kind='market_ready_test'`) for admin-panel parity, alongside their full record in `market_ready_submissions`.
-- **market_ready_submissions** — full record for the Market Ready Test: business details, all 10 written answers, consent flags, and the complete structured Claude report (JSONB), keyed by a random `result_token` used for the private result URL. See Market Ready Test below.
+- **market_ready_submissions** — full record for the Market Ready Test: business details, all 10 chosen answers, the optional free-text context, consent flags, and the complete deterministically-computed report (JSONB), keyed by a random `result_token` used for the private result URL. See Market Ready Test below.
 
 ## Users and permissions
 
@@ -489,33 +490,21 @@ Gotcha: a PDF downloaded through Chrome carries a `com.apple.quarantine` xattr t
 - `lorem.proofstrip` contains Tom's real example copy ("Built and exited / Abacus and Falmouth Taxis", etc.) rather than neutral lorem, because the section's whole purpose is naming real client work — neutral placeholder ("Lorem ipsum / Dolor sit amet") obscures what the template is for. Duplicates therefore land with the same example copy; users edit per-instance.
 - Thumbnail lives at `public/img/templates/proofstrip.svg`
 
-## Market Ready Test (unpublished, added 25/07/2026)
+## Market Ready Test (unpublished, added 25/07/2026, rebuilt deterministic 26/07/2026)
 
-A standalone AI-scored assessment tool, built the same way as the Owner Dependency Quiz (its own routes + dedicated EJS views, not part of the pages/CMS section system) but analysed server-side by Claude rather than scored by client-side JS. A visitor answers 10 open written questions about their business; the server sends the answers to the Anthropic API with a fixed system prompt and a forced structured tool call, validates the arithmetic/ranges of what comes back, retries once on malformed output, and stores the result. Produces a "New Owner Ready Score" out of 100 across six weighted categories (transferability, commercial resilience, financial/evidential credibility, preparation for sale, buyer confidence, owner readiness).
+A standalone assessment tool, built the same way as the Owner Dependency Quiz (its own routes + dedicated EJS views, not part of the pages/CMS section system). A visitor answers 10 multiple-choice questions about their business plus one optional free-text box, and the server scores the answers in plain code — no external API call. Produces a "New Owner Ready Score" out of 100 across six weighted categories (transferability, commercial resilience, financial/evidential credibility, preparation for sale, buyer confidence, owner readiness).
 
 **Deliberately unpublished.** Not linked from nav, not in `sitemap.xml`, `noindex, nofollow` on the page, and disallowed in `robots.txt` — reachable only at `/market-ready-test` by direct URL, same pattern as the hidden Business Consultant Devon page. Do not add it to nav or promote it without Tom's explicit sign-off.
 
-**Files:** `routes/marketReadyTest.js` (questions, system prompt, JSON tool schema, scoring validation, email sending), `views/market-ready-test.ejs` (the assessment), `views/market-ready-test-result.ejs` (the report + social share buttons), `db/schema.sql` → `market_ready_submissions` table (full answers + structured report + status, separate from but mirrored into the existing `leads` table for admin-panel parity).
+**Files:** `routes/marketReadyTest.js` (the 10 questions with their 4 pre-written, pre-scored options each, `buildReport()`, email sending), `views/market-ready-test.ejs` (the assessment — multiple choice via radio buttons, same visual pattern as the Owner Dependency Quiz, plus one free-text context box), `views/market-ready-test-result.ejs` (the report + social share buttons), `db/schema.sql` → `market_ready_submissions` table (business details, chosen answers, free-text context, and the computed report JSON, mirrored into the existing `leads` table for admin-panel parity).
 
-**Required env var: `ANTHROPIC_API_KEY`.** Without it the page renders fine but every submission returns a graceful "not yet configured" error rather than a broken page. Optional `MARKET_READY_MODEL` overrides the model (defaults to `claude-sonnet-5`).
+**Why this is deterministic, not AI-scored (rebuilt 26/07/2026).** The original version (25/07/2026) sent the 10 written answers to the Anthropic API and had it score and write the report. After getting it working (see the closed incident below), Nat raised two concerns worth taking seriously before ever launching it: (1) it's a public page that spends money on demand — the rate limit slows a curious visitor but not a determined one, and you'd only find out from the bill; (2) it published AI-written "red flags" about a stranger's business, unreviewed, under Tom's name — if the model invented a contradiction, the reader takes that as Tom's professional judgement. Tom agreed. The rebuild converts the 10 open questions into multiple choice (4 pre-written options each, strongest to weakest, each with a fixed score — same pattern as `views/owner-dependency-quiz.ejs`), so the server computes `overall_score`, `category_scores`, `strengths` (questions where the top option was chosen), `concerns`/`red_flags` (weaker options), and `priorities` (a fixed, pre-written action per question, shown for any non-top answer) entirely from fixed constants and the respondent's own selected text. Nothing in the report is generated or inferred — it cannot invent a fact, cannot fail an API call, and costs nothing per submission. The one free-text box is still emailed to Tom in full, unscored, exactly as written: if a lead looks worth chasing, the suggested next step is for Tom to paste the answers into Claude himself (using his own subscription, not the API) and write a bespoke, reviewed note before making contact — deliberately a manual step, not automated.
 
-**Incident, resolved 26/07/2026 08:30 — Railway stored the variable's name with a literal trailing newline.** Full chain, for whoever hits something like this again:
+**No env var required any more.** `ANTHROPIC_API_KEY` and `MARKET_READY_MODEL` are gone from this feature entirely, along with the `@anthropic-ai/sdk` dependency (removed from `package.json`, nothing else in the repo used it). Scoring cannot fail, so there is no "not yet configured" or retry path any more — every valid submission produces a result.
 
-- Symptom: `ANTHROPIC_API_KEY` visibly set correctly in the Railway dashboard (right value, right service, right environment), yet `process.env.ANTHROPIC_API_KEY` was empty in the running container across many fresh deploys.
-- Ruled out along the way: network path to `api.anthropic.com` (reachable, authenticates fine locally), wrong environment/service (pinned explicitly, no change), sealed variable, stale deployment.
-- Root cause, confirmed two independent ways — (1) a CI diagnostic step that JSON-parses `railway variables --json` and prints each key/length/prefix showed the key name splitting across two log lines, only possible if the string itself contains an embedded newline; (2) confirmed directly and definitively from a local machine's linked `railway` CLI via `railway variables --json | python3 -c "...repr(k)..."`, which printed the key literally as `'ANTHROPIC_API_KEY\n'`. Railway's own support (station.railway.com ticket) independently gave the same diagnosis.
-- Deleting and recreating the variable through the dashboard's "New Variable" form reproduced the newline both times, including a controlled retry that avoided paste entirely (typed the name character-by-character, only pasted into the Value field). The dashboard form itself is implicated, not copy/paste.
-- **Actual fix:** bypass the dashboard form entirely. Extract the existing correct value straight from Railway's own store and re-set it under a clean key via the CLI, piping the value through so it's never displayed or typed:
-  ```bash
-  railway variables --service arrington-prototype --environment production --json \
-    | node -e "/* find key.trim() === 'ANTHROPIC_API_KEY', write its value to stdout */" \
-    | railway variable set ANTHROPIC_API_KEY --service arrington-prototype --environment production --stdin --skip-deploys
-  railway variable delete --service arrington-prototype --environment production $'ANTHROPIC_API_KEY\n'
-  ```
-  Then a fresh `railway up` (or any push-triggered deploy) to get a container that reads the corrected variable. Confirmed via the boot-time log below: `present: true, length: 108, prefix: sk-ant-api03-`.
-- The `.trim()`-based fallback lookup in `routes/marketReadyTest.js` (`findEnvValue`) is now redundant since the stored key is clean, but harmless — left in place as a defence against the same platform behaviour recurring on a future recreate. **If this happens again on a different variable, skip straight to the CLI fix above rather than fighting the dashboard form.**
+**Closed incident (25–26/07/2026), kept for the general lesson, not because the AI version still exists:** getting `ANTHROPIC_API_KEY` working on Railway took an entire session because Railway's dashboard "New Variable" form was silently storing the variable's *name* with a trailing newline (`"ANTHROPIC_API_KEY\n"`), so `process.env.ANTHROPIC_API_KEY` read as empty no matter how many times the value was re-entered — confirmed independently via a CI diagnostic (`railway variables --json` printing the key name split across two log lines) and via `repr()` on a locally-linked `railway` CLI, and matched by Railway's own support bot. Deleting and recreating through the dashboard form reproduced it twice, including a character-by-character retype with no paste involved — the form itself was implicated. The eventual fix was bypassing the dashboard entirely and setting the variable via `railway variable set ANTHROPIC_API_KEY --stdin`. Worth knowing if a *different* Railway variable ever behaves the same way: a value that's visibly correct in the dashboard but reads empty in the running container, even after a fresh deploy, even after pinning `--environment` explicitly, is worth checking for exactly this before assuming it's a code bug.
 
-**Local testing note for future sessions in a similarly network-restricted environment:** this was built and fully tested (including real HTTP round-trips and Chromium screenshots) using a local Postgres 16 + local Node server inside the sandbox, since this session had no outbound access to the live site. `api.anthropic.com` specifically *was* reachable from the sandbox (confirmed via a real `401` from a dummy key) even though general web browsing was not — worth knowing if diagnosing the above incident from a similar environment.
+**Local testing note for future sessions in a similarly network-restricted environment:** this was built and fully tested (including real HTTP round-trips and Chromium screenshots) using a local Postgres 16 + local Node server inside the sandbox, since this session had no outbound access to the live site.
 
 ## Image management
 
@@ -616,14 +605,13 @@ npm run dev
 - **Platform:** Railway (project: arrington-prototype, plan upgraded from Hobby to support two custom domains)
 - **Database:** Railway PostgreSQL addon (internal networking only)
 - **Required env vars:** `DATABASE_URL` (auto-set by addon), `SESSION_SECRET`, `RAILWAY_ENVIRONMENT` (auto-set)
-- **`ANTHROPIC_API_KEY`** (added 25/07/2026, for the Market Ready Test — see its own section above): as of this writing, set in the Railway dashboard's Variables tab but the running app still doesn't see it — open incident, see Market Ready Test section for what's been ruled out. Optional `MARKET_READY_MODEL` overrides the model.
 - **`GMAIL_APP_PASSWORD`** — Gmail SMTP app password for lead/quiz/Market Ready Test notification emails (see Lead capture section). Optional locally; `notify()` no-ops with a console warning if unset.
 - **Bootstrap env vars (first boot only):** `NAT_PASSWORD`, `TOM_PASSWORD` — remove from Railway after the first successful deploy seeds the user rows
 - **Production detection:** checks for `RAILWAY_ENVIRONMENT` or `NODE_ENV=production`
 - **Trust proxy:** enabled (required for rate limiting, secure cookies, and HTTPS redirect behind Railway's reverse proxy)
 - **Start command:** `node db/seed.js && node server.js` (seed is idempotent; skips user creation after first run)
 - **Deploy:** `railway up` from project root. Auto-deploy on push to `main` is configured but unreliable — always run `railway up` after pushing to ensure the deploy goes out
-- **GitHub Action (`.github/workflows/deploy.yml`, added 25/07/2026):** runs `railway up --detach` via the Railway CLI on every push to `main`, as a more reliable alternative to Railway's built-in GitHub auto-deploy. Requires a `RAILWAY_TOKEN` secret in the repo's GitHub Actions settings — must be a **project token** (Railway dashboard → the service → Settings → Tokens → create a token scoped to that service/environment), not a personal account token, so `railway up` needs no `railway link` step and can't accidentally target the wrong project. Manual `railway up` from a local checkout is still fine as a fallback/for out-of-band deploys.
+- **GitHub Action (`.github/workflows/deploy.yml`, added 25/07/2026):** runs `railway up --service arrington-prototype --environment production --detach` via the Railway CLI on every push to `main`, as a more reliable alternative to Railway's built-in GitHub auto-deploy, plus a preceding diagnostic step (`railway whoami`/`status`/`variables --json`) that prints project/environment/service identity and variable names/lengths/prefixes — never values — into the Action's own logs, useful for verifying exactly what the live deploy target sees without needing dashboard access. Requires a `RAILWAY_TOKEN` secret in the repo's GitHub Actions settings — must be a **project token** (Railway dashboard → the service → Settings → Tokens → create a token scoped to that service/environment), not a personal account token, so `railway up` needs no `railway link` step and can't accidentally target the wrong project. Manual `railway up` from a local checkout is still fine as a fallback/for out-of-band deploys.
 - **GitHub:** `github.com/natparnell/arrington-prototype` (private)
 
 ## Custom domains
