@@ -27,7 +27,18 @@ const transporter = process.env.GMAIL_APP_PASSWORD
     })
   : null;
 
-const rawAnthropicKey = process.env.ANTHROPIC_API_KEY || '';
+// Railway has been observed storing this variable's *name* with a stray
+// trailing newline (e.g. "ANTHROPIC_API_KEY\n"), which makes the exact-name
+// lookup below come back empty even though the value is correctly set.
+// Falling back to a whitespace-trimmed name match works around that without
+// depending on the platform-side variable being recreated perfectly.
+function findEnvValue(name) {
+  if (process.env[name]) return process.env[name];
+  const match = Object.keys(process.env).find((key) => key.trim() === name);
+  return match ? process.env[match] : '';
+}
+
+const rawAnthropicKey = findEnvValue('ANTHROPIC_API_KEY');
 console.log(
   `[Market Ready Test] boot check — ANTHROPIC_API_KEY present: ${!!rawAnthropicKey}, length: ${rawAnthropicKey.length}, prefix: ${rawAnthropicKey.slice(0, 13) || '(none)'}`
 );
