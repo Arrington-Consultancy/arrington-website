@@ -25,6 +25,10 @@ const router = express.Router();
 // ============================================================
 
 const NOTIFY_FROM = 'tom@arringtonconsultancy.com';
+// Emails only ever contain plain text, so a bare "/market-ready-test/result/…"
+// path gets linkified by mail clients as a local file:// path instead of a
+// web address — every result link sent by email must be absolute.
+const SITE_ORIGIN = 'https://www.arringtonconsultancy.com';
 const transporter = process.env.GMAIL_APP_PASSWORD
   ? nodemailer.createTransport({
       service: 'gmail',
@@ -277,6 +281,20 @@ function bandKeyForScore(score) {
   return '0';
 }
 
+// Social share images — one per band, generated ahead of time and stored in
+// public/img/market-ready-test/. Keyed by the same band key as OPENING_TEXT
+// and CLOSING_TEXT above, so it stays in lockstep with them automatically.
+const SHARE_IMAGE = {
+  '85': { tag: 'New owner ready', image: 'share-ready.jpg' },
+  '70': { tag: 'Largely ready', image: 'share-largely-ready.jpg' },
+  '55': { tag: 'Mixed readiness', image: 'share-mixed.jpg' },
+  '40': { tag: 'Not yet ready', image: 'share-not-yet-ready.jpg' },
+  '0': { tag: 'Serious barriers', image: 'share-serious-barriers.jpg' }
+};
+function shareMetaForScore(score) {
+  return SHARE_IMAGE[bandKeyForScore(score)];
+}
+
 // Builds the full report object from validated option indices (0-3 per
 // question, chosen strongest-to-weakest) plus the one optional free-text
 // context box. Every string in the output is either a fixed constant above
@@ -422,13 +440,17 @@ function mountPageRoute(app, generateCsrfToken) {
       );
       const activeTheme = (themeRows[0] && themeRows[0].content) || 'dark';
       const theme = themes[activeTheme] || themes.dark;
+      const shareMeta = shareMetaForScore(submission.report.overall_score);
 
       res.render('market-ready-test-result', {
         theme,
         csrfToken: generateCsrfToken(req, res),
         firstName: submission.first_name,
         resultToken: token,
-        report: submission.report
+        report: submission.report,
+        shareTag: shareMeta.tag,
+        shareImageUrl: `${SITE_ORIGIN}/img/market-ready-test/${shareMeta.image}`,
+        resultUrl: `${SITE_ORIGIN}/market-ready-test/result/${token}`
       });
     } catch (err) {
       next(err);
@@ -501,8 +523,9 @@ router.post('/api/market-ready-test/submit', assessmentLimiter, async (req, res)
       [resultToken, firstName, lastName, businessName, email, phone, location, industry, employeeCount, turnoverBand, saleTimeframe, JSON.stringify(answersForStorage), context, consentTomReview, consentMarketing, JSON.stringify(report)]
     );
 
-    const resultUrl = `/market-ready-test/result/${resultToken}`;
-    res.json({ ok: true, resultUrl });
+    const resultPath = `/market-ready-test/result/${resultToken}`;
+    const resultUrl = `${SITE_ORIGIN}${resultPath}`;
+    res.json({ ok: true, resultUrl: resultPath });
 
     // Fire-and-forget: also record as a lead (parity with every other lead
     // type) so it surfaces in the existing admin "Leads & bookings" panel,
@@ -621,7 +644,7 @@ router.post('/api/market-ready-test/request-review', requestReviewLimiter, async
     res.json({ ok: true });
 
     if (transporter) {
-      const resultUrl = `/market-ready-test/result/${token}`;
+      const resultUrl = `${SITE_ORIGIN}/market-ready-test/result/${token}`;
       const report = submission.report;
       const answers = Array.isArray(submission.answers) ? submission.answers : [];
       transporter.sendMail({
@@ -682,7 +705,7 @@ router.post('/api/market-ready-test/share-notify', shareNotifyLimiter, async (re
         from: NOTIFY_FROM,
         to: NOTIFY_FROM,
         subject: `Market Ready Test — shared (${platform})`,
-        text: `${submission.business_name || 'Someone'}'s Market Ready Test result was shared via ${platform}.\n\nScore: ${submission.report?.overall_score}/100 (${submission.report?.rating})\nResult link: /market-ready-test/result/${token}`
+        text: `${submission.business_name || 'Someone'}'s Market Ready Test result was shared via ${platform}.\n\nScore: ${submission.report?.overall_score}/100 (${submission.report?.rating})\nResult link: ${SITE_ORIGIN}/market-ready-test/result/${token}`
       }).catch(err => console.error('Market Ready Test share-notify email failed:', err.message));
     }
   } catch (err) {

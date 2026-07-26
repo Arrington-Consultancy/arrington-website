@@ -3,8 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your New Owner Ready Score | Arrington Consultancy</title>
+    <title>My New Owner Ready Score: <%= report.overall_score %>/100 (<%= shareTag %>) | Arrington Consultancy</title>
+    <meta name="description" content="I scored <%= report.overall_score %>/100 (<%= shareTag %>) on the Market Ready Test. See your own business's free New Owner Ready Score in a few minutes.">
     <meta name="robots" content="noindex, nofollow">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="My New Owner Ready Score: <%= report.overall_score %>/100 (<%= shareTag %>)">
+    <meta property="og:description" content="I scored <%= report.overall_score %>/100 (<%= shareTag %>) on the Market Ready Test. See your own business's free New Owner Ready Score in a few minutes.">
+    <meta property="og:url" content="<%= resultUrl %>">
+    <meta property="og:image" content="<%= shareImageUrl %>">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="My New Owner Ready Score: <%= report.overall_score %>/100 (<%= shareTag %>)">
+    <meta name="twitter:description" content="I scored <%= report.overall_score %>/100 (<%= shareTag %>) on the Market Ready Test.">
+    <meta name="twitter:image" content="<%= shareImageUrl %>">
     <meta name="csrf-token" content="<%= csrfToken %>">
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="preconnect" href="https://fonts.googleapis.com">
