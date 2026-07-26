@@ -40,7 +40,7 @@ function findEnvValue(name) {
 
 const rawAnthropicKey = findEnvValue('ANTHROPIC_API_KEY');
 console.log(
-  `[Market Ready Test] boot check — ANTHROPIC_API_KEY present: ${!!rawAnthropicKey}, length: ${rawAnthropicKey.length}, prefix: ${rawAnthropicKey.slice(0, 13) || '(none)'}`
+  `[Market Ready Test] boot check @ ${new Date().toISOString()} — ANTHROPIC_API_KEY present: ${!!rawAnthropicKey}, length: ${rawAnthropicKey.length}, prefix: ${rawAnthropicKey.slice(0, 13) || '(none)'}`
 );
 const anthropic = rawAnthropicKey
   ? new Anthropic({ apiKey: rawAnthropicKey })
