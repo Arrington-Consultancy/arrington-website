@@ -27,8 +27,12 @@ const transporter = process.env.GMAIL_APP_PASSWORD
     })
   : null;
 
-const anthropic = process.env.ANTHROPIC_API_KEY
-  ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const rawAnthropicKey = process.env.ANTHROPIC_API_KEY || '';
+console.log(
+  `[Market Ready Test] boot check — ANTHROPIC_API_KEY present: ${!!rawAnthropicKey}, length: ${rawAnthropicKey.length}, prefix: ${rawAnthropicKey.slice(0, 13) || '(none)'}`
+);
+const anthropic = rawAnthropicKey
+  ? new Anthropic({ apiKey: rawAnthropicKey })
   : null;
 
 const MODEL = process.env.MARKET_READY_MODEL || 'claude-sonnet-5';
