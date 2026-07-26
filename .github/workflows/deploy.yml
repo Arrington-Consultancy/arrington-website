@@ -30,8 +30,8 @@ jobs:
           railway service || true
           echo "== railway environment (list environments) =="
           railway environment || true
-          echo "== railway variables --service arrington-prototype --json (names/lengths/prefix only, no values) =="
-          railway variables --service arrington-prototype --json > /tmp/vars.json 2> /tmp/vars.err || true
+          echo "== railway variables --service arrington-prototype --environment production --json (names/lengths/prefix only, no values) =="
+          railway variables --service arrington-prototype --environment production --json > /tmp/vars.json 2> /tmp/vars.err || true
           cat /tmp/vars.err || true
           node -e "
             try {
@@ -49,4 +49,4 @@ jobs:
       - name: Deploy
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: railway up --service arrington-prototype --detach
+        run: railway up --service arrington-prototype --environment production --detach
