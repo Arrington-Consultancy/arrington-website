@@ -39,6 +39,13 @@ async function seed() {
   `);
   console.log('Page navigation columns verified.');
 
+  // Migration: Market Ready Test's free-text context box, added 26/07/2026
+  // with the deterministic-scoring rebuild. Existing rows default to empty.
+  await db.query(`
+    ALTER TABLE market_ready_submissions ADD COLUMN IF NOT EXISTS context TEXT NOT NULL DEFAULT '';
+  `);
+  console.log('Market Ready Test context column verified.');
+
   // Migrate users CHECK constraint to include 'client' role
   await db.query(`
     DO $$ BEGIN
