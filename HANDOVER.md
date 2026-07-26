@@ -168,8 +168,8 @@ Tom does not need Claude or the code for normal edits. Go to the live site, add 
 
 ### Deploying code changes
 Only needed when the *code* changes (not content).
-- If you connected the GitHub repo in Railway, pushing to `main` triggers a deploy. Confirm the deploy actually went out in the Railway dashboard.
-- Or deploy from the command line: `railway up` from the project folder (after `railway link` to Tom's project).
+- As of 25/07/2026, a GitHub Action (`.github/workflows/deploy.yml`) deploys automatically on every push to `main` — this is now the reliable path, replacing Railway's own flaky built-in auto-deploy. It needs a `RAILWAY_TOKEN` repo secret (a Railway project token, not a personal account token) — already set up, only relevant again if it ever needs rotating. Check the Actions tab on GitHub to confirm a run went green.
+- Or deploy from the command line: `railway up` from the project folder (after `railway link` to Tom's project) — still fine as a fallback.
 
 ### Backups
 The admin panel has a Backups section (content + images snapshots, keeps the 3 most recent). For a full database backup, use Railway's own Postgres backup features on Tom's plan. **Recommended:** set up an uptime monitor (e.g. UptimeRobot, free) pointed at `https://www.arringtonconsultancy.com/health` at a 5 minute interval. That endpoint checks the database and returns 503 if the DB is down, so you get told within minutes if the site goes dark. This was a real incident once (see `CLAUDE.md`).
