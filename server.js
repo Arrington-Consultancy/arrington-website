@@ -252,6 +252,26 @@ app.get('/owner-dependency-review', (req, res) => {
   res.redirect(301, '/owner-dependency-quiz');
 });
 
+// Owner Check — library/hub page for short self-assessment tools (currently
+// Owner Dependency Quiz, with a second check to follow). Not a CMS page:
+// a standalone template like the quiz itself, so it needs no content rows.
+app.get('/owner-check', async (req, res, next) => {
+  try {
+    const { rows: themeRows } = await db.query(
+      "SELECT content FROM content WHERE section_key = 'site.theme'"
+    );
+    const activeTheme = (themeRows[0] && themeRows[0].content) || 'dark';
+    const theme = themes[activeTheme] || themes.dark;
+
+    res.render('owner-check', {
+      theme,
+      ga4Id: process.env.GA4_MEASUREMENT_ID || ''
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // robots.txt — allow crawling, point at the sitemap, keep the login page out
 // of the index. Built from the request host so it works on every domain.
 app.get('/robots.txt', (req, res) => {

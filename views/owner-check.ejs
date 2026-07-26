@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Owner Check | Arrington Consultancy</title>
+    <meta name="description" content="A small, growing library of short self-assessment checks for owners of established, owner run businesses. No jargon, no generic advice - just practical insight in a few minutes.">
+    <link rel="canonical" href="https://www.arringtonconsultancy.com/owner-check">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Owner Check | Arrington Consultancy">
+    <meta property="og:description" content="A small, growing library of short self-assessment checks for owners of established, owner run businesses.">
+    <meta property="og:url" content="https://www.arringtonconsultancy.com/owner-check">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" href="/icons/icon-32.png" type="image/png" sizes="32x32">
+    <link rel="icon" href="/icons/icon-16.png" type="image/png" sizes="16x16">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18129914078"></script>
+    <script nonce="<%= nonce %>">
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'AW-18129914078');
+        <% if (ga4Id) { %>
+        gtag('config', '<%= ga4Id %>');
+        <% } %>
+    </script>
+    <style nonce="<%= nonce %>">
+        :root {
+            <% for (const [prop, val] of Object.entries(theme.vars)) { %>
+            <%= prop %>: <%= val %>;
+            <% } %>
+        }
+        * { box-sizing: border-box; }
+        @media (prefers-reduced-motion: reduce) {
+            * { transition: none !important; animation: none !important; }
+        }
+        body {
+            margin: 0;
+            font-family: 'DM Sans', sans-serif;
+            background: var(--black);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+        header a.oc-logo-link { display: inline-flex; }
+        header img { height: 32px; width: auto; }
+        header .oc-back-link {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        header .oc-back-link:hover, header .oc-back-link:focus-visible { color: var(--accent); }
+
+        h1, h2, h3 {
+            font-family: 'DM Serif Display', serif;
+            font-weight: 400;
+            color: var(--text-bright);
+            line-height: 1.22;
+            margin: 0 0 1rem;
+        }
+        p { color: var(--text); margin: 0 0 1.2rem; }
+
+        .oc-label {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .btn {
+            display: inline-block;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            padding: 0.9rem 1.9rem;
+            border-radius: 3px;
+            text-decoration: none;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        .btn-primary { background: var(--accent); color: var(--black); border-color: var(--accent); }
+        .btn-primary:hover, .btn-primary:focus-visible { background: var(--accent-hover); border-color: var(--accent-hover); }
+        .btn-outline { background: transparent; color: var(--text-bright); border-color: var(--border); }
+        .btn-outline:hover, .btn-outline:focus-visible { border-color: var(--accent); color: var(--accent); }
+        .btn-disabled {
+            background: transparent;
+            color: var(--text-muted);
+            border-color: var(--border);
+            cursor: default;
+        }
+
+        /* Hero */
+        .oc-hero {
+            position: relative;
+            min-height: 62vh;
+            display: flex;
+            align-items: flex-end;
+            overflow: hidden;
+        }
+        .oc-hero-photo {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center 40%;
+        }
+        .oc-hero-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 65%, var(--black) 100%);
+        }
+        .oc-hero-inner {
+            position: relative;
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 4rem 1.5rem 3.5rem;
+            text-align: center;
+        }
+        .oc-hero-inner h1 {
+            font-size: clamp(2.2rem, 6vw, 3.2rem);
+            color: #ffffff;
+        }
+        .oc-hero-inner p {
+            color: rgba(255,255,255,0.86);
+            font-size: 1.15rem;
+            max-width: 560px;
+            margin: 0 auto 2rem;
+        }
+
+        main { max-width: 760px; margin: 0 auto; padding: 0 1.5rem; }
+
+        /* Trust strip */
+        .oc-trust {
+            display: flex;
+            justify-content: center;
+            gap: 2.5rem;
+            flex-wrap: wrap;
+            padding: 3rem 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 3.5rem;
+        }
+        .oc-trust-item {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            font-size: 0.92rem;
+            color: var(--text-muted);
+        }
+        .oc-trust-item svg { flex-shrink: 0; color: var(--accent); }
+
+        /* Checks */
+        #checks { padding-bottom: 1rem; }
+        .oc-checks-head { text-align: center; margin-bottom: 2.5rem; }
+        .oc-checks-list { display: flex; flex-direction: column; gap: 1.5rem; margin-bottom: 4.5rem; }
+
+        .check-card {
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 2.25rem;
+        }
+        .check-card-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.5rem;
+        }
+        .check-card h2 { font-size: 1.5rem; margin: 0; }
+        .check-card-time {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+        .check-card-desc { font-size: 1.02rem; }
+        .check-card-learn {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+        .check-card ul {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 1.75rem;
+        }
+        .check-card ul li {
+            position: relative;
+            padding-left: 1.15rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+            color: var(--text);
+        }
+        .check-card ul li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0.55em;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: var(--accent);
+        }
+        .check-card--soon { opacity: 0.72; }
+        .check-card--soon .check-card-time { color: var(--accent); }
+
+        /* Next section */
+        .oc-next {
+            text-align: center;
+            border-top: 1px solid var(--border);
+            padding: 4rem 0 5rem;
+        }
+        .oc-next h2 { font-size: 1.9rem; }
+        .oc-next p { max-width: 520px; margin: 0 auto 2rem; font-size: 1.05rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="/" class="oc-logo-link" aria-label="Arrington Consultancy home">
+            <img src="/img/logo" alt="Arrington Business Consultancy">
+        </a>
+        <a href="/" class="oc-back-link">&larr; Back to site</a>
+    </header>
+
+    <section class="oc-hero">
+        <img src="/img/owner-check/hero.jpg" alt="" class="oc-hero-photo">
+        <div class="oc-hero-overlay"></div>
+        <div class="oc-hero-inner">
+            <h1>Owner Check</h1>
+            <p>Sometimes it's difficult to see your own business clearly. These short checks help you step back, answer a few honest questions and understand where your biggest opportunities may be. No jargon. No generic advice. Just practical insight.</p>
+            <a href="#checks" class="btn btn-primary">Start a Check</a>
+        </div>
+    </section>
+
+    <main>
+        <div class="oc-trust">
+            <div class="oc-trust-item">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+                <span>Takes around 2-3 minutes</span>
+            </div>
+            <div class="oc-trust-item">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg>
+                <span>Immediate results</span>
+            </div>
+            <div class="oc-trust-item">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                <span>Private and confidential</span>
+            </div>
+        </div>
+
+        <div id="checks">
+            <div class="oc-checks-head">
+                <p class="oc-label">Choose a Check</p>
+                <h2 style="font-size:1.5rem;">Two checks to start with</h2>
+            </div>
+
+            <div class="oc-checks-list">
+
+                <!-- Check card template: duplicate this whole .check-card block for each future check -->
+                <article class="check-card">
+                    <div class="check-card-head">
+                        <h2>Owner Dependency Quiz</h2>
+                        <span class="check-card-time">About 2 minutes</span>
+                    </div>
+                    <p class="check-card-desc">Discover how dependent your business is on you.</p>
+                    <p class="check-card-learn">What you'll learn</p>
+                    <ul>
+                        <li>Where the business still relies too heavily on you day to day</li>
+                        <li>Which pressure points and bottlenecks are building up</li>
+                        <li>A dependency score you can act on immediately</li>
+                    </ul>
+                    <a href="/owner-dependency-quiz" class="btn btn-primary">Start Owner Dependency Quiz</a>
+                </article>
+
+                <article class="check-card check-card--soon">
+                    <div class="check-card-head">
+                        <h2>Sale Readiness Test <span style="font-size:0.9rem;color:var(--text-muted);font-family:'DM Sans',sans-serif;">(working title)</span></h2>
+                        <span class="check-card-time">Coming soon &middot; ~2-3 minutes</span>
+                    </div>
+                    <p class="check-card-desc">A second, complementary check - details being finalised.</p>
+                    <a href="#" class="btn btn-disabled" aria-disabled="true" onclick="return false;">Coming Soon</a>
+                </article>
+
+            </div>
+        </div>
+
+        <div class="oc-next">
+            <p class="oc-label" style="text-align:center;">What happens next?</p>
+            <h2>Every check leaves you with something useful.</h2>
+            <p>Some owners simply want clarity. Others decide they'd like another pair of experienced eyes. Either way, you'll leave knowing more than when you arrived.</p>
+            <a href="/book-a-30-minute-conversation" class="btn btn-outline">Talk to Us</a>
+        </div>
+    </main>
+</body>
+</html>
