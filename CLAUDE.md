@@ -108,6 +108,17 @@ routes/
                        Holds NEW_PAGE_TEMPLATES (the default sections
                        seeded when a page is created — currently
                        ['hero','casestudy']).
+  leads.js             Public, session-less endpoints for the footer
+                       contact/booking form, gated PDF downloads, and the
+                       Owner Dependency Quiz's email-results/share-notify
+                       actions. Each carries its own rate limiter — see
+                       "Lead capture" below.
+  marketReadyTest.js    Market Ready Test — see its own section below.
+                       Exports { router, mountPageRoute }; mountPageRoute
+                       registers the GET page routes ahead of the global
+                       CSRF middleware (same reason as the Owner
+                       Dependency Quiz route in server.js), router carries
+                       the POST/API endpoints.
 middleware/
   auth.js              requireAuth, requireAdmin (legacy convenience)
   permissions.js       Role-based capability engine. In-memory cache
@@ -174,6 +185,13 @@ public/
                        in VALID_TEMPLATES, used by the add-section modal
                        (contact.svg is kept for completeness even though
                        contact is no longer picker-listed).
+market-ready-test.ejs        Market Ready Test assessment itself (business
+                             details → 10 questions → contact details →
+                             review → submit). Standalone page, not part of
+                             the pages/CMS system — see its own section below.
+market-ready-test-result.ejs Market Ready Test results page, rendered from a
+                             stored report by result token. Also holds the
+                             social share buttons (LinkedIn/Facebook/X/copy).
 ```
 
 ## Database tables
@@ -187,6 +205,8 @@ public/
 - **backups** — full snapshots of content + images (JSONB)
 - **session** — express-session store (connect-pg-simple)
 - **audit_log** — all user actions (login, logout, edits, theme changes, backups, restores, section reorders, permission changes, page access changes, SEO changes)
+- **leads** — anonymous public submissions: the footer contact/booking form (`kind='contact'`), gated PDF requests (`kind='pdf_download'`), and Owner Dependency Quiz email-results (`kind='quiz_results'`) — see Lead capture below. Market Ready Test submissions also mirror a summary row here (`kind='market_ready_test'`) for admin-panel parity, alongside their full record in `market_ready_submissions`.
+- **market_ready_submissions** — full record for the Market Ready Test: business details, all 10 written answers, consent flags, and the complete structured Claude report (JSONB), keyed by a random `result_token` used for the private result URL. See Market Ready Test below.
 
 ## Users and permissions
 
@@ -469,6 +489,20 @@ Gotcha: a PDF downloaded through Chrome carries a `com.apple.quarantine` xattr t
 - `lorem.proofstrip` contains Tom's real example copy ("Built and exited / Abacus and Falmouth Taxis", etc.) rather than neutral lorem, because the section's whole purpose is naming real client work — neutral placeholder ("Lorem ipsum / Dolor sit amet") obscures what the template is for. Duplicates therefore land with the same example copy; users edit per-instance.
 - Thumbnail lives at `public/img/templates/proofstrip.svg`
 
+## Market Ready Test (unpublished, added 25/07/2026)
+
+A standalone AI-scored assessment tool, built the same way as the Owner Dependency Quiz (its own routes + dedicated EJS views, not part of the pages/CMS section system) but analysed server-side by Claude rather than scored by client-side JS. A visitor answers 10 open written questions about their business; the server sends the answers to the Anthropic API with a fixed system prompt and a forced structured tool call, validates the arithmetic/ranges of what comes back, retries once on malformed output, and stores the result. Produces a "New Owner Ready Score" out of 100 across six weighted categories (transferability, commercial resilience, financial/evidential credibility, preparation for sale, buyer confidence, owner readiness).
+
+**Deliberately unpublished.** Not linked from nav, not in `sitemap.xml`, `noindex, nofollow` on the page, and disallowed in `robots.txt` — reachable only at `/market-ready-test` by direct URL, same pattern as the hidden Business Consultant Devon page. Do not add it to nav or promote it without Tom's explicit sign-off.
+
+**Files:** `routes/marketReadyTest.js` (questions, system prompt, JSON tool schema, scoring validation, email sending), `views/market-ready-test.ejs` (the assessment), `views/market-ready-test-result.ejs` (the report + social share buttons), `db/schema.sql` → `market_ready_submissions` table (full answers + structured report + status, separate from but mirrored into the existing `leads` table for admin-panel parity).
+
+**Required env var: `ANTHROPIC_API_KEY`.** Without it the page renders fine but every submission returns a graceful "not yet configured" error rather than a broken page. Optional `MARKET_READY_MODEL` overrides the model (defaults to `claude-sonnet-5`).
+
+**Open incident, unresolved as of 25/07/2026 22:45:** `ANTHROPIC_API_KEY` was added to the Railway service's Variables tab (confirmed visible in a screenshot, several deploys have happened since), but submissions still return "not yet configured" — meaning `process.env.ANTHROPIC_API_KEY` is still empty in the running container. Ruled out: the network path to `api.anthropic.com` itself (confirmed reachable and authenticating correctly during local testing). Not yet ruled out: (1) the variable name has a typo — only confirmed truncated as "ANTHRO..." in a screenshot, never seen expanded; (2) it may be set on a different Railway environment than the one bound to the live domain; (3) the key value itself may be malformed from copy/paste. Nat was asked by email to check `railway logs` on a live deploy to confirm the variable is actually present in the running process — that is the fastest way to settle it. Whoever picks this up next: start there before re-deriving the above from scratch.
+
+**Local testing note for future sessions in a similarly network-restricted environment:** this was built and fully tested (including real HTTP round-trips and Chromium screenshots) using a local Postgres 16 + local Node server inside the sandbox, since this session had no outbound access to the live site. `api.anthropic.com` specifically *was* reachable from the sandbox (confirmed via a real `401` from a dummy key) even though general web browsing was not — worth knowing if diagnosing the above incident from a similar environment.
+
 ## Image management
 
 - Logo, headshot, and Oxford badge are stored as binary in PostgreSQL
@@ -568,6 +602,8 @@ npm run dev
 - **Platform:** Railway (project: arrington-prototype, plan upgraded from Hobby to support two custom domains)
 - **Database:** Railway PostgreSQL addon (internal networking only)
 - **Required env vars:** `DATABASE_URL` (auto-set by addon), `SESSION_SECRET`, `RAILWAY_ENVIRONMENT` (auto-set)
+- **`ANTHROPIC_API_KEY`** (added 25/07/2026, for the Market Ready Test — see its own section above): as of this writing, set in the Railway dashboard's Variables tab but the running app still doesn't see it — open incident, see Market Ready Test section for what's been ruled out. Optional `MARKET_READY_MODEL` overrides the model.
+- **`GMAIL_APP_PASSWORD`** — Gmail SMTP app password for lead/quiz/Market Ready Test notification emails (see Lead capture section). Optional locally; `notify()` no-ops with a console warning if unset.
 - **Bootstrap env vars (first boot only):** `NAT_PASSWORD`, `TOM_PASSWORD` — remove from Railway after the first successful deploy seeds the user rows
 - **Production detection:** checks for `RAILWAY_ENVIRONMENT` or `NODE_ENV=production`
 - **Trust proxy:** enabled (required for rate limiting, secure cookies, and HTTPS redirect behind Railway's reverse proxy)
