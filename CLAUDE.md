@@ -499,7 +499,21 @@ A standalone AI-scored assessment tool, built the same way as the Owner Dependen
 
 **Required env var: `ANTHROPIC_API_KEY`.** Without it the page renders fine but every submission returns a graceful "not yet configured" error rather than a broken page. Optional `MARKET_READY_MODEL` overrides the model (defaults to `claude-sonnet-5`).
 
-**Open incident, unresolved as of 25/07/2026 22:45:** `ANTHROPIC_API_KEY` was added to the Railway service's Variables tab (confirmed visible in a screenshot, several deploys have happened since), but submissions still return "not yet configured" — meaning `process.env.ANTHROPIC_API_KEY` is still empty in the running container. Ruled out: the network path to `api.anthropic.com` itself (confirmed reachable and authenticating correctly during local testing). Not yet ruled out: (1) the variable name has a typo — only confirmed truncated as "ANTHRO..." in a screenshot, never seen expanded; (2) it may be set on a different Railway environment than the one bound to the live domain; (3) the key value itself may be malformed from copy/paste. Nat was asked by email to check `railway logs` on a live deploy to confirm the variable is actually present in the running process — that is the fastest way to settle it. Whoever picks this up next: start there before re-deriving the above from scratch.
+**Incident, resolved 26/07/2026 08:30 — Railway stored the variable's name with a literal trailing newline.** Full chain, for whoever hits something like this again:
+
+- Symptom: `ANTHROPIC_API_KEY` visibly set correctly in the Railway dashboard (right value, right service, right environment), yet `process.env.ANTHROPIC_API_KEY` was empty in the running container across many fresh deploys.
+- Ruled out along the way: network path to `api.anthropic.com` (reachable, authenticates fine locally), wrong environment/service (pinned explicitly, no change), sealed variable, stale deployment.
+- Root cause, confirmed two independent ways — (1) a CI diagnostic step that JSON-parses `railway variables --json` and prints each key/length/prefix showed the key name splitting across two log lines, only possible if the string itself contains an embedded newline; (2) confirmed directly and definitively from a local machine's linked `railway` CLI via `railway variables --json | python3 -c "...repr(k)..."`, which printed the key literally as `'ANTHROPIC_API_KEY\n'`. Railway's own support (station.railway.com ticket) independently gave the same diagnosis.
+- Deleting and recreating the variable through the dashboard's "New Variable" form reproduced the newline both times, including a controlled retry that avoided paste entirely (typed the name character-by-character, only pasted into the Value field). The dashboard form itself is implicated, not copy/paste.
+- **Actual fix:** bypass the dashboard form entirely. Extract the existing correct value straight from Railway's own store and re-set it under a clean key via the CLI, piping the value through so it's never displayed or typed:
+  ```bash
+  railway variables --service arrington-prototype --environment production --json \
+    | node -e "/* find key.trim() === 'ANTHROPIC_API_KEY', write its value to stdout */" \
+    | railway variable set ANTHROPIC_API_KEY --service arrington-prototype --environment production --stdin --skip-deploys
+  railway variable delete --service arrington-prototype --environment production $'ANTHROPIC_API_KEY\n'
+  ```
+  Then a fresh `railway up` (or any push-triggered deploy) to get a container that reads the corrected variable. Confirmed via the boot-time log below: `present: true, length: 108, prefix: sk-ant-api03-`.
+- The `.trim()`-based fallback lookup in `routes/marketReadyTest.js` (`findEnvValue`) is now redundant since the stored key is clean, but harmless — left in place as a defence against the same platform behaviour recurring on a future recreate. **If this happens again on a different variable, skip straight to the CLI fix above rather than fighting the dashboard form.**
 
 **Local testing note for future sessions in a similarly network-restricted environment:** this was built and fully tested (including real HTTP round-trips and Chromium screenshots) using a local Postgres 16 + local Node server inside the sandbox, since this session had no outbound access to the live site. `api.anthropic.com` specifically *was* reachable from the sandbox (confirmed via a real `401` from a dummy key) even though general web browsing was not — worth knowing if diagnosing the above incident from a similar environment.
 
