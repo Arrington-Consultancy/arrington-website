@@ -147,43 +147,6 @@ app.get('/health', async (req, res) => {
   }
 });
 
-// TEMPORARY — proves ANTHROPIC_API_KEY actually works end to end (present +
-// a real, tiny, cheap live API call) before any new AI feature gets built on
-// top of it. Not a permanent route; remove once confirmed. Rate limited
-// since it makes a real paid API call per request. Never echoes the key
-// itself, only presence/length/prefix and whether the call succeeded.
-const anthropicTestLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req) => ipKeyGenerator(req)
-});
-app.get('/api/_test/anthropic', anthropicTestLimiter, async (req, res) => {
-  const rawKey = process.env.ANTHROPIC_API_KEY || '';
-  const result = {
-    present: !!rawKey,
-    length: rawKey.length,
-    prefix: rawKey.slice(0, 13) || '(none)'
-  };
-  if (!rawKey) {
-    return res.status(200).json({ ...result, apiCallSucceeded: false, error: 'ANTHROPIC_API_KEY not set' });
-  }
-  try {
-    const Anthropic = require('@anthropic-ai/sdk');
-    const anthropic = new Anthropic({ apiKey: rawKey });
-    const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 10,
-      messages: [{ role: 'user', content: 'Reply with exactly one word: OK' }]
-    });
-    const text = response.content.find(b => b.type === 'text')?.text || '';
-    res.json({ ...result, apiCallSucceeded: true, sampleResponse: text.trim() });
-  } catch (err) {
-    res.status(200).json({ ...result, apiCallSucceeded: false, error: err.message });
-  }
-});
-
 // Static files. These only change on redeploy, so a 1-day browser cache is
 // safe; ETag (on by default) still forces revalidation before serving
 // anything actually stale past that window.
