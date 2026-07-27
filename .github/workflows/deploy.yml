@@ -50,3 +50,9 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: railway up --service arrington-prototype --environment production --detach
+
+      - name: Live-test ANTHROPIC_API_KEY (temporary — see server.js /api/_test/anthropic)
+        run: |
+          echo "Waiting for the new container to come up..."
+          sleep 30
+          curl -sS --max-time 30 https://www.arringtonconsultancy.com/api/_test/anthropic || true
