@@ -18,6 +18,7 @@ const contentRoutes = require('./routes/content');
 const adminRoutes = require('./routes/admin');
 const leadRoutes = require('./routes/leads');
 const marketReadyTest = require('./routes/marketReadyTest');
+const commercialGapsReview = require('./routes/commercialGapsReview');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -277,10 +278,11 @@ app.get('/owner-check', async (req, res, next) => {
 app.get('/robots.txt', (req, res) => {
   const base = `${req.protocol}://${req.get('host')}`;
   res.type('text/plain').send(
-    // /market-ready-test is unpublished — see routes/marketReadyTest.js —
-    // disallowed here as belt-and-braces on top of the page's own
+    // /market-ready-test and /commercial-gaps-review are unpublished — see
+    // routes/marketReadyTest.js and routes/commercialGapsReview.js —
+    // disallowed here as belt-and-braces on top of each page's own
     // noindex/nofollow meta tag, until Tom approves launch.
-    `User-agent: *\nAllow: /\nDisallow: /login\nDisallow: /market-ready-test\n\nSitemap: ${base}/sitemap.xml\n`
+    `User-agent: *\nAllow: /\nDisallow: /login\nDisallow: /market-ready-test\nDisallow: /commercial-gaps-review\n\nSitemap: ${base}/sitemap.xml\n`
   );
 });
 
@@ -411,6 +413,13 @@ app.use(leadRoutes);
 // endpoint carries its own dedicated rate limiter.
 marketReadyTest.mountPageRoute(app, generateCsrfToken);
 app.use(marketReadyTest.router);
+
+// Commercial Gaps Review (AI) — unpublished, standalone tool (see
+// routes/commercialGapsReview.js for the full brief). Same registration
+// pattern as the two tools above, for the same reason (its intake form's
+// CSRF token needs generating here, ahead of the global res.locals set).
+commercialGapsReview.mountPageRoute(app, generateCsrfToken);
+app.use(commercialGapsReview.router);
 
 // Serve v1.html as static with a relaxed CSP (legacy static page has
 // inline <style>/<script> blocks that predate the nonce setup).
