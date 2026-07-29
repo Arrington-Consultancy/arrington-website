@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Commercial Gaps Review | Arrington Consultancy</title>
+    <meta name="description" content="A personalised AI-assisted commercial review that surfaces the issue worth investigating in your business, then hands you back to a real conversation.">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="csrf-token" content="<%= csrfToken %>">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <style nonce="<%= nonce %>">
+        :root {
+            <% for (const [prop, val] of Object.entries(theme.vars)) { %>
+            <%= prop %>: <%= val %>;
+            <% } %>
+        }
+        * { box-sizing: border-box; }
+        @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+        body { margin: 0; font-family: 'DM Sans', sans-serif; background: var(--black); color: var(--text); line-height: 1.6; }
+        header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+        header img { height: 32px; width: auto; }
+        header .cgr-back-link { font-size: 0.85rem; color: var(--text-muted); text-decoration: none; white-space: nowrap; }
+        header .cgr-back-link:hover, header .cgr-back-link:focus-visible { color: var(--accent); }
+        main { max-width: 680px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem; }
+        .cgr-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; color: var(--accent); margin-bottom: 0.9rem; }
+        h1, h2, h3 { font-family: 'DM Serif Display', serif; font-weight: 400; color: var(--text-bright); line-height: 1.25; margin: 0 0 1rem; text-wrap: balance; }
+        h1 { font-size: clamp(1.8rem, 5vw, 2.4rem); }
+        h2 { font-size: 1.35rem; }
+        p { color: var(--text); margin: 0 0 1.2rem; }
+        .cgr-meta { font-size: 0.88rem; color: var(--text-muted); margin-bottom: 2rem; }
+
+        .btn { display: inline-block; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 600; padding: 0.85rem 1.75rem; border-radius: 3px; text-decoration: none; cursor: pointer; border: 1px solid transparent; }
+        .btn-primary { background: var(--accent); color: var(--black); border-color: var(--accent); }
+        .btn-primary:hover, .btn-primary:focus-visible { background: var(--accent-hover); border-color: var(--accent-hover); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        button.btn { font: inherit; }
+
+        .cgr-screen { display: none; }
+        .cgr-screen.active { display: block; }
+
+        .cgr-progress { height: 3px; background: var(--border); border-radius: 2px; margin-bottom: 2rem; overflow: hidden; }
+        .cgr-progress-bar { height: 100%; background: var(--accent); width: 8%; transition: width 0.3s ease; }
+
+        .cgr-field { margin-bottom: 1.4rem; }
+        .cgr-field label { display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-bright); margin-bottom: 0.5rem; }
+        .cgr-field input[type="text"], .cgr-field input[type="email"], .cgr-field textarea {
+            width: 100%; font-family: 'DM Sans', sans-serif; font-size: 1rem; padding: 0.85rem 1rem;
+            border-radius: 4px; border: 1px solid var(--border); background: transparent; color: var(--text-bright);
+        }
+        .cgr-field input:focus-visible, .cgr-field textarea:focus-visible { outline: none; border-color: var(--accent); }
+        .cgr-field textarea { min-height: 140px; resize: vertical; line-height: 1.6; }
+        .cgr-field-error { font-size: 0.85rem; color: var(--odr-red, #c0524a); margin-top: 0.5rem; display: none; }
+        .cgr-field-error.visible { display: block; }
+
+        .cgr-consent { display: flex; gap: 0.75rem; align-items: flex-start; margin-bottom: 1rem; }
+        .cgr-consent input[type="checkbox"] { margin-top: 0.3rem; flex-shrink: 0; width: 18px; height: 18px; }
+        .cgr-consent label { font-size: 0.92rem; color: var(--text); font-weight: 400; }
+
+        .cgr-nav { display: flex; justify-content: flex-end; align-items: center; margin-top: 1.75rem; gap: 1rem; }
+        .cgr-nav.cgr-nav-between { justify-content: space-between; }
+
+        .cgr-callout { padding: 1.1rem 1.3rem; border: 1px solid var(--border); border-radius: 4px; margin-bottom: 1.75rem; font-size: 0.92rem; color: var(--text-muted); }
+
+        .cgr-question-label { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+        .cgr-question-text { font-family: 'DM Serif Display', serif; font-size: 1.35rem; color: var(--text-bright); margin-bottom: 1.25rem; line-height: 1.35; text-wrap: balance; }
+
+        .cgr-loading { text-align: center; padding: 3rem 0; }
+        .cgr-loading-text { font-size: 1.05rem; color: var(--text-bright); min-height: 1.6em; }
+        .cgr-spinner { width: 36px; height: 36px; margin: 0 auto 1.75rem; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: cgr-spin 0.9s linear infinite; }
+        @keyframes cgr-spin { to { transform: rotate(360deg); } }
+        @media (prefers-reduced-motion: reduce) { .cgr-spinner { animation: none; border-top-color: var(--border); } }
+
+        .cgr-error-box { padding: 1.25rem 1.4rem; border: 1px solid var(--odr-red, #c0524a); background: rgba(192,82,74,0.08); border-radius: 4px; margin-bottom: 1.5rem; }
+        .cgr-error-box p { color: var(--text-bright); margin: 0; }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="/" aria-label="Arrington Consultancy home"><img src="/img/logo" alt="Arrington Business Consultancy"></a>
+        <a href="/owner-check" class="cgr-back-link">&larr; Back to Owner Check</a>
+    </header>
+
+    <main>
+        <!-- INTRO -->
+        <section class="cgr-screen active" id="cgr-intro">
+            <p class="cgr-label">COMMERCIAL GAPS REVIEW (AI)</p>
+            <h1>A personalised look at what's really going on.</h1>
+            <p>A short, free-text conversation about how the business actually runs: what it sells, how it prices, where demand comes from, how much depends on you. Your answers are read once, at the end, and turned into a personalised AI Commercial Review, which we'll also email to you.</p>
+            <p class="cgr-meta">Usually 8&ndash;15 questions, around 10 minutes. Free text, not multiple choice.</p>
+
+            <div class="cgr-callout">
+                <p style="margin-bottom:0;">This is not an online consultancy service and it will not solve the business for you. It is here to help you and us both see the issue worth investigating clearly enough to have a proper conversation about it.</p>
+            </div>
+
+            <button type="button" class="btn btn-primary" id="cgr-start">Start my Commercial Gaps Review</button>
+        </section>
+
+        <!-- INTAKE -->
+        <section class="cgr-screen" id="cgr-intake">
+            <p class="cgr-label">YOUR DETAILS</p>
+            <h2>Before we begin</h2>
+            <p class="cgr-meta">We need these to create and send your personalised review.</p>
+            <form id="cgr-intake-form">
+                <div class="cgr-field">
+                    <label for="cgr-name">Your name</label>
+                    <input type="text" id="cgr-name" name="name" maxlength="200" required>
+                </div>
+                <div class="cgr-field">
+                    <label for="cgr-company">Company</label>
+                    <input type="text" id="cgr-company" name="company" maxlength="255" required>
+                </div>
+                <div class="cgr-field">
+                    <label for="cgr-location">Location</label>
+                    <input type="text" id="cgr-location" name="location" maxlength="255" required>
+                </div>
+                <div class="cgr-field">
+                    <label for="cgr-email">Email address</label>
+                    <input type="email" id="cgr-email" name="email" maxlength="255" required>
+                </div>
+
+                <div class="cgr-hp" aria-hidden="true" style="position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;">
+                    <label>Leave this field blank<input type="text" name="website" id="cgr-website-hp" tabindex="-1" autocomplete="off"></label>
+                </div>
+
+                <div class="cgr-consent">
+                    <input type="checkbox" id="cgr-consent-save-email">
+                    <label for="cgr-consent-save-email">Save my answers and email me a copy of my personalised review.</label>
+                </div>
+                <div class="cgr-consent">
+                    <input type="checkbox" id="cgr-consent-contact">
+                    <label for="cgr-consent-contact">Tom Arrington may contact me about what this review finds.</label>
+                </div>
+
+                <p class="cgr-field-error" id="cgr-intake-error">Please fill in your name, company, location and a valid email address.</p>
+                <div class="cgr-nav">
+                    <button type="submit" class="btn btn-primary">Begin the review</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- QUESTIONS -->
+        <section class="cgr-screen" id="cgr-questions">
+            <div class="cgr-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="cgr-progress-track">
+                <div class="cgr-progress-bar" id="cgr-progress-bar"></div>
+            </div>
+            <p class="cgr-question-label" id="cgr-question-label"></p>
+            <h2 class="cgr-question-text" id="cgr-question-text"></h2>
+            <div class="cgr-field">
+                <textarea id="cgr-answer-input" maxlength="2000" placeholder="Answer in your own words. There's no right length."></textarea>
+            </div>
+            <p class="cgr-field-error" id="cgr-answer-error">Please write an answer before continuing.</p>
+            <div class="cgr-nav">
+                <button type="button" class="btn btn-primary" id="cgr-answer-continue">Continue</button>
+            </div>
+        </section>
+
+        <!-- INTERPRETING -->
+        <section class="cgr-screen" id="cgr-interpreting">
+            <div class="cgr-loading">
+                <div class="cgr-spinner" aria-hidden="true"></div>
+                <p class="cgr-loading-text">Reading through what you've told us&hellip;</p>
+            </div>
+        </section>
+
+        <!-- ERROR -->
+        <section class="cgr-screen" id="cgr-error">
+            <div class="cgr-error-box">
+                <p id="cgr-error-text">Something went wrong. Please try again or contact us at tom@arringtonconsultancy.com.</p>
+            </div>
+        </section>
+    </main>
+
+    <script nonce="<%= nonce %>">
+        (function () {
+            var csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+            var screens = {};
+            ['cgr-intro', 'cgr-intake', 'cgr-questions', 'cgr-interpreting', 'cgr-error'].forEach(function (id) {
+                screens[id] = document.getElementById(id);
+            });
+            function showScreen(id) {
+                Object.keys(screens).forEach(function (k) { screens[k].classList.toggle('active', k === id); });
+            }
+            function showError(message) {
+                document.getElementById('cgr-error-text').textContent = message || 'Something went wrong. Please try again or contact us at tom@arringtonconsultancy.com.';
+                showScreen('cgr-error');
+            }
+
+            var reviewToken = null;
+            var currentQuestion = null;
+            var answeredCount = 0;
+
+            document.getElementById('cgr-start').addEventListener('click', function () {
+                showScreen('cgr-intake');
+            });
+
+            document.getElementById('cgr-intake-form').addEventListener('submit', function (e) {
+                e.preventDefault();
+                var errorEl = document.getElementById('cgr-intake-error');
+                var name = document.getElementById('cgr-name').value.trim();
+                var company = document.getElementById('cgr-company').value.trim();
+                var location = document.getElementById('cgr-location').value.trim();
+                var email = document.getElementById('cgr-email').value.trim();
+                var emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+                if (!name || !company || !location || !emailOk) {
+                    errorEl.classList.add('visible');
+                    return;
+                }
+                errorEl.classList.remove('visible');
+
+                var submitBtn = e.target.querySelector('button[type="submit"]');
+                submitBtn.disabled = true;
+
+                fetch('/api/commercial-gaps-review/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                    body: JSON.stringify({
+                        name: name,
+                        company: company,
+                        location: location,
+                        email: email,
+                        consentSaveEmail: document.getElementById('cgr-consent-save-email').checked,
+                        consentContact: document.getElementById('cgr-consent-contact').checked,
+                        website: document.getElementById('cgr-website-hp').value
+                    })
+                })
+                    .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+                    .then(function (result) {
+                        submitBtn.disabled = false;
+                        if (!result.ok) { errorEl.textContent = result.data.error || 'Something went wrong.'; errorEl.classList.add('visible'); return; }
+                        reviewToken = result.data.reviewToken;
+                        renderQuestion(result.data.question, { answered: 0, min: 8, max: 15 });
+                        showScreen('cgr-questions');
+                    })
+                    .catch(function () { submitBtn.disabled = false; showError(); });
+            });
+
+            function renderQuestion(question, progress) {
+                currentQuestion = question;
+                document.getElementById('cgr-question-label').textContent = question.isClarification ? 'A quick follow-up' : question.label;
+                document.getElementById('cgr-question-text').textContent = question.text;
+                document.getElementById('cgr-answer-input').value = '';
+                document.getElementById('cgr-answer-error').classList.remove('visible');
+                answeredCount = progress.answered;
+                var pct = Math.min(96, 8 + Math.round((progress.answered / progress.max) * 92));
+                document.getElementById('cgr-progress-bar').style.width = pct + '%';
+                document.getElementById('cgr-answer-input').focus();
+            }
+
+            document.getElementById('cgr-answer-continue').addEventListener('click', function () {
+                var input = document.getElementById('cgr-answer-input');
+                var answerText = input.value.trim();
+                var errorEl = document.getElementById('cgr-answer-error');
+                if (!answerText) { errorEl.classList.add('visible'); return; }
+                errorEl.classList.remove('visible');
+
+                var btn = this;
+                btn.disabled = true;
+
+                var isFinalLikely = answeredCount + 1 >= 11;
+                if (isFinalLikely) showScreen('cgr-interpreting');
+
+                fetch('/api/commercial-gaps-review/answer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                    body: JSON.stringify({ token: reviewToken, answerText: answerText })
+                })
+                    .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+                    .then(function (result) {
+                        btn.disabled = false;
+                        if (!result.ok) { showError(result.data.error); return; }
+                        if (result.data.done) {
+                            window.location.href = result.data.resultUrl;
+                            return;
+                        }
+                        showScreen('cgr-questions');
+                        renderQuestion(result.data.question, result.data.progress);
+                    })
+                    .catch(function () { btn.disabled = false; showError(); });
+            });
+        })();
+    </script>
+</body>
+</html>
