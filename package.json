@@ -8,7 +8,8 @@
   "scripts": {
     "start": "node db/seed.js && node server.js",
     "seed": "node db/seed.js",
-    "dev": "node db/seed.js && npx nodemon server.js"
+    "dev": "node db/seed.js && npx nodemon server.js",
+    "test": "node --test"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
