@@ -169,7 +169,7 @@ router.post('/api/commercial-gaps-review/start', startLimiter, async (req, res) 
     // lead") and gives parity with every other lead type in the admin panel.
     db.query(
       `INSERT INTO leads (kind, name, email, message)
-       VALUES ('commercial_gaps_review', $1, $2, $3)`,
+       VALUES ('commercial_gaps', $1, $2, $3)`,
       [name, email, `${company}${location ? ` (${location})` : ''} — Commercial Gaps Review started. Contact permission: ${consentContact ? 'Yes' : 'No'}.`]
     ).catch((err) => console.error('Commercial Gaps Review lead insert failed:', err.message));
 
@@ -364,7 +364,7 @@ router.post('/api/commercial-gaps-review/answer', answerLimiter, async (req, res
 
     db.query(
       `INSERT INTO leads (kind, name, email, message)
-       VALUES ('commercial_gaps_review', $1, $2, $3)`,
+       VALUES ('commercial_gaps', $1, $2, $3)`,
       [review.name, review.email, `${review.company} — Commercial Gaps Review completed. Primary issue: ${data.primary_issue.split('.')[0]}. Contact permission: ${review.consent_contact ? 'Yes' : 'No'}.`]
     ).catch((err) => console.error('Commercial Gaps Review completion lead insert failed:', err.message));
   } catch (err) {
