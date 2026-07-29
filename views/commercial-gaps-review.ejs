@@ -75,6 +75,15 @@
 
         .cgr-error-box { padding: 1.25rem 1.4rem; border: 1px solid var(--odr-red, #c0524a); background: rgba(192,82,74,0.08); border-radius: 4px; margin-bottom: 1.5rem; }
         .cgr-error-box p { color: var(--text-bright); margin: 0; }
+
+        /* Honeypot: must be a class rule, not an inline style="" attribute —
+           the page's CSP has no 'unsafe-inline' for style-src, and a nonce
+           only covers <style> elements, not the style="" HTML attribute, so
+           an inline style is silently dropped and the field renders fully
+           visible. Confirmed on staging: the equivalent inline-style
+           honeypot on the (unmodified) Market Ready Test view has the same
+           latent bug. */
+        .cgr-hp { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; }
     </style>
 </head>
 <body>
@@ -121,7 +130,7 @@
                     <input type="email" id="cgr-email" name="email" maxlength="255" required>
                 </div>
 
-                <div class="cgr-hp" aria-hidden="true" style="position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;">
+                <div class="cgr-hp" aria-hidden="true">
                     <label>Leave this field blank<input type="text" name="website" id="cgr-website-hp" tabindex="-1" autocomplete="off"></label>
                 </div>
 
