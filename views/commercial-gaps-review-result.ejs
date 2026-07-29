@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Commercial Gaps Review | Arrington Consultancy</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <style nonce="<%= nonce %>">
+        :root {
+            <% for (const [prop, val] of Object.entries(theme.vars)) { %>
+            <%= prop %>: <%= val %>;
+            <% } %>
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: 'DM Sans', sans-serif; background: var(--black); color: var(--text); line-height: 1.6; }
+        header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+        header img { height: 32px; width: auto; }
+        header .cgr-back-link { font-size: 0.85rem; color: var(--text-muted); text-decoration: none; white-space: nowrap; }
+        main { max-width: 680px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem; }
+        .cgr-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; color: var(--accent); margin-bottom: 0.9rem; }
+        h1, h2, h3 { font-family: 'DM Serif Display', serif; font-weight: 400; color: var(--text-bright); line-height: 1.25; margin: 0 0 1rem; text-wrap: balance; }
+        h1 { font-size: clamp(1.7rem, 4.5vw, 2.2rem); }
+        h2 { font-size: 1.25rem; }
+        p { color: var(--text); margin: 0 0 1.2rem; }
+
+        .cgr-card { border: 1px solid var(--border); border-radius: 6px; padding: 1.75rem; margin-bottom: 1.5rem; }
+        .cgr-card-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; color: var(--text-muted); margin-bottom: 0.75rem; }
+        .cgr-primary { border-color: var(--accent); }
+
+        .cgr-resource { display: flex; flex-direction: column; gap: 0.5rem; }
+        .cgr-resource a { color: var(--accent); text-decoration: none; font-weight: 600; }
+        .cgr-resource a:hover, .cgr-resource a:focus-visible { text-decoration: underline; }
+
+        .btn { display: inline-block; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 600; padding: 0.85rem 1.75rem; border-radius: 3px; text-decoration: none; cursor: pointer; border: 1px solid transparent; }
+        .btn-primary { background: var(--accent); color: var(--black); border-color: var(--accent); }
+        .btn-primary:hover, .btn-primary:focus-visible { background: var(--accent-hover); border-color: var(--accent-hover); }
+        .btn-outline { background: transparent; color: var(--text-bright); border-color: var(--border); }
+        .btn-outline:hover, .btn-outline:focus-visible { border-color: var(--accent); color: var(--accent); }
+
+        .cgr-next { text-align: center; border-top: 1px solid var(--border); padding: 3rem 0 1rem; margin-top: 2.5rem; }
+        .cgr-next p { max-width: 480px; margin: 0 auto 1.75rem; }
+
+        .cgr-caveat { font-size: 0.85rem; color: var(--text-muted); }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="/" aria-label="Arrington Consultancy home"><img src="/img/logo" alt="Arrington Business Consultancy"></a>
+        <a href="/" class="cgr-back-link">&larr; Back to site</a>
+    </header>
+
+    <main>
+        <p class="cgr-label">YOUR COMMERCIAL GAPS REVIEW</p>
+        <h1><%= headline %></h1>
+        <p><%= visitorSummary %></p>
+
+        <div class="cgr-card cgr-primary">
+            <p class="cgr-card-label">Primary issue</p>
+            <p style="margin-bottom:0;"><%= primaryIssue %></p>
+        </div>
+
+        <div class="cgr-card">
+            <p class="cgr-card-label">Also worth watching</p>
+            <p style="margin-bottom:0;"><%= secondaryIssue %></p>
+        </div>
+
+        <div class="cgr-card">
+            <p class="cgr-card-label">One useful observation</p>
+            <p style="margin-bottom:0;"><%= usefulObservation %></p>
+        </div>
+
+        <div class="cgr-card cgr-resource">
+            <p class="cgr-card-label">Worth reading</p>
+            <a href="<%= recommendedResource.url %>"><%= recommendedResource.title %></a>
+            <p style="margin-bottom:0;"><%= recommendedResource.reason %></p>
+        </div>
+
+        <p class="cgr-caveat">This review is a starting point, not a finished answer. It has looked at what you told us and pointed at where the pressure seems to be, it has not solved it for you.</p>
+
+        <div class="cgr-next">
+            <h2>If this sounds familiar</h2>
+            <p>A straightforward conversation is usually enough to work out whether a proper commercial review would help.</p>
+            <a href="/book-a-30-minute-conversation" class="btn btn-primary">Book a 30 minute conversation</a>
+        </div>
+    </main>
+</body>
+</html>

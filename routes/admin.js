@@ -78,6 +78,48 @@ router.get('/leads', requireCapability('view_activity'), async (req, res) => {
   }
 });
 
+// Commercial Gaps Review (AI) — unpublished, feature-branch tool (see
+// routes/commercialGapsReview.js). Every completed review is already
+// emailed to Tom in full, including the private briefing; these two
+// endpoints exist so the same detail is also reachable from the admin
+// panel without digging through email. Same capability gate as the leads
+// list above — this is not a separate, looser permission tier.
+router.get('/commercial-gaps-reviews', requireCapability('view_activity'), async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT result_token, status, name, email, company, location,
+              consent_save_email, consent_contact, ai_mode, created_at, completed_at
+       FROM commercial_gaps_reviews ORDER BY created_at DESC LIMIT 100`
+    );
+    res.json({ reviews: rows });
+  } catch (err) {
+    console.error('Commercial Gaps Review list error:', err);
+    res.status(500).json({ error: 'Failed to load Commercial Gaps Reviews' });
+  }
+});
+
+// Full detail for one review, including the transcript and — unlike the
+// visitor-facing result page — the private tom_briefing object.
+router.get('/commercial-gaps-reviews/:token', requireCapability('view_activity'), async (req, res) => {
+  try {
+    const token = String(req.params.token || '');
+    if (!/^[a-f0-9]{48}$/.test(token)) {
+      return res.status(400).json({ error: 'Invalid token' });
+    }
+    const { rows } = await db.query(
+      'SELECT * FROM commercial_gaps_reviews WHERE result_token = $1',
+      [token]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Review not found' });
+    }
+    res.json({ review: rows[0] });
+  } catch (err) {
+    console.error('Commercial Gaps Review detail error:', err);
+    res.status(500).json({ error: 'Failed to load review' });
+  }
+});
+
 // Reset all content to defaults (admin only)
 router.post('/reset', requireCapability('reset_content'), async (req, res) => {
   try {

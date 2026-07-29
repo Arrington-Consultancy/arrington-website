@@ -135,3 +135,32 @@ CREATE TABLE IF NOT EXISTS market_ready_submissions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_market_ready_created_at ON market_ready_submissions (created_at DESC);
+
+-- Commercial Gaps Review (AI) — third Owner Check tool, feature-branch build
+-- (see routes/commercialGapsReview.js). Unlike the Owner Dependency Quiz and
+-- Market Ready Test, this one is a lead-gated, free-text, dynamically ordered
+-- interview: the row is created the instant the intake form is submitted
+-- (before a single question is answered), then filled in as the visitor
+-- progresses. transcript holds the ordered list of {id, category, text,
+-- isClarification, answerText} exchanges. ai_response holds the full
+-- structured interpretation once complete, including the tom_briefing object
+-- that the visitor never sees (only routes/commercialGapsReview.js and the
+-- admin API read that sub-object out). Two separate consent flags because the
+-- brief requires them to be independently offered, not bundled.
+CREATE TABLE IF NOT EXISTS commercial_gaps_reviews (
+    id SERIAL PRIMARY KEY,
+    result_token VARCHAR(64) UNIQUE NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'in_progress' CHECK (status IN ('in_progress', 'completed', 'failed')),
+    name VARCHAR(200) NOT NULL DEFAULT '',
+    email VARCHAR(255) NOT NULL,
+    company VARCHAR(255) NOT NULL DEFAULT '',
+    location VARCHAR(255) NOT NULL DEFAULT '',
+    consent_save_email BOOLEAN NOT NULL DEFAULT false,
+    consent_contact BOOLEAN NOT NULL DEFAULT false,
+    transcript JSONB NOT NULL DEFAULT '[]'::jsonb,
+    ai_response JSONB,
+    ai_mode VARCHAR(10) NOT NULL DEFAULT 'mock' CHECK (ai_mode IN ('mock', 'live')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    completed_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_commercial_gaps_created_at ON commercial_gaps_reviews (created_at DESC);
