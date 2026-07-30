@@ -12,26 +12,22 @@ jobs:
           curl -sS -o headshot.webp https://www.arringtonconsultancy.com/img/headshot.webp
           curl -sS -o headshot-base.jpg https://www.arringtonconsultancy.com/img/headshot
           curl -sS -o hero5.webp https://www.arringtonconsultancy.com/img/headshot__hero__5.webp
-          echo "== sizes =="
-          ls -la headshot.webp headshot-base.jpg hero5.webp
-          echo "== md5 (hero5.webp vs headshot.webp - do they match?) =="
-          md5sum headshot.webp hero5.webp
+          curl -sS -o hero5.jpg https://www.arringtonconsultancy.com/img/headshot__hero__5
+          ls -la headshot.webp headshot-base.jpg hero5.webp hero5.jpg
 
       - name: Set up Python image lib
-        run: pip install --quiet Pillow
+        run: pip install --quiet Pillow imagehash
 
-      - name: Print small base64 thumbnails to the log for visual inspection
+      - name: Compare perceptual hashes and average colours (compact, copy-safe output)
         run: |
           python3 -c "
           from PIL import Image
-          import base64, io
-          for name in ['headshot.webp', 'headshot-base.jpg', 'hero5.webp']:
+          import imagehash
+          files = ['headshot.webp', 'headshot-base.jpg', 'hero5.webp', 'hero5.jpg']
+          for name in files:
               im = Image.open(name).convert('RGB')
-              im.thumbnail((240, 240))
-              buf = io.BytesIO()
-              im.save(buf, format='JPEG', quality=70)
-              b64 = base64.b64encode(buf.getvalue()).decode()
-              print(f'=== {name} ({im.size[0]}x{im.size[1]}) ===')
-              print(b64)
-              print()
+              h = imagehash.average_hash(im)
+              small = im.resize((3,3))
+              pixels = list(small.getdata())
+              print(name, 'size=', im.size, 'ahash=', str(h), 'pixels=', pixels)
           "
