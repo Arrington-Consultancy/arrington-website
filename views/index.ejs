@@ -2030,8 +2030,8 @@
 </nav>
 
 <div class="mobile-menu" id="mobileMenu">
-    <% if (allPages.length > 1) { %>
-        <% for (const _p of allPages) { %>
+    <% if (navPages.length > 1) { %>
+        <% for (const _p of navPages) { %>
             <% if (!_p.hidden || canEdit) { %>
             <a href="<%= _p.slug === 'main' ? '/' : '/' + _p.slug %>"
                class="<%= _p.slug === currentPage.slug ? 'active' : '' %>">
@@ -2039,7 +2039,6 @@
             </a>
             <% } %>
         <% } %>
-        <a href="/owner-check">Owner Check</a>
         <div class="mobile-menu-divider"></div>
     <% } %>
     <a href="#conversation" class="mobile-menu-cta"><%= content['contact.label'] %></a>
@@ -2049,17 +2048,16 @@
     <% } %>
 </div>
 
-<% if (allPages.length > 1) { %>
+<% if (navPages.length > 1) { %>
 <div class="page-menu" id="pageMenu">
     <div class="page-menu-inner">
-        <% for (const _p of allPages) { %>
+        <% for (const _p of navPages) { %>
         <a href="<%= _p.slug === 'main' ? '/' : '/' + _p.slug %>"
            class="page-menu-link<%= _p.slug === currentPage.slug ? ' active' : '' %><%= ((_p.hidden || !_p.show_in_nav) && canEdit) ? ' page-menu-hidden' : '' %>"
            <% if (canEdit && !_p.hidden && !_p.show_in_nav) { %>title="Out of the main nav (Show in nav is off), but reachable by direct URL and indexed"<% } %>>
             <%= _p.nav_label || _p.title %>
         </a>
         <% } %>
-        <a href="/owner-check" class="page-menu-link">Owner Check</a>
     </div>
 </div>
 <% } %>
