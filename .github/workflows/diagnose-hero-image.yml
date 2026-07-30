@@ -1,0 +1,32 @@
+name: Diagnose hero image on Websites and AI page (read-only, temporary)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch page and show hero-photo markup
+        run: |
+          curl -sS https://www.arringtonconsultancy.com/websites-and-ai -o wai.html
+          echo "== hero-photo block =="
+          python3 -c "import re; html = open('wai.html', encoding='utf-8').read(); m = re.search(r'<div class=\"hero-photo\">.*?</div>\s*</div>', html, re.S); print(m.group(0) if m else 'hero-photo block not found')"
+
+      - name: Check image endpoint directly
+        run: |
+          echo "== headshot__hero__5 =="
+          curl -sS -o /dev/null -D - -w "size: %{size_download}\n" https://www.arringtonconsultancy.com/img/headshot__hero__5
+          echo "== headshot__hero__5.webp =="
+          curl -sS -o /dev/null -D - -w "size: %{size_download}\n" https://www.arringtonconsultancy.com/img/headshot__hero__5.webp
+          echo "== base headshot =="
+          curl -sS -o /dev/null -D - -w "size: %{size_download}\n" https://www.arringtonconsultancy.com/img/headshot
+          echo "== base headshot.webp =="
+          curl -sS -o /dev/null -D - -w "size: %{size_download}\n" https://www.arringtonconsultancy.com/img/headshot.webp
+
+      - name: Check og:image and site defaults referenced in the page head
+        run: |
+          echo "== og:image tag =="
+          grep -oE '<meta property="og:image"[^>]*>' wai.html || echo "none found"
+          echo "== twitter:image tag =="
+          grep -oE '<meta name="twitter:image"[^>]*>' wai.html || echo "none found"
