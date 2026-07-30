@@ -253,6 +253,23 @@ app.get('/owner-dependency-review', (req, res) => {
   res.redirect(301, '/owner-dependency-quiz');
 });
 
+// What We Have Done, What the Work Looks Like and What Business Owners Say
+// were merged into a single Evidence page (30/07/2026, Tom's brief — see
+// db/seed.js for the merge migration). These three routes replace the pages
+// that used to render at these slugs; registered ahead of the generic
+// /:slug catch-all so a request never falls through to the (now deleted)
+// page row. Anchors send returning visitors straight to the right part of
+// Evidence rather than just its top.
+app.get('/what-we-have-done', (req, res) => {
+  res.redirect(301, '/evidence');
+});
+app.get('/what-the-work-looks-like', (req, res) => {
+  res.redirect(301, '/evidence#documents');
+});
+app.get('/what-business-owners-say', (req, res) => {
+  res.redirect(301, '/evidence#googlereviews');
+});
+
 // Owner Check — library/hub page for short self-assessment tools (currently
 // Owner Dependency Quiz, with a second check to follow). Not a CMS page:
 // a standalone template like the quiz itself, so it needs no content rows.
@@ -617,25 +634,27 @@ async function renderPage(req, res, next, pageSlug) {
     for (const iid of sectionOrder) instanceTemplates[iid] = baseOf(iid);
 
     // Selected-examples proof-strip rows (on both the homepage's `filter`
-    // template and What We Have Done's own `proofstrip` template) jump to
-    // the 3 case studies on What We Have Done, in page order. Computed once
-    // per request from that page's own section order — not the current
-    // page's — since the homepage strip has no local case-study sections of
-    // its own to scroll to.
+    // template and Evidence's own `proofstrip` template) jump to the case
+    // studies on the Evidence page, in page order. Computed once per
+    // request from that page's own section order — not the current page's
+    // — since the homepage strip has no local case-study sections of its
+    // own to scroll to. Evidence merges What We Have Done, What the Work
+    // Looks Like and What Business Owners Say (30/07/2026, Tom's brief);
+    // this used to point at What We Have Done directly before that merge.
     const EVIDENCE_TEMPLATES = ['biography', 'casestudy', 'casestudy2'];
     let caseStudyAnchors = [];
-    if (pageSlug === 'what-we-have-done') {
+    if (pageSlug === 'evidence') {
       caseStudyAnchors = sectionOrder
         .filter(iid => EVIDENCE_TEMPLATES.includes(instanceTemplates[iid]))
-        .map(iid => `/what-we-have-done#${iid}`);
+        .map(iid => `/evidence#${iid}`);
     } else {
-      const { rows: wwhdRows } = await db.query(
-        "SELECT section_order FROM pages WHERE slug = 'what-we-have-done'"
+      const { rows: evidenceRows } = await db.query(
+        "SELECT section_order FROM pages WHERE slug = 'evidence'"
       );
-      const wwhdOrder = Array.isArray(wwhdRows[0]?.section_order) ? wwhdRows[0].section_order : [];
-      caseStudyAnchors = wwhdOrder
+      const evidenceOrder = Array.isArray(evidenceRows[0]?.section_order) ? evidenceRows[0].section_order : [];
+      caseStudyAnchors = evidenceOrder
         .filter(iid => EVIDENCE_TEMPLATES.includes(baseOf(iid)))
-        .map(iid => `/what-we-have-done#${iid}`);
+        .map(iid => `/evidence#${iid}`);
     }
 
     // Only fetch/serve Google reviews on pages that actually have a

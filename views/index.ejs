@@ -2252,7 +2252,7 @@
             <p class="intervention-quote-attribution">&mdash; <%- content[_k + '.quote_attribution'] %></p>
         </div>
         <% if (currentPage.slug === 'main' && googleReviews) { %>
-        <a href="/what-business-owners-say" class="intervention-google-rating">
+        <a href="/evidence#googlereviews" class="intervention-google-rating">
             <span class="intervention-google-rating-stars" aria-hidden="true">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
             <span><%= googleReviews.rating.toFixed(1) %> from <%= googleReviews.userRatingCount %> <%= googleReviews.userRatingCount === 1 ? 'review' : 'reviews' %> on Google</span>
         </a>
@@ -2263,7 +2263,10 @@
         <%
           const _btnText = (content[_k + '.button_text'] || '').replace(/<[^>]+>/g, '').trim();
           const _btnSlug = (content[_k + '.button_link'] || '').trim();
-          const _validSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(_btnSlug);
+          // Optional trailing #fragment lets a button deep-link to a specific
+          // section on its target page (e.g. "evidence#documents"), same
+          // pattern as the fourcards card_N_link deep-link below.
+          const _validSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*(#[a-z0-9_-]+)?$/.test(_btnSlug);
           const _btnHref = _btnSlug === 'main' ? '/' : (_validSlug ? '/' + _btnSlug : '#conversation');
           const _isPrimaryCta = _btnSlug === '' || _btnSlug === 'book-a-30-minute-conversation';
         %>
@@ -2362,8 +2365,8 @@
             <% for (let _n = 1; _n <= 4; _n++) { %>
             <%
               // Optional trailing #instance_id anchor lets a testimonial card
-              // deep-link to its specific case study (e.g. "what-we-have-done
-              // #casestudy2__2") rather than just the page.
+              // deep-link to its specific case study (e.g.
+              // "evidence#casestudy2__2") rather than just the page.
               const _fcLink = (content[_k + '.card_' + _n + '_link'] || '').trim();
               const _fcMatch = /^([a-z0-9]+(?:-[a-z0-9]+)*)(?:#([a-z0-9]+(?:__[0-9]+)?))?$/.exec(_fcLink);
               // This template is shared: on What Business Owners Say, card_N_number
@@ -2416,7 +2419,7 @@
   const _montage = _docs.filter(d => d.image);
 %>
 <!-- DOCUMENTS -->
-<section class="documents<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
+<section class="documents<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" id="<%= _iid %>" data-section-id="<%= _iid %>">
     <div class="section-inner cms-section" data-section="<%= _k %>">
         <% if (canEdit) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
         <% if (canEdit) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
@@ -2637,7 +2640,9 @@
             <%
               const _fBtnText = (content[_k + '.button_text'] || '').replace(/<[^>]+>/g, '').trim();
               const _fBtnSlug = (content[_k + '.button_link'] || '').trim();
-              const _fValidSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(_fBtnSlug);
+              // Optional trailing #fragment — see the matching comment on
+              // the intervention template's button_link handling above.
+              const _fValidSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*(#[a-z0-9_-]+)?$/.test(_fBtnSlug);
               const _fBtnHref = _fBtnSlug === 'main' ? '/' : (_fValidSlug ? '/' + _fBtnSlug : '#conversation');
               const _fIsPrimaryCta = _fBtnSlug === '' || _fBtnSlug === 'book-a-30-minute-conversation';
             %>
@@ -2711,7 +2716,7 @@
   };
 %>
 <!-- GOOGLE REVIEWS -->
-<section class="googlereviews<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
+<section class="googlereviews<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" id="<%= _iid %>" data-section-id="<%= _iid %>">
     <div class="section-inner cms-section" data-section="<%= _k %>">
         <% if (canEdit) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
         <% if (canEdit) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
