@@ -13,8 +13,9 @@ name: Inspect Evidence source pages (read-only, temporary)
 # via `railway run`, which failed with ENOTFOUND for
 # postgres.railway.internal: that hostname only resolves from inside
 # Railway's own private network, not from any external runner regardless of
-# token/auth, so that approach was abandoned. Delete this workflow once the
-# Evidence merge is designed and built.
+# token/auth, so that approach was abandoned. Delete this workflow (and
+# scripts/extract-visible-text.py) once the Evidence merge is designed and
+# built.
 on:
   workflow_dispatch:
 
@@ -22,6 +23,8 @@ jobs:
   inspect:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - name: Fetch the three live pages
         run: |
           set -e
@@ -39,14 +42,6 @@ jobs:
             echo "--- signs of a live Google Reviews feed (googleusercontent avatars, review star markup, 'Posted on Google', etc.) ---"
             grep -o 'googleusercontent\.com\|google-review\|maps\.google\|"reviewRating"\|itemprop="review"' "/tmp/$slug.html" | sort -u || echo "(none found)"
             echo "--- full visible text content (tags stripped, for a human read of what's actually there) ---"
-            python3 -c "
-import re, sys
-html = open('/tmp/$slug.html', encoding='utf-8', errors='replace').read()
-html = re.sub(r'<script.*?</script>', '', html, flags=re.S)
-html = re.sub(r'<style.*?</style>', '', html, flags=re.S)
-text = re.sub(r'<[^>]+>', '\n', html)
-text = re.sub(r'\n\s*\n+', '\n\n', text)
-print(text.strip())
-"
+            python3 scripts/extract-visible-text.py "/tmp/$slug.html"
             echo ""
           done
