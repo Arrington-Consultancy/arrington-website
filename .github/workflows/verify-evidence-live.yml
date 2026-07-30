@@ -1,0 +1,52 @@
+name: Verify Evidence page live
+
+on:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check nav on homepage
+        run: |
+          curl -sS https://www.arringtonconsultancy.com/ -o home.html
+          echo "== Nav links (order matters) =="
+          grep -oE '<a[^>]*href="/(what-we-do|owner-check|evidence|about-us|book-a-30-minute-conversation)[^"]*"[^>]*>[^<]*' home.html | head -40 || true
+          echo "== Raw nav-ish hrefs, in document order =="
+          grep -oE 'href="/[a-z0-9-]*"' home.html | sort -u
+
+      - name: Check the three 301 redirects
+        run: |
+          for path in what-we-have-done what-the-work-looks-like what-business-owners-say; do
+            echo "== /$path =="
+            curl -sS -D - -o /dev/null "https://www.arringtonconsultancy.com/$path"
+            echo
+          done
+
+      - name: Check /evidence page
+        run: |
+          code=$(curl -sS -o evidence.html -w "%{http_code}" https://www.arringtonconsultancy.com/evidence)
+          echo "HTTP status: $code"
+          echo "== data-section-id occurrences (instance IDs actually rendered) =="
+          grep -oE 'data-section-id="[^"]*"' evidence.html | sort -u
+          echo "== section wrapper ids (id= on <section>) =="
+          grep -oE '<section[^>]*id="[^"]*"' evidence.html
+          echo "== count of intervention button_text occurrences (should show only ONE 'Book a 30 minute conversation' CTA) =="
+          grep -o 'Book a 30 minute conversation' evidence.html | wc -l
+          echo "== googlereviews block present? =="
+          grep -c 'googlereviews\|google-review\|Google review' evidence.html || true
+          echo "== title tag =="
+          grep -oE '<title>[^<]*</title>' evidence.html
+
+      - name: Check evidence anchors resolve on page (documents/googlereviews ids)
+        run: |
+          grep -oE 'id="documents[^"]*"' evidence.html || echo "no documents id found"
+          grep -oE 'id="googlereviews[^"]*"' evidence.html || echo "no googlereviews id found"
+
+      - name: Sitemap and robots sanity (should not list retired slugs)
+        run: |
+          curl -sS https://www.arringtonconsultancy.com/sitemap.xml -o sitemap.xml
+          echo "== retired slugs still in sitemap? (should be empty) =="
+          grep -E 'what-we-have-done|what-the-work-looks-like|what-business-owners-say' sitemap.xml || echo "none found (good)"
+          echo "== evidence in sitemap? =="
+          grep -E 'evidence' sitemap.xml || echo "NOT FOUND (problem)"
