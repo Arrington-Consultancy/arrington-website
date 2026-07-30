@@ -1,14 +1,20 @@
 name: Inspect Evidence source pages (read-only, temporary)
 
-# Manual-only, one-off diagnostic: reads the live content of the three pages
-# proposed for merging into a new Evidence page (What We Have Done, What the
-# Work Looks Like, What Business Owners Say), so the merge can be designed
-# against what's actually there instead of guessing. Strictly read-only —
-# see scripts/inspect-evidence-pages.js, no INSERT/UPDATE/DELETE anywhere in
-# it. Uses `railway run` (not `railway up`) so nothing is deployed; this only
-# executes a one-off Node process against the linked service's database with
-# its env vars injected. Delete this workflow once the Evidence merge is
-# built and no longer needed.
+# Manual-only, one-off diagnostic: fetches the public HTML of the three
+# pages proposed for merging into a new Evidence page (What We Have Done,
+# What the Work Looks Like, What Business Owners Say), so the merge can be
+# designed against what's actually live instead of guessing. This sandbox
+# has no network path to the live site at all (confirmed: outbound access
+# to arringtonconsultancy.com and to Railway's own control plane/private
+# network is blocked at the sandbox level), but a GitHub Actions runner has
+# normal public internet access, so this just curls the three public pages
+# directly — no deploy, no database access, no secrets involved. An earlier
+# version of this workflow tried to reach the production Postgres directly
+# via `railway run`, which failed with ENOTFOUND for
+# postgres.railway.internal: that hostname only resolves from inside
+# Railway's own private network, not from any external runner regardless of
+# token/auth, so that approach was abandoned. Delete this workflow once the
+# Evidence merge is designed and built.
 on:
   workflow_dispatch:
 
@@ -16,19 +22,31 @@ jobs:
   inspect:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-        run: npm ci --omit=dev --omit=optional || npm install --omit=dev
-
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
-
-      - name: Run read-only inspection against production
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: railway run --service arrington-prototype --environment production -- node scripts/inspect-evidence-pages.js
+      - name: Fetch the three live pages
+        run: |
+          set -e
+          for slug in what-we-have-done what-the-work-looks-like what-business-owners-say; do
+            echo "=================================================="
+            echo "=== https://www.arringtonconsultancy.com/$slug ==="
+            echo "=================================================="
+            curl -sS -w "\nHTTP_STATUS:%{http_code}\n" "https://www.arringtonconsultancy.com/$slug" -o "/tmp/$slug.html"
+            echo "--- byte size ---"
+            wc -c "/tmp/$slug.html"
+            echo "--- <title> ---"
+            grep -o '<title>[^<]*</title>' "/tmp/$slug.html" || echo "(not found)"
+            echo "--- section instance ids (data-section-id attributes, if any are exposed) ---"
+            grep -o 'data-section-id="[^"]*"' "/tmp/$slug.html" | sort -u || echo "(none found — likely only visible to logged-in editors)"
+            echo "--- signs of a live Google Reviews feed (googleusercontent avatars, review star markup, 'Posted on Google', etc.) ---"
+            grep -o 'googleusercontent\.com\|google-review\|maps\.google\|"reviewRating"\|itemprop="review"' "/tmp/$slug.html" | sort -u || echo "(none found)"
+            echo "--- full visible text content (tags stripped, for a human read of what's actually there) ---"
+            python3 -c "
+import re, sys
+html = open('/tmp/$slug.html', encoding='utf-8', errors='replace').read()
+html = re.sub(r'<script.*?</script>', '', html, flags=re.S)
+html = re.sub(r'<style.*?</style>', '', html, flags=re.S)
+text = re.sub(r'<[^>]+>', '\n', html)
+text = re.sub(r'\n\s*\n+', '\n\n', text)
+print(text.strip())
+"
+            echo ""
+          done
