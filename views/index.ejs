@@ -296,6 +296,21 @@
             color: var(--accent);
         }
 
+        .mobile-menu .mobile-menu-sublink {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            opacity: 0.85;
+            margin-top: -1.5rem;
+        }
+
+        .mobile-menu .mobile-menu-sublink::before {
+            content: '\203A';
+            margin-right: 0.4rem;
+            color: var(--accent);
+        }
+
         .mobile-menu .mobile-menu-divider {
             width: 40px;
             height: 1px;
@@ -1881,6 +1896,19 @@
             font-style: italic;
         }
 
+        .page-menu-link-child {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            opacity: 0.85;
+            margin-left: -0.5rem;
+        }
+
+        .page-menu-link-child::before {
+            content: '\203A';
+            margin-right: 0.35rem;
+            color: var(--accent);
+        }
+
         /* ---- FIRST-SECTION NAV CLEARANCE ---- */
         #cms-sections > section:first-child:not(.hero) {
             padding-top: 8.5rem;
@@ -2038,6 +2066,9 @@
                 <%= _p.nav_label || _p.title %>
             </a>
             <% } %>
+            <% if (_p.slug === 'what-we-do') { %>
+            <a href="/websites-and-ai" class="mobile-menu-sublink<%= currentPage.slug === 'websites-and-ai' ? ' active' : '' %>">Websites and AI</a>
+            <% } %>
         <% } %>
         <div class="mobile-menu-divider"></div>
     <% } %>
@@ -2057,6 +2088,9 @@
            <% if (canEdit && !_p.hidden && !_p.show_in_nav) { %>title="Out of the main nav (Show in nav is off), but reachable by direct URL and indexed"<% } %>>
             <%= _p.nav_label || _p.title %>
         </a>
+        <% if (_p.slug === 'what-we-do') { %>
+        <a href="/websites-and-ai" class="page-menu-link page-menu-link-child<%= currentPage.slug === 'websites-and-ai' ? ' active' : '' %>">Websites and AI</a>
+        <% } %>
         <% } %>
     </div>
 </div>
