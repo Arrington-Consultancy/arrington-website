@@ -546,6 +546,20 @@ async function renderPage(req, res, next, pageSlug) {
       allPages = allPagesRows;
     }
 
+    // Owner Check is a standalone route (not a `pages` row), so it can't
+    // just sit in `allPages` — that array also feeds the intervention/filter
+    // button link picker (<meta name="all-pages">), which should keep
+    // listing only genuine CMS pages. Nav position: third, right after What
+    // We Do, per the approved nav (Home | What We Do | Owner Check |
+    // Evidence | About Us | 30 Minute Conversation). Built as a separate
+    // array used only by the two nav loops in index.ejs; falls back to
+    // appending at the end if 'what-we-do' is ever renamed or removed.
+    const ownerCheckNavEntry = { slug: 'owner-check', title: 'Owner Check', nav_label: '', hidden: false, show_in_nav: true };
+    const whatWeDoIndex = allPages.findIndex(p => p.slug === 'what-we-do');
+    const navPages = whatWeDoIndex === -1
+      ? [...allPages, ownerCheckNavEntry]
+      : [...allPages.slice(0, whatWeDoIndex + 1), ownerCheckNavEntry, ...allPages.slice(whatWeDoIndex + 1)];
+
     // Load content
     const { rows } = await db.query('SELECT section_key, content FROM content');
     const content = {};
@@ -680,7 +694,7 @@ async function renderPage(req, res, next, pageSlug) {
     res.render('index', {
       content, theme, activeTheme, themes,
       sectionOrder: renderOrder, hiddenSections, instanceTemplates,
-      currentPage, allPages, seo, caseStudyAnchors, googleReviews,
+      currentPage, allPages, navPages, seo, caseStudyAnchors, googleReviews,
       canEdit, capabilities, showAdminPanel,
       // Unset until the GA4 property exists — see deployment report for the
       // one external step needed before setting this on Railway.
