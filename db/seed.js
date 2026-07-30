@@ -344,6 +344,131 @@ async function seed() {
     );
   }
 
+  // Migration: merge What We Have Done, What the Work Looks Like and What
+  // Business Owners Say into one new Evidence page (30/07/2026, Tom's
+  // brief). Idempotent: only runs once, guarded on the 'evidence' page not
+  // existing yet. Reads each source page's live section_order at migration
+  // time rather than hardcoding instance IDs, since those vary by
+  // deployment and this session's own inspection (see the merge report) was
+  // explicitly read-only. Section instances are just reassigned to the new
+  // page — same content rows, same instance IDs, nothing about their
+  // content changes. The three source pages are then deleted; server.js
+  // 301-redirects their old URLs to /evidence.
+  {
+    const { rows: existingEvidence } = await db.query("SELECT slug FROM pages WHERE slug = 'evidence'");
+    if (existingEvidence.length === 0) {
+      const EVIDENCE_SOURCE_SLUGS = ['what-we-have-done', 'what-the-work-looks-like', 'what-business-owners-say'];
+      const { rows: sourcePages } = await db.query(
+        'SELECT id, slug, section_order, hidden_sections FROM pages WHERE slug = ANY($1)',
+        [EVIDENCE_SOURCE_SLUGS]
+      );
+      if (sourcePages.length === EVIDENCE_SOURCE_SLUGS.length) {
+        const bySlug = {};
+        sourcePages.forEach(p => { bySlug[p.slug] = p; });
+        const orderOf = (slug) => Array.isArray(bySlug[slug].section_order) ? bySlug[slug].section_order : [];
+        const hiddenOf = (slug) => Array.isArray(bySlug[slug].hidden_sections) ? bySlug[slug].hidden_sections : [];
+
+        const baseOf = (id) => {
+          const m = /^([a-z0-9]+)(?:__(\d+))?$/.exec(id || '');
+          return m ? m[1] : null;
+        };
+
+        // Find the single CTA that survives as Evidence's shared closing
+        // block: the one whose button reads "Book a 30 minute
+        // conversation" (Tom's chosen wording). Every other intervention
+        // instance across the three source pages is dropped from the page
+        // order — its content rows stay in the DB, same as any other
+        // section removal in this CMS (see routes/content.js DELETE
+        // /section/:id).
+        const allIntervention = EVIDENCE_SOURCE_SLUGS
+          .flatMap(slug => orderOf(slug))
+          .filter(iid => baseOf(iid) === 'intervention');
+
+        let keeperCta = null;
+        for (const iid of allIntervention) {
+          const { rows } = await db.query(
+            'SELECT content FROM content WHERE section_key = $1',
+            [`${iid}.button_text`]
+          );
+          const text = ((rows[0] && rows[0].content) || '').replace(/<[^>]+>/g, '').trim();
+          if (text === 'Book a 30 minute conversation') { keeperCta = iid; break; }
+        }
+        if (!keeperCta && allIntervention.length > 0) {
+          keeperCta = allIntervention[allIntervention.length - 1];
+          console.warn(`Evidence merge: no intervention instance found with button text "Book a 30 minute conversation" — falling back to keeping ${keeperCta} as the shared closing CTA.`);
+        }
+
+        const withoutIntervention = (slug) => orderOf(slug).filter(iid => baseOf(iid) !== 'intervention');
+        const evidenceOrder = [
+          ...withoutIntervention('what-we-have-done'),
+          ...withoutIntervention('what-the-work-looks-like'),
+          ...withoutIntervention('what-business-owners-say'),
+          ...(keeperCta ? [keeperCta] : [])
+        ];
+        const evidenceHidden = EVIDENCE_SOURCE_SLUGS
+          .flatMap(slug => hiddenOf(slug))
+          .filter(iid => evidenceOrder.includes(iid));
+
+        // Position Evidence right after What We Do (Owner Check's synthetic
+        // nav entry sits between them at render time — see server.js
+        // navPages), shifting every later page's sort_order up by one to
+        // make room. Falls back to appending at the very end if
+        // 'what-we-do' is ever renamed or removed.
+        const { rows: wwdRows } = await db.query("SELECT sort_order FROM pages WHERE slug = 'what-we-do'");
+        let evidenceSortOrder;
+        if (wwdRows.length > 0) {
+          const wwdSort = wwdRows[0].sort_order;
+          await db.query('UPDATE pages SET sort_order = sort_order + 1 WHERE sort_order > $1', [wwdSort]);
+          evidenceSortOrder = wwdSort + 1;
+        } else {
+          const { rows: maxRows } = await db.query('SELECT COALESCE(MAX(sort_order), 0) + 1 AS next FROM pages');
+          evidenceSortOrder = maxRows[0].next;
+        }
+
+        await db.query(
+          `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections)
+           VALUES ('evidence', 'Evidence', $1, $2::jsonb, $3::jsonb, '[]'::jsonb)`,
+          [evidenceSortOrder, JSON.stringify(evidenceOrder), JSON.stringify(evidenceHidden)]
+        );
+
+        // Retire the three source pages now their sections have moved.
+        // server.js 301-redirects their old URLs to /evidence.
+        await db.query('DELETE FROM pages WHERE slug = ANY($1)', [EVIDENCE_SOURCE_SLUGS]);
+
+        // Repoint any button_link / card_N_link content anywhere on the
+        // site that referenced one of the three retired slugs, so visitors
+        // land on the right part of Evidence directly rather than relying
+        // on the redirect. Preserves any existing #fragment on card links
+        // (those deep-link to a specific case study instance, which hasn't
+        // moved). documents/googlereviews got a real id="" attribute added
+        // alongside their existing data-section-id in this same change (see
+        // views/index.ejs), so these anchors actually resolve.
+        const EVIDENCE_ANCHORS = {
+          'what-we-have-done': '',
+          'what-the-work-looks-like': '#documents',
+          'what-business-owners-say': '#googlereviews'
+        };
+        const { rows: linkRows } = await db.query(
+          "SELECT section_key, content FROM content " +
+          "WHERE section_key LIKE '%.button_link' OR section_key ~ '\\.card_[0-9]+_link$'"
+        );
+        for (const row of linkRows) {
+          const value = (row.content || '').trim();
+          const m = /^([a-z0-9]+(?:-[a-z0-9]+)*)(#[a-z0-9_-]+)?$/.exec(value);
+          if (!m) continue;
+          const [, slug, fragment] = m;
+          if (!Object.prototype.hasOwnProperty.call(EVIDENCE_ANCHORS, slug)) continue;
+          const newValue = fragment ? `evidence${fragment}` : `evidence${EVIDENCE_ANCHORS[slug]}`;
+          await db.query('UPDATE content SET content = $1 WHERE section_key = $2', [newValue, row.section_key]);
+        }
+
+        console.log(`Evidence page created (sort_order ${evidenceSortOrder}), ${evidenceOrder.length} section(s) merged, shared closing CTA: ${keeperCta || '(none found)'}. Source pages retired: ${EVIDENCE_SOURCE_SLUGS.join(', ')}.`);
+      } else {
+        console.log('Evidence merge skipped: not all three source pages exist yet.');
+      }
+    }
+  }
+
   // Keep only the 3 most recent backups. Idempotent: no-op when there are ≤3.
   const { rowCount: prunedBackups } = await db.query(
     `DELETE FROM backups
