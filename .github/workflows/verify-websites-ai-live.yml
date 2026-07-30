@@ -1,0 +1,49 @@
+name: Verify Websites and AI page live
+
+on:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the new page itself
+        run: |
+          code=$(curl -sS -o wai.html -w "%{http_code}" https://www.arringtonconsultancy.com/websites-and-ai)
+          echo "HTTP status: $code"
+          echo "== title =="
+          grep -oE '<title>[^<]*</title>' wai.html
+          echo "== data-section-id list =="
+          grep -oE 'data-section-id="[^"]*"' wai.html | sort -u
+          echo "== count of Book a 30 minute conversation buttons (should be exactly one CTA on this page) =="
+          grep -oE 'class="btn btn-primary">Book a 30 minute conversation' wai.html | wc -l
+          echo "== key headings present =="
+          grep -o "Websites and AI that solve real business problems" wai.html || echo "MISSING hero heading"
+          grep -o "Start with the business, not the technology" wai.html || echo "MISSING section 2 heading"
+          grep -o "Two implementation areas" wai.html || echo "MISSING section 4 heading"
+          grep -o "Proof from our own work" wai.html || echo "MISSING section 5 heading"
+          grep -o "Understand, design, build, improve" wai.html || echo "MISSING section 6 heading"
+          grep -o "We do not sell technology for its own sake" wai.html || echo "MISSING section 7 heading"
+          grep -o "Technology should make the business stronger, not more complicated" wai.html || echo "MISSING closing heading"
+
+      - name: Check nav on homepage (desktop + mobile child link)
+        run: |
+          curl -sS https://www.arringtonconsultancy.com/ -o home.html
+          echo "== desktop page-menu block =="
+          python3 -c "import re; html = open('home.html', encoding='utf-8').read(); m = re.search(r'class=\"page-menu\".*?</div>\s*</div>', html, re.S); print(m.group(0) if m else 'page-menu block not found')"
+          echo "== mobile menu block =="
+          python3 -c "import re; html = open('home.html', encoding='utf-8').read(); m = re.search(r'id=\"mobileMenu\".*?class=\"mobile-menu-cta\"[^>]*>[^<]*', html, re.S); print(m.group(0) if m else 'mobileMenu block not found')"
+
+      - name: Check What We Do page has the new contextual link and unchanged existing content
+        run: |
+          curl -sS https://www.arringtonconsultancy.com/what-we-do -o wwd.html
+          echo "== new link present =="
+          grep -oE '<a href="/websites-and-ai"[^>]*>[^<]*' wwd.html
+          echo "== existing content still present (sanity check nothing was disturbed) =="
+          grep -o "What a proper commercial review looks like" wwd.html || echo "MISSING existing fourcards heading"
+          grep -o "Useful thinking for business owners" wwd.html || echo "MISSING existing intervention heading"
+
+      - name: Sitemap check
+        run: |
+          curl -sS https://www.arringtonconsultancy.com/sitemap.xml -o sitemap.xml
+          grep -o 'websites-and-ai' sitemap.xml || echo "NOT FOUND in sitemap (problem)"
