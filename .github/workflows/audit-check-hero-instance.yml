@@ -1,0 +1,24 @@
+name: audit-check-hero-instance
+on:
+  workflow_dispatch: {}
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch websites-and-ai page and check hero instance/image
+        run: |
+          curl -s https://www.arringtonconsultancy.com/websites-and-ai -o page.html
+          echo "--- data-section-id for hero blocks ---"
+          grep -o 'data-section-id="hero[^"]*"' page.html || echo "none found"
+          echo "--- data-image for hero blocks ---"
+          grep -o 'data-image="headshot[^"]*"' page.html || echo "none found"
+          echo "--- img src near hero-photo ---"
+          grep -o 'src="/img/headshot[^"]*"' page.html || echo "none found"
+          echo "--- hero heading text (first 300 chars around hero-text) ---"
+          grep -o '<h1[^>]*>.\{0,200\}' page.html || true
+      - name: Check both candidate image keys directly
+        run: |
+          for k in headshot__hero__5 headshot__hero__6; do
+            echo "=== $k ==="
+            curl -s -o /dev/null -w "status=%{http_code} size=%{size_download} type=%{content_type}\n" "https://www.arringtonconsultancy.com/img/$k"
+          done
