@@ -11,19 +11,9 @@ jobs:
         run: |
           curl -sS https://www.arringtonconsultancy.com/ -o home.html
           echo "== Desktop page-menu bar block =="
-          python3 -c "
-import re
-html = open('home.html', encoding='utf-8').read()
-m = re.search(r'class=\"page-menu\".*?</div>\s*</div>', html, re.S)
-print(m.group(0) if m else 'page-menu block not found')
-"
+          python3 -c "import re; html = open('home.html', encoding='utf-8').read(); m = re.search(r'class=\"page-menu\".*?</div>\s*</div>', html, re.S); print(m.group(0) if m else 'page-menu block not found')"
           echo "== Mobile menu overlay block =="
-          python3 -c "
-import re
-html = open('home.html', encoding='utf-8').read()
-m = re.search(r'id=\"mobileMenu\".*?class=\"mobile-menu-cta\"[^>]*>[^<]*', html, re.S)
-print(m.group(0) if m else 'mobileMenu block not found')
-"
+          python3 -c "import re; html = open('home.html', encoding='utf-8').read(); m = re.search(r'id=\"mobileMenu\".*?class=\"mobile-menu-cta\"[^>]*>[^<]*', html, re.S); print(m.group(0) if m else 'mobileMenu block not found')"
 
       - name: Check the three 301 redirects
         run: |
