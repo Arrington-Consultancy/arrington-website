@@ -278,11 +278,14 @@ app.get('/owner-check', async (req, res, next) => {
 app.get('/robots.txt', (req, res) => {
   const base = `${req.protocol}://${req.get('host')}`;
   res.type('text/plain').send(
-    // /market-ready-test and /commercial-gaps-review are unpublished — see
-    // routes/marketReadyTest.js and routes/commercialGapsReview.js —
-    // disallowed here as belt-and-braces on top of each page's own
-    // noindex/nofollow meta tag, until Tom approves launch.
-    `User-agent: *\nAllow: /\nDisallow: /login\nDisallow: /market-ready-test\nDisallow: /commercial-gaps-review\n\nSitemap: ${base}/sitemap.xml\n`
+    // /market-ready-test is still unpublished — see routes/marketReadyTest.js
+    // — disallowed here as belt-and-braces on top of its own noindex/nofollow
+    // meta tag, until Tom approves launch. Commercial Gaps Review (routes/
+    // commercialGapsReview.js) was approved for launch 30/07/2026 and is
+    // deliberately no longer listed here; its own per-visitor result pages
+    // stay noindex/nofollow regardless, since those carry one visitor's
+    // private answers rather than being the public tool page.
+    `User-agent: *\nAllow: /\nDisallow: /login\nDisallow: /market-ready-test\n\nSitemap: ${base}/sitemap.xml\n`
   );
 });
 
@@ -322,9 +325,13 @@ app.get('/sitemap.xml', async (req, res, next) => {
       }
       return `  <url><loc>${escapeXml(loc)}</loc>${lastmod}</url>`;
     }));
-    // Owner Dependency Quiz isn't a row in `pages` (it's a standalone
-    // interactive tool, not CMS content), so it needs its own explicit entry.
+    // Owner Dependency Quiz and Commercial Gaps Review aren't rows in `pages`
+    // (standalone interactive tools, not CMS content), so each needs its own
+    // explicit entry. Market Ready Test stays out of this list until it is
+    // approved for launch. Owner Check itself is a pre-existing omission,
+    // left as-is here — out of scope for this change.
     urlEntries.push(`  <url><loc>${escapeXml(`${base}/owner-dependency-quiz`)}</loc></url>`);
+    urlEntries.push(`  <url><loc>${escapeXml(`${base}/commercial-gaps-review`)}</loc></url>`);
     res.type('application/xml').send(
       `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urlEntries.join('\n')}\n</urlset>\n`
     );

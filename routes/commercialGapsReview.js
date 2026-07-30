@@ -11,15 +11,18 @@ const { interpretCommercialGaps } = require('../lib/commercialGapsAI');
 const router = express.Router();
 
 // ============================================================
-// UNPUBLISHED — Commercial Gaps Review (AI)
+// PUBLISHED 30/07/2026 — Commercial Gaps Review (AI)
 // Third Owner Check tool, built on a feature branch per Tom's brief
 // (29/07/2026): a lead-gated, dynamically-ordered free-text interview,
 // interpreted once at the end by Anthropic into structured JSON — never a
-// live chatbot. Same "stays private until Tom approves launch" pattern as
-// the Market Ready Test: not linked from any nav, noindex/nofollow, direct-
-// URL-only, absent from sitemap.xml and disallowed in robots.txt. Does not
-// touch the Owner Dependency Quiz, the Market Ready Test, or the Owner
-// Check hub page.
+// live chatbot. Verified live in production (confirmed genuinely running
+// ENABLE_LIVE_AI, not the mock fallback) before launch. Now linked from the
+// Owner Check hub page as the third check, indexed, and listed in
+// sitemap.xml. The per-visitor result page
+// (commercial-gaps-review-result.ejs) stays noindex/nofollow regardless —
+// that's one visitor's private answers, not the public tool page. Does not
+// touch the Owner Dependency Quiz or the Market Ready Test, which remains
+// unpublished on its own separate timeline.
 // ============================================================
 
 const NOTIFY_FROM = 'tom@arringtonconsultancy.com';
