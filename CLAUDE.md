@@ -312,6 +312,39 @@ Two independent per-page settings now control what visitors see, and they are ea
 
 **Current site structure (22/07/2026):** main nav is Home, What We Do, What We Have Done, What the Work Looks Like (nav label "See how we work"), About Us, 30 Minute Conversation. Useful Thinking and What Business Owners Say are `show_in_nav = false` but fully indexed/accessible, discovered instead through contextual links added to What We Have Done, What the Work Looks Like (nav-labelled "See how we work"), What We Do, About Us, 30 Minute Conversation, and the global footer. Business Consultant Devon stays `hidden = true` (Google Ads landing page, not in the sitemap) and `show_in_nav = false`, linked once from a new About Us section. See the git log around this date for the exact new `intervention` instances (`__9` through `__16`) and their placement.
 
+### Nav child links (added 30/07/2026)
+
+A page can now appear as a visually-subordinate link directly under a specific top-level nav item, without becoming a new top-level item itself and without any new schema. The pattern (currently used once, for Websites and AI under What We Do): the child page is a normal `pages` row with `show_in_nav = false` (so the generic `navPages` loop never lists it as a sibling top-level item), and `views/index.ejs` special-cases the render — right after emitting the parent's `<a>` in both the desktop `.page-menu-inner` loop and the mobile `#mobileMenu` loop, it checks `_p.slug === 'what-we-do'` and if so emits one extra hardcoded `<a href="/websites-and-ai">` styled as a child (`.page-menu-link-child` / `.mobile-menu-sublink`: smaller font, muted colour, a `›` prefix). This is deliberately not a generic multi-level nav system — adding a second child link anywhere else means adding another explicit `if (_p.slug === '...')` block, copying this same pattern, not building something more abstract. The child page itself is otherwise a completely normal, fully public, fully indexed CMS page (same as Useful Thinking / What Business Owners Say used to be): reachable directly, in the sitemap, editable in the CMS — `show_in_nav = false` only ever affects the two nav loops.
+
+**Current top-level nav (30/07/2026):** Home, What We Do (with Websites and AI folded under it as described above), Owner Check (synthetic entry, not a `pages` row — see `navPages` in `server.js`), Evidence, About Us, 30 Minute Conversation. Useful Thinking is `show_in_nav = false`, discovered via contextual links. Business Consultant Devon stays `hidden = true` + `show_in_nav = false` (Google Ads landing page). The "Current site structure (22/07/2026)" note above predates the Evidence merge and Commercial Gaps Review launch and is left as historical context rather than corrected line-by-line — this paragraph is the current picture.
+
+## Websites and AI page (added 30/07/2026)
+
+A new service page introducing Arrington's combined website-development-plus-practical-AI-implementation offer, at `/websites-and-ai`. Built the same way as Evidence: a normal `pages` row (not a special standalone route), assembled entirely from existing templates so it stays fully CMS-editable — no new template was created for it. Deliberately not a new top-level nav item (see "Nav child links" above); positioned in `sort_order` right after What We Do.
+
+**Core positioning (per Tom's brief):** this page must not read as a web design agency or an AI agency pitch. The commercial position stays "take something that already works and make it stronger" — technology (websites, AI) is one way of implementing a commercial improvement, never the starting point. Copy was checked against the Brand Operating System (Drive) before writing: no em dashes, UK English, "we" voice, none of the banned words (solutions/synergy/leverage/empower/journey/holistic/tailored/bespoke/coach/transformational/world class), no fire metaphors.
+
+**Section → template mapping** (all in `section_order`, in this order):
+
+| # | Content | Template | Instance |
+|---|---|---|---|
+| 1 | Hero: "Websites and AI that solve real business problems" | `hero` | new |
+| 2 | Start with the business, not the technology (examples of business problems) | `biography` | new — two-column body carries the example list as prose, since CMS content only allows `strong`/`p`/`br`/`em` (no `<ul>`), the same constraint that ruled out a literal bullet list anywhere on this page |
+| 3 | Why we are different (agencies ask what website you want; we ask what's in the way) | `filter` | new — `p1`/`p2` two-paragraph contrast, no proof rows |
+| 4 | Two implementation areas: Commercial Websites / Practical AI | `biography` | new — second instance; each column opens with a bold `<strong>` lead-in naming the area, since the template has no per-column heading field |
+| 5 | Real examples: Owner Check, Commercial Gaps Review, this website itself | `insights` | new — exactly 3 cards, matching the template's fixed 3-slot layout with no empty-slot risk |
+| 6 | How the work happens: Understand / Design / Build / Improve | `fourcards` | new — exactly 4 cards, matching the template's fixed 4-slot layout |
+| 7 | What we will not do (trust statement) | `filter` | new — second instance, single paragraph, no button |
+| 8 | Closing CTA: "Technology should make the business stronger, not more complicated" → Book a 30 minute conversation | `intervention` | new |
+
+Two templates were deliberately ruled out for the two "list-shaped" sections (implementation areas' two lists of 6-7 items each, and the four "what we will not do" statements): `assessment`'s `.aq` boxes and `fourcards`/`insights` all render every slot unconditionally (no skip-if-empty logic anywhere in the codebase), so forcing a 4- or 6-item template to hold fewer real items would leave visible empty boxes. Prose within the existing two-column/paragraph templates was the safer fit.
+
+**Contextual link from What We Do (per Tom's brief, point 7):** rather than editing either of What We Do's two existing `intervention` instances (which would have meant replacing a working button/link), the migration appends a brand new third `intervention` instance to the end of What We Do's `section_order` — "Need the website or the systems to match?" → "See Websites and AI" → `/websites-and-ai`. Existing content on that page is completely untouched.
+
+**Hero image:** seeded with no per-instance photo, so it falls back to the site's default `headshot` image (same fallback every freshly-duplicated hero gets — see "Per-instance hero images" above) until the real photograph is uploaded via the hero's own image button in the CMS. No redeploy needed for that swap — it's a live-editing action like any other image upload.
+
+**Migration:** `db/seed.js`, guarded on `pages.slug = 'websites-and-ai'` not existing and on `what-we-do` existing. Uses the same collision-avoidance `allocate()` helper as the "what the work looks like" documents migration (collects every instance ID in use across all pages' `section_order` plus all distinct content-table prefixes before picking new ones), rather than hardcoding instance IDs.
+
 ## Section management (reorder, hide, delete, add, duplicate)
 
 Each editable section has five hover-revealed buttons in this visual order, left to right: ✎ edit · 👁 hide · ▲ up · ▼ down · ✕ delete. Edit and the up/down arrows behave as before; the rest are described below.
