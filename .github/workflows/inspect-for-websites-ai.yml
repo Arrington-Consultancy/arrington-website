@@ -1,0 +1,32 @@
+name: Inspect site for Websites and AI page build (read-only, temporary)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch key pages and list rendered instance IDs
+        run: |
+          for path in "" what-we-do about-us evidence book-a-30-minute-conversation owner-check useful-thinking business-consultant-devon commercial-gaps-review; do
+            url="https://www.arringtonconsultancy.com/${path}"
+            echo "=================================================="
+            echo "== $url =="
+            code=$(curl -sS -o page.html -w "%{http_code}" "$url")
+            echo "status: $code"
+            echo "-- data-section-id list --"
+            grep -oE 'data-section-id="[^"]*"' page.html | sort -u
+            echo "-- title --"
+            grep -oE '<title>[^<]*</title>' page.html
+          done
+
+      - name: List all pages via sitemap
+        run: |
+          curl -sS https://www.arringtonconsultancy.com/sitemap.xml -o sitemap.xml
+          cat sitemap.xml
+
+      - name: What We Do page full body text (for contextual link placement)
+        run: |
+          curl -sS https://www.arringtonconsultancy.com/what-we-do -o wwd.html
+          python3 -c "import re; html = open('wwd.html', encoding='utf-8').read(); m = re.search(r'<div id=\"cms-sections\">.*?<footer', html, re.S); body = m.group(0) if m else html; text = re.sub(r'<[^>]+>', ' ', body); text = re.sub(r'\s+', ' ', text).strip(); print(text[:6000])"
