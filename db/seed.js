@@ -662,7 +662,14 @@ async function seed() {
     { key: 'logo', file: 'logo.avif', mime: 'image/avif' },
     { key: 'headshot', file: 'headshot.png', mime: 'image/png' },
     { key: 'oxford', file: 'oxford.png', mime: 'image/png' },
-    { key: 'headshot__hero__5', file: 'hero-websites-and-ai.jpg', mime: 'image/jpeg' }
+    { key: 'headshot__hero__5', file: 'hero-websites-and-ai.jpg', mime: 'image/jpeg' },
+    // The <picture> element's <source> always requests `<key>__webp` and,
+    // unlike the <img> fallback, a failed source fetch has no defined
+    // fallback in the picture-element spec — without this row, WebP-
+    // preferring browsers (Safari, Chrome, most of the rest) would silently
+    // fall back to `headshot__webp` (the old default portrait) instead of
+    // this photo. Same source image as headshot__hero__5, WebP-encoded.
+    { key: 'headshot__hero__5__webp', file: 'hero-websites-and-ai.webp', mime: 'image/webp' }
   ];
 
   for (const img of images) {
