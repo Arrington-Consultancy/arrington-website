@@ -7,26 +7,31 @@ jobs:
   diagnose:
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch page and show hero-photo markup
+      - name: Download the actual bytes being served
         run: |
-          curl -sS https://www.arringtonconsultancy.com/websites-and-ai -o wai.html
-          echo "== hero-photo block =="
-          python3 -c "import re; html = open('wai.html', encoding='utf-8').read(); m = re.search(r'<div class=\"hero-photo\">.*?</div>\s*</div>', html, re.S); print(m.group(0) if m else 'hero-photo block not found')"
+          curl -sS -o headshot.webp https://www.arringtonconsultancy.com/img/headshot.webp
+          curl -sS -o headshot-base.jpg https://www.arringtonconsultancy.com/img/headshot
+          curl -sS -o hero5.webp https://www.arringtonconsultancy.com/img/headshot__hero__5.webp
+          echo "== sizes =="
+          ls -la headshot.webp headshot-base.jpg hero5.webp
+          echo "== md5 (hero5.webp vs headshot.webp - do they match?) =="
+          md5sum headshot.webp hero5.webp
 
-      - name: Check image endpoint directly
-        run: |
-          echo "== headshot__hero__5 =="
-          curl -sS -o /dev/null -D - -w "size: %{size_download}\n" https://www.arringtonconsultancy.com/img/headshot__hero__5
-          echo "== headshot__hero__5.webp =="
-          curl -sS -o /dev/null -D - -w "size: %{size_download}\n" https://www.arringtonconsultancy.com/img/headshot__hero__5.webp
-          echo "== base headshot =="
-          curl -sS -o /dev/null -D - -w "size: %{size_download}\n" https://www.arringtonconsultancy.com/img/headshot
-          echo "== base headshot.webp =="
-          curl -sS -o /dev/null -D - -w "size: %{size_download}\n" https://www.arringtonconsultancy.com/img/headshot.webp
+      - name: Set up Python image lib
+        run: pip install --quiet Pillow
 
-      - name: Check og:image and site defaults referenced in the page head
+      - name: Print small base64 thumbnails to the log for visual inspection
         run: |
-          echo "== og:image tag =="
-          grep -oE '<meta property="og:image"[^>]*>' wai.html || echo "none found"
-          echo "== twitter:image tag =="
-          grep -oE '<meta name="twitter:image"[^>]*>' wai.html || echo "none found"
+          python3 -c "
+          from PIL import Image
+          import base64, io
+          for name in ['headshot.webp', 'headshot-base.jpg', 'hero5.webp']:
+              im = Image.open(name).convert('RGB')
+              im.thumbnail((240, 240))
+              buf = io.BytesIO()
+              im.save(buf, format='JPEG', quality=70)
+              b64 = base64.b64encode(buf.getvalue()).decode()
+              print(f'=== {name} ({im.size[0]}x{im.size[1]}) ===')
+              print(b64)
+              print()
+          "
