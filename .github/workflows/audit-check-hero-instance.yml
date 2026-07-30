@@ -5,7 +5,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch every live page and strip to visible text
+      - name: Fetch every live page
         run: |
           pages="/ /what-we-do /websites-and-ai /evidence /about-us /book-a-30-minute-conversation /useful-thinking /owner-check /owner-dependency-quiz /market-ready-test /commercial-gaps-review /business-consultant-devon"
           mkdir -p pages_html
@@ -13,23 +13,17 @@ jobs:
             fname=$(echo "$p" | tr '/' '_')
             curl -s "https://www.arringtonconsultancy.com${p}" -o "pages_html/${fname}.html"
           done
-          ls -la pages_html/
-      - name: Grep every page for Brand OS banned language
+      - name: Show real quoted context around every fire/fires/firefighting hit
         run: |
-          echo "=== fire metaphors (firefighting, fires, blaze, extinguish) ==="
-          grep -linE '\bfire(fighting|s)?\b|\bblaze\b|\bextinguish' pages_html/*.html || echo "none found"
-          echo
-          echo "=== em dashes ==="
-          grep -lP '—' pages_html/*.html || echo "none found"
-          echo
-          echo "=== banned-unless-tactical words ==="
-          grep -linE '\b(solutions?|synergy|leverage|empowe?r|journey|holistic|tailored|bespoke|\bcoach(ing)?\b|transformational|world.class|unlock (your|their) potential)\b' pages_html/*.html || echo "none found"
-          echo
-          echo "=== every h1 on every page ==="
           for f in pages_html/*.html; do
-            echo "--- $f ---"
-            grep -oE '<h1[^>]*>[^<]*' "$f" | sed 's/<[^>]*>//' || echo "(no h1 match)"
+            grep -oiE '.{0,60}\bfire(fighting|s)?\b.{0,60}' "$f" | while read -r line; do
+              echo "[$f] $line"
+            done
           done
-      - name: Show full firefighting context lines
+      - name: Show real quoted context for banned-unless-tactical words on evidence + websites-and-ai
         run: |
-          grep -noE '.\{0,80\}fire[a-z]*.\{0,80\}' pages_html/*.html 2>/dev/null | grep -i fire || true
+          for f in pages_html/_evidence.html pages_html/_websites-and-ai.html; do
+            grep -oiE '.{0,60}\b(solutions?|synergy|leverage|empowe?r|journey|holistic|tailored|bespoke|coaching|transformational)\b.{0,60}' "$f" | while read -r line; do
+              echo "[$f] $line"
+            done
+          done
