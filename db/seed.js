@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const db = require('./pool');
 const defaults = require('./defaults');
@@ -685,6 +686,30 @@ async function seed() {
     }
   }
   console.log('Images seeded.');
+
+  // Migration: swap the Websites and AI hero photo for Tom's preferred
+  // version (30/07/2026 - the first upload was replaced same-day with a
+  // photo he liked better). Only replaces the stored image if it still
+  // matches the exact bytes of the photo it's replacing, so a later manual
+  // re-upload via the CMS admin UI is never silently overwritten by this
+  // migration running again on a future boot.
+  {
+    const photoSwaps = [
+      { key: 'headshot__hero__5', oldMd5: 'a18db38f68cf92ee335ecd645a9456d0', file: 'hero-websites-and-ai.jpg', mime: 'image/jpeg' },
+      { key: 'headshot__hero__5__webp', oldMd5: '068d0a2e6de052234c2b9c028dddc6d1', file: 'hero-websites-and-ai.webp', mime: 'image/webp' }
+    ];
+    for (const s of photoSwaps) {
+      const { rows } = await db.query('SELECT data FROM images WHERE image_key = $1', [s.key]);
+      if (rows.length === 0) continue;
+      const currentMd5 = crypto.createHash('md5').update(rows[0].data).digest('hex');
+      if (currentMd5 === s.oldMd5) {
+        const filePath = path.join(__dirname, '..', s.file);
+        const data = fs.readFileSync(filePath);
+        await db.query('UPDATE images SET data = $1, mime_type = $2 WHERE image_key = $3', [data, s.mime, s.key]);
+        console.log(`Swapped ${s.key} to Tom's preferred photo.`);
+      }
+    }
+  }
 
   console.log('Seed complete.');
 }
