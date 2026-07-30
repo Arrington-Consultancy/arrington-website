@@ -257,7 +257,7 @@ async function sendCompletionEmails(review, data, mode) {
       to: review.email,
       subject: 'Your Commercial Gaps Review',
       text: [
-        `Thanks, ${review.name} — here is your personalised Commercial Gaps Review for ${review.company}.`,
+        `Thanks, ${review.name}. Here is your personalised Commercial Gaps Review for ${review.company}.`,
         '',
         data.headline,
         '',
