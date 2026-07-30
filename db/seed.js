@@ -651,10 +651,18 @@ async function seed() {
   if (prunedBackups > 0) console.log(`Pruned ${prunedBackups} old backup(s); keeping the 3 most recent.`);
 
   // Seed images (idempotent: ON CONFLICT DO NOTHING)
+  // `headshot__hero__5` is the per-instance photo for the Websites and AI
+  // page's hero (confirmed live as instance id hero__5 — see the migration
+  // above). Tom's own photo, supplied after the page went live; before this
+  // the hero fell back to the site's default `headshot` image, same as any
+  // freshly-added hero. Re-compressed from the original ~2.9MB PNG to a
+  // ~130KB JPEG (quality 85) — visually identical at hero-background size,
+  // well under the CMS's 2MB upload cap.
   const images = [
     { key: 'logo', file: 'logo.avif', mime: 'image/avif' },
     { key: 'headshot', file: 'headshot.png', mime: 'image/png' },
-    { key: 'oxford', file: 'oxford.png', mime: 'image/png' }
+    { key: 'oxford', file: 'oxford.png', mime: 'image/png' },
+    { key: 'headshot__hero__5', file: 'hero-websites-and-ai.jpg', mime: 'image/jpeg' }
   ];
 
   for (const img of images) {
