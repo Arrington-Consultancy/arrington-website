@@ -1038,6 +1038,10 @@
     padding-top: 0.5rem;
 }
 
+.cms-users-add .cms-detail-title {
+    margin-top: 1rem;
+}
+
 .cms-user-input {
     display: block;
     width: 100%;

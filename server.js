@@ -122,6 +122,23 @@ app.use(helmet({
   } : false
 }));
 
+// Permissions-Policy: disable browser features this site never uses. The
+// only feature actually used anywhere (the Market Ready Test and Owner
+// Dependency Quiz result pages' "copy link" buttons) is navigator.clipboard,
+// so clipboard-write stays allowed for same-origin rather than being
+// switched off along with everything else.
+app.use((req, res, next) => {
+  res.setHeader(
+    'Permissions-Policy',
+    'accelerometer=(), autoplay=(), camera=(), display-capture=(), ' +
+    'encrypted-media=(), fullscreen=(), geolocation=(), gyroscope=(), ' +
+    'magnetometer=(), microphone=(), midi=(), payment=(), ' +
+    'picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), ' +
+    'usb=(), web-share=(), clipboard-write=(self)'
+  );
+  next();
+});
+
 // Cookie parsing (required by csrf-csrf)
 app.use(cookieParser());
 
@@ -342,11 +359,12 @@ app.get('/sitemap.xml', async (req, res, next) => {
       }
       return `  <url><loc>${escapeXml(loc)}</loc>${lastmod}</url>`;
     }));
-    // Owner Dependency Quiz and Commercial Gaps Review aren't rows in `pages`
-    // (standalone interactive tools, not CMS content), so each needs its own
-    // explicit entry. Market Ready Test stays out of this list until it is
-    // approved for launch. Owner Check itself is a pre-existing omission,
-    // left as-is here — out of scope for this change.
+    // Owner Check, Owner Dependency Quiz and Commercial Gaps Review aren't
+    // rows in `pages` (Owner Check is a synthetic nav entry, the other two
+    // are standalone interactive tools, not CMS content), so each needs its
+    // own explicit entry. Market Ready Test stays out of this list until it
+    // is approved for launch (unpublished — see robots.txt above).
+    urlEntries.push(`  <url><loc>${escapeXml(`${base}/owner-check`)}</loc></url>`);
     urlEntries.push(`  <url><loc>${escapeXml(`${base}/owner-dependency-quiz`)}</loc></url>`);
     urlEntries.push(`  <url><loc>${escapeXml(`${base}/commercial-gaps-review`)}</loc></url>`);
     res.type('application/xml').send(

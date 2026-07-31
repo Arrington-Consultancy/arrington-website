@@ -143,6 +143,16 @@
             font-size: 0.92rem;
             color: var(--text-muted);
         }
+        .mrt-callout p { margin-bottom: 0.9rem; }
+        .mrt-callout p:last-child { margin-bottom: 0; }
+        #mrt-step-label { margin: 0; }
+
+        /* Honeypot: must be a class rule, not an inline style="" attribute —
+           the page's CSP has no 'unsafe-inline' for style-src, and a nonce
+           only covers <style> elements, not the style="" HTML attribute, so
+           an inline style is silently dropped and the field renders fully
+           visible. Same fix as the Commercial Gaps Review honeypot. */
+        .mrt-hp { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; }
 
         .mrt-review-block { padding: 1rem 0; border-top: 1px solid var(--border); }
         .mrt-review-block:first-of-type { border-top: none; }
@@ -187,12 +197,12 @@
             <p class="mrt-meta">Around 5 minutes. Multiple choice, with space at the end for anything else.</p>
 
             <div class="mrt-callout">
-                <p style="margin-bottom:0.9rem;">There are no perfect businesses and there are no perfect answers. This assessment is designed to understand how the business really works, where it may be exposed and how it could look through the eyes of a serious buyer. The more open you are, the more useful the result will be.</p>
-                <p style="margin-bottom:0;">This is not a valuation and it is not legal, accounting or financial advice.</p>
+                <p>There are no perfect businesses and there are no perfect answers. This assessment is designed to understand how the business really works, where it may be exposed and how it could look through the eyes of a serious buyer. The more open you are, the more useful the result will be.</p>
+                <p>This is not a valuation and it is not legal, accounting or financial advice.</p>
             </div>
 
             <div class="mrt-callout">
-                <p style="margin-bottom:0;">Your answers will be used to produce your assessment and may be reviewed by Arrington Consultancy if you ask us to contact you. We will email you a copy of your result so you can keep it and return to it later.</p>
+                <p>Your answers will be used to produce your assessment and may be reviewed by Arrington Consultancy if you ask us to contact you. We will email you a copy of your result so you can keep it and return to it later.</p>
             </div>
 
             <button type="button" class="btn btn-primary" id="mrt-start">Start the Market Ready Test</button>
@@ -252,7 +262,7 @@
             <p class="mrt-field-error" id="mrt-answer-error"></p>
             <div class="mrt-nav">
                 <button type="button" class="mrt-back" id="mrt-q-back">&larr; Back</button>
-                <span class="mrt-meta" id="mrt-step-label" style="margin:0;"></span>
+                <span class="mrt-meta" id="mrt-step-label"></span>
                 <button type="button" class="btn btn-primary" id="mrt-q-continue">Continue</button>
             </div>
         </section>
@@ -296,7 +306,7 @@
                     <input type="tel" id="mrt-phone" name="phone" maxlength="50">
                 </div>
 
-                <div class="mrt-hp" aria-hidden="true" style="position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;">
+                <div class="mrt-hp" aria-hidden="true">
                     <label>Leave this field blank<input type="text" name="website" id="mrt-website-hp" tabindex="-1" autocomplete="off"></label>
                 </div>
 
