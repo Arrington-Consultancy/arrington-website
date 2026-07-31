@@ -1,0 +1,24 @@
+name: check-insights-instance
+on:
+  workflow_dispatch: {}
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch websites-and-ai page and inspect the insights section
+        run: |
+          curl -s https://www.arringtonconsultancy.com/websites-and-ai -o page.html
+          echo "--- data-section-id for insights blocks ---"
+          grep -oE 'data-section-id="insights[^"]*"' page.html | sort -u
+          echo "--- insight-tag / h3 order inside the insights-grid ---"
+          python3 -c "
+import re
+html = open('page.html').read()
+m = re.search(r'<div class=\"insights-grid\">(.*?)</div>\s*</div>\s*</section>', html, re.S)
+if m:
+    body = m.group(1)
+    for tag_m in re.finditer(r'<p class=\"insight-tag\">(.*?)</p>\s*<h3>(.*?)</h3>', body, re.S):
+        print(repr(tag_m.group(1)), '|', repr(tag_m.group(2)))
+else:
+    print('insights-grid block not found')
+"
