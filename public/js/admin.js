@@ -50,12 +50,15 @@
         'insights.card_1_tag': 'Card 1 tag',
         'insights.card_1_title': 'Card 1 title',
         'insights.card_1_body': 'Card 1 body',
+        'insights.card_1_link': 'Card 1 link (page slug, optional)',
         'insights.card_2_tag': 'Card 2 tag',
         'insights.card_2_title': 'Card 2 title',
         'insights.card_2_body': 'Card 2 body',
+        'insights.card_2_link': 'Card 2 link (page slug, optional)',
         'insights.card_3_tag': 'Card 3 tag',
         'insights.card_3_title': 'Card 3 title',
         'insights.card_3_body': 'Card 3 body',
+        'insights.card_3_link': 'Card 3 link (page slug, optional)',
         'fourcards.label': 'Section label',
         'fourcards.heading': 'Heading',
         'fourcards.card_1_number': 'Card 1 number',
@@ -164,7 +167,7 @@
             key.includes('_title') || key.includes('_number') ||
             key.includes('_action') || key.includes('_client') ||
             key.includes('_file') || key.includes('_image') || key.includes('_meta') ||
-            key.includes('button_text') || key.includes('button_link')) {
+            key.includes('_link') || key.includes('button_text')) {
             return 'short';
         }
         if (key.includes('body') || key.includes('_p1') || key.includes('_p2') ||
