@@ -890,6 +890,21 @@
             color: var(--text-bright);
         }
 
+        /* A linked card title keeps the heading's own typography (serif,
+           size, bright colour) rather than the smaller accent-coloured
+           style above, which is meant for a separate "read more"-style
+           link, not the heading itself. */
+        .insight-card h3 a {
+            color: inherit;
+            font-size: inherit;
+            font-weight: inherit;
+            text-decoration: none;
+        }
+
+        .insight-card h3 a:hover {
+            color: var(--accent);
+        }
+
         @media (max-width: 900px) {
             .insights-grid {
                 grid-template-columns: 1fr;
@@ -2360,21 +2375,25 @@
             <p class="section-sub"><%- content[_k + '.subtext'] %></p>
         </div>
         <div class="insights-grid">
+            <% for (let _n = 1; _n <= 3; _n++) { %>
+            <%
+              // Optional link, same pattern as fourcards' card_N_link: a page
+              // slug with an optional #fragment deep-link. Empty or invalid
+              // just renders the title as plain text, same as before this
+              // field existed.
+              const _inLink = (content[_k + '.card_' + _n + '_link'] || '').trim();
+              const _inMatch = /^([a-z0-9]+(?:-[a-z0-9]+)*)(?:#([a-z0-9]+(?:__[0-9]+)?))?$/.exec(_inLink);
+            %>
             <article class="insight-card">
-                <p class="insight-tag"><%- content[_k + '.card_1_tag'] %></p>
-                <h3><%- content[_k + '.card_1_title'] %></h3>
-                <p><%- content[_k + '.card_1_body'] %></p>
+                <p class="insight-tag"><%- content[_k + '.card_' + _n + '_tag'] %></p>
+                <% if (_inMatch) { %>
+                <h3><a href="/<%= _inMatch[1] %><%= _inMatch[2] ? '#' + _inMatch[2] : '' %>"><%- content[_k + '.card_' + _n + '_title'] %></a></h3>
+                <% } else { %>
+                <h3><%- content[_k + '.card_' + _n + '_title'] %></h3>
+                <% } %>
+                <p><%- content[_k + '.card_' + _n + '_body'] %></p>
             </article>
-            <article class="insight-card">
-                <p class="insight-tag"><%- content[_k + '.card_2_tag'] %></p>
-                <h3><%- content[_k + '.card_2_title'] %></h3>
-                <p><%- content[_k + '.card_2_body'] %></p>
-            </article>
-            <article class="insight-card">
-                <p class="insight-tag"><%- content[_k + '.card_3_tag'] %></p>
-                <h3><%- content[_k + '.card_3_title'] %></h3>
-                <p><%- content[_k + '.card_3_body'] %></p>
-            </article>
+            <% } %>
         </div>
     </div>
 </section>

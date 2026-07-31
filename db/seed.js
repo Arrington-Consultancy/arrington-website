@@ -326,6 +326,50 @@ async function seed() {
     }
   }
 
+  // Migration: add an optional card_N_link field to every insights instance,
+  // same "type in a page slug" pattern as fourcards' card_N_link. The three
+  // "real examples" cards on Websites and AI (Owner Check / Commercial Gaps
+  // Review / this website) were plain text with no way to link anywhere —
+  // Owner Check and Commercial Gaps Review now link to their own pages; the
+  // "this website" card stays unlinked (visitor is already on it). Sets the
+  // two real values FIRST, before the generic empty-string backfill below,
+  // so ON CONFLICT DO NOTHING can't beat these inserts to the row — order
+  // matters here, not just idempotency. Every other insights instance (e.g.
+  // Useful Thinking) gets blank, editable link fields, left for a deliberate
+  // future edit rather than guessed at.
+  {
+    const { rows: wsPage } = await db.query(
+      "SELECT section_order FROM pages WHERE slug = 'websites-and-ai'"
+    );
+    if (wsPage.length > 0) {
+      const order = Array.isArray(wsPage[0].section_order) ? wsPage[0].section_order : [];
+      const wsInsightsId = order.find(iid => /^insights(__[0-9]+)?$/.test(iid));
+      if (wsInsightsId) {
+        await db.query(
+          "INSERT INTO content (section_key, content) VALUES ($1, 'owner-check') ON CONFLICT (section_key) DO NOTHING",
+          [`${wsInsightsId}.card_1_link`]
+        );
+        await db.query(
+          "INSERT INTO content (section_key, content) VALUES ($1, 'commercial-gaps-review') ON CONFLICT (section_key) DO NOTHING",
+          [`${wsInsightsId}.card_2_link`]
+        );
+      }
+    }
+
+    const { rows: insightsPrefixes } = await db.query(
+      "SELECT DISTINCT split_part(section_key, '.', 1) AS instance_id " +
+      "FROM content WHERE section_key ~ '^insights(__[0-9]+)?\\.'"
+    );
+    for (const r of insightsPrefixes) {
+      for (const n of [1, 2, 3]) {
+        await db.query(
+          "INSERT INTO content (section_key, content) VALUES ($1, '') ON CONFLICT (section_key) DO NOTHING",
+          [`${r.instance_id}.card_${n}_link`]
+        );
+      }
+    }
+  }
+
   // Migration: ensure every existing hero instance has an optional `whatsapp`
   // row so the edit modal exposes the field. The booking-page hero (hero__3)
   // is seeded with the live wa.me link; all other heroes start empty (button
