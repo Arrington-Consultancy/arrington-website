@@ -1772,12 +1772,18 @@
 
         @media (max-width: 600px) {
             .utlibrary-row {
-                gap: 1rem;
+                flex-direction: column;
+                gap: 0.4rem;
             }
 
             .utlibrary-number {
-                width: 1.75rem;
+                width: auto;
                 font-size: 1.15rem;
+                opacity: 0.75;
+            }
+
+            .utlibrary-summary {
+                line-height: 1.5;
             }
         }
 
