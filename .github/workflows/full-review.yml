@@ -4,6 +4,7 @@ on:
 jobs:
   review:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - name: Install deps
@@ -21,8 +22,10 @@ jobs:
           echo "--- sitemap.xml ---"
           cat review-output/sitemap.xml
       - name: Run full page inspection (screenshots, meta, console, links)
+        timeout-minutes: 8
         run: node .tmp-review-scripts/full-review-check.js
       - name: Check all internal links for broken/redirect status
+        timeout-minutes: 3
         run: node .tmp-review-scripts/check-links.js
       - name: Print per-page summary (title, meta, h1 count, console issues)
         run: |
@@ -71,13 +74,14 @@ jobs:
           }
           "
       - name: Lighthouse on home, websites-and-ai, evidence
+        timeout-minutes: 5
         run: |
           for p in "" "websites-and-ai" "evidence"; do
             name=$(echo "$p" | tr '/' '_')
             [ -z "$name" ] && name="home"
-            npx lighthouse "https://www.arringtonconsultancy.com/$p" \
+            timeout 90 npx lighthouse "https://www.arringtonconsultancy.com/$p" \
               --output=json --output-path="review-output/lighthouse-${name}.json" \
-              --chrome-flags="--headless --no-sandbox" --quiet --only-categories=performance,accessibility,best-practices,seo || echo "lighthouse failed for $p"
+              --chrome-flags="--headless --no-sandbox" --quiet --only-categories=performance,accessibility,best-practices,seo || echo "lighthouse failed or timed out for $p"
           done
       - name: Print Lighthouse summary scores
         run: |

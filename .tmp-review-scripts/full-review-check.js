@@ -26,7 +26,18 @@ const pages = [
 const results = {};
 const allInternalLinks = new Set();
 
-async function inspectPage(context, urlPath, name, viewport) {
+// A hard cap around each page's entire inspection so one bad page can never
+// stall the whole run - if it doesn't finish in time, record the timeout and
+// move on to the next page.
+function withTimeout(promise, ms, label) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`hard timeout after ${ms}ms: ${label}`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+async function inspectPage(context, urlPath, name, viewportName) {
   const page = await context.newPage();
   const consoleMsgs = [];
   page.on('console', msg => {
@@ -38,57 +49,58 @@ async function inspectPage(context, urlPath, name, viewport) {
   const pageErrors = [];
   page.on('pageerror', err => pageErrors.push(String(err).slice(0, 300)));
 
-  let mainResponse = null;
-  page.on('response', resp => {
-    if (resp.url() === BASE + urlPath || resp.url() === BASE + urlPath + '/') {
-      if (!mainResponse) mainResponse = resp;
-    }
-  });
-
-  const record = { path: urlPath, viewport: viewport.name };
+  const record = { path: urlPath, viewport: viewportName };
   try {
-    const resp = await page.goto(BASE + urlPath, { waitUntil: 'domcontentloaded', timeout: 25000 });
+    const resp = await page.goto(BASE + urlPath, { waitUntil: 'domcontentloaded', timeout: 20000 });
     record.status = resp ? resp.status() : null;
-    await page.waitForTimeout(1200);
+    await page.waitForTimeout(1000);
 
-    record.title = await page.title();
-    record.metaDescription = await page.locator('meta[name="description"]').getAttribute('content').catch(() => null);
-    record.canonical = await page.locator('link[rel="canonical"]').getAttribute('href').catch(() => null);
-    record.ogTitle = await page.locator('meta[property="og:title"]').getAttribute('content').catch(() => null);
-    record.ogDescription = await page.locator('meta[property="og:description"]').getAttribute('content').catch(() => null);
-    record.ogImage = await page.locator('meta[property="og:image"]').getAttribute('content').catch(() => null);
-    record.robotsMeta = await page.locator('meta[name="robots"]').getAttribute('content').catch(() => null);
-    record.jsonLdCount = await page.locator('script[type="application/ld+json"]').count();
-    record.jsonLd = [];
-    const jsonLdCount = await page.locator('script[type="application/ld+json"]').count();
-    for (let i = 0; i < jsonLdCount; i++) {
-      record.jsonLd.push(await page.locator('script[type="application/ld+json"]').nth(i).innerText().catch(() => ''));
-    }
-    record.h1s = await page.locator('h1').allInnerTexts();
-    record.h1Count = record.h1s.length;
+    // Single in-page evaluate call for everything DOM-related - no Playwright
+    // actionability/visibility waits at all, so nothing here can hang on a
+    // missing or non-visible element.
+    const domData = await page.evaluate(() => {
+      const attr = (sel, name) => { const el = document.querySelector(sel); return el ? el.getAttribute(name) : null; };
+      const jsonLd = Array.from(document.querySelectorAll('script[type="application/ld+json"]')).map(el => el.textContent);
+      const h1s = Array.from(document.querySelectorAll('h1')).map(el => el.innerText);
+      const hrefs = Array.from(document.querySelectorAll('a[href]')).map(el => el.getAttribute('href'));
+      return {
+        title: document.title,
+        metaDescription: attr('meta[name="description"]', 'content'),
+        canonical: attr('link[rel="canonical"]', 'href'),
+        ogTitle: attr('meta[property="og:title"]', 'content'),
+        ogDescription: attr('meta[property="og:description"]', 'content'),
+        ogImage: attr('meta[property="og:image"]', 'content'),
+        robotsMeta: attr('meta[name="robots"]', 'content'),
+        jsonLd,
+        h1s,
+        hrefs,
+        bodyText: document.body ? document.body.innerText : ''
+      };
+    });
 
-    if (viewport.name === 'desktop') {
-      const hrefs = await page.locator('a[href]').evaluateAll(els => els.map(e => e.getAttribute('href')));
-      for (const h of hrefs) {
+    Object.assign(record, domData);
+    record.jsonLdCount = domData.jsonLd.length;
+    record.h1Count = domData.h1s.length;
+
+    if (viewportName === 'desktop') {
+      for (const h of domData.hrefs) {
         if (!h) continue;
         if (h.startsWith('/') && !h.startsWith('//')) allInternalLinks.add(h);
         else if (h.startsWith(BASE)) allInternalLinks.add(h.slice(BASE.length) || '/');
       }
-      record.internalLinkCount = hrefs.filter(h => h && (h.startsWith('/') || h.startsWith(BASE))).length;
-
-      // Full page text for content review
-      record.bodyText = await page.locator('body').innerText().catch(() => '');
+      record.internalLinkCount = domData.hrefs.filter(h => h && (h.startsWith('/') || h.startsWith(BASE))).length;
     }
+    delete record.hrefs; // keep the JSON small; allInternalLinks already captured them
 
     record.consoleIssues = consoleMsgs;
     record.pageErrors = pageErrors;
 
-    const shotPath = path.join(OUT, viewport.name, `${name}.png`);
-    await page.screenshot({ path: shotPath, fullPage: true });
+    const shotPath = path.join(OUT, viewportName, `${name}.png`);
+    await page.screenshot({ path: shotPath, fullPage: true, timeout: 15000 });
   } catch (e) {
     record.error = String(e).slice(0, 500);
   }
-  await page.close();
+  await page.close().catch(() => {});
   return record;
 }
 
@@ -98,19 +110,26 @@ async function inspectPage(context, urlPath, name, viewport) {
   const desktopCtx = await browser.newContext({ viewport: { width: 1400, height: 1000 } });
   for (const [p, name] of pages) {
     console.log('desktop:', p);
-    results[`desktop:${p}`] = await inspectPage(desktopCtx, p, name, { name: 'desktop' });
+    try {
+      results[`desktop:${p}`] = await withTimeout(inspectPage(desktopCtx, p, name, 'desktop'), 40000, p);
+    } catch (e) {
+      console.log('  TIMED OUT:', p, e.message);
+      results[`desktop:${p}`] = { path: p, viewport: 'desktop', error: e.message };
+    }
   }
-  await desktopCtx.close();
+  await desktopCtx.close().catch(() => {});
 
   const mobileCtx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true });
   for (const [p, name] of pages) {
     console.log('mobile:', p);
-    results[`mobile:${p}`] = await inspectPage(mobileCtx, p, name, { name: 'mobile' });
+    try {
+      results[`mobile:${p}`] = await withTimeout(inspectPage(mobileCtx, p, name, 'mobile'), 40000, p);
+    } catch (e) {
+      console.log('  TIMED OUT:', p, e.message);
+      results[`mobile:${p}`] = { path: p, viewport: 'mobile', error: e.message };
+    }
   }
-  await mobileCtx.close();
-
-  // Mobile hamburger menu screenshot
-  const mpage = await mobileCtx.newPage().catch(() => null);
+  await mobileCtx.close().catch(() => {});
 
   await browser.close();
 
