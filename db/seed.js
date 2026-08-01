@@ -686,6 +686,59 @@ async function seed() {
     }
   }
 
+  // Migration: correct voice and remove the banned fire metaphor on the
+  // hidden Business Consultant Devon Google Ads landing page (01/08/2026,
+  // per Tom's review follow-up). The page's `casestudy` (base instance)
+  // phase bodies were written in first person ("I was brought into...")
+  // and left "constant firefighting" in place after both were fixed
+  // elsewhere on the site (About Us already tells the same kind of story
+  // in third person; the homepage hero dropped "firefighting" back on
+  // 21/07/2026). Uses targeted substring replacement rather than a
+  // whole-value match — the live rows carry embedded newlines around the
+  // <br /><br /> breaks that a full-string compare would need to guess
+  // exactly, where REPLACE() just leaves that formatting untouched. Each
+  // substitution is guarded on the OLD phrase still being present, so this
+  // is a true no-op once applied and never touches a row Tom has since
+  // edited by hand.
+  {
+    const devonPhaseFixes = [
+      ['casestudy.phase_1_body', 'I was brought into an <strong>insolvent Devon business</strong>', 'Tom was brought into an <strong>insolvent Devon business</strong>'],
+      ['casestudy.phase_2_body', 'I rebuilt the structure, restored financial control and stabilised the business.', 'Tom rebuilt the structure, restored financial control and stabilised the business.'],
+      ['casestudy.phase_2_body', 'without depending on constant firefighting.', 'without depending on constant intervention.'],
+      ['casestudy.phase_3_body', 'Separately, I built, grew and sold my own business in a <strong>seven-figure exit.</strong>', 'Separately, Tom built, grew and sold his own business in a <strong>seven-figure exit.</strong>']
+    ];
+    let devonFixCount = 0;
+    for (const [key, oldPhrase, newPhrase] of devonPhaseFixes) {
+      const { rowCount } = await db.query(
+        `UPDATE content SET content = REPLACE(content, $1, $2)
+         WHERE section_key = $3 AND content LIKE '%' || $1 || '%'`,
+        [oldPhrase, newPhrase, key]
+      );
+      devonFixCount += rowCount;
+    }
+    if (devonFixCount > 0) console.log(`Business Consultant Devon: corrected voice / removed fire metaphor on ${devonFixCount} row(s).`);
+  }
+
+  // Migration: set a site-wide default Open Graph image (01/08/2026, per
+  // Tom's review follow-up — every page was rendering with no og:image at
+  // all, so shared links had no preview anywhere). Uses the existing logo
+  // image (served at /img/logo, already uploaded via the CMS) rather than
+  // the headshot: the logo's 2:1 aspect is close to the ~1.91:1 ratio
+  // social platforms crop to, while the headshot's 3:4 portrait would be
+  // cropped awkwardly. Stored as a full absolute URL, not root-relative —
+  // views/index.ejs renders seo.ogImage as-is with no origin prefixing, and
+  // the Open Graph spec requires og:image to be absolute for crawlers to
+  // fetch it. Only sets it while the field is still the shipped-blank
+  // default, so it never overwrites a value Tom sets himself via the SEO:
+  // site defaults panel.
+  {
+    const { rowCount: ogImageSet } = await db.query(
+      "UPDATE content SET content = $1 WHERE section_key = 'seo.default_og_image' AND content = ''",
+      ['https://www.arringtonconsultancy.com/img/logo']
+    );
+    if (ogImageSet > 0) console.log('Set site-wide default Open Graph image (seo.default_og_image).');
+  }
+
   // Keep only the 3 most recent backups. Idempotent: no-op when there are ≤3.
   const { rowCount: prunedBackups } = await db.query(
     `DELETE FROM backups

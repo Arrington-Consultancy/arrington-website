@@ -364,9 +364,23 @@ app.get('/sitemap.xml', async (req, res, next) => {
     // are standalone interactive tools, not CMS content), so each needs its
     // own explicit entry. Market Ready Test stays out of this list until it
     // is approved for launch (unpublished — see robots.txt above).
-    urlEntries.push(`  <url><loc>${escapeXml(`${base}/owner-check`)}</loc></url>`);
-    urlEntries.push(`  <url><loc>${escapeXml(`${base}/owner-dependency-quiz`)}</loc></url>`);
-    urlEntries.push(`  <url><loc>${escapeXml(`${base}/commercial-gaps-review`)}</loc></url>`);
+    //
+    // Their copy lives in static EJS templates, not the database, so there's
+    // no updated_at to read a real lastmod from. ASSESSMENT_ROUTE_LASTMOD
+    // records the date each route's on-page copy last meaningfully changed
+    // (01/08/2026: the SEO metadata added to all three counts as such a
+    // change) rather than leaving lastmod off entirely. Bump the relevant
+    // date here the next time one of these three views' visible copy
+    // changes — it is not tied to unrelated deploys, so it won't drift on
+    // its own.
+    const ASSESSMENT_ROUTE_LASTMOD = {
+      'owner-check': '2026-08-01',
+      'owner-dependency-quiz': '2026-08-01',
+      'commercial-gaps-review': '2026-08-01'
+    };
+    for (const slug of ['owner-check', 'owner-dependency-quiz', 'commercial-gaps-review']) {
+      urlEntries.push(`  <url><loc>${escapeXml(`${base}/${slug}`)}</loc><lastmod>${ASSESSMENT_ROUTE_LASTMOD[slug]}</lastmod></url>`);
+    }
     res.type('application/xml').send(
       `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urlEntries.join('\n')}\n</urlset>\n`
     );
