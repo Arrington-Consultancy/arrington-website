@@ -1710,11 +1710,34 @@
         }
 
         .utlibrary-row {
-            display: block;
+            display: flex;
+            align-items: flex-start;
+            gap: 1.5rem;
             padding: 1.75rem 0;
             border-bottom: 1px solid var(--border);
             text-decoration: none;
             color: inherit;
+            transition: padding-left 0.2s ease;
+        }
+
+        .utlibrary-row:hover,
+        .utlibrary-row:focus-visible {
+            padding-left: 0.5rem;
+        }
+
+        .utlibrary-number {
+            flex-shrink: 0;
+            width: 2.25rem;
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.4rem;
+            color: var(--accent);
+            opacity: 0.4;
+            line-height: 1.3;
+        }
+
+        .utlibrary-content {
+            flex: 1;
+            min-width: 0;
         }
 
         .utlibrary-title {
@@ -1735,6 +1758,32 @@
             color: var(--text-muted);
             line-height: 1.6;
             margin: 0;
+        }
+
+        .utlibrary-cta {
+            display: inline-block;
+            margin-top: 0.75rem;
+            font-size: 0.85rem;
+            color: var(--accent);
+            opacity: 0.7;
+        }
+
+        .utlibrary-row:hover .utlibrary-cta,
+        .utlibrary-row:focus-visible .utlibrary-cta {
+            opacity: 1;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+
+        @media (max-width: 600px) {
+            .utlibrary-row {
+                gap: 1rem;
+            }
+
+            .utlibrary-number {
+                width: 1.75rem;
+                font-size: 1.15rem;
+            }
         }
 
         /* ---- CONTACT (in footer) ---- */
@@ -2965,10 +3014,14 @@
             <p class="section-label"><%- content[_k + '.label'] %></p>
             <% const _hTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %><<%= _hTag %> class="section-heading"><%- content[_k + '.heading'] %></<%= _hTag %>>
             <div class="utlibrary-list">
-                <% (typeof usefulThinkingArticles !== 'undefined' ? usefulThinkingArticles : []).forEach(function(_art) { %>
+                <% (typeof usefulThinkingArticles !== 'undefined' ? usefulThinkingArticles : []).forEach(function(_art, _artIdx) { %>
                 <a class="utlibrary-row" href="/useful-thinking/<%= _art.slug %>">
-                    <p class="utlibrary-title"><%- (content[_art.instanceId + '.heading'] || '').replace(/<[^>]+>/g, '') %></p>
-                    <p class="utlibrary-summary"><%- (content[_art.instanceId + '.index_summary'] || '').replace(/<[^>]+>/g, '') %></p>
+                    <span class="utlibrary-number" aria-hidden="true"><%= String(_artIdx + 1).padStart(2, '0') %></span>
+                    <span class="utlibrary-content">
+                        <p class="utlibrary-title"><%- (content[_art.instanceId + '.heading'] || '').replace(/<[^>]+>/g, '') %></p>
+                        <p class="utlibrary-summary"><%- (content[_art.instanceId + '.index_summary'] || '').replace(/<[^>]+>/g, '') %></p>
+                        <span class="utlibrary-cta">Read the story &rarr;</span>
+                    </span>
                 </a>
                 <% }); %>
             </div>
