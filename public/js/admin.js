@@ -138,6 +138,14 @@
         'contact.email': 'Email address',
         'contact.phone': 'Phone number',
         'contact.whatsapp': 'WhatsApp link (leave empty to hide the WhatsApp button)',
+        'article.label': 'Section label',
+        'article.heading': 'Title',
+        'article.body': 'Body text',
+        'article.index_summary': 'Library summary (one line, shown on the Useful Thinking list)',
+        'article.related_text': 'Related link text (leave empty to hide)',
+        'article.related_link': 'Related link path (e.g. /owner-dependency-quiz)',
+        'utlibrary.label': 'Section label',
+        'utlibrary.heading': 'Heading',
         'footer.name': 'Name'
     };
 
@@ -157,7 +165,9 @@
         filter: 'Filter',
         proofstrip: 'Proof strip',
         contact: 'Contact',
-        footer: 'Footer'
+        footer: 'Footer',
+        article: 'Useful Thinking article',
+        utlibrary: 'Useful Thinking library list'
     };
 
     // Determine textarea height class based on expected content length
