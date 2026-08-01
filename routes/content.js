@@ -135,7 +135,7 @@ router.put('/', requireCapability('edit_content'), async (req, res) => {
 // Content keys are stored per instance: `{instanceId}.field` for most sections.
 // Credentials is a special case with two content sub-prefixes:
 //   `{instanceId}_oxford.*` and `{instanceId}_stat.*`.
-const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','fourcards','documents','casestudy','casestudy2','assessment','filter','proofstrip','contact','googlereviews'];
+const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','fourcards','documents','casestudy','casestudy2','assessment','filter','proofstrip','contact','googlereviews','article','utlibrary'];
 const MAX_INSTANCE_SUFFIX = 99;
 
 function baseTemplate(instanceId) {

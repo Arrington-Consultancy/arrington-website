@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const db = require('./pool');
 const defaults = require('./defaults');
+const { ARTICLES: UT_ARTICLES } = require('../lib/usefulThinkingArticles');
 
 const BCRYPT_ROUNDS = 12;
 
@@ -682,6 +683,229 @@ async function seed() {
         }
       } else {
         console.log('Websites and AI migration skipped: What We Do page does not exist yet.');
+      }
+    }
+  }
+
+  // Migration: Useful Thinking articles, first batch (01/08/2026, from
+  // "Arrington Website Worker Handover 01"). Four pieces are published as
+  // real pages (show_in_nav: false, same pattern as Websites and AI before
+  // it was promoted — discovered via the library list on /useful-thinking,
+  // the Commercial Gaps Review, and each other's related links, not the
+  // primary nav). A fifth, "The Reverse Economy of Scale", is seeded as
+  // content only under the reserved instance `article__5` with no page
+  // row — per the handover's explicit hold instruction, it needs a Tom
+  // voice-approval pass before it gets a route, a library entry or a CGR
+  // link. Idempotent: guarded on the first article's page not existing yet.
+  //
+  // The handover's own general caveat is "UK English throughout, no em
+  // dashes" (applies to all five pieces), but the delivered copy itself
+  // contains a handful of em dashes (evidently a mechanical slip, not
+  // something any per-article wording caveat marks as protected-verbatim).
+  // Those have been converted to plain punctuation; every line explicitly
+  // marked "must stay verbatim" in the handover is reproduced exactly as
+  // given, unchanged.
+  {
+    const { rows: existingArticle1 } = await db.query(
+      "SELECT slug FROM pages WHERE slug = 'being-certain-isnt-the-same-as-being-right'"
+    );
+    const { rows: utRows } = await db.query("SELECT id FROM pages WHERE slug = 'useful-thinking'");
+    if (existingArticle1.length === 0 && utRows.length > 0) {
+      const { rows: orderRows } = await db.query('SELECT section_order FROM pages');
+      const used = new Set();
+      for (const r of orderRows) {
+        if (Array.isArray(r.section_order)) r.section_order.forEach((s) => used.add(s));
+      }
+      const { rows: prefixRows } = await db.query(
+        "SELECT DISTINCT split_part(section_key, '.', 1) AS instance_id FROM content"
+      );
+      prefixRows.forEach((r) => used.add(r.instance_id));
+
+      const allocate = (tpl) => {
+        if (!used.has(tpl)) { used.add(tpl); return tpl; }
+        for (let n = 2; n <= 99; n++) {
+          const id = `${tpl}__${n}`;
+          if (!used.has(id)) { used.add(id); return id; }
+        }
+        return null;
+      };
+
+      // Reserve article__5 for the held Reverse Economy of Scale piece
+      // before allocating the four published ones, so `allocate` skips
+      // straight past it.
+      used.add('article__5');
+      const a1 = allocate('article');
+      const a2 = allocate('article');
+      const a3 = allocate('article');
+      const a4 = allocate('article');
+      const libId = allocate('utlibrary');
+
+      if (a1 && a2 && a3 && a4 && libId) {
+        const ODQ_RELATED = ['Owner Dependency Quiz', '/owner-dependency-quiz'];
+        const NO_RELATED = ['', ''];
+
+        const articleRows = [
+          // Article 1 — Being Certain Isn't the Same as Being Right
+          [`${a1}.label`, 'USEFUL THINKING'],
+          [`${a1}.heading`, "Being Certain Isn't the Same as Being Right"],
+          [`${a1}.index_summary`, 'A staff member was ignoring the phone. Tom was sure of it, right up until the call logs proved him wrong. On the danger of acting on certainty instead of evidence.'],
+          [`${a1}.body`, [
+            "<p>I've been wrong millions of times.</p>",
+            "<p>I've occasionally even been right, although that depends on whether you ask my wife.</p>",
+            '<p>But only a handful of times in my life have I been so completely certain about something that I would have bet my life on it, only to be proved wrong. This is the business one.</p>',
+            "<p>I rang the office one day and couldn't get through. I tried again from a different number. Still nothing. I checked the CCTV while it was ringing and saw the member of staff just sitting there.</p>",
+            "<p>He'd previously told me he didn't use the loudspeaker, so I'd ruled that out. No handset in his hand meant one thing to me: he was ignoring the phone.</p>",
+            "<p>I confronted him. He denied it. I was so certain I'd seen it with my own eyes that I called him a liar.</p>",
+            "<p>He still denied it, so I checked the call logs. He'd been on another call at the exact moment mine came in, on loudspeaker, exactly what he'd told me he didn't do.</p>",
+            "<p>I'd been wrong about the lie. He had broken a rule and concealed it, but I had accused him of something he hadn't done. Neither of us came out of it clean, but only one of us had been called a liar for something he hadn't done.</p>",
+            '<p>I apologised straight away.</p>',
+            "<p>It's one of the first things I tell new managers when they're considering disciplining a member of staff: never flat out call someone a liar.</p>",
+            "<p>Being certain doesn't make you right. Listen, gather the evidence and leave room for the possibility that you're wrong.</p>",
+            '<p>Sometimes even your own eyes give you the wrong answer.</p>'
+          ].join('')],
+          [`${a1}.related_text`, ODQ_RELATED[0]],
+          [`${a1}.related_link`, ODQ_RELATED[1]],
+
+          // Article 2 — The Customer Who Messaged Me at 4am
+          [`${a2}.label`, 'USEFUL THINKING'],
+          [`${a2}.heading`, 'The Customer Who Messaged Me at 4am'],
+          [`${a2}.index_summary`, "A 4am complaint from someone Tom barely knew, and his wife's reaction the next morning, exposed the difference between being responsive and being permanently on call."],
+          [`${a2}.body`, [
+            '<p>I was sound asleep over the festive period when a customer I knew to maybe say hello to felt it was acceptable to message me at 4am ranting about a late taxi.</p>',
+            '<p>My warped sense of what was normal meant I replied, then rang the office to sort it.</p>',
+            '<p>The following morning my wife asked who had been messaging me at that hour. I explained. She looked at me and said: "How can anyone possibly think that\'s acceptable? What if I contacted the CEO of Marks and Spencer with a complaint?"</p>',
+            '<p>My wife has an art of hyperbolising the extent of a breach of boundaries. She was also completely right.</p>',
+            '<p>At the time we were handling around 10,000 customers a week and I had spent years making the business genuinely responsive, but somewhere along the way I had confused caring about customers with being personally available to them at any hour.</p>',
+            '<p>Over twenty years the defining change was communication technology. The landline only ever got used for a genuine someone is on fire emergency. The mobile made contact feel somehow less intrusive to the person sending it, even when it wasn\'t.</p>',
+            '<p>Once people know they can reach you directly, it is very difficult to walk that back. The same applied to staff. Genuine emergencies, yes. A gripe that could wait until Monday morning belonged in the right place at the right time, not landing on me whenever somebody felt like having it.</p>',
+            '<p>It took a 4am message over Christmas and my wife\'s reaction the next morning to make me draw the line properly. We still smile about the Marks and Spencer line.</p>',
+            '<p>She was right. I should have done it sooner.</p>'
+          ].join('')],
+          [`${a2}.related_text`, ODQ_RELATED[0]],
+          [`${a2}.related_link`, ODQ_RELATED[1]],
+
+          // Article 3 — You Don't Get to Decide When You've Made Things Right
+          [`${a3}.label`, 'USEFUL THINKING'],
+          [`${a3}.heading`, "You Don't Get to Decide When You've Made Things Right"],
+          [`${a3}.index_summary`, 'Tom lost a £120,000 account at 26 after one late airport transfer, despite doing everything he thought a decent business owner should. On accepting consequences you don\'t get to set the terms of.'],
+          [`${a3}.body`, [
+            '<p>I lost a £120,000 a year account when I was 26 because of one drive to an airport.</p>',
+            '<p>We had made provisions for bad traffic, but not quite enough. The passenger was late and, funnily enough, the plane did not wait. The fault was ours and ours only.</p>',
+            '<p>I covered the cost to the company, apologised properly and spoke directly to the MD. At the time, I genuinely believed I had fixed it. I had taken responsibility, put my hand in my pocket and done everything I thought a decent business owner was supposed to do. I had read the book and everything.</p>',
+            '<p>He accepted the apology. He accepted the compensation. Then he ended the relationship.</p>',
+            '<p>At the time I felt betrayed. Looking back, he was not punishing me. He was protecting his customers, his business and the food he put on his family\'s table. I was irrelevant in that picture.</p>',
+            '<p>Business is not a social club. You can be friendly, but you are often not friends.</p>',
+            '<p>You can make the right moves afterwards. You can apologise, compensate and dance all the right dances. What you do not get to decide is what happens next. If you get it wrong in business, it is not your decision what the punishment should be. The offender is not the judge and jury.</p>',
+            '<p>There were staff involved and internal mistakes that contributed to what happened. I could have pointed the finger and badly wanted to. I suspect some people were waiting for me to. Even at 26, I knew that was nonsense.</p>',
+            '<p>If somebody on minimum wage can make a mistake that costs your business hundreds of thousands of pounds, that is not really a staff problem. That is a management problem and, in my case, a Tom problem.</p>',
+            '<p>The real failure was not the late airport run. The real failure was allowing that much risk to sit in one place.</p>',
+            '<p>Someone earning minimum wage deserves to be protected from errors that can make or break a business. After that, every account booking had to be confirmed by email and signed off. We built paper trails where there had not been any. Not because we wanted more administration, but because I had learned what a missing process could cost. An eye watering amount.</p>',
+            '<p>A few years later, the same MD was let down by one of our competitors and gave us another chance. The original incident was never mentioned. It did not need to be. We both knew what had happened, and he knew it would never happen again.</p>',
+            '<p>If I could speak to myself at 26, I would tell him it hurts now, and rightly so. But one day you will thank him for it.</p>'
+          ].join('')],
+          [`${a3}.related_text`, ODQ_RELATED[0]],
+          [`${a3}.related_link`, ODQ_RELATED[1]],
+
+          // Article 4 — The Tightrope Between Staff Loyalty and Damage Control
+          [`${a4}.label`, 'USEFUL THINKING'],
+          [`${a4}.heading`, 'The Tightrope Between Staff Loyalty and Damage Control'],
+          [`${a4}.index_summary`, "A fifteen-year employee, 98% brilliant and impossible the rest of the time. On why you can train skills but you can't transplant someone's character."],
+          [`${a4}.body`, [
+            '<p>The tightrope between staff loyalty and damage control is brutal.</p>',
+            '<p>I had someone who had been in the business for about 15 years. They turned up, they knew the place, and in plenty of ways they were loyal. The frustrating thing was that about 98% of the job was done well.</p>',
+            '<p>That made it very easy to give them far more rope than I should have.</p>',
+            '<p>The problem was the damage left in their wake. Customers were upset by their attitude. Other staff found them almost impossible to work with. Feedback never really landed, because they had no ability to see anything from anyone else\'s point of view. If something went wrong, it was always someone else\'s fault, or there was always a reason why they had done nothing wrong.</p>',
+            '<p>The blame culture became contagious.</p>',
+            '<p>For far too long, I absorbed it. Again and again I made excuses for them. I found myself trying to explain it away. I thought there must be a better way to manage it, a better conversation, different training, or some other way to get through to them.</p>',
+            "<p>There probably wasn't.</p>",
+            '<p>You can train skills. You can attempt to educate. You can set expectations. But you cannot transplant someone\'s character and personality. Trust me, I have tried.</p>',
+            '<p>When it was finally dealt with properly, the business felt different almost straight away. The working environment was calmer. Customers were happier. Staff morale improved.</p>',
+            '<p>That was the uncomfortable bit.</p>',
+            '<p>In trying to be loyal to one person, I had weakened the business for everyone else. There are limits to loyalty in business. Unless that loyalty puts the greater good first, it can become massively damaging.</p>'
+          ].join('')],
+          [`${a4}.related_text`, NO_RELATED[0]],
+          [`${a4}.related_link`, NO_RELATED[1]],
+
+          // Article 5 (HELD) — The Reverse Economy of Scale. Content seeded
+          // for CMS visibility/editing only; no page row, so no route, no
+          // library entry and no CGR link exist yet. See hold instruction
+          // above and lib/usefulThinkingArticles.js.
+          [`article__5.label`, 'USEFUL THINKING'],
+          [`article__5.heading`, 'The Reverse Economy of Scale'],
+          [`article__5.index_summary`, "More turnover was supposed to make things easier. It didn't. Growth just meant Tom found out about problems later, and later meant more expensive. On why bigger only works if the structure underneath gets bigger too."],
+          [`article__5.body`, [
+            '<p>The reverse economy of scale.</p>',
+            "<p>As my business grew, I assumed more sales and more people would naturally make things easier. It didn't work like that.</p>",
+            "<p>The further I got from the front line, the less I actually saw. Problems I'd have spotted immediately in the early days started slipping through the cracks instead. By the time some of them reached me, they'd already cost money, time, or trust.</p>",
+            '<p>You can be busier, turning over more, employing more people, and still have less control than you had when the business was smaller. I know that because I lived it.</p>',
+            "<p>I've heard the same thing from other owners since. One was frustrated that despite growing turnover, things felt harder than ever to manage, customer issues taking longer to surface, small mistakes turning expensive, constantly pulled into firefighting. It wasn't a new problem to me. It was mine, just wearing someone else's name.</p>",
+            '<p>Growth does not remove pressure on the owner unless the structure underneath grows with it. Otherwise the business gets bigger, and the owner stays trapped in the middle of everything.</p>'
+          ].join('')],
+          [`article__5.related_text`, NO_RELATED[0]],
+          [`article__5.related_link`, NO_RELATED[1]],
+
+          // Library list section on /useful-thinking
+          [`${libId}.label`, 'USEFUL THINKING'],
+          [`${libId}.heading`, 'Stories from twenty years of running businesses.']
+        ];
+
+        for (const [key, value] of articleRows) {
+          await db.query(
+            'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+            [key, value]
+          );
+        }
+
+        const { rows: maxSortRows } = await db.query('SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM pages');
+        let nextSort = maxSortRows[0].max_sort + 1;
+
+        // Slugs come from the manifest (single source of truth for
+        // routing); titles are the handover's "Final title" for each,
+        // matching the .heading content value set above.
+        const articleTitlesByInstance = {
+          [a1]: "Being Certain Isn't the Same as Being Right",
+          [a2]: 'The Customer Who Messaged Me at 4am',
+          [a3]: "You Don't Get to Decide When You've Made Things Right",
+          [a4]: 'The Tightrope Between Staff Loyalty and Damage Control'
+        };
+        const articlePages = UT_ARTICLES.map((a) => [a.instanceId, a.slug, articleTitlesByInstance[a.instanceId]]);
+        for (const [instanceId, slug, title] of articlePages) {
+          await db.query(
+            `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav, meta_description)
+             VALUES ($1, $2, $3, $4::jsonb, '[]'::jsonb, '[]'::jsonb, false, $5)`,
+            [slug, title, nextSort, JSON.stringify([instanceId]), (function () {
+              const key = `${instanceId}.index_summary`;
+              const found = articleRows.find((r) => r[0] === key);
+              return found ? found[1] : '';
+            })()]
+          );
+          nextSort += 1;
+        }
+
+        // Restructure the useful-thinking page: drop the now-redundant
+        // approach__2 three-up (Cash Flow / Fixed Overheads / Owner
+        // Dependency), which duplicated the insights block above it in
+        // both format and theme, and insert the new library list in its
+        // place, right before the closing assessment/quiz block. Content
+        // rows for approach__2 are untouched and stay recoverable via the
+        // existing "Reuse existing" add-section flow if ever wanted back.
+        const { rows: utPageRows } = await db.query("SELECT section_order FROM pages WHERE slug = 'useful-thinking'");
+        const utOrder = Array.isArray(utPageRows[0]?.section_order) ? utPageRows[0].section_order : [];
+        const newUtOrder = [];
+        for (const iid of utOrder) {
+          if (iid === 'approach__2') continue;
+          if (iid === 'assessment') newUtOrder.push(libId);
+          newUtOrder.push(iid);
+        }
+        if (!newUtOrder.includes(libId)) newUtOrder.push(libId);
+        await db.query(
+          'UPDATE pages SET section_order = $1::jsonb WHERE slug = $2',
+          [JSON.stringify(newUtOrder), 'useful-thinking']
+        );
+
+        console.log(`Useful Thinking: 4 articles published (${a1}, ${a2}, ${a3}, ${a4}), 1 held (article__5), library list (${libId}) added to /useful-thinking.`);
+      } else {
+        console.log('Useful Thinking articles migration skipped: could not allocate instance IDs.');
       }
     }
   }

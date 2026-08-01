@@ -19,6 +19,7 @@ const adminRoutes = require('./routes/admin');
 const leadRoutes = require('./routes/leads');
 const marketReadyTest = require('./routes/marketReadyTest');
 const commercialGapsReview = require('./routes/commercialGapsReview');
+const { publishedArticles, findBySlug: findUsefulThinkingArticle } = require('./lib/usefulThinkingArticles');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -339,7 +340,11 @@ app.get('/sitemap.xml', async (req, res, next) => {
     );
     const pubPages = rows.filter(p => !p.hidden && !p.noindex && !restrictedIds.has(p.id));
     const urlEntries = await Promise.all(pubPages.map(async (p) => {
-      const loc = p.slug === 'main' ? `${base}/` : `${base}/${p.slug}`;
+      const loc = p.slug === 'main'
+        ? `${base}/`
+        : findUsefulThinkingArticle(p.slug)
+          ? `${base}/useful-thinking/${p.slug}`
+          : `${base}/${p.slug}`;
       let lastmod = '';
       // pages.updated_at also gets bumped by structural admin actions (section
       // reorder, hide/show, nav sort) that aren't real content edits, so it
@@ -490,7 +495,7 @@ app.get('/v1.html', (req, res) => {
 });
 
 // Valid section templates (shared with routes/content.js)
-const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','fourcards','documents','casestudy','casestudy2','assessment','filter','proofstrip','contact','googlereviews'];
+const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','fourcards','documents','casestudy','casestudy2','assessment','filter','proofstrip','contact','googlereviews','article','utlibrary'];
 // Default auto-merge order — excludes 'contact' (now rendered globally in
 // the footer), 'fourcards', 'documents' and 'proofstrip' (picker-only). Users
 // pick those explicitly.
@@ -718,8 +723,20 @@ async function renderPage(req, res, next, pageSlug) {
     const defaultOgImage = (content['seo.default_og_image'] || '').trim();
     const twitterHandle = (content['seo.twitter_handle'] || '').trim();
 
+    // Useful Thinking articles are real pages (so SEO, hide/delete, the
+    // button-link picker etc. all just work) but render at a nested
+    // /useful-thinking/{slug} URL rather than the flat /{slug} every other
+    // page uses, per the handover's recommended URL shape. renderPage()
+    // itself doesn't care what path the request came in on — only the
+    // canonical/OG URL computation below needs to know to prefix it.
+    const isUsefulThinkingArticle = !!findUsefulThinkingArticle(currentPage.slug);
+
     const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const pagePath = currentPage.slug === 'main' ? '/' : `/${currentPage.slug}`;
+    const pagePath = currentPage.slug === 'main'
+      ? '/'
+      : isUsefulThinkingArticle
+        ? `/useful-thinking/${currentPage.slug}`
+        : `/${currentPage.slug}`;
     const computedTitle = currentPage.slug !== 'main'
       ? `${currentPage.title} | Arrington Consultancy`
       : 'Arrington Consultancy';
@@ -747,6 +764,10 @@ async function renderPage(req, res, next, pageSlug) {
       sectionOrder: renderOrder, hiddenSections, instanceTemplates,
       currentPage, allPages, navPages, seo, caseStudyAnchors, googleReviews,
       canEdit, capabilities, showAdminPanel,
+      // Only the useful-thinking page's `utlibrary` template reads this,
+      // but the list is cheap (no DB query, just the manifest) so it's
+      // simplest to always pass it rather than special-case the query.
+      usefulThinkingArticles: publishedArticles(),
       // Unset until the GA4 property exists — see deployment report for the
       // one external step needed before setting this on Railway.
       ga4Id: process.env.GA4_MEASUREMENT_ID || ''
@@ -758,6 +779,17 @@ async function renderPage(req, res, next, pageSlug) {
 
 // Main page
 app.get('/', (req, res, next) => renderPage(req, res, next, 'main'));
+
+// Useful Thinking articles — nested URL, registered ahead of the generic
+// /:slug catch-all so it never falls through. The article is still just a
+// normal `pages` row underneath (see lib/usefulThinkingArticles.js); this
+// route only changes which URL path resolves to it.
+app.get('/useful-thinking/:articleSlug', (req, res, next) => {
+  const slug = req.params.articleSlug;
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return render404(req, res);
+  if (!findUsefulThinkingArticle(slug)) return render404(req, res);
+  return renderPage(req, res, next, slug);
+});
 
 // Additional pages — placed after all fixed routes, before 404 handler
 app.get('/:slug', (req, res, next) => {

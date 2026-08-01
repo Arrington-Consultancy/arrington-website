@@ -1641,6 +1641,94 @@
             line-height: 1.3;
         }
 
+        /* ---- ARTICLE (Useful Thinking long-form pieces) ---- */
+        .article-back {
+            display: inline-block;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            margin-bottom: 1.75rem;
+        }
+
+        .article-back:hover,
+        .article-back:focus-visible {
+            color: var(--accent);
+        }
+
+        .article-inner {
+            max-width: 640px;
+            margin: 0 auto;
+        }
+
+        .article-body {
+            font-size: 1.05rem;
+            color: var(--text);
+            line-height: 1.75;
+            text-align: left;
+            margin-top: 1.5rem;
+        }
+
+        .article-body p {
+            margin: 0 0 1.25rem;
+        }
+
+        .article-body p:last-child {
+            margin-bottom: 0;
+        }
+
+        .article-related {
+            margin-top: 2.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.95rem;
+            color: var(--text-muted);
+        }
+
+        .article-related a {
+            color: var(--accent);
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+
+        /* ---- USEFUL THINKING LIBRARY (article index list) ---- */
+        .utlibrary-inner {
+            max-width: 720px;
+            margin: 0 auto;
+        }
+
+        .utlibrary-list {
+            margin-top: 2rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .utlibrary-row {
+            display: block;
+            padding: 1.75rem 0;
+            border-bottom: 1px solid var(--border);
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .utlibrary-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.3rem;
+            color: var(--text-bright);
+            margin: 0 0 0.5rem;
+            line-height: 1.3;
+        }
+
+        .utlibrary-row:hover .utlibrary-title,
+        .utlibrary-row:focus-visible .utlibrary-title {
+            color: var(--accent);
+        }
+
+        .utlibrary-summary {
+            font-size: 0.98rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin: 0;
+        }
+
         /* ---- CONTACT (in footer) ---- */
 
         /* ---- FOOTER ---- */
@@ -2127,6 +2215,21 @@
   // for every subsequent heading - so page order determines which section's
   // heading becomes the H1, and it's never duplicated.
   let _h1Used = false;
+
+  // Shared by every button/card link-slug picker below (intervention,
+  // filter, insights). Useful Thinking articles are real pages but render
+  // at a nested /useful-thinking/{slug} URL rather than the flat /{slug}
+  // every other page uses (see server.js), so anything resolving a picked
+  // page slug into an href needs to check for that case rather than
+  // always prefixing with a single slash.
+  const _isUtArticleSlug = (slug) => (usefulThinkingArticles || []).some((a) => a.slug === slug);
+  // slugWithFragment may carry a trailing #fragment (e.g. "evidence#documents").
+  const _resolvePageHref = (slugWithFragment) => {
+    const hashIdx = slugWithFragment.indexOf('#');
+    const slug = hashIdx === -1 ? slugWithFragment : slugWithFragment.slice(0, hashIdx);
+    const fragment = hashIdx === -1 ? '' : slugWithFragment.slice(hashIdx);
+    return (_isUtArticleSlug(slug) ? `/useful-thinking/${slug}` : `/${slug}`) + fragment;
+  };
 %>
 <div id="cms-sections">
 <% for (let _i = 0; _i < sectionOrder.length; _i++) { %>
@@ -2316,7 +2419,7 @@
           // section on its target page (e.g. "evidence#documents"), same
           // pattern as the fourcards card_N_link deep-link below.
           const _validSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*(#[a-z0-9_-]+)?$/.test(_btnSlug);
-          const _btnHref = _btnSlug === 'main' ? '/' : (_validSlug ? '/' + _btnSlug : '#conversation');
+          const _btnHref = _btnSlug === 'main' ? '/' : (_validSlug ? _resolvePageHref(_btnSlug) : '#conversation');
           const _isPrimaryCta = _btnSlug === '' || _btnSlug === 'book-a-30-minute-conversation';
         %>
         <% if (_btnText) { %>
@@ -2387,7 +2490,7 @@
             <article class="insight-card">
                 <p class="insight-tag"><%- content[_k + '.card_' + _n + '_tag'] %></p>
                 <% if (_inMatch) { %>
-                <h3><a href="/<%= _inMatch[1] %><%= _inMatch[2] ? '#' + _inMatch[2] : '' %>"><%- content[_k + '.card_' + _n + '_title'] %></a></h3>
+                <h3><a href="<%= _resolvePageHref(_inMatch[1] + (_inMatch[2] ? '#' + _inMatch[2] : '')) %>"><%- content[_k + '.card_' + _n + '_title'] %></a></h3>
                 <% } else { %>
                 <h3><%- content[_k + '.card_' + _n + '_title'] %></h3>
                 <% } %>
@@ -2437,7 +2540,7 @@
                 <h3><%- content[_k + '.card_' + _n + '_title'] %></h3>
                 <p><%- content[_k + '.card_' + _n + '_body'] %></p>
                 <% if (_fcMatch) { %>
-                <a href="/<%= _fcMatch[1] %><%= _fcMatch[2] ? '#' + _fcMatch[2] : '' %>" class="fourcard-link">Read the full story</a>
+                <a href="<%= _resolvePageHref(_fcMatch[1] + (_fcMatch[2] ? '#' + _fcMatch[2] : '')) %>" class="fourcard-link">Read the full story</a>
                 <% } %>
             </article>
             <% } %>
@@ -2643,7 +2746,7 @@
               const _asValidSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(_asBtnSlug);
             %>
             <% if (_asBtnText && _asValidSlug) { %>
-            <a href="/<%= _asBtnSlug %>" class="btn btn-primary"><%- content[_k + '.button_text'] %></a>
+            <a href="<%= _resolvePageHref(_asBtnSlug) %>" class="btn btn-primary"><%- content[_k + '.button_text'] %></a>
             <% } %>
         </div>
     </div>
@@ -2696,7 +2799,7 @@
               // Optional trailing #fragment — see the matching comment on
               // the intervention template's button_link handling above.
               const _fValidSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*(#[a-z0-9_-]+)?$/.test(_fBtnSlug);
-              const _fBtnHref = _fBtnSlug === 'main' ? '/' : (_fValidSlug ? '/' + _fBtnSlug : '#conversation');
+              const _fBtnHref = _fBtnSlug === 'main' ? '/' : (_fValidSlug ? _resolvePageHref(_fBtnSlug) : '#conversation');
               const _fIsPrimaryCta = _fBtnSlug === '' || _fBtnSlug === 'book-a-30-minute-conversation';
             %>
             <% if (_fBtnText) { %>
@@ -2801,6 +2904,60 @@
             <% }); %>
         </div>
         <% } %>
+    </div>
+</section>
+<% } %>
+
+<% if (_tpl === 'article') { %>
+<% const _k = _iid; %>
+<!-- ARTICLE (Useful Thinking long-form piece) -->
+<section class="article<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
+    <div class="section-inner cms-section" data-section="<%= _k %>">
+        <% if (canEdit) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
+        <div class="article-inner">
+            <a href="/useful-thinking" class="article-back">&larr; Useful Thinking</a>
+            <p class="section-label"><%- content[_k + '.label'] %></p>
+            <% const _hTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %><<%= _hTag %> class="section-heading"><%- content[_k + '.heading'] %></<%= _hTag %>>
+            <div class="article-body"><%- content[_k + '.body'] %></div>
+            <%
+              const _relText = (content[_k + '.related_text'] || '').replace(/<[^>]+>/g, '').trim();
+              const _relLink = (content[_k + '.related_link'] || '').trim();
+              const _relSafe = /^\/[a-z0-9-]+$/.test(_relLink);
+            %>
+            <% if (_relText && _relSafe) { %>
+            <p class="article-related">Related: <a href="<%= _relLink %>"><%- content[_k + '.related_text'] %></a></p>
+            <% } %>
+        </div>
+    </div>
+</section>
+<% } %>
+
+<% if (_tpl === 'utlibrary') { %>
+<% const _k = _iid; %>
+<!-- USEFUL THINKING LIBRARY (article index list) -->
+<section class="utlibrary<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
+    <div class="section-inner cms-section" data-section="<%= _k %>">
+        <% if (canEdit) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
+        <div class="utlibrary-inner">
+            <p class="section-label"><%- content[_k + '.label'] %></p>
+            <% const _hTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %><<%= _hTag %> class="section-heading"><%- content[_k + '.heading'] %></<%= _hTag %>>
+            <div class="utlibrary-list">
+                <% (typeof usefulThinkingArticles !== 'undefined' ? usefulThinkingArticles : []).forEach(function(_art) { %>
+                <a class="utlibrary-row" href="/useful-thinking/<%= _art.slug %>">
+                    <p class="utlibrary-title"><%- (content[_art.instanceId + '.heading'] || '').replace(/<[^>]+>/g, '') %></p>
+                    <p class="utlibrary-summary"><%- (content[_art.instanceId + '.index_summary'] || '').replace(/<[^>]+>/g, '') %></p>
+                </a>
+                <% }); %>
+            </div>
+        </div>
     </div>
 </section>
 <% } %>
