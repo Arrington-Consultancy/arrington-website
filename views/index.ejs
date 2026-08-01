@@ -1660,6 +1660,14 @@
             margin: 0 auto;
         }
 
+        .article-image {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: 6px;
+            margin-top: 1.75rem;
+        }
+
         .article-body {
             font-size: 1.05rem;
             color: var(--text);
@@ -2922,6 +2930,13 @@
             <a href="/useful-thinking" class="article-back">&larr; Useful Thinking</a>
             <p class="section-label"><%- content[_k + '.label'] %></p>
             <% const _hTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %><<%= _hTag %> class="section-heading"><%- content[_k + '.heading'] %></<%= _hTag %>>
+            <%
+              const _artImgRaw = (content[_k + '.image'] || '').trim();
+              const _artImg = /^\/[A-Za-z0-9._\-\/]*\.(jpe?g|png|webp|avif)$/i.test(_artImgRaw) && !_artImgRaw.includes('..') ? _artImgRaw : '';
+            %>
+            <% if (_artImg) { %>
+            <img src="<%= _artImg %>" alt="" class="article-image">
+            <% } %>
             <div class="article-body"><%- content[_k + '.body'] %></div>
             <%
               const _relText = (content[_k + '.related_text'] || '').replace(/<[^>]+>/g, '').trim();

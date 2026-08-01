@@ -144,6 +144,7 @@
         'article.index_summary': 'Library summary (one line, shown on the Useful Thinking list)',
         'article.related_text': 'Related link text (leave empty to hide)',
         'article.related_link': 'Related link path (e.g. /owner-dependency-quiz)',
+        'article.image': 'Header image path (optional, e.g. /img/useful-thinking/example.jpg; leave empty to hide)',
         'utlibrary.label': 'Section label',
         'utlibrary.heading': 'Heading',
         'footer.name': 'Name'
@@ -176,7 +177,7 @@
             key.includes('cta') || key.includes('email') || key.includes('phone') ||
             key.includes('_title') || key.includes('_number') ||
             key.includes('_action') || key.includes('_client') ||
-            key.includes('_file') || key.includes('_image') || key.includes('_meta') ||
+            key.includes('_file') || key.includes('_image') || key.endsWith('.image') || key.includes('_meta') ||
             key.includes('_link') || key.includes('button_text')) {
             return 'short';
         }

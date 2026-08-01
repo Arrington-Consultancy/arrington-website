@@ -868,7 +868,14 @@ async function seed() {
           [a3]: "You Don't Get to Decide When You've Made Things Right",
           [a4]: 'The Tightrope Between Staff Loyalty and Damage Control'
         };
-        const articlePages = UT_ARTICLES.map((a) => [a.instanceId, a.slug, articleTitlesByInstance[a.instanceId]]);
+        // Scoped to exactly the four instance IDs this migration allocates
+        // above (a1-a4), not the full current manifest — UT_ARTICLES has
+        // since grown a 5th (and will grow further) entry with its own
+        // dedicated migration block further down, and mapping over the
+        // whole array here would look up a title this block never defined.
+        const articlePages = UT_ARTICLES
+          .filter((a) => [a1, a2, a3, a4].includes(a.instanceId))
+          .map((a) => [a.instanceId, a.slug, articleTitlesByInstance[a.instanceId]]);
         for (const [instanceId, slug, title] of articlePages) {
           await db.query(
             `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav, meta_description)
@@ -981,6 +988,14 @@ async function seed() {
   // (<strong> lead-in), the same pattern already used elsewhere for
   // sub-labels within long-form content — sanitize-html only allows
   // strong/p/br/em, so there is no <h2> available for real subheadings.
+  // Adds the new optional article.image field (see views/index.ejs and
+  // routes/content.js's VALID_TEMPLATES 'article' handling) as a header
+  // image on the page itself, plus a page-level og_image for social
+  // sharing. Both are bespoke branded graphics Tom supplied directly
+  // (not stock/generic AI scenes), landscape one used for og_image since
+  // that ratio suits social cards, portrait one used as the in-page
+  // header. The Drive "Arrington Useful Thinking Bank" doc's per-article
+  // image-decision note has been updated to match this call.
   // Idempotent: guarded on the page not existing yet.
   {
     const { rows: existingArticle6 } = await db.query(
@@ -1058,7 +1073,8 @@ async function seed() {
           [`${a6}.index_summary`, indexSummary],
           [`${a6}.body`, bodyParagraphs],
           [`${a6}.related_text`, ''],
-          [`${a6}.related_link`, '']
+          [`${a6}.related_link`, ''],
+          [`${a6}.image`, '/img/useful-thinking/a-profitable-job-hero.jpg']
         ];
         for (const [key, value] of a6Rows) {
           await db.query(
@@ -1069,9 +1085,9 @@ async function seed() {
 
         const { rows: maxSortRows6 } = await db.query('SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM pages');
         await db.query(
-          `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav, meta_description)
-           VALUES ('a-profitable-job-is-not-necessarily-good-business', 'A Profitable Job Is Not Necessarily Good Business', $1, $2::jsonb, '[]'::jsonb, '[]'::jsonb, false, $3)`,
-          [maxSortRows6[0].max_sort + 1, JSON.stringify([a6]), indexSummary]
+          `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav, meta_description, og_image)
+           VALUES ('a-profitable-job-is-not-necessarily-good-business', 'A Profitable Job Is Not Necessarily Good Business', $1, $2::jsonb, '[]'::jsonb, '[]'::jsonb, false, $3, $4)`,
+          [maxSortRows6[0].max_sort + 1, JSON.stringify([a6]), indexSummary, 'https://www.arringtonconsultancy.com/img/useful-thinking/a-profitable-job-og.jpg']
         );
 
         console.log(`Useful Thinking: 5th article published (${a6}, a-profitable-job-is-not-necessarily-good-business).`);
