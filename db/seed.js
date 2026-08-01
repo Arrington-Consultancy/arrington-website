@@ -1097,6 +1097,102 @@ async function seed() {
     }
   }
 
+  // Migration: sixth Useful Thinking article, "Every Rule Changes
+  // Behaviour" (01/08/2026), from "Arrington Website Worker Handover 02"
+  // — supplied directly by Tom this session, pressure-tested and
+  // finalized with his sign-off. Per the handover's own hold note, two
+  // edits were made under Tom's delegated authority before this copy was
+  // called final: a hypothetical, non-lived analogy (a supermarket
+  // checkout worker on commission) was removed since every other piece
+  // in the library is a real, dated incident, and the section
+  // subheadings were flattened into continuous prose to match the format
+  // every other Ready piece uses (unlike the Profitable Job article,
+  // this one has no bold subheadings at all). Idempotent: guarded on the
+  // page not existing yet.
+  {
+    const { rows: existingArticle7 } = await db.query(
+      "SELECT slug FROM pages WHERE slug = 'every-rule-changes-behaviour'"
+    );
+    if (existingArticle7.length === 0) {
+      const { rows: orderRows7 } = await db.query('SELECT section_order FROM pages');
+      const used7 = new Set();
+      for (const r of orderRows7) {
+        if (Array.isArray(r.section_order)) r.section_order.forEach((s) => used7.add(s));
+      }
+      const { rows: prefixRows7 } = await db.query(
+        "SELECT DISTINCT split_part(section_key, '.', 1) AS instance_id FROM content"
+      );
+      prefixRows7.forEach((r) => used7.add(r.instance_id));
+      const allocate7 = (tpl) => {
+        if (!used7.has(tpl)) return tpl;
+        for (let n = 2; n <= 99; n++) {
+          const id = `${tpl}__${n}`;
+          if (!used7.has(id)) return id;
+        }
+        return null;
+      };
+      const a7 = allocate7('article');
+
+      if (a7) {
+        const bodyParagraphs7 = [
+          'When we took over the taxi company, out of town work operated on a simple first in, first out basis.',
+          'It appeared fair. The earlier a driver started, the higher they moved up the list and the better their chance of receiving a valuable long distance journey.',
+          'The drivers soon responded exactly as the system encouraged them to.',
+          'More began arriving early, including drivers we did not actually need at that time of day. They completed a few good jobs, reached the end of their shift and went home while much of the day remained.',
+          'The system distributed the work fairly between individual drivers. It did not put enough cars on the road when the business and its customers needed them.',
+          'We introduced a minimum eight hour shift to stop drivers arriving early, completing a couple of profitable jobs and disappearing.',
+          'That changed the behaviour, but not in the way we needed.',
+          'Some drivers began starting outrageously early. They still completed the required eight hours, but could then finish before the evening demand arrived.',
+          'By 5pm, during the gap between the daytime and evening drivers, we could barely have any cars available.',
+          'The rule was being followed. The outcome was still wrong.',
+          'We then predetermined which drivers would be the first and second cars. That guaranteed the essential early coverage. Everyone else could decide when to start, provided they completed the minimum shift.',
+          'When the evening shortage continued, access to the out of town list became dependent on drivers being available by a particular time.',
+          'It was presented as an incentive, although in truth it was probably a stick disguised as a carrot. Drivers who were not available when the business needed them would miss the opportunity to receive the more desirable work.',
+          'It helped, but it never completely solved the problem.',
+          "The same thing happens with any rule or incentive that affects somebody's earnings. People naturally adjust their behaviour around it. That does not make them dishonest or difficult. It means the system is producing the behaviour it rewards.",
+          'The mistake is assuming that because a rule sounds sensible, the combined result will also be sensible. A system can treat each person fairly while producing a poor result for the business.',
+          'The obvious response to every new problem is another rule. That eventually creates a different kind of damage.',
+          'Too little structure allowed drivers to maximise their immediate earnings while leaving the business short of cars later in the day. Too much structure would have damaged morale, removed useful independence and made good drivers feel they were being micromanaged.',
+          'That mattered commercially. Driver retention was already difficult. Making the working environment unnecessarily restrictive would only have made it harder.',
+          'The business needed enough control to protect customer coverage, but enough freedom for drivers to govern themselves. Finding that balance was not a one off decision. Each adjustment changed behaviour and had to be watched. Covid and the staffing shortages that followed made it harder again.',
+          'Across nearly 20 years, we only had enough drivers for brief periods. Demand almost always exceeded supply, even during recessions. That was both the joy and the stress of owning a busy business. There was always work available. The difficulty was having enough capacity in the right place at the right time. No single rule could remove that underlying pressure.',
+          'Good management was not about discovering a perfect system and leaving it alone. It meant watching what people actually did, understanding why they did it and deciding whether the next change would improve the overall result or simply move the problem somewhere else.',
+          'Every rule changes behaviour.',
+          'Sometimes the behaviour it creates becomes the next problem the business has to solve.'
+        ].map((p) => `<p>${p}</p>`).join('');
+
+        const indexSummary7 = "Four attempts to fix a taxi rota, and four new problems created in the process. On why there's no perfect rule, only a balance worth re-watching.";
+
+        const a7Rows = [
+          [`${a7}.label`, 'USEFUL THINKING'],
+          [`${a7}.heading`, 'Every Rule Changes Behaviour'],
+          [`${a7}.index_summary`, indexSummary7],
+          [`${a7}.body`, bodyParagraphs7],
+          [`${a7}.related_text`, ''],
+          [`${a7}.related_link`, ''],
+          [`${a7}.image`, '']
+        ];
+        for (const [key, value] of a7Rows) {
+          await db.query(
+            'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+            [key, value]
+          );
+        }
+
+        const { rows: maxSortRows7 } = await db.query('SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM pages');
+        await db.query(
+          `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav, meta_description)
+           VALUES ('every-rule-changes-behaviour', 'Every Rule Changes Behaviour', $1, $2::jsonb, '[]'::jsonb, '[]'::jsonb, false, $3)`,
+          [maxSortRows7[0].max_sort + 1, JSON.stringify([a7]), indexSummary7]
+        );
+
+        console.log(`Useful Thinking: 6th article published (${a7}, every-rule-changes-behaviour).`);
+      } else {
+        console.log('Useful Thinking 6th article migration skipped: could not allocate an instance ID.');
+      }
+    }
+  }
+
   // Migration: correct voice and remove the banned fire metaphor on the
   // hidden Business Consultant Devon Google Ads landing page (01/08/2026,
   // per Tom's review follow-up). The page's `casestudy` (base instance)
