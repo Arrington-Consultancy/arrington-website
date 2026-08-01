@@ -150,7 +150,9 @@ CREATE INDEX IF NOT EXISTS idx_market_ready_created_at ON market_ready_submissio
 CREATE TABLE IF NOT EXISTS commercial_gaps_reviews (
     id SERIAL PRIMARY KEY,
     result_token VARCHAR(64) UNIQUE NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'in_progress' CHECK (status IN ('in_progress', 'completed', 'failed')),
+    short_reference VARCHAR(12) UNIQUE,
+    status VARCHAR(20) NOT NULL DEFAULT 'in_progress' CHECK (status IN ('in_progress', 'processing', 'completed', 'failed')),
+    failure_reason TEXT NOT NULL DEFAULT '',
     name VARCHAR(200) NOT NULL DEFAULT '',
     email VARCHAR(255) NOT NULL,
     company VARCHAR(255) NOT NULL DEFAULT '',
@@ -164,3 +166,6 @@ CREATE TABLE IF NOT EXISTS commercial_gaps_reviews (
     completed_at TIMESTAMPTZ
 );
 CREATE INDEX IF NOT EXISTS idx_commercial_gaps_created_at ON commercial_gaps_reviews (created_at DESC);
+-- Used by the deployment-independent retention sweep (see server.js) to find
+-- stale failed/abandoned rows without a full table scan.
+CREATE INDEX IF NOT EXISTS idx_commercial_gaps_status_created ON commercial_gaps_reviews (status, created_at);
