@@ -972,6 +972,115 @@ async function seed() {
     if (utCopyFixCount > 0) console.log(`Useful Thinking: applied ${utCopyFixCount} copy refinement(s) from Tom's review.`);
   }
 
+  // Migration: fifth Useful Thinking article, "A Profitable Job Is Not
+  // Necessarily Good Business" (01/08/2026), supplied directly by Tom
+  // rather than via the handover — title kept as given; slug, summary,
+  // subheading treatment and CGR category are all an editorial call made
+  // here (see lib/usefulThinkingArticles.js), not preserved instructions.
+  // Subheadings within the body are rendered as bold-only paragraphs
+  // (<strong> lead-in), the same pattern already used elsewhere for
+  // sub-labels within long-form content — sanitize-html only allows
+  // strong/p/br/em, so there is no <h2> available for real subheadings.
+  // Idempotent: guarded on the page not existing yet.
+  {
+    const { rows: existingArticle6 } = await db.query(
+      "SELECT slug FROM pages WHERE slug = 'a-profitable-job-is-not-necessarily-good-business'"
+    );
+    if (existingArticle6.length === 0) {
+      const { rows: orderRows6 } = await db.query('SELECT section_order FROM pages');
+      const used6 = new Set();
+      for (const r of orderRows6) {
+        if (Array.isArray(r.section_order)) r.section_order.forEach((s) => used6.add(s));
+      }
+      const { rows: prefixRows6 } = await db.query(
+        "SELECT DISTINCT split_part(section_key, '.', 1) AS instance_id FROM content"
+      );
+      prefixRows6.forEach((r) => used6.add(r.instance_id));
+      const allocate6 = (tpl) => {
+        if (!used6.has(tpl)) return tpl;
+        for (let n = 2; n <= 99; n++) {
+          const id = `${tpl}__${n}`;
+          if (!used6.has(id)) return id;
+        }
+        return null;
+      };
+      const a6 = allocate6('article');
+
+      if (a6) {
+        const bodyParagraphs = [
+          'We thought we had landed a licence to print money.',
+          'A shipping company operating from Falmouth Docks needed its Romanian crew transported to and from Luton Airport for shift changes.',
+          'Sometimes we would have one vehicle going up and another coming back. Other times it could be four going up and three returning. Long-distance fares, passengers travelling in both directions and very little empty mileage.',
+          'On paper, it was brilliant work.',
+          'The journeys themselves were profitable. Getting paid for them was another matter.',
+          'We paid the drivers and bought the fuel immediately, but could then wait up to ten months for the invoices to be settled. At times, the company owed us tens of thousands of pounds.',
+          "In the earlier years of the business, when cash was tighter, that meant using our money to finance somebody else's operation while waiting nearly a year to receive the benefit of the work.",
+          'The profit was real, but it was not available to us.',
+          '<strong>Profit and cash are not the same thing</strong>',
+          'It is easy to look at a job, subtract its obvious costs and conclude that it is worth having.',
+          'But that calculation misses a crucial question:',
+          'When will the money actually arrive?',
+          "A customer might agree to a good price. The work might use spare capacity efficiently. The figures might show a healthy margin. None of that pays this week's wages or puts fuel in the vehicles.",
+          'If those costs leave your account today and the customer pays ten months later, you are extending credit whether you intended to or not.',
+          "The more successful the contract appears, the more dangerous that can become. Every additional job increases the reported revenue, but it also increases the amount of your own cash tied up in the customer's business.",
+          'Eventually, winning more work can make your immediate position worse.',
+          '<strong>Understanding why you have not been paid</strong>',
+          'The people we dealt with at the shipping company were not deliberately withholding our money. The company was waiting to be paid itself and the cash simply was not there.',
+          'That made the delay understandable. It did not remove the risk.',
+          'We were also owed money for similar periods by FTSE 250 companies, but those situations needed a different response. With the larger companies, the money generally existed. The delay was more likely to be an oversight, a failed internal process or an invoice sitting in the wrong place.',
+          'I continued accepting their work, but made it clear that we were a smaller operator being forced to carry the cost of their failure to pay. If necessary, I would take legal action.',
+          'That always resulted in payment. The debt was not disputed and the company had no reason to incur legal costs defending it.',
+          'The shipping company was different. Threatening legal action would not have made money suddenly appear. It could, however, have damaged the relationship with the people we worked with every day.',
+          'Eventually, the outstanding balance became too large for us to keep accepting more work. I spoke honestly with the CEO about the pressure it was putting on our business and followed that conversation up in writing.',
+          'We had to apply pressure, knowing that doing so carried some risk to a valuable commercial relationship. But there came a point when protecting our own business had to take priority.',
+          'The balance was always paid and the relationship survived.',
+          '<strong>Payment terms only take you so far</strong>',
+          "You can put all the belt and braces you like into your payment terms. They give you rights, but they do not put money into a customer's bank account.",
+          'What protected us was knowing the people involved, understanding why payment had been delayed and being willing to have an honest conversation when the exposure became uncomfortable.',
+          'That does not mean relationships should replace proper credit control. A good relationship is not a reason to allow an unpaid balance to grow indefinitely.',
+          'It means the response should reflect the real cause of the problem.',
+          'If a large company has the money but its payment process has failed, formal pressure may be effective.',
+          'If a smaller customer genuinely does not have the cash, another threatening email may achieve nothing. The important decision may be whether to continue accepting work and increasing the amount at risk.',
+          'In both cases, leaving the problem untouched is still a decision. You are choosing to extend more credit every time you complete another job without being paid for the earlier ones.',
+          'The job was profitable. The exposure was the problem.',
+          'We did eventually receive the money, so this is not a story about a bad debt.',
+          'It is a story about work that looked exceptional until we considered what the business had to carry in order to deliver it.',
+          'The price was good. The vehicle use was efficient. The journeys made money. But for months at a time, we were paying the operating costs and carrying the risk while somebody else had the benefit.',
+          'That changed what the work was worth to us.',
+          'A profitable job is not necessarily good business if you have to finance the customer for nearly a year.'
+        ].map((p) => `<p>${p}</p>`).join('');
+
+        const indexSummary = 'We thought we had landed a licence to print money. Getting paid for it was another matter entirely.';
+
+        const a6Rows = [
+          [`${a6}.label`, 'USEFUL THINKING'],
+          [`${a6}.heading`, 'A Profitable Job Is Not Necessarily Good Business'],
+          [`${a6}.index_summary`, indexSummary],
+          [`${a6}.body`, bodyParagraphs],
+          [`${a6}.related_text`, ''],
+          [`${a6}.related_link`, '']
+        ];
+        for (const [key, value] of a6Rows) {
+          await db.query(
+            'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+            [key, value]
+          );
+        }
+
+        const { rows: maxSortRows6 } = await db.query('SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM pages');
+        await db.query(
+          `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav, meta_description)
+           VALUES ('a-profitable-job-is-not-necessarily-good-business', 'A Profitable Job Is Not Necessarily Good Business', $1, $2::jsonb, '[]'::jsonb, '[]'::jsonb, false, $3)`,
+          [maxSortRows6[0].max_sort + 1, JSON.stringify([a6]), indexSummary]
+        );
+
+        console.log(`Useful Thinking: 5th article published (${a6}, a-profitable-job-is-not-necessarily-good-business).`);
+      } else {
+        console.log('Useful Thinking 5th article migration skipped: could not allocate an instance ID.');
+      }
+    }
+  }
+
   // Migration: correct voice and remove the banned fire metaphor on the
   // hidden Business Consultant Devon Google Ads landing page (01/08/2026,
   // per Tom's review follow-up). The page's `casestudy` (base instance)
