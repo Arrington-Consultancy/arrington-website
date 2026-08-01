@@ -2,113 +2,25 @@ name: full-review
 on:
   workflow_dispatch: {}
 jobs:
-  review:
+  shots:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - name: Install deps
         run: |
           npm init -y --silent >/dev/null 2>&1
-          npm install --no-save playwright@1 lighthouse@11 chrome-launcher@1 --silent >/dev/null 2>&1
+          npm install --no-save playwright@1 --silent >/dev/null 2>&1
           npx playwright install --with-deps chromium >/dev/null 2>&1
-      - name: robots.txt and sitemap.xml
-        run: |
-          mkdir -p review-output
-          curl -s https://www.arringtonconsultancy.com/robots.txt -o review-output/robots.txt
-          curl -s https://www.arringtonconsultancy.com/sitemap.xml -o review-output/sitemap.xml
-          echo "--- robots.txt ---"
-          cat review-output/robots.txt
-          echo "--- sitemap.xml ---"
-          cat review-output/sitemap.xml
-      - name: Run full page inspection (screenshots, meta, console, links)
-        timeout-minutes: 8
-        run: node .tmp-review-scripts/full-review-check.js
-      - name: Check all internal links for broken/redirect status
-        timeout-minutes: 3
-        run: node .tmp-review-scripts/check-links.js
-      - name: Print per-page summary (title, meta, h1 count, console issues)
-        run: |
-          node -e "
-          const r = require('./review-output/results.json');
-          for (const [k,v] of Object.entries(r)) {
-            if (!k.startsWith('desktop:')) continue;
-            console.log('=== ' + v.path + ' ===');
-            console.log('status:', v.status, '| title:', v.title);
-            console.log('metaDescription:', v.metaDescription);
-            console.log('canonical:', v.canonical, '| robotsMeta:', v.robotsMeta);
-            console.log('ogTitle:', v.ogTitle, '| ogImage:', v.ogImage);
-            console.log('jsonLdCount:', v.jsonLdCount, '| h1Count:', v.h1Count, v.h1s);
-            console.log('consoleIssues:', JSON.stringify(v.consoleIssues));
-            console.log('pageErrors:', JSON.stringify(v.pageErrors));
-            console.log('');
-          }
-          "
-      - name: Print full body text per page (for copy review)
-        run: |
-          node -e "
-          const r = require('./review-output/results.json');
-          for (const [k,v] of Object.entries(r)) {
-            if (!k.startsWith('desktop:')) continue;
-            console.log('##### PAGE: ' + v.path + ' #####');
-            console.log(v.bodyText || '(no text captured)');
-            console.log('');
-          }
-          "
-      - name: Mobile-specific checks (console issues + h1 + status only)
-        run: |
-          node -e "
-          const r = require('./review-output/results.json');
-          for (const [k,v] of Object.entries(r)) {
-            if (!k.startsWith('mobile:')) continue;
-            console.log(v.path, '| status:', v.status, '| consoleIssues:', v.consoleIssues.length, '| h1Count:', v.h1Count);
-          }
-          "
-      - name: Print link-check results (broken/redirect flags)
-        run: |
-          node -e "
-          const r = require('./review-output/link-check.json');
-          for (const item of r) {
-            const flag = (item.status >= 400 || item.status === 'ERROR') ? ' <<< BROKEN' : (item.status >= 300 && item.status < 400 ? ' (redirect -> ' + item.location + ')' : '');
-            console.log(item.link, '->', item.status, flag);
-          }
-          "
-      - name: Lighthouse on home, websites-and-ai, evidence
+      - name: Take key screenshots
         timeout-minutes: 5
+        run: node .tmp-review-scripts/key-shots.js
+      - name: Commit screenshots to branch
         run: |
-          for p in "" "websites-and-ai" "evidence"; do
-            name=$(echo "$p" | tr '/' '_')
-            [ -z "$name" ] && name="home"
-            timeout 90 npx lighthouse "https://www.arringtonconsultancy.com/$p" \
-              --output=json --output-path="review-output/lighthouse-${name}.json" \
-              --chrome-flags="--headless --no-sandbox" --quiet --only-categories=performance,accessibility,best-practices,seo || echo "lighthouse failed or timed out for $p"
-          done
-      - name: Print Lighthouse summary scores
-        run: |
-          for f in review-output/lighthouse-*.json; do
-            echo "=== $f ==="
-            node -e "
-            const r = require('./$f');
-            const c = r.categories;
-            console.log('Performance:', Math.round((c.performance?.score||0)*100));
-            console.log('Accessibility:', Math.round((c.accessibility?.score||0)*100));
-            console.log('Best Practices:', Math.round((c['best-practices']?.score||0)*100));
-            console.log('SEO:', Math.round((c.seo?.score||0)*100));
-            const audits = r.audits;
-            console.log('LCP:', audits['largest-contentful-paint']?.displayValue);
-            console.log('CLS:', audits['cumulative-layout-shift']?.displayValue);
-            console.log('TBT:', audits['total-blocking-time']?.displayValue);
-            console.log('Speed Index:', audits['speed-index']?.displayValue);
-            " 2>/dev/null || echo "(could not parse $f)"
-          done
-      - name: Security + Google tag headers on home page
-        run: |
-          curl -sD - -o /dev/null https://www.arringtonconsultancy.com/ | grep -iE "^HTTP|content-security-policy|permissions-policy|strict-transport-security|x-frame-options"
-          echo "--- gtag / GA4 presence ---"
-          curl -s https://www.arringtonconsultancy.com/ | grep -oE "AW-[0-9]+|G-[A-Z0-9]+|gtag\('config'[^)]*\)" | sort -u
-      - name: Upload screenshots and raw data as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: review-output
-          path: review-output/
-          retention-days: 3
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add review-shots/
+          git commit -m "Add key review screenshots [skip ci]" || echo "nothing to commit"
+          git push
