@@ -868,7 +868,14 @@ async function seed() {
           [a3]: "You Don't Get to Decide When You've Made Things Right",
           [a4]: 'The Tightrope Between Staff Loyalty and Damage Control'
         };
-        const articlePages = UT_ARTICLES.map((a) => [a.instanceId, a.slug, articleTitlesByInstance[a.instanceId]]);
+        // Scoped to exactly the four instance IDs this migration allocates
+        // above (a1-a4), not the full current manifest — UT_ARTICLES has
+        // since grown a 5th (and will grow further) entry with its own
+        // dedicated migration block further down, and mapping over the
+        // whole array here would look up a title this block never defined.
+        const articlePages = UT_ARTICLES
+          .filter((a) => [a1, a2, a3, a4].includes(a.instanceId))
+          .map((a) => [a.instanceId, a.slug, articleTitlesByInstance[a.instanceId]]);
         for (const [instanceId, slug, title] of articlePages) {
           await db.query(
             `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav, meta_description)
@@ -906,6 +913,186 @@ async function seed() {
         console.log(`Useful Thinking: 4 articles published (${a1}, ${a2}, ${a3}, ${a4}), 1 held (article__5), library list (${libId}) added to /useful-thinking.`);
       } else {
         console.log('Useful Thinking articles migration skipped: could not allocate instance IDs.');
+      }
+    }
+  }
+
+  // Migration: Useful Thinking copy refinements, per Tom's review of the
+  // deployed articles (01/08/2026). Three changes, all content-only:
+  // (1) the £120k account title was the one Tom specifically flagged as
+  // wrapping heavily on mobile (55 characters, longest of the four) — the
+  // other three titles are left untouched, per his explicit "wouldn't
+  // shorten every title" instruction; (2) the library section's heading
+  // is replaced with the line Tom proposed directly; (3) all four index
+  // summaries are rewritten to hold back the resolution a beat longer
+  // (more curiosity, not clickbait — every fact stays accurate, nothing
+  // is invented or exaggerated). Each update is guarded on the exact
+  // current value, so this is idempotent and never overwrites a value
+  // Tom has since edited himself via the CMS.
+  {
+    const utCopyFixes = [
+      // [key, oldValue, newValue]
+      ['article__3.heading', "You Don't Get to Decide When You've Made Things Right", "You Don't Get to Decide the Consequences"],
+      ['article.index_summary', 'A staff member was ignoring the phone. Tom was sure of it, right up until the call logs proved him wrong. On the danger of acting on certainty instead of evidence.', 'A staff member was ignoring the phone. Tom was completely certain of it, certain enough to say so out loud. He was wrong.'],
+      ['article__2.index_summary', "A 4am complaint from someone Tom barely knew, and his wife's reaction the next morning, exposed the difference between being responsive and being permanently on call.", 'A customer Tom barely knew messaged him at 4am over Christmas with a complaint. His wife had one question the next morning that changed how he ran the business.'],
+      ['article__3.index_summary', "Tom lost a £120,000 account at 26 after one late airport transfer, despite doing everything he thought a decent business owner should. On accepting consequences you don't get to set the terms of.", 'One late airport transfer cost Tom a £120,000 account at 26, despite doing everything he thought would fix it. What happened next was not what he expected.'],
+      ['article__4.index_summary', "A fifteen-year employee, 98% brilliant and impossible the rest of the time. On why you can train skills but you can't transplant someone's character.", 'A fifteen-year employee was 98% brilliant, and impossible the rest of the time. Tom spent years finding excuses for the other 2%.']
+    ];
+    let utCopyFixCount = 0;
+    for (const [key, oldValue, newValue] of utCopyFixes) {
+      const { rowCount } = await db.query(
+        'UPDATE content SET content = $1 WHERE section_key = $2 AND content = $3',
+        [newValue, key, oldValue]
+      );
+      utCopyFixCount += rowCount;
+    }
+
+    // pages.title and meta_description mirror the same two changes so the
+    // browser tab / search snippet stay consistent with the on-page copy.
+    const utPageFixes = [
+      ['being-certain-isnt-the-same-as-being-right', null, 'A staff member was ignoring the phone. Tom was completely certain of it, certain enough to say so out loud. He was wrong.'],
+      ['the-customer-who-messaged-me-at-4am', null, 'A customer Tom barely knew messaged him at 4am over Christmas with a complaint. His wife had one question the next morning that changed how he ran the business.'],
+      ['you-dont-get-to-decide-when-youve-made-things-right', "You Don't Get to Decide the Consequences", 'One late airport transfer cost Tom a £120,000 account at 26, despite doing everything he thought would fix it. What happened next was not what he expected.'],
+      ['the-tightrope-between-staff-loyalty-and-damage-control', null, 'A fifteen-year employee was 98% brilliant, and impossible the rest of the time. Tom spent years finding excuses for the other 2%.']
+    ];
+    for (const [slug, newTitle, newMetaDescription] of utPageFixes) {
+      if (newTitle) {
+        await db.query('UPDATE pages SET title = $1 WHERE slug = $2', [newTitle, slug]);
+      }
+      await db.query('UPDATE pages SET meta_description = $1 WHERE slug = $2', [newMetaDescription, slug]);
+    }
+
+    // The library instance's ID is allocated dynamically (see the
+    // migration above), so it's found here by matching the utlibrary
+    // template on whichever page currently holds it, rather than assumed.
+    const { rows: utPageRows2 } = await db.query("SELECT section_order FROM pages WHERE slug = 'useful-thinking'");
+    const utOrder2 = Array.isArray(utPageRows2[0]?.section_order) ? utPageRows2[0].section_order : [];
+    const libInstanceId = utOrder2.find((iid) => /^utlibrary(__\d+)?$/.test(iid));
+    if (libInstanceId) {
+      const { rowCount } = await db.query(
+        'UPDATE content SET content = $1 WHERE section_key = $2 AND content = $3',
+        ["These aren't just stories. They're the thinking behind how you work.", `${libInstanceId}.heading`, 'Stories from twenty years of running businesses.']
+      );
+      utCopyFixCount += rowCount;
+    }
+
+    if (utCopyFixCount > 0) console.log(`Useful Thinking: applied ${utCopyFixCount} copy refinement(s) from Tom's review.`);
+  }
+
+  // Migration: fifth Useful Thinking article, "A Profitable Job Is Not
+  // Necessarily Good Business" (01/08/2026), supplied directly by Tom
+  // rather than via the handover — title kept as given; slug, summary,
+  // subheading treatment and CGR category are all an editorial call made
+  // here (see lib/usefulThinkingArticles.js), not preserved instructions.
+  // Subheadings within the body are rendered as bold-only paragraphs
+  // (<strong> lead-in), the same pattern already used elsewhere for
+  // sub-labels within long-form content — sanitize-html only allows
+  // strong/p/br/em, so there is no <h2> available for real subheadings.
+  // Adds the new optional article.image field (see views/index.ejs and
+  // routes/content.js's VALID_TEMPLATES 'article' handling) as a header
+  // image on the page itself, plus a page-level og_image for social
+  // sharing. Both are bespoke branded graphics Tom supplied directly
+  // (not stock/generic AI scenes), landscape one used for og_image since
+  // that ratio suits social cards, portrait one used as the in-page
+  // header. The Drive "Arrington Useful Thinking Bank" doc's per-article
+  // image-decision note has been updated to match this call.
+  // Idempotent: guarded on the page not existing yet.
+  {
+    const { rows: existingArticle6 } = await db.query(
+      "SELECT slug FROM pages WHERE slug = 'a-profitable-job-is-not-necessarily-good-business'"
+    );
+    if (existingArticle6.length === 0) {
+      const { rows: orderRows6 } = await db.query('SELECT section_order FROM pages');
+      const used6 = new Set();
+      for (const r of orderRows6) {
+        if (Array.isArray(r.section_order)) r.section_order.forEach((s) => used6.add(s));
+      }
+      const { rows: prefixRows6 } = await db.query(
+        "SELECT DISTINCT split_part(section_key, '.', 1) AS instance_id FROM content"
+      );
+      prefixRows6.forEach((r) => used6.add(r.instance_id));
+      const allocate6 = (tpl) => {
+        if (!used6.has(tpl)) return tpl;
+        for (let n = 2; n <= 99; n++) {
+          const id = `${tpl}__${n}`;
+          if (!used6.has(id)) return id;
+        }
+        return null;
+      };
+      const a6 = allocate6('article');
+
+      if (a6) {
+        const bodyParagraphs = [
+          'We thought we had landed a licence to print money.',
+          'A shipping company operating from Falmouth Docks needed its Romanian crew transported to and from Luton Airport for shift changes.',
+          'Sometimes we would have one vehicle going up and another coming back. Other times it could be four going up and three returning. Long-distance fares, passengers travelling in both directions and very little empty mileage.',
+          'On paper, it was brilliant work.',
+          'The journeys themselves were profitable. Getting paid for them was another matter.',
+          'We paid the drivers and bought the fuel immediately, but could then wait up to ten months for the invoices to be settled. At times, the company owed us tens of thousands of pounds.',
+          "In the earlier years of the business, when cash was tighter, that meant using our money to finance somebody else's operation while waiting nearly a year to receive the benefit of the work.",
+          'The profit was real, but it was not available to us.',
+          '<strong>Profit and cash are not the same thing</strong>',
+          'It is easy to look at a job, subtract its obvious costs and conclude that it is worth having.',
+          'But that calculation misses a crucial question:',
+          'When will the money actually arrive?',
+          "A customer might agree to a good price. The work might use spare capacity efficiently. The figures might show a healthy margin. None of that pays this week's wages or puts fuel in the vehicles.",
+          'If those costs leave your account today and the customer pays ten months later, you are extending credit whether you intended to or not.',
+          "The more successful the contract appears, the more dangerous that can become. Every additional job increases the reported revenue, but it also increases the amount of your own cash tied up in the customer's business.",
+          'Eventually, winning more work can make your immediate position worse.',
+          '<strong>Understanding why you have not been paid</strong>',
+          'The people we dealt with at the shipping company were not deliberately withholding our money. The company was waiting to be paid itself and the cash simply was not there.',
+          'That made the delay understandable. It did not remove the risk.',
+          'We were also owed money for similar periods by FTSE 250 companies, but those situations needed a different response. With the larger companies, the money generally existed. The delay was more likely to be an oversight, a failed internal process or an invoice sitting in the wrong place.',
+          'I continued accepting their work, but made it clear that we were a smaller operator being forced to carry the cost of their failure to pay. If necessary, I would take legal action.',
+          'That always resulted in payment. The debt was not disputed and the company had no reason to incur legal costs defending it.',
+          'The shipping company was different. Threatening legal action would not have made money suddenly appear. It could, however, have damaged the relationship with the people we worked with every day.',
+          'Eventually, the outstanding balance became too large for us to keep accepting more work. I spoke honestly with the CEO about the pressure it was putting on our business and followed that conversation up in writing.',
+          'We had to apply pressure, knowing that doing so carried some risk to a valuable commercial relationship. But there came a point when protecting our own business had to take priority.',
+          'The balance was always paid and the relationship survived.',
+          '<strong>Payment terms only take you so far</strong>',
+          "You can put all the belt and braces you like into your payment terms. They give you rights, but they do not put money into a customer's bank account.",
+          'What protected us was knowing the people involved, understanding why payment had been delayed and being willing to have an honest conversation when the exposure became uncomfortable.',
+          'That does not mean relationships should replace proper credit control. A good relationship is not a reason to allow an unpaid balance to grow indefinitely.',
+          'It means the response should reflect the real cause of the problem.',
+          'If a large company has the money but its payment process has failed, formal pressure may be effective.',
+          'If a smaller customer genuinely does not have the cash, another threatening email may achieve nothing. The important decision may be whether to continue accepting work and increasing the amount at risk.',
+          'In both cases, leaving the problem untouched is still a decision. You are choosing to extend more credit every time you complete another job without being paid for the earlier ones.',
+          'The job was profitable. The exposure was the problem.',
+          'We did eventually receive the money, so this is not a story about a bad debt.',
+          'It is a story about work that looked exceptional until we considered what the business had to carry in order to deliver it.',
+          'The price was good. The vehicle use was efficient. The journeys made money. But for months at a time, we were paying the operating costs and carrying the risk while somebody else had the benefit.',
+          'That changed what the work was worth to us.',
+          'A profitable job is not necessarily good business if you have to finance the customer for nearly a year.'
+        ].map((p) => `<p>${p}</p>`).join('');
+
+        const indexSummary = 'We thought we had landed a licence to print money. Getting paid for it was another matter entirely.';
+
+        const a6Rows = [
+          [`${a6}.label`, 'USEFUL THINKING'],
+          [`${a6}.heading`, 'A Profitable Job Is Not Necessarily Good Business'],
+          [`${a6}.index_summary`, indexSummary],
+          [`${a6}.body`, bodyParagraphs],
+          [`${a6}.related_text`, ''],
+          [`${a6}.related_link`, ''],
+          [`${a6}.image`, '/img/useful-thinking/a-profitable-job-hero.jpg']
+        ];
+        for (const [key, value] of a6Rows) {
+          await db.query(
+            'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+            [key, value]
+          );
+        }
+
+        const { rows: maxSortRows6 } = await db.query('SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM pages');
+        await db.query(
+          `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav, meta_description, og_image)
+           VALUES ('a-profitable-job-is-not-necessarily-good-business', 'A Profitable Job Is Not Necessarily Good Business', $1, $2::jsonb, '[]'::jsonb, '[]'::jsonb, false, $3, $4)`,
+          [maxSortRows6[0].max_sort + 1, JSON.stringify([a6]), indexSummary, 'https://www.arringtonconsultancy.com/img/useful-thinking/a-profitable-job-og.jpg']
+        );
+
+        console.log(`Useful Thinking: 5th article published (${a6}, a-profitable-job-is-not-necessarily-good-business).`);
+      } else {
+        console.log('Useful Thinking 5th article migration skipped: could not allocate an instance ID.');
       }
     }
   }
