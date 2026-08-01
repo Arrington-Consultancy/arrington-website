@@ -910,6 +910,68 @@ async function seed() {
     }
   }
 
+  // Migration: Useful Thinking copy refinements, per Tom's review of the
+  // deployed articles (01/08/2026). Three changes, all content-only:
+  // (1) the £120k account title was the one Tom specifically flagged as
+  // wrapping heavily on mobile (55 characters, longest of the four) — the
+  // other three titles are left untouched, per his explicit "wouldn't
+  // shorten every title" instruction; (2) the library section's heading
+  // is replaced with the line Tom proposed directly; (3) all four index
+  // summaries are rewritten to hold back the resolution a beat longer
+  // (more curiosity, not clickbait — every fact stays accurate, nothing
+  // is invented or exaggerated). Each update is guarded on the exact
+  // current value, so this is idempotent and never overwrites a value
+  // Tom has since edited himself via the CMS.
+  {
+    const utCopyFixes = [
+      // [key, oldValue, newValue]
+      ['article__3.heading', "You Don't Get to Decide When You've Made Things Right", "You Don't Get to Decide the Consequences"],
+      ['article.index_summary', 'A staff member was ignoring the phone. Tom was sure of it, right up until the call logs proved him wrong. On the danger of acting on certainty instead of evidence.', 'A staff member was ignoring the phone. Tom was completely certain of it, certain enough to say so out loud. He was wrong.'],
+      ['article__2.index_summary', "A 4am complaint from someone Tom barely knew, and his wife's reaction the next morning, exposed the difference between being responsive and being permanently on call.", 'A customer Tom barely knew messaged him at 4am over Christmas with a complaint. His wife had one question the next morning that changed how he ran the business.'],
+      ['article__3.index_summary', "Tom lost a £120,000 account at 26 after one late airport transfer, despite doing everything he thought a decent business owner should. On accepting consequences you don't get to set the terms of.", 'One late airport transfer cost Tom a £120,000 account at 26, despite doing everything he thought would fix it. What happened next was not what he expected.'],
+      ['article__4.index_summary', "A fifteen-year employee, 98% brilliant and impossible the rest of the time. On why you can train skills but you can't transplant someone's character.", 'A fifteen-year employee was 98% brilliant, and impossible the rest of the time. Tom spent years finding excuses for the other 2%.']
+    ];
+    let utCopyFixCount = 0;
+    for (const [key, oldValue, newValue] of utCopyFixes) {
+      const { rowCount } = await db.query(
+        'UPDATE content SET content = $1 WHERE section_key = $2 AND content = $3',
+        [newValue, key, oldValue]
+      );
+      utCopyFixCount += rowCount;
+    }
+
+    // pages.title and meta_description mirror the same two changes so the
+    // browser tab / search snippet stay consistent with the on-page copy.
+    const utPageFixes = [
+      ['being-certain-isnt-the-same-as-being-right', null, 'A staff member was ignoring the phone. Tom was completely certain of it, certain enough to say so out loud. He was wrong.'],
+      ['the-customer-who-messaged-me-at-4am', null, 'A customer Tom barely knew messaged him at 4am over Christmas with a complaint. His wife had one question the next morning that changed how he ran the business.'],
+      ['you-dont-get-to-decide-when-youve-made-things-right', "You Don't Get to Decide the Consequences", 'One late airport transfer cost Tom a £120,000 account at 26, despite doing everything he thought would fix it. What happened next was not what he expected.'],
+      ['the-tightrope-between-staff-loyalty-and-damage-control', null, 'A fifteen-year employee was 98% brilliant, and impossible the rest of the time. Tom spent years finding excuses for the other 2%.']
+    ];
+    for (const [slug, newTitle, newMetaDescription] of utPageFixes) {
+      if (newTitle) {
+        await db.query('UPDATE pages SET title = $1 WHERE slug = $2', [newTitle, slug]);
+      }
+      await db.query('UPDATE pages SET meta_description = $1 WHERE slug = $2', [newMetaDescription, slug]);
+    }
+
+    // The library instance's ID is allocated dynamically (see the
+    // migration above), so it's found here by matching the utlibrary
+    // template on whichever page currently holds it, rather than assumed.
+    const { rows: utPageRows2 } = await db.query("SELECT section_order FROM pages WHERE slug = 'useful-thinking'");
+    const utOrder2 = Array.isArray(utPageRows2[0]?.section_order) ? utPageRows2[0].section_order : [];
+    const libInstanceId = utOrder2.find((iid) => /^utlibrary(__\d+)?$/.test(iid));
+    if (libInstanceId) {
+      const { rowCount } = await db.query(
+        'UPDATE content SET content = $1 WHERE section_key = $2 AND content = $3',
+        ["These aren't just stories. They're the thinking behind how you work.", `${libInstanceId}.heading`, 'Stories from twenty years of running businesses.']
+      );
+      utCopyFixCount += rowCount;
+    }
+
+    if (utCopyFixCount > 0) console.log(`Useful Thinking: applied ${utCopyFixCount} copy refinement(s) from Tom's review.`);
+  }
+
   // Migration: correct voice and remove the banned fire metaphor on the
   // hidden Business Consultant Devon Google Ads landing page (01/08/2026,
   // per Tom's review follow-up). The page's `casestudy` (base instance)
