@@ -983,7 +983,8 @@ async function seed() {
         for (const [instanceId, slug, title] of articlePages) {
           await db.query(
             `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav, meta_description)
-             VALUES ($1, $2, $3, $4::jsonb, '[]'::jsonb, '[]'::jsonb, false, $5)`,
+             VALUES ($1, $2, $3, $4::jsonb, '[]'::jsonb, '[]'::jsonb, false, $5)
+             ON CONFLICT (slug) DO NOTHING`,
             [slug, title, nextSort, JSON.stringify([instanceId]), (function () {
               const key = `${instanceId}.index_summary`;
               const found = articleRows.find((r) => r[0] === key);
@@ -1190,7 +1191,8 @@ async function seed() {
         const { rows: maxSortRows6 } = await db.query('SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM pages');
         await db.query(
           `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav, meta_description, og_image)
-           VALUES ('a-profitable-job-is-not-necessarily-good-business', 'A Profitable Job Is Not Necessarily Good Business', $1, $2::jsonb, '[]'::jsonb, '[]'::jsonb, false, $3, $4)`,
+           VALUES ('a-profitable-job-is-not-necessarily-good-business', 'A Profitable Job Is Not Necessarily Good Business', $1, $2::jsonb, '[]'::jsonb, '[]'::jsonb, false, $3, $4)
+           ON CONFLICT (slug) DO NOTHING`,
           [maxSortRows6[0].max_sort + 1, JSON.stringify([a6]), indexSummary, 'https://www.arringtonconsultancy.com/img/useful-thinking/a-profitable-job-og.jpg']
         );
 
@@ -1286,7 +1288,8 @@ async function seed() {
         const { rows: maxSortRows7 } = await db.query('SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM pages');
         await db.query(
           `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav, meta_description)
-           VALUES ('every-rule-changes-behaviour', 'Every Rule Changes Behaviour', $1, $2::jsonb, '[]'::jsonb, '[]'::jsonb, false, $3)`,
+           VALUES ('every-rule-changes-behaviour', 'Every Rule Changes Behaviour', $1, $2::jsonb, '[]'::jsonb, '[]'::jsonb, false, $3)
+           ON CONFLICT (slug) DO NOTHING`,
           [maxSortRows7[0].max_sort + 1, JSON.stringify([a7]), indexSummary7]
         );
 
