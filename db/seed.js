@@ -560,10 +560,11 @@ async function seed() {
         const examplesId = allocate('insights');
         const howId = allocate('fourcards');
         const wontId = allocate('filter');
+        const offerId = allocate('biography');
         const closingId = allocate('intervention');
         const wwdLinkId = allocate('intervention');
 
-        if (heroId && startId && whyId && areasId && examplesId && howId && wontId && closingId && wwdLinkId) {
+        if (heroId && startId && whyId && areasId && examplesId && howId && wontId && offerId && closingId && wwdLinkId) {
           const rows = [
             // SECTION 1 — hero
             [`${heroId}.heading`, 'Websites and AI that solve real business problems'],
@@ -632,10 +633,18 @@ async function seed() {
             [`${wontId}.button_text`, ''],
             [`${wontId}.button_link`, 'main'],
 
-            // SECTION 8 — intervention (closing)
+            // SECTION 8 — biography (bespoke website offer)
+            [`${offerId}.label`, 'BESPOKE WEBSITE OFFER'],
+            [`${offerId}.heading`, 'A genuinely bespoke website — from £999'],
+            [`${offerId}.col_1_p1`, 'This is a genuinely bespoke website. We build what the business actually wants, not what a template happens to allow.'],
+            [`${offerId}.col_1_p2`, 'The lower price comes from modern technology and a leaner build process, not from lower quality. The result is still a finished website built around the business.'],
+            [`${offerId}.col_2_p1`, '£999 covers a defined scope: up to five core pages, a mobile responsive build, basic SEO setup, a one-hour recorded discovery conversation at the start, and one structured round of changes before sign-off.'],
+            [`${offerId}.col_2_p2`, 'It is a defined finished website, not unlimited revisions. If extra pages, extra functionality or integrations are needed, we quote those separately before the work is done.'],
+
+            // SECTION 9 — intervention (closing)
             [`${closingId}.heading`, 'Technology should make the business stronger, not more complicated'],
             [`${closingId}.subtext`, 'If a stronger website, better systems or practical AI could genuinely improve the way the business operates, that is where the conversation should start.'],
-            [`${closingId}.button_text`, 'Book a 30 minute conversation'],
+            [`${closingId}.button_text`, 'Tell us what you want to build'],
             [`${closingId}.button_link`, 'book-a-30-minute-conversation'],
 
             // Contextual link appended to the existing What We Do page,
@@ -655,7 +664,7 @@ async function seed() {
             );
           }
 
-          const pageOrder = [heroId, startId, whyId, areasId, examplesId, howId, wontId, closingId];
+          const pageOrder = [heroId, startId, whyId, areasId, examplesId, howId, wontId, offerId, closingId];
 
           // Position right after What We Do, shifting later pages' sort_order
           // up by one — same pattern as the Evidence merge above. show_in_nav
@@ -683,6 +692,101 @@ async function seed() {
         }
       } else {
         console.log('Websites and AI migration skipped: What We Do page does not exist yet.');
+      }
+    }
+  }
+
+  // Migration: add the bespoke website offer section to the existing
+  // Websites and AI page and update the closing CTA button text. Idempotent:
+  // if the offer section is already present, it is left alone; the button
+  // text only changes when it is still on the old wording.
+  {
+    const { rows: wsRows } = await db.query(
+      "SELECT section_order FROM pages WHERE slug = 'websites-and-ai'"
+    );
+    if (wsRows.length > 0) {
+      const pageOrder = Array.isArray(wsRows[0].section_order) ? wsRows[0].section_order : [];
+      const baseOf = (id) => {
+        const m = /^([a-z0-9]+)(?:__(\d+))?$/.exec(id || '');
+        return m ? m[1] : null;
+      };
+
+      let closingId = null;
+      for (let i = pageOrder.length - 1; i >= 0; i--) {
+        if (baseOf(pageOrder[i]) === 'intervention') {
+          closingId = pageOrder[i];
+          break;
+        }
+      }
+
+      if (closingId) {
+        const { rows: headingRows } = await db.query(
+          "SELECT split_part(section_key, '.', 1) AS instance_id FROM content WHERE section_key LIKE '%.heading' AND content = $1",
+          ['A genuinely bespoke website — from £999']
+        );
+        const existingOfferId = headingRows
+          .map((r) => r.instance_id)
+          .find((iid) => pageOrder.includes(iid) && baseOf(iid) === 'biography');
+
+        if (!existingOfferId) {
+          const used = new Set();
+          const { rows: orderRows } = await db.query('SELECT section_order FROM pages');
+          for (const r of orderRows) {
+            if (Array.isArray(r.section_order)) r.section_order.forEach((s) => used.add(s));
+          }
+          const { rows: prefixRows } = await db.query(
+            "SELECT DISTINCT split_part(section_key, '.', 1) AS instance_id FROM content"
+          );
+          prefixRows.forEach((r) => used.add(r.instance_id));
+
+          const allocate = (tpl) => {
+            if (!used.has(tpl)) { used.add(tpl); return tpl; }
+            for (let n = 2; n <= 99; n++) {
+              const id = `${tpl}__${n}`;
+              if (!used.has(id)) { used.add(id); return id; }
+            }
+            return null;
+          };
+
+          const offerId = allocate('biography');
+          if (offerId) {
+            const offerRows = [
+              [`${offerId}.label`, 'BESPOKE WEBSITE OFFER'],
+              [`${offerId}.heading`, 'A genuinely bespoke website — from £999'],
+              [`${offerId}.col_1_p1`, 'This is a genuinely bespoke website. We build what the business actually wants, not what a template happens to allow.'],
+              [`${offerId}.col_1_p2`, 'The lower price comes from modern technology and a leaner build process, not from lower quality. The result is still a finished website built around the business.'],
+              [`${offerId}.col_2_p1`, '£999 covers a defined scope: up to five core pages, a mobile responsive build, basic SEO setup, a one-hour recorded discovery conversation at the start, and one structured round of changes before sign-off.'],
+              [`${offerId}.col_2_p2`, 'It is a defined finished website, not unlimited revisions. If extra pages, extra functionality or integrations are needed, we quote those separately before the work is done.']
+            ];
+            for (const [key, value] of offerRows) {
+              await db.query(
+                'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+                [key, value]
+              );
+            }
+
+            const closingIndex = pageOrder.indexOf(closingId);
+            const nextOrder = closingIndex === -1
+              ? pageOrder.concat([offerId])
+              : pageOrder.slice(0, closingIndex).concat([offerId], pageOrder.slice(closingIndex));
+            await db.query(
+              'UPDATE pages SET section_order = $1::jsonb WHERE slug = $2',
+              [JSON.stringify(nextOrder), 'websites-and-ai']
+            );
+          }
+        }
+
+        const { rows: ctaRows } = await db.query(
+          'SELECT content FROM content WHERE section_key = $1',
+          [`${closingId}.button_text`]
+        );
+        const ctaText = ((ctaRows[0] && ctaRows[0].content) || '').replace(/<[^>]+>/g, '').trim();
+        if (ctaText === 'Book a 30 minute conversation') {
+          await db.query(
+            'UPDATE content SET content = $1 WHERE section_key = $2',
+            ['Tell us what you want to build', `${closingId}.button_text`]
+          );
+        }
       }
     }
   }

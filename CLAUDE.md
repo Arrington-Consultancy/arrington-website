@@ -335,7 +335,8 @@ A new service page introducing Arrington's combined website-development-plus-pra
 | 5 | Real examples: Owner Check, Commercial Gaps Review, this website itself | `insights` | new — exactly 3 cards, matching the template's fixed 3-slot layout with no empty-slot risk |
 | 6 | How the work happens: Understand / Design / Build / Improve | `fourcards` | new — exactly 4 cards, matching the template's fixed 4-slot layout |
 | 7 | What we will not do (trust statement) | `filter` | new — second instance, single paragraph, no button |
-| 8 | Closing CTA: "Technology should make the business stronger, not more complicated" → Book a 30 minute conversation | `intervention` | new |
+| 8 | Bespoke website offer: "A genuinely bespoke website — from £999" | `biography` | inserted 02/08/2026 immediately before the existing closing CTA; two-column prose to keep the offer premium and within the site's existing CMS templates, covering the defined five-page scope, discovery call, revision limit and separate quoting for extras |
+| 9 | Closing CTA: "Technology should make the business stronger, not more complicated" → Tell us what you want to build | `intervention` | existing closing block, button destination unchanged |
 
 Two templates were deliberately ruled out for the two "list-shaped" sections (implementation areas' two lists of 6-7 items each, and the four "what we will not do" statements): `assessment`'s `.aq` boxes and `fourcards`/`insights` all render every slot unconditionally (no skip-if-empty logic anywhere in the codebase), so forcing a 4- or 6-item template to hold fewer real items would leave visible empty boxes. Prose within the existing two-column/paragraph templates was the safer fit.
 
