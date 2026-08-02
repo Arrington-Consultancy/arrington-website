@@ -534,171 +534,178 @@ async function seed() {
   {
     const { rows: existingWebAi } = await db.query("SELECT slug FROM pages WHERE slug = 'websites-and-ai'");
     if (existingWebAi.length === 0) {
-      const { rows: wwdRows } = await db.query("SELECT id, section_order FROM pages WHERE slug = 'what-we-do'");
-      if (wwdRows.length > 0) {
-        // Same collision-avoidance approach as the "what the work looks
-        // like" migration above: collect every instance ID currently in use
-        // anywhere (page section_order arrays plus distinct content-table
-        // prefixes) before allocating new ones, rather than hardcoding IDs
-        // that might already be taken on this particular deployment.
-        const { rows: orderRows } = await db.query('SELECT section_order FROM pages');
-        const used = new Set();
-        for (const r of orderRows) {
-          if (Array.isArray(r.section_order)) r.section_order.forEach(s => used.add(s));
+      // Same collision-avoidance approach as the "what the work looks
+      // like" migration above: collect every instance ID currently in use
+      // anywhere (page section_order arrays plus distinct content-table
+      // prefixes) before allocating new ones, rather than hardcoding IDs
+      // that might already be taken on this particular deployment.
+      const { rows: orderRows } = await db.query('SELECT section_order FROM pages');
+      const used = new Set();
+      for (const r of orderRows) {
+        if (Array.isArray(r.section_order)) r.section_order.forEach(s => used.add(s));
+      }
+      const { rows: prefixRows } = await db.query(
+        "SELECT DISTINCT split_part(section_key, '.', 1) AS instance_id FROM content"
+      );
+      prefixRows.forEach(r => used.add(r.instance_id));
+
+      const allocate = (tpl) => {
+        if (!used.has(tpl)) { used.add(tpl); return tpl; }
+        for (let n = 2; n <= 99; n++) {
+          const id = `${tpl}__${n}`;
+          if (!used.has(id)) { used.add(id); return id; }
         }
-        const { rows: prefixRows } = await db.query(
-          "SELECT DISTINCT split_part(section_key, '.', 1) AS instance_id FROM content"
-        );
-        prefixRows.forEach(r => used.add(r.instance_id));
+        return null;
+      };
 
-        const allocate = (tpl) => {
-          if (!used.has(tpl)) { used.add(tpl); return tpl; }
-          for (let n = 2; n <= 99; n++) {
-            const id = `${tpl}__${n}`;
-            if (!used.has(id)) { used.add(id); return id; }
-          }
-          return null;
-        };
+      const heroId = allocate('hero');
+      const startId = allocate('biography');
+      const whyId = allocate('filter');
+      const areasId = allocate('biography');
+      const examplesId = allocate('insights');
+      const howId = allocate('fourcards');
+      const wontId = allocate('filter');
+      const offerId = allocate('biography');
+      const closingId = allocate('intervention');
+      const wwdLinkId = allocate('intervention');
 
-        const heroId = allocate('hero');
-        const startId = allocate('biography');
-        const whyId = allocate('filter');
-        const areasId = allocate('biography');
-        const examplesId = allocate('insights');
-        const howId = allocate('fourcards');
-        const wontId = allocate('filter');
-        const offerId = allocate('biography');
-        const closingId = allocate('intervention');
-        const wwdLinkId = allocate('intervention');
+      if (heroId && startId && whyId && areasId && examplesId && howId && wontId && offerId && closingId && wwdLinkId) {
+        const rows = [
+          // SECTION 1 — hero
+          [`${heroId}.heading`, 'Websites and AI that solve real business problems'],
+          [`${heroId}.subtext`, "We don't build websites because someone wants a new website. We don't recommend AI because it's fashionable. We use both where they genuinely improve the commercial performance of the business."],
+          [`${heroId}.cta`, 'Talk to us about what needs fixing'],
+          [`${heroId}.whatsapp`, ''],
 
-        if (heroId && startId && whyId && areasId && examplesId && howId && wontId && offerId && closingId && wwdLinkId) {
-          const rows = [
-            // SECTION 1 — hero
-            [`${heroId}.heading`, 'Websites and AI that solve real business problems'],
-            [`${heroId}.subtext`, "We don't build websites because someone wants a new website. We don't recommend AI because it's fashionable. We use both where they genuinely improve the commercial performance of the business."],
-            [`${heroId}.cta`, 'Talk to us about what needs fixing'],
-            [`${heroId}.whatsapp`, ''],
+          // SECTION 2 — biography (start with the business, not the technology)
+          [`${startId}.label`, 'COMMERCIAL PROBLEMS FIRST'],
+          [`${startId}.heading`, 'Start with the business, not the technology'],
+          [`${startId}.col_1_p1`, 'Most businesses do not have a website problem. They have business problems that a website or AI can sometimes solve.'],
+          [`${startId}.col_1_p2`, "That might be poor quality enquiries, too many repetitive questions, or knowledge that only exists in the owner's head."],
+          [`${startId}.col_2_p1`, 'It might be weak follow-up, manual administration that eats a day a week, or a business that cannot run properly without the owner in the room.'],
+          [`${startId}.col_2_p2`, 'We look at what is actually happening in the business first. The technology comes after, and only where it earns its place.'],
 
-            // SECTION 2 — biography (start with the business, not the technology)
-            [`${startId}.label`, 'COMMERCIAL PROBLEMS FIRST'],
-            [`${startId}.heading`, 'Start with the business, not the technology'],
-            [`${startId}.col_1_p1`, 'Most businesses do not have a website problem. They have business problems that a website or AI can sometimes solve.'],
-            [`${startId}.col_1_p2`, "That might be poor quality enquiries, too many repetitive questions, or knowledge that only exists in the owner's head."],
-            [`${startId}.col_2_p1`, 'It might be weak follow-up, manual administration that eats a day a week, or a business that cannot run properly without the owner in the room.'],
-            [`${startId}.col_2_p2`, 'We look at what is actually happening in the business first. The technology comes after, and only where it earns its place.'],
+          // SECTION 3 — filter (why we are different)
+          [`${whyId}.label`, 'WHY WE ARE DIFFERENT'],
+          [`${whyId}.heading`, 'We start with the business, not the brief'],
+          [`${whyId}.p1`, 'Most agencies begin by asking what website the client wants.'],
+          [`${whyId}.p2`, 'We begin by understanding what is getting in the way of the business. Only then do we decide whether a website, AI, a change in process, or a combination of the three is actually the right answer.'],
+          [`${whyId}.button_text`, ''],
+          [`${whyId}.button_link`, 'main'],
 
-            // SECTION 3 — filter (why we are different)
-            [`${whyId}.label`, 'WHY WE ARE DIFFERENT'],
-            [`${whyId}.heading`, 'We start with the business, not the brief'],
-            [`${whyId}.p1`, 'Most agencies begin by asking what website the client wants.'],
-            [`${whyId}.p2`, 'We begin by understanding what is getting in the way of the business. Only then do we decide whether a website, AI, a change in process, or a combination of the three is actually the right answer.'],
-            [`${whyId}.button_text`, ''],
-            [`${whyId}.button_link`, 'main'],
+          // SECTION 4 — biography (two implementation areas)
+          [`${areasId}.label`, 'TWO WAYS WE PUT IT INTO PRACTICE'],
+          [`${areasId}.heading`, 'Two implementation areas'],
+          [`${areasId}.col_1_p1`, '<strong>Commercial websites.</strong> Better enquiries, clearer positioning and stronger credibility.'],
+          [`${areasId}.col_1_p2`, 'Higher quality conversations, useful information captured before a meeting even starts, and less time wasted on the wrong prospects.'],
+          [`${areasId}.col_2_p1`, "<strong>Practical AI.</strong> Internal knowledge that does not live only in the owner's head, better enquiry handling, and sharper business reviews."],
+          [`${areasId}.col_2_p2`, 'Faster document analysis, better meeting preparation, more support for staff, and less reliance on the owner for every answer.'],
 
-            // SECTION 4 — biography (two implementation areas)
-            [`${areasId}.label`, 'TWO WAYS WE PUT IT INTO PRACTICE'],
-            [`${areasId}.heading`, 'Two implementation areas'],
-            [`${areasId}.col_1_p1`, '<strong>Commercial websites.</strong> Better enquiries, clearer positioning and stronger credibility.'],
-            [`${areasId}.col_1_p2`, 'Higher quality conversations, useful information captured before a meeting even starts, and less time wasted on the wrong prospects.'],
-            [`${areasId}.col_2_p1`, "<strong>Practical AI.</strong> Internal knowledge that does not live only in the owner's head, better enquiry handling, and sharper business reviews."],
-            [`${areasId}.col_2_p2`, 'Faster document analysis, better meeting preparation, more support for staff, and less reliance on the owner for every answer.'],
+          // SECTION 5 — insights (real examples)
+          [`${examplesId}.label`, 'REAL ARRINGTON EXAMPLES'],
+          [`${examplesId}.heading`, 'Proof from our own work'],
+          [`${examplesId}.subtext`, 'We do not ask a business to try something we have not tried ourselves.'],
+          [`${examplesId}.card_1_tag`, 'OWNER CHECK'],
+          [`${examplesId}.card_1_title`, 'Owner Check'],
+          [`${examplesId}.card_1_body`, 'A practical self-diagnostic that shows an owner where the business still depends too heavily on them, with an actionable score rather than a vague opinion.'],
+          [`${examplesId}.card_2_tag`, 'COMMERCIAL GAPS REVIEW'],
+          [`${examplesId}.card_2_title`, 'Commercial Gaps Review'],
+          [`${examplesId}.card_2_body`, 'An automated commercial review that gives an owner real clarity on where the pressure is, built so it costs nothing to run and never invents a fact about the business.'],
+          [`${examplesId}.card_3_tag`, 'THIS WEBSITE'],
+          [`${examplesId}.card_3_title`, 'The Arrington Consultancy website'],
+          [`${examplesId}.card_3_body`, 'Built to generate serious enquiries from suitable owners, not to win design awards. Every page exists to move a real conversation forward.'],
 
-            // SECTION 5 — insights (real examples)
-            [`${examplesId}.label`, 'REAL ARRINGTON EXAMPLES'],
-            [`${examplesId}.heading`, 'Proof from our own work'],
-            [`${examplesId}.subtext`, 'We do not ask a business to try something we have not tried ourselves.'],
-            [`${examplesId}.card_1_tag`, 'OWNER CHECK'],
-            [`${examplesId}.card_1_title`, 'Owner Check'],
-            [`${examplesId}.card_1_body`, 'A practical self-diagnostic that shows an owner where the business still depends too heavily on them, with an actionable score rather than a vague opinion.'],
-            [`${examplesId}.card_2_tag`, 'COMMERCIAL GAPS REVIEW'],
-            [`${examplesId}.card_2_title`, 'Commercial Gaps Review'],
-            [`${examplesId}.card_2_body`, 'An automated commercial review that gives an owner real clarity on where the pressure is, built so it costs nothing to run and never invents a fact about the business.'],
-            [`${examplesId}.card_3_tag`, 'THIS WEBSITE'],
-            [`${examplesId}.card_3_title`, 'The Arrington Consultancy website'],
-            [`${examplesId}.card_3_body`, 'Built to generate serious enquiries from suitable owners, not to win design awards. Every page exists to move a real conversation forward.'],
+          // SECTION 6 — fourcards (how the work happens)
+          [`${howId}.label`, 'HOW THE WORK HAPPENS'],
+          [`${howId}.heading`, 'Understand, design, build, improve'],
+          [`${howId}.card_1_number`, '01'],
+          [`${howId}.card_1_title`, 'Understand'],
+          [`${howId}.card_1_body`, 'We look at what is actually happening in the business before anything is designed or built.'],
+          [`${howId}.card_2_number`, '02'],
+          [`${howId}.card_2_title`, 'Design'],
+          [`${howId}.card_2_body`, 'We decide what should change, and whether a website, AI, a process fix or a combination is the right answer.'],
+          [`${howId}.card_3_number`, '03'],
+          [`${howId}.card_3_title`, 'Build'],
+          [`${howId}.card_3_body`, 'We build only what earns its place, in plain language the business can actually use.'],
+          [`${howId}.card_4_number`, '04'],
+          [`${howId}.card_4_title`, 'Improve'],
+          [`${howId}.card_4_body`, 'We check what is working and change what is not. The business keeps control of it, not us.'],
 
-            // SECTION 6 — fourcards (how the work happens)
-            [`${howId}.label`, 'HOW THE WORK HAPPENS'],
-            [`${howId}.heading`, 'Understand, design, build, improve'],
-            [`${howId}.card_1_number`, '01'],
-            [`${howId}.card_1_title`, 'Understand'],
-            [`${howId}.card_1_body`, 'We look at what is actually happening in the business before anything is designed or built.'],
-            [`${howId}.card_2_number`, '02'],
-            [`${howId}.card_2_title`, 'Design'],
-            [`${howId}.card_2_body`, 'We decide what should change, and whether a website, AI, a process fix or a combination is the right answer.'],
-            [`${howId}.card_3_number`, '03'],
-            [`${howId}.card_3_title`, 'Build'],
-            [`${howId}.card_3_body`, 'We build only what earns its place, in plain language the business can actually use.'],
-            [`${howId}.card_4_number`, '04'],
-            [`${howId}.card_4_title`, 'Improve'],
-            [`${howId}.card_4_body`, 'We check what is working and change what is not. The business keeps control of it, not us.'],
+          // SECTION 7 — filter (what we will not do)
+          [`${wontId}.label`, 'WHAT WE WILL NOT DO'],
+          [`${wontId}.heading`, 'We do not sell technology for its own sake'],
+          [`${wontId}.p1`, 'We do not recommend AI unless it genuinely helps. We do not recommend rebuilding a website that already works. We do not sell technology for the sake of it. We only recommend changes that create commercial value.'],
+          [`${wontId}.button_text`, ''],
+          [`${wontId}.button_link`, 'main'],
 
-            // SECTION 7 — filter (what we will not do)
-            [`${wontId}.label`, 'WHAT WE WILL NOT DO'],
-            [`${wontId}.heading`, 'We do not sell technology for its own sake'],
-            [`${wontId}.p1`, 'We do not recommend AI unless it genuinely helps. We do not recommend rebuilding a website that already works. We do not sell technology for the sake of it. We only recommend changes that create commercial value.'],
-            [`${wontId}.button_text`, ''],
-            [`${wontId}.button_link`, 'main'],
+          // SECTION 8 — biography (bespoke website offer)
+          [`${offerId}.label`, 'BESPOKE WEBSITE OFFER'],
+          [`${offerId}.heading`, 'A genuinely bespoke website — from £999'],
+          [`${offerId}.col_1_p1`, 'This is a genuinely bespoke website. We build what the business actually wants, not what a template happens to allow.'],
+          [`${offerId}.col_1_p2`, 'The lower price comes from modern technology and a leaner build process, not from lower quality. The result is still a finished website built around the business.'],
+          [`${offerId}.col_2_p1`, '£999 covers a defined scope: up to five core pages, a mobile responsive build, basic SEO setup, a one-hour recorded discovery conversation at the start, and one structured round of changes before sign-off.'],
+          [`${offerId}.col_2_p2`, 'It is a defined finished website, not unlimited revisions. If extra pages, extra functionality or integrations are needed, we quote those separately before the work is done.'],
 
-            // SECTION 8 — biography (bespoke website offer)
-            [`${offerId}.label`, 'BESPOKE WEBSITE OFFER'],
-            [`${offerId}.heading`, 'A genuinely bespoke website — from £999'],
-            [`${offerId}.col_1_p1`, 'This is a genuinely bespoke website. We build what the business actually wants, not what a template happens to allow.'],
-            [`${offerId}.col_1_p2`, 'The lower price comes from modern technology and a leaner build process, not from lower quality. The result is still a finished website built around the business.'],
-            [`${offerId}.col_2_p1`, '£999 covers a defined scope: up to five core pages, a mobile responsive build, basic SEO setup, a one-hour recorded discovery conversation at the start, and one structured round of changes before sign-off.'],
-            [`${offerId}.col_2_p2`, 'It is a defined finished website, not unlimited revisions. If extra pages, extra functionality or integrations are needed, we quote those separately before the work is done.'],
+          // SECTION 9 — intervention (closing)
+          [`${closingId}.heading`, 'Technology should make the business stronger, not more complicated'],
+          [`${closingId}.subtext`, 'If a stronger website, better systems or practical AI could genuinely improve the way the business operates, that is where the conversation should start.'],
+          [`${closingId}.button_text`, 'Tell us what you want to build'],
+          [`${closingId}.button_link`, 'book-a-30-minute-conversation'],
 
-            // SECTION 9 — intervention (closing)
-            [`${closingId}.heading`, 'Technology should make the business stronger, not more complicated'],
-            [`${closingId}.subtext`, 'If a stronger website, better systems or practical AI could genuinely improve the way the business operates, that is where the conversation should start.'],
-            [`${closingId}.button_text`, 'Tell us what you want to build'],
-            [`${closingId}.button_link`, 'book-a-30-minute-conversation'],
+          // Contextual link appended to the existing What We Do page,
+          // per the brief's explicit request — a new instance so nothing
+          // already on that page is disturbed.
+          [`${wwdLinkId}.heading`, 'Need the website or the systems to match?'],
+          [`${wwdLinkId}.subtext`, 'We also build the websites and practical AI that make a stronger business easier to run. See how that works.'],
+          [`${wwdLinkId}.button_text`, 'See Websites and AI'],
+          [`${wwdLinkId}.button_link`, 'websites-and-ai']
+        ];
 
-            // Contextual link appended to the existing What We Do page,
-            // per the brief's explicit request — a new instance so nothing
-            // already on that page is disturbed.
-            [`${wwdLinkId}.heading`, 'Need the website or the systems to match?'],
-            [`${wwdLinkId}.subtext`, 'We also build the websites and practical AI that make a stronger business easier to run. See how that works.'],
-            [`${wwdLinkId}.button_text`, 'See Websites and AI'],
-            [`${wwdLinkId}.button_link`, 'websites-and-ai']
-          ];
-
-          for (const [key, value] of rows) {
-            await db.query(
-              `INSERT INTO content (section_key, content) VALUES ($1, $2)
-               ON CONFLICT (section_key) DO NOTHING`,
-              [key, value]
-            );
-          }
-
-          const pageOrder = [heroId, startId, whyId, areasId, examplesId, howId, wontId, offerId, closingId];
-
-          // Position right after What We Do, shifting later pages' sort_order
-          // up by one — same pattern as the Evidence merge above. show_in_nav
-          // is false: this page is fully public and indexed, just reached via
-          // the What We Do nav child link and contextual links rather than
-          // sitting in the top-level nav bar itself.
-          const wwdSort = (await db.query("SELECT sort_order FROM pages WHERE slug = 'what-we-do'")).rows[0].sort_order;
-          await db.query('UPDATE pages SET sort_order = sort_order + 1 WHERE sort_order > $1', [wwdSort]);
-
+        for (const [key, value] of rows) {
           await db.query(
-            `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav)
-             VALUES ('websites-and-ai', 'Websites and AI', $1, $2::jsonb, '[]'::jsonb, '[]'::jsonb, false)`,
-            [wwdSort + 1, JSON.stringify(pageOrder)]
+            `INSERT INTO content (section_key, content) VALUES ($1, $2)
+             ON CONFLICT (section_key) DO NOTHING`,
+            [key, value]
           );
+        }
 
+        const pageOrder = [heroId, startId, whyId, areasId, examplesId, howId, wontId, offerId, closingId];
+
+        // Position right after What We Do when it exists, shifting later
+        // pages' sort_order up by one. If What We Do does not exist yet
+        // (clean database), fall back to appending after all existing pages
+        // so the Websites and AI page is still created with its full 9
+        // sections (including the £999 offer). The contextual link is only
+        // appended to What We Do when that page exists.
+        const { rows: wwdRows } = await db.query("SELECT id, sort_order, section_order FROM pages WHERE slug = 'what-we-do'");
+        let newPageSort;
+        if (wwdRows.length > 0) {
+          const wwdSort = wwdRows[0].sort_order;
+          await db.query('UPDATE pages SET sort_order = sort_order + 1 WHERE sort_order > $1', [wwdSort]);
+          newPageSort = wwdSort + 1;
+        } else {
+          const { rows: maxSortRows } = await db.query('SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM pages');
+          newPageSort = maxSortRows[0].max_sort + 1;
+        }
+
+        await db.query(
+          `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav)
+           VALUES ('websites-and-ai', 'Websites and AI', $1, $2::jsonb, '[]'::jsonb, '[]'::jsonb, false)`,
+          [newPageSort, JSON.stringify(pageOrder)]
+        );
+
+        if (wwdRows.length > 0) {
           const wwdOrder = Array.isArray(wwdRows[0].section_order) ? wwdRows[0].section_order : [];
           await db.query(
             'UPDATE pages SET section_order = $1::jsonb WHERE slug = $2',
             [JSON.stringify(wwdOrder.concat([wwdLinkId])), 'what-we-do']
           );
-
-          console.log(`Websites and AI page created (sort_order ${wwdSort + 1}, hero=${heroId}), contextual link (${wwdLinkId}) appended to What We Do.`);
+          console.log(`Websites and AI page created (sort_order ${newPageSort}, hero=${heroId}), contextual link (${wwdLinkId}) appended to What We Do.`);
         } else {
-          console.log('Websites and AI migration skipped: could not allocate instance IDs.');
+          console.log(`Websites and AI page created (sort_order ${newPageSort}, hero=${heroId}). What We Do not found; contextual link (${wwdLinkId}) seeded but not yet placed on any page.`);
         }
       } else {
-        console.log('Websites and AI migration skipped: What We Do page does not exist yet.');
+        console.log('Websites and AI migration skipped: could not allocate instance IDs.');
       }
     }
   }
