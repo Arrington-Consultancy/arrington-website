@@ -603,7 +603,15 @@ async function seed() {
             [`${areasId}.col_2_p1`, "<strong>Practical AI.</strong> Internal knowledge that does not live only in the owner's head, better enquiry handling, and sharper business reviews."],
             [`${areasId}.col_2_p2`, 'Faster document analysis, better meeting preparation, more support for staff, and less reliance on the owner for every answer.'],
 
-            // SECTION 5 — insights (real examples)
+            // SECTION 5 — biography (bespoke website offer)
+            [`${offerId}.label`, 'BESPOKE WEBSITE OFFER'],
+            [`${offerId}.heading`, 'A genuinely bespoke website — from £999'],
+            [`${offerId}.col_1_p1`, 'This is a genuinely bespoke website. We build what the business actually wants, not what a template happens to allow.'],
+            [`${offerId}.col_1_p2`, 'The lower price comes from modern technology and a leaner build process, not from lower quality. The result is still a finished website built around the business.'],
+            [`${offerId}.col_2_p1`, '£999 covers a defined scope: up to five core pages, a mobile responsive build, basic SEO setup, a one-hour recorded discovery conversation at the start, and one structured round of changes before sign-off.'],
+            [`${offerId}.col_2_p2`, 'It is a defined finished website, not unlimited revisions. If extra pages, extra functionality or integrations are needed, we quote those separately before the work is done.'],
+
+            // SECTION 6 — insights (real examples)
             [`${examplesId}.label`, 'REAL ARRINGTON EXAMPLES'],
             [`${examplesId}.heading`, 'Proof from our own work'],
             [`${examplesId}.subtext`, 'We do not ask a business to try something we have not tried ourselves.'],
@@ -617,7 +625,7 @@ async function seed() {
             [`${examplesId}.card_3_title`, 'The Arrington Consultancy website'],
             [`${examplesId}.card_3_body`, 'Built to generate serious enquiries from suitable owners, not to win design awards. Every page exists to move a real conversation forward.'],
 
-            // SECTION 6 — fourcards (how the work happens)
+            // SECTION 7 — fourcards (how the work happens)
             [`${howId}.label`, 'HOW THE WORK HAPPENS'],
             [`${howId}.heading`, 'Understand, design, build, improve'],
             [`${howId}.card_1_number`, '01'],
@@ -633,20 +641,12 @@ async function seed() {
             [`${howId}.card_4_title`, 'Improve'],
             [`${howId}.card_4_body`, 'We check what is working and change what is not. The business keeps control of it, not us.'],
 
-            // SECTION 7 — filter (what we will not do)
+            // SECTION 8 — filter (what we will not do)
             [`${wontId}.label`, 'WHAT WE WILL NOT DO'],
             [`${wontId}.heading`, 'We do not sell technology for its own sake'],
             [`${wontId}.p1`, 'We do not recommend AI unless it genuinely helps. We do not recommend rebuilding a website that already works. We do not sell technology for the sake of it. We only recommend changes that create commercial value.'],
             [`${wontId}.button_text`, ''],
             [`${wontId}.button_link`, 'main'],
-
-            // SECTION 8 — biography (bespoke website offer)
-            [`${offerId}.label`, 'BESPOKE WEBSITE OFFER'],
-            [`${offerId}.heading`, 'A genuinely bespoke website — from £999'],
-            [`${offerId}.col_1_p1`, 'This is a genuinely bespoke website. We build what the business actually wants, not what a template happens to allow.'],
-            [`${offerId}.col_1_p2`, 'The lower price comes from modern technology and a leaner build process, not from lower quality. The result is still a finished website built around the business.'],
-            [`${offerId}.col_2_p1`, '£999 covers a defined scope: up to five core pages, a mobile responsive build, basic SEO setup, a one-hour recorded discovery conversation at the start, and one structured round of changes before sign-off.'],
-            [`${offerId}.col_2_p2`, 'It is a defined finished website, not unlimited revisions. If extra pages, extra functionality or integrations are needed, we quote those separately before the work is done.'],
 
             // SECTION 9 — intervention (closing)
             [`${closingId}.heading`, 'Technology should make the business stronger, not more complicated'],
@@ -671,7 +671,7 @@ async function seed() {
             );
           }
 
-          const pageOrder = [heroId, startId, whyId, areasId, examplesId, howId, wontId, offerId, closingId];
+          const pageOrder = [heroId, startId, whyId, areasId, offerId, examplesId, howId, wontId, closingId];
 
           // Position right after What We Do, shifting later pages' sort_order
           // up by one — same pattern as the Evidence merge above. show_in_nav
@@ -704,9 +704,10 @@ async function seed() {
   }
 
   // Migration: add the bespoke website offer section to the existing
-  // Websites and AI page and update the closing CTA button text. Idempotent:
-  // if the offer section is already present, it is left alone; the button
-  // text only changes when it is still on the old wording.
+  // Websites and AI page, move it higher up the page (before the proof/how
+  // sections), and update the closing CTA button text. Idempotent: the offer
+  // content is only created when missing, and the reorder becomes a no-op
+  // once the section already sits in the target slot.
   {
     const { rows: wsRows } = await db.query(
       "SELECT section_order FROM pages WHERE slug = 'websites-and-ai'"
@@ -727,15 +728,23 @@ async function seed() {
       }
 
       if (closingId) {
+        const targetIndex = (() => {
+          for (let i = 0; i < pageOrder.length; i++) {
+            const base = baseOf(pageOrder[i]);
+            if (base === 'insights' || base === 'fourcards' || base === 'intervention') return i;
+          }
+          return pageOrder.length;
+        })();
+
         const { rows: headingRows } = await db.query(
           "SELECT split_part(section_key, '.', 1) AS instance_id FROM content WHERE section_key LIKE '%.heading' AND content = $1",
           ['A genuinely bespoke website — from £999']
         );
-        const existingOfferId = headingRows
+        let offerId = headingRows
           .map((r) => r.instance_id)
           .find((iid) => pageOrder.includes(iid) && baseOf(iid) === 'biography');
 
-        if (!existingOfferId) {
+        if (!offerId) {
           const used = new Set();
           const { rows: orderRows } = await db.query('SELECT section_order FROM pages');
           for (const r of orderRows) {
@@ -755,15 +764,15 @@ async function seed() {
             return null;
           };
 
-          const offerId = allocate('biography');
-          if (offerId) {
+          const allocatedOfferId = allocate('biography');
+          if (allocatedOfferId) {
             const offerRows = [
-              [`${offerId}.label`, 'BESPOKE WEBSITE OFFER'],
-              [`${offerId}.heading`, 'A genuinely bespoke website — from £999'],
-              [`${offerId}.col_1_p1`, 'This is a genuinely bespoke website. We build what the business actually wants, not what a template happens to allow.'],
-              [`${offerId}.col_1_p2`, 'The lower price comes from modern technology and a leaner build process, not from lower quality. The result is still a finished website built around the business.'],
-              [`${offerId}.col_2_p1`, '£999 covers a defined scope: up to five core pages, a mobile responsive build, basic SEO setup, a one-hour recorded discovery conversation at the start, and one structured round of changes before sign-off.'],
-              [`${offerId}.col_2_p2`, 'It is a defined finished website, not unlimited revisions. If extra pages, extra functionality or integrations are needed, we quote those separately before the work is done.']
+              [`${allocatedOfferId}.label`, 'BESPOKE WEBSITE OFFER'],
+              [`${allocatedOfferId}.heading`, 'A genuinely bespoke website — from £999'],
+              [`${allocatedOfferId}.col_1_p1`, 'This is a genuinely bespoke website. We build what the business actually wants, not what a template happens to allow.'],
+              [`${allocatedOfferId}.col_1_p2`, 'The lower price comes from modern technology and a leaner build process, not from lower quality. The result is still a finished website built around the business.'],
+              [`${allocatedOfferId}.col_2_p1`, '£999 covers a defined scope: up to five core pages, a mobile responsive build, basic SEO setup, a one-hour recorded discovery conversation at the start, and one structured round of changes before sign-off.'],
+              [`${allocatedOfferId}.col_2_p2`, 'It is a defined finished website, not unlimited revisions. If extra pages, extra functionality or integrations are needed, we quote those separately before the work is done.']
             ];
             for (const [key, value] of offerRows) {
               await db.query(
@@ -771,11 +780,18 @@ async function seed() {
                 [key, value]
               );
             }
+            offerId = allocatedOfferId;
+          }
+        }
 
-            const closingIndex = pageOrder.indexOf(closingId);
-            const nextOrder = closingIndex === -1
-              ? pageOrder.concat([offerId])
-              : pageOrder.slice(0, closingIndex).concat([offerId], pageOrder.slice(closingIndex));
+        if (offerId) {
+          const currentOrder = pageOrder.includes(offerId) ? pageOrder : pageOrder.concat([offerId]);
+          const withoutOffer = currentOrder.filter((sectionId) => sectionId !== offerId);
+          const safeTargetIndex = Math.min(targetIndex, withoutOffer.length);
+          const nextOrder = withoutOffer
+            .slice(0, safeTargetIndex)
+            .concat([offerId], withoutOffer.slice(safeTargetIndex));
+          if (JSON.stringify(nextOrder) !== JSON.stringify(pageOrder)) {
             await db.query(
               'UPDATE pages SET section_order = $1::jsonb WHERE slug = $2',
               [JSON.stringify(nextOrder), 'websites-and-ai']
