@@ -20,6 +20,12 @@ const leadRoutes = require('./routes/leads');
 const marketReadyTest = require('./routes/marketReadyTest');
 const commercialGapsReview = require('./routes/commercialGapsReview');
 const { publishedArticles, findBySlug: findUsefulThinkingArticle } = require('./lib/usefulThinkingArticles');
+const {
+  buildCanonicalPageUrl,
+  buildRobotsTxt,
+  getCanonicalRedirectLocation,
+  resolveCanonicalForPage
+} = require('./lib/canonicalHost');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -41,20 +47,18 @@ app.set('trust proxy', 1);
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// Canonical host + HTTPS enforcement in production, combined into a single
-// 301 so a plain-HTTP request to the bare apex domain redirects straight to
-// https://www...<path> in one hop rather than two separate redirects. Only
-// the bare apex is rewritten to www — any other host (e.g. Railway's own
-// default domain) is left alone, it just gets the HTTPS check.
-const CANONICAL_HOST = 'www.arringtonconsultancy.com';
-const APEX_HOST = 'arringtonconsultancy.com';
+// Canonical host + HTTPS enforcement in production. The three public
+// non-canonical domains permanently redirect to the canonical host; Railway
+// preview hosts and localhost are intentionally excluded.
 app.use((req, res, next) => {
-  if (!isProd) return next();
-  const host = (req.header('host') || '').toLowerCase();
-  const targetHost = host === APEX_HOST ? CANONICAL_HOST : host;
-  const isHttps = req.header('x-forwarded-proto') === 'https';
-  if (targetHost !== host || !isHttps) {
-    return res.redirect(301, `https://${targetHost}${req.url}`);
+  const redirectLocation = getCanonicalRedirectLocation({
+    hostHeader: req.header('host'),
+    forwardedProto: req.header('x-forwarded-proto'),
+    url: req.url,
+    isProd
+  });
+  if (redirectLocation) {
+    return res.redirect(301, redirectLocation);
   }
   next();
 });
@@ -308,10 +312,9 @@ app.get('/owner-check', async (req, res, next) => {
   }
 });
 
-// robots.txt — allow crawling, point at the sitemap, keep the login page out
-// of the index. Built from the request host so it works on every domain.
+// robots.txt — allow crawling, point at the canonical sitemap, keep the login
+// page out of the index.
 app.get('/robots.txt', (req, res) => {
-  const base = `${req.protocol}://${req.get('host')}`;
   res.type('text/plain').send(
     // /market-ready-test is still unpublished — see routes/marketReadyTest.js
     // — disallowed here as belt-and-braces on top of its own noindex/nofollow
@@ -320,7 +323,7 @@ app.get('/robots.txt', (req, res) => {
     // deliberately no longer listed here; its own per-visitor result pages
     // stay noindex/nofollow regardless, since those carry one visitor's
     // private answers rather than being the public tool page.
-    `User-agent: *\nAllow: /\nDisallow: /login\nDisallow: /market-ready-test\n\nSitemap: ${base}/sitemap.xml\n`
+    buildRobotsTxt()
   );
 });
 
@@ -332,7 +335,6 @@ const escapeXml = (s) => String(s)
 
 app.get('/sitemap.xml', async (req, res, next) => {
   try {
-    const base = `${req.protocol}://${req.get('host')}`;
     const { rows: restricted } = await db.query('SELECT DISTINCT page_id FROM page_access');
     const restrictedIds = new Set(restricted.map(r => r.page_id));
     const { rows } = await db.query(
@@ -340,11 +342,10 @@ app.get('/sitemap.xml', async (req, res, next) => {
     );
     const pubPages = rows.filter(p => !p.hidden && !p.noindex && !restrictedIds.has(p.id));
     const urlEntries = await Promise.all(pubPages.map(async (p) => {
-      const loc = p.slug === 'main'
-        ? `${base}/`
-        : findUsefulThinkingArticle(p.slug)
-          ? `${base}/useful-thinking/${p.slug}`
-          : `${base}/${p.slug}`;
+      const loc = buildCanonicalPageUrl({
+        slug: p.slug,
+        isUsefulThinkingArticle: !!findUsefulThinkingArticle(p.slug)
+      });
       let lastmod = '';
       // pages.updated_at also gets bumped by structural admin actions (section
       // reorder, hide/show, nav sort) that aren't real content edits, so it
@@ -384,7 +385,7 @@ app.get('/sitemap.xml', async (req, res, next) => {
       'commercial-gaps-review': '2026-08-01'
     };
     for (const slug of ['owner-check', 'owner-dependency-quiz', 'commercial-gaps-review']) {
-      urlEntries.push(`  <url><loc>${escapeXml(`${base}/${slug}`)}</loc><lastmod>${ASSESSMENT_ROUTE_LASTMOD[slug]}</lastmod></url>`);
+      urlEntries.push(`  <url><loc>${escapeXml(buildCanonicalPageUrl({ slug }))}</loc><lastmod>${ASSESSMENT_ROUTE_LASTMOD[slug]}</lastmod></url>`);
     }
     res.type('application/xml').send(
       `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urlEntries.join('\n')}\n</urlset>\n`
@@ -731,19 +732,17 @@ async function renderPage(req, res, next, pageSlug) {
     // canonical/OG URL computation below needs to know to prefix it.
     const isUsefulThinkingArticle = !!findUsefulThinkingArticle(currentPage.slug);
 
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const pagePath = currentPage.slug === 'main'
-      ? '/'
-      : isUsefulThinkingArticle
-        ? `/useful-thinking/${currentPage.slug}`
-        : `/${currentPage.slug}`;
     const computedTitle = currentPage.slug !== 'main'
       ? `${currentPage.title} | Arrington Consultancy`
       : 'Arrington Consultancy';
 
     const metaTitle = (currentPage.meta_title || '').trim() || computedTitle;
     const metaDescription = (currentPage.meta_description || '').trim() || defaultDesc;
-    const canonical = (currentPage.canonical_url || '').trim() || `${baseUrl}${pagePath}`;
+    const canonical = resolveCanonicalForPage({
+      pageCanonical: currentPage.canonical_url || '',
+      slug: currentPage.slug,
+      isUsefulThinkingArticle
+    });
     const ogImage = (currentPage.og_image || '').trim() || defaultOgImage;
     const seo = {
       title: metaTitle,

@@ -5,6 +5,7 @@ const { requireCapability, getPermissionsMatrix, refreshPermissions, ALL_CAPABIL
 const db = require('../db/pool');
 const defaults = require('../db/defaults');
 const themes = require('../db/themes');
+const { CANONICAL_ORIGIN, isAllowedCanonicalOverride } = require('../lib/canonicalHost');
 
 const BCRYPT_ROUNDS = 12;
 
@@ -572,10 +573,8 @@ router.put('/page-order', requireCapability('manage_pages'), async (req, res) =>
 const SEO_FIELDS = ['meta_title', 'meta_description', 'meta_keywords', 'og_title', 'og_description', 'og_image', 'canonical_url'];
 // The site-wide default content keys (fallbacks for blank per-page fields).
 const SEO_DEFAULT_KEYS = ['seo.site_name', 'seo.default_description', 'seo.default_og_image', 'seo.twitter_handle'];
-// SEO fields that hold URLs — restricted to http(s) or root-relative so a
-// stored value can never carry a javascript:/data: scheme into a rendered
-// href/content attribute (defence-in-depth on top of EJS escaping).
-const SEO_URL_FIELDS = new Set(['og_image', 'canonical_url']);
+// URL-like SEO fields are validated to avoid unsafe schemes and to keep
+// canonical overrides on the canonical host only.
 
 function isSafeSeoUrl(value) {
   if (value === '') return true;            // blank clears the field
@@ -667,9 +666,12 @@ router.put('/seo/:slug', requireCapability('manage_seo'), async (req, res) => {
     for (const field of SEO_FIELDS) {
       if (body[field] === undefined) continue;
       let value = typeof body[field] === 'string' ? body[field].trim() : '';
-      // URL fields must be http(s) or root-relative.
-      if (SEO_URL_FIELDS.has(field) && !isSafeSeoUrl(value)) {
-        return res.status(400).json({ error: `${field === 'og_image' ? 'Social image URL' : 'Canonical URL'} must start with https:// or /` });
+      // URL fields are validated to avoid unsafe schemes.
+      if (field === 'canonical_url' && !isAllowedCanonicalOverride(value)) {
+        return res.status(400).json({ error: `Canonical URL must be root-relative or on ${CANONICAL_ORIGIN}` });
+      }
+      if (field === 'og_image' && !isSafeSeoUrl(value)) {
+        return res.status(400).json({ error: 'Social image URL must start with https:// or /' });
       }
       // Length guards mirror the column definitions (VARCHAR(255) for the
       // two *_title columns; the rest are TEXT).
