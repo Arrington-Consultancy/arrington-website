@@ -4,7 +4,14 @@ const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const db = require('./pool');
 const defaults = require('./defaults');
-const { ARTICLES: UT_ARTICLES } = require('../lib/usefulThinkingArticles');
+const {
+  FIRST_BATCH_PAGES,
+  HELD_ARTICLE_INSTANCE_ID,
+  LIBRARY_INSTANCE_ID,
+  FIFTH_PUBLISHED_ARTICLE,
+  SIXTH_PUBLISHED_ARTICLE,
+  buildUsefulThinkingPageOrder
+} = require('../lib/usefulThinkingSeed');
 
 const BCRYPT_ROUNDS = 12;
 
@@ -811,44 +818,17 @@ async function seed() {
   // given, unchanged.
   {
     const { rows: existingArticle1 } = await db.query(
-      "SELECT slug FROM pages WHERE slug = 'being-certain-isnt-the-same-as-being-right'"
+      'SELECT slug FROM pages WHERE slug = $1',
+      [FIRST_BATCH_PAGES[0].slug]
     );
     const { rows: utRows } = await db.query("SELECT id FROM pages WHERE slug = 'useful-thinking'");
     if (existingArticle1.length === 0 && utRows.length > 0) {
-      const { rows: orderRows } = await db.query('SELECT section_order FROM pages');
-      const used = new Set();
-      for (const r of orderRows) {
-        if (Array.isArray(r.section_order)) r.section_order.forEach((s) => used.add(s));
-      }
-      const { rows: prefixRows } = await db.query(
-        "SELECT DISTINCT split_part(section_key, '.', 1) AS instance_id FROM content"
-      );
-      prefixRows.forEach((r) => used.add(r.instance_id));
+      const [a1, a2, a3, a4] = FIRST_BATCH_PAGES.map((p) => p.instanceId);
+      const libId = LIBRARY_INSTANCE_ID;
+      const ODQ_RELATED = ['Owner Dependency Quiz', '/owner-dependency-quiz'];
+      const NO_RELATED = ['', ''];
 
-      const allocate = (tpl) => {
-        if (!used.has(tpl)) { used.add(tpl); return tpl; }
-        for (let n = 2; n <= 99; n++) {
-          const id = `${tpl}__${n}`;
-          if (!used.has(id)) { used.add(id); return id; }
-        }
-        return null;
-      };
-
-      // Reserve article__5 for the held Reverse Economy of Scale piece
-      // before allocating the four published ones, so `allocate` skips
-      // straight past it.
-      used.add('article__5');
-      const a1 = allocate('article');
-      const a2 = allocate('article');
-      const a3 = allocate('article');
-      const a4 = allocate('article');
-      const libId = allocate('utlibrary');
-
-      if (a1 && a2 && a3 && a4 && libId) {
-        const ODQ_RELATED = ['Owner Dependency Quiz', '/owner-dependency-quiz'];
-        const NO_RELATED = ['', ''];
-
-        const articleRows = [
+      const articleRows = [
           // Article 1 — Being Certain Isn't the Same as Being Right
           [`${a1}.label`, 'USEFUL THINKING'],
           [`${a1}.heading`, "Being Certain Isn't the Same as Being Right"],
@@ -934,10 +914,10 @@ async function seed() {
           // for CMS visibility/editing only; no page row, so no route, no
           // library entry and no CGR link exist yet. See hold instruction
           // above and lib/usefulThinkingArticles.js.
-          [`article__5.label`, 'USEFUL THINKING'],
-          [`article__5.heading`, 'The Reverse Economy of Scale'],
-          [`article__5.index_summary`, "More turnover was supposed to make things easier. It didn't. Growth just meant Tom found out about problems later, and later meant more expensive. On why bigger only works if the structure underneath gets bigger too."],
-          [`article__5.body`, [
+          [`${HELD_ARTICLE_INSTANCE_ID}.label`, 'USEFUL THINKING'],
+          [`${HELD_ARTICLE_INSTANCE_ID}.heading`, 'The Reverse Economy of Scale'],
+          [`${HELD_ARTICLE_INSTANCE_ID}.index_summary`, "More turnover was supposed to make things easier. It didn't. Growth just meant Tom found out about problems later, and later meant more expensive. On why bigger only works if the structure underneath gets bigger too."],
+          [`${HELD_ARTICLE_INSTANCE_ID}.body`, [
             '<p>The reverse economy of scale.</p>',
             "<p>As my business grew, I assumed more sales and more people would naturally make things easier. It didn't work like that.</p>",
             "<p>The further I got from the front line, the less I actually saw. Problems I'd have spotted immediately in the early days started slipping through the cracks instead. By the time some of them reached me, they'd already cost money, time, or trust.</p>",
@@ -945,54 +925,40 @@ async function seed() {
             "<p>I've heard the same thing from other owners since. One was frustrated that despite growing turnover, things felt harder than ever to manage, customer issues taking longer to surface, small mistakes turning expensive, constantly pulled into firefighting. It wasn't a new problem to me. It was mine, just wearing someone else's name.</p>",
             '<p>Growth does not remove pressure on the owner unless the structure underneath grows with it. Otherwise the business gets bigger, and the owner stays trapped in the middle of everything.</p>'
           ].join('')],
-          [`article__5.related_text`, NO_RELATED[0]],
-          [`article__5.related_link`, NO_RELATED[1]],
+          [`${HELD_ARTICLE_INSTANCE_ID}.related_text`, NO_RELATED[0]],
+          [`${HELD_ARTICLE_INSTANCE_ID}.related_link`, NO_RELATED[1]],
 
           // Library list section on /useful-thinking
           [`${libId}.label`, 'USEFUL THINKING'],
           [`${libId}.heading`, 'Stories from twenty years of running businesses.']
-        ];
+      ];
 
-        for (const [key, value] of articleRows) {
-          await db.query(
-            'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
-            [key, value]
-          );
-        }
+      for (const [key, value] of articleRows) {
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [key, value]
+        );
+      }
 
-        const { rows: maxSortRows } = await db.query('SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM pages');
-        let nextSort = maxSortRows[0].max_sort + 1;
+      const { rows: maxSortRows } = await db.query('SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM pages');
+      let nextSort = maxSortRows[0].max_sort + 1;
 
         // Slugs come from the manifest (single source of truth for
         // routing); titles are the handover's "Final title" for each,
         // matching the .heading content value set above.
-        const articleTitlesByInstance = {
-          [a1]: "Being Certain Isn't the Same as Being Right",
-          [a2]: 'The Customer Who Messaged Me at 4am',
-          [a3]: "You Don't Get to Decide When You've Made Things Right",
-          [a4]: 'The Tightrope Between Staff Loyalty and Damage Control'
-        };
-        // Scoped to exactly the four instance IDs this migration allocates
-        // above (a1-a4), not the full current manifest — UT_ARTICLES has
-        // since grown a 5th (and will grow further) entry with its own
-        // dedicated migration block further down, and mapping over the
-        // whole array here would look up a title this block never defined.
-        const articlePages = UT_ARTICLES
-          .filter((a) => [a1, a2, a3, a4].includes(a.instanceId))
-          .map((a) => [a.instanceId, a.slug, articleTitlesByInstance[a.instanceId]]);
-        for (const [instanceId, slug, title] of articlePages) {
-          await db.query(
-            `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav, meta_description)
-             VALUES ($1, $2, $3, $4::jsonb, '[]'::jsonb, '[]'::jsonb, false, $5)
-             ON CONFLICT (slug) DO NOTHING`,
-            [slug, title, nextSort, JSON.stringify([instanceId]), (function () {
-              const key = `${instanceId}.index_summary`;
-              const found = articleRows.find((r) => r[0] === key);
-              return found ? found[1] : '';
-            })()]
-          );
-          nextSort += 1;
-        }
+      for (const { instanceId, slug, title } of FIRST_BATCH_PAGES) {
+        await db.query(
+          `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav, meta_description)
+           VALUES ($1, $2, $3, $4::jsonb, '[]'::jsonb, '[]'::jsonb, false, $5)
+           ON CONFLICT (slug) DO NOTHING`,
+          [slug, title, nextSort, JSON.stringify([instanceId]), (function () {
+            const key = `${instanceId}.index_summary`;
+            const found = articleRows.find((r) => r[0] === key);
+            return found ? found[1] : '';
+          })()]
+        );
+        nextSort += 1;
+      }
 
         // Restructure the useful-thinking page: drop the now-redundant
         // approach__2 three-up (Cash Flow / Fixed Overheads / Owner
@@ -1001,24 +967,18 @@ async function seed() {
         // place, right before the closing assessment/quiz block. Content
         // rows for approach__2 are untouched and stay recoverable via the
         // existing "Reuse existing" add-section flow if ever wanted back.
-        const { rows: utPageRows } = await db.query("SELECT section_order FROM pages WHERE slug = 'useful-thinking'");
-        const utOrder = Array.isArray(utPageRows[0]?.section_order) ? utPageRows[0].section_order : [];
-        const newUtOrder = [];
-        for (const iid of utOrder) {
-          if (iid === 'approach__2') continue;
-          if (iid === 'assessment') newUtOrder.push(libId);
-          newUtOrder.push(iid);
-        }
-        if (!newUtOrder.includes(libId)) newUtOrder.push(libId);
-        await db.query(
-          'UPDATE pages SET section_order = $1::jsonb WHERE slug = $2',
-          [JSON.stringify(newUtOrder), 'useful-thinking']
-        );
+        // If a previous run already inserted the library instance before
+        // failing elsewhere, strip any existing copy first so a rerun
+        // re-inserts it once in the right place rather than duplicating it.
+      const { rows: utPageRows } = await db.query("SELECT section_order FROM pages WHERE slug = 'useful-thinking'");
+      const utOrder = Array.isArray(utPageRows[0]?.section_order) ? utPageRows[0].section_order : [];
+      const newUtOrder = buildUsefulThinkingPageOrder(utOrder, libId);
+      await db.query(
+        'UPDATE pages SET section_order = $1::jsonb WHERE slug = $2',
+        [JSON.stringify(newUtOrder), 'useful-thinking']
+      );
 
-        console.log(`Useful Thinking: 4 articles published (${a1}, ${a2}, ${a3}, ${a4}), 1 held (article__5), library list (${libId}) added to /useful-thinking.`);
-      } else {
-        console.log('Useful Thinking articles migration skipped: could not allocate instance IDs.');
-      }
+      console.log(`Useful Thinking: 4 articles published (${a1}, ${a2}, ${a3}, ${a4}), 1 held (${HELD_ARTICLE_INSTANCE_ID}), library list (${libId}) added to /useful-thinking.`);
     }
   }
 
@@ -1104,30 +1064,12 @@ async function seed() {
   // Idempotent: guarded on the page not existing yet.
   {
     const { rows: existingArticle6 } = await db.query(
-      "SELECT slug FROM pages WHERE slug = 'a-profitable-job-is-not-necessarily-good-business'"
+      'SELECT slug FROM pages WHERE slug = $1',
+      [FIFTH_PUBLISHED_ARTICLE.slug]
     );
     if (existingArticle6.length === 0) {
-      const { rows: orderRows6 } = await db.query('SELECT section_order FROM pages');
-      const used6 = new Set();
-      for (const r of orderRows6) {
-        if (Array.isArray(r.section_order)) r.section_order.forEach((s) => used6.add(s));
-      }
-      const { rows: prefixRows6 } = await db.query(
-        "SELECT DISTINCT split_part(section_key, '.', 1) AS instance_id FROM content"
-      );
-      prefixRows6.forEach((r) => used6.add(r.instance_id));
-      const allocate6 = (tpl) => {
-        if (!used6.has(tpl)) return tpl;
-        for (let n = 2; n <= 99; n++) {
-          const id = `${tpl}__${n}`;
-          if (!used6.has(id)) return id;
-        }
-        return null;
-      };
-      const a6 = allocate6('article');
-
-      if (a6) {
-        const bodyParagraphs = [
+      const a6 = FIFTH_PUBLISHED_ARTICLE.instanceId;
+      const bodyParagraphs = [
           'We thought we had landed a licence to print money.',
           'A shipping company operating from Falmouth Docks needed its Romanian crew transported to and from Luton Airport for shift changes.',
           'Sometimes we would have one vehicle going up and another coming back. Other times it could be four going up and three returning. Long-distance fares, passengers travelling in both directions and very little empty mileage.',
@@ -1170,36 +1112,33 @@ async function seed() {
           'A profitable job is not necessarily good business if you have to finance the customer for nearly a year.'
         ].map((p) => `<p>${p}</p>`).join('');
 
-        const indexSummary = 'We thought we had landed a licence to print money. Getting paid for it was another matter entirely.';
+      const indexSummary = 'We thought we had landed a licence to print money. Getting paid for it was another matter entirely.';
 
-        const a6Rows = [
-          [`${a6}.label`, 'USEFUL THINKING'],
-          [`${a6}.heading`, 'A Profitable Job Is Not Necessarily Good Business'],
-          [`${a6}.index_summary`, indexSummary],
-          [`${a6}.body`, bodyParagraphs],
-          [`${a6}.related_text`, ''],
-          [`${a6}.related_link`, ''],
-          [`${a6}.image`, '/img/useful-thinking/a-profitable-job-hero.jpg']
-        ];
-        for (const [key, value] of a6Rows) {
-          await db.query(
-            'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
-            [key, value]
-          );
-        }
-
-        const { rows: maxSortRows6 } = await db.query('SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM pages');
+      const a6Rows = [
+        [`${a6}.label`, 'USEFUL THINKING'],
+        [`${a6}.heading`, 'A Profitable Job Is Not Necessarily Good Business'],
+        [`${a6}.index_summary`, indexSummary],
+        [`${a6}.body`, bodyParagraphs],
+        [`${a6}.related_text`, ''],
+        [`${a6}.related_link`, ''],
+        [`${a6}.image`, '/img/useful-thinking/a-profitable-job-hero.jpg']
+      ];
+      for (const [key, value] of a6Rows) {
         await db.query(
-          `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav, meta_description, og_image)
-           VALUES ('a-profitable-job-is-not-necessarily-good-business', 'A Profitable Job Is Not Necessarily Good Business', $1, $2::jsonb, '[]'::jsonb, '[]'::jsonb, false, $3, $4)
-           ON CONFLICT (slug) DO NOTHING`,
-          [maxSortRows6[0].max_sort + 1, JSON.stringify([a6]), indexSummary, 'https://www.arringtonconsultancy.com/img/useful-thinking/a-profitable-job-og.jpg']
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [key, value]
         );
-
-        console.log(`Useful Thinking: 5th article published (${a6}, a-profitable-job-is-not-necessarily-good-business).`);
-      } else {
-        console.log('Useful Thinking 5th article migration skipped: could not allocate an instance ID.');
       }
+
+      const { rows: maxSortRows6 } = await db.query('SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM pages');
+      await db.query(
+        `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav, meta_description, og_image)
+         VALUES ($1, $2, $3, $4::jsonb, '[]'::jsonb, '[]'::jsonb, false, $5, $6)
+         ON CONFLICT (slug) DO NOTHING`,
+        [FIFTH_PUBLISHED_ARTICLE.slug, FIFTH_PUBLISHED_ARTICLE.title, maxSortRows6[0].max_sort + 1, JSON.stringify([a6]), indexSummary, 'https://www.arringtonconsultancy.com/img/useful-thinking/a-profitable-job-og.jpg']
+      );
+
+      console.log(`Useful Thinking: 5th article published (${a6}, ${FIFTH_PUBLISHED_ARTICLE.slug}).`);
     }
   }
 
@@ -1217,30 +1156,12 @@ async function seed() {
   // page not existing yet.
   {
     const { rows: existingArticle7 } = await db.query(
-      "SELECT slug FROM pages WHERE slug = 'every-rule-changes-behaviour'"
+      'SELECT slug FROM pages WHERE slug = $1',
+      [SIXTH_PUBLISHED_ARTICLE.slug]
     );
     if (existingArticle7.length === 0) {
-      const { rows: orderRows7 } = await db.query('SELECT section_order FROM pages');
-      const used7 = new Set();
-      for (const r of orderRows7) {
-        if (Array.isArray(r.section_order)) r.section_order.forEach((s) => used7.add(s));
-      }
-      const { rows: prefixRows7 } = await db.query(
-        "SELECT DISTINCT split_part(section_key, '.', 1) AS instance_id FROM content"
-      );
-      prefixRows7.forEach((r) => used7.add(r.instance_id));
-      const allocate7 = (tpl) => {
-        if (!used7.has(tpl)) return tpl;
-        for (let n = 2; n <= 99; n++) {
-          const id = `${tpl}__${n}`;
-          if (!used7.has(id)) return id;
-        }
-        return null;
-      };
-      const a7 = allocate7('article');
-
-      if (a7) {
-        const bodyParagraphs7 = [
+      const a7 = SIXTH_PUBLISHED_ARTICLE.instanceId;
+      const bodyParagraphs7 = [
           'When we took over the taxi company, out of town work operated on a simple first in, first out basis.',
           'It appeared fair. The earlier a driver started, the higher they moved up the list and the better their chance of receiving a valuable long distance journey.',
           'The drivers soon responded exactly as the system encouraged them to.',
@@ -1267,36 +1188,33 @@ async function seed() {
           'Sometimes the behaviour it creates becomes the next problem the business has to solve.'
         ].map((p) => `<p>${p}</p>`).join('');
 
-        const indexSummary7 = "Four attempts to fix a taxi rota, and four new problems created in the process. On why there's no perfect rule, only a balance worth re-watching.";
+      const indexSummary7 = "Four attempts to fix a taxi rota, and four new problems created in the process. On why there's no perfect rule, only a balance worth re-watching.";
 
-        const a7Rows = [
-          [`${a7}.label`, 'USEFUL THINKING'],
-          [`${a7}.heading`, 'Every Rule Changes Behaviour'],
-          [`${a7}.index_summary`, indexSummary7],
-          [`${a7}.body`, bodyParagraphs7],
-          [`${a7}.related_text`, ''],
-          [`${a7}.related_link`, ''],
-          [`${a7}.image`, '']
-        ];
-        for (const [key, value] of a7Rows) {
-          await db.query(
-            'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
-            [key, value]
-          );
-        }
-
-        const { rows: maxSortRows7 } = await db.query('SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM pages');
+      const a7Rows = [
+        [`${a7}.label`, 'USEFUL THINKING'],
+        [`${a7}.heading`, 'Every Rule Changes Behaviour'],
+        [`${a7}.index_summary`, indexSummary7],
+        [`${a7}.body`, bodyParagraphs7],
+        [`${a7}.related_text`, ''],
+        [`${a7}.related_link`, ''],
+        [`${a7}.image`, '']
+      ];
+      for (const [key, value] of a7Rows) {
         await db.query(
-          `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav, meta_description)
-           VALUES ('every-rule-changes-behaviour', 'Every Rule Changes Behaviour', $1, $2::jsonb, '[]'::jsonb, '[]'::jsonb, false, $3)
-           ON CONFLICT (slug) DO NOTHING`,
-          [maxSortRows7[0].max_sort + 1, JSON.stringify([a7]), indexSummary7]
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [key, value]
         );
-
-        console.log(`Useful Thinking: 6th article published (${a7}, every-rule-changes-behaviour).`);
-      } else {
-        console.log('Useful Thinking 6th article migration skipped: could not allocate an instance ID.');
       }
+
+      const { rows: maxSortRows7 } = await db.query('SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM pages');
+      await db.query(
+        `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav, meta_description)
+         VALUES ($1, $2, $3, $4::jsonb, '[]'::jsonb, '[]'::jsonb, false, $5)
+         ON CONFLICT (slug) DO NOTHING`,
+        [SIXTH_PUBLISHED_ARTICLE.slug, SIXTH_PUBLISHED_ARTICLE.title, maxSortRows7[0].max_sort + 1, JSON.stringify([a7]), indexSummary7]
+      );
+
+      console.log(`Useful Thinking: 6th article published (${a7}, ${SIXTH_PUBLISHED_ARTICLE.slug}).`);
     }
   }
 
