@@ -669,7 +669,7 @@ async function seed() {
           );
         }
 
-        const pageOrder = [heroId, offerId, startId, whyId, areasId, examplesId, howId, wontId, closingId];
+        const pageOrder = [offerId, heroId, startId, whyId, areasId, examplesId, howId, wontId, closingId];
 
         // Position right after What We Do when it exists, shifting later
         // pages' sort_order up by one. If What We Do does not exist yet
@@ -805,28 +805,27 @@ async function seed() {
     }
   }
 
-  // Migration: move the £999 bespoke website offer section to position 2
-  // (immediately after the hero) on the Websites and AI page. The previous
-  // migration placed it just before the closing intervention, but commercially
-  // it belongs at the top as the primary hook. Idempotent: guarded on the
-  // offer section not already being at index 1 in the page's section_order.
+  // Migration: promote the £999 bespoke website offer section to position 1
+  // (the very first section, before the hero) on the Websites and AI page.
+  // It is the primary commercial hook and must be the headline. Idempotent:
+  // guarded on the offer section not already being at index 0.
   {
     const { rows: wsRows } = await db.query(
       "SELECT section_order FROM pages WHERE slug = 'websites-and-ai'"
     );
     if (wsRows.length > 0) {
       const pageOrder = Array.isArray(wsRows[0].section_order) ? wsRows[0].section_order : [];
-      if (pageOrder.length >= 2) {
+      if (pageOrder.length >= 1) {
         const baseOf = (id) => {
           const m = /^([a-z0-9]+)(?:__(\d+))?$/.exec(id || '');
           return m ? m[1] : null;
         };
 
-        // Check if the section at index 1 is already the bespoke offer.
-        const idx1 = pageOrder[1];
+        // Check if the section at index 0 is already the bespoke offer.
+        const idx0 = pageOrder[0];
         const { rows: headingRows } = await db.query(
           'SELECT content FROM content WHERE section_key = $1',
-          [`${idx1}.heading`]
+          [`${idx0}.heading`]
         );
         const alreadyMoved = headingRows.length > 0 &&
           headingRows[0].content === 'A genuinely bespoke website \u2014 from \u00a3999';
@@ -842,14 +841,14 @@ async function seed() {
             .find((iid) => pageOrder.includes(iid) && baseOf(iid) === 'biography');
 
           if (offerId) {
-            // Remove from current position, insert at index 1 (after hero).
+            // Remove from current position, place at index 0.
             const without = pageOrder.filter((id) => id !== offerId);
-            const reordered = [without[0], offerId, ...without.slice(1)];
+            const reordered = [offerId, ...without];
             await db.query(
               'UPDATE pages SET section_order = $1::jsonb WHERE slug = $2',
               [JSON.stringify(reordered), 'websites-and-ai']
             );
-            console.log(`Websites and AI: moved bespoke offer (${offerId}) to position 2.`);
+            console.log(`Websites and AI: promoted bespoke offer (${offerId}) to position 1 (headline).`);
           }
         }
       }
