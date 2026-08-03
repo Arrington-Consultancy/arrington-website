@@ -67,6 +67,8 @@
         .cgr-consent { display: flex; gap: 0.75rem; align-items: flex-start; margin-bottom: 1rem; }
         .cgr-consent input[type="checkbox"] { margin-top: 0.3rem; flex-shrink: 0; width: 18px; height: 18px; }
         .cgr-consent label { font-size: 0.92rem; color: var(--text); font-weight: 400; }
+        .cgr-privacy-note { font-size: 0.82rem; color: var(--text-muted); margin: 0 0 1rem; }
+        .cgr-privacy-note a { color: var(--text-muted); text-underline-offset: 0.16em; }
 
         .cgr-nav { display: flex; justify-content: flex-end; align-items: center; margin-top: 1.75rem; gap: 1rem; }
         .cgr-nav.cgr-nav-between { justify-content: space-between; }
@@ -152,6 +154,7 @@
                     <input type="checkbox" id="cgr-consent-contact">
                     <label for="cgr-consent-contact">Tom Arrington may contact me about what this review finds.</label>
                 </div>
+                <p class="cgr-privacy-note">We use your details to produce and send the review. Read our <a href="/privacy">Privacy</a> page.</p>
 
                 <p class="cgr-field-error" id="cgr-intake-error">Please fill in your name, company, location and a valid email address.</p>
                 <div class="cgr-nav">

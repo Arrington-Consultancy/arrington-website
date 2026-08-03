@@ -980,6 +980,17 @@ async function seed() {
       );
     };
 
+    const seedImageIfMissing = async (key, file, mime) => {
+      const filePath = path.join(__dirname, '..', file);
+      if (!fs.existsSync(filePath)) return;
+      await db.query(
+        `INSERT INTO images (image_key, data, mime_type)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (image_key) DO NOTHING`,
+        [key, fs.readFileSync(filePath), mime]
+      );
+    };
+
     if (waRows.length === 0) {
       const used = await collectUsedIds();
       const allocate = makeAllocator(used);
@@ -1088,18 +1099,8 @@ async function seed() {
         await upsert(`${heroId}.cta_link`, '');
         await upsert(`${heroId}.whatsapp`, '');
 
-        const seedHeroImageIfMissing = async (key, file, mime) => {
-          const filePath = path.join(__dirname, '..', file);
-          if (!fs.existsSync(filePath)) return;
-          await db.query(
-            `INSERT INTO images (image_key, data, mime_type)
-             VALUES ($1, $2, $3)
-             ON CONFLICT (image_key) DO NOTHING`,
-            [key, fs.readFileSync(filePath), mime]
-          );
-        };
-        await seedHeroImageIfMissing(`headshot__${heroId}`, 'hero-websites-and-ai.jpg', 'image/jpeg');
-        await seedHeroImageIfMissing(`headshot__${heroId}__webp`, 'hero-websites-and-ai.webp', 'image/webp');
+        await seedImageIfMissing(`headshot__${heroId}`, 'hero-websites-and-ai.jpg', 'image/jpeg');
+        await seedImageIfMissing(`headshot__${heroId}__webp`, 'hero-websites-and-ai.webp', 'image/webp');
       }
 
       if (wsaId) {
@@ -1121,6 +1122,9 @@ async function seed() {
         await upsert(`${wsaId}.outcome`, '');
         await upsert(`${wsaId}.button_text`, 'View the World Student Advisors website');
         await upsert(`${wsaId}.button_href`, 'https://www.worldstudentadvisors.com/');
+        await seedImageIfMissing(`screenshot__${wsaId}__1`, 'public/img/wsa/wsa-homepage.jpg', 'image/jpeg');
+        await seedImageIfMissing(`screenshot__${wsaId}__2`, 'public/img/wsa/wsa-study-options.jpg', 'image/jpeg');
+        await seedImageIfMissing(`screenshot__${wsaId}__3`, 'public/img/wsa/wsa-contact.jpg', 'image/jpeg');
       }
 
       if (includesId) {
@@ -1178,6 +1182,19 @@ async function seed() {
       await upsert('wai.contact_body', 'You do not need a specification or wireframes.<br><br>Tell us what you are trying to achieve and we will tell you what we would do and why.');
       await upsert('wai.contact_message_placeholder', 'Tell us what you want the website to do');
       await upsert('wai.contact_submit_text', 'Send enquiry');
+
+      const waiMetaTitle = 'A Proper Business Website for £999 | Arrington Consultancy';
+      const waiMetaDescription = 'A genuinely bespoke business website for £999, built around the way your business actually operates. See the World Student Advisors website we built for the same fixed price.';
+      await db.query(
+        `UPDATE pages
+         SET meta_title = $1,
+             meta_description = $2,
+             og_title = $1,
+             og_description = $2,
+             canonical_url = $3
+         WHERE slug = 'websites-and-ai'`,
+        [waiMetaTitle, waiMetaDescription, 'https://www.arringtonconsultancy.com/websites-and-ai']
+      );
 
       const desiredOrder = [heroId, wsaId, includesId, processId, whyId].filter(Boolean);
       const uniqueDesiredOrder = [...new Set(desiredOrder)];
@@ -1712,21 +1729,25 @@ async function seed() {
   }
   console.log('Images seeded.');
 
-  // Migration: swap the old compact white logo for the Drive-sourced gold
-  // stacked Arrington Consultancy lockup. Only replaces the stored image if
-  // it still matches the exact old seed asset, so a later CMS upload is
-  // preserved.
+  // Migration: swap known old logo assets for the higher-resolution gold
+  // Arrington Consultancy lockup. Only replaces exact known hashes, so a
+  // later CMS upload is preserved.
   {
     const logoPath = path.join(__dirname, '..', 'logo.png');
     const { rows } = await db.query('SELECT data FROM images WHERE image_key = $1', ['logo']);
     if (rows.length > 0 && fs.existsSync(logoPath)) {
       const currentMd5 = crypto.createHash('md5').update(rows[0].data).digest('hex');
-      if (currentMd5 === '1b59d855877e5ceeea549f0b74ef1761') {
+      const replaceableLogoMd5s = new Set([
+        '1b59d855877e5ceeea549f0b74ef1761',
+        '2d02b99128fe3d33a8d0d6305e266bbc',
+        '4855292a9ee382f1d708e3f5f9745200'
+      ]);
+      if (replaceableLogoMd5s.has(currentMd5)) {
         await db.query(
           'UPDATE images SET data = $1, mime_type = $2 WHERE image_key = $3',
           [fs.readFileSync(logoPath), 'image/png', 'logo']
         );
-        console.log('Swapped logo to the Drive-sourced gold lockup.');
+        console.log('Swapped logo to the higher-resolution gold lockup.');
       }
     }
   }

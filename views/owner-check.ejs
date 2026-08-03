@@ -237,6 +237,16 @@
         .oc-next h2 { font-size: 1.9rem; }
         .oc-next .oc-label { text-align: center; }
         .oc-next p { max-width: 520px; margin: 0 auto 2rem; font-size: 1.05rem; }
+        .oc-privacy-link {
+            text-align: center;
+            padding: 0 1.5rem 2rem;
+        }
+        .oc-privacy-link a {
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            text-decoration: none;
+        }
+        .oc-privacy-link a:hover, .oc-privacy-link a:focus-visible { color: var(--accent); }
     </style>
 </head>
 <body>
@@ -276,7 +286,7 @@
         <div id="checks">
             <div class="oc-checks-head">
                 <p class="oc-label">Choose a Check</p>
-                <h2>Three checks to start with</h2>
+                <h2>Two checks to start with</h2>
             </div>
 
             <div class="oc-checks-list">
@@ -295,21 +305,6 @@
                         <li>A dependency score you can act on immediately</li>
                     </ul>
                     <a href="/owner-dependency-quiz" class="btn btn-primary">Start Owner Dependency Quiz</a>
-                </article>
-
-                <article class="check-card">
-                    <div class="check-card-head">
-                        <h2>Market Ready Test</h2>
-                        <span class="check-card-time">Around 5 minutes</span>
-                    </div>
-                    <p class="check-card-desc">How ready is your business for a new owner?</p>
-                    <p class="check-card-learn">What you'll learn</p>
-                    <ul>
-                        <li>A New Owner Ready Score out of 100</li>
-                        <li>What may make a buyer hesitate before making an offer</li>
-                        <li>The priorities worth strengthening before you approach the market</li>
-                    </ul>
-                    <a href="/market-ready-test" class="btn btn-primary">Start Market Ready Test</a>
                 </article>
 
                 <article class="check-card">
@@ -337,5 +332,8 @@
             <a href="/book-a-30-minute-conversation" class="btn btn-outline">Talk to Us</a>
         </div>
     </main>
+    <footer class="oc-privacy-link">
+        <a href="/privacy">Privacy</a>
+    </footer>
 </body>
 </html>

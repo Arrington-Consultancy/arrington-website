@@ -366,6 +366,8 @@
         .odr-email-status { margin: 0.75rem 0 0; font-size: 0.88rem; }
         .odr-email-status.is-success { color: var(--accent); }
         .odr-email-status.is-error { color: var(--odr-red); }
+        .odr-privacy-note { font-size: 0.82rem; color: var(--text-muted); margin: 0.75rem 0 0; }
+        .odr-privacy-note a { color: var(--text-muted); text-underline-offset: 0.16em; }
 
         .odr-cta {
             margin-top: 2.5rem;
@@ -470,6 +472,7 @@
                         <input type="email" id="odr-email-input" name="email" placeholder="you@business.co.uk" maxlength="255" required aria-label="Email address">
                         <button type="submit" class="btn btn-outline" id="odr-email-submit">Send my result</button>
                     </div>
+                    <p class="odr-privacy-note">We use your email to send your result. Read our <a href="/privacy">Privacy</a> page.</p>
                     <p class="odr-email-status" id="odr-email-status" role="status" hidden></p>
                 </form>
             </div>

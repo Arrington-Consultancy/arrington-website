@@ -362,26 +362,27 @@ app.get('/sitemap.xml', async (req, res, next) => {
       }
       return `  <url><loc>${escapeXml(loc)}</loc>${lastmod}</url>`;
     }));
-    // Owner Check, Owner Dependency Quiz and Commercial Gaps Review aren't
-    // rows in `pages` (Owner Check is a synthetic nav entry, the other two
-    // are standalone interactive tools, not CMS content), so each needs its
-    // own explicit entry. Market Ready Test stays out of this list until it
-    // is approved for launch (unpublished — see robots.txt above).
+    // Owner Check, Owner Dependency Quiz, Commercial Gaps Review and Privacy
+    // aren't rows in `pages` (Owner Check is a synthetic nav entry, the other
+    // three are standalone routes, not CMS content), so each needs its own
+    // explicit entry. Market Ready Test stays out of this list until it is
+    // approved for launch (unpublished, see robots.txt above).
     //
     // Their copy lives in static EJS templates, not the database, so there's
     // no updated_at to read a real lastmod from. ASSESSMENT_ROUTE_LASTMOD
     // records the date each route's on-page copy last meaningfully changed
     // (01/08/2026: the SEO metadata added to all three counts as such a
     // change) rather than leaving lastmod off entirely. Bump the relevant
-    // date here the next time one of these three views' visible copy
+    // date here the next time one of these standalone views' visible copy
     // changes — it is not tied to unrelated deploys, so it won't drift on
     // its own.
     const ASSESSMENT_ROUTE_LASTMOD = {
       'owner-check': '2026-08-01',
       'owner-dependency-quiz': '2026-08-01',
-      'commercial-gaps-review': '2026-08-01'
+      'commercial-gaps-review': '2026-08-01',
+      'privacy': '2026-08-03'
     };
-    for (const slug of ['owner-check', 'owner-dependency-quiz', 'commercial-gaps-review']) {
+    for (const slug of ['owner-check', 'owner-dependency-quiz', 'commercial-gaps-review', 'privacy']) {
       urlEntries.push(`  <url><loc>${escapeXml(`${base}/${slug}`)}</loc><lastmod>${ASSESSMENT_ROUTE_LASTMOD[slug]}</lastmod></url>`);
     }
     res.type('application/xml').send(
@@ -712,6 +713,14 @@ async function renderPage(req, res, next, pageSlug) {
       ? sectionOrder
       : sectionOrder.filter(s => !hiddenSections.includes(s));
 
+    const screenshotKeys = new Set();
+    if (sectionOrder.some(iid => instanceTemplates[iid] === 'casestudy2')) {
+      const { rows: screenshotRows } = await db.query(
+        "SELECT image_key FROM images WHERE image_key LIKE 'screenshot__%'"
+      );
+      screenshotRows.forEach(row => screenshotKeys.add(row.image_key));
+    }
+
     // Resolve SEO metadata. Per-page columns (on the pages row) override the
     // site-wide defaults held in the seo.* content keys; a blank per-page
     // field falls back to the default. Canonical/OG URL default to the
@@ -784,6 +793,7 @@ async function renderPage(req, res, next, pageSlug) {
       currentPage, allPages, navPages, seo, caseStudyAnchors, googleReviews,
       canEdit, capabilities, showAdminPanel,
       pageContact,
+      screenshotKeys,
       // Only the useful-thinking page's `utlibrary` template reads this,
       // but the list is cheap (no DB query, just the manifest) so it's
       // simplest to always pass it rather than special-case the query.
@@ -799,6 +809,24 @@ async function renderPage(req, res, next, pageSlug) {
 
 // Main page
 app.get('/', (req, res, next) => renderPage(req, res, next, 'main'));
+
+app.get('/privacy', async (req, res, next) => {
+  try {
+    const { rows: themeRows } = await db.query(
+      "SELECT content FROM content WHERE section_key = 'site.theme'"
+    );
+    const activeTheme = (themeRows[0] && themeRows[0].content) || 'dark';
+    const theme = themes[activeTheme] || themes.dark;
+    res.render('privacy', {
+      theme,
+      activeTheme,
+      nonce: res.locals.nonce,
+      ga4Id: process.env.GA4_MEASUREMENT_ID || ''
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // Useful Thinking articles — nested URL, registered ahead of the generic
 // /:slug catch-all so it never falls through. The article is still just a

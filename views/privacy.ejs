@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy | Arrington Consultancy</title>
+    <meta name="description" content="How Arrington Consultancy uses information submitted through this website.">
+    <link rel="canonical" href="https://www.arringtonconsultancy.com/privacy">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Privacy | Arrington Consultancy">
+    <meta property="og:description" content="How Arrington Consultancy uses information submitted through this website.">
+    <meta property="og:url" content="https://www.arringtonconsultancy.com/privacy">
+    <meta property="og:image" content="https://www.arringtonconsultancy.com/img/logo">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Privacy | Arrington Consultancy">
+    <meta name="twitter:description" content="How Arrington Consultancy uses information submitted through this website.">
+    <meta name="twitter:image" content="https://www.arringtonconsultancy.com/img/logo">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" href="/icons/icon-32.png" type="image/png" sizes="32x32">
+    <link rel="icon" href="/icons/icon-16.png" type="image/png" sizes="16x16">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18129914078"></script>
+    <script nonce="<%= nonce %>">
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'AW-18129914078');
+        <% if (ga4Id) { %>
+        gtag('config', '<%= ga4Id %>');
+        <% } %>
+    </script>
+    <style nonce="<%= nonce %>">
+        :root {
+            <% for (const [prop, val] of Object.entries(theme.vars)) { %>
+            <%= prop %>: <%= val %>;
+            <% } %>
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: 'DM Sans', sans-serif;
+            background: var(--black);
+            color: var(--text);
+            line-height: 1.65;
+        }
+        header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+        header img { height: 32px; width: auto; }
+        header a { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; }
+        header a:hover, header a:focus-visible { color: var(--accent); }
+        main {
+            width: min(760px, calc(100% - 2rem));
+            margin: 0 auto;
+            padding: 4rem 0 5rem;
+        }
+        .privacy-label {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            font-weight: 700;
+            color: var(--accent);
+            margin: 0 0 1rem;
+        }
+        h1, h2 {
+            font-family: 'DM Serif Display', serif;
+            font-weight: 400;
+            color: var(--text-bright);
+            line-height: 1.2;
+        }
+        h1 { font-size: clamp(2.1rem, 7vw, 3.4rem); margin: 0 0 1.25rem; }
+        h2 { font-size: 1.45rem; margin: 2.4rem 0 0.8rem; }
+        p, li { color: var(--text); }
+        ul { padding-left: 1.2rem; }
+        a { color: var(--accent); }
+        .privacy-note {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-top: 2.5rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="/" aria-label="Arrington Consultancy home"><img src="/img/logo" alt="Arrington Business Consultancy"></a>
+        <a href="/">Back to site</a>
+    </header>
+
+    <main>
+        <p class="privacy-label">Privacy</p>
+        <h1>How we use information from this website</h1>
+        <p>This page explains how Arrington Business Consultancy Ltd, trading as Arrington Consultancy, uses information submitted through this website.</p>
+
+        <h2>What we collect</h2>
+        <p>When you use a form on this website, we may collect:</p>
+        <ul>
+            <li>your name</li>
+            <li>your email address</li>
+            <li>your phone number, where you provide one</li>
+            <li>your message or answers to a website tool</li>
+            <li>the best time to contact you, where you provide one</li>
+        </ul>
+
+        <h2>How we use it</h2>
+        <p>We use this information to respond to enquiries, arrange conversations, provide information or services you have requested, and understand whether Arrington Consultancy may be able to help.</p>
+        <p>The website also includes Google advertising measurement, and may include basic website analytics where configured. This helps us understand whether the website is working and which enquiries it produces.</p>
+
+        <h2>What we do not do</h2>
+        <p>We do not sell personal information submitted through this website.</p>
+
+        <h2>How long we keep enquiry information</h2>
+        <p>Enquiry information is normally kept for as long as needed to respond, manage the relationship and maintain ordinary business records. If it is no longer needed, it can be deleted.</p>
+
+        <h2>Access, correction and deletion</h2>
+        <p>You can ask to see, correct or delete personal information you have sent through this website. Email <a href="mailto:tom@arringtonconsultancy.com">tom@arringtonconsultancy.com</a>.</p>
+
+        <h2>Company details</h2>
+        <p>Arrington Business Consultancy Ltd, trading as Arrington Consultancy. Registered in England and Wales. Company number 17122684.</p>
+
+        <p class="privacy-note">This page is intentionally plain. It describes the current website forms and measurement visible in the repository.</p>
+    </main>
+</body>
+</html>

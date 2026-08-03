@@ -1535,6 +1535,11 @@
             position: relative;
         }
 
+        .cs2-screenshots:not(.cs2-screenshots--single):not(.cs2-screenshots--pair) .cs2-screenshot:first-child {
+            grid-column: span 2;
+            grid-row: span 2;
+        }
+
         .cs2-screenshot img {
             display: block;
             width: 100%;
@@ -2037,6 +2042,20 @@
         .lead-form textarea {
             margin-bottom: 1.1rem;
             resize: vertical;
+        }
+
+        .lead-privacy-note {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin: 0.85rem 0 1rem;
+            text-align: left;
+        }
+
+        .lead-privacy-note a {
+            color: var(--text-muted);
+            text-decoration: underline;
+            text-underline-offset: 0.16em;
         }
 
         .lead-form input::placeholder,
@@ -2996,15 +3015,30 @@
             </div>
             <% } %>
             <p class="casestudy2-body"><%- content[_k + '.body'] %></p>
+            <%
+              const _screenshotKeys = (typeof screenshotKeys !== 'undefined' && screenshotKeys) ? screenshotKeys : new Set();
+              const _visibleScreenshotKeys = [1, 2, 3].map(function(_ssN) {
+                return 'screenshot__' + _iid + '__' + _ssN;
+              }).filter(function(_ssKey) {
+                return _screenshotKeys.has(_ssKey);
+              });
+            %>
+            <% if (canEdit || _visibleScreenshotKeys.length > 0) { %>
             <div class="cs2-screenshots">
                 <% [1, 2, 3].forEach(function(_ssN) { %>
                 <% const _ssKey = 'screenshot__' + _iid + '__' + _ssN; %>
+                <% const _hasScreenshot = _screenshotKeys.has(_ssKey); %>
+                <% if (canEdit || _hasScreenshot) { %>
                 <figure class="cs2-screenshot" data-img-key="<%= _ssKey %>">
+                    <% if (_hasScreenshot) { %>
                     <img src="/img/<%= _ssKey %>" alt="Screenshot <%= _ssN %>" loading="lazy">
+                    <% } %>
                     <% if (canEdit) { %><button class="cms-img-btn" data-image="<%= _ssKey %>" title="Upload screenshot <%= _ssN %>">&#9998;</button><% } %>
                 </figure>
+                <% } %>
                 <% }); %>
             </div>
+            <% } %>
             <% if (_cs2Items.length > 0) { %>
             <% if (_cs2IncludedHeading) { %><h3 class="casestudy2-included-heading"><%- content[_k + '.included_heading'] %></h3><% } %>
             <ul class="casestudy2-list">
@@ -3351,6 +3385,7 @@
                 <input type="text" name="preferred_time" placeholder="Best day/time for a 30 min call (optional)" maxlength="255">
             </div>
             <textarea name="message" placeholder="<%= pageContact.messagePlaceholder %>" maxlength="2000" rows="4"></textarea>
+            <p class="lead-privacy-note">We use your details to respond to your enquiry. Read our <a href="/privacy">Privacy</a> page.</p>
             <button type="submit" class="btn btn-primary"><%= pageContact.submitText %></button>
             <p class="lead-form-status" id="leadFormStatus" aria-live="polite"></p>
         </form>
@@ -3365,6 +3400,7 @@
     </div>
     <div class="footer-links">
         <a href="/useful-thinking">For more on how we think, see Useful Thinking</a>
+        <a href="/privacy">Privacy</a>
     </div>
     <div class="footer-credit cms-section" data-section="footer">
         <% if (canEdit) { %><button class="cms-edit-btn" data-section="footer" title="Edit name">&#9998;</button><% } %>
