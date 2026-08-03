@@ -572,11 +572,9 @@ async function seed() {
         const wwdLinkId = allocate('intervention');
 
         if (heroId && wsaId && startId && whyId && areasId && examplesId && howId && wontId && closingId && wwdLinkId) {
-          const newHeroSubtext = 'Tell us what you want your website to do.<br><br>'
-            + 'That might be a simple holding page. It might be a substantial bespoke build with Pipedrive CRM, Microsoft 365 email, Google Reviews, YouTube, AI tools or a chatbot built into the site.<br><br>'
-            + 'The price is £999.<br><br>'
-            + 'We agree the website during a one-hour recorded conversation, build what was agreed and include one structured round of changes after the first complete version.<br><br>'
-            + 'Further changes are charged at £300 per day, based on approximately six working hours.';
+          const newHeroSubtext = 'If we built World Student Advisors for £999, imagine what we could build for your business.<br><br>'
+            + 'Some businesses need a straightforward website. Others need something far more capable.<br><br>'
+            + "Either way, we'll build it around your business, not around a template.";
           const rows = [
             // SECTION 1 — hero (£999 offer headline)
             [`${heroId}.heading`, 'A genuinely bespoke website for £999'],
@@ -587,9 +585,11 @@ async function seed() {
             // SECTION 2 — casestudy2 (World Student Advisors proof)
             [`${wsaId}.label`, 'OUR WORK'],
             [`${wsaId}.heading`, 'World Student Advisors'],
-            [`${wsaId}.intro`, 'We built World Student Advisors a fully bespoke HTML website for £999.'],
-            [`${wsaId}.body`, 'It includes direct Pipedrive CRM integration, Microsoft 365 email, Google Reviews, AI-powered interview practice, AI-powered visa interview mock sessions, detailed student enquiry and registration forms, counsellor and regional team pages, responsive layouts across desktop, tablet and mobile, and technical and on-page SEO foundations.<br><br>It was built around how the organisation actually works.'],
-            [`${wsaId}.outcome`, 'That is the level of website we will build for £999.'],
+            [`${wsaId}.intro`, 'We built World Student Advisors for £999.'],
+            [`${wsaId}.body`, "It's a fully bespoke HTML website with Pipedrive CRM, Microsoft 365 integration, Google Reviews, AI interview practice, AI visa interview preparation and responsive layouts across desktop, tablet and mobile.<br><br>Everything was built around how the business actually works."],
+            [`${wsaId}.outcome`, 'That is the standard we expect £999 to deliver.'],
+            [`${wsaId}.button_text`, 'Visit World Student Advisors'],
+            [`${wsaId}.button_href`, 'https://www.worldstudentadvisors.com/'],
 
             // SECTION 3 — biography (start with the business, not the technology)
             [`${startId}.label`, 'COMMERCIAL PROBLEMS FIRST'],
@@ -599,11 +599,11 @@ async function seed() {
             [`${startId}.col_2_p1`, 'It might be weak follow-up, manual administration that eats a day a week, or a business that cannot run properly without the owner in the room.'],
             [`${startId}.col_2_p2`, 'We look at what is actually happening in the business first. The technology comes after, and only where it earns its place.'],
 
-            // SECTION 4 — filter (why we are different)
+            // SECTION 4 — filter (built around you)
             [`${whyId}.label`, 'WHY WE ARE DIFFERENT'],
             [`${whyId}.heading`, 'We start with the business, not the brief'],
-            [`${whyId}.p1`, 'Most agencies begin by asking what website the client wants.'],
-            [`${whyId}.p2`, 'We begin by understanding what is getting in the way of the business. Only then do we decide whether a website, AI, a change in process, or a combination of the three is actually the right answer.'],
+            [`${whyId}.p1`, "Most websites start with a template. We start with the business. We listen properly, understand what you're trying to achieve and build around that."],
+            [`${whyId}.p2`, "We'll challenge ideas where it helps, suggest better ones where we see them and explain why. The decisions stay with you. It's your business and your website."],
             [`${whyId}.button_text`, ''],
             [`${whyId}.button_link`, 'main'],
 
@@ -645,10 +645,11 @@ async function seed() {
             [`${howId}.card_4_title`, 'Improve'],
             [`${howId}.card_4_body`, 'We check what is working and change what is not. The business keeps control of it, not us.'],
 
-            // SECTION 8 — filter (what we will not do)
+            // SECTION 8 — filter (technology section)
             [`${wontId}.label`, 'WHAT WE WILL NOT DO'],
-            [`${wontId}.heading`, 'We do not sell technology for its own sake'],
-            [`${wontId}.p1`, 'We do not recommend AI unless it genuinely helps. We do not recommend rebuilding a website that already works. We do not sell technology for the sake of it. We only recommend changes that create commercial value.'],
+            [`${wontId}.heading`, 'Technology should earn its place'],
+            [`${wontId}.p1`, "We recommend websites, AI and systems when they genuinely improve the business. If they don't, we won't recommend them."],
+            [`${wontId}.p2`, ''],
             [`${wontId}.button_text`, ''],
             [`${wontId}.button_link`, 'main'],
 
@@ -788,9 +789,11 @@ async function seed() {
             const wsaRows = [
               [`${wsaId}.label`, 'OUR WORK'],
               [`${wsaId}.heading`, 'World Student Advisors'],
-              [`${wsaId}.intro`, 'We built World Student Advisors a fully bespoke HTML website for £999.'],
-              [`${wsaId}.body`, 'It includes direct Pipedrive CRM integration, Microsoft 365 email, Google Reviews, AI-powered interview practice, AI-powered visa interview mock sessions, detailed student enquiry and registration forms, counsellor and regional team pages, responsive layouts across desktop, tablet and mobile, and technical and on-page SEO foundations.<br><br>It was built around how the organisation actually works.'],
-              [`${wsaId}.outcome`, 'That is the level of website we will build for £999.']
+              [`${wsaId}.intro`, 'We built World Student Advisors for £999.'],
+              [`${wsaId}.body`, "It's a fully bespoke HTML website with Pipedrive CRM, Microsoft 365 integration, Google Reviews, AI interview practice, AI visa interview preparation and responsive layouts across desktop, tablet and mobile.<br><br>Everything was built around how the business actually works."],
+              [`${wsaId}.outcome`, 'That is the standard we expect £999 to deliver.'],
+              [`${wsaId}.button_text`, 'Visit World Student Advisors'],
+              [`${wsaId}.button_href`, 'https://www.worldstudentadvisors.com/']
             ];
             for (const [key, value] of wsaRows) {
               await db.query(
@@ -846,6 +849,78 @@ async function seed() {
           }
         }
       }
+    }
+  }
+
+  // Migration: websites-and-ai copy refinement (03/08/2026). Updates the
+  // hero subtext, WSA proof section, BUILT AROUND YOU filter, TECHNOLOGY
+  // filter, and global footer contact heading/body to the new approved copy.
+  // Idempotent: uses DO UPDATE SET so safe to run on both fresh and live DBs.
+  {
+    const { rows: waRows } = await db.query(
+      "SELECT section_order FROM pages WHERE slug = 'websites-and-ai'"
+    );
+    if (waRows.length > 0) {
+      const pageOrder = Array.isArray(waRows[0].section_order) ? waRows[0].section_order : [];
+      const baseOf = (id) => {
+        const m = /^([a-z0-9]+)(?:__(\d+))?$/.exec(id || '');
+        return m ? m[1] : null;
+      };
+
+      const heroId = pageOrder.find((id) => baseOf(id) === 'hero');
+      const wsaId = pageOrder.find((id) => baseOf(id) === 'casestudy2');
+      const filters = pageOrder.filter((id) => baseOf(id) === 'filter');
+      const whyId = filters[0];  // first filter = BUILT AROUND YOU
+      const wontId = filters[1]; // second filter = TECHNOLOGY SECTION
+
+      const upsert = async (key, value) => {
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content',
+          [key, value]
+        );
+      };
+
+      if (heroId) {
+        await upsert(`${heroId}.subtext`,
+          'If we built World Student Advisors for £999, imagine what we could build for your business.<br><br>'
+          + 'Some businesses need a straightforward website. Others need something far more capable.<br><br>'
+          + "Either way, we'll build it around your business, not around a template."
+        );
+      }
+
+      if (wsaId) {
+        await upsert(`${wsaId}.intro`, 'We built World Student Advisors for £999.');
+        await upsert(`${wsaId}.body`,
+          "It's a fully bespoke HTML website with Pipedrive CRM, Microsoft 365 integration, Google Reviews, AI interview practice, AI visa interview preparation and responsive layouts across desktop, tablet and mobile.<br><br>"
+          + 'Everything was built around how the business actually works.'
+        );
+        await upsert(`${wsaId}.outcome`, 'That is the standard we expect £999 to deliver.');
+        await upsert(`${wsaId}.button_text`, 'Visit World Student Advisors');
+        await upsert(`${wsaId}.button_href`, 'https://www.worldstudentadvisors.com/');
+      }
+
+      if (whyId) {
+        await upsert(`${whyId}.p1`, "Most websites start with a template. We start with the business. We listen properly, understand what you're trying to achieve and build around that.");
+        await upsert(`${whyId}.p2`, "We'll challenge ideas where it helps, suggest better ones where we see them and explain why. The decisions stay with you. It's your business and your website.");
+      }
+
+      if (wontId) {
+        await upsert(`${wontId}.heading`, 'Technology should earn its place');
+        await upsert(`${wontId}.p1`, "We recommend websites, AI and systems when they genuinely improve the business. If they don't, we won't recommend them.");
+        await upsert(`${wontId}.p2`, '');
+      }
+
+      // Global footer contact section: update heading and body.
+      await upsert('contact.heading', 'Tell us what you want to build.');
+      await upsert('contact.body',
+        "You don't need a specification.<br><br>"
+        + "You don't need wireframes.<br><br>"
+        + "You don't even need to know exactly what the finished website looks like.<br><br>"
+        + "Tell us what you're trying to achieve.<br><br>"
+        + "We'll tell you how we'd build it."
+      );
+
+      console.log('Websites and AI: copy refinement migration applied.');
     }
   }
 

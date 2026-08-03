@@ -112,6 +112,8 @@
         'casestudy2.stat_label': 'Stat label',
         'casestudy2.body': 'Body text',
         'casestudy2.outcome': 'Outcome',
+        'casestudy2.button_text': 'Button text (leave empty to hide)',
+        'casestudy2.button_href': 'Button link (full https:// URL)',
         'assessment.label': 'Section label',
         'assessment.heading': 'Heading',
         'assessment.intro': 'Introduction',
