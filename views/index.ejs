@@ -199,6 +199,15 @@
             display: block;
         }
 
+        nav.nav-wai .nav-logo {
+            letter-spacing: 0;
+            line-height: 1;
+        }
+
+        nav.nav-wai .nav-logo-img {
+            width: 96px;
+        }
+
         .nav-actions {
             display: flex;
             align-items: center;
@@ -421,6 +430,19 @@
         }
 
         .hero-secondary-link:hover {
+            color: var(--text-bright);
+        }
+
+        .hero-proof-link {
+            display: inline-block;
+            margin: -1.3rem 0 2rem;
+            color: var(--accent);
+            font-size: 0.95rem;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .hero-proof-link:hover {
             color: var(--text-bright);
         }
 
@@ -1498,11 +1520,20 @@
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 1rem;
-            margin-top: 2rem;
+            margin: 2rem 0 2.25rem;
         }
 
-        .cs2-screenshots:empty {
+        .cs2-screenshots:empty,
+        .cs2-screenshots.cs2-screenshots--empty {
             display: none;
+        }
+
+        .cs2-screenshots.cs2-screenshots--single {
+            grid-template-columns: 1fr;
+        }
+
+        .cs2-screenshots.cs2-screenshots--pair {
+            grid-template-columns: repeat(2, 1fr);
         }
 
         .cs2-screenshot {
@@ -2243,6 +2274,10 @@
                 width: 140px;
             }
 
+            nav.nav-wai .nav-logo-img {
+                width: 72px;
+            }
+
             .nav-inner {
                 height: 64px;
             }
@@ -2361,7 +2396,7 @@
 <body>
 
 <!-- NAV -->
-<nav id="nav">
+<nav id="nav" class="<%= currentPage.slug === 'websites-and-ai' ? 'nav-wai' : '' %>">
     <div class="nav-inner">
         <a href="/" class="nav-logo">
             <img src="/img/logo" alt="Arrington Business Consultancy" class="nav-logo-img">
@@ -2465,6 +2500,9 @@
 <%
   const _heroLabel = (content[_k + '.label'] || '').trim();
   const _heroBullets = [1, 2, 3].map((n) => content[_k + '.bullet_' + n] || '').filter((v) => v.replace(/<[^>]+>/g, '').trim());
+  const _heroProofText = (content[_k + '.proof_text'] || '').replace(/<[^>]+>/g, '').trim();
+  const _heroProofHref = (content[_k + '.proof_href'] || '').trim();
+  const _heroProofHrefValid = /^#[A-Za-z0-9_-]+(?:__[0-9]+)?$/.test(_heroProofHref);
 %>
 <!-- HERO -->
 <section class="hero<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
@@ -2478,6 +2516,9 @@
             <% if (_heroLabel) { %><p class="hero-label"><%- content[_k + '.label'] %></p><% } %>
             <<%= _heroHTag %> class="hero-heading"><%- content[_k + '.heading'] %></<%= _heroHTag %>>
             <p class="sub"><%- content[_k + '.subtext'] %></p>
+            <% if (_heroProofText && _heroProofHrefValid) { %>
+            <a href="<%= _heroProofHref %>" class="hero-proof-link"><%- content[_k + '.proof_text'] %></a>
+            <% } %>
             <% if (_heroBullets.length > 0) { %>
             <ul class="hero-bullets">
                 <% _heroBullets.forEach(function(_bullet) { %>
@@ -2968,6 +3009,15 @@
             </div>
             <% } %>
             <p class="casestudy2-body"><%- content[_k + '.body'] %></p>
+            <div class="cs2-screenshots">
+                <% [1, 2, 3].forEach(function(_ssN) { %>
+                <% const _ssKey = 'screenshot__' + _iid + '__' + _ssN; %>
+                <figure class="cs2-screenshot" data-img-key="<%= _ssKey %>">
+                    <img src="/img/<%= _ssKey %>" alt="Screenshot <%= _ssN %>" loading="lazy">
+                    <% if (canEdit) { %><button class="cms-img-btn" data-image="<%= _ssKey %>" title="Upload screenshot <%= _ssN %>">&#9998;</button><% } %>
+                </figure>
+                <% }); %>
+            </div>
             <% if (_cs2Items.length > 0) { %>
             <% if (_cs2IncludedHeading) { %><h3 class="casestudy2-included-heading"><%- content[_k + '.included_heading'] %></h3><% } %>
             <ul class="casestudy2-list">
@@ -2981,15 +3031,6 @@
                 <p><%- content[_k + '.outcome'] %></p>
             </div>
             <% } %>
-            <div class="cs2-screenshots">
-                <% [1, 2, 3].forEach(function(_ssN) { %>
-                <% const _ssKey = 'screenshot__' + _iid + '__' + _ssN; %>
-                <figure class="cs2-screenshot" data-img-key="<%= _ssKey %>">
-                    <img src="/img/<%= _ssKey %>" alt="Screenshot <%= _ssN %>" loading="lazy">
-                    <% if (canEdit) { %><button class="cms-img-btn" data-image="<%= _ssKey %>" title="Upload screenshot <%= _ssN %>">&#9998;</button><% } %>
-                </figure>
-                <% }); %>
-            </div>
             <%
               const _cs2BtnText = (content[_k + '.button_text'] || '').replace(/<[^>]+>/g, '').trim();
               const _cs2BtnHref = (content[_k + '.button_href'] || '').trim();
@@ -3634,12 +3675,32 @@
     // error handler on the <img> fires after the server returns 404 for the
     // derived key (screenshot__{instanceId}__N) so public visitors never see
     // a broken-image placeholder.
+    function syncScreenshotGroup(group) {
+        const visible = Array.from(group.querySelectorAll('.cs2-screenshot')).filter(function(figure) {
+            return !figure.classList.contains('cs2-screenshot--empty');
+        });
+        group.classList.toggle('cs2-screenshots--empty', visible.length === 0);
+        group.classList.toggle('cs2-screenshots--single', visible.length === 1);
+        group.classList.toggle('cs2-screenshots--pair', visible.length === 2);
+    }
+    document.querySelectorAll('.cs2-screenshots').forEach(syncScreenshotGroup);
     document.querySelectorAll('.cs2-screenshot img').forEach(function(img) {
-        function hide() { img.closest('.cs2-screenshot').classList.add('cs2-screenshot--empty'); }
+        function hide() {
+            const group = img.closest('.cs2-screenshots');
+            img.closest('.cs2-screenshot').classList.add('cs2-screenshot--empty');
+            if (group) syncScreenshotGroup(group);
+        }
+        function show() {
+            const group = img.closest('.cs2-screenshots');
+            if (img.naturalHeight) img.closest('.cs2-screenshot').classList.remove('cs2-screenshot--empty');
+            if (group) syncScreenshotGroup(group);
+        }
         if (img.complete) {
             if (!img.naturalHeight) hide();
+            else show();
         } else {
             img.addEventListener('error', hide);
+            img.addEventListener('load', show);
         }
     });
 </script>

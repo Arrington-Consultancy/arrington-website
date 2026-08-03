@@ -23,6 +23,8 @@
         'hero.cta': 'Button text',
         'hero.label': 'Section label',
         'hero.cta_href': 'Button anchor link',
+        'hero.proof_text': 'Proof link text',
+        'hero.proof_href': 'Proof link anchor',
         'hero.secondary_text': 'Secondary link text',
         'hero.secondary_href': 'Secondary link anchor',
         'hero.bullet_1': 'Bullet 1',
