@@ -1076,7 +1076,7 @@ async function seed() {
         await upsert(`${heroId}.label`, 'BESPOKE BUSINESS WEBSITES');
         await upsert(`${heroId}.heading`, 'A proper business website for £999');
         await upsert(`${heroId}.subtext`, 'If we built World Student Advisors for £999, imagine what we could build for your business.<br><br>Built around the way your business actually operates. Not dropped into a template.');
-        await upsert(`${heroId}.proof_text`, 'See what we built for the same fixed £999');
+        await upsert(`${heroId}.proof_text`, 'Look at our latest example of what we have built');
         await upsert(`${heroId}.proof_href`, wsaId ? `#${wsaId}` : '#conversation');
         await upsert(`${heroId}.bullet_1`, 'Fixed £999 price');
         await upsert(`${heroId}.bullet_2`, 'Mobile ready');
