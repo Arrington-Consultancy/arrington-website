@@ -355,7 +355,6 @@
             color: var(--text-bright);
             line-height: 1.12;
             margin-bottom: 1.5rem;
-            letter-spacing: -0.02em;
         }
 
         .hero-text .sub {
@@ -368,6 +367,61 @@
 
         .hero-text .btn {
             display: inline-flex;
+        }
+
+        .hero-label {
+            font-size: 0.74rem;
+            text-transform: uppercase;
+            letter-spacing: 0;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 1rem;
+        }
+
+        .hero-bullets {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem 1.25rem;
+            padding: 0;
+            margin: -1.15rem 0 2rem;
+            list-style: none;
+        }
+
+        .hero-bullets li {
+            position: relative;
+            padding-left: 1rem;
+            color: var(--text);
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        .hero-bullets li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0.58em;
+            width: 0.38rem;
+            height: 0.38rem;
+            border-radius: 50%;
+            background: var(--accent);
+        }
+
+        .hero-cta-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem 1.25rem;
+        }
+
+        .hero-secondary-link {
+            color: var(--accent);
+            font-size: 0.92rem;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .hero-secondary-link:hover {
+            color: var(--text-bright);
         }
 
         .hero-photo {
@@ -1372,7 +1426,7 @@
             font-size: 1.05rem;
             color: var(--text);
             line-height: 1.75;
-            margin-bottom: 2.5rem;
+            margin-bottom: 2rem;
         }
 
         .casestudy2-outcome {
@@ -1387,6 +1441,44 @@
 
         .casestudy2-outcome strong {
             color: var(--text-bright);
+        }
+
+        .casestudy2-included-heading {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.2rem;
+            color: var(--text-bright);
+            margin: 0 0 1rem;
+        }
+
+        .casestudy2-list,
+        .filter-list {
+            display: grid;
+            gap: 0.75rem;
+            margin: 0 0 2rem;
+            padding: 0;
+            list-style: none;
+            text-align: left;
+        }
+
+        .casestudy2-list li,
+        .filter-list li {
+            position: relative;
+            padding-left: 1.35rem;
+            color: var(--text);
+            font-size: 1rem;
+            line-height: 1.55;
+        }
+
+        .casestudy2-list li::before,
+        .filter-list li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0.72em;
+            width: 0.42rem;
+            height: 0.42rem;
+            border-radius: 50%;
+            background: var(--accent);
         }
 
         .casestudy2 .btn {
@@ -1603,6 +1695,22 @@
             color: var(--text);
             line-height: 1.75;
             margin-bottom: 0.75rem;
+            text-align: left;
+        }
+
+        .filter-intro {
+            font-size: 1.05rem;
+            color: var(--text);
+            line-height: 1.75;
+            margin-bottom: 2rem;
+            text-align: left;
+        }
+
+        .filter-closing {
+            margin-top: 2rem;
+            font-size: 1.05rem;
+            color: var(--text);
+            line-height: 1.75;
             text-align: left;
         }
 
@@ -2220,6 +2328,16 @@
                 font-size: 1rem;
             }
 
+            .hero-bullets {
+                flex-direction: column;
+                gap: 0.65rem;
+            }
+
+            .hero-cta-row {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
             .section-heading {
                 font-size: 1.5rem;
             }
@@ -2344,6 +2462,10 @@
 <% const _k = _iid; %>
 <% const _heroImg = _iid === 'hero' ? 'headshot' : 'headshot__' + _iid; %>
 <% const _heroHTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %>
+<%
+  const _heroLabel = (content[_k + '.label'] || '').trim();
+  const _heroBullets = [1, 2, 3].map((n) => content[_k + '.bullet_' + n] || '').filter((v) => v.replace(/<[^>]+>/g, '').trim());
+%>
 <!-- HERO -->
 <section class="hero<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
     <div class="hero-inner">
@@ -2353,22 +2475,40 @@
             <% if (canEdit) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
         <% if (canEdit) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
         <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
+            <% if (_heroLabel) { %><p class="hero-label"><%- content[_k + '.label'] %></p><% } %>
             <<%= _heroHTag %> class="hero-heading"><%- content[_k + '.heading'] %></<%= _heroHTag %>>
             <p class="sub"><%- content[_k + '.subtext'] %></p>
+            <% if (_heroBullets.length > 0) { %>
+            <ul class="hero-bullets">
+                <% _heroBullets.forEach(function(_bullet) { %>
+                <li><%- _bullet %></li>
+                <% }); %>
+            </ul>
+            <% } %>
             <%
               const _heroWa = (content[_k + '.whatsapp'] || '').trim();
               const _heroWaValid = /^https:\/\/(wa\.me|api\.whatsapp\.com)\//.test(_heroWa);
               const _heroCtaLink = (content[_k + '.cta_link'] || '').trim();
               const _heroCtaLinkValid = /^https:\/\/calendar\.app\.google\//.test(_heroCtaLink);
+              const _heroCtaHref = (content[_k + '.cta_href'] || '').trim();
+              const _heroCtaHrefValid = /^#[A-Za-z0-9_-]+(?:__[0-9]+)?$/.test(_heroCtaHref);
+              const _heroSecondaryText = (content[_k + '.secondary_text'] || '').replace(/<[^>]+>/g, '').trim();
+              const _heroSecondaryHref = (content[_k + '.secondary_href'] || '').trim();
+              const _heroSecondaryHrefValid = /^#[A-Za-z0-9_-]+(?:__[0-9]+)?$/.test(_heroSecondaryHref);
             %>
             <div class="hero-cta-row">
                 <% if (_heroCtaLinkValid) { %>
                 <a href="<%= _heroCtaLink %>" class="btn btn-primary" target="_blank" rel="noopener"><%- content[_k + '.cta'] %></a>
+                <% } else if (_heroCtaHrefValid) { %>
+                <a href="<%= _heroCtaHref %>" class="btn btn-primary"><%- content[_k + '.cta'] %></a>
                 <% } else { %>
                 <a href="#conversation" class="btn btn-primary"><%- content[_k + '.cta'] %></a>
                 <% } %>
                 <% if (_heroWaValid) { %>
                 <a href="<%= _heroWa %>" class="btn btn-whatsapp" target="_blank" rel="noopener nofollow">WhatsApp us</a>
+                <% } %>
+                <% if (_heroSecondaryText && _heroSecondaryHrefValid) { %>
+                <a href="<%= _heroSecondaryHref %>" class="hero-secondary-link"><%- content[_k + '.secondary_text'] %></a>
                 <% } %>
             </div>
         </div>
@@ -2789,6 +2929,14 @@
 
 <% if (_tpl === 'casestudy2') { %>
 <% const _k = _iid; %>
+<%
+  const _cs2Items = [];
+  for (let _cs2N = 1; _cs2N <= 8; _cs2N++) {
+    const _cs2Item = content[_k + '.item_' + _cs2N] || '';
+    if (_cs2Item.replace(/<[^>]+>/g, '').trim()) _cs2Items.push(_cs2Item);
+  }
+  const _cs2IncludedHeading = (content[_k + '.included_heading'] || '').trim();
+%>
 <!-- CASE STUDY 2 -->
 <section class="casestudy2<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" id="<%= _iid %>" data-section-id="<%= _iid %>">
     <div class="section-inner cms-section" data-section="<%= _k %>">
@@ -2820,9 +2968,19 @@
             </div>
             <% } %>
             <p class="casestudy2-body"><%- content[_k + '.body'] %></p>
+            <% if (_cs2Items.length > 0) { %>
+            <% if (_cs2IncludedHeading) { %><h3 class="casestudy2-included-heading"><%- content[_k + '.included_heading'] %></h3><% } %>
+            <ul class="casestudy2-list">
+                <% _cs2Items.forEach(function(_item) { %>
+                <li><%- _item %></li>
+                <% }); %>
+            </ul>
+            <% } %>
+            <% if ((content[_k + '.outcome'] || '').trim()) { %>
             <div class="casestudy2-outcome">
                 <p><%- content[_k + '.outcome'] %></p>
             </div>
+            <% } %>
             <div class="cs2-screenshots">
                 <% [1, 2, 3].forEach(function(_ssN) { %>
                 <% const _ssKey = 'screenshot__' + _iid + '__' + _ssN; %>
@@ -2882,6 +3040,15 @@
 
 <% if (_tpl === 'filter') { %>
 <% const _k = _iid; %>
+<%
+  const _filterIntro = (content[_k + '.intro'] || '').trim();
+  const _filterItems = [];
+  for (let _filterN = 1; _filterN <= 8; _filterN++) {
+    const _filterItem = content[_k + '.item_' + _filterN] || '';
+    if (_filterItem.replace(/<[^>]+>/g, '').trim()) _filterItems.push(_filterItem);
+  }
+  const _filterClosing = (content[_k + '.closing'] || '').trim();
+%>
 <!-- FILTER -->
 <section class="filter<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
     <div class="section-inner cms-section" data-section="<%= _k %>">
@@ -2893,7 +3060,17 @@
         <div class="filter-inner">
             <p class="section-label"><%- content[_k + '.label'] %></p>
             <% const _hTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %><<%= _hTag %> class="section-heading"><%- content[_k + '.heading'] %></<%= _hTag %>>
+            <% if (_filterIntro) { %><div class="filter-intro"><%- content[_k + '.intro'] %></div><% } %>
+            <% if ((content[_k + '.p1'] || '').trim()) { %>
             <div class="filter-body"><%- content[_k + '.p1'] %></div>
+            <% } %>
+            <% if (_filterItems.length > 0) { %>
+            <ul class="filter-list">
+                <% _filterItems.forEach(function(_item) { %>
+                <li><%- _item %></li>
+                <% }); %>
+            </ul>
+            <% } %>
             <% if ((content[_k + '.row_1_action'] || '').trim()) { %>
             <div class="proofstrip-rows filter-proof-rows">
                 <% for (let _r = 1; _r <= 3; _r++) { %>
@@ -2918,8 +3095,11 @@
                 <% } %>
             </div>
             <% } else { %>
+            <% if ((content[_k + '.p2'] || '').trim()) { %>
             <div class="filter-body"><%- content[_k + '.p2'] %></div>
             <% } %>
+            <% } %>
+            <% if (_filterClosing) { %><div class="filter-closing"><%- content[_k + '.closing'] %></div><% } %>
             <%
               const _fBtnText = (content[_k + '.button_text'] || '').replace(/<[^>]+>/g, '').trim();
               const _fBtnSlug = (content[_k + '.button_link'] || '').trim();
@@ -3442,7 +3622,7 @@
         });
     }, { threshold: 0.1 });
 
-    document.querySelectorAll('.step, .insight-card, .fourcard, .case-phase, .aq, .credential-block').forEach(el => {
+    document.querySelectorAll('.step, .insight-card, .case-phase, .aq, .credential-block').forEach(el => {
         el.style.opacity = '0';
         el.style.transform = 'translateY(16px)';
         el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
