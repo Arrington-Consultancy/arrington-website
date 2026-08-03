@@ -200,11 +200,9 @@ app.get('/img/:key', async (req, res, next) => {
       );
       if (rows.length > 0) {
         res.set('Content-Type', rows[0].mime_type);
-        // Images rarely change and are content-addressed by key, but an
-        // admin can re-upload one under the same key - a moderate max-age
-        // with the automatic ETag Express sends keeps repeat visits fast
-        // without risking long-lived staleness after a real replacement.
-        res.set('Cache-Control', 'public, max-age=86400, must-revalidate');
+        // CMS images can be replaced under the same key, so browsers should
+        // revalidate rather than keep a stale logo or hero image locally.
+        res.set('Cache-Control', 'no-cache');
         return res.send(rows[0].data);
       }
     }

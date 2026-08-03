@@ -1685,7 +1685,7 @@ async function seed() {
   // ~130KB JPEG (quality 85) — visually identical at hero-background size,
   // well under the CMS's 2MB upload cap.
   const images = [
-    { key: 'logo', file: 'logo.avif', mime: 'image/avif' },
+    { key: 'logo', file: 'logo.png', mime: 'image/png' },
     { key: 'headshot', file: 'headshot.png', mime: 'image/png' },
     { key: 'oxford', file: 'oxford.png', mime: 'image/png' },
     { key: 'headshot__hero__5', file: 'hero-websites-and-ai.jpg', mime: 'image/jpeg' },
@@ -1711,6 +1711,25 @@ async function seed() {
     }
   }
   console.log('Images seeded.');
+
+  // Migration: swap the old compact white logo for the Drive-sourced gold
+  // stacked Arrington Consultancy lockup. Only replaces the stored image if
+  // it still matches the exact old seed asset, so a later CMS upload is
+  // preserved.
+  {
+    const logoPath = path.join(__dirname, '..', 'logo.png');
+    const { rows } = await db.query('SELECT data FROM images WHERE image_key = $1', ['logo']);
+    if (rows.length > 0 && fs.existsSync(logoPath)) {
+      const currentMd5 = crypto.createHash('md5').update(rows[0].data).digest('hex');
+      if (currentMd5 === '1b59d855877e5ceeea549f0b74ef1761') {
+        await db.query(
+          'UPDATE images SET data = $1, mime_type = $2 WHERE image_key = $3',
+          [fs.readFileSync(logoPath), 'image/png', 'logo']
+        );
+        console.log('Swapped logo to the Drive-sourced gold lockup.');
+      }
+    }
+  }
 
   // Migration: swap the Websites and AI hero photo for Tom's preferred
   // version (30/07/2026 - the first upload was replaced same-day with a

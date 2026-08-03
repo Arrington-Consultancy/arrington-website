@@ -199,15 +199,6 @@
             display: block;
         }
 
-        nav.nav-wai .nav-logo {
-            letter-spacing: 0;
-            line-height: 1;
-        }
-
-        nav.nav-wai .nav-logo-img {
-            width: 96px;
-        }
-
         .nav-actions {
             display: flex;
             align-items: center;
@@ -2274,10 +2265,6 @@
                 width: 140px;
             }
 
-            nav.nav-wai .nav-logo-img {
-                width: 72px;
-            }
-
             .nav-inner {
                 height: 64px;
             }
@@ -2399,7 +2386,7 @@
 <nav id="nav" class="<%= currentPage.slug === 'websites-and-ai' ? 'nav-wai' : '' %>">
     <div class="nav-inner">
         <a href="/" class="nav-logo">
-            <img src="/img/logo" alt="Arrington Business Consultancy" class="nav-logo-img">
+            <img src="/img/logo?v=20260803" alt="Arrington Business Consultancy" class="nav-logo-img">
             <% if (canEdit) { %><button class="cms-img-btn" data-image="logo" title="Change logo">&#9998;</button><% } %>
         </a>
         <div class="nav-actions">
