@@ -2809,6 +2809,14 @@
                 </figure>
                 <% }); %>
             </div>
+            <%
+              const _cs2BtnText = (content[_k + '.button_text'] || '').replace(/<[^>]+>/g, '').trim();
+              const _cs2BtnHref = (content[_k + '.button_href'] || '').trim();
+              const _cs2ValidHref = /^https?:\/\//.test(_cs2BtnHref);
+            %>
+            <% if (_cs2BtnText && _cs2ValidHref) { %>
+            <a href="<%= _cs2BtnHref %>" class="btn btn-primary" target="_blank" rel="noopener noreferrer"><%= _cs2BtnText %></a>
+            <% } %>
         </div>
     </div>
 </section>
@@ -3081,8 +3089,8 @@
     <div class="footer-contact cms-section" data-section="contact">
         <% if (canEdit) { %><button class="cms-edit-btn" data-section="contact" title="Edit section">&#9998;</button><% } %>
         <p class="section-label"><%- content['contact.label'] %></p>
-        <h2 class="section-heading"><%- content['contact.heading'] %></h2>
-        <p><%- content['contact.body'] %></p>
+        <h2 class="section-heading"><%- pageContact.heading %></h2>
+        <p><%- pageContact.body %></p>
         <%
           const _rawEmail = (content['contact.email'] || '').trim();
           const _atIdx = _rawEmail.indexOf('@');
