@@ -3089,8 +3089,8 @@
     <div class="footer-contact cms-section" data-section="contact">
         <% if (canEdit) { %><button class="cms-edit-btn" data-section="contact" title="Edit section">&#9998;</button><% } %>
         <p class="section-label"><%- content['contact.label'] %></p>
-        <h2 class="section-heading"><%- content['contact.heading'] %></h2>
-        <p><%- content['contact.body'] %></p>
+        <h2 class="section-heading"><%- pageContact.heading %></h2>
+        <p><%- pageContact.body %></p>
         <%
           const _rawEmail = (content['contact.email'] || '').trim();
           const _atIdx = _rawEmail.indexOf('@');

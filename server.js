@@ -759,11 +759,24 @@ async function renderPage(req, res, next, pageSlug) {
       noindex: currentPage.noindex === true
     };
 
+    // Page-specific contact overrides. For websites-and-ai the footer shows
+    // different heading/body copy while keeping the shared email, phone and
+    // WhatsApp details unchanged. All other pages get the global values.
+    const pageContact = {
+      heading: content['contact.heading'],
+      body: content['contact.body']
+    };
+    if (pageSlug === 'websites-and-ai') {
+      pageContact.heading = content['wai.contact_heading'] || pageContact.heading;
+      pageContact.body    = content['wai.contact_body']    || pageContact.body;
+    }
+
     res.render('index', {
       content, theme, activeTheme, themes,
       sectionOrder: renderOrder, hiddenSections, instanceTemplates,
       currentPage, allPages, navPages, seo, caseStudyAnchors, googleReviews,
       canEdit, capabilities, showAdminPanel,
+      pageContact,
       // Only the useful-thinking page's `utlibrary` template reads this,
       // but the list is cheap (no DB query, just the manifest) so it's
       // simplest to always pass it rather than special-case the query.

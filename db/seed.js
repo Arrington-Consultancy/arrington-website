@@ -573,8 +573,7 @@ async function seed() {
 
         if (heroId && wsaId && startId && whyId && areasId && examplesId && howId && wontId && closingId && wwdLinkId) {
           const newHeroSubtext = 'If we built World Student Advisors for £999, imagine what we could build for your business.<br><br>'
-            + 'Some businesses need a straightforward website. Others need something far more capable.<br><br>'
-            + "Either way, we'll build it around your business, not around a template.";
+            + "We'll build it around your business, not around a template.";
           const rows = [
             // SECTION 1 — hero (£999 offer headline)
             [`${heroId}.heading`, 'A genuinely bespoke website for £999'],
@@ -586,8 +585,8 @@ async function seed() {
             [`${wsaId}.label`, 'OUR WORK'],
             [`${wsaId}.heading`, 'World Student Advisors'],
             [`${wsaId}.intro`, 'We built World Student Advisors for £999.'],
-            [`${wsaId}.body`, "It's a fully bespoke HTML website with Pipedrive CRM, Microsoft 365 integration, Google Reviews, AI interview practice, AI visa interview preparation and responsive layouts across desktop, tablet and mobile.<br><br>Everything was built around how the business actually works."],
-            [`${wsaId}.outcome`, 'That is the standard we expect £999 to deliver.'],
+            [`${wsaId}.body`, "It includes Pipedrive CRM, Microsoft 365, Google Reviews, AI interview practice, AI visa interview preparation and responsive layouts across desktop and mobile.<br><br>Every part of it was built around how the business actually works."],
+            [`${wsaId}.outcome`, "That's what £999 looks like."],
             [`${wsaId}.button_text`, 'Visit World Student Advisors'],
             [`${wsaId}.button_href`, 'https://www.worldstudentadvisors.com/'],
 
@@ -603,7 +602,7 @@ async function seed() {
             [`${whyId}.label`, 'WHY WE ARE DIFFERENT'],
             [`${whyId}.heading`, 'We start with the business, not the brief'],
             [`${whyId}.p1`, "Most websites start with a template. We start with the business. We listen properly, understand what you're trying to achieve and build around that."],
-            [`${whyId}.p2`, "We'll challenge ideas where it helps, suggest better ones where we see them and explain why. The decisions stay with you. It's your business and your website."],
+            [`${whyId}.p2`, "We'll challenge ideas when we think there's a better way and explain why. The decisions stay with you. It's your business and your website."],
             [`${whyId}.button_text`, ''],
             [`${whyId}.button_link`, 'main'],
 
@@ -853,8 +852,10 @@ async function seed() {
   }
 
   // Migration: websites-and-ai copy refinement (03/08/2026). Updates the
-  // hero subtext, WSA proof section, BUILT AROUND YOU filter, TECHNOLOGY
-  // filter, and global footer contact heading/body to the new approved copy.
+  // hero subtext, WSA proof section, BUILT AROUND YOU filter, and TECHNOLOGY
+  // filter to the new approved copy. Also seeds page-specific contact
+  // overrides (wai.contact_heading / wai.contact_body) for the
+  // websites-and-ai page only, leaving the global contact section untouched.
   // Idempotent: uses DO UPDATE SET so safe to run on both fresh and live DBs.
   {
     const { rows: waRows } = await db.query(
@@ -883,25 +884,24 @@ async function seed() {
       if (heroId) {
         await upsert(`${heroId}.subtext`,
           'If we built World Student Advisors for £999, imagine what we could build for your business.<br><br>'
-          + 'Some businesses need a straightforward website. Others need something far more capable.<br><br>'
-          + "Either way, we'll build it around your business, not around a template."
+          + "We'll build it around your business, not around a template."
         );
       }
 
       if (wsaId) {
         await upsert(`${wsaId}.intro`, 'We built World Student Advisors for £999.');
         await upsert(`${wsaId}.body`,
-          "It's a fully bespoke HTML website with Pipedrive CRM, Microsoft 365 integration, Google Reviews, AI interview practice, AI visa interview preparation and responsive layouts across desktop, tablet and mobile.<br><br>"
-          + 'Everything was built around how the business actually works.'
+          'It includes Pipedrive CRM, Microsoft 365, Google Reviews, AI interview practice, AI visa interview preparation and responsive layouts across desktop and mobile.<br><br>'
+          + 'Every part of it was built around how the business actually works.'
         );
-        await upsert(`${wsaId}.outcome`, 'That is the standard we expect £999 to deliver.');
+        await upsert(`${wsaId}.outcome`, "That's what £999 looks like.");
         await upsert(`${wsaId}.button_text`, 'Visit World Student Advisors');
         await upsert(`${wsaId}.button_href`, 'https://www.worldstudentadvisors.com/');
       }
 
       if (whyId) {
         await upsert(`${whyId}.p1`, "Most websites start with a template. We start with the business. We listen properly, understand what you're trying to achieve and build around that.");
-        await upsert(`${whyId}.p2`, "We'll challenge ideas where it helps, suggest better ones where we see them and explain why. The decisions stay with you. It's your business and your website.");
+        await upsert(`${whyId}.p2`, "We'll challenge ideas when we think there's a better way and explain why. The decisions stay with you. It's your business and your website.");
       }
 
       if (wontId) {
@@ -910,14 +910,16 @@ async function seed() {
         await upsert(`${wontId}.p2`, '');
       }
 
-      // Global footer contact section: update heading and body.
-      await upsert('contact.heading', 'Tell us what you want to build.');
-      await upsert('contact.body',
+      // Page-specific contact overrides for websites-and-ai only.
+      // The global contact.heading / contact.body are left unchanged so all
+      // other pages continue to use the shared contact section as before.
+      await upsert('wai.contact_heading', 'Tell us what you want to build.');
+      await upsert('wai.contact_body',
         "You don't need a specification.<br><br>"
         + "You don't need wireframes.<br><br>"
         + "You don't even need to know exactly what the finished website looks like.<br><br>"
         + "Tell us what you're trying to achieve.<br><br>"
-        + "We'll tell you how we'd build it."
+        + "We'll tell you what we'd do and why."
       );
 
       console.log('Websites and AI: copy refinement migration applied.');
