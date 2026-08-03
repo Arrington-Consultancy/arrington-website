@@ -1394,6 +1394,12 @@
             margin-top: 2rem;
             max-width: 100%;
             white-space: normal;
+            overflow-wrap: break-word;
+            text-align: center;
+            justify-content: center;
+            height: auto;
+            min-height: 3rem;
+            box-sizing: border-box;
         }
 
         .cs2-screenshots {
@@ -2227,6 +2233,10 @@
                 justify-content: center;
                 text-align: center;
             }
+
+            .casestudy2 .btn {
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -2240,7 +2250,7 @@
             <% if (canEdit) { %><button class="cms-img-btn" data-image="logo" title="Change logo">&#9998;</button><% } %>
         </a>
         <div class="nav-actions">
-            <a href="#conversation" class="nav-cta"><%= content['contact.label'] %></a>
+            <a href="#conversation" class="nav-cta"><%= pageContact.headerCtaText %></a>
             <% const _navWa = (content['contact.whatsapp'] || '').trim(); %>
             <% if (/^https:\/\/(wa\.me|api\.whatsapp\.com)\//.test(_navWa)) { %>
             <a href="<%= _navWa %>" class="nav-cta nav-cta-whatsapp" target="_blank" rel="noopener nofollow">WhatsApp us</a>
@@ -2269,7 +2279,7 @@
         <% } %>
         <div class="mobile-menu-divider"></div>
     <% } %>
-    <a href="#conversation" class="mobile-menu-cta"><%= content['contact.label'] %></a>
+    <a href="#conversation" class="mobile-menu-cta"><%= pageContact.headerCtaText %></a>
     <% const _mWa = (content['contact.whatsapp'] || '').trim(); %>
     <% if (/^https:\/\/(wa\.me|api\.whatsapp\.com)\//.test(_mWa)) { %>
     <a href="<%= _mWa %>" class="mobile-menu-cta mobile-menu-whatsapp" target="_blank" rel="noopener nofollow">WhatsApp us</a>
@@ -2625,10 +2635,15 @@
               // show the avatar when the initial is actually a letter.
               const _fcInitialRaw = (content[_k + '.card_' + _n + '_number'] || '').replace(/<[^>]+>/g, '').trim().charAt(0).toUpperCase();
               const _fcInitial = /[A-Z]/.test(_fcInitialRaw) ? _fcInitialRaw : '';
+              const _fcTitle = (content[_k + '.card_' + _n + '_title'] || '').replace(/<[^>]+>/g, '').trim();
+              const _fcBody = (content[_k + '.card_' + _n + '_body'] || '').replace(/<[^>]+>/g, '').trim();
+              const _fcNum = (content[_k + '.card_' + _n + '_number'] || '').replace(/<[^>]+>/g, '').trim();
+              const _fcHasContent = !!(_fcTitle || _fcBody || _fcNum);
             %>
+            <% if (_fcHasContent) { %>
             <article class="fourcard">
-                <div class="fourcard-header">
-                    <% if (_fcInitial) { %><div class="fourcard-avatar" aria-hidden="true"><%= _fcInitial %></div><% } %>
+               <div class="fourcard-header">
+                   <% if (_fcInitial) { %><div class="fourcard-avatar" aria-hidden="true"><%= _fcInitial %></div><% } %>
                     <div class="fourcard-number"><%- content[_k + '.card_' + _n + '_number'] %></div>
                 </div>
                 <h3><%- content[_k + '.card_' + _n + '_title'] %></h3>
@@ -2637,6 +2652,7 @@
                 <a href="<%= _resolvePageHref(_fcMatch[1] + (_fcMatch[2] ? '#' + _fcMatch[2] : '')) %>" class="fourcard-link">Read the full story</a>
                 <% } %>
             </article>
+            <% } %>
             <% } %>
         </div>
     </div>
@@ -3095,7 +3111,7 @@
 <footer id="conversation">
     <div class="footer-contact cms-section" data-section="contact">
         <% if (canEdit) { %><button class="cms-edit-btn" data-section="contact" title="Edit section">&#9998;</button><% } %>
-        <p class="section-label"><%- content['contact.label'] %></p>
+        <p class="section-label"><%- pageContact.label %></p>
         <h2 class="section-heading"><%- pageContact.heading %></h2>
         <p><%- pageContact.body %></p>
         <%
@@ -3126,8 +3142,8 @@
                 <input type="tel" name="phone" placeholder="Phone (optional)" maxlength="50">
                 <input type="text" name="preferred_time" placeholder="Best day/time for a 30 min call (optional)" maxlength="255">
             </div>
-            <textarea name="message" placeholder="Tell us where the pressure is showing" maxlength="2000" rows="4"></textarea>
-            <button type="submit" class="btn btn-primary">Send</button>
+            <textarea name="message" placeholder="<%= pageContact.messagePlaceholder %>" maxlength="2000" rows="4"></textarea>
+            <button type="submit" class="btn btn-primary"><%= pageContact.submitText %></button>
             <p class="lead-form-status" id="leadFormStatus" aria-live="polite"></p>
         </form>
         <p class="lead-form-alt">Prefer to call, email or WhatsApp instead?</p>

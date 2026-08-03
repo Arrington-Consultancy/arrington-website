@@ -83,10 +83,22 @@ router.get('/orphaned-sections', requireCapability('manage_sections'), async (re
 // Get all content for a section prefix
 router.get('/:prefix', requireCapability('edit_content'), async (req, res) => {
   try {
-    const { rows } = await db.query(
-      'SELECT section_key, content FROM content WHERE section_key LIKE $1 ORDER BY section_key',
-      [`${req.params.prefix}.%`]
-    );
+    const prefix = req.params.prefix;
+    const pageSlug = (req.query.pageSlug || '').toString();
+    let rows;
+    if (prefix === 'contact' && pageSlug === 'websites-and-ai') {
+      ({ rows } = await db.query(
+        `SELECT section_key, content
+         FROM content
+         WHERE section_key LIKE 'contact.%' OR section_key LIKE 'wai.%'
+         ORDER BY section_key`
+      ));
+    } else {
+      ({ rows } = await db.query(
+        'SELECT section_key, content FROM content WHERE section_key LIKE $1 ORDER BY section_key',
+        [`${prefix}.%`]
+      ));
+    }
     const fields = {};
     rows.forEach(r => { fields[r.section_key] = r.content; });
     res.json({ fields });

@@ -142,6 +142,12 @@
         'contact.email': 'Email address',
         'contact.phone': 'Phone number',
         'contact.whatsapp': 'WhatsApp link (leave empty to hide the WhatsApp button)',
+        'wai.header_cta_text': 'Websites and AI header CTA text',
+        'wai.contact_label': 'Websites and AI contact label',
+        'wai.contact_heading': 'Websites and AI contact heading',
+        'wai.contact_body': 'Websites and AI contact body',
+        'wai.contact_message_placeholder': 'Websites and AI message placeholder',
+        'wai.contact_submit_text': 'Websites and AI submit button text',
         'article.label': 'Section label',
         'article.heading': 'Title',
         'article.body': 'Body text',
@@ -182,7 +188,8 @@
             key.includes('_title') || key.includes('_number') ||
             key.includes('_action') || key.includes('_client') ||
             key.includes('_file') || key.includes('_image') || key.endsWith('.image') || key.includes('_meta') ||
-            key.includes('_link') || key.includes('button_text')) {
+            key.includes('_link') || key.includes('button_text') ||
+            key.includes('placeholder') || key.includes('submit_text')) {
             return 'short';
         }
         if (key.includes('body') || key.includes('_p1') || key.includes('_p2') ||
@@ -217,7 +224,7 @@
         modal.classList.add('active');
 
         try {
-            const res = await fetch(`/api/content/${section}`, {
+            const res = await fetch(`/api/content/${section}?pageSlug=${encodeURIComponent(pageSlug)}`, {
                 headers: { 'X-CSRF-Token': csrfToken }
             });
             const data = await res.json();

@@ -926,6 +926,173 @@ async function seed() {
     }
   }
 
+  // Migration: complete Websites and AI simplification (03/08/2026). Enforces
+  // the final six-section structure, updates the approved copy, removes old
+  // repetitive sections from the page order, and seeds page-specific contact
+  // overrides used only on /websites-and-ai. Idempotent and scoped to this
+  // page only.
+  {
+    const { rows: waRows } = await db.query(
+      "SELECT section_order FROM pages WHERE slug = 'websites-and-ai'"
+    );
+    if (waRows.length > 0) {
+      const pageOrder = Array.isArray(waRows[0].section_order) ? waRows[0].section_order : [];
+      const baseOf = (id) => {
+        const m = /^([a-z0-9]+)(?:__(\d+))?$/.exec(id || '');
+        return m ? m[1] : null;
+      };
+
+      const upsert = async (key, value) => {
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content',
+          [key, value]
+        );
+      };
+
+      const { rows: pageContentRows } = await db.query(
+        `SELECT section_key, content
+         FROM content
+         WHERE split_part(section_key, '.', 1) = ANY($1::text[])`,
+        [pageOrder]
+      );
+      const sectionFields = {};
+      for (const r of pageContentRows) {
+        const dot = r.section_key.indexOf('.');
+        if (dot < 0) continue;
+        const iid = r.section_key.slice(0, dot);
+        const field = r.section_key.slice(dot + 1);
+        if (!sectionFields[iid]) sectionFields[iid] = {};
+        sectionFields[iid][field] = r.content || '';
+      }
+
+      const idsByBase = (base) => pageOrder.filter((id) => baseOf(id) === base);
+      const findBy = (base, predicate) => {
+        const ids = idsByBase(base);
+        for (const id of ids) {
+          if (predicate(sectionFields[id] || {}, id)) return id;
+        }
+        return ids[0] || null;
+      };
+
+      let heroId = idsByBase('hero')[0] || null;
+      let wsaId = idsByBase('casestudy2')[0] || null;
+      let techId = findBy('filter', (f) => (f.heading || '').trim() === 'Technology should earn its place' || (f.label || '').trim() === 'HOW WE THINK');
+      let examplesId = idsByBase('insights')[0] || null;
+      let processId = idsByBase('fourcards')[0] || null;
+      let closingId = findBy('intervention', (f) => {
+        const h = (f.heading || '').trim();
+        return h === 'Tell us what you want to build' || h === 'Technology should make the business stronger, not more complicated';
+      });
+
+      if (!heroId || !wsaId || !techId || !examplesId || !processId || !closingId) {
+        const { rows: orderRows } = await db.query('SELECT section_order FROM pages');
+        const used = new Set();
+        for (const r of orderRows) {
+          if (Array.isArray(r.section_order)) r.section_order.forEach((s) => used.add(s));
+        }
+        const { rows: prefixRows } = await db.query(
+          "SELECT DISTINCT split_part(section_key, '.', 1) AS instance_id FROM content"
+        );
+        prefixRows.forEach((r) => used.add(r.instance_id));
+        const allocate = (tpl) => {
+          if (!used.has(tpl)) { used.add(tpl); return tpl; }
+          for (let n = 2; n <= 99; n++) {
+            const id = `${tpl}__${n}`;
+            if (!used.has(id)) { used.add(id); return id; }
+          }
+          return null;
+        };
+        if (!heroId) heroId = allocate('hero');
+        if (!wsaId) wsaId = allocate('casestudy2');
+        if (!techId) techId = allocate('filter');
+        if (!examplesId) examplesId = allocate('insights');
+        if (!processId) processId = allocate('fourcards');
+        if (!closingId) closingId = allocate('intervention');
+      }
+
+      if (heroId) {
+        await upsert(`${heroId}.heading`, 'A genuinely bespoke website for £999');
+        await upsert(`${heroId}.subtext`, 'If we built World Student Advisors for £999, imagine what we could build for your business.<br><br>We\'ll build it around your business, not around a template.');
+        await upsert(`${heroId}.cta`, 'Tell us what you want to build');
+      }
+
+      if (wsaId) {
+        await upsert(`${wsaId}.label`, 'OUR WORK');
+        await upsert(`${wsaId}.heading`, 'World Student Advisors');
+        await upsert(`${wsaId}.intro`, 'We built World Student Advisors for £999.');
+        await upsert(`${wsaId}.body`, 'It includes Pipedrive CRM, Microsoft 365, Google Reviews, AI interview practice, AI visa interview preparation and responsive layouts across desktop and mobile.<br><br>Every part of it was built around how the business actually works.');
+        await upsert(`${wsaId}.outcome`, 'That\'s what £999 looks like.');
+        await upsert(`${wsaId}.button_text`, 'View the World Student Advisors website');
+        await upsert(`${wsaId}.button_href`, 'https://www.worldstudentadvisors.com/');
+      }
+
+      if (techId) {
+        await upsert(`${techId}.label`, 'HOW WE THINK');
+        await upsert(`${techId}.heading`, 'Technology should earn its place');
+        await upsert(`${techId}.p1`, 'We recommend websites, AI and systems only when they genuinely improve the business.');
+        await upsert(`${techId}.p2`, 'If they don\'t, we won\'t recommend them.');
+        await upsert(`${techId}.button_text`, '');
+      }
+
+      if (examplesId) {
+        await upsert(`${examplesId}.label`, 'WHAT ELSE WE\'VE BUILT');
+        await upsert(`${examplesId}.heading`, 'What else we\'ve built');
+        await upsert(`${examplesId}.subtext`, 'Our own businesses have always been our testing ground.<br><br>Before we recommend something to a client, we\'d rather build it ourselves.<br><br>Everything here started by solving a real commercial problem.');
+        await upsert(`${examplesId}.card_1_tag`, 'OWNER CHECK');
+        await upsert(`${examplesId}.card_1_title`, 'Owner Check');
+        await upsert(`${examplesId}.card_1_body`, 'A practical self-diagnostic that shows where a business still depends too heavily on its owner.');
+        await upsert(`${examplesId}.card_2_tag`, 'COMMERCIAL GAPS REVIEW');
+        await upsert(`${examplesId}.card_2_title`, 'Commercial Gaps Review');
+        await upsert(`${examplesId}.card_2_body`, 'An automated commercial review that highlights opportunities, pressure points and missed commercial potential using evidence rather than assumptions.');
+        await upsert(`${examplesId}.card_3_tag`, 'ARRINGTON CONSULTANCY');
+        await upsert(`${examplesId}.card_3_title`, 'Arrington Consultancy');
+        await upsert(`${examplesId}.card_3_body`, 'Built to generate better enquiries, demonstrate properly directed AI and show what a genuinely bespoke £999 website can look like.');
+      }
+
+      if (processId) {
+        await upsert(`${processId}.label`, 'HOW THE WORK HAPPENS');
+        await upsert(`${processId}.heading`, 'Understand, build, improve');
+        await upsert(`${processId}.card_1_number`, '01');
+        await upsert(`${processId}.card_1_title`, 'Understand');
+        await upsert(`${processId}.card_1_body`, 'We understand the business before we build anything.');
+        await upsert(`${processId}.card_2_number`, '02');
+        await upsert(`${processId}.card_2_title`, 'Build');
+        await upsert(`${processId}.card_2_body`, 'We build what the business actually needs.');
+        await upsert(`${processId}.card_3_number`, '03');
+        await upsert(`${processId}.card_3_title`, 'Improve');
+        await upsert(`${processId}.card_3_body`, 'We improve it as the business grows.');
+        await upsert(`${processId}.card_4_number`, '');
+        await upsert(`${processId}.card_4_title`, '');
+        await upsert(`${processId}.card_4_body`, '');
+      }
+
+      if (closingId) {
+        await upsert(`${closingId}.heading`, 'Tell us what you want to build');
+        await upsert(`${closingId}.subtext`, 'You don\'t need a finished brief. Tell us what you\'re trying to achieve and we\'ll tell you what we\'d do and why.');
+        await upsert(`${closingId}.button_text`, 'Tell us what you want to build');
+        await upsert(`${closingId}.button_link`, '');
+      }
+
+      await upsert('wai.header_cta_text', 'TELL US WHAT YOU WANT TO BUILD');
+      await upsert('wai.contact_label', 'TELL US WHAT YOU WANT TO BUILD');
+      await upsert('wai.contact_heading', 'Tell us what you want to build.');
+      await upsert('wai.contact_body', 'You don\'t need a specification.<br><br>You don\'t need wireframes.<br><br>You don\'t even need to know exactly what the finished website looks like.<br><br>Tell us what you\'re trying to achieve.<br><br>We\'ll tell you what we\'d do and why.');
+      await upsert('wai.contact_message_placeholder', 'Tell us what you want to build');
+      await upsert('wai.contact_submit_text', 'Tell us what you want to build');
+
+      const desiredOrder = [heroId, wsaId, techId, examplesId, processId, closingId].filter(Boolean);
+      const uniqueDesiredOrder = [...new Set(desiredOrder)];
+      if (JSON.stringify(uniqueDesiredOrder) !== JSON.stringify(pageOrder)) {
+        await db.query(
+          'UPDATE pages SET section_order = $1::jsonb WHERE slug = $2',
+          [JSON.stringify(uniqueDesiredOrder), 'websites-and-ai']
+        );
+      }
+
+      console.log('Websites and AI: final simplification migration applied.');
+    }
+  }
+
   // Migration: Useful Thinking articles, first batch (01/08/2026, from
   // "Arrington Website Worker Handover 01"). Four pieces are published as
   // real pages (show_in_nav: false, same pattern as Websites and AI before
