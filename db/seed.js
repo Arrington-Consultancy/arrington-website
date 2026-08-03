@@ -1729,7 +1729,7 @@ async function seed() {
   }
   console.log('Images seeded.');
 
-  // Migration: swap known old logo assets for the higher-resolution gold
+  // Migration: swap known old logo assets for the cropped stacked gold
   // Arrington Consultancy lockup. Only replaces exact known hashes, so a
   // later CMS upload is preserved.
   {
@@ -1740,7 +1740,8 @@ async function seed() {
       const replaceableLogoMd5s = new Set([
         '1b59d855877e5ceeea549f0b74ef1761',
         '2d02b99128fe3d33a8d0d6305e266bbc',
-        '4855292a9ee382f1d708e3f5f9745200'
+        '4855292a9ee382f1d708e3f5f9745200',
+        '73038371d01eda10ffb8fa842676b39d'
       ]);
       if (replaceableLogoMd5s.has(currentMd5)) {
         await db.query(
