@@ -744,7 +744,7 @@ async function seed() {
           [`${heroId}.heading`]
         );
         const existingHeading = (hRows[0] && hRows[0].content) || '';
-        if (existingHeading !== 'A genuinely bespoke website for £999') {
+        if (existingHeading !== 'A genuinely bespoke website for £999' && existingHeading !== 'A proper business website for £999') {
           await db.query(
             'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content',
             [`${heroId}.heading`, 'A genuinely bespoke website for £999']
@@ -881,48 +881,316 @@ async function seed() {
         );
       };
 
+      let hasFinalHeading = false;
       if (heroId) {
-        await upsert(`${heroId}.subtext`,
-          'If we built World Student Advisors for £999, imagine what we could build for your business.<br><br>'
-          + "We'll build it around your business, not around a template."
+        const { rows: finalHeadingRows } = await db.query(
+          'SELECT content FROM content WHERE section_key = $1',
+          [`${heroId}.heading`]
         );
+        hasFinalHeading = ((finalHeadingRows[0] && finalHeadingRows[0].content) || '') === 'A proper business website for £999';
+      }
+
+      if (!hasFinalHeading) {
+        if (heroId) {
+          await upsert(`${heroId}.subtext`,
+            'If we built World Student Advisors for £999, imagine what we could build for your business.<br><br>'
+            + "We'll build it around your business, not around a template."
+          );
+        }
+
+        if (wsaId) {
+          await upsert(`${wsaId}.intro`, 'We built World Student Advisors for £999.');
+          await upsert(`${wsaId}.body`,
+            'It includes Pipedrive CRM, Microsoft 365, Google Reviews, AI interview practice, AI visa interview preparation and responsive layouts across desktop and mobile.<br><br>'
+            + 'Every part of it was built around how the business actually works.'
+          );
+          await upsert(`${wsaId}.outcome`, "That's what £999 looks like.");
+          await upsert(`${wsaId}.button_text`, 'View the World Student Advisors website');
+          await upsert(`${wsaId}.button_href`, 'https://www.worldstudentadvisors.com/');
+        }
+
+        if (whyId) {
+          await upsert(`${whyId}.p1`, "Most websites start with a template. We start with the business. We listen properly, understand what you're trying to achieve and build around that.");
+          await upsert(`${whyId}.p2`, "We'll challenge ideas when we think there's a better way and explain why. The decisions stay with you. It's your business and your website.");
+        }
+
+        if (wontId) {
+          await upsert(`${wontId}.heading`, 'Technology should earn its place');
+          await upsert(`${wontId}.p1`, "We recommend websites, AI and systems when they genuinely improve the business. If they don't, we won't recommend them.");
+          await upsert(`${wontId}.p2`, '');
+        }
+
+        // Page-specific contact overrides for websites-and-ai only.
+        // The global contact.heading / contact.body are left unchanged so all
+        // other pages continue to use the shared contact section as before.
+        await upsert('wai.contact_heading', 'Tell us what you want to build.');
+        await upsert('wai.contact_body',
+          "You don't need a specification.<br><br>"
+          + "You don't need wireframes.<br><br>"
+          + "You don't even need to know exactly what the finished website looks like.<br><br>"
+          + "Tell us what you're trying to achieve.<br><br>"
+          + "We'll tell you what we'd do and why."
+        );
+
+        console.log('Websites and AI: copy refinement migration applied.');
+      }
+    }
+  }
+
+  // Migration: rebuild Websites and AI as the approved £999 conversion page
+  // (03/08/2026). Enforces the exact five body sections before the shared
+  // footer, removes the older repetitive sections from the page order, and
+  // seeds page-specific contact copy without touching the global contact
+  // defaults used by the consultancy pages.
+  {
+    let { rows: waRows } = await db.query(
+      "SELECT section_order FROM pages WHERE slug = 'websites-and-ai'"
+    );
+    const baseOf = (id) => {
+      const m = /^([a-z0-9]+)(?:__(\d+))?$/.exec(id || '');
+      return m ? m[1] : null;
+    };
+
+    const collectUsedIds = async () => {
+      const { rows: orderRows } = await db.query('SELECT section_order FROM pages');
+      const used = new Set();
+      for (const r of orderRows) {
+        if (Array.isArray(r.section_order)) r.section_order.forEach((s) => used.add(s));
+      }
+      const { rows: prefixRows } = await db.query(
+        "SELECT DISTINCT split_part(section_key, '.', 1) AS instance_id FROM content"
+      );
+      prefixRows.forEach((r) => used.add(r.instance_id));
+      return used;
+    };
+
+    const makeAllocator = (used) => (tpl) => {
+      if (!used.has(tpl)) { used.add(tpl); return tpl; }
+      for (let n = 2; n <= 99; n++) {
+        const id = `${tpl}__${n}`;
+        if (!used.has(id)) { used.add(id); return id; }
+      }
+      return null;
+    };
+
+    const upsert = async (key, value) => {
+      await db.query(
+        'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content',
+        [key, value]
+      );
+    };
+
+    if (waRows.length === 0) {
+      const used = await collectUsedIds();
+      const allocate = makeAllocator(used);
+      const seedOrder = [
+        allocate('hero'),
+        allocate('casestudy2'),
+        allocate('filter'),
+        allocate('fourcards'),
+        allocate('filter')
+      ].filter(Boolean);
+
+      const { rows: wwdSortRows } = await db.query("SELECT sort_order FROM pages WHERE slug = 'what-we-do'");
+      let waiSort = null;
+      if (wwdSortRows.length > 0) {
+        const wwdSort = wwdSortRows[0].sort_order;
+        await db.query('UPDATE pages SET sort_order = sort_order + 1 WHERE sort_order > $1', [wwdSort]);
+        waiSort = wwdSort + 1;
+      } else {
+        const { rows: maxRows } = await db.query('SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM pages');
+        waiSort = Number(maxRows[0].max_sort || 0) + 1;
+      }
+
+      await db.query(
+        `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav)
+         VALUES ('websites-and-ai', 'Websites and AI', $1, $2::jsonb, '[]'::jsonb, '[]'::jsonb, false)`,
+        [waiSort, JSON.stringify(seedOrder)]
+      );
+      waRows = [{ section_order: seedOrder }];
+    }
+
+    if (waRows.length > 0) {
+      const pageOrder = Array.isArray(waRows[0].section_order) ? waRows[0].section_order : [];
+      const { rows: pageContentRows } = await db.query(
+        `SELECT section_key, content
+         FROM content
+         WHERE split_part(section_key, '.', 1) = ANY($1::text[])`,
+        [pageOrder]
+      );
+      const sectionFields = {};
+      for (const r of pageContentRows) {
+        const dot = r.section_key.indexOf('.');
+        if (dot < 0) continue;
+        const iid = r.section_key.slice(0, dot);
+        const field = r.section_key.slice(dot + 1);
+        if (!sectionFields[iid]) sectionFields[iid] = {};
+        sectionFields[iid][field] = r.content || '';
+      }
+
+      const idsByBase = (base) => pageOrder.filter((id) => baseOf(id) === base);
+      const findBy = (base, predicate, exclude = new Set()) => {
+        const ids = idsByBase(base).filter((id) => !exclude.has(id));
+        for (const id of ids) {
+          if (predicate(sectionFields[id] || {}, id)) return id;
+        }
+        return ids[0] || null;
+      };
+
+      let heroId = idsByBase('hero')[0] || null;
+      let wsaId = idsByBase('casestudy2')[0] || null;
+      let includesId = findBy('filter', (f) =>
+        (f.label || '').trim() === 'THE £999 BUILD' || (f.heading || '').trim() === 'What you get'
+      );
+      const usedFilterIds = new Set(includesId ? [includesId] : []);
+      let whyId = findBy('filter', (f) =>
+        (f.label || '').trim() === 'WHY ARRINGTON' || (f.heading || '').trim() === 'Built by someone who understands business',
+        usedFilterIds
+      );
+      let processId = idsByBase('fourcards')[0] || null;
+
+      if (!heroId || !wsaId || !includesId || !processId || !whyId) {
+        const used = await collectUsedIds();
+        const allocate = makeAllocator(used);
+        if (!heroId) heroId = allocate('hero');
+        if (!wsaId) wsaId = allocate('casestudy2');
+        if (!includesId) includesId = allocate('filter');
+        if (!processId) processId = allocate('fourcards');
+        if (!whyId) whyId = allocate('filter');
+      }
+
+      const clearFilterExtras = async (id) => {
+        if (!id) return;
+        for (let n = 1; n <= 8; n++) await upsert(`${id}.item_${n}`, '');
+        for (let n = 1; n <= 3; n++) {
+          await upsert(`${id}.row_${n}_action`, '');
+          await upsert(`${id}.row_${n}_client`, '');
+        }
+        await upsert(`${id}.intro`, '');
+        await upsert(`${id}.closing`, '');
+        await upsert(`${id}.button_text`, '');
+        await upsert(`${id}.button_link`, 'main');
+      };
+
+      if (heroId) {
+        await upsert(`${heroId}.label`, 'BESPOKE BUSINESS WEBSITES');
+        await upsert(`${heroId}.heading`, 'A proper business website for £999');
+        await upsert(`${heroId}.subtext`, 'If we built World Student Advisors for £999, imagine what we could build for your business.<br><br>Built around the way your business actually operates. Not dropped into a template.');
+        await upsert(`${heroId}.proof_text`, 'See what we built for the same fixed £999');
+        await upsert(`${heroId}.proof_href`, wsaId ? `#${wsaId}` : '#conversation');
+        await upsert(`${heroId}.bullet_1`, 'Fixed £999 price');
+        await upsert(`${heroId}.bullet_2`, 'Mobile ready');
+        await upsert(`${heroId}.bullet_3`, 'Built around the way your business actually operates');
+        await upsert(`${heroId}.cta`, 'See what £999 looks like');
+        await upsert(`${heroId}.cta_href`, wsaId ? `#${wsaId}` : '#conversation');
+        await upsert(`${heroId}.secondary_text`, 'Tell us what you want to build');
+        await upsert(`${heroId}.secondary_href`, '#conversation');
+        await upsert(`${heroId}.cta_link`, '');
+        await upsert(`${heroId}.whatsapp`, '');
+
+        const seedHeroImageIfMissing = async (key, file, mime) => {
+          const filePath = path.join(__dirname, '..', file);
+          if (!fs.existsSync(filePath)) return;
+          await db.query(
+            `INSERT INTO images (image_key, data, mime_type)
+             VALUES ($1, $2, $3)
+             ON CONFLICT (image_key) DO NOTHING`,
+            [key, fs.readFileSync(filePath), mime]
+          );
+        };
+        await seedHeroImageIfMissing(`headshot__${heroId}`, 'hero-websites-and-ai.jpg', 'image/jpeg');
+        await seedHeroImageIfMissing(`headshot__${heroId}__webp`, 'hero-websites-and-ai.webp', 'image/webp');
       }
 
       if (wsaId) {
-        await upsert(`${wsaId}.intro`, 'We built World Student Advisors for £999.');
-        await upsert(`${wsaId}.body`,
-          'It includes Pipedrive CRM, Microsoft 365, Google Reviews, AI interview practice, AI visa interview preparation and responsive layouts across desktop and mobile.<br><br>'
-          + 'Every part of it was built around how the business actually works.'
-        );
-        await upsert(`${wsaId}.outcome`, "That's what £999 looks like.");
+        await upsert(`${wsaId}.label`, 'BUILT FOR £999');
+        await upsert(`${wsaId}.heading`, 'World Student Advisors');
+        await upsert(`${wsaId}.intro`, 'World Student Advisors is a fully bespoke website we built for £999.');
+        await upsert(`${wsaId}.body`, 'It includes Pipedrive CRM, Microsoft 365, Google Reviews, AI interview practice, AI visa interview preparation and responsive layouts across desktop and mobile.<br><br>Every part of it was built around how the organisation actually works.');
+        await upsert(`${wsaId}.included_heading`, 'Included in the build');
+        await upsert(`${wsaId}.item_1`, 'Pipedrive CRM integration');
+        await upsert(`${wsaId}.item_2`, 'Microsoft 365 integration');
+        await upsert(`${wsaId}.item_3`, 'Google Reviews');
+        await upsert(`${wsaId}.item_4`, 'AI interview practice');
+        await upsert(`${wsaId}.item_5`, 'AI visa interview preparation');
+        await upsert(`${wsaId}.item_6`, 'Responsive desktop and mobile layouts');
+        await upsert(`${wsaId}.item_7`, 'Detailed enquiry and registration journeys');
+        await upsert(`${wsaId}.item_8`, '');
+        await upsert(`${wsaId}.stat_number`, '');
+        await upsert(`${wsaId}.stat_label`, '');
+        await upsert(`${wsaId}.outcome`, '');
         await upsert(`${wsaId}.button_text`, 'View the World Student Advisors website');
         await upsert(`${wsaId}.button_href`, 'https://www.worldstudentadvisors.com/');
       }
 
+      if (includesId) {
+        await clearFilterExtras(includesId);
+        await upsert(`${includesId}.label`, 'THE £999 BUILD');
+        await upsert(`${includesId}.heading`, 'What you get');
+        await upsert(`${includesId}.intro`, 'We agree what the website needs to do before we start.');
+        await upsert(`${includesId}.p1`, '');
+        await upsert(`${includesId}.p2`, '');
+        await upsert(`${includesId}.item_1`, 'A website designed around the way your business actually operates');
+        await upsert(`${includesId}.item_2`, 'Responsive desktop and mobile build');
+        await upsert(`${includesId}.item_3`, 'The agreed pages, forms and functionality');
+        await upsert(`${includesId}.item_4`, 'Basic technical and on-page SEO setup');
+        await upsert(`${includesId}.item_5`, 'A one-hour recorded planning conversation');
+        await upsert(`${includesId}.item_6`, 'One complete first version');
+        await upsert(`${includesId}.item_7`, 'One structured round of changes');
+        await upsert(`${includesId}.item_8`, 'CMS access where appropriate');
+        await upsert(`${includesId}.closing`, 'The price is £999.<br><br>Further changes after the agreed build and included revision are charged at £300 per day, based on approximately six working hours.');
+      }
+
+      if (processId) {
+        await upsert(`${processId}.label`, 'HOW IT WORKS');
+        await upsert(`${processId}.heading`, 'From conversation to live website');
+        await upsert(`${processId}.evidence_intro`, '');
+        await upsert(`${processId}.card_1_number`, '01');
+        await upsert(`${processId}.card_1_title`, 'Tell us what you want to build');
+        await upsert(`${processId}.card_1_body`, 'We use a recorded planning conversation to agree what the website needs to do.');
+        await upsert(`${processId}.card_1_link`, '');
+        await upsert(`${processId}.card_2_number`, '02');
+        await upsert(`${processId}.card_2_title`, 'We build it');
+        await upsert(`${processId}.card_2_body`, 'We build the complete first version around what was agreed.');
+        await upsert(`${processId}.card_2_link`, '');
+        await upsert(`${processId}.card_3_number`, '03');
+        await upsert(`${processId}.card_3_title`, 'You review it');
+        await upsert(`${processId}.card_3_body`, 'You get one structured round of changes before sign-off and launch.');
+        await upsert(`${processId}.card_3_link`, '');
+        await upsert(`${processId}.card_4_number`, '');
+        await upsert(`${processId}.card_4_title`, '');
+        await upsert(`${processId}.card_4_body`, '');
+        await upsert(`${processId}.card_4_link`, '');
+      }
+
       if (whyId) {
-        await upsert(`${whyId}.p1`, "Most websites start with a template. We start with the business. We listen properly, understand what you're trying to achieve and build around that.");
-        await upsert(`${whyId}.p2`, "We'll challenge ideas when we think there's a better way and explain why. The decisions stay with you. It's your business and your website.");
+        await clearFilterExtras(whyId);
+        await upsert(`${whyId}.label`, 'WHY ARRINGTON');
+        await upsert(`${whyId}.heading`, 'Built by someone who understands business');
+        await upsert(`${whyId}.p1`, 'This is not a design agency selling a favourite style.');
+        await upsert(`${whyId}.p2`, 'Tom has built, operated and sold real businesses. The website is judged by whether it helps the business communicate clearly, handle enquiries properly and win better work.');
+        await upsert(`${whyId}.closing`, 'The technology matters. Understanding the business matters more.');
       }
 
-      if (wontId) {
-        await upsert(`${wontId}.heading`, 'Technology should earn its place');
-        await upsert(`${wontId}.p1`, "We recommend websites, AI and systems when they genuinely improve the business. If they don't, we won't recommend them.");
-        await upsert(`${wontId}.p2`, '');
-      }
-
-      // Page-specific contact overrides for websites-and-ai only.
-      // The global contact.heading / contact.body are left unchanged so all
-      // other pages continue to use the shared contact section as before.
+      await upsert('wai.header_cta_text', 'TELL US WHAT YOU WANT TO BUILD');
+      await upsert('wai.contact_label', 'TELL US WHAT YOU WANT TO BUILD');
       await upsert('wai.contact_heading', 'Tell us what you want to build.');
-      await upsert('wai.contact_body',
-        "You don't need a specification.<br><br>"
-        + "You don't need wireframes.<br><br>"
-        + "You don't even need to know exactly what the finished website looks like.<br><br>"
-        + "Tell us what you're trying to achieve.<br><br>"
-        + "We'll tell you what we'd do and why."
+      await upsert('wai.contact_body', 'You do not need a specification or wireframes.<br><br>Tell us what you are trying to achieve and we will tell you what we would do and why.');
+      await upsert('wai.contact_message_placeholder', 'Tell us what you want the website to do');
+      await upsert('wai.contact_submit_text', 'Send enquiry');
+
+      const desiredOrder = [heroId, wsaId, includesId, processId, whyId].filter(Boolean);
+      const uniqueDesiredOrder = [...new Set(desiredOrder)];
+      await db.query(
+        `UPDATE pages
+         SET section_order = $1::jsonb,
+             hidden_sections = '[]'::jsonb,
+             deleted_sections = '[]'::jsonb
+         WHERE slug = $2`,
+        [JSON.stringify(uniqueDesiredOrder), 'websites-and-ai']
       );
 
-      console.log('Websites and AI: copy refinement migration applied.');
+      console.log('Websites and AI: £999 conversion-page rebuild applied.');
     }
   }
 
@@ -1417,7 +1685,7 @@ async function seed() {
   // ~130KB JPEG (quality 85) — visually identical at hero-background size,
   // well under the CMS's 2MB upload cap.
   const images = [
-    { key: 'logo', file: 'logo.avif', mime: 'image/avif' },
+    { key: 'logo', file: 'logo.png', mime: 'image/png' },
     { key: 'headshot', file: 'headshot.png', mime: 'image/png' },
     { key: 'oxford', file: 'oxford.png', mime: 'image/png' },
     { key: 'headshot__hero__5', file: 'hero-websites-and-ai.jpg', mime: 'image/jpeg' },
@@ -1443,6 +1711,25 @@ async function seed() {
     }
   }
   console.log('Images seeded.');
+
+  // Migration: swap the old compact white logo for the Drive-sourced gold
+  // stacked Arrington Consultancy lockup. Only replaces the stored image if
+  // it still matches the exact old seed asset, so a later CMS upload is
+  // preserved.
+  {
+    const logoPath = path.join(__dirname, '..', 'logo.png');
+    const { rows } = await db.query('SELECT data FROM images WHERE image_key = $1', ['logo']);
+    if (rows.length > 0 && fs.existsSync(logoPath)) {
+      const currentMd5 = crypto.createHash('md5').update(rows[0].data).digest('hex');
+      if (currentMd5 === '1b59d855877e5ceeea549f0b74ef1761') {
+        await db.query(
+          'UPDATE images SET data = $1, mime_type = $2 WHERE image_key = $3',
+          [fs.readFileSync(logoPath), 'image/png', 'logo']
+        );
+        console.log('Swapped logo to the Drive-sourced gold lockup.');
+      }
+    }
+  }
 
   // Migration: swap the Websites and AI hero photo for Tom's preferred
   // version (30/07/2026 - the first upload was replaced same-day with a

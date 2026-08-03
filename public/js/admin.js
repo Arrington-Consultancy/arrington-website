@@ -21,6 +21,15 @@
         'hero.heading': 'Heading',
         'hero.subtext': 'Subtext',
         'hero.cta': 'Button text',
+        'hero.label': 'Section label',
+        'hero.cta_href': 'Button anchor link',
+        'hero.proof_text': 'Proof link text',
+        'hero.proof_href': 'Proof link anchor',
+        'hero.secondary_text': 'Secondary link text',
+        'hero.secondary_href': 'Secondary link anchor',
+        'hero.bullet_1': 'Bullet 1',
+        'hero.bullet_2': 'Bullet 2',
+        'hero.bullet_3': 'Bullet 3',
         'hero.whatsapp': 'WhatsApp link (leave empty to hide the WhatsApp button)',
         'credentials_oxford.title': 'Title',
         'credentials_oxford.text': 'Description',
@@ -111,6 +120,15 @@
         'casestudy2.stat_number': 'Stat number (leave empty to hide)',
         'casestudy2.stat_label': 'Stat label',
         'casestudy2.body': 'Body text',
+        'casestudy2.included_heading': 'Included heading',
+        'casestudy2.item_1': 'Included item 1',
+        'casestudy2.item_2': 'Included item 2',
+        'casestudy2.item_3': 'Included item 3',
+        'casestudy2.item_4': 'Included item 4',
+        'casestudy2.item_5': 'Included item 5',
+        'casestudy2.item_6': 'Included item 6',
+        'casestudy2.item_7': 'Included item 7',
+        'casestudy2.item_8': 'Included item 8',
         'casestudy2.outcome': 'Outcome',
         'casestudy2.button_text': 'Button text (leave empty to hide)',
         'casestudy2.button_href': 'Button link (full https:// URL)',
@@ -125,8 +143,18 @@
         'assessment.q_6': 'Question 6',
         'filter.label': 'Section label',
         'filter.heading': 'Heading',
+        'filter.intro': 'Introduction',
         'filter.p1': 'Paragraph 1',
         'filter.p2': 'Paragraph 2',
+        'filter.item_1': 'List item 1',
+        'filter.item_2': 'List item 2',
+        'filter.item_3': 'List item 3',
+        'filter.item_4': 'List item 4',
+        'filter.item_5': 'List item 5',
+        'filter.item_6': 'List item 6',
+        'filter.item_7': 'List item 7',
+        'filter.item_8': 'List item 8',
+        'filter.closing': 'Closing text',
         'filter.button_text': 'Button text (leave empty to hide button)',
         'filter.button_link': 'Button links to',
         'proofstrip.label': 'Section label (leave empty to hide)',
@@ -142,6 +170,12 @@
         'contact.email': 'Email address',
         'contact.phone': 'Phone number',
         'contact.whatsapp': 'WhatsApp link (leave empty to hide the WhatsApp button)',
+        'wai.header_cta_text': 'Websites and AI header CTA text',
+        'wai.contact_label': 'Websites and AI contact label',
+        'wai.contact_heading': 'Websites and AI contact heading',
+        'wai.contact_body': 'Websites and AI contact body',
+        'wai.contact_message_placeholder': 'Websites and AI message placeholder',
+        'wai.contact_submit_text': 'Websites and AI submit button text',
         'article.label': 'Section label',
         'article.heading': 'Title',
         'article.body': 'Body text',
@@ -182,7 +216,8 @@
             key.includes('_title') || key.includes('_number') ||
             key.includes('_action') || key.includes('_client') ||
             key.includes('_file') || key.includes('_image') || key.endsWith('.image') || key.includes('_meta') ||
-            key.includes('_link') || key.includes('button_text')) {
+            key.includes('_link') || key.includes('button_text') ||
+            key.includes('placeholder') || key.includes('submit_text')) {
             return 'short';
         }
         if (key.includes('body') || key.includes('_p1') || key.includes('_p2') ||
@@ -217,7 +252,7 @@
         modal.classList.add('active');
 
         try {
-            const res = await fetch(`/api/content/${section}`, {
+            const res = await fetch(`/api/content/${section}?pageSlug=${encodeURIComponent(pageSlug)}`, {
                 headers: { 'X-CSRF-Token': csrfToken }
             });
             const data = await res.json();

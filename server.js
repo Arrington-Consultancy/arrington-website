@@ -200,11 +200,9 @@ app.get('/img/:key', async (req, res, next) => {
       );
       if (rows.length > 0) {
         res.set('Content-Type', rows[0].mime_type);
-        // Images rarely change and are content-addressed by key, but an
-        // admin can re-upload one under the same key - a moderate max-age
-        // with the automatic ETag Express sends keeps repeat visits fast
-        // without risking long-lived staleness after a real replacement.
-        res.set('Cache-Control', 'public, max-age=86400, must-revalidate');
+        // CMS images can be replaced under the same key, so browsers should
+        // revalidate rather than keep a stale logo or hero image locally.
+        res.set('Cache-Control', 'no-cache');
         return res.send(rows[0].data);
       }
     }
@@ -762,13 +760,22 @@ async function renderPage(req, res, next, pageSlug) {
     // Page-specific contact overrides. For websites-and-ai the footer shows
     // different heading/body copy while keeping the shared email, phone and
     // WhatsApp details unchanged. All other pages get the global values.
+    const plainText = (v) => String(v || '').replace(/<[^>]+>/g, '').trim();
     const pageContact = {
+      headerCtaText: plainText(content['contact.label']) || 'Start a conversation',
+      label: content['contact.label'],
       heading: content['contact.heading'],
-      body: content['contact.body']
+      body: content['contact.body'],
+      messagePlaceholder: 'Tell us where the pressure is showing',
+      submitText: 'Send'
     };
     if (pageSlug === 'websites-and-ai') {
+      pageContact.headerCtaText = plainText(content['wai.header_cta_text']) || pageContact.headerCtaText;
+      pageContact.label = content['wai.contact_label'] || pageContact.label;
       pageContact.heading = content['wai.contact_heading'] || pageContact.heading;
       pageContact.body    = content['wai.contact_body']    || pageContact.body;
+      pageContact.messagePlaceholder = plainText(content['wai.contact_message_placeholder']) || pageContact.messagePlaceholder;
+      pageContact.submitText = plainText(content['wai.contact_submit_text']) || pageContact.submitText;
     }
 
     res.render('index', {

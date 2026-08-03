@@ -355,7 +355,6 @@
             color: var(--text-bright);
             line-height: 1.12;
             margin-bottom: 1.5rem;
-            letter-spacing: -0.02em;
         }
 
         .hero-text .sub {
@@ -368,6 +367,74 @@
 
         .hero-text .btn {
             display: inline-flex;
+        }
+
+        .hero-label {
+            font-size: 0.74rem;
+            text-transform: uppercase;
+            letter-spacing: 0;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 1rem;
+        }
+
+        .hero-bullets {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem 1.25rem;
+            padding: 0;
+            margin: -1.15rem 0 2rem;
+            list-style: none;
+        }
+
+        .hero-bullets li {
+            position: relative;
+            padding-left: 1rem;
+            color: var(--text);
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        .hero-bullets li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0.58em;
+            width: 0.38rem;
+            height: 0.38rem;
+            border-radius: 50%;
+            background: var(--accent);
+        }
+
+        .hero-cta-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem 1.25rem;
+        }
+
+        .hero-secondary-link {
+            color: var(--accent);
+            font-size: 0.92rem;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .hero-secondary-link:hover {
+            color: var(--text-bright);
+        }
+
+        .hero-proof-link {
+            display: inline-block;
+            margin: -1.3rem 0 2rem;
+            color: var(--accent);
+            font-size: 0.95rem;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .hero-proof-link:hover {
+            color: var(--text-bright);
         }
 
         .hero-photo {
@@ -1372,7 +1439,7 @@
             font-size: 1.05rem;
             color: var(--text);
             line-height: 1.75;
-            margin-bottom: 2.5rem;
+            margin-bottom: 2rem;
         }
 
         .casestudy2-outcome {
@@ -1389,22 +1456,75 @@
             color: var(--text-bright);
         }
 
+        .casestudy2-included-heading {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.2rem;
+            color: var(--text-bright);
+            margin: 0 0 1rem;
+        }
+
+        .casestudy2-list,
+        .filter-list {
+            display: grid;
+            gap: 0.75rem;
+            margin: 0 0 2rem;
+            padding: 0;
+            list-style: none;
+            text-align: left;
+        }
+
+        .casestudy2-list li,
+        .filter-list li {
+            position: relative;
+            padding-left: 1.35rem;
+            color: var(--text);
+            font-size: 1rem;
+            line-height: 1.55;
+        }
+
+        .casestudy2-list li::before,
+        .filter-list li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0.72em;
+            width: 0.42rem;
+            height: 0.42rem;
+            border-radius: 50%;
+            background: var(--accent);
+        }
+
         .casestudy2 .btn {
             display: inline-flex;
             margin-top: 2rem;
             max-width: 100%;
             white-space: normal;
+            overflow-wrap: break-word;
+            text-align: center;
+            justify-content: center;
+            height: auto;
+            min-height: 3rem;
+            box-sizing: border-box;
         }
 
         .cs2-screenshots {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 1rem;
-            margin-top: 2rem;
+            margin: 2rem 0 2.25rem;
         }
 
-        .cs2-screenshots:empty {
+        .cs2-screenshots:empty,
+        .cs2-screenshots.cs2-screenshots--empty {
             display: none;
+        }
+
+        .cs2-screenshots.cs2-screenshots--single {
+            grid-template-columns: 1fr;
+        }
+
+        .cs2-screenshots.cs2-screenshots--pair {
+            grid-template-columns: repeat(2, 1fr);
         }
 
         .cs2-screenshot {
@@ -1597,6 +1717,22 @@
             color: var(--text);
             line-height: 1.75;
             margin-bottom: 0.75rem;
+            text-align: left;
+        }
+
+        .filter-intro {
+            font-size: 1.05rem;
+            color: var(--text);
+            line-height: 1.75;
+            margin-bottom: 2rem;
+            text-align: left;
+        }
+
+        .filter-closing {
+            margin-top: 2rem;
+            font-size: 1.05rem;
+            color: var(--text);
+            line-height: 1.75;
             text-align: left;
         }
 
@@ -2214,6 +2350,16 @@
                 font-size: 1rem;
             }
 
+            .hero-bullets {
+                flex-direction: column;
+                gap: 0.65rem;
+            }
+
+            .hero-cta-row {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
             .section-heading {
                 font-size: 1.5rem;
             }
@@ -2227,20 +2373,24 @@
                 justify-content: center;
                 text-align: center;
             }
+
+            .casestudy2 .btn {
+                width: 100%;
+            }
         }
     </style>
 </head>
 <body>
 
 <!-- NAV -->
-<nav id="nav">
+<nav id="nav" class="<%= currentPage.slug === 'websites-and-ai' ? 'nav-wai' : '' %>">
     <div class="nav-inner">
         <a href="/" class="nav-logo">
-            <img src="/img/logo" alt="Arrington Business Consultancy" class="nav-logo-img">
+            <img src="/img/logo?v=20260803" alt="Arrington Business Consultancy" class="nav-logo-img">
             <% if (canEdit) { %><button class="cms-img-btn" data-image="logo" title="Change logo">&#9998;</button><% } %>
         </a>
         <div class="nav-actions">
-            <a href="#conversation" class="nav-cta"><%= content['contact.label'] %></a>
+            <a href="#conversation" class="nav-cta"><%= pageContact.headerCtaText %></a>
             <% const _navWa = (content['contact.whatsapp'] || '').trim(); %>
             <% if (/^https:\/\/(wa\.me|api\.whatsapp\.com)\//.test(_navWa)) { %>
             <a href="<%= _navWa %>" class="nav-cta nav-cta-whatsapp" target="_blank" rel="noopener nofollow">WhatsApp us</a>
@@ -2269,7 +2419,7 @@
         <% } %>
         <div class="mobile-menu-divider"></div>
     <% } %>
-    <a href="#conversation" class="mobile-menu-cta"><%= content['contact.label'] %></a>
+    <a href="#conversation" class="mobile-menu-cta"><%= pageContact.headerCtaText %></a>
     <% const _mWa = (content['contact.whatsapp'] || '').trim(); %>
     <% if (/^https:\/\/(wa\.me|api\.whatsapp\.com)\//.test(_mWa)) { %>
     <a href="<%= _mWa %>" class="mobile-menu-cta mobile-menu-whatsapp" target="_blank" rel="noopener nofollow">WhatsApp us</a>
@@ -2334,6 +2484,13 @@
 <% const _k = _iid; %>
 <% const _heroImg = _iid === 'hero' ? 'headshot' : 'headshot__' + _iid; %>
 <% const _heroHTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %>
+<%
+  const _heroLabel = (content[_k + '.label'] || '').trim();
+  const _heroBullets = [1, 2, 3].map((n) => content[_k + '.bullet_' + n] || '').filter((v) => v.replace(/<[^>]+>/g, '').trim());
+  const _heroProofText = (content[_k + '.proof_text'] || '').replace(/<[^>]+>/g, '').trim();
+  const _heroProofHref = (content[_k + '.proof_href'] || '').trim();
+  const _heroProofHrefValid = /^#[A-Za-z0-9_-]+(?:__[0-9]+)?$/.test(_heroProofHref);
+%>
 <!-- HERO -->
 <section class="hero<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
     <div class="hero-inner">
@@ -2343,22 +2500,43 @@
             <% if (canEdit) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
         <% if (canEdit) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
         <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
+            <% if (_heroLabel) { %><p class="hero-label"><%- content[_k + '.label'] %></p><% } %>
             <<%= _heroHTag %> class="hero-heading"><%- content[_k + '.heading'] %></<%= _heroHTag %>>
             <p class="sub"><%- content[_k + '.subtext'] %></p>
+            <% if (_heroProofText && _heroProofHrefValid) { %>
+            <a href="<%= _heroProofHref %>" class="hero-proof-link"><%- content[_k + '.proof_text'] %></a>
+            <% } %>
+            <% if (_heroBullets.length > 0) { %>
+            <ul class="hero-bullets">
+                <% _heroBullets.forEach(function(_bullet) { %>
+                <li><%- _bullet %></li>
+                <% }); %>
+            </ul>
+            <% } %>
             <%
               const _heroWa = (content[_k + '.whatsapp'] || '').trim();
               const _heroWaValid = /^https:\/\/(wa\.me|api\.whatsapp\.com)\//.test(_heroWa);
               const _heroCtaLink = (content[_k + '.cta_link'] || '').trim();
               const _heroCtaLinkValid = /^https:\/\/calendar\.app\.google\//.test(_heroCtaLink);
+              const _heroCtaHref = (content[_k + '.cta_href'] || '').trim();
+              const _heroCtaHrefValid = /^#[A-Za-z0-9_-]+(?:__[0-9]+)?$/.test(_heroCtaHref);
+              const _heroSecondaryText = (content[_k + '.secondary_text'] || '').replace(/<[^>]+>/g, '').trim();
+              const _heroSecondaryHref = (content[_k + '.secondary_href'] || '').trim();
+              const _heroSecondaryHrefValid = /^#[A-Za-z0-9_-]+(?:__[0-9]+)?$/.test(_heroSecondaryHref);
             %>
             <div class="hero-cta-row">
                 <% if (_heroCtaLinkValid) { %>
                 <a href="<%= _heroCtaLink %>" class="btn btn-primary" target="_blank" rel="noopener"><%- content[_k + '.cta'] %></a>
+                <% } else if (_heroCtaHrefValid) { %>
+                <a href="<%= _heroCtaHref %>" class="btn btn-primary"><%- content[_k + '.cta'] %></a>
                 <% } else { %>
                 <a href="#conversation" class="btn btn-primary"><%- content[_k + '.cta'] %></a>
                 <% } %>
                 <% if (_heroWaValid) { %>
                 <a href="<%= _heroWa %>" class="btn btn-whatsapp" target="_blank" rel="noopener nofollow">WhatsApp us</a>
+                <% } %>
+                <% if (_heroSecondaryText && _heroSecondaryHrefValid) { %>
+                <a href="<%= _heroSecondaryHref %>" class="hero-secondary-link"><%- content[_k + '.secondary_text'] %></a>
                 <% } %>
             </div>
         </div>
@@ -2625,10 +2803,15 @@
               // show the avatar when the initial is actually a letter.
               const _fcInitialRaw = (content[_k + '.card_' + _n + '_number'] || '').replace(/<[^>]+>/g, '').trim().charAt(0).toUpperCase();
               const _fcInitial = /[A-Z]/.test(_fcInitialRaw) ? _fcInitialRaw : '';
+              const _fcTitle = (content[_k + '.card_' + _n + '_title'] || '').replace(/<[^>]+>/g, '').trim();
+              const _fcBody = (content[_k + '.card_' + _n + '_body'] || '').replace(/<[^>]+>/g, '').trim();
+              const _fcNum = (content[_k + '.card_' + _n + '_number'] || '').replace(/<[^>]+>/g, '').trim();
+              const _fcHasContent = !!(_fcTitle || _fcBody || _fcNum);
             %>
+            <% if (_fcHasContent) { %>
             <article class="fourcard">
-                <div class="fourcard-header">
-                    <% if (_fcInitial) { %><div class="fourcard-avatar" aria-hidden="true"><%= _fcInitial %></div><% } %>
+               <div class="fourcard-header">
+                   <% if (_fcInitial) { %><div class="fourcard-avatar" aria-hidden="true"><%= _fcInitial %></div><% } %>
                     <div class="fourcard-number"><%- content[_k + '.card_' + _n + '_number'] %></div>
                 </div>
                 <h3><%- content[_k + '.card_' + _n + '_title'] %></h3>
@@ -2637,6 +2820,7 @@
                 <a href="<%= _resolvePageHref(_fcMatch[1] + (_fcMatch[2] ? '#' + _fcMatch[2] : '')) %>" class="fourcard-link">Read the full story</a>
                 <% } %>
             </article>
+            <% } %>
             <% } %>
         </div>
     </div>
@@ -2773,6 +2957,14 @@
 
 <% if (_tpl === 'casestudy2') { %>
 <% const _k = _iid; %>
+<%
+  const _cs2Items = [];
+  for (let _cs2N = 1; _cs2N <= 8; _cs2N++) {
+    const _cs2Item = content[_k + '.item_' + _cs2N] || '';
+    if (_cs2Item.replace(/<[^>]+>/g, '').trim()) _cs2Items.push(_cs2Item);
+  }
+  const _cs2IncludedHeading = (content[_k + '.included_heading'] || '').trim();
+%>
 <!-- CASE STUDY 2 -->
 <section class="casestudy2<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" id="<%= _iid %>" data-section-id="<%= _iid %>">
     <div class="section-inner cms-section" data-section="<%= _k %>">
@@ -2804,9 +2996,6 @@
             </div>
             <% } %>
             <p class="casestudy2-body"><%- content[_k + '.body'] %></p>
-            <div class="casestudy2-outcome">
-                <p><%- content[_k + '.outcome'] %></p>
-            </div>
             <div class="cs2-screenshots">
                 <% [1, 2, 3].forEach(function(_ssN) { %>
                 <% const _ssKey = 'screenshot__' + _iid + '__' + _ssN; %>
@@ -2816,6 +3005,19 @@
                 </figure>
                 <% }); %>
             </div>
+            <% if (_cs2Items.length > 0) { %>
+            <% if (_cs2IncludedHeading) { %><h3 class="casestudy2-included-heading"><%- content[_k + '.included_heading'] %></h3><% } %>
+            <ul class="casestudy2-list">
+                <% _cs2Items.forEach(function(_item) { %>
+                <li><%- _item %></li>
+                <% }); %>
+            </ul>
+            <% } %>
+            <% if ((content[_k + '.outcome'] || '').trim()) { %>
+            <div class="casestudy2-outcome">
+                <p><%- content[_k + '.outcome'] %></p>
+            </div>
+            <% } %>
             <%
               const _cs2BtnText = (content[_k + '.button_text'] || '').replace(/<[^>]+>/g, '').trim();
               const _cs2BtnHref = (content[_k + '.button_href'] || '').trim();
@@ -2866,6 +3068,15 @@
 
 <% if (_tpl === 'filter') { %>
 <% const _k = _iid; %>
+<%
+  const _filterIntro = (content[_k + '.intro'] || '').trim();
+  const _filterItems = [];
+  for (let _filterN = 1; _filterN <= 8; _filterN++) {
+    const _filterItem = content[_k + '.item_' + _filterN] || '';
+    if (_filterItem.replace(/<[^>]+>/g, '').trim()) _filterItems.push(_filterItem);
+  }
+  const _filterClosing = (content[_k + '.closing'] || '').trim();
+%>
 <!-- FILTER -->
 <section class="filter<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
     <div class="section-inner cms-section" data-section="<%= _k %>">
@@ -2877,7 +3088,17 @@
         <div class="filter-inner">
             <p class="section-label"><%- content[_k + '.label'] %></p>
             <% const _hTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %><<%= _hTag %> class="section-heading"><%- content[_k + '.heading'] %></<%= _hTag %>>
+            <% if (_filterIntro) { %><div class="filter-intro"><%- content[_k + '.intro'] %></div><% } %>
+            <% if ((content[_k + '.p1'] || '').trim()) { %>
             <div class="filter-body"><%- content[_k + '.p1'] %></div>
+            <% } %>
+            <% if (_filterItems.length > 0) { %>
+            <ul class="filter-list">
+                <% _filterItems.forEach(function(_item) { %>
+                <li><%- _item %></li>
+                <% }); %>
+            </ul>
+            <% } %>
             <% if ((content[_k + '.row_1_action'] || '').trim()) { %>
             <div class="proofstrip-rows filter-proof-rows">
                 <% for (let _r = 1; _r <= 3; _r++) { %>
@@ -2902,8 +3123,11 @@
                 <% } %>
             </div>
             <% } else { %>
+            <% if ((content[_k + '.p2'] || '').trim()) { %>
             <div class="filter-body"><%- content[_k + '.p2'] %></div>
             <% } %>
+            <% } %>
+            <% if (_filterClosing) { %><div class="filter-closing"><%- content[_k + '.closing'] %></div><% } %>
             <%
               const _fBtnText = (content[_k + '.button_text'] || '').replace(/<[^>]+>/g, '').trim();
               const _fBtnSlug = (content[_k + '.button_link'] || '').trim();
@@ -3095,7 +3319,7 @@
 <footer id="conversation">
     <div class="footer-contact cms-section" data-section="contact">
         <% if (canEdit) { %><button class="cms-edit-btn" data-section="contact" title="Edit section">&#9998;</button><% } %>
-        <p class="section-label"><%- content['contact.label'] %></p>
+        <p class="section-label"><%- pageContact.label %></p>
         <h2 class="section-heading"><%- pageContact.heading %></h2>
         <p><%- pageContact.body %></p>
         <%
@@ -3126,8 +3350,8 @@
                 <input type="tel" name="phone" placeholder="Phone (optional)" maxlength="50">
                 <input type="text" name="preferred_time" placeholder="Best day/time for a 30 min call (optional)" maxlength="255">
             </div>
-            <textarea name="message" placeholder="Tell us where the pressure is showing" maxlength="2000" rows="4"></textarea>
-            <button type="submit" class="btn btn-primary">Send</button>
+            <textarea name="message" placeholder="<%= pageContact.messagePlaceholder %>" maxlength="2000" rows="4"></textarea>
+            <button type="submit" class="btn btn-primary"><%= pageContact.submitText %></button>
             <p class="lead-form-status" id="leadFormStatus" aria-live="polite"></p>
         </form>
         <p class="lead-form-alt">Prefer to call, email or WhatsApp instead?</p>
@@ -3426,7 +3650,7 @@
         });
     }, { threshold: 0.1 });
 
-    document.querySelectorAll('.step, .insight-card, .fourcard, .case-phase, .aq, .credential-block').forEach(el => {
+    document.querySelectorAll('.step, .insight-card, .case-phase, .aq, .credential-block').forEach(el => {
         el.style.opacity = '0';
         el.style.transform = 'translateY(16px)';
         el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
@@ -3438,12 +3662,32 @@
     // error handler on the <img> fires after the server returns 404 for the
     // derived key (screenshot__{instanceId}__N) so public visitors never see
     // a broken-image placeholder.
+    function syncScreenshotGroup(group) {
+        const visible = Array.from(group.querySelectorAll('.cs2-screenshot')).filter(function(figure) {
+            return !figure.classList.contains('cs2-screenshot--empty');
+        });
+        group.classList.toggle('cs2-screenshots--empty', visible.length === 0);
+        group.classList.toggle('cs2-screenshots--single', visible.length === 1);
+        group.classList.toggle('cs2-screenshots--pair', visible.length === 2);
+    }
+    document.querySelectorAll('.cs2-screenshots').forEach(syncScreenshotGroup);
     document.querySelectorAll('.cs2-screenshot img').forEach(function(img) {
-        function hide() { img.closest('.cs2-screenshot').classList.add('cs2-screenshot--empty'); }
+        function hide() {
+            const group = img.closest('.cs2-screenshots');
+            img.closest('.cs2-screenshot').classList.add('cs2-screenshot--empty');
+            if (group) syncScreenshotGroup(group);
+        }
+        function show() {
+            const group = img.closest('.cs2-screenshots');
+            if (img.naturalHeight) img.closest('.cs2-screenshot').classList.remove('cs2-screenshot--empty');
+            if (group) syncScreenshotGroup(group);
+        }
         if (img.complete) {
             if (!img.naturalHeight) hide();
+            else show();
         } else {
             img.addEventListener('error', hide);
+            img.addEventListener('load', show);
         }
     });
 </script>
