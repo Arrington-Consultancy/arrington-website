@@ -153,6 +153,12 @@ const lorem = {
     'body': 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt.',
     'email': 'lorem@example.com',
     'phone': '01234 567890'
+  },
+  websitecase: {
+    'label': 'CASE STUDY',
+    'heading': 'Lorem ipsum dolor sit amet.',
+    'intro': 'Built for £000. Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+    'features': 'Lorem ipsum\nDolor sit amet\nConsectetur adipiscing'
   }
 };
 
