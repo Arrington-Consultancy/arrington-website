@@ -558,8 +558,9 @@ function bytesMatchMime(buf, mime) {
 }
 
 // Base image keys that map to fixed UI slots. Instance-scoped keys take the
-// form `{base}__{instanceId}` (e.g. `headshot__hero__2`).
-const BASE_IMAGE_KEYS = new Set(['logo', 'headshot', 'oxford']);
+// form `{base}__{instanceId}` (e.g. `headshot__hero__2`). `screenshot` is used
+// for casestudy2 screenshot slots (e.g. `screenshot__casestudy2__3__1`).
+const BASE_IMAGE_KEYS = new Set(['logo', 'headshot', 'oxford', 'screenshot']);
 
 function validImageKey(key) {
   if (typeof key !== 'string' || key.length === 0 || key.length > 50) return false;

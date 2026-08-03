@@ -1389,7 +1389,42 @@
             color: var(--text-bright);
         }
 
-        /* ---- ASSESSMENT ---- */
+        .cs2-screenshots {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .cs2-screenshots:empty {
+            display: none;
+        }
+
+        .cs2-screenshot {
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            background: var(--charcoal);
+            position: relative;
+        }
+
+        .cs2-screenshot img {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        .cs2-screenshot.cs2-screenshot--empty {
+            display: none;
+        }
+
+        @media (max-width: 900px) {
+            .cs2-screenshots {
+                grid-template-columns: 1fr;
+            }
+        }
+
+
         .assessment {
             background: var(--near-black);
             border-top: 1px solid var(--border);
@@ -2731,7 +2766,7 @@
 
 <% if (_tpl === 'casestudy2') { %>
 <% const _k = _iid; %>
-<!-- CASE STUDY 2 - TRISTAN -->
+<!-- CASE STUDY 2 -->
 <section class="casestudy2<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" id="<%= _iid %>" data-section-id="<%= _iid %>">
     <div class="section-inner cms-section" data-section="<%= _k %>">
         <% if (canEdit) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
@@ -2764,6 +2799,15 @@
             <p class="casestudy2-body"><%- content[_k + '.body'] %></p>
             <div class="casestudy2-outcome">
                 <p><%- content[_k + '.outcome'] %></p>
+            </div>
+            <div class="cs2-screenshots">
+                <% [1, 2, 3].forEach(function(_ssN) { %>
+                <% const _ssKey = 'screenshot__' + _iid + '__' + _ssN; %>
+                <figure class="cs2-screenshot" data-img-key="<%= _ssKey %>">
+                    <img src="/img/<%= _ssKey %>" alt="Screenshot <%= _ssN %>" loading="lazy">
+                    <% if (canEdit) { %><button class="cms-img-btn" data-image="<%= _ssKey %>" title="Upload screenshot <%= _ssN %>">&#9998;</button><% } %>
+                </figure>
+                <% }); %>
             </div>
         </div>
     </div>
@@ -3372,6 +3416,20 @@
         el.style.transform = 'translateY(16px)';
         el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
         observer.observe(el);
+    });
+
+    // Hide casestudy2 screenshot slots where no image has been uploaded yet.
+    // The .cs2-screenshot--empty class suppresses layout for the slot. An
+    // error handler on the <img> fires after the server returns 404 for the
+    // derived key (screenshot__{instanceId}__N) so public visitors never see
+    // a broken-image placeholder.
+    document.querySelectorAll('.cs2-screenshot img').forEach(function(img) {
+        function hide() { img.closest('.cs2-screenshot').classList.add('cs2-screenshot--empty'); }
+        if (img.complete) {
+            if (!img.naturalHeight) hide();
+        } else {
+            img.addEventListener('error', hide);
+        }
     });
 </script>
 

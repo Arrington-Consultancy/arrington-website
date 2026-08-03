@@ -561,25 +561,37 @@ async function seed() {
         };
 
         const heroId = allocate('hero');
+        const wsaId = allocate('casestudy2');
         const startId = allocate('biography');
         const whyId = allocate('filter');
         const areasId = allocate('biography');
         const examplesId = allocate('insights');
         const howId = allocate('fourcards');
         const wontId = allocate('filter');
-        const offerId = allocate('biography');
         const closingId = allocate('intervention');
         const wwdLinkId = allocate('intervention');
 
-        if (heroId && startId && whyId && areasId && examplesId && howId && wontId && offerId && closingId && wwdLinkId) {
+        if (heroId && wsaId && startId && whyId && areasId && examplesId && howId && wontId && closingId && wwdLinkId) {
+          const newHeroSubtext = 'Tell us what you want your website to do.<br><br>'
+            + 'That might be a simple holding page. It might be a substantial bespoke build with Pipedrive CRM, Microsoft 365 email, Google Reviews, YouTube, AI tools or a chatbot built into the site.<br><br>'
+            + 'The price is £999.<br><br>'
+            + 'We agree the website during a one-hour recorded conversation, build what was agreed and include one structured round of changes after the first complete version.<br><br>'
+            + 'Further changes are charged at £300 per day, based on approximately six working hours.';
           const rows = [
-            // SECTION 1 — hero
-            [`${heroId}.heading`, 'Websites and AI that solve real business problems'],
-            [`${heroId}.subtext`, "We don't build websites because someone wants a new website. We don't recommend AI because it's fashionable. We use both where they genuinely improve the commercial performance of the business."],
-            [`${heroId}.cta`, 'Talk to us about what needs fixing'],
+            // SECTION 1 — hero (£999 offer headline)
+            [`${heroId}.heading`, 'A genuinely bespoke website for £999'],
+            [`${heroId}.subtext`, newHeroSubtext],
+            [`${heroId}.cta`, 'Tell us what you want to build'],
             [`${heroId}.whatsapp`, ''],
 
-            // SECTION 2 — biography (start with the business, not the technology)
+            // SECTION 2 — casestudy2 (World Student Advisors proof)
+            [`${wsaId}.label`, 'OUR WORK'],
+            [`${wsaId}.heading`, 'World Student Advisors'],
+            [`${wsaId}.intro`, 'We built World Student Advisors a fully bespoke HTML website for £999.'],
+            [`${wsaId}.body`, 'It includes direct Pipedrive CRM integration, Microsoft 365 email, Google Reviews, AI-powered interview practice, AI-powered visa interview mock sessions, detailed student enquiry and registration forms, counsellor and regional team pages, responsive layouts across desktop, tablet and mobile, and technical and on-page SEO foundations.<br><br>It was built around how the organisation actually works.'],
+            [`${wsaId}.outcome`, 'That is the level of website we will build for £999.'],
+
+            // SECTION 3 — biography (start with the business, not the technology)
             [`${startId}.label`, 'COMMERCIAL PROBLEMS FIRST'],
             [`${startId}.heading`, 'Start with the business, not the technology'],
             [`${startId}.col_1_p1`, 'Most businesses do not have a website problem. They have business problems that a website or AI can sometimes solve.'],
@@ -587,7 +599,7 @@ async function seed() {
             [`${startId}.col_2_p1`, 'It might be weak follow-up, manual administration that eats a day a week, or a business that cannot run properly without the owner in the room.'],
             [`${startId}.col_2_p2`, 'We look at what is actually happening in the business first. The technology comes after, and only where it earns its place.'],
 
-            // SECTION 3 — filter (why we are different)
+            // SECTION 4 — filter (why we are different)
             [`${whyId}.label`, 'WHY WE ARE DIFFERENT'],
             [`${whyId}.heading`, 'We start with the business, not the brief'],
             [`${whyId}.p1`, 'Most agencies begin by asking what website the client wants.'],
@@ -595,21 +607,13 @@ async function seed() {
             [`${whyId}.button_text`, ''],
             [`${whyId}.button_link`, 'main'],
 
-            // SECTION 4 — biography (two implementation areas)
+            // SECTION 5 — biography (two implementation areas)
             [`${areasId}.label`, 'TWO WAYS WE PUT IT INTO PRACTICE'],
             [`${areasId}.heading`, 'Two implementation areas'],
             [`${areasId}.col_1_p1`, '<strong>Commercial websites.</strong> Better enquiries, clearer positioning and stronger credibility.'],
             [`${areasId}.col_1_p2`, 'Higher quality conversations, useful information captured before a meeting even starts, and less time wasted on the wrong prospects.'],
             [`${areasId}.col_2_p1`, "<strong>Practical AI.</strong> Internal knowledge that does not live only in the owner's head, better enquiry handling, and sharper business reviews."],
             [`${areasId}.col_2_p2`, 'Faster document analysis, better meeting preparation, more support for staff, and less reliance on the owner for every answer.'],
-
-            // SECTION 5 — biography (bespoke website offer)
-            [`${offerId}.label`, 'BESPOKE WEBSITE OFFER'],
-            [`${offerId}.heading`, 'A genuinely bespoke website — from £999'],
-            [`${offerId}.col_1_p1`, 'This is a genuinely bespoke website. We build what the business actually wants, not what a template happens to allow.'],
-            [`${offerId}.col_1_p2`, 'The lower price comes from modern technology and a leaner build process, not from lower quality. The result is still a finished website built around the business.'],
-            [`${offerId}.col_2_p1`, '£999 covers a defined scope: up to five core pages, a mobile responsive build, basic SEO setup, a one-hour recorded discovery conversation at the start, and one structured round of changes before sign-off.'],
-            [`${offerId}.col_2_p2`, 'It is a defined finished website, not unlimited revisions. If extra pages, extra functionality or integrations are needed, we quote those separately before the work is done.'],
 
             // SECTION 6 — insights (real examples)
             [`${examplesId}.label`, 'REAL ARRINGTON EXAMPLES'],
@@ -671,7 +675,9 @@ async function seed() {
             );
           }
 
-          const pageOrder = [heroId, offerId, startId, whyId, areasId, examplesId, howId, wontId, closingId];
+          // Order: hero → WSA proof → biography → filter → biography → insights
+          //        → fourcards → filter → intervention (closing)
+          const pageOrder = [heroId, wsaId, startId, whyId, areasId, examplesId, howId, wontId, closingId];
 
           // Position right after What We Do, shifting later pages' sort_order
           // up by one — same pattern as the Evidence merge above. show_in_nav
@@ -693,7 +699,7 @@ async function seed() {
             [JSON.stringify(wwdOrder.concat([wwdLinkId])), 'what-we-do']
           );
 
-          console.log(`Websites and AI page created (sort_order ${wwdSort + 1}, hero=${heroId}), contextual link (${wwdLinkId}) appended to What We Do.`);
+          console.log(`Websites and AI page created (sort_order ${wwdSort + 1}, hero=${heroId}, wsa=${wsaId}), contextual link (${wwdLinkId}) appended to What We Do.`);
         } else {
           console.log('Websites and AI migration skipped: could not allocate instance IDs.');
         }
@@ -703,11 +709,10 @@ async function seed() {
     }
   }
 
-  // Migration: add the bespoke website offer section to the existing
-  // Websites and AI page, move it higher up the page (before the proof/how
-  // sections), and update the closing CTA button text. Idempotent: the offer
-  // content is only created when missing, and the reorder becomes a no-op
-  // once the section already sits in the target slot.
+  // Migration: replace hero copy with the £999 offer headline, add World
+  // Student Advisors proof section, and remove the old separate offer section
+  // (03/08/2026). Idempotent: each step is guarded by a check that the live
+  // value already matches the target or the target state already exists.
   {
     const { rows: wsRows } = await db.query(
       "SELECT section_order FROM pages WHERE slug = 'websites-and-ai'"
@@ -719,31 +724,48 @@ async function seed() {
         return m ? m[1] : null;
       };
 
+      // Find the hero and (last) intervention instances on this page.
+      const heroId = pageOrder.find((id) => baseOf(id) === 'hero');
       let closingId = null;
       for (let i = pageOrder.length - 1; i >= 0; i--) {
-        if (baseOf(pageOrder[i]) === 'intervention') {
-          closingId = pageOrder[i];
-          break;
-        }
+        if (baseOf(pageOrder[i]) === 'intervention') { closingId = pageOrder[i]; break; }
       }
 
-      if (closingId) {
-        // Place the offer right after the hero (index 1). If there is no hero,
-        // fall back to the very top (index 0).
-        const heroIndex = pageOrder.findIndex((id) => baseOf(id) === 'hero');
-        const targetIndex = heroIndex >= 0 ? heroIndex + 1 : 0;
+      if (heroId) {
+        const newHeroSubtext = 'Tell us what you want your website to do.<br><br>'
+          + 'That might be a simple holding page. It might be a substantial bespoke build with Pipedrive CRM, Microsoft 365 email, Google Reviews, YouTube, AI tools or a chatbot built into the site.<br><br>'
+          + 'The price is £999.<br><br>'
+          + 'We agree the website during a one-hour recorded conversation, build what was agreed and include one structured round of changes after the first complete version.<br><br>'
+          + 'Further changes are charged at £300 per day, based on approximately six working hours.';
 
-        const { rows: headingRows } = await db.query(
-          "SELECT split_part(section_key, '.', 1) AS instance_id FROM content WHERE section_key LIKE '%.heading' AND content = $1",
-          ['A genuinely bespoke website — from £999']
+        // 1. Update hero content (skip if already up to date).
+        const { rows: hRows } = await db.query(
+          'SELECT content FROM content WHERE section_key = $1',
+          [`${heroId}.heading`]
         );
-        let offerId = headingRows
-          .map((r) => r.instance_id)
-          .find((iid) => pageOrder.includes(iid) && baseOf(iid) === 'biography');
+        const existingHeading = (hRows[0] && hRows[0].content) || '';
+        if (existingHeading !== 'A genuinely bespoke website for £999') {
+          await db.query(
+            'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content',
+            [`${heroId}.heading`, 'A genuinely bespoke website for £999']
+          );
+          await db.query(
+            'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content',
+            [`${heroId}.subtext`, newHeroSubtext]
+          );
+          await db.query(
+            'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content',
+            [`${heroId}.cta`, 'Tell us what you want to build']
+          );
+          console.log(`Websites and AI: hero content updated (${heroId}).`);
+        }
 
-        if (!offerId) {
-          const used = new Set();
+        // 2. Add WSA proof casestudy2 section if not already present.
+        const wsaExists = pageOrder.some((id) => baseOf(id) === 'casestudy2');
+        let wsaId = null;
+        if (!wsaExists) {
           const { rows: orderRows } = await db.query('SELECT section_order FROM pages');
+          const used = new Set();
           for (const r of orderRows) {
             if (Array.isArray(r.section_order)) r.section_order.forEach((s) => used.add(s));
           }
@@ -761,51 +783,67 @@ async function seed() {
             return null;
           };
 
-          const allocatedOfferId = allocate('biography');
-          if (allocatedOfferId) {
-            const offerRows = [
-              [`${allocatedOfferId}.label`, 'BESPOKE WEBSITE OFFER'],
-              [`${allocatedOfferId}.heading`, 'A genuinely bespoke website — from £999'],
-              [`${allocatedOfferId}.col_1_p1`, 'This is a genuinely bespoke website. We build what the business actually wants, not what a template happens to allow.'],
-              [`${allocatedOfferId}.col_1_p2`, 'The lower price comes from modern technology and a leaner build process, not from lower quality. The result is still a finished website built around the business.'],
-              [`${allocatedOfferId}.col_2_p1`, '£999 covers a defined scope: up to five core pages, a mobile responsive build, basic SEO setup, a one-hour recorded discovery conversation at the start, and one structured round of changes before sign-off.'],
-              [`${allocatedOfferId}.col_2_p2`, 'It is a defined finished website, not unlimited revisions. If extra pages, extra functionality or integrations are needed, we quote those separately before the work is done.']
+          wsaId = allocate('casestudy2');
+          if (wsaId) {
+            const wsaRows = [
+              [`${wsaId}.label`, 'OUR WORK'],
+              [`${wsaId}.heading`, 'World Student Advisors'],
+              [`${wsaId}.intro`, 'We built World Student Advisors a fully bespoke HTML website for £999.'],
+              [`${wsaId}.body`, 'It includes direct Pipedrive CRM integration, Microsoft 365 email, Google Reviews, AI-powered interview practice, AI-powered visa interview mock sessions, detailed student enquiry and registration forms, counsellor and regional team pages, responsive layouts across desktop, tablet and mobile, and technical and on-page SEO foundations.<br><br>It was built around how the organisation actually works.'],
+              [`${wsaId}.outcome`, 'That is the level of website we will build for £999.']
             ];
-            for (const [key, value] of offerRows) {
+            for (const [key, value] of wsaRows) {
               await db.query(
                 'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
                 [key, value]
               );
             }
-            offerId = allocatedOfferId;
+            console.log(`Websites and AI: WSA proof section created (${wsaId}).`);
           }
+        } else {
+          // Already exists — find the instance ID so we can keep it in the order.
+          wsaId = pageOrder.find((id) => baseOf(id) === 'casestudy2');
         }
 
-        if (offerId) {
-          const currentOrder = pageOrder.includes(offerId) ? pageOrder : pageOrder.concat([offerId]);
-          const withoutOffer = currentOrder.filter((sectionId) => sectionId !== offerId);
-          const safeTargetIndex = Math.min(targetIndex, withoutOffer.length);
-          const nextOrder = withoutOffer
-            .slice(0, safeTargetIndex)
-            .concat([offerId], withoutOffer.slice(safeTargetIndex));
-          if (JSON.stringify(nextOrder) !== JSON.stringify(pageOrder)) {
+        // 3. Find any offer section (biography with the old £999 headline) and
+        //    remove it from section_order.
+        const { rows: offerHeadingRows } = await db.query(
+          "SELECT split_part(section_key, '.', 1) AS iid FROM content WHERE section_key LIKE '%.heading' AND content = $1",
+          ['A genuinely bespoke website \u2014 from \u00a3999']
+        );
+        const offerIds = offerHeadingRows
+          .map((r) => r.iid)
+          .filter((iid) => pageOrder.includes(iid) && baseOf(iid) === 'biography');
+
+        // 4. Compute the new section_order.
+        //    hero → WSA proof → [rest, without offer sections]
+        let newOrder = pageOrder.filter((id) => !offerIds.includes(id));
+        if (wsaId && !newOrder.includes(wsaId)) {
+          const heroIdx = newOrder.findIndex((id) => baseOf(id) === 'hero');
+          const insertIdx = heroIdx >= 0 ? heroIdx + 1 : 0;
+          newOrder.splice(insertIdx, 0, wsaId);
+        }
+        if (JSON.stringify(newOrder) !== JSON.stringify(pageOrder)) {
+          await db.query(
+            'UPDATE pages SET section_order = $1::jsonb WHERE slug = $2',
+            [JSON.stringify(newOrder), 'websites-and-ai']
+          );
+          console.log(`Websites and AI: section_order updated.`);
+        }
+
+        // 5. Update closing CTA button text if still on the old value.
+        if (closingId) {
+          const { rows: ctaRows } = await db.query(
+            'SELECT content FROM content WHERE section_key = $1',
+            [`${closingId}.button_text`]
+          );
+          const ctaText = ((ctaRows[0] && ctaRows[0].content) || '').replace(/<[^>]+>/g, '').trim();
+          if (ctaText === 'Book a 30 minute conversation') {
             await db.query(
-              'UPDATE pages SET section_order = $1::jsonb WHERE slug = $2',
-              [JSON.stringify(nextOrder), 'websites-and-ai']
+              'UPDATE content SET content = $1 WHERE section_key = $2',
+              ['Tell us what you want to build', `${closingId}.button_text`]
             );
           }
-        }
-
-        const { rows: ctaRows } = await db.query(
-          'SELECT content FROM content WHERE section_key = $1',
-          [`${closingId}.button_text`]
-        );
-        const ctaText = ((ctaRows[0] && ctaRows[0].content) || '').replace(/<[^>]+>/g, '').trim();
-        if (ctaText === 'Book a 30 minute conversation') {
-          await db.query(
-            'UPDATE content SET content = $1 WHERE section_key = $2',
-            ['Tell us what you want to build', `${closingId}.button_text`]
-          );
         }
       }
     }
