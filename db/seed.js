@@ -837,7 +837,7 @@ async function seed() {
             'SELECT content FROM content WHERE section_key = $1',
             [`${closingId}.button_text`]
           );
-          const ctaText = ((ctaRows[0] && ctaRows[0].content) || '').replace(/<[^>]+>/g, '').trim();
+          const ctaText = (ctaRows[0] && ctaRows[0].content) || '';
           if (ctaText === 'Book a 30 minute conversation') {
             await db.query(
               'UPDATE content SET content = $1 WHERE section_key = $2',
