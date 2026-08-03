@@ -587,7 +587,7 @@ async function seed() {
             [`${wsaId}.intro`, 'We built World Student Advisors for £999.'],
             [`${wsaId}.body`, "It includes Pipedrive CRM, Microsoft 365, Google Reviews, AI interview practice, AI visa interview preparation and responsive layouts across desktop and mobile.<br><br>Every part of it was built around how the business actually works."],
             [`${wsaId}.outcome`, "That's what £999 looks like."],
-            [`${wsaId}.button_text`, 'Visit World Student Advisors'],
+            [`${wsaId}.button_text`, 'View the World Student Advisors website'],
             [`${wsaId}.button_href`, 'https://www.worldstudentadvisors.com/'],
 
             // SECTION 3 — biography (start with the business, not the technology)
@@ -791,7 +791,7 @@ async function seed() {
               [`${wsaId}.intro`, 'We built World Student Advisors for £999.'],
               [`${wsaId}.body`, "It's a fully bespoke HTML website with Pipedrive CRM, Microsoft 365 integration, Google Reviews, AI interview practice, AI visa interview preparation and responsive layouts across desktop, tablet and mobile.<br><br>Everything was built around how the business actually works."],
               [`${wsaId}.outcome`, 'That is the standard we expect £999 to deliver.'],
-              [`${wsaId}.button_text`, 'Visit World Student Advisors'],
+              [`${wsaId}.button_text`, 'View the World Student Advisors website'],
               [`${wsaId}.button_href`, 'https://www.worldstudentadvisors.com/']
             ];
             for (const [key, value] of wsaRows) {
@@ -895,7 +895,7 @@ async function seed() {
           + 'Every part of it was built around how the business actually works.'
         );
         await upsert(`${wsaId}.outcome`, "That's what £999 looks like.");
-        await upsert(`${wsaId}.button_text`, 'Visit World Student Advisors');
+        await upsert(`${wsaId}.button_text`, 'View the World Student Advisors website');
         await upsert(`${wsaId}.button_href`, 'https://www.worldstudentadvisors.com/');
       }
 
