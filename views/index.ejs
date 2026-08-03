@@ -3023,7 +3023,7 @@
             <div class="websitecase-desktop-wrap">
                 <picture>
                     <source srcset="/img/<%= _wsaDesktopImg %>.webp" type="image/webp">
-                    <img src="/img/<%= _wsaDesktopImg %>" alt="Desktop screenshot — <%= (content[_k + '.heading'] || '').replace(/<[^>]+>/g,'') %>" class="websitecase-screenshot" loading="lazy">
+                    <img src="/img/<%= _wsaDesktopImg %>" alt="Desktop website screenshot" class="websitecase-screenshot" loading="lazy">
                 </picture>
                 <% if (canEdit) { %><button class="cms-img-btn" data-image="<%= _wsaDesktopImg %>" title="Upload desktop screenshot">&#9998;</button><% } %>
                 <p class="websitecase-screenshot-label">Desktop</p>
@@ -3031,7 +3031,7 @@
             <div class="websitecase-mobile-wrap">
                 <picture>
                     <source srcset="/img/<%= _wsaMobileImg %>.webp" type="image/webp">
-                    <img src="/img/<%= _wsaMobileImg %>" alt="Mobile screenshot — <%= (content[_k + '.heading'] || '').replace(/<[^>]+>/g,'') %>" class="websitecase-screenshot" loading="lazy">
+                    <img src="/img/<%= _wsaMobileImg %>" alt="Mobile website screenshot" class="websitecase-screenshot" loading="lazy">
                 </picture>
                 <% if (canEdit) { %><button class="cms-img-btn" data-image="<%= _wsaMobileImg %>" title="Upload mobile screenshot">&#9998;</button><% } %>
                 <p class="websitecase-screenshot-label">Mobile</p>
