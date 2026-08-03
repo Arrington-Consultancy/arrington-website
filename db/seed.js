@@ -671,7 +671,7 @@ async function seed() {
             );
           }
 
-          const pageOrder = [heroId, startId, whyId, areasId, offerId, examplesId, howId, wontId, closingId];
+          const pageOrder = [heroId, offerId, startId, whyId, areasId, examplesId, howId, wontId, closingId];
 
           // Position right after What We Do, shifting later pages' sort_order
           // up by one — same pattern as the Evidence merge above. show_in_nav
@@ -728,13 +728,10 @@ async function seed() {
       }
 
       if (closingId) {
-        const targetIndex = (() => {
-          for (let i = 0; i < pageOrder.length; i++) {
-            const base = baseOf(pageOrder[i]);
-            if (base === 'insights' || base === 'fourcards' || base === 'intervention') return i;
-          }
-          return pageOrder.length;
-        })();
+        // Place the offer right after the hero (index 1). If there is no hero,
+        // fall back to the very top (index 0).
+        const heroIndex = pageOrder.findIndex((id) => baseOf(id) === 'hero');
+        const targetIndex = heroIndex >= 0 ? heroIndex + 1 : 0;
 
         const { rows: headingRows } = await db.query(
           "SELECT split_part(section_key, '.', 1) AS instance_id FROM content WHERE section_key LIKE '%.heading' AND content = $1",
