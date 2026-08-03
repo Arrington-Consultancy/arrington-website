@@ -1184,7 +1184,7 @@ async function seed() {
       await upsert('wai.contact_submit_text', 'Send enquiry');
 
       const waiMetaTitle = 'A Proper Business Website for £999 | Arrington Consultancy';
-      const waiMetaDescription = 'A genuinely bespoke business website for £999, built around the way your business actually operates. See the World Student Advisors website we built for the same fixed price.';
+      const waiMetaDescription = 'A proper £999 business website, built around the way your business actually operates. See the World Student Advisors site built for the same fixed price.';
       await db.query(
         `UPDATE pages
          SET meta_title = $1,
