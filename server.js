@@ -495,7 +495,7 @@ app.get('/v1.html', (req, res) => {
 });
 
 // Valid section templates (shared with routes/content.js)
-const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','fourcards','documents','casestudy','casestudy2','assessment','filter','proofstrip','contact','googlereviews','article','utlibrary'];
+const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','fourcards','documents','casestudy','casestudy2','assessment','filter','proofstrip','contact','googlereviews','article','utlibrary','websitecase'];
 // Default auto-merge order — excludes 'contact' (now rendered globally in
 // the footer), 'fourcards', 'documents' and 'proofstrip' (picker-only). Users
 // pick those explicitly.

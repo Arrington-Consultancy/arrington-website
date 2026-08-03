@@ -855,6 +855,115 @@ async function seed() {
     }
   }
 
+  // Migration: Websites and AI page restructure (03/08/2026).
+  // Replaces the biography "bespoke offer" headline with a proper hero
+  // section, and inserts the World Student Advisors proof (websitecase
+  // template) immediately after the existing Tom-photo hero.
+  //
+  // New section order:
+  //   [new hero (£999 headline), existing hero (Tom's photo),
+  //    websitecase (WSA proof), biography (start with business), ...]
+  //
+  // The old biography "A genuinely bespoke website — from £999" is removed
+  // from the page order (content rows stay in the DB; reachable via the
+  // CMS "Reuse existing" tab if needed).
+  //
+  // Idempotent guard: skipped if the page already has a hero whose heading
+  // is 'A genuinely bespoke website for £999.' (the new hero text).
+  {
+    const { buildNewPageOrder, newHeroContent, wsaContent } = require('../lib/websitesAndAiRestructure');
+
+    const { rows: wsRows } = await db.query(
+      "SELECT section_order FROM pages WHERE slug = 'websites-and-ai'"
+    );
+    if (wsRows.length > 0) {
+      const pageOrder = Array.isArray(wsRows[0].section_order) ? wsRows[0].section_order : [];
+
+      // Check if the new hero already exists on this page.
+      let alreadyMigrated = false;
+      for (const iid of pageOrder) {
+        const base = /^([a-z0-9]+)(?:__\d+)?$/.exec(iid || '');
+        if (!base || base[1] !== 'hero') continue;
+        const { rows: hRows } = await db.query(
+          'SELECT content FROM content WHERE section_key = $1',
+          [`${iid}.heading`]
+        );
+        if (hRows.length > 0 && hRows[0].content === 'A genuinely bespoke website for \u00a3999.') {
+          alreadyMigrated = true;
+          break;
+        }
+      }
+
+      if (!alreadyMigrated) {
+        // Collect all instance IDs in use so allocation avoids collisions.
+        const used = new Set();
+        const { rows: allOrderRows } = await db.query('SELECT section_order FROM pages');
+        for (const r of allOrderRows) {
+          if (Array.isArray(r.section_order)) r.section_order.forEach(s => used.add(s));
+        }
+        const { rows: prefixRows } = await db.query(
+          "SELECT DISTINCT split_part(section_key, '.', 1) AS iid FROM content"
+        );
+        prefixRows.forEach(r => used.add(r.iid));
+
+        const allocate = (tpl) => {
+          if (!used.has(tpl)) { used.add(tpl); return tpl; }
+          for (let n = 2; n <= 99; n++) {
+            const id = `${tpl}__${n}`;
+            if (!used.has(id)) { used.add(id); return id; }
+          }
+          return null;
+        };
+
+        const newHeroId = allocate('hero');
+        const wsaId = allocate('websitecase');
+
+        if (newHeroId && wsaId) {
+          // Identify the old biography "bespoke offer" instance(s) to remove.
+          const offerIds = [];
+          for (const iid of pageOrder) {
+            const base = /^([a-z0-9]+)(?:__\d+)?$/.exec(iid || '');
+            if (!base || base[1] !== 'biography') continue;
+            const { rows: hRows } = await db.query(
+              'SELECT content FROM content WHERE section_key = $1',
+              [`${iid}.heading`]
+            );
+            if (hRows.length > 0 && hRows[0].content === 'A genuinely bespoke website \u2014 from \u00a3999') {
+              offerIds.push(iid);
+            }
+          }
+
+          // Seed content for the new hero and the WSA case study.
+          for (const [key, value] of newHeroContent(newHeroId)) {
+            await db.query(
+              'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+              [key, value]
+            );
+          }
+          for (const [key, value] of wsaContent(wsaId)) {
+            await db.query(
+              'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+              [key, value]
+            );
+          }
+          // Seed the intervention button_link content key for the new hero
+          // (not needed for hero template but follows the per-instance pattern).
+
+          const newOrder = buildNewPageOrder(pageOrder, newHeroId, wsaId, offerIds);
+          await db.query(
+            'UPDATE pages SET section_order = $1::jsonb WHERE slug = $2',
+            [JSON.stringify(newOrder), 'websites-and-ai']
+          );
+          console.log(
+            `Websites and AI restructured: new hero (${newHeroId}), WSA proof (${wsaId}). ` +
+            `Removed offer sections: [${offerIds.join(', ')}]. ` +
+            `New order: [${newOrder.join(', ')}]`
+          );
+        }
+      }
+    }
+  }
+
   // Migration: Useful Thinking articles, first batch (01/08/2026, from
   // "Arrington Website Worker Handover 01"). Four pieces are published as
   // real pages (show_in_nav: false, same pattern as Websites and AI before

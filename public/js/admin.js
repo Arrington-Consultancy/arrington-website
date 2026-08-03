@@ -147,7 +147,11 @@
         'article.image': 'Header image path (optional, e.g. /img/useful-thinking/example.jpg; leave empty to hide)',
         'utlibrary.label': 'Section label',
         'utlibrary.heading': 'Heading',
-        'footer.name': 'Name'
+        'footer.name': 'Name',
+        'websitecase.label': 'Section label',
+        'websitecase.heading': 'Heading',
+        'websitecase.intro': 'Introduction (price and what was delivered)',
+        'websitecase.features': 'Features list (one feature per line)'
     };
 
     const sectionTitles = {
@@ -168,7 +172,8 @@
         contact: 'Contact',
         footer: 'Footer',
         article: 'Useful Thinking article',
-        utlibrary: 'Useful Thinking library list'
+        utlibrary: 'Useful Thinking library list',
+        websitecase: 'Website case study'
     };
 
     // Determine textarea height class based on expected content length
@@ -182,7 +187,7 @@
             return 'short';
         }
         if (key.includes('body') || key.includes('_p1') || key.includes('_p2') ||
-            key.includes('subtext') || key.includes('intro')) {
+            key.includes('subtext') || key.includes('intro') || key.includes('features')) {
             return 'tall';
         }
         return '';

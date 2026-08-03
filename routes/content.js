@@ -135,7 +135,7 @@ router.put('/', requireCapability('edit_content'), async (req, res) => {
 // Content keys are stored per instance: `{instanceId}.field` for most sections.
 // Credentials is a special case with two content sub-prefixes:
 //   `{instanceId}_oxford.*` and `{instanceId}_stat.*`.
-const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','fourcards','documents','casestudy','casestudy2','assessment','filter','proofstrip','contact','googlereviews','article','utlibrary'];
+const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','fourcards','documents','casestudy','casestudy2','assessment','filter','proofstrip','contact','googlereviews','article','utlibrary','websitecase'];
 const MAX_INSTANCE_SUFFIX = 99;
 
 function baseTemplate(instanceId) {
@@ -559,7 +559,7 @@ function bytesMatchMime(buf, mime) {
 
 // Base image keys that map to fixed UI slots. Instance-scoped keys take the
 // form `{base}__{instanceId}` (e.g. `headshot__hero__2`).
-const BASE_IMAGE_KEYS = new Set(['logo', 'headshot', 'oxford']);
+const BASE_IMAGE_KEYS = new Set(['logo', 'headshot', 'oxford', 'screenshot']);
 
 function validImageKey(key) {
   if (typeof key !== 'string' || key.length === 0 || key.length > 50) return false;
