@@ -920,7 +920,7 @@
 
         .fourcards-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 2.5rem;
             margin-top: 3rem;
         }
@@ -1080,12 +1080,6 @@
             font-size: 0.78rem;
             color: var(--text-muted);
             margin-top: 0.75rem;
-        }
-
-        @media (max-width: 900px) {
-            .fourcards-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
         }
 
         @media (max-width: 600px) {
@@ -1387,6 +1381,20 @@
 
         .casestudy2-outcome strong {
             color: var(--text-bright);
+        }
+
+        .casestudy2-cta {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            white-space: normal;
+            overflow-wrap: break-word;
+            box-sizing: border-box;
+            min-height: 3rem;
+            max-width: 100%;
+            margin-top: 1.5rem;
+            line-height: 1.35;
         }
 
         .cs2-screenshots {
@@ -2211,6 +2219,13 @@
                 font-size: 1.5rem;
             }
 
+            .casestudy2-cta {
+                width: 100%;
+                display: flex;
+                min-height: 3.25rem;
+                padding: 0.9rem 1rem;
+            }
+
             .step {
                 padding: 1.5rem;
             }
@@ -2604,18 +2619,21 @@
         <% if ((content[_k + '.evidence_intro'] || '').trim()) { %>
         <p class="evidence-intro"><%- content[_k + '.evidence_intro'] %></p>
         <% } %>
+        <%
+          const _fourcardsItems = [];
+          for (let _n = 1; _n <= 4; _n++) {
+            const _fcNum = (content[_k + '.card_' + _n + '_number'] || '').replace(/<[^>]+>/g, '').trim();
+            const _fcTitle = (content[_k + '.card_' + _n + '_title'] || '').replace(/<[^>]+>/g, '').trim();
+            const _fcBody = (content[_k + '.card_' + _n + '_body'] || '').replace(/<[^>]+>/g, '').trim();
+            if (!_fcNum && !_fcTitle && !_fcBody) continue;
+            _fourcardsItems.push(_n);
+          }
+        %>
         <div class="fourcards-grid">
-            <% for (let _n = 1; _n <= 4; _n++) { %>
+            <% _fourcardsItems.forEach(function(_n) { %>
             <%
-              // Optional trailing #instance_id anchor lets a testimonial card
-              // deep-link to its specific case study (e.g.
-              // "evidence#casestudy2__2") rather than just the page.
               const _fcLink = (content[_k + '.card_' + _n + '_link'] || '').trim();
               const _fcMatch = /^([a-z0-9]+(?:-[a-z0-9]+)*)(?:#([a-z0-9]+(?:__[0-9]+)?))?$/.exec(_fcLink);
-              // This template is shared: on What Business Owners Say, card_N_number
-              // holds a person's name (avatar makes sense); on What We Do it holds a
-              // step numeral like "01" (avatar would show a meaningless "0"). Only
-              // show the avatar when the initial is actually a letter.
               const _fcInitialRaw = (content[_k + '.card_' + _n + '_number'] || '').replace(/<[^>]+>/g, '').trim().charAt(0).toUpperCase();
               const _fcInitial = /[A-Z]/.test(_fcInitialRaw) ? _fcInitialRaw : '';
             %>
@@ -2630,7 +2648,7 @@
                 <a href="<%= _resolvePageHref(_fcMatch[1] + (_fcMatch[2] ? '#' + _fcMatch[2] : '')) %>" class="fourcard-link">Read the full story</a>
                 <% } %>
             </article>
-            <% } %>
+            <% }); %>
         </div>
     </div>
 </section>
@@ -2815,7 +2833,7 @@
               const _cs2ValidHref = /^https?:\/\//.test(_cs2BtnHref);
             %>
             <% if (_cs2BtnText && _cs2ValidHref) { %>
-            <a href="<%= _cs2BtnHref %>" class="btn btn-primary" target="_blank" rel="noopener noreferrer"><%= _cs2BtnText %></a>
+            <a href="<%= _cs2BtnHref %>" class="btn btn-primary casestudy2-cta" target="_blank" rel="noopener noreferrer"><%= _cs2BtnText %></a>
             <% } %>
         </div>
     </div>
@@ -3088,7 +3106,7 @@
 <footer id="conversation">
     <div class="footer-contact cms-section" data-section="contact">
         <% if (canEdit) { %><button class="cms-edit-btn" data-section="contact" title="Edit section">&#9998;</button><% } %>
-        <p class="section-label"><%- content['contact.label'] %></p>
+        <p class="section-label"><%- pageContact.label %></p>
         <h2 class="section-heading"><%- pageContact.heading %></h2>
         <p><%- pageContact.body %></p>
         <%
@@ -3119,8 +3137,8 @@
                 <input type="tel" name="phone" placeholder="Phone (optional)" maxlength="50">
                 <input type="text" name="preferred_time" placeholder="Best day/time for a 30 min call (optional)" maxlength="255">
             </div>
-            <textarea name="message" placeholder="Tell us where the pressure is showing" maxlength="2000" rows="4"></textarea>
-            <button type="submit" class="btn btn-primary">Send</button>
+            <textarea name="message" placeholder="<%= pageContact.messagePlaceholder %>" maxlength="2000" rows="4"></textarea>
+            <button type="submit" class="btn btn-primary"><%= pageContact.submitText %></button>
             <p class="lead-form-status" id="leadFormStatus" aria-live="polite"></p>
         </form>
         <p class="lead-form-alt">Prefer to call, email or WhatsApp instead?</p>

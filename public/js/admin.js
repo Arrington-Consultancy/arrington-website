@@ -142,6 +142,11 @@
         'contact.email': 'Email address',
         'contact.phone': 'Phone number',
         'contact.whatsapp': 'WhatsApp link (leave empty to hide the WhatsApp button)',
+        'wai.contact_label': 'Website page: section label',
+        'wai.contact_heading': 'Website page: heading',
+        'wai.contact_body': 'Website page: body text',
+        'wai.contact_message_placeholder': 'Website page: message placeholder',
+        'wai.contact_submit_text': 'Website page: submit button text',
         'article.label': 'Section label',
         'article.heading': 'Title',
         'article.body': 'Body text',
@@ -217,7 +222,7 @@
         modal.classList.add('active');
 
         try {
-            const res = await fetch(`/api/content/${section}`, {
+            const res = await fetch(`/api/content/${section}?pageSlug=${encodeURIComponent(pageSlug)}`, {
                 headers: { 'X-CSRF-Token': csrfToken }
             });
             const data = await res.json();

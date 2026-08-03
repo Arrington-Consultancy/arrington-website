@@ -562,16 +562,13 @@ async function seed() {
 
         const heroId = allocate('hero');
         const wsaId = allocate('casestudy2');
-        const startId = allocate('biography');
-        const whyId = allocate('filter');
-        const areasId = allocate('biography');
         const examplesId = allocate('insights');
         const howId = allocate('fourcards');
         const wontId = allocate('filter');
         const closingId = allocate('intervention');
         const wwdLinkId = allocate('intervention');
 
-        if (heroId && wsaId && startId && whyId && areasId && examplesId && howId && wontId && closingId && wwdLinkId) {
+        if (heroId && wsaId && examplesId && howId && wontId && closingId && wwdLinkId) {
           const newHeroSubtext = 'If we built World Student Advisors for £999, imagine what we could build for your business.<br><br>'
             + "We'll build it around your business, not around a template.";
           const rows = [
@@ -590,71 +587,47 @@ async function seed() {
             [`${wsaId}.button_text`, 'View the World Student Advisors website'],
             [`${wsaId}.button_href`, 'https://www.worldstudentadvisors.com/'],
 
-            // SECTION 3 — biography (start with the business, not the technology)
-            [`${startId}.label`, 'COMMERCIAL PROBLEMS FIRST'],
-            [`${startId}.heading`, 'Start with the business, not the technology'],
-            [`${startId}.col_1_p1`, 'Most businesses do not have a website problem. They have business problems that a website or AI can sometimes solve.'],
-            [`${startId}.col_1_p2`, "That might be poor quality enquiries, too many repetitive questions, or knowledge that only exists in the owner's head."],
-            [`${startId}.col_2_p1`, 'It might be weak follow-up, manual administration that eats a day a week, or a business that cannot run properly without the owner in the room.'],
-            [`${startId}.col_2_p2`, 'We look at what is actually happening in the business first. The technology comes after, and only where it earns its place.'],
-
-            // SECTION 4 — filter (built around you)
-            [`${whyId}.label`, 'WHY WE ARE DIFFERENT'],
-            [`${whyId}.heading`, 'We start with the business, not the brief'],
-            [`${whyId}.p1`, "Most websites start with a template. We start with the business. We listen properly, understand what you're trying to achieve and build around that."],
-            [`${whyId}.p2`, "We'll challenge ideas when we think there's a better way and explain why. The decisions stay with you. It's your business and your website."],
-            [`${whyId}.button_text`, ''],
-            [`${whyId}.button_link`, 'main'],
-
-            // SECTION 5 — biography (two implementation areas)
-            [`${areasId}.label`, 'TWO WAYS WE PUT IT INTO PRACTICE'],
-            [`${areasId}.heading`, 'Two implementation areas'],
-            [`${areasId}.col_1_p1`, '<strong>Commercial websites.</strong> Better enquiries, clearer positioning and stronger credibility.'],
-            [`${areasId}.col_1_p2`, 'Higher quality conversations, useful information captured before a meeting even starts, and less time wasted on the wrong prospects.'],
-            [`${areasId}.col_2_p1`, "<strong>Practical AI.</strong> Internal knowledge that does not live only in the owner's head, better enquiry handling, and sharper business reviews."],
-            [`${areasId}.col_2_p2`, 'Faster document analysis, better meeting preparation, more support for staff, and less reliance on the owner for every answer.'],
-
-            // SECTION 6 — insights (real examples)
-            [`${examplesId}.label`, 'REAL ARRINGTON EXAMPLES'],
-            [`${examplesId}.heading`, 'Proof from our own work'],
-            [`${examplesId}.subtext`, 'We do not ask a business to try something we have not tried ourselves.'],
-            [`${examplesId}.card_1_tag`, 'OWNER CHECK'],
-            [`${examplesId}.card_1_title`, 'Owner Check'],
-            [`${examplesId}.card_1_body`, 'A practical self-diagnostic that shows an owner where the business still depends too heavily on them, with an actionable score rather than a vague opinion.'],
-            [`${examplesId}.card_2_tag`, 'COMMERCIAL GAPS REVIEW'],
-            [`${examplesId}.card_2_title`, 'Commercial Gaps Review'],
-            [`${examplesId}.card_2_body`, 'An automated commercial review that gives an owner real clarity on where the pressure is, built so it costs nothing to run and never invents a fact about the business.'],
-            [`${examplesId}.card_3_tag`, 'THIS WEBSITE'],
-            [`${examplesId}.card_3_title`, 'The Arrington Consultancy website'],
-            [`${examplesId}.card_3_body`, 'Built to generate serious enquiries from suitable owners, not to win design awards. Every page exists to move a real conversation forward.'],
-
-            // SECTION 7 — fourcards (how the work happens)
-            [`${howId}.label`, 'HOW THE WORK HAPPENS'],
-            [`${howId}.heading`, 'Understand, design, build, improve'],
-            [`${howId}.card_1_number`, '01'],
-            [`${howId}.card_1_title`, 'Understand'],
-            [`${howId}.card_1_body`, 'We look at what is actually happening in the business before anything is designed or built.'],
-            [`${howId}.card_2_number`, '02'],
-            [`${howId}.card_2_title`, 'Design'],
-            [`${howId}.card_2_body`, 'We decide what should change, and whether a website, AI, a process fix or a combination is the right answer.'],
-            [`${howId}.card_3_number`, '03'],
-            [`${howId}.card_3_title`, 'Build'],
-            [`${howId}.card_3_body`, 'We build only what earns its place, in plain language the business can actually use.'],
-            [`${howId}.card_4_number`, '04'],
-            [`${howId}.card_4_title`, 'Improve'],
-            [`${howId}.card_4_body`, 'We check what is working and change what is not. The business keeps control of it, not us.'],
-
-            // SECTION 8 — filter (technology section)
-            [`${wontId}.label`, 'WHAT WE WILL NOT DO'],
+            // SECTION 3 — filter (technology)
+            [`${wontId}.label`, 'HOW WE THINK'],
             [`${wontId}.heading`, 'Technology should earn its place'],
-            [`${wontId}.p1`, "We recommend websites, AI and systems when they genuinely improve the business. If they don't, we won't recommend them."],
-            [`${wontId}.p2`, ''],
+            [`${wontId}.p1`, "We recommend websites, AI and systems only when they genuinely improve the business."],
+            [`${wontId}.p2`, "If they don't, we won't recommend them."],
             [`${wontId}.button_text`, ''],
             [`${wontId}.button_link`, 'main'],
 
-            // SECTION 9 — intervention (closing)
-            [`${closingId}.heading`, 'Technology should make the business stronger, not more complicated'],
-            [`${closingId}.subtext`, 'If a stronger website, better systems or practical AI could genuinely improve the way the business operates, that is where the conversation should start.'],
+            // SECTION 4 — insights (what else we've built)
+            [`${examplesId}.label`, "WHAT ELSE WE'VE BUILT"],
+            [`${examplesId}.heading`, "What else we've built"],
+            [`${examplesId}.subtext`, "Our own businesses have always been our testing ground.<br><br>Before we recommend something to a client, we'd rather build it ourselves.<br><br>Everything here started by solving a real commercial problem."],
+            [`${examplesId}.card_1_tag`, 'OWNER CHECK'],
+            [`${examplesId}.card_1_title`, 'Owner Check'],
+            [`${examplesId}.card_1_body`, 'A practical self-diagnostic that shows where a business still depends too heavily on its owner.'],
+            [`${examplesId}.card_2_tag`, 'COMMERCIAL GAPS REVIEW'],
+            [`${examplesId}.card_2_title`, 'Commercial Gaps Review'],
+            [`${examplesId}.card_2_body`, 'An automated commercial review that highlights opportunities, pressure points and missed commercial potential using evidence rather than assumptions.'],
+            [`${examplesId}.card_3_tag`, 'ARRINGTON CONSULTANCY'],
+            [`${examplesId}.card_3_title`, 'Arrington Consultancy'],
+            [`${examplesId}.card_3_body`, 'Built to generate better enquiries, demonstrate properly directed AI and show what a genuinely bespoke £999 website can look like.'],
+
+            // SECTION 5 — fourcards (how the work happens)
+            [`${howId}.label`, 'HOW THE WORK HAPPENS'],
+            [`${howId}.heading`, 'Understand, build, improve'],
+            [`${howId}.card_1_number`, '01'],
+            [`${howId}.card_1_title`, 'Understand'],
+            [`${howId}.card_1_body`, 'We understand the business before we build anything.'],
+            [`${howId}.card_2_number`, '02'],
+            [`${howId}.card_2_title`, 'Build'],
+            [`${howId}.card_2_body`, 'We build what the business actually needs.'],
+            [`${howId}.card_3_number`, '03'],
+            [`${howId}.card_3_title`, 'Improve'],
+            [`${howId}.card_3_body`, 'We improve it as the business grows.'],
+            [`${howId}.card_4_number`, ''],
+            [`${howId}.card_4_title`, ''],
+            [`${howId}.card_4_body`, ''],
+
+            // SECTION 6 — intervention (closing)
+            [`${closingId}.heading`, 'Tell us what you want to build'],
+            [`${closingId}.subtext`, "You don't need a finished brief. Tell us what you're trying to achieve and we'll tell you what we'd do and why."],
             [`${closingId}.button_text`, 'Tell us what you want to build'],
             [`${closingId}.button_link`, 'book-a-30-minute-conversation'],
 
@@ -675,9 +648,8 @@ async function seed() {
             );
           }
 
-          // Order: hero → WSA proof → biography → filter → biography → insights
-          //        → fourcards → filter → intervention (closing)
-          const pageOrder = [heroId, wsaId, startId, whyId, areasId, examplesId, howId, wontId, closingId];
+          // Order: hero → WSA proof → technology → examples → process → closing
+          const pageOrder = [heroId, wsaId, wontId, examplesId, howId, closingId];
 
           // Position right after What We Do, shifting later pages' sort_order
           // up by one — same pattern as the Evidence merge above. show_in_nav
@@ -851,12 +823,10 @@ async function seed() {
     }
   }
 
-  // Migration: websites-and-ai copy refinement (03/08/2026). Updates the
-  // hero subtext, WSA proof section, BUILT AROUND YOU filter, and TECHNOLOGY
-  // filter to the new approved copy. Also seeds page-specific contact
-  // overrides (wai.contact_heading / wai.contact_body) for the
-  // websites-and-ai page only, leaving the global contact section untouched.
-  // Idempotent: uses DO UPDATE SET so safe to run on both fresh and live DBs.
+  // Migration: websites-and-ai final simplification (03/08/2026). Enforces
+  // the final section order and copy, removes repetitive middle sections from
+  // this page only, and seeds page-specific contact overrides for this page
+  // only. Idempotent and safe on fresh and existing DBs.
   {
     const { rows: waRows } = await db.query(
       "SELECT section_order FROM pages WHERE slug = 'websites-and-ai'"
@@ -868,11 +838,15 @@ async function seed() {
         return m ? m[1] : null;
       };
 
-      const heroId = pageOrder.find((id) => baseOf(id) === 'hero');
-      const wsaId = pageOrder.find((id) => baseOf(id) === 'casestudy2');
-      const filters = pageOrder.filter((id) => baseOf(id) === 'filter');
-      const whyId = filters[0];  // first filter = BUILT AROUND YOU
-      const wontId = filters[1]; // second filter = TECHNOLOGY SECTION
+      const text = (v) => (v || '').replace(/<[^>]+>/g, '').trim();
+      const getValue = async (iid, field) => {
+        if (!iid) return '';
+        const { rows } = await db.query(
+          'SELECT content FROM content WHERE section_key = $1',
+          [`${iid}.${field}`]
+        );
+        return rows[0]?.content || '';
+      };
 
       const upsert = async (key, value) => {
         await db.query(
@@ -881,14 +855,39 @@ async function seed() {
         );
       };
 
+      const heroId = pageOrder.find((id) => baseOf(id) === 'hero');
+      const wsaId = pageOrder.find((id) => baseOf(id) === 'casestudy2');
+      const insightsId = pageOrder.find((id) => baseOf(id) === 'insights');
+      const howId = pageOrder.find((id) => baseOf(id) === 'fourcards');
+
+      let closingId = null;
+      for (let i = pageOrder.length - 1; i >= 0; i--) {
+        if (baseOf(pageOrder[i]) === 'intervention') { closingId = pageOrder[i]; break; }
+      }
+
+      const filterIds = pageOrder.filter((id) => baseOf(id) === 'filter');
+      let technologyId = null;
+      for (const id of filterIds) {
+        const heading = text(await getValue(id, 'heading')).toLowerCase();
+        if (heading === 'technology should earn its place') {
+          technologyId = id;
+          break;
+        }
+      }
+      if (!technologyId) technologyId = filterIds[0] || null;
+
       if (heroId) {
+        await upsert(`${heroId}.heading`, 'A genuinely bespoke website for £999');
         await upsert(`${heroId}.subtext`,
           'If we built World Student Advisors for £999, imagine what we could build for your business.<br><br>'
           + "We'll build it around your business, not around a template."
         );
+        await upsert(`${heroId}.cta`, 'Tell us what you want to build');
       }
 
       if (wsaId) {
+        await upsert(`${wsaId}.label`, 'OUR WORK');
+        await upsert(`${wsaId}.heading`, 'World Student Advisors');
         await upsert(`${wsaId}.intro`, 'We built World Student Advisors for £999.');
         await upsert(`${wsaId}.body`,
           'It includes Pipedrive CRM, Microsoft 365, Google Reviews, AI interview practice, AI visa interview preparation and responsive layouts across desktop and mobile.<br><br>'
@@ -899,20 +898,61 @@ async function seed() {
         await upsert(`${wsaId}.button_href`, 'https://www.worldstudentadvisors.com/');
       }
 
-      if (whyId) {
-        await upsert(`${whyId}.p1`, "Most websites start with a template. We start with the business. We listen properly, understand what you're trying to achieve and build around that.");
-        await upsert(`${whyId}.p2`, "We'll challenge ideas when we think there's a better way and explain why. The decisions stay with you. It's your business and your website.");
+      if (technologyId) {
+        await upsert(`${technologyId}.label`, 'HOW WE THINK');
+        await upsert(`${technologyId}.heading`, 'Technology should earn its place');
+        await upsert(`${technologyId}.p1`, 'We recommend websites, AI and systems only when they genuinely improve the business.');
+        await upsert(`${technologyId}.p2`, "If they don't, we won't recommend them.");
+        await upsert(`${technologyId}.button_text`, '');
+        await upsert(`${technologyId}.button_link`, 'main');
       }
 
-      if (wontId) {
-        await upsert(`${wontId}.heading`, 'Technology should earn its place');
-        await upsert(`${wontId}.p1`, "We recommend websites, AI and systems when they genuinely improve the business. If they don't, we won't recommend them.");
-        await upsert(`${wontId}.p2`, '');
+      if (insightsId) {
+        await upsert(`${insightsId}.label`, "WHAT ELSE WE'VE BUILT");
+        await upsert(`${insightsId}.heading`, "What else we've built");
+        await upsert(`${insightsId}.subtext`,
+          "Our own businesses have always been our testing ground.<br><br>"
+          + "Before we recommend something to a client, we'd rather build it ourselves.<br><br>"
+          + 'Everything here started by solving a real commercial problem.'
+        );
+        await upsert(`${insightsId}.card_1_tag`, 'OWNER CHECK');
+        await upsert(`${insightsId}.card_1_title`, 'Owner Check');
+        await upsert(`${insightsId}.card_1_body`, 'A practical self-diagnostic that shows where a business still depends too heavily on its owner.');
+        await upsert(`${insightsId}.card_2_tag`, 'COMMERCIAL GAPS REVIEW');
+        await upsert(`${insightsId}.card_2_title`, 'Commercial Gaps Review');
+        await upsert(`${insightsId}.card_2_body`, 'An automated commercial review that highlights opportunities, pressure points and missed commercial potential using evidence rather than assumptions.');
+        await upsert(`${insightsId}.card_3_tag`, 'ARRINGTON CONSULTANCY');
+        await upsert(`${insightsId}.card_3_title`, 'Arrington Consultancy');
+        await upsert(`${insightsId}.card_3_body`, 'Built to generate better enquiries, demonstrate properly directed AI and show what a genuinely bespoke £999 website can look like.');
+      }
+
+      if (howId) {
+        await upsert(`${howId}.label`, 'HOW THE WORK HAPPENS');
+        await upsert(`${howId}.heading`, 'Understand, build, improve');
+        await upsert(`${howId}.card_1_number`, '01');
+        await upsert(`${howId}.card_1_title`, 'Understand');
+        await upsert(`${howId}.card_1_body`, 'We understand the business before we build anything.');
+        await upsert(`${howId}.card_2_number`, '02');
+        await upsert(`${howId}.card_2_title`, 'Build');
+        await upsert(`${howId}.card_2_body`, 'We build what the business actually needs.');
+        await upsert(`${howId}.card_3_number`, '03');
+        await upsert(`${howId}.card_3_title`, 'Improve');
+        await upsert(`${howId}.card_3_body`, 'We improve it as the business grows.');
+        await upsert(`${howId}.card_4_number`, '');
+        await upsert(`${howId}.card_4_title`, '');
+        await upsert(`${howId}.card_4_body`, '');
+      }
+
+      if (closingId) {
+        await upsert(`${closingId}.heading`, 'Tell us what you want to build');
+        await upsert(`${closingId}.subtext`, "You don't need a finished brief. Tell us what you're trying to achieve and we'll tell you what we'd do and why.");
+        await upsert(`${closingId}.button_text`, 'Tell us what you want to build');
       }
 
       // Page-specific contact overrides for websites-and-ai only.
-      // The global contact.heading / contact.body are left unchanged so all
+      // The global contact.* values are left unchanged so all
       // other pages continue to use the shared contact section as before.
+      await upsert('wai.contact_label', 'TELL US WHAT YOU WANT TO BUILD');
       await upsert('wai.contact_heading', 'Tell us what you want to build.');
       await upsert('wai.contact_body',
         "You don't need a specification.<br><br>"
@@ -921,8 +961,24 @@ async function seed() {
         + "Tell us what you're trying to achieve.<br><br>"
         + "We'll tell you what we'd do and why."
       );
+      await upsert('wai.contact_message_placeholder', 'Tell us what you want to build');
+      await upsert('wai.contact_submit_text', 'Tell us what you want to build');
 
-      console.log('Websites and AI: copy refinement migration applied.');
+      const cleanedOrder = [];
+      const seen = new Set();
+      for (const id of [heroId, wsaId, technologyId, insightsId, howId, closingId]) {
+        if (!id || seen.has(id)) continue;
+        seen.add(id);
+        cleanedOrder.push(id);
+      }
+      if (cleanedOrder.length > 0 && JSON.stringify(cleanedOrder) !== JSON.stringify(pageOrder)) {
+        await db.query(
+          'UPDATE pages SET section_order = $1::jsonb WHERE slug = $2',
+          [JSON.stringify(cleanedOrder), 'websites-and-ai']
+        );
+      }
+
+      console.log('Websites and AI: final simplification migration applied.');
     }
   }
 
