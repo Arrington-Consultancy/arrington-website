@@ -763,12 +763,18 @@ async function renderPage(req, res, next, pageSlug) {
     // different heading/body copy while keeping the shared email, phone and
     // WhatsApp details unchanged. All other pages get the global values.
     const pageContact = {
+      label: content['contact.label'],
       heading: content['contact.heading'],
-      body: content['contact.body']
+      body: content['contact.body'],
+      messagePlaceholder: 'Tell us where the pressure is showing',
+      submitText: 'Send'
     };
     if (pageSlug === 'websites-and-ai') {
+      pageContact.label   = content['wai.contact_label']   || pageContact.label;
       pageContact.heading = content['wai.contact_heading'] || pageContact.heading;
       pageContact.body    = content['wai.contact_body']    || pageContact.body;
+      pageContact.messagePlaceholder = content['wai.contact_message_placeholder'] || pageContact.messagePlaceholder;
+      pageContact.submitText = content['wai.contact_submit_text'] || pageContact.submitText;
     }
 
     res.render('index', {

@@ -89,6 +89,23 @@ router.get('/:prefix', requireCapability('edit_content'), async (req, res) => {
     );
     const fields = {};
     rows.forEach(r => { fields[r.section_key] = r.content; });
+
+    if (req.params.prefix === 'contact' && req.query.pageSlug === 'websites-and-ai') {
+      const { rows: waiRows } = await db.query(
+        `SELECT section_key, content
+           FROM content
+          WHERE section_key IN (
+            'wai.contact_label',
+            'wai.contact_heading',
+            'wai.contact_body',
+            'wai.contact_message_placeholder',
+            'wai.contact_submit_text'
+          )
+          ORDER BY section_key`
+      );
+      waiRows.forEach(r => { fields[r.section_key] = r.content; });
+    }
+
     res.json({ fields });
   } catch (err) {
     console.error('Content fetch error:', err);
