@@ -6,7 +6,6 @@ const sanitizeHtml = require('sanitize-html');
 const nodemailer = require('nodemailer');
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const db = require('../db/pool');
-const { verifyTurnstileToken } = require('../lib/turnstile');
 
 const router = express.Router();
 
@@ -236,16 +235,6 @@ router.post('/api/quiz/complete-notify', publicFormLimiter, async (req, res) => 
     }
     if (!resultsText) {
       return res.status(400).json({ error: 'Invalid result data.' });
-    }
-
-    // Human verification — this is the quiz's one and only completion
-    // trigger (see the comment above), so it is also the one point that
-    // gates the owner notification. A missing or invalid token blocks the
-    // lead insert and the notification outright; nothing else about the
-    // quiz (scoring, the results screen itself) depends on this check.
-    const turnstileCheck = await verifyTurnstileToken(plainText(body.turnstileToken).slice(0, 2000), req.ip);
-    if (!turnstileCheck.success) {
-      return res.status(400).json({ error: 'Verification failed. Please try again.' });
     }
 
     await db.query(

@@ -15,7 +15,6 @@
     <meta name="twitter:title" content="Owner Check | Arrington Consultancy">
     <meta name="twitter:description" content="A small, growing library of short self-assessment checks for owners of established, owner run businesses.">
     <meta name="twitter:image" content="https://www.arringtonconsultancy.com/img/logo">
-    <meta name="csrf-token" content="<%= csrfToken %>">
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="icon" href="/icons/icon-32.png" type="image/png" sizes="32x32">
     <link rel="icon" href="/icons/icon-16.png" type="image/png" sizes="16x16">
@@ -51,7 +50,23 @@
             color: var(--text);
             line-height: 1.6;
         }
-        <%- include('partials/site-chrome-styles') %>
+        header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+        header a.oc-logo-link { display: inline-flex; }
+        header img { height: 32px; width: auto; }
+        header .oc-back-link {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        header .oc-back-link:hover, header .oc-back-link:focus-visible { color: var(--accent); }
 
         h1, h2, h3 {
             font-family: 'DM Serif Display', serif;
@@ -222,10 +237,25 @@
         .oc-next h2 { font-size: 1.9rem; }
         .oc-next .oc-label { text-align: center; }
         .oc-next p { max-width: 520px; margin: 0 auto 2rem; font-size: 1.05rem; }
+        .oc-privacy-link {
+            text-align: center;
+            padding: 0 1.5rem 2rem;
+        }
+        .oc-privacy-link a {
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            text-decoration: none;
+        }
+        .oc-privacy-link a:hover, .oc-privacy-link a:focus-visible { color: var(--accent); }
     </style>
 </head>
 <body>
-    <%- include('partials/site-header', { currentPage: { slug: 'owner-check' }, navPages, canEdit: false, content, pageContact }) %>
+    <header>
+        <a href="/" class="oc-logo-link" aria-label="Arrington Consultancy home">
+            <img src="/img/logo" alt="Arrington Business Consultancy">
+        </a>
+        <a href="/" class="oc-back-link">&larr; Back to site</a>
+    </header>
 
     <section class="oc-hero">
         <img src="/img/owner-check/hero.jpg" alt="" class="oc-hero-photo">
@@ -302,10 +332,8 @@
             <a href="/book-a-30-minute-conversation" class="btn btn-outline">Talk to Us</a>
         </div>
     </main>
-
-    <%- include('partials/site-footer', { canEdit: false, pageContact, content }) %>
-    <script nonce="<%= nonce %>">
-        <%- include('partials/site-chrome-script') %>
-    </script>
+    <footer class="oc-privacy-link">
+        <a href="/privacy">Privacy</a>
+    </footer>
 </body>
 </html>

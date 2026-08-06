@@ -2401,7 +2401,66 @@
 </head>
 <body>
 
-<%- include('partials/site-header', { currentPage, navPages, canEdit, content, pageContact }) %>
+<!-- NAV -->
+<nav id="nav" class="<%= currentPage.slug === 'websites-and-ai' ? 'nav-wai' : '' %>">
+    <div class="nav-inner">
+        <a href="/" class="nav-logo">
+            <img src="/img/logo?v=20260803-transparent" alt="Arrington Business Consultancy" class="nav-logo-img">
+            <% if (canEdit) { %><button class="cms-img-btn" data-image="logo" title="Change logo">&#9998;</button><% } %>
+        </a>
+        <div class="nav-actions">
+            <a href="#conversation" class="nav-cta"><%= pageContact.headerCtaText %></a>
+            <% const _navWa = (content['contact.whatsapp'] || '').trim(); %>
+            <% if (/^https:\/\/(wa\.me|api\.whatsapp\.com)\//.test(_navWa)) { %>
+            <a href="<%= _navWa %>" class="nav-cta nav-cta-whatsapp" target="_blank" rel="noopener nofollow">WhatsApp us</a>
+            <% } %>
+        </div>
+        <button class="nav-hamburger" id="navHamburger" aria-label="Menu" aria-expanded="false">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+    </div>
+</nav>
+
+<div class="mobile-menu" id="mobileMenu">
+    <% if (navPages.length > 1) { %>
+        <% for (const _p of navPages) { %>
+            <% if (!_p.hidden || canEdit) { %>
+            <a href="<%= _p.slug === 'main' ? '/' : '/' + _p.slug %>"
+               class="<%= _p.slug === currentPage.slug ? 'active' : '' %>">
+                <%= _p.nav_label || _p.title %>
+            </a>
+            <% } %>
+            <% if (_p.slug === 'what-we-do') { %>
+            <a href="/websites-and-ai" class="mobile-menu-sublink<%= currentPage.slug === 'websites-and-ai' ? ' active' : '' %>">Websites and AI</a>
+            <% } %>
+        <% } %>
+        <div class="mobile-menu-divider"></div>
+    <% } %>
+    <a href="#conversation" class="mobile-menu-cta"><%= pageContact.headerCtaText %></a>
+    <% const _mWa = (content['contact.whatsapp'] || '').trim(); %>
+    <% if (/^https:\/\/(wa\.me|api\.whatsapp\.com)\//.test(_mWa)) { %>
+    <a href="<%= _mWa %>" class="mobile-menu-cta mobile-menu-whatsapp" target="_blank" rel="noopener nofollow">WhatsApp us</a>
+    <% } %>
+</div>
+
+<% if (navPages.length > 1) { %>
+<div class="page-menu" id="pageMenu">
+    <div class="page-menu-inner">
+        <% for (const _p of navPages) { %>
+        <a href="<%= _p.slug === 'main' ? '/' : '/' + _p.slug %>"
+           class="page-menu-link<%= _p.slug === currentPage.slug ? ' active' : '' %><%= ((_p.hidden || !_p.show_in_nav) && canEdit) ? ' page-menu-hidden' : '' %>"
+           <% if (canEdit && !_p.hidden && !_p.show_in_nav) { %>title="Out of the main nav (Show in nav is off), but reachable by direct URL and indexed"<% } %>>
+            <%= _p.nav_label || _p.title %>
+        </a>
+        <% if (_p.slug === 'what-we-do') { %>
+        <a href="/websites-and-ai" class="page-menu-link page-menu-link-child<%= currentPage.slug === 'websites-and-ai' ? ' active' : '' %>">Websites and AI</a>
+        <% } %>
+        <% } %>
+    </div>
+</div>
+<% } %>
 
 
 <%
@@ -3290,7 +3349,64 @@
 <% } %>
 </div>
 
-<%- include('partials/site-footer', { canEdit, pageContact, content }) %>
+<!-- FOOTER / CONTACT -->
+<footer id="conversation">
+    <div class="footer-contact cms-section" data-section="contact">
+        <% if (canEdit) { %><button class="cms-edit-btn" data-section="contact" title="Edit section">&#9998;</button><% } %>
+        <p class="section-label"><%- pageContact.label %></p>
+        <h2 class="section-heading"><%- pageContact.heading %></h2>
+        <p><%- pageContact.body %></p>
+        <%
+          const _rawEmail = (content['contact.email'] || '').trim();
+          const _atIdx = _rawEmail.indexOf('@');
+          const _eU = _atIdx >= 0 ? _rawEmail.slice(0, _atIdx) : _rawEmail;
+          const _eD = _atIdx >= 0 ? _rawEmail.slice(_atIdx + 1) : '';
+          const _rawPhone = (content['contact.phone'] || '').trim();
+          const _pMid = Math.ceil(_rawPhone.length / 2);
+          const _pA = _rawPhone.slice(0, _pMid);
+          const _pB = _rawPhone.slice(_pMid);
+          const _pDigits = _rawPhone.replace(/[^0-9+]/g, '');
+          const _pDigitsMid = Math.ceil(_pDigits.length / 2);
+          const _pDigitsA = _pDigits.slice(0, _pDigitsMid);
+          const _pDigitsB = _pDigits.slice(_pDigitsMid);
+          const _waUrl = (content['contact.whatsapp'] || '').trim();
+          const _waValid = /^https:\/\/(wa\.me|api\.whatsapp\.com)\//.test(_waUrl);
+        %>
+        <form class="lead-form" id="leadForm">
+            <div class="lead-hp" aria-hidden="true">
+                <label>Leave this field blank<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+            </div>
+            <div class="lead-row">
+                <input type="text" name="name" placeholder="Your name" maxlength="200" required>
+                <input type="email" name="email" placeholder="Your email" maxlength="255" required>
+            </div>
+            <div class="lead-row">
+                <input type="tel" name="phone" placeholder="Phone (optional)" maxlength="50">
+                <input type="text" name="preferred_time" placeholder="Best day/time for a 30 min call (optional)" maxlength="255">
+            </div>
+            <textarea name="message" placeholder="<%= pageContact.messagePlaceholder %>" maxlength="2000" rows="4"></textarea>
+            <p class="lead-privacy-note">We use your details to respond to your enquiry. Read our <a href="/privacy">Privacy</a> page.</p>
+            <button type="submit" class="btn btn-primary"><%= pageContact.submitText %></button>
+            <p class="lead-form-status" id="leadFormStatus" aria-live="polite"></p>
+        </form>
+        <p class="lead-form-alt">Prefer to call, email or WhatsApp instead?</p>
+        <div class="contact-details">
+            <a href="#" class="js-email-link" data-u="<%= _eU %>" data-d="<%= _eD %>" rel="nofollow"><%= _eU %> <span aria-hidden="true">[at]</span> <%= _eD %></a>
+            <a href="#" class="js-phone-link" data-pa="<%= _pDigitsA %>" data-pb="<%= _pDigitsB %>" rel="nofollow"><%= _pA %><span aria-hidden="true">&#8203;</span><%= _pB %></a>
+            <% if (_waValid) { %>
+            <a href="<%= _waUrl %>" class="btn btn-whatsapp" target="_blank" rel="noopener nofollow">WhatsApp us</a>
+            <% } %>
+        </div>
+    </div>
+    <div class="footer-links">
+        <a href="/useful-thinking">For more on how we think, see Useful Thinking</a>
+        <a href="/privacy">Privacy</a>
+    </div>
+    <div class="footer-credit cms-section" data-section="footer">
+        <% if (canEdit) { %><button class="cms-edit-btn" data-section="footer" title="Edit name">&#9998;</button><% } %>
+        <%= content['footer.name'] || '' %>
+    </div>
+</footer>
 
 <div class="doc-modal-overlay" id="docModalOverlay">
     <div class="doc-modal">

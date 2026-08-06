@@ -5,8 +5,6 @@ const nodemailer = require('nodemailer');
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const db = require('../db/pool');
 const themes = require('../db/themes');
-const { getSiteShellData } = require('../lib/navShell');
-const { verifyTurnstileToken, SITE_KEY: TURNSTILE_SITE_KEY } = require('../lib/turnstile');
 
 const router = express.Router();
 
@@ -407,17 +405,12 @@ function mountPageRoute(app, generateCsrfToken) {
       );
       const activeTheme = (themeRows[0] && themeRows[0].content) || 'dark';
       const theme = themes[activeTheme] || themes.dark;
-      const { navPages, content, pageContact } = await getSiteShellData();
 
       res.render('market-ready-test', {
         theme,
         csrfToken: generateCsrfToken(req, res),
         questions: CLIENT_QUESTIONS,
-        saleTimeframeOptions: SALE_TIMEFRAME_OPTIONS,
-        navPages,
-        content,
-        pageContact,
-        turnstileSiteKey: TURNSTILE_SITE_KEY
+        saleTimeframeOptions: SALE_TIMEFRAME_OPTIONS
       });
     } catch (err) {
       next(err);
@@ -448,7 +441,6 @@ function mountPageRoute(app, generateCsrfToken) {
       const activeTheme = (themeRows[0] && themeRows[0].content) || 'dark';
       const theme = themes[activeTheme] || themes.dark;
       const shareMeta = shareMetaForScore(submission.report.overall_score);
-      const { navPages, content, pageContact } = await getSiteShellData();
 
       res.render('market-ready-test-result', {
         theme,
@@ -458,10 +450,7 @@ function mountPageRoute(app, generateCsrfToken) {
         report: submission.report,
         shareTag: shareMeta.tag,
         shareImageUrl: `${SITE_ORIGIN}/img/market-ready-test/${shareMeta.image}`,
-        resultUrl: `${SITE_ORIGIN}/market-ready-test/result/${token}`,
-        navPages,
-        content,
-        pageContact
+        resultUrl: `${SITE_ORIGIN}/market-ready-test/result/${token}`
       });
     } catch (err) {
       next(err);
@@ -517,15 +506,6 @@ router.post('/api/market-ready-test/submit', assessmentLimiter, async (req, res)
       if (!Number.isInteger(optionIndices[i]) || optionIndices[i] < 0 || optionIndices[i] > 3) {
         return res.status(400).json({ error: `Please choose an answer for question ${i + 1}.` });
       }
-    }
-
-    // Human verification — this is the test's one and only submission
-    // endpoint (synchronous: scores, stores and notifies in one request),
-    // so it is the single point that gates all three. A missing or invalid
-    // token stops here, before anything is scored, stored or sent.
-    const turnstileCheck = await verifyTurnstileToken(plainText(body.turnstileToken, 2000), req.ip);
-    if (!turnstileCheck.success) {
-      return res.status(400).json({ error: 'Verification failed. Please try again.' });
     }
 
     const report = buildReport(optionIndices);

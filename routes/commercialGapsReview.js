@@ -8,8 +8,6 @@ const themes = require('../db/themes');
 const { selectNextStep, firstQuestion, MIN_QUESTIONS, MAX_QUESTIONS } = require('../lib/commercialGapsQuestions');
 const { interpretCommercialGaps } = require('../lib/commercialGapsAI');
 const { generateUniqueShortReference } = require('../lib/shortReference');
-const { getSiteShellData } = require('../lib/navShell');
-const { verifyTurnstileToken, SITE_KEY: TURNSTILE_SITE_KEY } = require('../lib/turnstile');
 
 const router = express.Router();
 
@@ -94,15 +92,10 @@ function mountPageRoute(app, generateCsrfToken) {
       );
       const activeTheme = (themeRows[0] && themeRows[0].content) || 'dark';
       const theme = themes[activeTheme] || themes.dark;
-      const { navPages, content, pageContact } = await getSiteShellData();
 
       res.render('commercial-gaps-review', {
         theme,
-        csrfToken: generateCsrfToken(req, res),
-        navPages,
-        content,
-        pageContact,
-        turnstileSiteKey: TURNSTILE_SITE_KEY
+        csrfToken: generateCsrfToken(req, res)
       });
     } catch (err) {
       next(err);
@@ -129,7 +122,6 @@ function mountPageRoute(app, generateCsrfToken) {
       );
       const activeTheme = (themeRows[0] && themeRows[0].content) || 'dark';
       const theme = themes[activeTheme] || themes.dark;
-      const { navPages, content, pageContact } = await getSiteShellData();
 
       // Three real states, one view (commercial-gaps-review-result.ejs
       // branches on `state`): still working (in_progress shouldn't
@@ -138,26 +130,14 @@ function mountPageRoute(app, generateCsrfToken) {
       // waiting state polls /api/commercial-gaps-review/status/:token
       // until it changes.
       if (review.status === 'processing' || review.status === 'in_progress') {
-        return res.render('commercial-gaps-review-result', {
-          theme,
-          state: 'waiting',
-          token,
-          csrfToken: generateCsrfToken(req, res),
-          navPages,
-          content,
-          pageContact
-        });
+        return res.render('commercial-gaps-review-result', { theme, state: 'waiting', token });
       }
 
       if (review.status === 'failed') {
         return res.render('commercial-gaps-review-result', {
           theme,
           state: 'failed',
-          shortReference: review.short_reference,
-          csrfToken: generateCsrfToken(req, res),
-          navPages,
-          content,
-          pageContact
+          shortReference: review.short_reference
         });
       }
 
@@ -178,11 +158,7 @@ function mountPageRoute(app, generateCsrfToken) {
         secondaryIssue: r.secondary_issue,
         usefulObservation: r.useful_observation,
         visitorSummary: r.visitor_summary,
-        recommendedResource: r.recommended_resource,
-        csrfToken: generateCsrfToken(req, res),
-        navPages,
-        content,
-        pageContact
+        recommendedResource: r.recommended_resource
       });
     } catch (err) {
       next(err);
@@ -499,85 +475,24 @@ router.post('/api/commercial-gaps-review/answer', answerLimiter, async (req, res
       });
     }
 
-    // Final answer — all questions are now answered, but the review is not
-    // submitted yet. Save the transcript and hand back to the client for
-    // one last step: human verification (see /api/commercial-gaps-review/
-    // verify below). Status stays 'in_progress' — an abandoned review that
-    // never verifies stays exactly that, abandoned, and never generates a
-    // notification, same as before this check existed.
+    // Final answer — mark processing and respond immediately. A live AI
+    // call (plus its one retry on a bad reply) can genuinely take long
+    // enough to exceed a proxy or mobile-browser timeout, so the request
+    // is never held open waiting for interpretCommercialGaps to finish.
+    // The actual interpretation happens in finalizeReview, in the
+    // background, after the response has already gone out.
     await db.query(
-      'UPDATE commercial_gaps_reviews SET transcript = $1::jsonb WHERE result_token = $2',
+      `UPDATE commercial_gaps_reviews SET transcript = $1::jsonb, status = 'processing' WHERE result_token = $2`,
       [JSON.stringify(newTranscript), token]
-    );
-
-    res.json({ ok: true, done: false, needsVerification: true });
-  } catch (err) {
-    console.error('Commercial Gaps Review answer error:', err);
-    res.status(500).json({ error: 'Something went wrong. Please try again or contact us at tom@arringtonconsultancy.com.' });
-  }
-});
-
-// ------------------------------------------------------------
-// POST /api/commercial-gaps-review/verify
-//
-// The one and only human-verification gate for this tool, called once,
-// immediately after the visitor's final answer and immediately before the
-// review is actually submitted for interpretation. Never called mid-
-// interview. Re-derives "is this transcript actually complete" from the
-// stored transcript via selectNextStep rather than trusting the client, so
-// this cannot be used to force-complete a review early. On success, this
-// is exactly the old final branch of /answer: mark 'processing', respond
-// immediately, and finalize in the background.
-// ------------------------------------------------------------
-router.post('/api/commercial-gaps-review/verify', answerLimiter, async (req, res) => {
-  try {
-    const body = req.body || {};
-    const token = plainText(body.token, 64);
-    if (!isValidToken(token)) {
-      return res.status(400).json({ error: 'Invalid request.' });
-    }
-
-    const { rows } = await db.query(
-      'SELECT * FROM commercial_gaps_reviews WHERE result_token = $1',
-      [token]
-    );
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Review not found.' });
-    }
-    const review = rows[0];
-    if (review.status !== 'in_progress') {
-      return res.status(400).json({ error: 'This review is already complete.' });
-    }
-
-    const transcript = Array.isArray(review.transcript) ? review.transcript : [];
-    const pending = selectNextStep(transcript);
-    if (!pending.done) {
-      return res.status(400).json({ error: 'This review is not ready to be submitted yet.' });
-    }
-
-    const turnstileCheck = await verifyTurnstileToken(plainText(body.turnstileToken, 2000), req.ip);
-    if (!turnstileCheck.success) {
-      return res.status(400).json({ error: 'Verification failed. Please try again.' });
-    }
-
-    // Mark processing and respond immediately. A live AI call (plus its one
-    // retry on a bad reply) can genuinely take long enough to exceed a
-    // proxy or mobile-browser timeout, so the request is never held open
-    // waiting for interpretCommercialGaps to finish. The actual
-    // interpretation happens in finalizeReview, in the background, after
-    // the response has already gone out.
-    await db.query(
-      `UPDATE commercial_gaps_reviews SET status = 'processing' WHERE result_token = $1`,
-      [token]
     );
 
     const resultPath = `/commercial-gaps-review/result/${token}`;
     res.json({ ok: true, done: true, resultUrl: resultPath });
 
-    finalizeReview(review, token)
+    finalizeReview({ ...review, transcript: newTranscript }, token)
       .catch((err) => console.error('Commercial Gaps Review: finalizeReview itself threw (should be unreachable, it handles its own failures):', err.message));
   } catch (err) {
-    console.error('Commercial Gaps Review verify error:', err);
+    console.error('Commercial Gaps Review answer error:', err);
     res.status(500).json({ error: 'Something went wrong. Please try again or contact us at tom@arringtonconsultancy.com.' });
   }
 });
