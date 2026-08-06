@@ -16,10 +16,12 @@
     <meta name="twitter:description" content="A personalised AI-assisted commercial review that surfaces the issue worth investigating in your business, then hands you back to a real conversation.">
     <meta name="twitter:image" content="https://www.arringtonconsultancy.com/img/logo">
     <meta name="csrf-token" content="<%= csrfToken %>">
+    <meta name="turnstile-site-key" content="<%= turnstileSiteKey %>">
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <script async defer src="https://challenges.cloudflare.com/turnstile/v0/api.js"></script>
     <style nonce="<%= nonce %>">
         :root {
             <% for (const [prop, val] of Object.entries(theme.vars)) { %>
@@ -87,6 +89,9 @@
 
         .cgr-error-box { padding: 1.25rem 1.4rem; border: 1px solid var(--odr-red, #c0524a); background: rgba(192,82,74,0.08); border-radius: 4px; margin-bottom: 1.5rem; }
         .cgr-error-box p { color: var(--text-bright); margin: 0; }
+
+        .cgr-turnstile { margin: 1.5rem 0; }
+        .cgr-verify-error { font-size: 0.88rem; color: var(--odr-red, #c0524a); margin-top: 0.5rem; }
 
         /* Honeypot: must be a class rule, not an inline style="" attribute —
            the page's CSP has no 'unsafe-inline' for style-src, and a nonce
@@ -177,6 +182,15 @@
             </div>
         </section>
 
+        <!-- VERIFY (shown once, after the last answer, before submission) -->
+        <section class="cgr-screen" id="cgr-verify">
+            <p class="cgr-label">ONE LAST STEP</p>
+            <h2>Quick human check</h2>
+            <p>Before we put together your review, please complete this quick check.</p>
+            <div id="cgr-turnstile" class="cgr-turnstile"></div>
+            <p class="cgr-verify-error" id="cgr-verify-error" role="alert" hidden>Verification failed. Please try again.</p>
+        </section>
+
         <!-- INTERPRETING -->
         <section class="cgr-screen" id="cgr-interpreting">
             <div class="cgr-loading">
@@ -201,11 +215,16 @@
         (function () {
             var csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
             var screens = {};
-            ['cgr-intro', 'cgr-intake', 'cgr-questions', 'cgr-interpreting', 'cgr-error'].forEach(function (id) {
+            ['cgr-intro', 'cgr-intake', 'cgr-questions', 'cgr-verify', 'cgr-interpreting', 'cgr-error'].forEach(function (id) {
                 screens[id] = document.getElementById(id);
             });
             function showScreen(id) {
                 Object.keys(screens).forEach(function (k) { screens[k].classList.toggle('active', k === id); });
+                // Without this, a screen switch keeps whatever scroll offset
+                // the previous (often taller) screen left behind, which can
+                // leave the new screen's heading rendered under the fixed
+                // nav. Matches the Market Ready Test's identical pattern.
+                window.scrollTo({ top: 0, behavior: 'auto' });
             }
             function showError(message) {
                 document.getElementById('cgr-error-text').textContent = message || 'Something went wrong. Please try again or contact us at tom@arringtonconsultancy.com.';
@@ -296,8 +315,8 @@
                     .then(function (result) {
                         btn.disabled = false;
                         if (!result.ok) { showError(result.data.error); return; }
-                        if (result.data.done) {
-                            window.location.href = result.data.resultUrl;
+                        if (result.data.needsVerification) {
+                            showVerifyScreen();
                             return;
                         }
                         showScreen('cgr-questions');
@@ -305,6 +324,67 @@
                     })
                     .catch(function () { btn.disabled = false; showError(); });
             });
+
+            // Human verification — shown exactly once, after the last
+            // answer is accepted and before the review is actually
+            // submitted for interpretation. Never shown between questions.
+            var turnstileToken = null;
+            var turnstileWidgetId = null;
+            function showVerifyScreen() {
+                document.getElementById('cgr-verify-error').hidden = true;
+                turnstileToken = null;
+                showScreen('cgr-verify');
+
+                function render() {
+                    if (typeof turnstile === 'undefined') {
+                        window.setTimeout(render, 300);
+                        return;
+                    }
+                    if (turnstileWidgetId !== null) {
+                        turnstile.reset(turnstileWidgetId);
+                        return;
+                    }
+                    var siteKey = document.querySelector('meta[name="turnstile-site-key"]')?.content;
+                    turnstileWidgetId = turnstile.render('#cgr-turnstile', {
+                        sitekey: siteKey,
+                        callback: function (token) {
+                            turnstileToken = token;
+                            submitVerification();
+                        },
+                        'error-callback': function () {
+                            document.getElementById('cgr-verify-error').hidden = false;
+                        },
+                        'expired-callback': function () {
+                            turnstileToken = null;
+                        }
+                    });
+                }
+                render();
+            }
+
+            function submitVerification() {
+                showScreen('cgr-interpreting');
+                fetch('/api/commercial-gaps-review/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                    body: JSON.stringify({ token: reviewToken, turnstileToken: turnstileToken })
+                })
+                    .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+                    .then(function (result) {
+                        if (!result.ok || !result.data.done) {
+                            document.getElementById('cgr-verify-error').hidden = false;
+                            showScreen('cgr-verify');
+                            if (turnstileWidgetId !== null) turnstile.reset(turnstileWidgetId);
+                            return;
+                        }
+                        window.location.href = result.data.resultUrl;
+                    })
+                    .catch(function () {
+                        document.getElementById('cgr-verify-error').hidden = false;
+                        showScreen('cgr-verify');
+                        if (turnstileWidgetId !== null) turnstile.reset(turnstileWidgetId);
+                    });
+            }
         })();
     </script>
 </body>

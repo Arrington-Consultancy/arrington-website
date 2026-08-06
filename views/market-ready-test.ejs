@@ -7,10 +7,12 @@
     <meta name="description" content="A ten-question assessment of whether your business could be taken over successfully by a new owner.">
     <meta name="robots" content="noindex, nofollow">
     <meta name="csrf-token" content="<%= csrfToken %>">
+    <meta name="turnstile-site-key" content="<%= turnstileSiteKey %>">
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <script async defer src="https://challenges.cloudflare.com/turnstile/v0/api.js"></script>
     <style nonce="<%= nonce %>">
         :root {
             <% for (const [prop, val] of Object.entries(theme.vars)) { %>
@@ -119,6 +121,9 @@
         .mrt-consent label { font-size: 0.92rem; color: var(--text); font-weight: 400; }
         .mrt-privacy-note { font-size: 0.82rem; color: var(--text-muted); margin: 0 0 1rem; }
         .mrt-privacy-note a { color: var(--text-muted); text-underline-offset: 0.16em; }
+
+        .mrt-turnstile { margin: 0.5rem 0 0; }
+        .mrt-verify-error { font-size: 0.88rem; color: var(--odr-red, #c0524a); margin-top: 0.5rem; }
 
         .mrt-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 1.75rem; gap: 1rem; }
         .mrt-back { background: none; border: none; color: var(--text-muted); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; cursor: pointer; padding: 0.5rem 0; }
@@ -325,9 +330,12 @@
             <h2>Check your answers before submitting</h2>
             <p class="mrt-meta">You can go back and change anything before your result is generated.</p>
             <div id="mrt-review-body"></div>
+            <p class="mrt-label">ONE LAST STEP</p>
+            <div id="mrt-turnstile" class="mrt-turnstile"></div>
+            <p class="mrt-verify-error" id="mrt-verify-error" role="alert" hidden>Verification failed. Please try again.</p>
             <div class="mrt-nav">
                 <button type="button" class="mrt-back" id="mrt-review-back">&larr; Back</button>
-                <button type="button" class="btn btn-primary" id="mrt-review-submit">Get my New Owner Ready Score</button>
+                <button type="button" class="btn btn-primary" id="mrt-review-submit" disabled>Get my New Owner Ready Score</button>
             </div>
         </section>
 
@@ -588,6 +596,48 @@
                     showScreen('mrt-context');
                 });
             }
+            renderTurnstileWidget();
+        }
+
+        // Human verification — rendered on the review screen, immediately
+        // before the actual submit button, never during the question
+        // screens themselves. Re-rendered (reset) every time the review
+        // screen is shown, including after a failed submission retry, so a
+        // token is never reused past its first submit attempt.
+        var turnstileToken = null;
+        var turnstileWidgetId = null;
+        function renderTurnstileWidget() {
+            turnstileToken = null;
+            document.getElementById('mrt-review-submit').disabled = true;
+            document.getElementById('mrt-verify-error').hidden = true;
+
+            function render() {
+                if (typeof turnstile === 'undefined') {
+                    window.setTimeout(render, 300);
+                    return;
+                }
+                if (turnstileWidgetId !== null) {
+                    turnstile.reset(turnstileWidgetId);
+                    return;
+                }
+                var siteKey = document.querySelector('meta[name="turnstile-site-key"]')?.content;
+                turnstileWidgetId = turnstile.render('#mrt-turnstile', {
+                    sitekey: siteKey,
+                    callback: function (token) {
+                        turnstileToken = token;
+                        document.getElementById('mrt-review-submit').disabled = false;
+                    },
+                    'error-callback': function () {
+                        document.getElementById('mrt-verify-error').hidden = false;
+                        document.getElementById('mrt-review-submit').disabled = true;
+                    },
+                    'expired-callback': function () {
+                        turnstileToken = null;
+                        document.getElementById('mrt-review-submit').disabled = true;
+                    }
+                });
+            }
+            render();
         }
 
         function escapeHtml(s) {
@@ -606,6 +656,7 @@
 
         // ---- Submit ----
         document.getElementById('mrt-review-submit').addEventListener('click', function () {
+            if (!turnstileToken) return;
             showScreen('mrt-loading');
             startLoadingMessages();
 
@@ -628,7 +679,8 @@
                     answers: state.answers,
                     context: state.context,
                     consentTomReview: state.consentTom,
-                    consentMarketing: state.consentMarketing
+                    consentMarketing: state.consentMarketing,
+                    turnstileToken: turnstileToken
                 })
             }).then(function (res) {
                 return res.json().catch(function () { return {}; }).then(function (data) {
@@ -653,6 +705,7 @@
         });
 
         document.getElementById('mrt-error-retry').addEventListener('click', function () {
+            renderTurnstileWidget();
             showScreen('mrt-review');
         });
         document.getElementById('mrt-error-contact').addEventListener('click', function (e) {

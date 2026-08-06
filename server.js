@@ -21,6 +21,7 @@ const marketReadyTest = require('./routes/marketReadyTest');
 const commercialGapsReview = require('./routes/commercialGapsReview');
 const { publishedArticles, findBySlug: findUsefulThinkingArticle } = require('./lib/usefulThinkingArticles');
 const { getSiteShellData } = require('./lib/navShell');
+const { SITE_KEY: TURNSTILE_SITE_KEY } = require('./lib/turnstile');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -93,7 +94,8 @@ app.use(helmet({
         "'self'",
         (req, res) => `'nonce-${res.locals.nonce}'`,
         'https://www.googletagmanager.com',
-        'https://www.googleadservices.com'
+        'https://www.googleadservices.com',
+        'https://challenges.cloudflare.com'
       ],
       imgSrc: [
         "'self'",
@@ -111,7 +113,7 @@ app.use(helmet({
         'https://www.googleadservices.com',
         'https://googleads.g.doubleclick.net'
       ],
-      frameSrc: ["'self'", 'https://td.doubleclick.net'],
+      frameSrc: ["'self'", 'https://td.doubleclick.net', 'https://challenges.cloudflare.com'],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       frameAncestors: ["'self'"]
@@ -264,7 +266,8 @@ app.get('/owner-dependency-quiz', async (req, res, next) => {
       requestUrl: `${req.protocol}://${req.get('host')}${req.originalUrl}`,
       navPages,
       content,
-      pageContact
+      pageContact,
+      turnstileSiteKey: TURNSTILE_SITE_KEY
     });
   } catch (err) {
     next(err);

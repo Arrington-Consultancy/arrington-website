@@ -29,6 +29,7 @@
     <meta name="twitter:description" content="<%= _pageDescription %>">
     <meta name="twitter:image" content="https://www.arringtonconsultancy.com/img/logo">
     <meta name="csrf-token" content="<%= csrfToken %>">
+    <meta name="turnstile-site-key" content="<%= turnstileSiteKey %>">
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="icon" href="/icons/icon-32.png" type="image/png" sizes="32x32">
     <link rel="icon" href="/icons/icon-16.png" type="image/png" sizes="16x16">
@@ -38,6 +39,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
     <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18129914078"></script>
+    <script async defer src="https://challenges.cloudflare.com/turnstile/v0/api.js"></script>
     <script nonce="<%= nonce %>">
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
@@ -78,6 +80,16 @@
         }
         @media (max-width: 900px) {
             main { padding-top: calc(64px + 2.5rem); }
+        }
+        /* Screen transitions call scrollIntoView() on the newly-active
+           .odr-screen — without this, the browser scrolls its top edge
+           flush to the viewport top, sliding it in underneath the fixed
+           nav (and, when 2+ pages exist, the secondary page-menu bar
+           beneath it — 88px + 36px). Matches main's own padding-top
+           formula so there is always clearance to spare either way. */
+        .odr-screen { scroll-margin-top: calc(88px + 2.5rem); }
+        @media (max-width: 900px) {
+            .odr-screen { scroll-margin-top: calc(64px + 2.5rem); }
         }
         .odr-label {
             font-size: 0.72rem;
@@ -133,6 +145,9 @@
 
         .odr-screen { display: none; }
         .odr-screen.active { display: block; }
+
+        .odr-turnstile { margin: 1.5rem 0; }
+        .odr-verify-error { font-size: 0.88rem; color: var(--odr-red, #c0524a); margin-top: 0.5rem; }
 
         .odr-progress {
             height: 3px;
@@ -400,6 +415,15 @@
             </div>
         </section>
 
+        <!-- VERIFY (shown once, after the last question, before results) -->
+        <section class="odr-screen" id="odr-verify">
+            <p class="odr-label">ONE LAST STEP</p>
+            <h2>Quick human check</h2>
+            <p>Before we show your result, please complete this quick check.</p>
+            <div id="odr-turnstile" class="odr-turnstile"></div>
+            <p class="odr-verify-error" id="odr-verify-error" role="alert" hidden>Verification failed. Please try again.</p>
+        </section>
+
         <!-- RESULTS -->
         <section class="odr-screen" id="odr-results">
             <p class="odr-label">YOUR RESULT</p>
@@ -619,6 +643,7 @@
 
         var introEl = document.getElementById('odr-intro');
         var quizEl = document.getElementById('odr-quiz');
+        var verifyEl = document.getElementById('odr-verify');
         var resultsEl = document.getElementById('odr-results');
         var questionsEl = document.getElementById('odr-questions');
         var progressBar = document.getElementById('odr-progress-bar');
@@ -627,9 +652,48 @@
         var backBtn = document.getElementById('odr-back');
 
         function showScreen(el) {
-            [introEl, quizEl, resultsEl].forEach(function (s) { s.classList.remove('active'); });
+            [introEl, quizEl, verifyEl, resultsEl].forEach(function (s) { s.classList.remove('active'); });
             el.classList.add('active');
             el.scrollIntoView({ block: 'start' });
+        }
+
+        // Human verification — rendered once, on the interstitial screen
+        // shown after the last question and before results/notification,
+        // never during the quiz itself. The widget is (re)rendered fresh
+        // each time this screen is shown so a retake after "Restart" always
+        // gets an unused token.
+        var turnstileToken = null;
+        var turnstileWidgetId = null;
+        function showVerifyScreen(onVerified) {
+            document.getElementById('odr-verify-error').hidden = true;
+            turnstileToken = null;
+            showScreen(verifyEl);
+
+            function render() {
+                if (typeof turnstile === 'undefined') {
+                    window.setTimeout(render, 300);
+                    return;
+                }
+                if (turnstileWidgetId !== null) {
+                    turnstile.reset(turnstileWidgetId);
+                    return;
+                }
+                var siteKey = document.querySelector('meta[name="turnstile-site-key"]')?.content;
+                turnstileWidgetId = turnstile.render('#odr-turnstile', {
+                    sitekey: siteKey,
+                    callback: function (token) {
+                        turnstileToken = token;
+                        onVerified();
+                    },
+                    'error-callback': function () {
+                        document.getElementById('odr-verify-error').hidden = false;
+                    },
+                    'expired-callback': function () {
+                        turnstileToken = null;
+                    }
+                });
+            }
+            render();
         }
 
         function ragClass(score) {
@@ -670,7 +734,7 @@
                             current += 1;
                             renderQuestion();
                         } else {
-                            showResults();
+                            showVerifyScreen(showResults);
                         }
                     }, 220);
                 });
@@ -762,7 +826,7 @@
                 fetch('/api/quiz/complete-notify', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
-                    body: JSON.stringify({ score: total, band: band.label, resultsText: fullResultsText })
+                    body: JSON.stringify({ score: total, band: band.label, resultsText: fullResultsText, turnstileToken: turnstileToken })
                 }).catch(function () {});
             })();
 
