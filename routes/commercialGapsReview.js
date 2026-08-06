@@ -8,6 +8,7 @@ const themes = require('../db/themes');
 const { selectNextStep, firstQuestion, MIN_QUESTIONS, MAX_QUESTIONS } = require('../lib/commercialGapsQuestions');
 const { interpretCommercialGaps } = require('../lib/commercialGapsAI');
 const { generateUniqueShortReference } = require('../lib/shortReference');
+const { getSiteShellData } = require('../lib/navShell');
 
 const router = express.Router();
 
@@ -92,10 +93,14 @@ function mountPageRoute(app, generateCsrfToken) {
       );
       const activeTheme = (themeRows[0] && themeRows[0].content) || 'dark';
       const theme = themes[activeTheme] || themes.dark;
+      const { navPages, content, pageContact } = await getSiteShellData();
 
       res.render('commercial-gaps-review', {
         theme,
-        csrfToken: generateCsrfToken(req, res)
+        csrfToken: generateCsrfToken(req, res),
+        navPages,
+        content,
+        pageContact
       });
     } catch (err) {
       next(err);
@@ -122,6 +127,7 @@ function mountPageRoute(app, generateCsrfToken) {
       );
       const activeTheme = (themeRows[0] && themeRows[0].content) || 'dark';
       const theme = themes[activeTheme] || themes.dark;
+      const { navPages, content, pageContact } = await getSiteShellData();
 
       // Three real states, one view (commercial-gaps-review-result.ejs
       // branches on `state`): still working (in_progress shouldn't
@@ -130,14 +136,26 @@ function mountPageRoute(app, generateCsrfToken) {
       // waiting state polls /api/commercial-gaps-review/status/:token
       // until it changes.
       if (review.status === 'processing' || review.status === 'in_progress') {
-        return res.render('commercial-gaps-review-result', { theme, state: 'waiting', token });
+        return res.render('commercial-gaps-review-result', {
+          theme,
+          state: 'waiting',
+          token,
+          csrfToken: generateCsrfToken(req, res),
+          navPages,
+          content,
+          pageContact
+        });
       }
 
       if (review.status === 'failed') {
         return res.render('commercial-gaps-review-result', {
           theme,
           state: 'failed',
-          shortReference: review.short_reference
+          shortReference: review.short_reference,
+          csrfToken: generateCsrfToken(req, res),
+          navPages,
+          content,
+          pageContact
         });
       }
 
@@ -158,7 +176,11 @@ function mountPageRoute(app, generateCsrfToken) {
         secondaryIssue: r.secondary_issue,
         usefulObservation: r.useful_observation,
         visitorSummary: r.visitor_summary,
-        recommendedResource: r.recommended_resource
+        recommendedResource: r.recommended_resource,
+        csrfToken: generateCsrfToken(req, res),
+        navPages,
+        content,
+        pageContact
       });
     } catch (err) {
       next(err);

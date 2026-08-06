@@ -1,0 +1,106 @@
+<%# SHARED SITE CHROME SCRIPT — extracted from views/index.ejs. Raw statements
+    only (no <script> tag), so both index.ejs and standalone tool pages can
+    each wrap this in their own nonced <script> block. %>
+// Reveal obfuscated email / phone links. Runs before any generic anchor
+// handling below so the mailto:/tel: hrefs are live by the time other
+// listeners attach.
+document.querySelectorAll('.js-email-link').forEach(a => {
+    const u = a.dataset.u, d = a.dataset.d;
+    if (!u || !d) return;
+    const addr = u + '@' + d;
+    a.href = 'mailto:' + addr + '?subject=Let%27s%20talk';
+    a.textContent = addr;
+});
+document.querySelectorAll('.js-phone-link').forEach(a => {
+    const pa = a.dataset.pa || '', pb = a.dataset.pb || '';
+    const digits = pa + pb;
+    if (!digits) return;
+    a.href = 'tel:' + digits;
+});
+
+// Google Ads conversion: visitor tapped a phone, email or WhatsApp link.
+// Runs after the reassembly above so the href prefixes are live.
+document.querySelectorAll('a[href^="tel:"], a[href^="mailto:"], a[href^="https://wa.me/"], a[href^="https://api.whatsapp.com/"]').forEach(a => {
+    a.addEventListener('click', () => {
+        const kind = a.href.indexOf('tel:') === 0 ? 'phone'
+            : a.href.indexOf('mailto:') === 0 ? 'email'
+            : 'whatsapp';
+        if (typeof gtag === 'function') {
+            gtag('event', 'conversion', { 'send_to': 'AW-18129914078/h_2rCJeH8aYcEN6RgsVD' });
+            gtag('event', kind + '_click', { event_category: 'contact', page_path: location.pathname });
+        }
+    });
+});
+
+// Footer contact/booking form.
+(function () {
+    const form = document.getElementById('leadForm');
+    if (!form) return;
+    const status = document.getElementById('leadFormStatus');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = form.querySelector('button[type="submit"]');
+        const data = Object.fromEntries(new FormData(form).entries());
+        btn.disabled = true;
+        status.textContent = 'Sending...';
+        status.classList.remove('lead-form-error');
+        try {
+            const res = await fetch('/api/leads', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.error || 'Something went wrong.');
+            form.reset();
+            status.textContent = 'Thanks — I will get back to you shortly.';
+            if (typeof gtag === 'function') {
+                gtag('event', 'conversion', { 'send_to': 'AW-18129914078/h_2rCJeH8aYcEN6RgsVD' });
+                gtag('event', 'contact_form_submit', { event_category: 'contact', page_path: location.pathname });
+            }
+        } catch (err) {
+            status.textContent = err.message || 'Something went wrong. Please try again.';
+            status.classList.add('lead-form-error');
+        } finally {
+            btn.disabled = false;
+        }
+    });
+})();
+
+window.addEventListener('scroll', () => {
+    const navEl = document.getElementById('nav');
+    if (navEl) navEl.classList.toggle('scrolled', window.scrollY > 20);
+});
+
+// Hamburger menu toggle
+(function () {
+    const btn = document.getElementById('navHamburger');
+    const menu = document.getElementById('mobileMenu');
+    if (!btn || !menu) return;
+
+    btn.addEventListener('click', () => {
+        const open = btn.classList.toggle('open');
+        menu.classList.toggle('open', open);
+        btn.setAttribute('aria-expanded', open);
+        document.body.style.overflow = open ? 'hidden' : '';
+    });
+
+    menu.querySelectorAll('a').forEach(a => {
+        a.addEventListener('click', () => {
+            btn.classList.remove('open');
+            menu.classList.remove('open');
+            btn.setAttribute('aria-expanded', 'false');
+            document.body.style.overflow = '';
+        });
+    });
+})();
+
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+        e.preventDefault();
+        const target = document.querySelector(a.getAttribute('href'));
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+});

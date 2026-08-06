@@ -29,11 +29,11 @@
         * { box-sizing: border-box; }
         @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
         body { margin: 0; font-family: 'DM Sans', sans-serif; background: var(--black); color: var(--text); line-height: 1.6; }
-        header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-        header img { height: 32px; width: auto; }
-        header .cgr-back-link { font-size: 0.85rem; color: var(--text-muted); text-decoration: none; white-space: nowrap; }
-        header .cgr-back-link:hover, header .cgr-back-link:focus-visible { color: var(--accent); }
-        main { max-width: 680px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem; }
+        <%- include('partials/site-chrome-styles') %>
+        main { max-width: 680px; margin: 0 auto; padding: calc(88px + 2.5rem) 1.5rem 6rem; }
+        @media (max-width: 900px) {
+            main { padding-top: calc(64px + 2.5rem); }
+        }
         .cgr-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; color: var(--accent); margin-bottom: 0.9rem; }
         h1, h2, h3 { font-family: 'DM Serif Display', serif; font-weight: 400; color: var(--text-bright); line-height: 1.25; margin: 0 0 1rem; text-wrap: balance; }
         h1 { font-size: clamp(1.8rem, 5vw, 2.4rem); }
@@ -99,10 +99,7 @@
     </style>
 </head>
 <body>
-    <header>
-        <a href="/" aria-label="Arrington Consultancy home"><img src="/img/logo" alt="Arrington Business Consultancy"></a>
-        <a href="/owner-check" class="cgr-back-link">&larr; Back to Owner Check</a>
-    </header>
+    <%- include('partials/site-header', { currentPage: { slug: 'owner-check' }, navPages, canEdit: false, content, pageContact }) %>
 
     <main>
         <!-- INTRO -->
@@ -196,6 +193,10 @@
         </section>
     </main>
 
+    <%- include('partials/site-footer', { canEdit: false, pageContact, content }) %>
+    <script nonce="<%= nonce %>">
+        <%- include('partials/site-chrome-script') %>
+    </script>
     <script nonce="<%= nonce %>">
         (function () {
             var csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;

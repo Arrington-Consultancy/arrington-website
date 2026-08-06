@@ -5,6 +5,7 @@ const nodemailer = require('nodemailer');
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const db = require('../db/pool');
 const themes = require('../db/themes');
+const { getSiteShellData } = require('../lib/navShell');
 
 const router = express.Router();
 
@@ -405,12 +406,16 @@ function mountPageRoute(app, generateCsrfToken) {
       );
       const activeTheme = (themeRows[0] && themeRows[0].content) || 'dark';
       const theme = themes[activeTheme] || themes.dark;
+      const { navPages, content, pageContact } = await getSiteShellData();
 
       res.render('market-ready-test', {
         theme,
         csrfToken: generateCsrfToken(req, res),
         questions: CLIENT_QUESTIONS,
-        saleTimeframeOptions: SALE_TIMEFRAME_OPTIONS
+        saleTimeframeOptions: SALE_TIMEFRAME_OPTIONS,
+        navPages,
+        content,
+        pageContact
       });
     } catch (err) {
       next(err);
@@ -441,6 +446,7 @@ function mountPageRoute(app, generateCsrfToken) {
       const activeTheme = (themeRows[0] && themeRows[0].content) || 'dark';
       const theme = themes[activeTheme] || themes.dark;
       const shareMeta = shareMetaForScore(submission.report.overall_score);
+      const { navPages, content, pageContact } = await getSiteShellData();
 
       res.render('market-ready-test-result', {
         theme,
@@ -450,7 +456,10 @@ function mountPageRoute(app, generateCsrfToken) {
         report: submission.report,
         shareTag: shareMeta.tag,
         shareImageUrl: `${SITE_ORIGIN}/img/market-ready-test/${shareMeta.image}`,
-        resultUrl: `${SITE_ORIGIN}/market-ready-test/result/${token}`
+        resultUrl: `${SITE_ORIGIN}/market-ready-test/result/${token}`,
+        navPages,
+        content,
+        pageContact
       });
     } catch (err) {
       next(err);

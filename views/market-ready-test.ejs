@@ -28,26 +28,14 @@
             color: var(--text);
             line-height: 1.6;
         }
-        header {
-            padding: 1.25rem 1.5rem;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-        }
-        header img { height: 32px; width: auto; }
-        header .mrt-back-link {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            text-decoration: none;
-            white-space: nowrap;
-        }
-        header .mrt-back-link:hover, header .mrt-back-link:focus-visible { color: var(--accent); }
+        <%- include('partials/site-chrome-styles') %>
         main {
             max-width: 680px;
             margin: 0 auto;
-            padding: 2.5rem 1.5rem 6rem;
+            padding: calc(88px + 2.5rem) 1.5rem 6rem;
+        }
+        @media (max-width: 900px) {
+            main { padding-top: calc(64px + 2.5rem); }
         }
         .mrt-label {
             font-size: 0.72rem;
@@ -184,10 +172,7 @@
     </style>
 </head>
 <body>
-    <header>
-        <a href="/" aria-label="Arrington Consultancy home"><img src="/img/logo" alt="Arrington Business Consultancy"></a>
-        <a href="/" class="mrt-back-link">&larr; Back to site</a>
-    </header>
+    <%- include('partials/site-header', { currentPage: { slug: 'market-ready-test' }, navPages, canEdit: false, content, pageContact }) %>
 
     <main>
         <!-- INTRO -->
@@ -367,6 +352,11 @@
             </div>
         </section>
     </main>
+
+    <%- include('partials/site-footer', { canEdit: false, pageContact, content }) %>
+    <script nonce="<%= nonce %>">
+        <%- include('partials/site-chrome-script') %>
+    </script>
 
     <script nonce="<%= nonce %>">
     (function () {
