@@ -204,7 +204,7 @@
             </div>
 
             <div class="mrt-callout">
-                <p>Your answers will be used to produce your assessment and may be reviewed by Arrington Consultancy if you ask us to contact you. We will email you a copy of your result so you can keep it and return to it later.</p>
+                <p>Your answers will be used to produce your assessment and may be reviewed by Arrington Consultancy if you ask us to contact you. If you give us an email address, we will also send you a copy of your result so you can keep it and return to it later.</p>
             </div>
 
             <button type="button" class="btn btn-primary" id="mrt-start">Start the Market Ready Test</button>
@@ -300,8 +300,8 @@
                     </div>
                 </div>
                 <div class="mrt-field">
-                    <label for="mrt-email">Email address</label>
-                    <input type="email" id="mrt-email" name="email" maxlength="255" required>
+                    <label for="mrt-email">Email address <span class="mrt-optional">(optional)</span></label>
+                    <input type="email" id="mrt-email" name="email" maxlength="255">
                 </div>
                 <div class="mrt-field">
                     <label for="mrt-phone">Telephone number <span class="mrt-optional">(optional)</span></label>
@@ -314,7 +314,7 @@
 
                 <div class="mrt-consent">
                     <input type="checkbox" id="mrt-consent-result" required>
-                    <label for="mrt-consent-result">I agree to my answers being used to produce and email my Market Ready Test result.</label>
+                    <label for="mrt-consent-result">I agree to my answers being used to produce my Market Ready Test result.</label>
                 </div>
                 <div class="mrt-consent">
                     <input type="checkbox" id="mrt-consent-tom">
@@ -326,7 +326,7 @@
                 </div>
                 <p class="mrt-privacy-note">We use your details to produce and send your result. Read our <a href="/privacy">Privacy</a> page.</p>
 
-                <p class="mrt-field-error" id="mrt-contact-error">Please enter your first name, a valid email address, and agree to the first box above.</p>
+                <p class="mrt-field-error" id="mrt-contact-error">Please enter your first name, a valid email address if you give one, and agree to the first box above.</p>
                 <div class="mrt-nav">
                     <button type="button" class="mrt-back" id="mrt-contact-back">&larr; Back</button>
                     <button type="submit" class="btn btn-primary">Review my answers</button>
@@ -544,7 +544,8 @@
             var email = document.getElementById('mrt-email').value.trim();
             var consentResult = document.getElementById('mrt-consent-result').checked;
             var errEl = document.getElementById('mrt-contact-error');
-            if (!firstName || !isValidEmail(email) || !consentResult) {
+            var emailOk = !email || isValidEmail(email);
+            if (!firstName || !emailOk || !consentResult) {
                 errEl.classList.add('visible');
                 return;
             }
@@ -579,8 +580,9 @@
                     '<div class="mrt-review-a">' + escapeHtml(state.context) + '</div>' +
                     '<button type="button" class="mrt-review-edit" id="mrt-review-edit-context">Change this</button></div>';
             }
-            html += '<div class="mrt-review-block"><div class="mrt-review-q">Sending your result to</div><div class="mrt-review-a">' +
-                escapeHtml(state.contact.firstName + ' — ' + state.contact.email) + '</div></div>';
+            html += '<div class="mrt-review-block"><div class="mrt-review-q">' +
+                (state.contact.email ? 'Sending your result to' : 'Your result will be shown to') + '</div><div class="mrt-review-a">' +
+                escapeHtml(state.contact.email ? (state.contact.firstName + ' — ' + state.contact.email) : state.contact.firstName) + '</div></div>';
             body.innerHTML = html;
             body.querySelectorAll('[data-edit-q]').forEach(function (btn) {
                 btn.addEventListener('click', function () {

@@ -487,10 +487,10 @@ router.post('/api/market-ready-test/submit', assessmentLimiter, async (req, res)
     const consentTomReview = body.consentTomReview === true;
     const consentMarketing = body.consentMarketing === true;
 
-    if (!firstName || !businessName || !email) {
-      return res.status(400).json({ error: 'Name, business name and email are required.' });
+    if (!firstName || !businessName) {
+      return res.status(400).json({ error: 'Name and business name are required.' });
     }
-    if (!isValidEmail(email)) {
+    if (email && !isValidEmail(email)) {
       return res.status(400).json({ error: 'Please enter a valid email address.' });
     }
     if (saleTimeframe && !SALE_TIMEFRAME_OPTIONS.includes(saleTimeframe)) {
@@ -544,13 +544,13 @@ router.post('/api/market-ready-test/submit', assessmentLimiter, async (req, res)
       transporter.sendMail({
         from: NOTIFY_FROM,
         to: NOTIFY_FROM,
-        replyTo: email,
+        ...(email ? { replyTo: email } : {}),
         subject: `${subjectFlag}Market Ready Test — ${businessName} — ${report.overall_score}/100`,
         text: [
-          `Name: ${firstName} ${lastName}`,
+          `Name: ${`${firstName} ${lastName}`.trim() || 'Not provided'}`,
           `Business: ${businessName}`,
-          `Email: ${email}`,
-          phone && `Phone: ${phone}`,
+          `Email: ${email || 'Not provided'}`,
+          `Phone: ${phone || 'Not provided'}`,
           location && `Location: ${location}`,
           industry && `Industry: ${industry}`,
           employeeCount && `People working in the business: ${employeeCount}`,
@@ -581,27 +581,32 @@ router.post('/api/market-ready-test/submit', assessmentLimiter, async (req, res)
         ].filter(Boolean).join('\n')
       }).catch(err => console.error('Market Ready Test owner notification failed:', err.message));
 
-      // Visitor's own copy of their result.
-      transporter.sendMail({
-        from: NOTIFY_FROM,
-        to: email,
-        subject: 'Your New Owner Ready Score',
-        text: [
-          `Thanks, ${firstName} — here is a copy of your Market Ready Test result.`,
-          '',
-          `New Owner Ready Score: ${report.overall_score}/100 (${report.rating})`,
-          '',
-          report.opening_assessment,
-          '',
-          `View your full result online: ${resultUrl}`,
-          '',
-          'Arrington Consultancy',
-          'Tom Arrington, Managing Director',
-          'tom@arringtonconsultancy.com',
-          '01752 477026',
-          'www.arringtonconsultancy.com'
-        ].join('\n')
-      }).catch(err => console.error('Market Ready Test visitor email failed:', err.message));
+      // Visitor's own copy of their result — only if they gave an email
+      // address (now optional at intake, so there's sometimes nothing to
+      // send this to). The result itself is always shown on-screen either
+      // way via resultUrl.
+      if (email) {
+        transporter.sendMail({
+          from: NOTIFY_FROM,
+          to: email,
+          subject: 'Your New Owner Ready Score',
+          text: [
+            `Thanks, ${firstName} — here is a copy of your Market Ready Test result.`,
+            '',
+            `New Owner Ready Score: ${report.overall_score}/100 (${report.rating})`,
+            '',
+            report.opening_assessment,
+            '',
+            `View your full result online: ${resultUrl}`,
+            '',
+            'Arrington Consultancy',
+            'Tom Arrington, Managing Director',
+            'tom@arringtonconsultancy.com',
+            '01752 477026',
+            'www.arringtonconsultancy.com'
+          ].join('\n')
+        }).catch(err => console.error('Market Ready Test visitor email failed:', err.message));
+      }
     } else {
       console.warn('GMAIL_APP_PASSWORD not set — skipping Market Ready Test emails.');
     }
@@ -650,14 +655,14 @@ router.post('/api/market-ready-test/request-review', requestReviewLimiter, async
       transporter.sendMail({
         from: NOTIFY_FROM,
         to: NOTIFY_FROM,
-        replyTo: submission.email,
+        ...(submission.email ? { replyTo: submission.email } : {}),
         subject: `[REQUESTED REVIEW] Market Ready Test — ${submission.business_name} — ${report.overall_score}/100`,
         text: [
           `${submission.first_name} ${submission.last_name}`.trim() + ` has asked you to review their Market Ready Test result after seeing it.`,
           '',
           `Business: ${submission.business_name}`,
-          `Email: ${submission.email}`,
-          submission.phone && `Phone: ${submission.phone}`,
+          `Email: ${submission.email || 'Not provided'}`,
+          `Phone: ${submission.phone || 'Not provided'}`,
           `Result link: ${resultUrl}`,
           '',
           `New Owner Ready Score: ${report.overall_score}/100 (${report.rating})`,

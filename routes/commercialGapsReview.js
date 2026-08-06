@@ -207,10 +207,10 @@ router.post('/api/commercial-gaps-review/start', startLimiter, async (req, res) 
     const consentSaveEmail = body.consentSaveEmail === true;
     const consentContact = body.consentContact === true;
 
-    if (!name || !email || !company || !location) {
-      return res.status(400).json({ error: 'Name, email, company and location are all required.' });
+    if (!name || !company || !location) {
+      return res.status(400).json({ error: 'Name, company and location are all required.' });
     }
-    if (!isValidEmail(email)) {
+    if (email && !isValidEmail(email)) {
       return res.status(400).json({ error: 'Please enter a valid email address.' });
     }
 
@@ -229,31 +229,15 @@ router.post('/api/commercial-gaps-review/start', startLimiter, async (req, res) 
     // Lead exists the instant the intake form is submitted, before a single
     // question is answered — matches the brief ("Immediately create the
     // lead") and gives parity with every other lead type in the admin panel.
+    // This is a DB record only, not an email: starting a review must never
+    // trigger an owner notification (only a completed submission does — see
+    // finalizeReview below), so an abandoned review still shows up for Tom
+    // in the admin panel without ever landing in his inbox.
     db.query(
       `INSERT INTO leads (kind, name, email, message)
        VALUES ('commercial_gaps', $1, $2, $3)`,
       [name, email, `${company}${location ? ` (${location})` : ''} — Commercial Gaps Review started. Contact permission: ${consentContact ? 'Yes' : 'No'}.`]
     ).catch((err) => console.error('Commercial Gaps Review lead insert failed:', err.message));
-
-    if (transporter) {
-      transporter.sendMail({
-        from: NOTIFY_FROM,
-        to: NOTIFY_FROM,
-        replyTo: email,
-        subject: `Commercial Gaps Review started — ${company}`,
-        text: [
-          `${name} has started a Commercial Gaps Review.`,
-          '',
-          `Company: ${company}`,
-          `Location: ${location}`,
-          `Email: ${email}`,
-          `Consented to save/email the review: ${consentSaveEmail ? 'Yes' : 'No'}`,
-          `Consented to being contacted: ${consentContact ? 'Yes' : 'No'}`,
-          '',
-          `You'll get the full private briefing by email once they finish (or if they abandon it partway, this is your only record).`
-        ].join('\n')
-      }).catch((err) => console.error('Commercial Gaps Review start-notification email failed:', err.message));
-    }
   } catch (err) {
     console.error('Commercial Gaps Review start error:', err);
     res.status(500).json({ error: 'Something went wrong. Please try again or contact us at tom@arringtonconsultancy.com.' });
@@ -272,20 +256,22 @@ async function sendCompletionEmails(review, data, mode) {
   const resultUrl = `${SITE_ORIGIN}/commercial-gaps-review/result/${review.result_token}`;
   const transcript = Array.isArray(review.transcript) ? review.transcript : [];
 
-  // Tom's private briefing — always sent, regardless of consent, same
-  // principle as every other tool here: this is the business's own record
-  // of a completed assessment, not a marketing send to the visitor.
+  // Tom's private briefing — always sent, regardless of consent and
+  // regardless of whether the visitor gave an email at all, same principle
+  // as every other tool here: this is the business's own record of a
+  // completed assessment, not a marketing send to the visitor.
   const tb = data.tom_briefing;
   transporter.sendMail({
     from: NOTIFY_FROM,
     to: NOTIFY_FROM,
-    replyTo: review.email,
+    ...(review.email ? { replyTo: review.email } : {}),
     subject: `${review.consent_contact ? '[CONTACT OK] ' : ''}Commercial Gaps Review — ${review.company} — ${data.primary_issue.split('.')[0]}`,
     text: [
-      `Name: ${review.name}`,
+      `Name: ${review.name || 'Not provided'}`,
       `Company: ${review.company}`,
       `Location: ${review.location}`,
-      `Email: ${review.email}`,
+      `Email: ${review.email || 'Not provided'}`,
+      'Phone: Not provided',
       `Consented to save/email the review: ${review.consent_save_email ? 'Yes' : 'No'}`,
       `Consented to being contacted: ${review.consent_contact ? 'Yes' : 'No'}`,
       `AI mode: ${mode}`,
@@ -307,10 +293,12 @@ async function sendCompletionEmails(review, data, mode) {
     ].filter(Boolean).join('\n')
   }).catch((err) => console.error('Commercial Gaps Review Tom briefing email failed:', err.message));
 
-  // Visitor's own copy — only if they ticked the save/email consent box.
+  // Visitor's own copy — only if they ticked the save/email consent box AND
+  // actually gave an email address (the field is optional, so a visitor can
+  // tick the box with nothing to send it to — nothing to do in that case).
   // The result is always shown on-screen regardless; this box only governs
   // whether a copy is saved and sent to their inbox.
-  if (review.consent_save_email) {
+  if (review.consent_save_email && review.email) {
     transporter.sendMail({
       from: NOTIFY_FROM,
       to: review.email,
@@ -360,16 +348,17 @@ async function sendFailureRecoveryEmail(review, failureReason) {
   transporter.sendMail({
     from: NOTIFY_FROM,
     to: NOTIFY_FROM,
-    replyTo: review.email,
+    ...(review.email ? { replyTo: review.email } : {}),
     subject: `[NEEDS RECOVERY] Commercial Gaps Review — ${review.company} — ${review.short_reference}`,
     text: [
       'A Commercial Gaps Review could not be generated and needs manual recovery.',
       '',
       `Reference: ${review.short_reference}`,
-      `Name: ${review.name}`,
+      `Name: ${review.name || 'Not provided'}`,
       `Company: ${review.company}`,
       `Location: ${review.location}`,
-      `Email: ${review.email}`,
+      `Email: ${review.email || 'Not provided'}`,
+      'Phone: Not provided',
       `Consented to save/email a copy: ${review.consent_save_email ? 'Yes' : 'No'}`,
       `Consented to being contacted: ${review.consent_contact ? 'Yes' : 'No'}`,
       `Failure reason: ${failureReason}`,
