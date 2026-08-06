@@ -34,14 +34,11 @@
         * { box-sizing: border-box; }
         @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
         body { margin: 0; font-family: 'DM Sans', sans-serif; background: var(--black); color: var(--text); line-height: 1.65; }
-        header {
-            padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border);
-            display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+        <%- include('partials/site-chrome-styles') %>
+        main { max-width: 700px; margin: 0 auto; padding: calc(88px + 2.5rem) 1.5rem 6rem; }
+        @media (max-width: 900px) {
+            main { padding-top: calc(64px + 2.5rem); }
         }
-        header img { height: 32px; width: auto; }
-        header a.mrt-back-link { font-size: 0.85rem; color: var(--text-muted); text-decoration: none; white-space: nowrap; }
-        header a.mrt-back-link:hover { color: var(--accent); }
-        main { max-width: 700px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem; }
         .mrt-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; color: var(--accent); margin-bottom: 0.9rem; }
         h1, h2, h3 { font-family: 'DM Serif Display', serif; font-weight: 400; color: var(--text-bright); line-height: 1.25; margin: 0 0 1rem; text-wrap: balance; }
         h1 { font-size: clamp(1.7rem, 5vw, 2.2rem); }
@@ -117,10 +114,7 @@
     </style>
 </head>
 <body>
-    <header>
-        <a href="/" aria-label="Arrington Consultancy home"><img src="/img/logo" alt="Arrington Business Consultancy"></a>
-        <a href="/" class="mrt-back-link">&larr; Back to site</a>
-    </header>
+    <%- include('partials/site-header', { currentPage: { slug: 'market-ready-test' }, navPages, canEdit: false, content, pageContact }) %>
 
     <main>
         <p class="mrt-label">YOUR RESULT</p>
@@ -265,6 +259,10 @@
         </div>
     </main>
 
+    <%- include('partials/site-footer', { canEdit: false, pageContact, content }) %>
+    <script nonce="<%= nonce %>">
+        <%- include('partials/site-chrome-script') %>
+    </script>
     <script nonce="<%= nonce %>">
     (function () {
         var score = <%= report.overall_score %>;

@@ -20,6 +20,8 @@ const leadRoutes = require('./routes/leads');
 const marketReadyTest = require('./routes/marketReadyTest');
 const commercialGapsReview = require('./routes/commercialGapsReview');
 const { publishedArticles, findBySlug: findUsefulThinkingArticle } = require('./lib/usefulThinkingArticles');
+const { getSiteShellData } = require('./lib/navShell');
+const { SITE_KEY: TURNSTILE_SITE_KEY } = require('./lib/turnstile');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -92,7 +94,8 @@ app.use(helmet({
         "'self'",
         (req, res) => `'nonce-${res.locals.nonce}'`,
         'https://www.googletagmanager.com',
-        'https://www.googleadservices.com'
+        'https://www.googleadservices.com',
+        'https://challenges.cloudflare.com'
       ],
       imgSrc: [
         "'self'",
@@ -110,7 +113,7 @@ app.use(helmet({
         'https://www.googleadservices.com',
         'https://googleads.g.doubleclick.net'
       ],
-      frameSrc: ["'self'", 'https://td.doubleclick.net'],
+      frameSrc: ["'self'", 'https://td.doubleclick.net', 'https://challenges.cloudflare.com'],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       frameAncestors: ["'self'"]
@@ -253,12 +256,18 @@ app.get('/owner-dependency-quiz', async (req, res, next) => {
       shareResult = { score: scoreParam, bandLabel: band.label };
     }
 
+    const { navPages, content, pageContact } = await getSiteShellData();
+
     res.render('owner-dependency-quiz', {
       theme,
       ga4Id: process.env.GA4_MEASUREMENT_ID || '',
       csrfToken: generateCsrfToken(req, res),
       shareResult,
-      requestUrl: `${req.protocol}://${req.get('host')}${req.originalUrl}`
+      requestUrl: `${req.protocol}://${req.get('host')}${req.originalUrl}`,
+      navPages,
+      content,
+      pageContact,
+      turnstileSiteKey: TURNSTILE_SITE_KEY
     });
   } catch (err) {
     next(err);
@@ -297,9 +306,15 @@ app.get('/owner-check', async (req, res, next) => {
     const activeTheme = (themeRows[0] && themeRows[0].content) || 'dark';
     const theme = themes[activeTheme] || themes.dark;
 
+    const { navPages, content, pageContact } = await getSiteShellData();
+
     res.render('owner-check', {
       theme,
-      ga4Id: process.env.GA4_MEASUREMENT_ID || ''
+      ga4Id: process.env.GA4_MEASUREMENT_ID || '',
+      csrfToken: generateCsrfToken(req, res),
+      navPages,
+      content,
+      pageContact
     });
   } catch (err) {
     next(err);
