@@ -109,7 +109,7 @@
         <section class="cgr-screen active" id="cgr-intro">
             <p class="cgr-label">COMMERCIAL GAPS REVIEW (AI)</p>
             <h1>A personalised look at what's really going on.</h1>
-            <p>A short, free-text conversation about how the business actually runs: what it sells, how it prices, where demand comes from, how much depends on you. Your answers are read once, at the end, and turned into a personalised AI Commercial Review, which we'll also email to you.</p>
+            <p>A short, free-text conversation about how the business actually runs: what it sells, how it prices, where demand comes from, how much depends on you. Your answers are read once, at the end, and turned into a personalised AI Commercial Review, shown to you on screen and emailed to you too if you give us an address.</p>
             <p class="cgr-meta">Usually 8&ndash;15 questions, around 10 minutes. Free text, not multiple choice.</p>
 
             <div class="cgr-callout">
@@ -138,8 +138,8 @@
                     <input type="text" id="cgr-location" name="location" maxlength="255" required>
                 </div>
                 <div class="cgr-field">
-                    <label for="cgr-email">Email address</label>
-                    <input type="email" id="cgr-email" name="email" maxlength="255" required>
+                    <label for="cgr-email">Email address (optional)</label>
+                    <input type="email" id="cgr-email" name="email" maxlength="255">
                 </div>
 
                 <div class="cgr-hp" aria-hidden="true">
@@ -156,7 +156,8 @@
                 </div>
                 <p class="cgr-privacy-note">We use your details to produce and send the review. Read our <a href="/privacy">Privacy</a> page.</p>
 
-                <p class="cgr-field-error" id="cgr-intake-error">Please fill in your name, company, location and a valid email address.</p>
+                <p class="cgr-field-error" id="cgr-intake-error">Please fill in your name, company and location, and a valid email address if you enter one.</p>
+                <p class="cgr-meta cgr-privacy-note">Before you begin: your answers and any contact details you give us will be received by Arrington Consultancy to deliver this review and recover it if something goes wrong. We will not add you to a marketing list or contact you for any other reason without asking separately. If your review cannot be generated, we keep what you submitted for 90 days to help fix it, then delete it.</p>
                 <div class="cgr-nav">
                     <button type="submit" class="btn btn-primary">Begin the review</button>
                 </div>
@@ -225,7 +226,7 @@
                 var company = document.getElementById('cgr-company').value.trim();
                 var location = document.getElementById('cgr-location').value.trim();
                 var email = document.getElementById('cgr-email').value.trim();
-                var emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+                var emailOk = !email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
                 if (!name || !company || !location || !emailOk) {
                     errorEl.classList.add('visible');

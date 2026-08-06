@@ -206,14 +206,76 @@ async function getContactDetails() {
   }
 }
 
+// POST /api/quiz/complete-notify — fires exactly once, the moment a visitor
+// finishes the Owner Dependency Quiz (before they've been offered the
+// separate, optional "email me my results" choice below). This is the
+// quiz's one and only owner-notification trigger, and it does not depend on
+// the visitor supplying any contact details — the quiz never asks for a
+// name or email until after a result exists, so this always reports them as
+// not provided. /api/quiz/email-results below deliberately no longer emails
+// Tom itself (see its own comment), so a visitor who both finishes the quiz
+// and requests a copy of their result still only ever generates the one
+// owner notification from this route, not two.
+router.post('/api/quiz/complete-notify', publicFormLimiter, async (req, res) => {
+  try {
+    const body = req.body || {};
+    if (plainText(body.website)) {
+      return res.json({ ok: true });
+    }
+
+    const band = plainText(body.band).slice(0, 60);
+    const resultsText = plainText(body.resultsText).slice(0, 3000);
+    const score = Number(body.score);
+
+    if (!Number.isInteger(score) || score < 0 || score > 16) {
+      return res.status(400).json({ error: 'Invalid result data.' });
+    }
+    if (!VALID_BANDS.includes(band)) {
+      return res.status(400).json({ error: 'Invalid result data.' });
+    }
+    if (!resultsText) {
+      return res.status(400).json({ error: 'Invalid result data.' });
+    }
+
+    await db.query(
+      `INSERT INTO leads (kind, name, email, message) VALUES ('quiz_results', '', '', $1)`,
+      [resultsText]
+    );
+
+    res.json({ ok: true });
+
+    notify({
+      subject: `Owner Dependency Quiz completed — ${score}/16 (${band})`,
+      text: [
+        'Name: Not provided',
+        'Email: Not provided',
+        'Phone: Not provided',
+        '',
+        'Assessment: Owner Dependency Quiz',
+        'Page: /owner-dependency-quiz',
+        `Completed: ${new Date().toISOString()}`,
+        `Score: ${score}/16 (${band})`,
+        '',
+        resultsText
+      ].join('\n')
+    });
+  } catch (err) {
+    console.error('Quiz complete-notify error:', err);
+    res.status(500).json({ error: 'Something went wrong.' });
+  }
+});
+
 // POST /api/quiz/email-results — optional, visitor-initiated: emails the
 // requester their own Owner Dependency Quiz result. Fully separate from
 // showing the result itself (which never requires an email) and not tied to
-// social sharing. Reuses the leads table with kind='quiz_results' so it
-// surfaces in the admin panel and triggers the same owner notification as
-// every other lead; also sends a second, one-off transactional email to the
-// visitor's own address — no mailing list, no consent wording, since this is
-// only fulfilling their own request for a copy of their result.
+// social sharing. Still reuses the leads table with kind='quiz_results' so
+// the request itself is visible in the admin panel, but deliberately does
+// NOT notify Tom any more (see /api/quiz/complete-notify above) — the owner
+// notification for this completion has already gone out the moment the
+// result was shown, so notifying again here would be a duplicate for the
+// same completed assessment. This route's only remaining job is the visitor
+// transactional email: a one-off copy sent to their own address, no mailing
+// list, no consent wording, since it only fulfils their own request.
 router.post('/api/quiz/email-results', publicFormLimiter, async (req, res) => {
   try {
     const body = req.body || {};
@@ -245,12 +307,6 @@ router.post('/api/quiz/email-results', publicFormLimiter, async (req, res) => {
     );
 
     res.json({ ok: true });
-
-    notify({
-      subject: `Owner Dependency Quiz result — ${score}/16 (${band})`,
-      text: `${email} completed the Owner Dependency Quiz and requested a copy of their result.\n\n${resultsText}`,
-      replyTo: email
-    });
 
     if (transporter) {
       const contact = await getContactDetails();

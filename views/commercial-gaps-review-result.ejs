@@ -16,6 +16,7 @@
             <% } %>
         }
         * { box-sizing: border-box; }
+        @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
         body { margin: 0; font-family: 'DM Sans', sans-serif; background: var(--black); color: var(--text); line-height: 1.6; }
         header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
         header img { height: 32px; width: auto; }
@@ -47,6 +48,19 @@
         .cgr-caveat { font-size: 0.85rem; color: var(--text-muted); }
         .cgr-card .cgr-label { margin-bottom: 0.5rem; }
         .cgr-card p:last-child { margin-bottom: 0; }
+
+        /* ---- waiting state ---- */
+        .cgr-waiting { text-align: center; padding: 4rem 0 2rem; }
+        .cgr-spinner { width: 40px; height: 40px; margin: 0 auto 2rem; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: cgr-spin 0.9s linear infinite; }
+        @keyframes cgr-spin { to { transform: rotate(360deg); } }
+        @media (prefers-reduced-motion: reduce) { .cgr-spinner { animation: none; border-top-color: var(--border); } }
+        .cgr-waiting-text { font-size: 1.1rem; color: var(--text-bright); min-height: 1.6em; transition: opacity 0.4s ease; }
+        .cgr-waiting-meta { font-size: 0.85rem; color: var(--text-muted); margin-top: 1.5rem; }
+
+        /* ---- failed state ---- */
+        .cgr-error-box { padding: 1.5rem 1.6rem; border: 1px solid var(--odr-red, #c0524a); background: rgba(192,82,74,0.08); border-radius: 6px; margin-bottom: 1.5rem; }
+        .cgr-error-box p { color: var(--text-bright); margin: 0; }
+        .cgr-reference { display: inline-block; margin-top: 1rem; padding: 0.4rem 0.8rem; border-radius: 3px; background: rgba(255,255,255,0.06); font-family: 'DM Sans', monospace; font-weight: 600; color: var(--accent); letter-spacing: 0.03em; }
     </style>
 </head>
 <body>
@@ -56,6 +70,58 @@
     </header>
 
     <main>
+        <% if (state === 'waiting') { %>
+        <p class="cgr-label">YOUR COMMERCIAL GAPS REVIEW</p>
+        <div class="cgr-waiting">
+            <div class="cgr-spinner" aria-hidden="true"></div>
+            <p class="cgr-waiting-text" id="cgr-waiting-text" role="status">Reading through what you've told us&hellip;</p>
+            <p class="cgr-waiting-meta">This page will update on its own &mdash; no need to refresh it yourself.</p>
+        </div>
+        <script nonce="<%= nonce %>">
+            (function () {
+                var messages = [
+                    "Reading through what you've told us…",
+                    'Weighing up where the pressure in the business really sits…',
+                    'Comparing this against real Arrington experience…',
+                    'Nearly there…',
+                    "This is taking a little longer than usual, but we're still working on it…"
+                ];
+                var textEl = document.getElementById('cgr-waiting-text');
+                var step = 0;
+                function advanceMessage() {
+                    if (step >= messages.length - 1) return; // hold on the last message rather than looping
+                    step += 1;
+                    textEl.style.opacity = '0';
+                    window.setTimeout(function () {
+                        textEl.textContent = messages[step];
+                        textEl.style.opacity = '1';
+                    }, 300);
+                }
+                var messageTimer = window.setInterval(advanceMessage, 6000);
+
+                function poll() {
+                    fetch('/api/commercial-gaps-review/status/<%= token %>')
+                        .then(function (r) { return r.json(); })
+                        .then(function (data) {
+                            if (data.status === 'completed' || data.status === 'failed') {
+                                window.clearInterval(messageTimer);
+                                window.location.reload();
+                            }
+                        })
+                        .catch(function () { /* try again on the next tick */ });
+                }
+                window.setInterval(poll, 3000);
+            })();
+        </script>
+
+        <% } else if (state === 'failed') { %>
+        <p class="cgr-label">YOUR COMMERCIAL GAPS REVIEW</p>
+        <div class="cgr-error-box">
+            <p>We couldn't display your review this time. Your answers have been received. Contact Tom at tom@arringtonconsultancy.com and we can recover or complete it for you.</p>
+            <span class="cgr-reference">Reference: <%= shortReference %></span>
+        </div>
+
+        <% } else { %>
         <p class="cgr-label">YOUR COMMERCIAL GAPS REVIEW</p>
         <h1><%= headline %></h1>
         <p><%= visitorSummary %></p>
@@ -87,6 +153,7 @@
         </div>
 
         <p class="cgr-caveat">This review is a starting point, not a finished answer. It has looked at what you told us and pointed at where the pressure seems to be, it has not solved it for you.</p>
+        <% } %>
 
         <div class="cgr-next">
             <h2>If this sounds familiar</h2>

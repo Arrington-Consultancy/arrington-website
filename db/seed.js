@@ -12,6 +12,8 @@ const {
   SIXTH_PUBLISHED_ARTICLE,
   buildUsefulThinkingPageOrder
 } = require('../lib/usefulThinkingSeed');
+const { ARTICLES: UT_ARTICLES } = require('../lib/usefulThinkingArticles');
+const { generateUniqueShortReference } = require('../lib/shortReference');
 
 const BCRYPT_ROUNDS = 12;
 
@@ -54,6 +56,36 @@ async function seed() {
     ALTER TABLE market_ready_submissions ADD COLUMN IF NOT EXISTS context TEXT NOT NULL DEFAULT '';
   `);
   console.log('Market Ready Test context column verified.');
+
+  // Migration: Commercial Gaps Review failure-recovery columns, added
+  // 01/08/2026. This is schema setup only (idempotent, one-off structural
+  // change) — the actual retention/deletion of stale rows deliberately
+  // does NOT live here or anywhere tied to a deploy; see the independent
+  // scheduled sweep in server.js (pruneStaleCommercialGapsReviews), which
+  // runs on the server's own clock so cleanup still happens on schedule
+  // even across long stretches with no deploy at all.
+  await db.query(`
+    ALTER TABLE commercial_gaps_reviews ADD COLUMN IF NOT EXISTS short_reference VARCHAR(12) UNIQUE;
+    ALTER TABLE commercial_gaps_reviews ADD COLUMN IF NOT EXISTS failure_reason TEXT NOT NULL DEFAULT '';
+  `);
+  await db.query(`
+    DO $$ BEGIN
+      ALTER TABLE commercial_gaps_reviews DROP CONSTRAINT IF EXISTS commercial_gaps_reviews_status_check;
+      ALTER TABLE commercial_gaps_reviews ADD CONSTRAINT commercial_gaps_reviews_status_check
+        CHECK (status IN ('in_progress', 'processing', 'completed', 'failed'));
+    EXCEPTION WHEN others THEN NULL;
+    END $$;
+  `);
+  await db.query(`CREATE INDEX IF NOT EXISTS idx_commercial_gaps_status_created ON commercial_gaps_reviews (status, created_at);`);
+
+  const { rows: needsReference } = await db.query(
+    'SELECT id FROM commercial_gaps_reviews WHERE short_reference IS NULL'
+  );
+  for (const row of needsReference) {
+    const ref = await generateUniqueShortReference('commercial_gaps_reviews', 'short_reference');
+    await db.query('UPDATE commercial_gaps_reviews SET short_reference = $1 WHERE id = $2', [ref, row.id]);
+  }
+  console.log(`Commercial Gaps Review recovery columns verified${needsReference.length ? ` (backfilled ${needsReference.length} short reference(s))` : ''}.`);
 
   // Migrate users CHECK constraint to include 'client' role
   await db.query(`

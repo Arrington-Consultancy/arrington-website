@@ -872,6 +872,52 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 
+// Commercial Gaps Review retention sweep — deliberately independent of
+// deployments. This is NOT part of db/seed.js (which only runs once per
+// deploy, so a site that isn't redeployed for weeks would never clean up).
+// Instead it runs on the server process's own clock via setInterval, so
+// stale rows are removed on schedule regardless of deploy activity.
+// Retention: failed reviews (result generation genuinely broke) are kept
+// 90 days — long enough for the internal recovery email to be actioned.
+// Abandoned reviews (started, never completed) are kept 30 days — there's
+// less reason to hold an incomplete session for long. Completed reviews
+// are never touched by this sweep.
+const CGR_FAILED_RETENTION_DAYS = 90;
+const CGR_ABANDONED_RETENTION_DAYS = 30;
+const CGR_SWEEP_INTERVAL_MS = 24 * 60 * 60 * 1000;
+
+async function pruneStaleCommercialGapsReviews() {
+  try {
+    const { rowCount: failedPruned } = await db.query(
+      `DELETE FROM commercial_gaps_reviews
+       WHERE status = 'failed' AND created_at < NOW() - ($1 || ' days')::interval`,
+      [CGR_FAILED_RETENTION_DAYS]
+    );
+    const { rowCount: abandonedPruned } = await db.query(
+      `DELETE FROM commercial_gaps_reviews
+       WHERE status IN ('in_progress', 'processing') AND created_at < NOW() - ($1 || ' days')::interval`,
+      [CGR_ABANDONED_RETENTION_DAYS]
+    );
+    if (failedPruned || abandonedPruned) {
+      const detail = `Removed ${failedPruned} failed (older than ${CGR_FAILED_RETENTION_DAYS}d) and ${abandonedPruned} abandoned (older than ${CGR_ABANDONED_RETENTION_DAYS}d) Commercial Gaps Review submission(s).`;
+      console.log(`Commercial Gaps Review retention sweep: ${detail}`);
+      await db.query(
+        `INSERT INTO audit_log (user_id, action, section_key, detail) VALUES (NULL, 'cgr_retention_sweep', 'commercial_gaps_reviews', $1)`,
+        [detail]
+      );
+    }
+  } catch (err) {
+    console.error('Commercial Gaps Review retention sweep failed:', err.message);
+  }
+}
+// Run shortly after boot (not instantly, so it isn't competing with the
+// seed script's own DB work), then on a fixed 24h cycle for as long as the
+// process stays up — that cycle is what makes this independent of deploys.
+setTimeout(() => {
+  pruneStaleCommercialGapsReviews();
+  setInterval(pruneStaleCommercialGapsReviews, CGR_SWEEP_INTERVAL_MS);
+}, 60 * 1000);
+
 loadPermissions().then(() => {
   app.listen(PORT, () => {
     console.log(`[${isProd ? 'PROD' : 'DEV'}] Arrington CMS running on port ${PORT}`);
