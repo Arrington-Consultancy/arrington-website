@@ -325,6 +325,23 @@
         }
         .odr-summary p { margin: 0; font-size: 0.95rem; color: var(--text-bright); }
 
+        /* ---- results: Useful Thinking recommendation (shown only when
+           genuinely relevant, matching .article-related's visual pattern
+           on the article pages themselves) ---- */
+        .odr-related {
+            margin-top: 1.75rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.95rem;
+            color: var(--text-muted);
+        }
+        .odr-related p { margin: 0; }
+        .odr-related a {
+            color: var(--accent);
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+
         .odr-disclaimer {
             font-size: 0.82rem;
             color: var(--text-muted);
@@ -459,6 +476,10 @@
 
             <div class="odr-summary">
                 <p id="odr-summary-text"></p>
+            </div>
+
+            <div class="odr-related" id="odr-related" hidden>
+                <p>Worth reading: <a href="/useful-thinking/the-turning-that-never-came">The Turning That Never Came</a> &mdash; on knowing the answer and still not acting on it.</p>
             </div>
 
             <p class="odr-disclaimer">This is a general reflection tool based on common patterns in owner run businesses, not a professional assessment of your specific business. It does not replace proper financial, legal or commercial advice.</p>
@@ -788,6 +809,16 @@
                     '<p class="odr-result-text">' + r.text + '</p>' +
                     '</div>';
             }).join('');
+
+            // Useful Thinking recommendation — shown only when genuinely
+            // relevant, never on every result. "The Turning That Never
+            // Came" is a first-person account of a decision the narrator
+            // already knew the answer to and delayed anyway, so it only
+            // surfaces when the quiz's own "Decision dependency" category
+            // comes back red (the worst tier: "most decisions still route
+            // through you"), not on amber or any other category.
+            var decisionRow = rows.find(function (r) { return r.category === 'Decision dependency'; });
+            document.getElementById('odr-related').hidden = !(decisionRow && decisionRow.cls === 'red');
 
             var reds = rows.filter(function (r) { return r.cls === 'red'; }).map(function (r) { return r.category; });
             var ambers = rows.filter(function (r) { return r.cls === 'amber'; }).map(function (r) { return r.category; });

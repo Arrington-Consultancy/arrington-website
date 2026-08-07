@@ -10,6 +10,7 @@ const {
   LIBRARY_INSTANCE_ID,
   FIFTH_PUBLISHED_ARTICLE,
   SIXTH_PUBLISHED_ARTICLE,
+  SEVENTH_PUBLISHED_ARTICLE,
   buildUsefulThinkingPageOrder
 } = require('../lib/usefulThinkingSeed');
 const { ARTICLES: UT_ARTICLES } = require('../lib/usefulThinkingArticles');
@@ -1660,6 +1661,99 @@ async function seed() {
       );
 
       console.log(`Useful Thinking: 6th article published (${a7}, ${SIXTH_PUBLISHED_ARTICLE.slug}).`);
+    }
+  }
+
+  // Migration: seventh Useful Thinking article, "The Turning That Never
+  // Came" — approved copy supplied directly by Tom. Reproduced verbatim
+  // (paragraph breaks preserved exactly as given); the only change made
+  // is normalising a handful of curly/smart apostrophes in the supplied
+  // text to the plain straight apostrophes every other article already
+  // uses, for typographic consistency — no wording, sentence, or
+  // paragraph was altered. No cgrCategory / commercialGapsResources.js
+  // entry: this piece is connected into the Owner Dependency Quiz
+  // instead (see views/owner-dependency-quiz.ejs), not Commercial Gaps
+  // Review. Idempotent: guarded on the page not existing yet.
+  {
+    const { rows: existingArticle8 } = await db.query(
+      'SELECT slug FROM pages WHERE slug = $1',
+      [SEVENTH_PUBLISHED_ARTICLE.slug]
+    );
+    if (existingArticle8.length === 0) {
+      const a8 = SEVENTH_PUBLISHED_ARTICLE.instanceId;
+      const bodyParagraphs8 = [
+          'There have been plenty of difficult decisions in my twenty years in business, but the strange thing is that most of the really difficult ones were not difficult decisions at all. I already knew the answer. I just did not like it.',
+          'Years ago, somebody who had worked with me for a long time did something that crossed a line. It was not ambiguous and there was no real grey area. I knew what had happened and I knew what I should do about it. There was history though. There were relationships involved. There was a family in the background. So I told myself there was a decision to be made.',
+          "There wasn't.",
+          "I knew straight away what the right decision was and I still did not make it. Looking back, that is the bit I regret. Not because of what it taught him. I judge myself on my actions, not somebody else's. I regret it because I ignored my own judgement when I already knew the answer.",
+          'I think owners do this more often than we admit. We pretend something is still open for debate when really we are just hoping a better answer turns up.',
+          'I used to think a lot about fairness in business. The older I got, the less convinced I became that fair really exists in any useful sense. Almost every decision is a balance. Spend the money or keep it. Reinvest or protect the cash. Recruit or cut costs. Back the customer or back the member of staff. Give someone another chance or protect the standard you have set for everyone else.',
+          'There is no perfect point where all of those interests line up. Even if there was some mathematical way of aligning everyone perfectly, humans would find a way to ruin it. People are complicated and everybody in a business has their own pull, their own incentives and their own view of what matters most.',
+          'That is why I became so obsessed with systems and rules.',
+          'We used software that was designed for generic use and then had to be configured around the way our business actually worked. That underlying setup was something I always struggled to delegate. It was not because I needed control of every button or every process. I wanted control over the control.',
+          'If I shaped the foundations properly, everything built on top had to follow them.',
+          'The operator wanted one thing. The driver wanted another. The customer wanted something else. Management might want something completely different again. None of them were necessarily wrong, they were just looking at the business from where they stood. The owner is one of the few people forced to look across the whole thing.',
+          'Systems gave me a way of holding that together.',
+          'If fair is impossible, consistency becomes non-negotiable.',
+          'That does not mean treating every situation as identical. Life does not work like that and business certainly does not. It means having a default position, a standard and a reason behind it. Good rules actually give you more room to make hard judgement calls because everyone knows where the starting point is.',
+          'The problem comes when you stop applying your own standards because the consequence feels uncomfortable.',
+          'That is what I did.',
+          'The best way I can describe it is getting lost before satnav. You are driving down a country road and you know you have gone the wrong way. You should stop, turn around and go back, but somehow that feels worse than carrying on. So you keep driving because maybe there is another turning ahead. Maybe the road loops back around. Maybe something appears that gets you where you wanted to go without having to admit you went the wrong way in the first place.',
+          'Then you go another mile.',
+          'Then another.',
+          'Now turning around feels even worse because of how far you have already gone.',
+          'At some point you are not continuing because you believe it is the right road. You are continuing because you do not want to admit it is the wrong one.',
+          'In business, that is how you end up driving off a cliff to prove you were not wrong.',
+          'The dangerous bit is that sometimes the turning does appear.',
+          'In twenty years of business there were occasions where I carried on longer than I should have and something unexpected happened that put everything back on track. A person changed. A customer came back. The numbers improved. An opportunity appeared that I could not have predicted.',
+          'That is enough to teach you a terrible lesson.',
+          'Maybe this one will fix itself as well.',
+          'Sometimes it will.',
+          'Waiting for it is still false economy.',
+          'When I look back at the difficult decisions I delayed but eventually made anyway, the thought afterwards was always the same.',
+          'I should have done that six months ago.',
+          'Every time.',
+          'That is the difference I understand better now. There is real uncertainty and there is simply not liking the answer.',
+          'Real uncertainty deserves time. Get more information. Ask questions. Check your assumptions. Think properly.',
+          'But sometimes you already know.',
+          'That is where owners can waste months pretending they are still deciding when really they are waiting for the answer to change.',
+          'I did exactly that.',
+          'I lied to myself that there was a decision to be made.',
+          "There wasn't.",
+          'I was waiting for a turning to magically appear so I did not have to do what I already knew was right.',
+          'Sometimes that turning appears.',
+          "Don't build a business on sometimes.",
+          'If I could go back and say one thing to the younger version of myself every time he was heading further down one of those roads, it would be simple.',
+          "Your gut knows what to do. Don't hesitate when you know what's right."
+        ].map((p) => `<p>${p}</p>`).join('');
+
+      const indexSummary8 = 'Tom knew exactly what needed to happen with someone who had crossed a line, and put it off anyway. On the difference between a decision that is genuinely hard and one you just do not like the answer to.';
+
+      const a8Rows = [
+        [`${a8}.label`, 'USEFUL THINKING'],
+        [`${a8}.heading`, 'The Turning That Never Came'],
+        [`${a8}.index_summary`, indexSummary8],
+        [`${a8}.body`, bodyParagraphs8],
+        [`${a8}.related_text`, ''],
+        [`${a8}.related_link`, ''],
+        [`${a8}.image`, '']
+      ];
+      for (const [key, value] of a8Rows) {
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [key, value]
+        );
+      }
+
+      const { rows: maxSortRows8 } = await db.query('SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM pages');
+      await db.query(
+        `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav, meta_description)
+         VALUES ($1, $2, $3, $4::jsonb, '[]'::jsonb, '[]'::jsonb, false, $5)
+         ON CONFLICT (slug) DO NOTHING`,
+        [SEVENTH_PUBLISHED_ARTICLE.slug, SEVENTH_PUBLISHED_ARTICLE.title, maxSortRows8[0].max_sort + 1, JSON.stringify([a8]), indexSummary8]
+      );
+
+      console.log(`Useful Thinking: 7th article published (${a8}, ${SEVENTH_PUBLISHED_ARTICLE.slug}).`);
     }
   }
 
