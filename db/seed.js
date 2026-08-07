@@ -11,6 +11,7 @@ const {
   FIFTH_PUBLISHED_ARTICLE,
   SIXTH_PUBLISHED_ARTICLE,
   SEVENTH_PUBLISHED_ARTICLE,
+  EIGHTH_PUBLISHED_ARTICLE,
   buildUsefulThinkingPageOrder
 } = require('../lib/usefulThinkingSeed');
 const { ARTICLES: UT_ARTICLES } = require('../lib/usefulThinkingArticles');
@@ -1754,6 +1755,100 @@ async function seed() {
       );
 
       console.log(`Useful Thinking: 7th article published (${a8}, ${SEVENTH_PUBLISHED_ARTICLE.slug}).`);
+    }
+  }
+
+  // Migration: 8th published Useful Thinking article, "Serendipity Is Not
+  // a System" (07/08/2026), supplied directly by Tom as a complete
+  // approved piece. Reproduced verbatim below (paragraph breaks preserved
+  // exactly as given); the only change made is normalising a handful of
+  // curly/smart apostrophes in the supplied text to the plain straight
+  // apostrophes every other article already uses, for typographic
+  // consistency — no wording, sentence, or paragraph was altered. No
+  // cgrCategory / commercialGapsResources.js entry: like "The Turning
+  // That Never Came", this piece is connected into the Owner Dependency
+  // Quiz instead (see views/owner-dependency-quiz.ejs), shown only when
+  // the quiz's "Succession readiness" or "Cash control" category scores
+  // red — deliberately kept diagnostically separate from "The Turning
+  // That Never Came" (which stays mapped to "Decision dependency" only).
+  // Idempotent: guarded on the page not existing yet.
+  {
+    const { rows: existingArticle9 } = await db.query(
+      'SELECT slug FROM pages WHERE slug = $1',
+      [EIGHTH_PUBLISHED_ARTICLE.slug]
+    );
+    if (existingArticle9.length === 0) {
+      const a9 = EIGHTH_PUBLISHED_ARTICLE.instanceId;
+      const bodyParagraphs9 = [
+          'For years I knew roughly how much money in the business bank account was actually usable and how much was already spoken for. Rent had to be paid, VAT would become due, corporation tax would arrive eventually, wages had to go out and suppliers needed paying. None of it was particularly sophisticated. I made provisions, moved money into a savings account and carried the rest in my head.',
+          'Only I knew exactly when things needed paying and what the genuine usable cash was.',
+          "At the time I didn't see a problem with that. Why would anybody else need to know? I was the one paying it.",
+          'The stupid thing is that I had already been taught exactly why.',
+          'Years earlier my business partner dropped dead from a heart attack at 37. He had his responsibilities and I had mine. I knew what he did in the broadest sense, but there were parts of his side of the business that I knew almost nothing about apart from the fact that he dealt with them.',
+          "Suddenly he wasn't there and I had to learn the 50% of the business I had trusted him to look after while dealing with everything else that came with losing him.",
+          'You would think that would have taught me.',
+          "It didn't.",
+          'Years later, in 2017, I had a serious car accident and spent eight weeks in a coma. This time I was the one who disappeared.',
+          'Only I had access to the bank. Only I really understood the cash position. Only I knew what needed paying, when it needed paying and what money had already been mentally allocated to something else.',
+          'The business survived, but not because I had built something that could survive without me.',
+          'The people around me saved it.',
+          "Through personal connections with the bank, my manager was given access she wouldn't ordinarily have been allowed. Family and friends offered money. People pulled together and filled gaps they should never have had to fill.",
+          "If we hadn't had that personal relationship with the bank, people might not have been paid.",
+          "I owe a huge amount to the people who stepped in, particularly my manager. There is no way through my recovery that I could ever have separated what she did professionally from what she had done for me personally. She helped save the business when I couldn't.",
+          'There is a lot of serendipity in having the right people around you at the exact moment you need them. There is also a danger in pretending serendipity is a system.',
+          'We were lucky twice.',
+          'The first time somebody else disappeared and I discovered how much of the business existed only inside his head. The second time I disappeared and everyone else discovered how much existed only inside mine.',
+          'I should not have needed the lesson once, let alone twice.',
+          "I don't think I believed I was immortal. It was probably something much more normal than that. Bad things happen to other people. Death and near death are things you witness, not things you genuinely imagine experiencing yourself.",
+          "You deal with the day to day. Customers, staff, bills, problems, whatever needs doing next. You don't sit there thinking about what happens if you are suddenly not there tomorrow.",
+          "Call it arrogance if you want. The ignorance of youth was probably part of it. I think the bigger mistake was that I didn't understand that protecting the business from me was part of my job.",
+          'I thought I was one and the same as the business.',
+          "I wasn't.",
+          "A limited company is legally its own separate identity, which I obviously understood. What I didn't understand was that it meant more than the legal definition.",
+          'The business had obligations beyond me.',
+          'People relied on it for wages and families relied on those wages. Customers relied on it doing what it had promised. Suppliers expected to be paid. The business supported people whose lives continued whether I was there or not.',
+          "Once you see it like that, making yourself indispensable doesn't look clever.",
+          "The answer wasn't to make me irrelevant. The judgement and experience of the person who built the business had value. The answer was to make sure somebody else had the keys.",
+          'For me that became a manager who knew enough, could access enough and had enough authority to keep things moving without me. If she had eventually left to do something else, I would have had to replace that role.',
+          'She was personally irreplaceable to me.',
+          "Her role couldn't be.",
+          "I've always remembered the idea Richard Branson used about making sure you are the stupidest person around the boardroom table. I don't take it literally, but I understand the point. There will always be people with qualities you admire and abilities you don't have.",
+          'You need enough judgement to recognise them and enough confidence to let them use those abilities.',
+          'I got a third chance.',
+          'I can take life insurance, make a will and make sure important information is kept somewhere secure and accessible to the right people. I can make sure nobody has to rely on a favour from a bank manager or somebody remembering what I might have done.',
+          'The lesson for me is bigger than succession planning.',
+          'I spent years thinking that because the business was mine, protecting myself and protecting the business were basically the same thing.',
+          "They weren't.",
+          'The business was bigger than me.'
+        ].map((p) => `<p>${p}</p>`).join('');
+
+      const indexSummary9 = "Tom's business partner died suddenly at 37, and years later Tom disappeared too, for eight weeks after a serious car accident. On discovering twice how much of a business survives only because of what is trapped inside one person's head.";
+
+      const a9Rows = [
+        [`${a9}.label`, 'USEFUL THINKING'],
+        [`${a9}.heading`, 'Serendipity Is Not a System'],
+        [`${a9}.index_summary`, indexSummary9],
+        [`${a9}.body`, bodyParagraphs9],
+        [`${a9}.related_text`, ''],
+        [`${a9}.related_link`, ''],
+        [`${a9}.image`, '']
+      ];
+      for (const [key, value] of a9Rows) {
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [key, value]
+        );
+      }
+
+      const { rows: maxSortRows9 } = await db.query('SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM pages');
+      await db.query(
+        `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav, meta_description)
+         VALUES ($1, $2, $3, $4::jsonb, '[]'::jsonb, '[]'::jsonb, false, $5)
+         ON CONFLICT (slug) DO NOTHING`,
+        [EIGHTH_PUBLISHED_ARTICLE.slug, EIGHTH_PUBLISHED_ARTICLE.title, maxSortRows9[0].max_sort + 1, JSON.stringify([a9]), indexSummary9]
+      );
+
+      console.log(`Useful Thinking: 8th article published (${a9}, ${EIGHTH_PUBLISHED_ARTICLE.slug}).`);
     }
   }
 

@@ -479,7 +479,7 @@
             </div>
 
             <div class="odr-related" id="odr-related" hidden>
-                <p>Worth reading: <a href="/useful-thinking/the-turning-that-never-came">The Turning That Never Came</a> &mdash; on knowing the answer and still not acting on it.</p>
+                <p>Worth reading: <a href="/useful-thinking/the-turning-that-never-came" id="odr-related-link">The Turning That Never Came</a><span id="odr-related-hook"> &mdash; on knowing the answer and still not acting on it.</span></p>
             </div>
 
             <p class="odr-disclaimer">This is a general reflection tool based on common patterns in owner run businesses, not a professional assessment of your specific business. It does not replace proper financial, legal or commercial advice.</p>
@@ -811,14 +811,66 @@
             }).join('');
 
             // Useful Thinking recommendation — shown only when genuinely
-            // relevant, never on every result. "The Turning That Never
-            // Came" is a first-person account of a decision the narrator
-            // already knew the answer to and delayed anyway, so it only
-            // surfaces when the quiz's own "Decision dependency" category
-            // comes back red (the worst tier: "most decisions still route
-            // through you"), not on amber or any other category.
-            var decisionRow = rows.find(function (r) { return r.category === 'Decision dependency'; });
-            document.getElementById('odr-related').hidden = !(decisionRow && decisionRow.cls === 'red');
+            // relevant, never on every result, and at most one piece per
+            // result (checked in priority order, first match wins) so two
+            // independently-triggerable articles never show together.
+            //
+            // "The Turning That Never Came" is a first-person account of a
+            // decision the narrator already knew the answer to and delayed
+            // anyway, so it only surfaces when the quiz's own "Decision
+            // dependency" category comes back red (the worst tier: "most
+            // decisions still route through you"), not on amber or any
+            // other category. Checked first so its existing behaviour is
+            // unchanged if a result also happens to trigger the second
+            // candidate below.
+            //
+            // "Serendipity Is Not a System" is a first-person account of
+            // cash-position knowledge and business continuity existing
+            // only in the owner's head, surfaced when either "Succession
+            // readiness" or "Cash control" comes back red — the two
+            // categories whose real questions ("what happens if you step
+            // away permanently", "do you find out about cash problems only
+            // after they've happened") most precisely match that article's
+            // actual content. Deliberately not tied to "Decision
+            // dependency": that territory stays with "The Turning That
+            // Never Came" (delayed judgement), this article's territory is
+            // structural dependence, a different diagnostic problem.
+            var relatedCandidates = [
+                {
+                    test: function () {
+                        var r = rows.find(function (r) { return r.category === 'Decision dependency'; });
+                        return !!(r && r.cls === 'red');
+                    },
+                    url: '/useful-thinking/the-turning-that-never-came',
+                    title: 'The Turning That Never Came',
+                    hook: ' — on knowing the answer and still not acting on it.'
+                },
+                {
+                    test: function () {
+                        var succession = rows.find(function (r) { return r.category === 'Succession readiness'; });
+                        var cash = rows.find(function (r) { return r.category === 'Cash control'; });
+                        return !!((succession && succession.cls === 'red') || (cash && cash.cls === 'red'));
+                    },
+                    url: '/useful-thinking/serendipity-is-not-a-system',
+                    title: 'Serendipity Is Not a System',
+                    hook: ' — on being the only person who knew where the money was.'
+                }
+            ];
+            var relatedEl = document.getElementById('odr-related');
+            var relatedLinkEl = document.getElementById('odr-related-link');
+            var relatedHookEl = document.getElementById('odr-related-hook');
+            var matchedCandidate = null;
+            for (var ci = 0; ci < relatedCandidates.length; ci++) {
+                if (relatedCandidates[ci].test()) { matchedCandidate = relatedCandidates[ci]; break; }
+            }
+            if (matchedCandidate) {
+                relatedLinkEl.href = matchedCandidate.url;
+                relatedLinkEl.textContent = matchedCandidate.title;
+                relatedHookEl.textContent = matchedCandidate.hook;
+                relatedEl.hidden = false;
+            } else {
+                relatedEl.hidden = true;
+            }
 
             var reds = rows.filter(function (r) { return r.cls === 'red'; }).map(function (r) { return r.category; });
             var ambers = rows.filter(function (r) { return r.cls === 'amber'; }).map(function (r) { return r.category; });
