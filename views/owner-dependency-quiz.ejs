@@ -835,6 +835,22 @@
             // dependency": that territory stays with "The Turning That
             // Never Came" (delayed judgement), this article's territory is
             // structural dependence, a different diagnostic problem.
+            //
+            // "Some People Are Worth the Risk" is a first-person account of
+            // delegating in name only and still taking decisions back,
+            // surfaced when "Delegation" comes back red — that category's
+            // real question ("when you outsource a task, what normally
+            // happens?") and its red indicator ("work you hand off tends
+            // to come back to you") match this article's own point almost
+            // word for word. Checked last (after Turning and Serendipity)
+            // so it's purely additive and doesn't disturb either of their
+            // existing, previously-tested behaviour. Deliberately not
+            // triggered by "Decision dependency", "Succession readiness"
+            // or "Cash control" - this article is a companion piece to
+            // Serendipity that argues the opposite side of the same
+            // tension (don't let fear of dependency stop good people
+            // becoming important), not a restatement of it, so it needs
+            // its own distinct trigger rather than riding on theirs.
             var relatedCandidates = [
                 {
                     test: function () {
@@ -854,6 +870,15 @@
                     url: '/useful-thinking/serendipity-is-not-a-system',
                     title: 'Serendipity Is Not a System',
                     hook: ' — on being the only person who knew where the money was.'
+                },
+                {
+                    test: function () {
+                        var r = rows.find(function (r) { return r.category === 'Delegation'; });
+                        return !!(r && r.cls === 'red');
+                    },
+                    url: '/useful-thinking/some-people-are-worth-the-risk',
+                    title: 'Some People Are Worth the Risk',
+                    hook: ' — on when the answer to dependency risk is more reward, not less reliance.'
                 }
             ];
             var relatedEl = document.getElementById('odr-related');

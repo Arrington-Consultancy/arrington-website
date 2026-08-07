@@ -12,6 +12,7 @@ const {
   SIXTH_PUBLISHED_ARTICLE,
   SEVENTH_PUBLISHED_ARTICLE,
   EIGHTH_PUBLISHED_ARTICLE,
+  NINTH_PUBLISHED_ARTICLE,
   buildUsefulThinkingPageOrder
 } = require('../lib/usefulThinkingSeed');
 const { ARTICLES: UT_ARTICLES } = require('../lib/usefulThinkingArticles');
@@ -1880,6 +1881,95 @@ async function seed() {
         [`${libInstanceId2}.intro`, 'Every idea below came from something that actually happened, not a theory.']
       );
       if (introHeadingCount > 0) console.log(`Useful Thinking: library intro updated (${libInstanceId2}).`);
+    }
+  }
+
+  // Migration: 9th published Useful Thinking article, "Some People Are
+  // Worth the Risk" (07/08/2026), supplied via "Arrington Website Worker
+  // Handover 03" as a deliberate companion piece to "Serendipity Is Not a
+  // System". Reproduced verbatim from that handover doc (paragraph breaks
+  // preserved exactly, no wording changed). The manager is anonymised
+  // throughout as "my manager"/"she"/"her" per Tom's explicit
+  // confidentiality decision recorded in the handover doc - no name,
+  // initials or other identifying detail was added. The equity detail
+  // ("I gave her a percentage of the company") is kept in full, per the
+  // same doc's explicit instruction not to trim or soften it. No
+  // cgrCategory / commercialGapsResources.js entry: connected into the
+  // Owner Dependency Quiz instead (see views/owner-dependency-quiz.ejs),
+  // shown only when the quiz's "Delegation" category scores red, checked
+  // after "The Turning That Never Came" and "Serendipity Is Not a
+  // System" so only one recommendation ever shows. Idempotent: guarded
+  // on the page not existing yet.
+  {
+    const { rows: existingArticle10 } = await db.query(
+      'SELECT slug FROM pages WHERE slug = $1',
+      [NINTH_PUBLISHED_ARTICLE.slug]
+    );
+    if (existingArticle10.length === 0) {
+      const a10 = NINTH_PUBLISHED_ARTICLE.instanceId;
+      const bodyParagraphs10 = [
+          "After my accident my manager took on far more of the business than she ever had before. I was in a coma for eight weeks and when I eventually started the long road back there were things she had become responsible for that I couldn't simply take back, even if I'd wanted to. The biggest was people, and the truth is she was better at managing them than I was.",
+          "She had an empathy I didn't have. She could listen to somebody, understand why they were upset, probably understand their argument better than I did, and still tell them no. I could get to exactly the same answer but somehow make the journey there considerably less pleasant.",
+          "The staff listened to her and, more importantly, they knew her word carried weight. Not because Manager was written underneath her name, but because they knew if she had said it, I would back her. People occasionally tried to come around her and get a different answer from me and I'm not going to pretend that over all those years there wasn't an exception or two, but from memory she was very rarely circumnavigated. If I'd asked her to manage the staff and then changed her decisions every time somebody complained to me, she wasn't really managing them. I was.",
+          "She had a light touch probably 99% of the time. Like all of us though, she had her trigger, and hers was being lied to. I'd been managing people for twenty years and heard excuses that would make you laugh, so perhaps I'd become numb to it. She hadn't. If she thought somebody was lying to her you got to see the other 1%, and I think that 1% was part of the reason the other 99% worked.",
+          "I've struggled to find the right word for what she had. Fear is wrong. Respect somehow undervalues it and authority makes her sound like an organisational chart. Her words had weight. People knew she would listen, they knew she would be fair and they also knew there was a line. Empathy didn't make her soft. It meant that when she was firm, it meant something.",
+          "There were plenty of times I would have handled something differently, but that was the point. If I'd wanted somebody to manage exactly like me I might as well have carried on doing it myself. Delegating something and then expecting your version of the decision, delivered in your way, isn't really delegation. Sometimes somebody will do something worse than you. Sometimes they'll do it better. Occasionally you'll find somebody who has something you simply don't have.",
+          'She did.',
+          "The obvious problem with allowing somebody to become that important is what happens if they leave. Every bit of sensible business advice tells you not to become too dependent on one person, and having experienced what happens when important knowledge disappears with somebody, I'm hardly going to argue against protecting yourself.",
+          'But I think you can take that too far.',
+          "If you spend all your time making sure nobody becomes too important, there's a danger nobody ever does.",
+          "By then I'd seen a business absorb changes I would once have thought impossible. My business partner had dropped dead at 37 and years later I had nearly disappeared myself. Both times the business struggled, changed and eventually adapted. Maybe those experiences made me less frightened of what would happen if my manager ever left. Maybe the personal bond between us meant I simply never believed she would. Probably a bit of both.",
+          'What I did know was what she brought to the business while she was there, and that was worth the risk of one day not having it.',
+          "You can't completely protect a business from losing brilliant people. You can share knowledge, make sure other people have access, put systems around them and avoid allowing the whole thing to collapse because one person walks out of the door. But after that, I'd rather harness everything an exceptional person can give the business than deliberately limit them because I'm frightened they might leave.",
+          'And if somebody becomes that valuable, give them a bloody good reason not to.',
+          'Pay them properly. Trust them. Give them actual responsibility rather than responsibility that disappears the moment you disagree with them. Let them use the qualities you hired them for instead of slowly training those qualities out of them until they become another version of you.',
+          'In her case I went further. I gave her a percentage of the company.',
+          "It wasn't some clever retention strategy I'd read in a book. I trusted her completely, she had become fundamental to the business and it seemed right that if the business became more valuable because of what she brought to it, she should own some of that value.",
+          "There is plenty written about making sure nobody in a business becomes indispensable and I understand why. I've lived the consequences of getting dependency badly wrong.",
+          'But there is another side to it.',
+          "Sometimes somebody becomes incredibly important because they're incredibly good, and trying to engineer that importance out of your business might protect you from losing something you never properly allowed yourself to have.",
+          "Protect the business as best you can, but when you find somebody exceptional, don't spend all your energy making sure you don't need them.",
+          'Make it worth their while to stay.'
+        ].map((p) => `<p>${p}</p>`).join('');
+
+      const indexSummary10 = "After Tom's accident, his manager took on more of the business than she ever had, and turned out to be better at managing people than he was. On when the answer to dependency risk is not less reliance, but more reward.";
+
+      const a10Rows = [
+        [`${a10}.label`, 'USEFUL THINKING'],
+        [`${a10}.heading`, 'Some People Are Worth the Risk'],
+        [`${a10}.index_summary`, indexSummary10],
+        [`${a10}.body`, bodyParagraphs10],
+        [`${a10}.related_text`, 'Serendipity Is Not a System'],
+        [`${a10}.related_link`, '/useful-thinking/serendipity-is-not-a-system'],
+        [`${a10}.image`, '']
+      ];
+      for (const [key, value] of a10Rows) {
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [key, value]
+        );
+      }
+
+      const { rows: maxSortRows10 } = await db.query('SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM pages');
+      await db.query(
+        `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav, meta_description)
+         VALUES ($1, $2, $3, $4::jsonb, '[]'::jsonb, '[]'::jsonb, false, $5)
+         ON CONFLICT (slug) DO NOTHING`,
+        [NINTH_PUBLISHED_ARTICLE.slug, NINTH_PUBLISHED_ARTICLE.title, maxSortRows10[0].max_sort + 1, JSON.stringify([a10]), indexSummary10]
+      );
+
+      // Complete the two-way companion link: Serendipity's related_text/
+      // related_link were seeded empty (this article didn't exist yet).
+      // Guarded on still being empty so it never overwrites a value Tom
+      // has since edited himself via the CMS.
+      const { rowCount: serendipityLinkCount } = await db.query(
+        "UPDATE content SET content = 'Some People Are Worth the Risk' WHERE section_key = 'article__9.related_text' AND content = ''"
+      );
+      await db.query(
+        "UPDATE content SET content = '/useful-thinking/some-people-are-worth-the-risk' WHERE section_key = 'article__9.related_link' AND content = ''"
+      );
+
+      console.log(`Useful Thinking: 9th article published (${a10}, ${NINTH_PUBLISHED_ARTICLE.slug})${serendipityLinkCount > 0 ? ', companion link to Serendipity added' : ''}.`);
     }
   }
 

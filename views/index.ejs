@@ -3287,7 +3287,12 @@
             <%
               const _relText = (content[_k + '.related_text'] || '').replace(/<[^>]+>/g, '').trim();
               const _relLink = (content[_k + '.related_link'] || '').trim();
-              const _relSafe = /^\/[a-z0-9-]+$/.test(_relLink);
+              // Single top-level page slug (/some-slug), or - since
+              // Useful Thinking articles are the one nested path this
+              // site actually has - a nested article slug
+              // (/useful-thinking/some-slug), so an article can link
+              // directly to a companion article, not just a top-level page.
+              const _relSafe = /^\/(?:useful-thinking\/)?[a-z0-9-]+$/.test(_relLink);
             %>
             <% if (_relText && _relSafe) { %>
             <p class="article-related">Related: <a href="<%= _relLink %>"><%- content[_k + '.related_text'] %></a></p>
