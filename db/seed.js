@@ -1852,6 +1852,37 @@ async function seed() {
     }
   }
 
+  // Migration: Useful Thinking index tidy-up (07/08/2026), per Tom's
+  // request. The library had grown to 8 articles as a plain stacked list
+  // and needed a short top introduction; rather than add a whole separate
+  // section (with its own 6rem section padding) purely for two lines of
+  // copy, the intro is folded directly into the existing library
+  // section's own heading + a new one-line `.intro` paragraph, so the
+  // page opens straight into "Useful Thinking" without a section of its
+  // own competing for vertical space. Heading reuses the exact line from
+  // the homepage's `insights.heading` ("That gut feeling is not
+  // guesswork.") per Tom's explicit instruction. Guarded the same way as
+  // the copy-refinement migration above: heading update only fires if the
+  // value still matches the last-set copy-refinement text, so it's a
+  // no-op if Tom has since edited it himself; the new `.intro` key uses
+  // ON CONFLICT DO NOTHING so it never overwrites a value Tom has edited.
+  {
+    const { rows: utPageRows3 } = await db.query("SELECT section_order FROM pages WHERE slug = 'useful-thinking'");
+    const utOrder3 = Array.isArray(utPageRows3[0]?.section_order) ? utPageRows3[0].section_order : [];
+    const libInstanceId2 = utOrder3.find((iid) => /^utlibrary(__\d+)?$/.test(iid));
+    if (libInstanceId2) {
+      const { rowCount: introHeadingCount } = await db.query(
+        'UPDATE content SET content = $1 WHERE section_key = $2 AND content = $3',
+        ['That gut feeling is not guesswork.', `${libInstanceId2}.heading`, "These aren't just stories. They're the thinking behind how you work."]
+      );
+      await db.query(
+        'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+        [`${libInstanceId2}.intro`, 'Every idea below came from something that actually happened, not a theory.']
+      );
+      if (introHeadingCount > 0) console.log(`Useful Thinking: library intro updated (${libInstanceId2}).`);
+    }
+  }
+
   // Migration: correct voice and remove the banned fire metaphor on the
   // hidden Business Consultant Devon Google Ads landing page (01/08/2026,
   // per Tom's review follow-up). The page's `casestudy` (base instance)

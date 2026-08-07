@@ -1616,6 +1616,42 @@
             font-style: italic;
         }
 
+        <% if (currentPage.slug === 'useful-thinking') { %>
+        /* ---- USEFUL THINKING PAGE ONLY: the "Honest questions" assessment
+           section is a shared instance with the homepage, so it can't be
+           restyled globally - these overrides only ever render into this
+           page's own <style> block. Tightened and scaled down so it reads
+           as a clearly secondary block beneath the article library above
+           it, not a second section of equal weight. Copy is untouched. */
+        .assessment {
+            padding: 3.5rem 2rem;
+        }
+
+        .assessment .section-heading {
+            font-size: 1.5rem;
+            margin-bottom: 0.85rem;
+        }
+
+        .assessment-body {
+            font-size: 0.95rem;
+            margin-bottom: 1.1rem;
+        }
+
+        .assessment-questions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+            margin: 1.5rem 0;
+            text-align: left;
+        }
+
+        @media (max-width: 700px) {
+            .assessment-questions {
+                grid-template-columns: 1fr;
+            }
+        }
+        <% } %>
+
         /* ---- INTERVENTION ---- */
         .intervention {
             background: var(--dark-grey);
@@ -1881,71 +1917,84 @@
             text-underline-offset: 3px;
         }
 
-        /* ---- USEFUL THINKING LIBRARY (article index list) ---- */
+        /* ---- USEFUL THINKING LIBRARY (article grid) ---- */
         .utlibrary-inner {
-            max-width: 720px;
+            max-width: 980px;
             margin: 0 auto;
         }
 
-        .utlibrary-list {
-            margin-top: 2rem;
-            border-top: 1px solid var(--border);
+        .utlibrary-intro {
+            max-width: 640px;
+            font-size: 1.02rem;
+            color: var(--text-muted);
+            line-height: 1.65;
+            margin: 0 0 0.5rem;
         }
 
-        .utlibrary-row {
+        .utlibrary-list {
+            margin-top: 2.25rem;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.25rem;
+        }
+
+        .utlibrary-card {
             display: flex;
-            align-items: flex-start;
-            gap: 1.5rem;
-            padding: 1.75rem 0;
-            border-bottom: 1px solid var(--border);
+            flex-direction: column;
+            height: 100%;
+            padding: 1.75rem;
+            background: var(--charcoal, rgba(255,255,255,0.02));
+            border: 1px solid var(--border);
+            border-radius: 6px;
             text-decoration: none;
             color: inherit;
-            transition: padding-left 0.2s ease;
+            transition: border-color 0.2s ease, transform 0.2s ease;
         }
 
-        .utlibrary-row:hover,
-        .utlibrary-row:focus-visible {
-            padding-left: 0.5rem;
+        .utlibrary-card:hover,
+        .utlibrary-card:focus-visible {
+            border-color: var(--accent);
+            transform: translateY(-2px);
         }
 
         .utlibrary-number {
             flex-shrink: 0;
-            width: 2.25rem;
             font-family: 'DM Serif Display', serif;
-            font-size: 1.4rem;
+            font-size: 1.2rem;
             color: var(--accent);
-            opacity: 0.4;
-            line-height: 1.3;
-        }
-
-        .utlibrary-content {
-            flex: 1;
-            min-width: 0;
+            opacity: 0.5;
+            line-height: 1;
+            margin-bottom: 0.85rem;
         }
 
         .utlibrary-title {
             font-family: 'DM Serif Display', serif;
-            font-size: 1.3rem;
+            font-size: 1.25rem;
             color: var(--text-bright);
-            margin: 0 0 0.5rem;
+            margin: 0 0 0.6rem;
             line-height: 1.3;
         }
 
-        .utlibrary-row:hover .utlibrary-title,
-        .utlibrary-row:focus-visible .utlibrary-title {
+        .utlibrary-card:hover .utlibrary-title,
+        .utlibrary-card:focus-visible .utlibrary-title {
             color: var(--accent);
         }
 
         .utlibrary-summary {
-            font-size: 0.98rem;
+            flex: 1;
+            font-size: 0.95rem;
             color: var(--text-muted);
             line-height: 1.6;
             margin: 0;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
         }
 
         .utlibrary-cta {
             display: inline-block;
-            margin-top: 0.75rem;
+            margin-top: 1.1rem;
             font-size: 0.85rem;
             font-weight: 600;
             color: var(--accent);
@@ -1953,14 +2002,9 @@
             text-underline-offset: 3px;
         }
 
-        @media (max-width: 600px) {
-            .utlibrary-row {
-                gap: 1rem;
-            }
-
-            .utlibrary-number {
-                width: 1.75rem;
-                font-size: 1.15rem;
+        @media (max-width: 900px) {
+            .utlibrary-list {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -3266,15 +3310,16 @@
         <div class="utlibrary-inner">
             <p class="section-label"><%- content[_k + '.label'] %></p>
             <% const _hTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %><<%= _hTag %> class="section-heading"><%- content[_k + '.heading'] %></<%= _hTag %>>
+            <% if ((content[_k + '.intro'] || '').trim()) { %>
+            <p class="utlibrary-intro"><%- content[_k + '.intro'] %></p>
+            <% } %>
             <div class="utlibrary-list">
                 <% (typeof usefulThinkingArticles !== 'undefined' ? usefulThinkingArticles : []).forEach(function(_art, _artIdx) { %>
-                <a class="utlibrary-row" href="/useful-thinking/<%= _art.slug %>">
+                <a class="utlibrary-card" href="/useful-thinking/<%= _art.slug %>">
                     <span class="utlibrary-number" aria-hidden="true"><%= String(_artIdx + 1).padStart(2, '0') %></span>
-                    <span class="utlibrary-content">
-                        <p class="utlibrary-title"><%- (content[_art.instanceId + '.heading'] || '').replace(/<[^>]+>/g, '') %></p>
-                        <p class="utlibrary-summary"><%- (content[_art.instanceId + '.index_summary'] || '').replace(/<[^>]+>/g, '') %></p>
-                        <span class="utlibrary-cta">Read the story &rarr;</span>
-                    </span>
+                    <p class="utlibrary-title"><%- (content[_art.instanceId + '.heading'] || '').replace(/<[^>]+>/g, '') %></p>
+                    <p class="utlibrary-summary"><%- (content[_art.instanceId + '.index_summary'] || '').replace(/<[^>]+>/g, '') %></p>
+                    <span class="utlibrary-cta">Read the story &rarr;</span>
                 </a>
                 <% }); %>
             </div>
