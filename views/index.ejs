@@ -1887,6 +1887,26 @@
             margin: 0 auto;
         }
 
+        /* Strengthens "Useful Thinking" as the section's own identity
+           (bigger, bolder eyebrow) and steps "That gut feeling is not
+           guesswork." down to a clearly supporting line underneath it,
+           rather than the dominant headline the generic .section-heading
+           treatment gives every other section. Scoped to .utlibrary only,
+           doesn't touch the shared .section-label/.section-heading rules
+           used elsewhere on the site. */
+        .utlibrary .section-label {
+            font-size: 0.95rem;
+            letter-spacing: 0.1em;
+            font-weight: 800;
+            margin-bottom: 0.9rem;
+        }
+
+        .utlibrary .section-heading {
+            font-size: clamp(1.3rem, 2.4vw, 1.7rem);
+            font-weight: 400;
+            color: var(--text-muted);
+        }
+
         .utlibrary-intro {
             max-width: 640px;
             font-size: 1.02rem;
@@ -3334,7 +3354,7 @@
 <% } %>
 </div>
 
-<%- include('partials/site-footer', { canEdit, pageContact, content }) %>
+<%- include('partials/site-footer', { canEdit, pageContact, content, currentPage }) %>
 
 <div class="doc-modal-overlay" id="docModalOverlay">
     <div class="doc-modal">
