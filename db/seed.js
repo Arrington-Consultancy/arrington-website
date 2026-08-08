@@ -1300,9 +1300,9 @@ async function seed() {
           [`${a1}.related_text`, ODQ_RELATED[0]],
           [`${a1}.related_link`, ODQ_RELATED[1]],
 
-          // Article 2 — The Customer Who Messaged Me at 4am
+          // Article 2 — The Customer Who Messaged at 4am
           [`${a2}.label`, 'USEFUL THINKING'],
-          [`${a2}.heading`, 'The Customer Who Messaged Me at 4am'],
+          [`${a2}.heading`, 'The Customer Who Messaged at 4am'],
           [`${a2}.index_summary`, "A 4am complaint from someone Tom barely knew, and his wife's reaction the next morning, exposed the difference between being responsive and being permanently on call."],
           [`${a2}.body`, [
             '<p>I was sound asleep over the festive period when a customer I knew to maybe say hello to felt it was acceptable to message me at 4am ranting about a late taxi.</p>',
@@ -2117,6 +2117,43 @@ async function seed() {
 
       console.log(`Useful Thinking: 10th article published (${a11}, ${TENTH_PUBLISHED_ARTICLE.slug}).`);
     }
+  }
+
+  // Migration: pronoun consistency across Useful Thinking titles and
+  // index summaries (08/08/2026, per Tom's review). Article bodies are
+  // deliberately first-person ("I") throughout — that's the established
+  // narrative voice and is untouched here. But titles and index summaries
+  // sit together on the library index page and in page <title> tags,
+  // where the convention is consistently third person ("Tom"); two
+  // outliers had crept in: article__2's title used first-person "Me",
+  // and the fifth article's index summary used first-person plural "We".
+  // Each update is guarded on the exact current value, so this is
+  // idempotent and never overwrites a value Tom has since edited himself
+  // via the CMS.
+  {
+    const pronounFixes = [
+      ['article__2.heading', 'The Customer Who Messaged Me at 4am', 'The Customer Who Messaged at 4am'],
+      [
+        `${FIFTH_PUBLISHED_ARTICLE.instanceId}.index_summary`,
+        'We thought we had landed a licence to print money. Getting paid for it was another matter entirely.',
+        'Tom thought he had landed a licence to print money. Getting paid for it was another matter entirely.'
+      ]
+    ];
+    let pronounFixCount = 0;
+    for (const [key, oldValue, newValue] of pronounFixes) {
+      const { rowCount } = await db.query(
+        'UPDATE content SET content = $1 WHERE section_key = $2 AND content = $3',
+        [newValue, key, oldValue]
+      );
+      pronounFixCount += rowCount;
+    }
+
+    const { rowCount: titleFixCount } = await db.query(
+      "UPDATE pages SET title = 'The Customer Who Messaged at 4am' WHERE slug = 'the-customer-who-messaged-me-at-4am' AND title = 'The Customer Who Messaged Me at 4am'"
+    );
+    pronounFixCount += titleFixCount;
+
+    if (pronounFixCount > 0) console.log(`Useful Thinking: applied ${pronounFixCount} pronoun-consistency fix(es).`);
   }
 
   // Migration: correct voice and remove the banned fire metaphor on the
