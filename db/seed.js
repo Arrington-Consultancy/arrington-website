@@ -8,6 +8,7 @@ const {
   FIRST_BATCH_PAGES,
   HELD_ARTICLE_INSTANCE_ID,
   LIBRARY_INSTANCE_ID,
+  EDITORIAL_INDEX_MARKER_KEY,
   FIFTH_PUBLISHED_ARTICLE,
   SIXTH_PUBLISHED_ARTICLE,
   SEVENTH_PUBLISHED_ARTICLE,
@@ -1970,6 +1971,82 @@ async function seed() {
       );
 
       console.log(`Useful Thinking: 9th article published (${a10}, ${NINTH_PUBLISHED_ARTICLE.slug})${serendipityLinkCount > 0 ? ', companion link to Serendipity added' : ''}.`);
+    }
+  }
+
+  // Migration: rebuild /useful-thinking as an editorial index (08/08/2026).
+  // Drops the pre-library philosophy/marketing sections and the shared
+  // "Honest questions" assessment block that had accumulated on this page,
+  // leaving only [library, one restrained commercial bridge]. Guarded by
+  // a dedicated marker content key rather than a structural check, since
+  // "has this page been restructured already" has no natural query and a
+  // marker is the only way to guarantee this never re-clobbers whatever
+  // Tom has since edited on the page himself via the CMS.
+  {
+    const { rows: markerRows } = await db.query(
+      'SELECT 1 FROM content WHERE section_key = $1',
+      [EDITORIAL_INDEX_MARKER_KEY]
+    );
+    if (markerRows.length === 0) {
+      const { rows: utPageRows } = await db.query(
+        "SELECT section_order FROM pages WHERE slug = 'useful-thinking'"
+      );
+      if (utPageRows.length > 0) {
+        const utOrder = Array.isArray(utPageRows[0].section_order) ? utPageRows[0].section_order : [];
+        const libId = utOrder.find((iid) => /^utlibrary(__\d+)?$/.test(iid)) || LIBRARY_INSTANCE_ID;
+
+        const collectUsedIds = async () => {
+          const { rows: orderRows } = await db.query('SELECT section_order FROM pages');
+          const used = new Set();
+          for (const r of orderRows) {
+            if (Array.isArray(r.section_order)) r.section_order.forEach((s) => used.add(s));
+          }
+          const { rows: prefixRows } = await db.query(
+            "SELECT DISTINCT split_part(section_key, '.', 1) AS instance_id FROM content"
+          );
+          prefixRows.forEach((r) => used.add(r.instance_id));
+          return used;
+        };
+        const makeAllocator = (used) => (tpl) => {
+          if (!used.has(tpl)) { used.add(tpl); return tpl; }
+          for (let n = 2; n <= 99; n++) {
+            const id = `${tpl}__${n}`;
+            if (!used.has(id)) { used.add(id); return id; }
+          }
+          return null;
+        };
+
+        const used = await collectUsedIds();
+        const allocate = makeAllocator(used);
+        const bridgeId = allocate('intervention');
+
+        await db.query(
+          `INSERT INTO content (section_key, content) VALUES
+             ($1, 'If any of this sounds familiar'),
+             ($2, 'One straightforward question is usually enough to work out whether a proper commercial review would help.'),
+             ($3, 'Take the Owner Dependency Quiz'),
+             ($4, 'owner-dependency-quiz')
+           ON CONFLICT (section_key) DO NOTHING`,
+          [
+            `${bridgeId}.heading`,
+            `${bridgeId}.subtext`,
+            `${bridgeId}.button_text`,
+            `${bridgeId}.button_link`
+          ]
+        );
+
+        await db.query(
+          'UPDATE pages SET section_order = $1::jsonb WHERE slug = $2',
+          [JSON.stringify([libId, bridgeId]), 'useful-thinking']
+        );
+
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [EDITORIAL_INDEX_MARKER_KEY, 'true']
+        );
+
+        console.log(`Useful Thinking: editorial index applied (library: ${libId}, bridge: ${bridgeId}).`);
+      }
     }
   }
 
