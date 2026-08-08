@@ -1616,42 +1616,6 @@
             font-style: italic;
         }
 
-        <% if (currentPage.slug === 'useful-thinking') { %>
-        /* ---- USEFUL THINKING PAGE ONLY: the "Honest questions" assessment
-           section is a shared instance with the homepage, so it can't be
-           restyled globally - these overrides only ever render into this
-           page's own <style> block. Tightened and scaled down so it reads
-           as a clearly secondary block beneath the article library above
-           it, not a second section of equal weight. Copy is untouched. */
-        .assessment {
-            padding: 3.5rem 2rem;
-        }
-
-        .assessment .section-heading {
-            font-size: 1.5rem;
-            margin-bottom: 0.85rem;
-        }
-
-        .assessment-body {
-            font-size: 0.95rem;
-            margin-bottom: 1.1rem;
-        }
-
-        .assessment-questions {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 0.75rem;
-            margin: 1.5rem 0;
-            text-align: left;
-        }
-
-        @media (max-width: 700px) {
-            .assessment-questions {
-                grid-template-columns: 1fr;
-            }
-        }
-        <% } %>
-
         /* ---- INTERVENTION ---- */
         .intervention {
             background: var(--dark-grey);
@@ -1917,9 +1881,9 @@
             text-underline-offset: 3px;
         }
 
-        /* ---- USEFUL THINKING LIBRARY (article grid) ---- */
+        /* ---- USEFUL THINKING LIBRARY (editorial index) ---- */
         .utlibrary-inner {
-            max-width: 980px;
+            max-width: 780px;
             margin: 0 auto;
         }
 
@@ -1931,70 +1895,86 @@
             margin: 0 0 0.5rem;
         }
 
-        .utlibrary-list {
-            margin-top: 2.25rem;
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1.25rem;
-        }
-
-        .utlibrary-card {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            padding: 1.75rem;
-            background: var(--charcoal, rgba(255,255,255,0.02));
-            border: 1px solid var(--border);
-            border-radius: 6px;
+        /* Featured piece */
+        .utlibrary-featured {
+            display: block;
+            margin-top: 3rem;
+            padding-top: 2.5rem;
+            border-top: 1px solid var(--border);
             text-decoration: none;
             color: inherit;
-            transition: border-color 0.2s ease, transform 0.2s ease;
         }
 
-        .utlibrary-card:hover,
-        .utlibrary-card:focus-visible {
-            border-color: var(--accent);
-            transform: translateY(-2px);
-        }
-
-        .utlibrary-number {
-            flex-shrink: 0;
-            font-family: 'DM Serif Display', serif;
-            font-size: 1.2rem;
+        .utlibrary-featured-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
             color: var(--accent);
-            opacity: 0.5;
-            line-height: 1;
-            margin-bottom: 0.85rem;
+            margin: 0 0 0.9rem;
         }
 
-        .utlibrary-title {
+        .utlibrary-featured-title {
             font-family: 'DM Serif Display', serif;
-            font-size: 1.25rem;
+            font-size: 2rem;
+            color: var(--text-bright);
+            margin: 0 0 1rem;
+            line-height: 1.25;
+        }
+
+        .utlibrary-featured:hover .utlibrary-featured-title,
+        .utlibrary-featured:focus-visible .utlibrary-featured-title {
+            color: var(--accent);
+        }
+
+        .utlibrary-featured-summary {
+            font-size: 1.05rem;
+            color: var(--text-muted);
+            line-height: 1.7;
+            margin: 0 0 1.25rem;
+            max-width: 640px;
+        }
+
+        /* Flat editorial list */
+        .utlibrary-list {
+            margin-top: 3rem;
+        }
+
+        .utlibrary-item {
+            display: block;
+            padding: 1.9rem 0;
+            border-top: 1px solid var(--border);
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .utlibrary-list .utlibrary-item:last-child {
+            border-bottom: 1px solid var(--border);
+        }
+
+        .utlibrary-item-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.4rem;
             color: var(--text-bright);
             margin: 0 0 0.6rem;
             line-height: 1.3;
         }
 
-        .utlibrary-card:hover .utlibrary-title,
-        .utlibrary-card:focus-visible .utlibrary-title {
+        .utlibrary-item:hover .utlibrary-item-title,
+        .utlibrary-item:focus-visible .utlibrary-item-title {
             color: var(--accent);
         }
 
-        .utlibrary-summary {
-            flex: 1;
-            font-size: 0.95rem;
+        .utlibrary-item-summary {
+            font-size: 0.98rem;
             color: var(--text-muted);
-            line-height: 1.6;
-            margin: 0;
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
+            line-height: 1.65;
+            margin: 0 0 0.9rem;
+            max-width: 640px;
         }
 
         .utlibrary-cta {
             display: inline-block;
-            margin-top: 1.1rem;
             font-size: 0.85rem;
             font-weight: 600;
             color: var(--accent);
@@ -2002,9 +1982,13 @@
             text-underline-offset: 3px;
         }
 
-        @media (max-width: 900px) {
-            .utlibrary-list {
-                grid-template-columns: 1fr;
+        @media (max-width: 700px) {
+            .utlibrary-featured-title {
+                font-size: 1.6rem;
+            }
+
+            .utlibrary-item-title {
+                font-size: 1.2rem;
             }
         }
 
@@ -3318,12 +3302,22 @@
             <% if ((content[_k + '.intro'] || '').trim()) { %>
             <p class="utlibrary-intro"><%- content[_k + '.intro'] %></p>
             <% } %>
+            <% const _utArticles = (typeof usefulThinkingArticles !== 'undefined' ? usefulThinkingArticles : []); %>
+            <% const _utFeatured = _utArticles[_utArticles.length - 1]; %>
+            <% const _utRest = _utArticles.slice(0, -1); %>
+            <% if (_utFeatured) { %>
+            <a class="utlibrary-featured" href="/useful-thinking/<%= _utFeatured.slug %>">
+                <p class="utlibrary-featured-label">Latest</p>
+                <p class="utlibrary-featured-title"><%- (content[_utFeatured.instanceId + '.heading'] || '').replace(/<[^>]+>/g, '') %></p>
+                <p class="utlibrary-featured-summary"><%- (content[_utFeatured.instanceId + '.index_summary'] || '').replace(/<[^>]+>/g, '') %></p>
+                <span class="utlibrary-cta">Read the story &rarr;</span>
+            </a>
+            <% } %>
             <div class="utlibrary-list">
-                <% (typeof usefulThinkingArticles !== 'undefined' ? usefulThinkingArticles : []).forEach(function(_art, _artIdx) { %>
-                <a class="utlibrary-card" href="/useful-thinking/<%= _art.slug %>">
-                    <span class="utlibrary-number" aria-hidden="true"><%= String(_artIdx + 1).padStart(2, '0') %></span>
-                    <p class="utlibrary-title"><%- (content[_art.instanceId + '.heading'] || '').replace(/<[^>]+>/g, '') %></p>
-                    <p class="utlibrary-summary"><%- (content[_art.instanceId + '.index_summary'] || '').replace(/<[^>]+>/g, '') %></p>
+                <% _utRest.forEach(function(_art) { %>
+                <a class="utlibrary-item" href="/useful-thinking/<%= _art.slug %>">
+                    <p class="utlibrary-item-title"><%- (content[_art.instanceId + '.heading'] || '').replace(/<[^>]+>/g, '') %></p>
+                    <p class="utlibrary-item-summary"><%- (content[_art.instanceId + '.index_summary'] || '').replace(/<[^>]+>/g, '') %></p>
                     <span class="utlibrary-cta">Read the story &rarr;</span>
                 </a>
                 <% }); %>
