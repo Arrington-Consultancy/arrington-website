@@ -14,6 +14,7 @@ const {
   SEVENTH_PUBLISHED_ARTICLE,
   EIGHTH_PUBLISHED_ARTICLE,
   NINTH_PUBLISHED_ARTICLE,
+  TENTH_PUBLISHED_ARTICLE,
   buildUsefulThinkingPageOrder
 } = require('../lib/usefulThinkingSeed');
 const { ARTICLES: UT_ARTICLES } = require('../lib/usefulThinkingArticles');
@@ -2047,6 +2048,74 @@ async function seed() {
 
         console.log(`Useful Thinking: editorial index applied (library: ${libId}, bridge: ${bridgeId}).`);
       }
+    }
+  }
+
+  // Migration: tenth Useful Thinking article, "The Connection Isn't the
+  // Sale" (08/08/2026), supplied directly by Tom. Reproduced verbatim,
+  // paragraph breaks preserved exactly, no wording changed — including
+  // the closing line, which is Tom's own voice choice and has been left
+  // as given rather than softened. No related-link: nothing else on the
+  // site is a natural fit for a story about judging introductions and
+  // business development. Connected into Commercial Gaps Review (see
+  // lib/usefulThinkingArticles.js and lib/commercialGapsResources.js),
+  // not the Owner Dependency Quiz — none of the quiz's categories
+  // (Freedom from the business, Decision dependency, Visibility,
+  // Delegation, Day-to-day management, Commercial understanding,
+  // Succession readiness, Cash control) are a real match for this
+  // article's subject. Idempotent: guarded on the page not existing yet.
+  {
+    const { rows: existingArticle11 } = await db.query(
+      'SELECT slug FROM pages WHERE slug = $1',
+      [TENTH_PUBLISHED_ARTICLE.slug]
+    );
+    if (existingArticle11.length === 0) {
+      const a11 = TENTH_PUBLISHED_ARTICLE.instanceId;
+      const bodyParagraphs11 = [
+          "I've been promised some enormous accounts over the years. \"I know them.\" \"Leave it with me.\" \"I'll have a word.\" \"This one's definitely happening.\" Quite a few turned out to be bollocks, but not usually because anyone was lying. People mean well. They want to help and sometimes they genuinely believe they have more influence than they do. Someone they know becomes someone they know well, someone they know well becomes someone who will definitely listen to them, and before long I'm apparently getting a massive new account.",
+          "I learnt not to dismiss any of it. I'd never say no or make someone feel stupid for offering to help because occasionally they really do know the right person, but I also learnt not to sit around waiting. If there was even a small opportunity to approach directly, I normally would, and then there was another judgement to make: do I use the name?",
+          "Sometimes the answer is yes. \"Hi, I'm Tom from X. Steve Smith gave me your contact details because I wanted to speak to you about X. I'd really appreciate five minutes of your time.\" Simple. The connection has got me through the first door and now it's my job. But sometimes dropping the name would make you look like a fool.",
+          "I have a good friend who's a director of a FTSE 100 company. I know him genuinely well and I also know that beyond an introduction I hold absolutely no influence. Why would I? If he introduces me to somebody that's valuable. If I then walk into that conversation behaving as though his position gives me some sort of borrowed importance, I've probably made myself look worse.",
+          "I've been on the receiving end of it too. Someone approaches you through some three-times-removed connection and implies the person has influence over you. You see straight through it. I'd rather they were straight with me. \"Steve gave me your number. I'd like five minutes to talk to you about something.\" Fine. I'll listen. What I don't need is the little performance around how well everyone supposedly knows everyone.",
+          "The best introductions I've had have often worked the other way around. I didn't know they were happening. The phone rang. \"Hi Tom. Steve gave me your number. He said you might be able to offer us a competitive rate for X.\" That's an introduction you want. Someone has said something good about you when you weren't there, they've put enough of their own credibility behind you for another business to pick up the phone, and there has been no promise, no posturing and no waiting around for somebody to work their magic.",
+          "At that point the introducer has done their job. There is no onus on them to sell my business. It's all on me. I need to understand what the customer needs, explain what we can do, get the price right and give them a reason to use us. The introduction opened the door. I still have to walk through it.",
+          "Over the years I became much more careful about the difference between knowing someone and influencing them. They aren't the same thing. I also became more careful about assuming there was a rule for any of this.",
+          'Always go direct? No.',
+          'Always use the introduction? No.',
+          "Never let somebody else sell your business? No.",
+          "Sometimes somebody else's influence is exactly what you need and the best thing you can do is shut up and let them use it. Sometimes all you want is a name and a number. Sometimes mentioning the person who introduced you makes the approach stronger and sometimes it makes you look like a dick.",
+          "Each situation is different. Experience helps because you've seen enough versions of it before, but experience shouldn't make you lazy enough to stop looking at the one in front of you.",
+          'Hard and fast rules can go fuck themselves.',
+          'Judge every instance on its own merits.'
+        ].map((p) => `<p>${p}</p>`).join('');
+
+      const indexSummary11 = "Tom has been promised plenty of enormous accounts through connections over the years, most people meaning it sincerely even when nothing came of it. On knowing the difference between someone knowing you and someone actually being able to influence anything on your behalf.";
+
+      const a11Rows = [
+        [`${a11}.label`, 'USEFUL THINKING'],
+        [`${a11}.heading`, TENTH_PUBLISHED_ARTICLE.title],
+        [`${a11}.index_summary`, indexSummary11],
+        [`${a11}.body`, bodyParagraphs11],
+        [`${a11}.related_text`, ''],
+        [`${a11}.related_link`, ''],
+        [`${a11}.image`, '']
+      ];
+      for (const [key, value] of a11Rows) {
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [key, value]
+        );
+      }
+
+      const { rows: maxSortRows11 } = await db.query('SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM pages');
+      await db.query(
+        `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav, meta_description)
+         VALUES ($1, $2, $3, $4::jsonb, '[]'::jsonb, '[]'::jsonb, false, $5)
+         ON CONFLICT (slug) DO NOTHING`,
+        [TENTH_PUBLISHED_ARTICLE.slug, TENTH_PUBLISHED_ARTICLE.title, maxSortRows11[0].max_sort + 1, JSON.stringify([a11]), indexSummary11]
+      );
+
+      console.log(`Useful Thinking: 10th article published (${a11}, ${TENTH_PUBLISHED_ARTICLE.slug}).`);
     }
   }
 
