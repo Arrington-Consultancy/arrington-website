@@ -15,6 +15,7 @@ const {
   EIGHTH_PUBLISHED_ARTICLE,
   NINTH_PUBLISHED_ARTICLE,
   TENTH_PUBLISHED_ARTICLE,
+  ELEVENTH_PUBLISHED_ARTICLE,
   buildUsefulThinkingPageOrder
 } = require('../lib/usefulThinkingSeed');
 const { ARTICLES: UT_ARTICLES } = require('../lib/usefulThinkingArticles');
@@ -1447,7 +1448,14 @@ async function seed() {
   {
     const utCopyFixes = [
       // [key, oldValue, newValue]
-      ['article__3.heading', "You Don't Get to Decide When You've Made Things Right", "You Don't Get to Decide the Consequences"],
+      // article__3.heading's long-to-short conversion lived here until
+      // 09/08/2026 — removed because it was guarded to fire every time the
+      // heading was long, which put it in a permanent tug-of-war with the
+      // "restore the original title on article__3" migration below (added
+      // after Tom's Drive reconciliation decision reversed this specific
+      // shortening). The heading now stays long permanently; see that
+      // later migration for the one-time revert of any already-shortened
+      // production row.
       ['article.index_summary', 'A staff member was ignoring the phone. Tom was sure of it, right up until the call logs proved him wrong. On the danger of acting on certainty instead of evidence.', 'A staff member was ignoring the phone. Tom was completely certain of it, certain enough to say so out loud. He was wrong.'],
       ['article__2.index_summary', "A 4am complaint from someone Tom barely knew, and his wife's reaction the next morning, exposed the difference between being responsive and being permanently on call.", 'A customer Tom barely knew messaged him at 4am over Christmas with a complaint. His wife had one question the next morning that changed how he ran the business.'],
       ['article__3.index_summary', "Tom lost a £120,000 account at 26 after one late airport transfer, despite doing everything he thought a decent business owner should. On accepting consequences you don't get to set the terms of.", 'One late airport transfer cost Tom a £120,000 account at 26, despite doing everything he thought would fix it. What happened next was not what he expected.'],
@@ -1467,7 +1475,15 @@ async function seed() {
     const utPageFixes = [
       ['being-certain-isnt-the-same-as-being-right', null, 'A staff member was ignoring the phone. Tom was completely certain of it, certain enough to say so out loud. He was wrong.'],
       ['the-customer-who-messaged-me-at-4am', null, 'A customer Tom barely knew messaged him at 4am over Christmas with a complaint. His wife had one question the next morning that changed how he ran the business.'],
-      ['you-dont-get-to-decide-when-youve-made-things-right', "You Don't Get to Decide the Consequences", 'One late airport transfer cost Tom a £120,000 account at 26, despite doing everything he thought would fix it. What happened next was not what he expected.'],
+      // Title left as null (09/08/2026) — was previously shortened to "You
+      // Don't Get to Decide the Consequences" here, but that write had no
+      // guard on the title's current value, so it silently re-shortened
+      // the title on every single boot regardless of later edits. Tom's
+      // Drive reconciliation decision restored the original long title
+      // permanently (see the "restore the original title on article__3"
+      // migration below) — this entry no longer touches title at all, only
+      // meta_description, so the two migrations stop fighting each other.
+      ['you-dont-get-to-decide-when-youve-made-things-right', null, 'One late airport transfer cost Tom a £120,000 account at 26, despite doing everything he thought would fix it. What happened next was not what he expected.'],
       ['the-tightrope-between-staff-loyalty-and-damage-control', null, 'A fifteen-year employee was 98% brilliant, and impossible the rest of the time. Tom spent years finding excuses for the other 2%.']
     ];
     for (const [slug, newTitle, newMetaDescription] of utPageFixes) {
@@ -2247,6 +2263,205 @@ async function seed() {
       iRhythmFixCount += rowCount;
     }
     if (iRhythmFixCount > 0) console.log(`Useful Thinking: applied ${iRhythmFixCount} "I"-rhythm fix(es) across 4 articles.`);
+  }
+
+  // Migration: Drive reconciliation pass (09/08/2026) — "Some People Are
+  // Worth the Risk" was found to be Drive-newer than the live copy in 3
+  // spots. The per-article Drive doc replaced 3 uses of the bare pronoun
+  // "she" with the fuller "my manager" (matching the confidentiality/
+  // anonymisation pattern used everywhere else in the piece), superseding
+  // the version reproduced from Handover 03 when the article was first
+  // published. Facts, structure and every other word are unchanged.
+  // Guarded on the exact old paragraph still being present, so this is
+  // idempotent and never touches a row Tom's since edited himself via the
+  // CMS.
+  {
+    const someoneWorthRiskDriveSyncFixes = [
+      [
+        'article__10.body',
+        "<p>The staff listened to her and, more importantly, they knew her word carried weight. Not because Manager was written underneath her name, but because they knew if she had said it, I would back her. People occasionally tried to come around her and get a different answer from me and I'm not going to pretend that over all those years there wasn't an exception or two, but from memory she was very rarely circumnavigated. If I'd asked her to manage the staff and then changed her decisions every time somebody complained to me, she wasn't really managing them. I was.</p>",
+        "<p>The staff listened to her and, more importantly, they knew her word carried weight. Not because Manager was written underneath her name, but because they knew if my manager had said it, I would back her. People occasionally tried to come around her and get a different answer from me and I'm not going to pretend that over all those years there wasn't an exception or two, but from memory she was very rarely circumnavigated. If I'd asked her to manage the staff and then changed her decisions every time somebody complained to me, she wasn't really managing them. I was.</p>"
+      ],
+      [
+        'article__10.body',
+        '<p>She did.</p>',
+        '<p>My manager did.</p>'
+      ],
+      [
+        'article__10.body',
+        "<p>In her case I went further. I gave her a percentage of the company.</p>",
+        "<p>In my manager's case I went further. I gave her a percentage of the company.</p>"
+      ]
+    ];
+    let driveSyncFixCount = 0;
+    for (const [key, oldParagraph, newParagraph] of someoneWorthRiskDriveSyncFixes) {
+      const { rowCount } = await db.query(
+        `UPDATE content SET content = REPLACE(content, $1, $2)
+         WHERE section_key = $3 AND content LIKE '%' || $1 || '%'`,
+        [oldParagraph, newParagraph, key]
+      );
+      driveSyncFixCount += rowCount;
+    }
+    if (driveSyncFixCount > 0) console.log(`Useful Thinking: synced ${driveSyncFixCount} Drive-newer wording fix(es) on "Some People Are Worth the Risk".`);
+  }
+
+  // Migration: eleventh Useful Thinking article, "The Monument to Wasted
+  // Money" (09/08/2026), found during a full Drive reconciliation and
+  // inventory pass. Marked "Finished and saved as a standalone Useful
+  // Thinking article" in the Arrington Useful Thinking Map, supplied
+  // directly by Tom, not sourced from a handover doc. Reproduced verbatim,
+  // paragraph breaks preserved exactly (this piece is written in
+  // deliberately short, one-line paragraphs throughout — the same rhythm
+  // already used in Serendipity Is Not a System and The Turning That
+  // Never Came), no wording changed. No related-link: the Map gives no
+  // companion-piece instruction for this article, unlike the explicit
+  // two-way link rule that exists for Serendipity/Some People. Connected
+  // into Commercial Gaps Review under "commercial_priorities" (see
+  // lib/usefulThinkingArticles.js and lib/commercialGapsResources.js).
+  // Idempotent: guarded on the page not existing yet.
+  {
+    const { rows: existingArticle12 } = await db.query(
+      'SELECT slug FROM pages WHERE slug = $1',
+      [ELEVENTH_PUBLISHED_ARTICLE.slug]
+    );
+    if (existingArticle12.length === 0) {
+      const a12 = ELEVENTH_PUBLISHED_ARTICLE.instanceId;
+      const bodyParagraphs12 = [
+          'In the early days my business partner and I used to joke that one day we would build a shrine to the monument of wasted money.',
+          'Every business has one. Ideas that looked good. Things bought because they might help. Small experiments that somehow became bigger experiments.',
+          'Most of them are harmless enough.',
+          'If something is cheap enough to test, test it. The right idea can become a very good one.',
+          'One of ours looked like it was going to be brilliant.',
+          'Advertising screens in taxis.',
+          'We were doing around 9,000 jobs a week. Thousands of people were sitting in the back of our cars. Local businesses could advertise directly to them.',
+          'It felt obvious.',
+          'And commercially, it worked.',
+          'Businesses wanted the space. Some were bidding against each other. Some wanted industry exclusivity.',
+          'For a little while it felt like printing money.',
+          'The problem was I had tested whether people wanted to buy it.',
+          'What I had not tested was whether the business could actually carry it.',
+          'That was the mistake.',
+          "Worse, I had sold a year's worth of advertising before we had properly tried it in the real world.",
+          'Then reality arrived.',
+          'Drivers would not always turn the screens on.',
+          'Customers did not always want adverts playing in the back of a taxi.',
+          'The technology was nowhere near as good as it would be now.',
+          'Advertisers were understandably unhappy if they had paid for something that was not being shown.',
+          'Drivers were asking what they got out of it.',
+          'Customers were leaving bad reviews because they did not want to be advertised to while paying us for a taxi.',
+          'That last one mattered most.',
+          'The advertisers were customers of the advertising idea.',
+          'The passengers were customers of the actual business.',
+          'I could refund an advertiser.',
+          'Lose a taxi customer and I might never see them again.',
+          'And for every customer angry enough to complain, my assumption was there were plenty more who disliked it and just never said anything.',
+          'So I started trying to fix it.',
+          'Limit the screens.',
+          'Make drivers turn them on.',
+          'Give passengers the option to switch them off.',
+          'Put notices up.',
+          'Change the way we ran it.',
+          'All of those things were possible.',
+          'None of them made the idea worth the effort.',
+          'That is something I learnt a few times over the years.',
+          'Just because something can be fixed does not mean it deserves fixing.',
+          'If I wanted to mark my own homework, I could probably prove the advertising made money.',
+          'There was revenue.',
+          'There were advertisers.',
+          'There were separate accounts opened.',
+          'There were businesses we built relationships with.',
+          'From a commercial point of view, showing my face to local businesses was not all bad.',
+          'As a business owner, having a reason to speak to another local business that is not the obvious sales pitch can be useful.',
+          'So I would not call the whole thing a disaster.',
+          'But I would still mark the idea down as a loss.',
+          'Because a balance sheet does not show everything.',
+          'It does not show the time you spent managing something awkward.',
+          'It does not show the effort required to keep staff doing something they do not believe in.',
+          'It does not show customers quietly getting irritated.',
+          'It does not show the damage done when a side project starts interfering with the thing people actually came to you for.',
+          'That is where the economics changed.',
+          'The advertising made some money.',
+          'The business paid for it in other ways.',
+          'If I was doing it again, I would have trialled it first.',
+          'A couple of local businesses.',
+          'A taxi or two.',
+          'Free advertising.',
+          'No promises.',
+          'No year-long commitments.',
+          'Then wait.',
+          'What do the drivers think?',
+          'What do the customers think?',
+          'Does the technology work?',
+          'Do advertisers actually get what they were promised?',
+          'How much effort does it take to keep the whole thing running?',
+          'Only then would I decide whether it deserved scaling.',
+          'That is the bit I got wrong.',
+          'I proved demand before I proved delivery.',
+          'Those are not the same thing.',
+          'A new revenue stream can look like growth.',
+          'Sometimes it is.',
+          'Sometimes it is just a distraction with a sales line attached to it.',
+          'So now, if someone tells me they have found another way to make money alongside their main business, the first thing I want to know is not how much it could make.',
+          'It is this:',
+          'What impact will it have on your core business?',
+          'And how distracted are you going to become from your bread and butter?'
+        ].map((p) => `<p>${p}</p>`).join('');
+
+      const indexSummary12 = 'Tom sold a year of advertising screens in taxis before he had properly tested whether the business could actually deliver it. On proving demand is not the same as proving you can deliver it.';
+
+      const a12Rows = [
+        [`${a12}.label`, 'USEFUL THINKING'],
+        [`${a12}.heading`, ELEVENTH_PUBLISHED_ARTICLE.title],
+        [`${a12}.index_summary`, indexSummary12],
+        [`${a12}.body`, bodyParagraphs12],
+        [`${a12}.related_text`, ''],
+        [`${a12}.related_link`, ''],
+        [`${a12}.image`, '']
+      ];
+      for (const [key, value] of a12Rows) {
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [key, value]
+        );
+      }
+
+      const { rows: maxSortRows12 } = await db.query('SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM pages');
+      await db.query(
+        `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav, meta_description)
+         VALUES ($1, $2, $3, $4::jsonb, '[]'::jsonb, '[]'::jsonb, false, $5)
+         ON CONFLICT (slug) DO NOTHING`,
+        [ELEVENTH_PUBLISHED_ARTICLE.slug, ELEVENTH_PUBLISHED_ARTICLE.title, maxSortRows12[0].max_sort + 1, JSON.stringify([a12]), indexSummary12]
+      );
+
+      console.log(`Useful Thinking: 11th article published (${a12}, ${ELEVENTH_PUBLISHED_ARTICLE.slug}).`);
+    }
+  }
+
+  // Migration: restore the original title on article__3, "You Don't Get
+  // to Decide When You've Made Things Right" (09/08/2026, per Tom's
+  // decision during the Drive reconciliation pass). An earlier "copy
+  // refinements" migration (see the migration above titled "Useful
+  // Thinking copy refinements") had shortened this to "You Don't Get to
+  // Decide the Consequences" per a prior direct instruction from Tom that
+  // was never written back to Drive; Drive's own Handover 01 (marked
+  // "FINAL WEBSITE-READY ARTICLE COPY") has always shown the original
+  // longer title, so on reconciliation Tom confirmed the Drive title is
+  // the one to keep. Slug and body are both untouched: the slug already
+  // matches this longer title exactly, and there is no other approved
+  // wording change for this article. meta_description is left as-is —
+  // this migration only reverts the title/heading, which is the only
+  // field the conflict was about. Guarded on the exact shortened value
+  // still being present, so this is idempotent and never overwrites a
+  // value Tom's since edited himself via the CMS.
+  {
+    const { rowCount: headingRevertCount } = await db.query(
+      "UPDATE content SET content = 'You Don''t Get to Decide When You''ve Made Things Right' WHERE section_key = 'article__3.heading' AND content = 'You Don''t Get to Decide the Consequences'"
+    );
+    const { rowCount: titleRevertCount } = await db.query(
+      "UPDATE pages SET title = 'You Don''t Get to Decide When You''ve Made Things Right' WHERE slug = 'you-dont-get-to-decide-when-youve-made-things-right' AND title = 'You Don''t Get to Decide the Consequences'"
+    );
+    const titleRevertTotal = headingRevertCount + titleRevertCount;
+    if (titleRevertTotal > 0) console.log(`Useful Thinking: restored the original title on article__3 (${titleRevertTotal} row(s)).`);
   }
 
   // Migration: correct voice and remove the banned fire metaphor on the
