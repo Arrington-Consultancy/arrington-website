@@ -16,6 +16,7 @@ const {
   NINTH_PUBLISHED_ARTICLE,
   TENTH_PUBLISHED_ARTICLE,
   ELEVENTH_PUBLISHED_ARTICLE,
+  TWELFTH_PUBLISHED_ARTICLE,
   buildUsefulThinkingPageOrder
 } = require('../lib/usefulThinkingSeed');
 const { ARTICLES: UT_ARTICLES } = require('../lib/usefulThinkingArticles');
@@ -2579,6 +2580,81 @@ async function seed() {
       [newBodyParagraphs12, 'article__12.body', oldBodyParagraphs12]
     );
     if (monumentRewriteCount > 0) console.log('Useful Thinking: replaced "The Monument to Wasted Money" body with Tom\'s rewrite.');
+  }
+
+  // Migration: twelfth Useful Thinking article, "You Build a Business One
+  // Problem at a Time" (09/08/2026), supplied directly by Tom via the
+  // current Google Drive document of the same name. Reproduced verbatim,
+  // paragraph breaks preserved exactly as written in Drive, including "Some
+  // will turn out to be bollocks" — approved natural wording, not sanitised.
+  // The first Useful Thinking piece built around the sale/exit of one of
+  // Tom's businesses; deliberately not connected into either the Commercial
+  // Gaps Review or the Owner Dependency Quiz (see
+  // lib/usefulThinkingArticles.js for why). No related-link: no companion-
+  // piece instruction exists for this article. Idempotent: guarded on the
+  // page not existing yet.
+  {
+    const { rows: existingArticle13 } = await db.query(
+      'SELECT slug FROM pages WHERE slug = $1',
+      [TWELFTH_PUBLISHED_ARTICLE.slug]
+    );
+    if (existingArticle13.length === 0) {
+      const a13 = TWELFTH_PUBLISHED_ARTICLE.instanceId;
+      const bodyParagraphs13 = [
+          "When I sold my taxi businesses, the buyers understandably wanted to know everything. Some of the questions were obvious, others were about things I hadn't really thought about for years because to me they were simply part of how the business worked. One of them was driver deposits.",
+          "We held £500 from each driver, but it hadn't started as some clever retention strategy. Years earlier a driver had an accident, caused damage to the car and then left with a rather self-righteous view that she shouldn't have to pay for it. I disagreed, but disagreeing didn't fix the car or pay the bill, so afterwards I changed the system. Drivers would build up a £500 deposit, normally at £10 or £20 a week, and if they caused damage they were responsible for the first £500. Anything beyond that would either be covered by the insurance or, quite often, I'd pay for it separately because I've always hated making unnecessary insurance claims.",
+          "The policy then evolved because we had another problem. We could spend thousands putting a new car on for somebody, buy the uniform and equipment they'd asked for, get everything ready and then they could have a bad day and leave us high and dry. So the deposit became tied into giving us the required notice as well. Leave properly, return everything and you got your money back.",
+          'It shifted a little bit of the balance of power back towards the business and, over time, it just became part of how we operated. The managers knew how it worked. The accountants knew how it worked. The drivers definitely knew how it worked and, as it turned out, so did our competitors.',
+          "The people buying the company had tried to poach drivers from us before, so they already knew the deposit existed because it had been a barrier to them doing it. There was something quite satisfying about that. A policy we'd introduced because we'd been bitten a few times had quietly become strong enough that another taxi company had experienced its effect from the outside.",
+          'Then I had to explain the whole thing to them as buyers.',
+          'Where was the money? How much were we holding? Who did it actually belong to? When was it returned? What happened if somebody damaged a car? What happened if they left?',
+          'I knew all the answers. So did the people around me. What surprised me was the value of the cash we were actually holding and, more than that, how different the whole system looked when I had to explain it from beginning to end rather than simply live inside it.',
+          "That's when I started noticing something about quite a few parts of the business.",
+          "We hadn't sat down one day and designed this magnificent operating system. Most of it had evolved because something had happened and we'd responded to it. Somebody caused damage and left us with the bill, so we changed something. Drivers left after we'd invested thousands in them, so we changed something else. Then somebody found a weakness in the new system, so that changed as well.",
+          'You do that for twenty years and the fixes start joining together.',
+          "When you're in the middle of it you don't necessarily notice what you're building because you're not thinking about the business as one complete thing. You're dealing with whatever is in front of you. Tuesday gives you a problem, you sort it out. Wednesday gives you another one and hopefully you don't make exactly the same mistake twice.",
+          "Some of those decisions will be good. Some will turn out to be bollocks. Others start off solving one problem and end up becoming useful for reasons you hadn't even considered when you introduced them.",
+          "The sale forced me to explain all of that to people who hadn't lived through the reasons behind it.",
+          'And I was proud of what I saw.',
+          "There were elements of how we operated that the new owners talked about taking into their wider business. I don't think I'd ever really considered that somebody buying the company might look at some of the systems we'd built and think, we'll have that.",
+          "It was a nice moment because none of it had come from pretending we knew all the answers. It came from getting things wrong, getting caught out, watching what people actually did rather than what we hoped they'd do and changing the business accordingly.",
+          "I think that's how a lot of good businesses are really built.",
+          'Not in one magnificent strategic exercise.',
+          'One problem at a time.',
+          "The funny thing is that when you've been there for all of those problems, you remember the individual scars. You remember why a rule changed, why a process exists and probably the name of the person who made you introduce it in the first place.",
+          "Someone coming from outside doesn't see any of that.",
+          'They see the thing you ended up building.',
+          'Selling the business was probably the first time in years that I was forced to do the same.'
+        ].map((p) => `<p>${p}</p>`).join('');
+
+      const indexSummary13 = "A £500 driver deposit started as a fix for one problem and quietly evolved into a system strong enough that competitors had felt its effect and buyers wanted to take pieces of it into their own business. On how selling forced Tom to see the whole shape of something he'd only ever lived inside one problem at a time.";
+
+      const a13Rows = [
+        [`${a13}.label`, 'USEFUL THINKING'],
+        [`${a13}.heading`, TWELFTH_PUBLISHED_ARTICLE.title],
+        [`${a13}.index_summary`, indexSummary13],
+        [`${a13}.body`, bodyParagraphs13],
+        [`${a13}.related_text`, ''],
+        [`${a13}.related_link`, ''],
+        [`${a13}.image`, '']
+      ];
+      for (const [key, value] of a13Rows) {
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [key, value]
+        );
+      }
+
+      const { rows: maxSortRows13 } = await db.query('SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM pages');
+      await db.query(
+        `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav, meta_description)
+         VALUES ($1, $2, $3, $4::jsonb, '[]'::jsonb, '[]'::jsonb, false, $5)
+         ON CONFLICT (slug) DO NOTHING`,
+        [TWELFTH_PUBLISHED_ARTICLE.slug, TWELFTH_PUBLISHED_ARTICLE.title, maxSortRows13[0].max_sort + 1, JSON.stringify([a13]), indexSummary13]
+      );
+
+      console.log(`Useful Thinking: 12th article published (${a13}, ${TWELFTH_PUBLISHED_ARTICLE.slug}).`);
+    }
   }
 
   // Migration: correct voice and remove the banned fire metaphor on the
