@@ -2422,6 +2422,33 @@ async function seed() {
     }
   }
 
+  // Migration: restore the original title on article__3, "You Don't Get
+  // to Decide When You've Made Things Right" (09/08/2026, per Tom's
+  // decision during the Drive reconciliation pass). An earlier "copy
+  // refinements" migration (see the migration above titled "Useful
+  // Thinking copy refinements") had shortened this to "You Don't Get to
+  // Decide the Consequences" per a prior direct instruction from Tom that
+  // was never written back to Drive; Drive's own Handover 01 (marked
+  // "FINAL WEBSITE-READY ARTICLE COPY") has always shown the original
+  // longer title, so on reconciliation Tom confirmed the Drive title is
+  // the one to keep. Slug and body are both untouched: the slug already
+  // matches this longer title exactly, and there is no other approved
+  // wording change for this article. meta_description is left as-is —
+  // this migration only reverts the title/heading, which is the only
+  // field the conflict was about. Guarded on the exact shortened value
+  // still being present, so this is idempotent and never overwrites a
+  // value Tom's since edited himself via the CMS.
+  {
+    const { rowCount: headingRevertCount } = await db.query(
+      "UPDATE content SET content = 'You Don''t Get to Decide When You''ve Made Things Right' WHERE section_key = 'article__3.heading' AND content = 'You Don''t Get to Decide the Consequences'"
+    );
+    const { rowCount: titleRevertCount } = await db.query(
+      "UPDATE pages SET title = 'You Don''t Get to Decide When You''ve Made Things Right' WHERE slug = 'you-dont-get-to-decide-when-youve-made-things-right' AND title = 'You Don''t Get to Decide the Consequences'"
+    );
+    const titleRevertTotal = headingRevertCount + titleRevertCount;
+    if (titleRevertTotal > 0) console.log(`Useful Thinking: restored the original title on article__3 (${titleRevertTotal} row(s)).`);
+  }
+
   // Migration: correct voice and remove the banned fire metaphor on the
   // hidden Business Consultant Devon Google Ads landing page (01/08/2026,
   // per Tom's review follow-up). The page's `casestudy` (base instance)
