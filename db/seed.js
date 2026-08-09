@@ -2464,6 +2464,123 @@ async function seed() {
     if (titleRevertTotal > 0) console.log(`Useful Thinking: restored the original title on article__3 (${titleRevertTotal} row(s)).`);
   }
 
+  // Migration: replace "The Monument to Wasted Money" body with Tom's own
+  // rewrite (09/08/2026). Supplied directly by Tom as a full replacement
+  // for the version implemented from the earlier Drive doc — drops the
+  // "shrine to the monument of wasted money" framing and the one-line-
+  // per-paragraph rhythm in favour of Tom's own natural paragraph lengths,
+  // and corrects the job-volume figure (was "around 9,000 jobs a week...
+  // Thousands of people"; now "around 3,000 jobs a week, which meant
+  // roughly 10,000 people"). index_summary and heading are unchanged —
+  // both still hold true against the new body. Guarded on the exact old
+  // body still being present, so this is idempotent and never overwrites
+  // a value Tom's since edited himself via the CMS.
+  {
+    const oldBodyParagraphs12 = [
+        'In the early days my business partner and I used to joke that one day we would build a shrine to the monument of wasted money.',
+        'Every business has one. Ideas that looked good. Things bought because they might help. Small experiments that somehow became bigger experiments.',
+        'Most of them are harmless enough.',
+        'If something is cheap enough to test, test it. The right idea can become a very good one.',
+        'One of ours looked like it was going to be brilliant.',
+        'Advertising screens in taxis.',
+        'We were doing around 9,000 jobs a week. Thousands of people were sitting in the back of our cars. Local businesses could advertise directly to them.',
+        'It felt obvious.',
+        'And commercially, it worked.',
+        'Businesses wanted the space. Some were bidding against each other. Some wanted industry exclusivity.',
+        'For a little while it felt like printing money.',
+        'The problem was I had tested whether people wanted to buy it.',
+        'What I had not tested was whether the business could actually carry it.',
+        'That was the mistake.',
+        "Worse, I had sold a year's worth of advertising before we had properly tried it in the real world.",
+        'Then reality arrived.',
+        'Drivers would not always turn the screens on.',
+        'Customers did not always want adverts playing in the back of a taxi.',
+        'The technology was nowhere near as good as it would be now.',
+        'Advertisers were understandably unhappy if they had paid for something that was not being shown.',
+        'Drivers were asking what they got out of it.',
+        'Customers were leaving bad reviews because they did not want to be advertised to while paying us for a taxi.',
+        'That last one mattered most.',
+        'The advertisers were customers of the advertising idea.',
+        'The passengers were customers of the actual business.',
+        'I could refund an advertiser.',
+        'Lose a taxi customer and I might never see them again.',
+        'And for every customer angry enough to complain, my assumption was there were plenty more who disliked it and just never said anything.',
+        'So I started trying to fix it.',
+        'Limit the screens.',
+        'Make drivers turn them on.',
+        'Give passengers the option to switch them off.',
+        'Put notices up.',
+        'Change the way we ran it.',
+        'All of those things were possible.',
+        'None of them made the idea worth the effort.',
+        'That is something I learnt a few times over the years.',
+        'Just because something can be fixed does not mean it deserves fixing.',
+        'If I wanted to mark my own homework, I could probably prove the advertising made money.',
+        'There was revenue.',
+        'There were advertisers.',
+        'There were separate accounts opened.',
+        'There were businesses we built relationships with.',
+        'From a commercial point of view, showing my face to local businesses was not all bad.',
+        'As a business owner, having a reason to speak to another local business that is not the obvious sales pitch can be useful.',
+        'So I would not call the whole thing a disaster.',
+        'But I would still mark the idea down as a loss.',
+        'Because a balance sheet does not show everything.',
+        'It does not show the time you spent managing something awkward.',
+        'It does not show the effort required to keep staff doing something they do not believe in.',
+        'It does not show customers quietly getting irritated.',
+        'It does not show the damage done when a side project starts interfering with the thing people actually came to you for.',
+        'That is where the economics changed.',
+        'The advertising made some money.',
+        'The business paid for it in other ways.',
+        'If I was doing it again, I would have trialled it first.',
+        'A couple of local businesses.',
+        'A taxi or two.',
+        'Free advertising.',
+        'No promises.',
+        'No year-long commitments.',
+        'Then wait.',
+        'What do the drivers think?',
+        'What do the customers think?',
+        'Does the technology work?',
+        'Do advertisers actually get what they were promised?',
+        'How much effort does it take to keep the whole thing running?',
+        'Only then would I decide whether it deserved scaling.',
+        'That is the bit I got wrong.',
+        'I proved demand before I proved delivery.',
+        'Those are not the same thing.',
+        'A new revenue stream can look like growth.',
+        'Sometimes it is.',
+        'Sometimes it is just a distraction with a sales line attached to it.',
+        'So now, if someone tells me they have found another way to make money alongside their main business, the first thing I want to know is not how much it could make.',
+        'It is this:',
+        'What impact will it have on your core business?',
+        'And how distracted are you going to become from your bread and butter?'
+      ].map((p) => `<p>${p}</p>`).join('');
+
+    const newBodyParagraphs12 = [
+        'We were doing around 3,000 jobs a week, which meant roughly 10,000 people sitting in the back of our cars, so the idea seemed obvious: give local businesses the chance to advertise directly to them. And commercially, it worked. Businesses wanted the space, some were bidding against each other and a few even wanted exclusivity within their industry. For a little while, it genuinely felt like printing money.',
+        "The problem was that I had tested whether people wanted to buy it, but I had not tested whether the business could actually carry it. Worse, I had already sold a year's worth of advertising before we had properly tried it in the real world.",
+        'Then reality arrived. Drivers would not always turn the screens on, customers did not always want adverts playing in the back of a taxi and the technology was nowhere near as reliable as it would be now. Advertisers were understandably unhappy if they had paid for something that was not being shown, and the drivers, never exactly a selfless bunch, quite reasonably wanted to know what they were getting out of it.',
+        'The final straw was customers leaving bad reviews because they did not want to be advertised to while they were already paying us for a taxi. That mattered more than anything else because the advertisers were customers of the advertising idea, whereas the passengers were customers of the actual business. I could refund an unhappy advertiser. Lose a taxi customer and I might never see them again, and for every one angry enough to complain I assumed there were plenty more who disliked it and simply said nothing.',
+        'So I started trying to fix it. We limited the screens, tried to make sure drivers turned them on, gave passengers the option to switch them off and even put notices in the taxis explaining what was going on. All of those things were possible, but none of them made the idea worth the effort.',
+        'That is something I learnt a few times over the years: just because something can be fixed does not mean it deserves fixing.',
+        'If I wanted to mark my own homework, I could probably prove the advertising made money. There was revenue, there were advertisers and it opened doors with local businesses that I might not otherwise have spoken to. From a commercial point of view, that was not completely worthless. Having a reason to speak to another business owner without turning up with the obvious sales pitch can be useful, and in some ways it became a bit of a Trojan horse for the taxi business.',
+        'So I would not call the whole thing a disaster, but I would still mark it down as a loss because a balance sheet does not show everything. It does not show the time spent managing something awkward, the effort required to keep staff doing something they do not really believe in, the customers quietly getting irritated or the damage caused when a side project starts interfering with the thing people actually came to you for.',
+        'That is where the economics changed. The advertising made some money, but the business paid for it in other ways.',
+        'If I was doing it again, I would have trialled it properly first. A couple of local businesses, one or two taxis, free advertising, no promises and definitely no year-long commitments. Then I would have waited to see what actually happened. What did the drivers think? How did customers react? Did the technology work? Were advertisers genuinely getting what they had been promised? And, perhaps most importantly, how much effort did the whole thing take to keep running?',
+        'Only then would I have decided whether it deserved scaling.',
+        'That is the bit I got wrong. I proved demand before I proved delivery, and those are not the same thing.',
+        'A new revenue stream can look like growth. Sometimes it is. Sometimes it is just a distraction with a sales line attached to it.',
+        'So now, if someone tells me they have found another way to make money alongside their main business, the first thing I want to know is not how much it could make. It is what impact it is going to have on the core business, and how distracted they are going to become from the thing that actually pays the bills.'
+      ].map((p) => `<p>${p}</p>`).join('');
+
+    const { rowCount: monumentRewriteCount } = await db.query(
+      'UPDATE content SET content = $1 WHERE section_key = $2 AND content = $3',
+      [newBodyParagraphs12, 'article__12.body', oldBodyParagraphs12]
+    );
+    if (monumentRewriteCount > 0) console.log('Useful Thinking: replaced "The Monument to Wasted Money" body with Tom\'s rewrite.');
+  }
+
   // Migration: correct voice and remove the banned fire metaphor on the
   // hidden Business Consultant Devon Google Ads landing page (01/08/2026,
   // per Tom's review follow-up). The page's `casestudy` (base instance)
