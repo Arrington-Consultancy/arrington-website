@@ -2156,6 +2156,99 @@ async function seed() {
     if (pronounFixCount > 0) console.log(`Useful Thinking: applied ${pronounFixCount} pronoun-consistency fix(es).`);
   }
 
+  // Migration: reduce "I"-opener repetition across four Useful Thinking
+  // articles (08/08/2026), per Tom's review — reviewed and selected by
+  // him from a set of suggested edits after "The Connection Isn't the
+  // Sale" was flagged as clustering "I" at the start of four of its
+  // first five paragraphs. Voice stays first person throughout (this is
+  // a rhythm fix, not a point-of-view change) — deliberate repetition
+  // elsewhere (the "Only I knew... Only I had access..." passage in
+  // Serendipity, the "I got a third chance." beat, the closing lines of
+  // The Turning That Never Came and The Connection Isn't the Sale) was
+  // explicitly reviewed and left alone because it is doing rhetorical
+  // work, not accidental. "A Profitable Job..." and "Every Rule Changes
+  // Behaviour" (the two "we"-voice pieces) are deliberately not touched
+  // here — that is a separate editorial decision, not part of this pass.
+  // Uses targeted substring replacement (same approach as the Devon
+  // voice-correction migration above) since `body` stores the whole
+  // article as one concatenated HTML string, not one row per paragraph.
+  // Each substitution is guarded on the OLD paragraph still being
+  // present, so this is idempotent and never touches a row Tom has since
+  // edited himself via the CMS.
+  {
+    const iRhythmFixes = [
+      // Being Certain Isn't the Same as Being Right (article)
+      [
+        'article.body',
+        "<p>I rang the office one day and couldn't get through. I tried again from a different number. Still nothing. I checked the CCTV while it was ringing and saw the member of staff just sitting there.</p>",
+        "<p>One day I rang the office and couldn't get through. I tried again from a different number. Still nothing. While it was ringing, I checked the CCTV and saw the member of staff just sitting there.</p>"
+      ],
+      [
+        'article.body',
+        "<p>I confronted him. He denied it. I was so certain I'd seen it with my own eyes that I called him a liar.</p>",
+        "<p>When I confronted him, he denied it. I was so certain I'd seen it with my own eyes that I called him a liar.</p>"
+      ],
+      [
+        'article.body',
+        "<p>I'd been wrong about the lie. He had broken a rule and concealed it, but I had accused him of something he hadn't done. Neither of us came out of it clean, but only one of us had been called a liar for something he hadn't done.</p>",
+        "<p>The lie was the bit I'd been wrong about. He had broken a rule and concealed it, but I had accused him of something he hadn't done. Neither of us came out of it clean, but only one of us had been called a liar for something he hadn't done.</p>"
+      ],
+      // The Turning That Never Came (article__8)
+      [
+        'article__8.body',
+        "<p>I knew straight away what the right decision was and I still did not make it. Looking back, that is the bit I regret. Not because of what it taught him. I judge myself on my actions, not somebody else's. I regret it because I ignored my own judgement when I already knew the answer.</p>",
+        "<p>Straight away, I knew what the right decision was and still did not make it. Looking back, that is the bit I regret. Not because of what it taught him. I judge myself on my actions, not somebody else's. I regret it because I ignored my own judgement when I already knew the answer.</p>"
+      ],
+      [
+        'article__8.body',
+        '<p>I think owners do this more often than we admit. We pretend something is still open for debate when really we are just hoping a better answer turns up.</p>',
+        '<p>Owners do this more often than I think we admit. We pretend something is still open for debate when really we are just hoping a better answer turns up.</p>'
+      ],
+      [
+        'article__8.body',
+        '<p>I used to think a lot about fairness in business. The older I got, the less convinced I became that fair really exists in any useful sense. Almost every decision is a balance. Spend the money or keep it. Reinvest or protect the cash. Recruit or cut costs. Back the customer or back the member of staff. Give someone another chance or protect the standard you have set for everyone else.</p>',
+        '<p>Fairness in business was something I used to think about a lot. The older I got, the less convinced I became that fair really exists in any useful sense. Almost every decision is a balance. Spend the money or keep it. Reinvest or protect the cash. Recruit or cut costs. Back the customer or back the member of staff. Give someone another chance or protect the standard you have set for everyone else.</p>'
+      ],
+      // Serendipity Is Not a System (article__9)
+      [
+        'article__9.body',
+        '<p>I can take life insurance, make a will and make sure important information is kept somewhere secure and accessible to the right people. I can make sure nobody has to rely on a favour from a bank manager or somebody remembering what I might have done.</p>',
+        '<p>Now I can take life insurance, make a will and make sure important information is kept somewhere secure and accessible to the right people. Nobody has to rely on a favour from a bank manager or somebody remembering what I might have done.</p>'
+      ],
+      [
+        'article__9.body',
+        '<p>I spent years thinking that because the business was mine, protecting myself and protecting the business were basically the same thing.</p>',
+        '<p>For years I thought that because the business was mine, protecting myself and protecting the business were basically the same thing.</p>'
+      ],
+      // The Connection Isn't the Sale (article__11)
+      [
+        'article__11.body',
+        "<p>I learnt not to dismiss any of it. I'd never say no or make someone feel stupid for offering to help because occasionally they really do know the right person, but I also learnt not to sit around waiting. If there was even a small opportunity to approach directly, I normally would, and then there was another judgement to make: do I use the name?</p>",
+        "<p>Over time I learnt not to dismiss any of it. I'd never say no or make someone feel stupid for offering to help because occasionally they really do know the right person, but I also learnt not to sit around waiting. If there was even a small opportunity to approach directly, I normally would, and then there was another judgement to make: do I use the name?</p>"
+      ],
+      [
+        'article__11.body',
+        "<p>I have a good friend who's a director of a FTSE 100 company. I know him genuinely well and I also know that beyond an introduction I hold absolutely no influence. Why would I? If he introduces me to somebody that's valuable. If I then walk into that conversation behaving as though his position gives me some sort of borrowed importance, I've probably made myself look worse.</p>",
+        "<p>One of my good friends is a director of a FTSE 100 company. I know him genuinely well and I also know that beyond an introduction I hold absolutely no influence. Why would I? If he introduces me to somebody that's valuable. If I then walk into that conversation behaving as though his position gives me some sort of borrowed importance, I've probably made myself look worse.</p>"
+      ],
+      [
+        'article__11.body',
+        "<p>I've been on the receiving end of it too. Someone approaches you through some three-times-removed connection and implies the person has influence over you. You see straight through it. I'd rather they were straight with me. \"Steve gave me your number. I'd like five minutes to talk to you about something.\" Fine. I'll listen. What I don't need is the little performance around how well everyone supposedly knows everyone.</p>",
+        "<p>The same thing happens from the other side too. I've been on the receiving end of it. Someone approaches you through some three-times-removed connection and implies the person has influence over you. You see straight through it. I'd rather they were straight with me. \"Steve gave me your number. I'd like five minutes to talk to you about something.\" Fine. I'll listen. What I don't need is the little performance around how well everyone supposedly knows everyone.</p>"
+      ]
+    ];
+    let iRhythmFixCount = 0;
+    for (const [key, oldParagraph, newParagraph] of iRhythmFixes) {
+      const { rowCount } = await db.query(
+        `UPDATE content SET content = REPLACE(content, $1, $2)
+         WHERE section_key = $3 AND content LIKE '%' || $1 || '%'`,
+        [oldParagraph, newParagraph, key]
+      );
+      iRhythmFixCount += rowCount;
+    }
+    if (iRhythmFixCount > 0) console.log(`Useful Thinking: applied ${iRhythmFixCount} "I"-rhythm fix(es) across 4 articles.`);
+  }
+
   // Migration: correct voice and remove the banned fire metaphor on the
   // hidden Business Consultant Devon Google Ads landing page (01/08/2026,
   // per Tom's review follow-up). The page's `casestudy` (base instance)
