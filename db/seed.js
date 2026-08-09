@@ -16,6 +16,7 @@ const {
   NINTH_PUBLISHED_ARTICLE,
   TENTH_PUBLISHED_ARTICLE,
   ELEVENTH_PUBLISHED_ARTICLE,
+  TWELFTH_PUBLISHED_ARTICLE,
   buildUsefulThinkingPageOrder
 } = require('../lib/usefulThinkingSeed');
 const { ARTICLES: UT_ARTICLES } = require('../lib/usefulThinkingArticles');
@@ -2462,6 +2463,198 @@ async function seed() {
     );
     const titleRevertTotal = headingRevertCount + titleRevertCount;
     if (titleRevertTotal > 0) console.log(`Useful Thinking: restored the original title on article__3 (${titleRevertTotal} row(s)).`);
+  }
+
+  // Migration: replace "The Monument to Wasted Money" body with Tom's own
+  // rewrite (09/08/2026). Supplied directly by Tom as a full replacement
+  // for the version implemented from the earlier Drive doc — drops the
+  // "shrine to the monument of wasted money" framing and the one-line-
+  // per-paragraph rhythm in favour of Tom's own natural paragraph lengths,
+  // and corrects the job-volume figure (was "around 9,000 jobs a week...
+  // Thousands of people"; now "around 3,000 jobs a week, which meant
+  // roughly 10,000 people"). index_summary and heading are unchanged —
+  // both still hold true against the new body. Guarded on the exact old
+  // body still being present, so this is idempotent and never overwrites
+  // a value Tom's since edited himself via the CMS.
+  {
+    const oldBodyParagraphs12 = [
+        'In the early days my business partner and I used to joke that one day we would build a shrine to the monument of wasted money.',
+        'Every business has one. Ideas that looked good. Things bought because they might help. Small experiments that somehow became bigger experiments.',
+        'Most of them are harmless enough.',
+        'If something is cheap enough to test, test it. The right idea can become a very good one.',
+        'One of ours looked like it was going to be brilliant.',
+        'Advertising screens in taxis.',
+        'We were doing around 9,000 jobs a week. Thousands of people were sitting in the back of our cars. Local businesses could advertise directly to them.',
+        'It felt obvious.',
+        'And commercially, it worked.',
+        'Businesses wanted the space. Some were bidding against each other. Some wanted industry exclusivity.',
+        'For a little while it felt like printing money.',
+        'The problem was I had tested whether people wanted to buy it.',
+        'What I had not tested was whether the business could actually carry it.',
+        'That was the mistake.',
+        "Worse, I had sold a year's worth of advertising before we had properly tried it in the real world.",
+        'Then reality arrived.',
+        'Drivers would not always turn the screens on.',
+        'Customers did not always want adverts playing in the back of a taxi.',
+        'The technology was nowhere near as good as it would be now.',
+        'Advertisers were understandably unhappy if they had paid for something that was not being shown.',
+        'Drivers were asking what they got out of it.',
+        'Customers were leaving bad reviews because they did not want to be advertised to while paying us for a taxi.',
+        'That last one mattered most.',
+        'The advertisers were customers of the advertising idea.',
+        'The passengers were customers of the actual business.',
+        'I could refund an advertiser.',
+        'Lose a taxi customer and I might never see them again.',
+        'And for every customer angry enough to complain, my assumption was there were plenty more who disliked it and just never said anything.',
+        'So I started trying to fix it.',
+        'Limit the screens.',
+        'Make drivers turn them on.',
+        'Give passengers the option to switch them off.',
+        'Put notices up.',
+        'Change the way we ran it.',
+        'All of those things were possible.',
+        'None of them made the idea worth the effort.',
+        'That is something I learnt a few times over the years.',
+        'Just because something can be fixed does not mean it deserves fixing.',
+        'If I wanted to mark my own homework, I could probably prove the advertising made money.',
+        'There was revenue.',
+        'There were advertisers.',
+        'There were separate accounts opened.',
+        'There were businesses we built relationships with.',
+        'From a commercial point of view, showing my face to local businesses was not all bad.',
+        'As a business owner, having a reason to speak to another local business that is not the obvious sales pitch can be useful.',
+        'So I would not call the whole thing a disaster.',
+        'But I would still mark the idea down as a loss.',
+        'Because a balance sheet does not show everything.',
+        'It does not show the time you spent managing something awkward.',
+        'It does not show the effort required to keep staff doing something they do not believe in.',
+        'It does not show customers quietly getting irritated.',
+        'It does not show the damage done when a side project starts interfering with the thing people actually came to you for.',
+        'That is where the economics changed.',
+        'The advertising made some money.',
+        'The business paid for it in other ways.',
+        'If I was doing it again, I would have trialled it first.',
+        'A couple of local businesses.',
+        'A taxi or two.',
+        'Free advertising.',
+        'No promises.',
+        'No year-long commitments.',
+        'Then wait.',
+        'What do the drivers think?',
+        'What do the customers think?',
+        'Does the technology work?',
+        'Do advertisers actually get what they were promised?',
+        'How much effort does it take to keep the whole thing running?',
+        'Only then would I decide whether it deserved scaling.',
+        'That is the bit I got wrong.',
+        'I proved demand before I proved delivery.',
+        'Those are not the same thing.',
+        'A new revenue stream can look like growth.',
+        'Sometimes it is.',
+        'Sometimes it is just a distraction with a sales line attached to it.',
+        'So now, if someone tells me they have found another way to make money alongside their main business, the first thing I want to know is not how much it could make.',
+        'It is this:',
+        'What impact will it have on your core business?',
+        'And how distracted are you going to become from your bread and butter?'
+      ].map((p) => `<p>${p}</p>`).join('');
+
+    const newBodyParagraphs12 = [
+        'We were doing around 3,000 jobs a week, which meant roughly 10,000 people sitting in the back of our cars, so the idea seemed obvious: give local businesses the chance to advertise directly to them. And commercially, it worked. Businesses wanted the space, some were bidding against each other and a few even wanted exclusivity within their industry. For a little while, it genuinely felt like printing money.',
+        "The problem was that I had tested whether people wanted to buy it, but I had not tested whether the business could actually carry it. Worse, I had already sold a year's worth of advertising before we had properly tried it in the real world.",
+        'Then reality arrived. Drivers would not always turn the screens on, customers did not always want adverts playing in the back of a taxi and the technology was nowhere near as reliable as it would be now. Advertisers were understandably unhappy if they had paid for something that was not being shown, and the drivers, never exactly a selfless bunch, quite reasonably wanted to know what they were getting out of it.',
+        'The final straw was customers leaving bad reviews because they did not want to be advertised to while they were already paying us for a taxi. That mattered more than anything else because the advertisers were customers of the advertising idea, whereas the passengers were customers of the actual business. I could refund an unhappy advertiser. Lose a taxi customer and I might never see them again, and for every one angry enough to complain I assumed there were plenty more who disliked it and simply said nothing.',
+        'So I started trying to fix it. We limited the screens, tried to make sure drivers turned them on, gave passengers the option to switch them off and even put notices in the taxis explaining what was going on. All of those things were possible, but none of them made the idea worth the effort.',
+        'That is something I learnt a few times over the years: just because something can be fixed does not mean it deserves fixing.',
+        'If I wanted to mark my own homework, I could probably prove the advertising made money. There was revenue, there were advertisers and it opened doors with local businesses that I might not otherwise have spoken to. From a commercial point of view, that was not completely worthless. Having a reason to speak to another business owner without turning up with the obvious sales pitch can be useful, and in some ways it became a bit of a Trojan horse for the taxi business.',
+        'So I would not call the whole thing a disaster, but I would still mark it down as a loss because a balance sheet does not show everything. It does not show the time spent managing something awkward, the effort required to keep staff doing something they do not really believe in, the customers quietly getting irritated or the damage caused when a side project starts interfering with the thing people actually came to you for.',
+        'That is where the economics changed. The advertising made some money, but the business paid for it in other ways.',
+        'If I was doing it again, I would have trialled it properly first. A couple of local businesses, one or two taxis, free advertising, no promises and definitely no year-long commitments. Then I would have waited to see what actually happened. What did the drivers think? How did customers react? Did the technology work? Were advertisers genuinely getting what they had been promised? And, perhaps most importantly, how much effort did the whole thing take to keep running?',
+        'Only then would I have decided whether it deserved scaling.',
+        'That is the bit I got wrong. I proved demand before I proved delivery, and those are not the same thing.',
+        'A new revenue stream can look like growth. Sometimes it is. Sometimes it is just a distraction with a sales line attached to it.',
+        'So now, if someone tells me they have found another way to make money alongside their main business, the first thing I want to know is not how much it could make. It is what impact it is going to have on the core business, and how distracted they are going to become from the thing that actually pays the bills.'
+      ].map((p) => `<p>${p}</p>`).join('');
+
+    const { rowCount: monumentRewriteCount } = await db.query(
+      'UPDATE content SET content = $1 WHERE section_key = $2 AND content = $3',
+      [newBodyParagraphs12, 'article__12.body', oldBodyParagraphs12]
+    );
+    if (monumentRewriteCount > 0) console.log('Useful Thinking: replaced "The Monument to Wasted Money" body with Tom\'s rewrite.');
+  }
+
+  // Migration: twelfth Useful Thinking article, "You Build a Business One
+  // Problem at a Time" (09/08/2026), supplied directly by Tom via the
+  // current Google Drive document of the same name. Reproduced verbatim,
+  // paragraph breaks preserved exactly as written in Drive, including "Some
+  // will turn out to be bollocks" — approved natural wording, not sanitised.
+  // The first Useful Thinking piece built around the sale/exit of one of
+  // Tom's businesses; deliberately not connected into either the Commercial
+  // Gaps Review or the Owner Dependency Quiz (see
+  // lib/usefulThinkingArticles.js for why). No related-link: no companion-
+  // piece instruction exists for this article. Idempotent: guarded on the
+  // page not existing yet.
+  {
+    const { rows: existingArticle13 } = await db.query(
+      'SELECT slug FROM pages WHERE slug = $1',
+      [TWELFTH_PUBLISHED_ARTICLE.slug]
+    );
+    if (existingArticle13.length === 0) {
+      const a13 = TWELFTH_PUBLISHED_ARTICLE.instanceId;
+      const bodyParagraphs13 = [
+          "When I sold my taxi businesses, the buyers understandably wanted to know everything. Some of the questions were obvious, others were about things I hadn't really thought about for years because to me they were simply part of how the business worked. One of them was driver deposits.",
+          "We held £500 from each driver, but it hadn't started as some clever retention strategy. Years earlier a driver had an accident, caused damage to the car and then left with a rather self-righteous view that she shouldn't have to pay for it. I disagreed, but disagreeing didn't fix the car or pay the bill, so afterwards I changed the system. Drivers would build up a £500 deposit, normally at £10 or £20 a week, and if they caused damage they were responsible for the first £500. Anything beyond that would either be covered by the insurance or, quite often, I'd pay for it separately because I've always hated making unnecessary insurance claims.",
+          "The policy then evolved because we had another problem. We could spend thousands putting a new car on for somebody, buy the uniform and equipment they'd asked for, get everything ready and then they could have a bad day and leave us high and dry. So the deposit became tied into giving us the required notice as well. Leave properly, return everything and you got your money back.",
+          'It shifted a little bit of the balance of power back towards the business and, over time, it just became part of how we operated. The managers knew how it worked. The accountants knew how it worked. The drivers definitely knew how it worked and, as it turned out, so did our competitors.',
+          "The people buying the company had tried to poach drivers from us before, so they already knew the deposit existed because it had been a barrier to them doing it. There was something quite satisfying about that. A policy we'd introduced because we'd been bitten a few times had quietly become strong enough that another taxi company had experienced its effect from the outside.",
+          'Then I had to explain the whole thing to them as buyers.',
+          'Where was the money? How much were we holding? Who did it actually belong to? When was it returned? What happened if somebody damaged a car? What happened if they left?',
+          'I knew all the answers. So did the people around me. What surprised me was the value of the cash we were actually holding and, more than that, how different the whole system looked when I had to explain it from beginning to end rather than simply live inside it.',
+          "That's when I started noticing something about quite a few parts of the business.",
+          "We hadn't sat down one day and designed this magnificent operating system. Most of it had evolved because something had happened and we'd responded to it. Somebody caused damage and left us with the bill, so we changed something. Drivers left after we'd invested thousands in them, so we changed something else. Then somebody found a weakness in the new system, so that changed as well.",
+          'You do that for twenty years and the fixes start joining together.',
+          "When you're in the middle of it you don't necessarily notice what you're building because you're not thinking about the business as one complete thing. You're dealing with whatever is in front of you. Tuesday gives you a problem, you sort it out. Wednesday gives you another one and hopefully you don't make exactly the same mistake twice.",
+          "Some of those decisions will be good. Some will turn out to be bollocks. Others start off solving one problem and end up becoming useful for reasons you hadn't even considered when you introduced them.",
+          "The sale forced me to explain all of that to people who hadn't lived through the reasons behind it.",
+          'And I was proud of what I saw.',
+          "There were elements of how we operated that the new owners talked about taking into their wider business. I don't think I'd ever really considered that somebody buying the company might look at some of the systems we'd built and think, we'll have that.",
+          "It was a nice moment because none of it had come from pretending we knew all the answers. It came from getting things wrong, getting caught out, watching what people actually did rather than what we hoped they'd do and changing the business accordingly.",
+          "I think that's how a lot of good businesses are really built.",
+          'Not in one magnificent strategic exercise.',
+          'One problem at a time.',
+          "The funny thing is that when you've been there for all of those problems, you remember the individual scars. You remember why a rule changed, why a process exists and probably the name of the person who made you introduce it in the first place.",
+          "Someone coming from outside doesn't see any of that.",
+          'They see the thing you ended up building.',
+          'Selling the business was probably the first time in years that I was forced to do the same.'
+        ].map((p) => `<p>${p}</p>`).join('');
+
+      const indexSummary13 = "A £500 driver deposit started as a fix for one problem and quietly evolved into a system strong enough that competitors had felt its effect and buyers wanted to take pieces of it into their own business. On how selling forced Tom to see the whole shape of something he'd only ever lived inside one problem at a time.";
+
+      const a13Rows = [
+        [`${a13}.label`, 'USEFUL THINKING'],
+        [`${a13}.heading`, TWELFTH_PUBLISHED_ARTICLE.title],
+        [`${a13}.index_summary`, indexSummary13],
+        [`${a13}.body`, bodyParagraphs13],
+        [`${a13}.related_text`, ''],
+        [`${a13}.related_link`, ''],
+        [`${a13}.image`, '']
+      ];
+      for (const [key, value] of a13Rows) {
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [key, value]
+        );
+      }
+
+      const { rows: maxSortRows13 } = await db.query('SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM pages');
+      await db.query(
+        `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav, meta_description)
+         VALUES ($1, $2, $3, $4::jsonb, '[]'::jsonb, '[]'::jsonb, false, $5)
+         ON CONFLICT (slug) DO NOTHING`,
+        [TWELFTH_PUBLISHED_ARTICLE.slug, TWELFTH_PUBLISHED_ARTICLE.title, maxSortRows13[0].max_sort + 1, JSON.stringify([a13]), indexSummary13]
+      );
+
+      console.log(`Useful Thinking: 12th article published (${a13}, ${TWELFTH_PUBLISHED_ARTICLE.slug}).`);
+    }
   }
 
   // Migration: correct voice and remove the banned fire metaphor on the
