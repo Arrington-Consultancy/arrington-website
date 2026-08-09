@@ -1448,7 +1448,14 @@ async function seed() {
   {
     const utCopyFixes = [
       // [key, oldValue, newValue]
-      ['article__3.heading', "You Don't Get to Decide When You've Made Things Right", "You Don't Get to Decide the Consequences"],
+      // article__3.heading's long-to-short conversion lived here until
+      // 09/08/2026 — removed because it was guarded to fire every time the
+      // heading was long, which put it in a permanent tug-of-war with the
+      // "restore the original title on article__3" migration below (added
+      // after Tom's Drive reconciliation decision reversed this specific
+      // shortening). The heading now stays long permanently; see that
+      // later migration for the one-time revert of any already-shortened
+      // production row.
       ['article.index_summary', 'A staff member was ignoring the phone. Tom was sure of it, right up until the call logs proved him wrong. On the danger of acting on certainty instead of evidence.', 'A staff member was ignoring the phone. Tom was completely certain of it, certain enough to say so out loud. He was wrong.'],
       ['article__2.index_summary', "A 4am complaint from someone Tom barely knew, and his wife's reaction the next morning, exposed the difference between being responsive and being permanently on call.", 'A customer Tom barely knew messaged him at 4am over Christmas with a complaint. His wife had one question the next morning that changed how he ran the business.'],
       ['article__3.index_summary', "Tom lost a £120,000 account at 26 after one late airport transfer, despite doing everything he thought a decent business owner should. On accepting consequences you don't get to set the terms of.", 'One late airport transfer cost Tom a £120,000 account at 26, despite doing everything he thought would fix it. What happened next was not what he expected.'],
@@ -1468,7 +1475,15 @@ async function seed() {
     const utPageFixes = [
       ['being-certain-isnt-the-same-as-being-right', null, 'A staff member was ignoring the phone. Tom was completely certain of it, certain enough to say so out loud. He was wrong.'],
       ['the-customer-who-messaged-me-at-4am', null, 'A customer Tom barely knew messaged him at 4am over Christmas with a complaint. His wife had one question the next morning that changed how he ran the business.'],
-      ['you-dont-get-to-decide-when-youve-made-things-right', "You Don't Get to Decide the Consequences", 'One late airport transfer cost Tom a £120,000 account at 26, despite doing everything he thought would fix it. What happened next was not what he expected.'],
+      // Title left as null (09/08/2026) — was previously shortened to "You
+      // Don't Get to Decide the Consequences" here, but that write had no
+      // guard on the title's current value, so it silently re-shortened
+      // the title on every single boot regardless of later edits. Tom's
+      // Drive reconciliation decision restored the original long title
+      // permanently (see the "restore the original title on article__3"
+      // migration below) — this entry no longer touches title at all, only
+      // meta_description, so the two migrations stop fighting each other.
+      ['you-dont-get-to-decide-when-youve-made-things-right', null, 'One late airport transfer cost Tom a £120,000 account at 26, despite doing everything he thought would fix it. What happened next was not what he expected.'],
       ['the-tightrope-between-staff-loyalty-and-damage-control', null, 'A fifteen-year employee was 98% brilliant, and impossible the rest of the time. Tom spent years finding excuses for the other 2%.']
     ];
     for (const [slug, newTitle, newMetaDescription] of utPageFixes) {
