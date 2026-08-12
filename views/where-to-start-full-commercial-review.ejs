@@ -96,40 +96,44 @@
         .wts-alt-route a { color: var(--text-muted); }
         .wts-alt-route a:hover { color: var(--accent); }
 
-        /* EVIDENCE — two real, public documents rather than an abstract
-           claim of quality. Compact horizontal cards on desktop, stacked on
-           mobile. Deliberately not a repeat of the Evidence page's full
-           documents template: no PDF-gated download flow here, just a
-           preview thumbnail, title and one-line description linking through
-           to the real thing. */
+        /* EVIDENCE — two real, public documents doing the persuading
+           instead of prose. Full-size portrait previews (same treatment as
+           the Evidence page's own document-thumb: real aspect ratio, no
+           cropping, a drop shadow for weight) rather than small icons, so
+           the visitor can actually see that substantial work sits behind
+           the offer. Centred card layout, stacked on mobile at a slightly
+           larger size since there's more width to give each one. */
+        .wts-evidence-note { font-size: 0.95rem; color: var(--text-muted); margin-bottom: 1.4rem; }
         .wts-evidence-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
-            margin-top: 0.5rem;
+            gap: 1.75rem;
         }
         .wts-evidence-card {
             display: flex;
-            gap: 1rem;
-            align-items: flex-start;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
             text-decoration: none;
-            padding: 1rem;
+            padding: 1.5rem 1.25rem;
             border: 1px solid var(--border);
             border-radius: 3px;
         }
         .wts-evidence-card:hover, .wts-evidence-card:focus-visible { border-color: var(--accent); }
         .wts-evidence-thumb {
-            width: 64px;
-            height: 82px;
-            object-fit: cover;
+            width: 100%;
+            max-width: 190px;
+            height: auto;
             border-radius: 2px;
-            flex-shrink: 0;
             border: 1px solid var(--border);
+            box-shadow: 0 10px 26px rgba(0,0,0,0.45);
+            margin-bottom: 1.1rem;
         }
-        .wts-evidence-title { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 0.98rem; color: var(--text-bright); margin-bottom: 0.3rem; }
-        .wts-evidence-card p { font-size: 0.88rem; color: var(--text-muted); margin: 0; }
+        .wts-evidence-title { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--text-bright); margin-bottom: 0.4rem; }
+        .wts-evidence-card p { font-size: 0.9rem; color: var(--text-muted); margin: 0; max-width: 22rem; }
         @media (max-width: 640px) {
-            .wts-evidence-grid { grid-template-columns: 1fr; }
+            .wts-evidence-grid { grid-template-columns: 1fr; gap: 1.5rem; }
+            .wts-evidence-thumb { max-width: 220px; }
         }
     </style>
 </head>
@@ -147,13 +151,12 @@
 
         <div class="wts-section">
             <h2>What's different</h2>
-            <p>Substantially more time to understand the business, following the evidence rather than relying solely on what the owner first believes is happening &mdash; where useful, that includes time inside the business itself.</p>
-            <p>Recommendations are developed in far more depth, discussed with you, challenged and refined as the evidence warrants.</p>
+            <p>Substantially more time to follow the evidence rather than relying solely on what the owner first believes is happening &mdash; including time inside the business where useful &mdash; and recommendations developed, discussed, challenged and refined in far more depth.</p>
         </div>
 
         <div class="wts-section">
             <h2>Then we build it</h2>
-            <p>From there, the work moves beyond telling you the direction. We build the practical action plan and start helping put the right things in place &mdash; that could mean AI systems, operational systems, website work, business structure, commercial reporting, or working alongside the right tax or accountancy advisers where regulated advice is genuinely needed. The work follows what the business actually needs, not a fixed list.</p>
+            <p>We build the practical action plan and start putting the right things in place &mdash; that could mean AI systems, operational systems, website work, business structure or commercial reporting, or working alongside the right tax or accountancy advisers where regulated advice is genuinely needed. The work follows what the business actually needs, not a fixed list.</p>
         </div>
 
         <div class="wts-section">
@@ -172,21 +175,17 @@
 
         <div class="wts-section">
             <h2>See the standard</h2>
-            <p>Two real, public examples of the evidence-led work behind this review.</p>
+            <p class="wts-evidence-note">Real work, not a description of work.</p>
             <div class="wts-evidence-grid">
                 <a class="wts-evidence-card" href="/evidence#documents">
-                    <img class="wts-evidence-thumb" src="/img/docs/half-time-team-talk.jpg" alt="" loading="lazy">
-                    <div>
-                        <p class="wts-evidence-title">Half-Time Team Talk</p>
-                        <p>What became clear after spending time inside the business and following the evidence.</p>
-                    </div>
+                    <img class="wts-evidence-thumb" src="/img/docs/half-time-team-talk.jpg" alt="Preview of the Half-Time Team Talk document" loading="lazy">
+                    <p class="wts-evidence-title">Half-Time Team Talk</p>
+                    <p>The commercial assessment that comes from following the evidence.</p>
                 </a>
                 <a class="wts-evidence-card" href="/evidence#documents">
-                    <img class="wts-evidence-thumb" src="/img/docs/90-day-action-plan.jpg" alt="" loading="lazy">
-                    <div>
-                        <p class="wts-evidence-title">90-Day Action Plan</p>
-                        <p>Findings turned into practical actions, owners, deadlines and evidence of completion.</p>
-                    </div>
+                    <img class="wts-evidence-thumb" src="/img/docs/90-day-action-plan.jpg" alt="Preview of the 90-Day Action Plan document" loading="lazy">
+                    <p class="wts-evidence-title">90-Day Action Plan</p>
+                    <p>How findings become a practical plan of action.</p>
                 </a>
             </div>
         </div>
@@ -194,7 +193,7 @@
         <% if (purchaseMode === 'direct_purchase') { %>
         <div class="wts-form-section">
             <h2>Start your Full Commercial Review</h2>
-            <p class="wts-form-note">Payment is handled securely by Stripe. Card details are never seen by or stored on this site.</p>
+            <p class="wts-form-note">Payment is handled securely by Stripe. Card details are never seen by or stored on this site. You'll receive a short brief by email once payment is confirmed.</p>
             <form id="wtsCheckoutForm" data-offer="full_commercial_review">
                 <label for="wtsEmail">Your email</label>
                 <input type="email" id="wtsEmail" name="email" required maxlength="255" autocomplete="email">
