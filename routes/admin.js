@@ -975,4 +975,99 @@ router.put('/page-access/:pageId', requireCapability('manage_page_access'), asyn
   }
 });
 
+// Where to Start — Stripe-backed purchases (see routes/whereToStart.js and
+// db/schema.sql's purchases table). List is read-only, same capability gate
+// as the leads list above. The £500 credit is normally matched
+// automatically by email at checkout time, but email match is a
+// convenience, not the sole authority — if a customer paid the Commercial
+// Review under one email and the Full Commercial Review under another, the
+// automatic match never fires, so this gives Tom a manual override rather
+// than requiring a customer-account system to solve an edge case. Gated on
+// manage_backups (not view_activity) because it's a write action touching
+// financial bookkeeping, not just a read.
+router.get('/purchases', requireCapability('view_activity'), async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT id, offer_id, email, list_price_pence, amount_pence, credit_applied_pence,
+              credit_applied_manually, currency, status, stripe_session_id,
+              credited_toward_id, created_at
+       FROM purchases ORDER BY created_at DESC LIMIT 200`
+    );
+    res.json({ purchases: rows });
+  } catch (err) {
+    console.error('Purchases list error:', err);
+    res.status(500).json({ error: 'Failed to load purchases' });
+  }
+});
+
+// Records that an earlier paid Commercial Review (sourcePurchaseId) credits
+// a later paid Full Commercial Review (targetPurchaseId), when the
+// automatic email match at checkout time didn't catch it (different
+// emails, etc). This is a bookkeeping correction only — it does NOT trigger
+// a Stripe refund. Both purchases already have real, completed Stripe
+// charges at whatever amount was actually paid; reconciling the money (if
+// Tom decides the customer is owed £500 back) is a deliberate, separate
+// action taken directly in the Stripe Dashboard, not something this
+// endpoint automates, since an automatic refund is exactly the kind of
+// irreversible financial action that needs a human decision each time.
+router.put('/purchases/:id/apply-credit', requireCapability('manage_backups'), async (req, res) => {
+  const sourceId = parseInt(req.params.id, 10);
+  const targetId = parseInt(req.body?.targetPurchaseId, 10);
+
+  if (!Number.isInteger(sourceId) || !Number.isInteger(targetId)) {
+    return res.status(400).json({ error: 'A valid targetPurchaseId is required.' });
+  }
+  if (sourceId === targetId) {
+    return res.status(400).json({ error: 'Source and target purchase cannot be the same.' });
+  }
+
+  try {
+    const { rows: sourceRows } = await db.query(
+      `SELECT id, offer_id, status, credited_toward_id FROM purchases WHERE id = $1`,
+      [sourceId]
+    );
+    const source = sourceRows[0];
+    if (!source) return res.status(404).json({ error: 'Source purchase not found.' });
+    if (source.offer_id !== 'commercial_review' || source.status !== 'paid') {
+      return res.status(400).json({ error: 'Source purchase must be a paid Commercial Review.' });
+    }
+    if (source.credited_toward_id) {
+      return res.status(400).json({ error: 'This Commercial Review credit has already been applied elsewhere.' });
+    }
+
+    const { rows: targetRows } = await db.query(
+      `SELECT id, offer_id, status FROM purchases WHERE id = $1`,
+      [targetId]
+    );
+    const target = targetRows[0];
+    if (!target) return res.status(404).json({ error: 'Target purchase not found.' });
+    if (target.offer_id !== 'full_commercial_review' || target.status !== 'paid') {
+      return res.status(400).json({ error: 'Target purchase must be a paid Full Commercial Review.' });
+    }
+
+    await db.query(
+      `UPDATE purchases SET credited_toward_id = $1 WHERE id = $2`,
+      [targetId, sourceId]
+    );
+    await db.query(
+      `UPDATE purchases SET credit_applied_manually = true WHERE id = $1`,
+      [targetId]
+    );
+
+    await db.query(
+      'INSERT INTO audit_log (user_id, action, detail) VALUES ($1, $2, $3)',
+      [
+        req.session.user.id,
+        'purchase_credit_applied_manually',
+        `Commercial Review purchase #${sourceId} manually marked as crediting Full Commercial Review purchase #${targetId} by ${req.session.user.username}`
+      ]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Manual credit apply error:', err);
+    res.status(500).json({ error: 'Failed to apply credit.' });
+  }
+});
+
 module.exports = router;

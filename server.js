@@ -19,6 +19,7 @@ const adminRoutes = require('./routes/admin');
 const leadRoutes = require('./routes/leads');
 const marketReadyTest = require('./routes/marketReadyTest');
 const commercialGapsReview = require('./routes/commercialGapsReview');
+const whereToStart = require('./routes/whereToStart');
 const { publishedArticles, findBySlug: findUsefulThinkingArticle } = require('./lib/usefulThinkingArticles');
 const { getSiteShellData } = require('./lib/navShell');
 const { SITE_KEY: TURNSTILE_SITE_KEY } = require('./lib/turnstile');
@@ -145,6 +146,13 @@ app.use((req, res, next) => {
 
 // Cookie parsing (required by csrf-csrf)
 app.use(cookieParser());
+
+// Stripe webhook — registered before any JSON body parsing (it needs the
+// RAW request body to verify Stripe's signature) and before the CSRF
+// middleware further down (Stripe's servers don't send our CSRF token, so
+// this route must be exempt, same as any third-party webhook). See
+// routes/whereToStart.js for the handler itself.
+whereToStart.mountWebhook(app);
 
 // Body parsing. Only the image upload route carries a large base64 payload, so
 // it gets a 5mb limit; every other JSON endpoint gets a small default, which
@@ -395,9 +403,15 @@ app.get('/sitemap.xml', async (req, res, next) => {
       'owner-check': '2026-08-01',
       'owner-dependency-quiz': '2026-08-01',
       'commercial-gaps-review': '2026-08-01',
-      'privacy': '2026-08-03'
+      'privacy': '2026-08-03',
+      'where-to-start': '2026-08-09',
+      'where-to-start/commercial-review': '2026-08-09',
+      'where-to-start/full-commercial-review': '2026-08-09'
     };
-    for (const slug of ['owner-check', 'owner-dependency-quiz', 'commercial-gaps-review', 'privacy']) {
+    // where-to-start/confirmation is deliberately excluded — private,
+    // per-visitor payment status, noindex/nofollow on the page itself,
+    // same treatment as the quiz/review result pages.
+    for (const slug of ['owner-check', 'owner-dependency-quiz', 'commercial-gaps-review', 'privacy', 'where-to-start', 'where-to-start/commercial-review', 'where-to-start/full-commercial-review']) {
       urlEntries.push(`  <url><loc>${escapeXml(`${base}/${slug}`)}</loc><lastmod>${ASSESSMENT_ROUTE_LASTMOD[slug]}</lastmod></url>`);
     }
     res.type('application/xml').send(
@@ -495,6 +509,16 @@ app.use(marketReadyTest.router);
 // CSRF token needs generating here, ahead of the global res.locals set).
 commercialGapsReview.mountPageRoute(app, generateCsrfToken);
 app.use(commercialGapsReview.router);
+
+// Where to Start — priced offers with Stripe-hosted checkout (see
+// routes/whereToStart.js). Same registration pattern as the tools above:
+// GET pages registered directly so each page's CSRF token is generated
+// here, the checkout-creation POST route mounted via the router so it sits
+// behind the global CSRF middleware like every other public form on the
+// site (the webhook, which must NOT go through CSRF, is registered
+// separately, much earlier — see mountWebhook above).
+whereToStart.mountPageRoute(app, generateCsrfToken);
+app.use(whereToStart.router);
 
 // Serve v1.html as static with a relaxed CSP (legacy static page has
 // inline <style>/<script> blocks that predate the nonce setup).
@@ -624,9 +648,25 @@ async function renderPage(req, res, next, pageSlug) {
     // appending at the end if 'what-we-do' is ever renamed or removed.
     const ownerCheckNavEntry = { slug: 'owner-check', title: 'Owner Check', nav_label: '', hidden: false, show_in_nav: true };
     const whatWeDoIndex = allPages.findIndex(p => p.slug === 'what-we-do');
-    const navPages = whatWeDoIndex === -1
+    const navPagesWithOwnerCheck = whatWeDoIndex === -1
       ? [...allPages, ownerCheckNavEntry]
       : [...allPages.slice(0, whatWeDoIndex + 1), ownerCheckNavEntry, ...allPages.slice(whatWeDoIndex + 1)];
+
+    // Where to Start (09/08/2026) is a second standalone route synthetic nav
+    // entry, same reasoning as Owner Check above (no CMS template exists
+    // for "priced offer with a Stripe purchase button" — see
+    // routes/whereToStart.js). Deliberately placed after Evidence rather
+    // than immediately after What We Do/Owner Check: a visitor should see
+    // proof before they see prices, per the commercial-thinking review this
+    // page came out of — pricing ahead of proof reads as a shop, pricing
+    // after proof reads as "now that you've seen the work, here's how to
+    // start." Falls back to appending at the end if 'evidence' is ever
+    // renamed or removed.
+    const whereToStartNavEntry = { slug: 'where-to-start', title: 'Where to Start', nav_label: '', hidden: false, show_in_nav: true };
+    const evidenceIndex = navPagesWithOwnerCheck.findIndex(p => p.slug === 'evidence');
+    const navPages = evidenceIndex === -1
+      ? [...navPagesWithOwnerCheck, whereToStartNavEntry]
+      : [...navPagesWithOwnerCheck.slice(0, evidenceIndex + 1), whereToStartNavEntry, ...navPagesWithOwnerCheck.slice(evidenceIndex + 1)];
 
     // Load content
     const { rows } = await db.query('SELECT section_key, content FROM content');

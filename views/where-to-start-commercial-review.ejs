@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Commercial Review | Arrington Consultancy</title>
+    <meta name="description" content="A genuine piece of commercial work: give Tom enough context, he listens for as long as it takes, and you get a written assessment with recommendations and next steps within 4 business days. £500, credited in full against the Full Commercial Review.">
+    <link rel="canonical" href="https://www.arringtonconsultancy.com/where-to-start/commercial-review">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Commercial Review | Arrington Consultancy">
+    <meta property="og:description" content="A genuine piece of commercial work, not a teaser. £500, credited in full against the Full Commercial Review.">
+    <meta property="og:url" content="https://www.arringtonconsultancy.com/where-to-start/commercial-review">
+    <meta property="og:image" content="https://www.arringtonconsultancy.com/img/logo">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="csrf-token" content="<%= csrfToken %>">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18129914078"></script>
+    <script nonce="<%= nonce %>">
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'AW-18129914078');
+        <% if (ga4Id) { %>
+        gtag('config', '<%= ga4Id %>');
+        <% } %>
+    </script>
+    <style nonce="<%= nonce %>">
+        :root {
+            <% for (const [prop, val] of Object.entries(theme.vars)) { %>
+            <%= prop %>: <%= val %>;
+            <% } %>
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: 'DM Sans', sans-serif; background: var(--black); color: var(--text); line-height: 1.6; }
+        <%- include('partials/site-chrome-styles') %>
+
+        h1, h2, h3 { font-family: 'DM Serif Display', serif; font-weight: 400; color: var(--text-bright); line-height: 1.22; margin: 0 0 1rem; }
+        p { color: var(--text); margin: 0 0 1.2rem; }
+
+        .wts-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; color: var(--accent); margin-bottom: 1rem; display: block; }
+        .btn { display: inline-block; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 600; padding: 0.9rem 1.9rem; border-radius: 3px; text-decoration: none; cursor: pointer; border: 1px solid transparent; }
+        .btn-primary { background: var(--accent); color: var(--black); border-color: var(--accent); }
+        .btn-primary:hover, .btn-primary:focus-visible { background: var(--accent-hover); border-color: var(--accent-hover); }
+        .btn-primary:disabled { opacity: 0.6; cursor: default; }
+        .btn-outline { background: transparent; color: var(--text-bright); border-color: var(--border); }
+        .btn-outline:hover, .btn-outline:focus-visible { border-color: var(--accent); color: var(--accent); }
+
+        main { max-width: 640px; margin: 0 auto; padding: 8.5rem 1.5rem 5rem; }
+        .wts-back { font-size: 0.9rem; color: var(--text-muted); text-decoration: none; display: inline-block; margin-bottom: 2rem; }
+        .wts-back:hover { color: var(--accent); }
+        .wts-price { font-family: 'DM Sans', sans-serif; font-size: 1.15rem; font-weight: 600; color: var(--text-bright); margin-bottom: 1.5rem; }
+
+        .wts-what { border-top: 1px solid var(--border); padding-top: 2rem; margin-top: 2rem; }
+        .wts-what h2 { font-size: 1.3rem; }
+
+        .wts-form { border-top: 1px solid var(--border); padding-top: 2.5rem; margin-top: 2.5rem; }
+        .wts-form h2 { font-size: 1.3rem; }
+        .wts-form label { display: block; font-size: 0.88rem; color: var(--text-muted); margin-bottom: 0.4rem; }
+        .wts-form input[type="email"] {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            color: var(--text-bright);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            margin-bottom: 1.25rem;
+        }
+        .wts-form input[type="email"]:focus { outline: none; border-color: var(--accent); }
+        .wts-website-field { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+        .wts-form-status { font-size: 0.92rem; margin-top: 1rem; }
+        .wts-form-status--error { color: #e07a5f; }
+        .wts-form-status--ok { color: var(--accent); }
+    </style>
+</head>
+<body>
+    <%- include('partials/site-header', { currentPage: { slug: 'where-to-start' }, navPages, canEdit: false, content, pageContact }) %>
+
+    <main>
+        <a href="/where-to-start" class="wts-back">&larr; Where to Start</a>
+        <p class="wts-label">Commercial Review</p>
+        <h1><%= offer.name %></h1>
+        <p class="wts-price">£<%= (offer.pricePence / 100).toLocaleString('en-GB') %></p>
+        <p>This is a genuine piece of commercial work, not a shorter or lesser version of the Full Commercial Review. It is a single, tightly defined piece of Tom's judgement on one thing you want looked at properly.</p>
+
+        <div class="wts-what">
+            <h2>What you get</h2>
+            <p>You give Tom enough initial context to work with, potentially through a short questionnaire. He sits down with the business and listens for as long as it takes: sometimes thirty minutes, sometimes two hours. There is no fixed slot to book, and the conversation is not sold by the minute.</p>
+            <p>The conversation can be recorded, so it can be listened back to and assessed properly rather than judged in the moment. Tom then considers the business and the relevant evidence, and produces a written report: his assessment, his recommendations, a proposed direction, and next steps.</p>
+            <p>The report is completed within 4 business days.</p>
+            <p>If you go on to the Full Commercial Review, the £<%= (offer.pricePence / 100).toLocaleString('en-GB') %> you pay here is credited in full against it.</p>
+        </div>
+
+        <div class="wts-form">
+            <h2>Start the Commercial Review</h2>
+            <p>Payment is handled securely by Stripe. Card details are never seen by or stored on this site.</p>
+            <form id="wtsCheckoutForm" data-offer="commercial_review">
+                <label for="wtsEmail">Your email</label>
+                <input type="email" id="wtsEmail" name="email" required maxlength="255" autocomplete="email">
+                <div class="wts-website-field" aria-hidden="true">
+                    <label for="wtsWebsite">Leave this field blank</label>
+                    <input type="text" id="wtsWebsite" name="website" tabindex="-1" autocomplete="off">
+                </div>
+                <button type="submit" class="btn btn-primary" id="wtsCheckoutSubmit">Pay £<%= (offer.pricePence / 100).toLocaleString('en-GB') %> and start</button>
+                <p class="wts-form-status" id="wtsCheckoutStatus" role="status"></p>
+            </form>
+            <p style="margin-top: 1.5rem;"><a href="/where-to-start#conversation-offer" class="btn btn-outline">Not sure? Start with the free conversation instead</a></p>
+        </div>
+    </main>
+
+    <%- include('partials/site-footer', { canEdit: false, pageContact, content }) %>
+    <script nonce="<%= nonce %>">
+        <%- include('partials/site-chrome-script') %>
+
+        (function () {
+            const form = document.getElementById('wtsCheckoutForm');
+            if (!form) return;
+            const status = document.getElementById('wtsCheckoutStatus');
+            const submitBtn = document.getElementById('wtsCheckoutSubmit');
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                status.textContent = '';
+                status.className = 'wts-form-status';
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Starting checkout…';
+
+                const data = {
+                    email: document.getElementById('wtsEmail').value,
+                    website: document.getElementById('wtsWebsite').value
+                };
+
+                try {
+                    const res = await fetch('/api/checkout/' + form.dataset.offer, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                        body: JSON.stringify(data)
+                    });
+                    const result = await res.json();
+                    if (!res.ok || !result.ok) {
+                        throw new Error(result.error || 'Something went wrong.');
+                    }
+                    status.textContent = 'Redirecting to secure payment…';
+                    status.className = 'wts-form-status wts-form-status--ok';
+                    window.location.href = result.url;
+                } catch (err) {
+                    status.textContent = err.message || 'Something went wrong. Please try again.';
+                    status.className = 'wts-form-status wts-form-status--error';
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Pay £<%= (offer.pricePence / 100).toLocaleString('en-GB') %> and start';
+                }
+            });
+        })();
+    </script>
+</body>
+</html>
