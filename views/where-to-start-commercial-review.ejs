@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Commercial Review | Arrington Consultancy</title>
-    <meta name="description" content="A genuine, standalone Commercial Review: Tom listens for as long as it takes, then produces a written assessment, recommendations and next steps within 4 business days. £500, credited in full against the Full Commercial Review.">
+    <meta name="description" content="A genuine, standalone Commercial Review: we listen for as long as it takes, then produce a written assessment, recommendations and next steps within 4 business days. £500, credited in full against the Full Commercial Review.">
     <link rel="canonical" href="https://www.arringtonconsultancy.com/where-to-start/commercial-review">
     <meta property="og:type" content="website">
     <meta property="og:title" content="Commercial Review | Arrington Consultancy">
@@ -41,7 +41,7 @@
         p { color: var(--text); margin: 0 0 1.2rem; }
 
         .wts-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; color: var(--accent); margin-bottom: 1rem; display: block; }
-        .btn { display: inline-block; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 600; padding: 0.95rem 2rem; border-radius: 3px; text-decoration: none; cursor: pointer; border: 1px solid transparent; }
+        .btn { display: inline-block; font-family: 'DM Sans', sans-serif; font-size: 0.92rem; font-weight: 600; padding: 0.6rem 1.5rem; border-radius: 3px; text-decoration: none; cursor: pointer; border: 1px solid transparent; }
         .btn-primary { background: var(--accent); color: var(--black); border-color: var(--accent); }
         .btn-primary:hover, .btn-primary:focus-visible { background: var(--accent-hover); border-color: var(--accent-hover); }
         .btn-primary:disabled { opacity: 0.6; cursor: default; }
@@ -109,12 +109,12 @@
             <h1><%= offer.name %></h1>
             <p class="wts-price">£<%= (offer.pricePence / 100).toLocaleString('en-GB') %></p>
         </div>
-        <p class="wts-lede">This is a genuine Commercial Review in its own right, not a smaller or lesser version of the Full Commercial Review. Its value is Tom's commercial judgement and assessment, not minutes purchased.</p>
+        <p class="wts-lede">A genuine Commercial Review in its own right, not a smaller version of the Full Commercial Review. Its value is the judgement, not the minutes.</p>
 
         <div class="wts-section">
             <h2>What happens</h2>
-            <p>Tom listens to you for as long as it takes to properly understand the position. That might be thirty minutes, ninety minutes, two hours, or however long the conversation genuinely needs. The conversation may be recorded so it can be listened back to properly, rather than judged in the moment.</p>
-            <p>He then assesses the business and whatever else is relevant, and produces a written report setting out his assessment, his recommendations, the direction he thinks you should take, and the priorities and next steps.</p>
+            <p>We listen for as long as it genuinely takes to understand the position &mdash; thirty minutes or two hours. The call may be recorded so it can be reviewed properly rather than judged in the moment.</p>
+            <p>We then assess the business and whatever else is relevant, and produce a written report: assessment, recommendations, direction, and next steps.</p>
         </div>
 
         <div class="wts-section">
@@ -125,7 +125,7 @@
         <div class="wts-section">
             <h2>The credit</h2>
             <div class="wts-credit-note">
-                <p>If you go on to a Full Commercial Review, the £<%= (offer.pricePence / 100).toLocaleString('en-GB') %> you pay here is credited in full against it.</p>
+                <p>If you go on to a Full Commercial Review, the £<%= (offer.pricePence / 100).toLocaleString('en-GB') %> you pay here is credited in full.</p>
             </div>
         </div>
 
@@ -139,10 +139,10 @@
                     <label for="wtsWebsite">Leave this field blank</label>
                     <input type="text" id="wtsWebsite" name="website" tabindex="-1" autocomplete="off">
                 </div>
-                <button type="submit" class="btn btn-primary" id="wtsCheckoutSubmit">Start your Commercial Review &mdash; £<%= (offer.pricePence / 100).toLocaleString('en-GB') %></button>
+                <button type="submit" class="btn btn-primary" id="wtsCheckoutSubmit">Start your Commercial Review</button>
                 <p class="wts-form-status" id="wtsCheckoutStatus" role="status"></p>
             </form>
-            <p class="wts-alt-route"><a href="/where-to-start#conversation-offer">Not sure? Start with the free conversation instead &rarr;</a></p>
+            <p class="wts-alt-route"><a href="/where-to-start#conversation-offer">Not sure? Start with the free conversation &rarr;</a></p>
         </div>
     </main>
 

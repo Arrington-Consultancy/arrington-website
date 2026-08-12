@@ -41,7 +41,7 @@
         p { color: var(--text); margin: 0 0 1.2rem; }
 
         .wts-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; color: var(--accent); margin-bottom: 1rem; display: block; }
-        .btn { display: inline-block; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 600; padding: 0.95rem 2rem; border-radius: 3px; text-decoration: none; cursor: pointer; border: 1px solid transparent; }
+        .btn { display: inline-block; font-family: 'DM Sans', sans-serif; font-size: 0.92rem; font-weight: 600; padding: 0.6rem 1.5rem; border-radius: 3px; text-decoration: none; cursor: pointer; border: 1px solid transparent; }
         .btn-primary { background: var(--accent); color: var(--black); border-color: var(--accent); }
         .btn-primary:hover, .btn-primary:focus-visible { background: var(--accent-hover); border-color: var(--accent-hover); }
         .btn-primary:disabled { opacity: 0.6; cursor: default; }
@@ -95,6 +95,42 @@
         .wts-alt-route { margin-top: 1.6rem; font-size: 0.95rem; }
         .wts-alt-route a { color: var(--text-muted); }
         .wts-alt-route a:hover { color: var(--accent); }
+
+        /* EVIDENCE — two real, public documents rather than an abstract
+           claim of quality. Compact horizontal cards on desktop, stacked on
+           mobile. Deliberately not a repeat of the Evidence page's full
+           documents template: no PDF-gated download flow here, just a
+           preview thumbnail, title and one-line description linking through
+           to the real thing. */
+        .wts-evidence-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-top: 0.5rem;
+        }
+        .wts-evidence-card {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+            text-decoration: none;
+            padding: 1rem;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+        }
+        .wts-evidence-card:hover, .wts-evidence-card:focus-visible { border-color: var(--accent); }
+        .wts-evidence-thumb {
+            width: 64px;
+            height: 82px;
+            object-fit: cover;
+            border-radius: 2px;
+            flex-shrink: 0;
+            border: 1px solid var(--border);
+        }
+        .wts-evidence-title { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 0.98rem; color: var(--text-bright); margin-bottom: 0.3rem; }
+        .wts-evidence-card p { font-size: 0.88rem; color: var(--text-muted); margin: 0; }
+        @media (max-width: 640px) {
+            .wts-evidence-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
@@ -111,20 +147,18 @@
 
         <div class="wts-section">
             <h2>What's different</h2>
-            <p>The Full Commercial Review allows substantially more time to understand the business, following the evidence rather than relying solely on what the owner first believes is happening. Where useful, that can include time inside the business itself.</p>
+            <p>Substantially more time to understand the business, following the evidence rather than relying solely on what the owner first believes is happening &mdash; where useful, that includes time inside the business itself.</p>
             <p>Recommendations are developed in far more depth, discussed with you, challenged and refined as the evidence warrants.</p>
         </div>
 
         <div class="wts-section">
             <h2>Then we build it</h2>
-            <p>From there, the work moves beyond telling you the direction we think the business should take. We build the practical action plan and begin helping put the right things in place.</p>
-            <p>Depending on what the business actually needs, that could include an AI business brain or wider operational AI systems, management and operational systems, website work, social media systems, business structure, commercial reporting, or working alongside the right tax, accountancy or specialist advisers where regulated advice is genuinely needed. Not every review includes every one of these &mdash; the work follows what the business actually needs.</p>
-            <p>The standard and depth is the same one behind Arrington's existing evidence and case studies. Not every client receives the same documents, but every client receives work at that standard.</p>
+            <p>From there, the work moves beyond telling you the direction. We build the practical action plan and start helping put the right things in place &mdash; that could mean AI systems, operational systems, website work, business structure, commercial reporting, or working alongside the right tax or accountancy advisers where regulated advice is genuinely needed. The work follows what the business actually needs, not a fixed list.</p>
         </div>
 
         <div class="wts-section">
             <h2>Timeline and scope</h2>
-            <p>Completed within 4 weeks. £<%= (offer.pricePence / 100).toLocaleString('en-GB') %> is a fixed price for the Full Commercial Review as defined here. If something material comes up that sits outside that, we discuss it separately.</p>
+            <p>Completed within 4 weeks. £<%= (offer.pricePence / 100).toLocaleString('en-GB') %> is a fixed price as defined here; anything materially outside that is discussed separately.</p>
         </div>
 
         <% if (offer.creditFrom) { %>
@@ -135,6 +169,27 @@
             </div>
         </div>
         <% } %>
+
+        <div class="wts-section">
+            <h2>See the standard</h2>
+            <p>Two real, public examples of the evidence-led work behind this review.</p>
+            <div class="wts-evidence-grid">
+                <a class="wts-evidence-card" href="/evidence#documents">
+                    <img class="wts-evidence-thumb" src="/img/docs/half-time-team-talk.jpg" alt="" loading="lazy">
+                    <div>
+                        <p class="wts-evidence-title">Half-Time Team Talk</p>
+                        <p>What became clear after spending time inside the business and following the evidence.</p>
+                    </div>
+                </a>
+                <a class="wts-evidence-card" href="/evidence#documents">
+                    <img class="wts-evidence-thumb" src="/img/docs/90-day-action-plan.jpg" alt="" loading="lazy">
+                    <div>
+                        <p class="wts-evidence-title">90-Day Action Plan</p>
+                        <p>Findings turned into practical actions, owners, deadlines and evidence of completion.</p>
+                    </div>
+                </a>
+            </div>
+        </div>
 
         <% if (purchaseMode === 'direct_purchase') { %>
         <div class="wts-form-section">
@@ -147,7 +202,7 @@
                     <label for="wtsWebsite">Leave this field blank</label>
                     <input type="text" id="wtsWebsite" name="website" tabindex="-1" autocomplete="off">
                 </div>
-                <button type="submit" class="btn btn-primary" id="wtsCheckoutSubmit">Start your Full Commercial Review &mdash; £<%= (offer.pricePence / 100).toLocaleString('en-GB') %></button>
+                <button type="submit" class="btn btn-primary" id="wtsCheckoutSubmit">Start your Full Commercial Review</button>
                 <p class="wts-form-status" id="wtsCheckoutStatus" role="status"></p>
             </form>
             <p class="wts-alt-route"><a href="#conversation">Prefer to talk first? Start with a conversation &rarr;</a></p>

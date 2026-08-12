@@ -76,9 +76,9 @@
             display: inline-block;
             max-width: 100%;
             font-family: 'DM Sans', sans-serif;
-            font-size: 0.95rem;
+            font-size: 0.92rem;
             font-weight: 600;
-            padding: 0.9rem 1.9rem;
+            padding: 0.55rem 1.35rem;
             border-radius: 3px;
             text-decoration: none;
             cursor: pointer;
@@ -228,9 +228,9 @@
                     <h2><%= offers.commercial_review.name %></h2>
                     <p class="wts-step-price">£<%= (offers.commercial_review.pricePence / 100).toLocaleString('en-GB') %></p>
                 </div>
-                <p class="wts-step-kicker">A genuine, standalone piece of Tom's commercial judgement.</p>
-                <p class="wts-step-body">Tom listens for as long as it takes to properly understand the business, then produces a written report: his assessment, his recommendations and what to do first. Completed within 4 business days. <strong>Fully credited</strong> if you go on to a Full Commercial Review.</p>
-                <a href="/where-to-start/commercial-review" class="btn btn-primary">Start your Commercial Review &mdash; £<%= (offers.commercial_review.pricePence / 100).toLocaleString('en-GB') %></a>
+                <p class="wts-step-kicker">A genuine, standalone piece of commercial judgement.</p>
+                <p class="wts-step-body">We listen for as long as it takes to understand the business, then produce a written report: assessment, recommendations, and what to do first. Within 4 business days. <strong>Fully credited</strong> against a Full Commercial Review.</p>
+                <a href="/where-to-start/commercial-review" class="btn btn-primary">Start your Commercial Review</a>
             </section>
 
             <section class="wts-step" id="full-review-offer">
@@ -240,8 +240,8 @@
                     <p class="wts-step-price">£<%= (offers.full_commercial_review.pricePence / 100).toLocaleString('en-GB') %></p>
                 </div>
                 <p class="wts-step-kicker">Depth, access, and help putting the plan into action.</p>
-                <p class="wts-step-body">Substantially more time and access, evidence followed rather than assumed, and practical help putting the right things in place once we agree the direction. Completed within 4 weeks.</p>
-                <a href="/where-to-start/full-commercial-review" class="btn btn-primary">Start your Full Commercial Review &mdash; £<%= (offers.full_commercial_review.pricePence / 100).toLocaleString('en-GB') %></a>
+                <p class="wts-step-body">More time, evidence followed rather than assumed, and practical help putting the right things in place once we agree the direction. Completed within 4 weeks.</p>
+                <a href="/where-to-start/full-commercial-review" class="btn btn-primary">Start your Full Commercial Review</a>
             </section>
         </div>
 
@@ -251,7 +251,7 @@
                 <h2>Website Build</h2>
                 <p class="wts-build-price">From £999</p>
             </div>
-            <p class="wts-build-body">A genuinely bespoke website, built properly. This is build work, not commercial diagnosis &mdash; a different kind of project from the two reviews above.</p>
+            <p class="wts-build-body">A genuinely bespoke website. Build work, not commercial diagnosis &mdash; a different kind of project from the two reviews above.</p>
             <a href="/websites-and-ai" class="btn btn-outline">See the website offer</a>
         </section>
 
