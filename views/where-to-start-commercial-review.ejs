@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Commercial Review | Arrington Consultancy</title>
-    <meta name="description" content="A genuine piece of commercial work: give Tom enough context, he listens for as long as it takes, and you get a written assessment with recommendations and next steps within 4 business days. £500, credited in full against the Full Commercial Review.">
+    <meta name="description" content="A genuine, standalone Commercial Review: we listen for as long as it takes, then produce a written assessment, recommendations and next steps within 4 business days. £500, credited in full against the Full Commercial Review.">
     <link rel="canonical" href="https://www.arringtonconsultancy.com/where-to-start/commercial-review">
     <meta property="og:type" content="website">
     <meta property="og:title" content="Commercial Review | Arrington Consultancy">
-    <meta property="og:description" content="A genuine piece of commercial work, not a teaser. £500, credited in full against the Full Commercial Review.">
+    <meta property="og:description" content="A genuine, standalone Commercial Review. £500, credited in full against the Full Commercial Review.">
     <meta property="og:url" content="https://www.arringtonconsultancy.com/where-to-start/commercial-review">
     <meta property="og:image" content="https://www.arringtonconsultancy.com/img/logo">
     <meta name="twitter:card" content="summary_large_image">
@@ -37,44 +37,66 @@
         body { margin: 0; font-family: 'DM Sans', sans-serif; background: var(--black); color: var(--text); line-height: 1.6; }
         <%- include('partials/site-chrome-styles') %>
 
-        h1, h2, h3 { font-family: 'DM Serif Display', serif; font-weight: 400; color: var(--text-bright); line-height: 1.22; margin: 0 0 1rem; }
+        h1, h2 { font-family: 'DM Serif Display', serif; font-weight: 400; color: var(--text-bright); line-height: 1.2; margin: 0; }
         p { color: var(--text); margin: 0 0 1.2rem; }
 
         .wts-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; color: var(--accent); margin-bottom: 1rem; display: block; }
-        .btn { display: inline-block; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 600; padding: 0.9rem 1.9rem; border-radius: 3px; text-decoration: none; cursor: pointer; border: 1px solid transparent; }
+        .btn { display: inline-block; font-family: 'DM Sans', sans-serif; font-size: 0.92rem; font-weight: 600; padding: 0.6rem 1.5rem; border-radius: 3px; text-decoration: none; cursor: pointer; border: 1px solid transparent; }
         .btn-primary { background: var(--accent); color: var(--black); border-color: var(--accent); }
         .btn-primary:hover, .btn-primary:focus-visible { background: var(--accent-hover); border-color: var(--accent-hover); }
         .btn-primary:disabled { opacity: 0.6; cursor: default; }
         .btn-outline { background: transparent; color: var(--text-bright); border-color: var(--border); }
         .btn-outline:hover, .btn-outline:focus-visible { border-color: var(--accent); color: var(--accent); }
 
-        main { max-width: 640px; margin: 0 auto; padding: 8.5rem 1.5rem 5rem; }
-        .wts-back { font-size: 0.9rem; color: var(--text-muted); text-decoration: none; display: inline-block; margin-bottom: 2rem; }
+        main { max-width: 640px; margin: 0 auto; padding: 8rem 1.5rem 5rem; }
+        .wts-back { font-size: 0.9rem; color: var(--text-muted); text-decoration: none; display: inline-block; margin-bottom: 2.5rem; }
         .wts-back:hover { color: var(--accent); }
-        .wts-price { font-family: 'DM Sans', sans-serif; font-size: 1.15rem; font-weight: 600; color: var(--text-bright); margin-bottom: 1.5rem; }
 
-        .wts-what { border-top: 1px solid var(--border); padding-top: 2rem; margin-top: 2rem; }
-        .wts-what h2 { font-size: 1.3rem; }
+        /* Price gets real weight here — this is the page whose whole job is
+           to make the purchase feel concrete, not the page to be coy on. */
+        .wts-hero-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 1.4rem; }
+        .wts-hero-head h1 { font-size: clamp(1.9rem, 4.5vw, 2.4rem); }
+        .wts-price { font-family: 'DM Serif Display', serif; font-size: clamp(2.4rem, 6vw, 3rem); color: var(--accent); line-height: 1; }
+        .wts-lede { font-size: 1.12rem; color: var(--text-bright); max-width: 560px; }
 
-        .wts-form { border-top: 1px solid var(--border); padding-top: 2.5rem; margin-top: 2.5rem; }
-        .wts-form h2 { font-size: 1.3rem; }
+        .wts-section { border-top: 1px solid var(--border); padding-top: 2rem; margin-top: 2.5rem; }
+        .wts-section h2 { font-size: 1.05rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: 1.2rem; }
+        .wts-section p { font-size: 1.02rem; }
+        .wts-credit-note {
+            display: inline-block;
+            margin-top: 0.3rem;
+            padding: 0.9rem 1.2rem;
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            border-radius: 2px;
+            font-size: 0.98rem;
+            color: var(--text-bright);
+        }
+        .wts-credit-note p { margin: 0; }
+
+        .wts-form-section { border-top: 1px solid var(--border); padding-top: 2.5rem; margin-top: 2.5rem; }
+        .wts-form-section h2 { font-size: 1.4rem; margin-bottom: 0.5rem; }
+        .wts-form-note { font-size: 0.92rem; color: var(--text-muted); margin-bottom: 1.6rem; }
         .wts-form label { display: block; font-size: 0.88rem; color: var(--text-muted); margin-bottom: 0.4rem; }
         .wts-form input[type="email"] {
             width: 100%;
-            padding: 0.85rem 1rem;
+            padding: 0.9rem 1rem;
             background: transparent;
             border: 1px solid var(--border);
             border-radius: 3px;
             color: var(--text-bright);
             font-family: 'DM Sans', sans-serif;
             font-size: 1rem;
-            margin-bottom: 1.25rem;
+            margin-bottom: 1.4rem;
         }
         .wts-form input[type="email"]:focus { outline: none; border-color: var(--accent); }
         .wts-website-field { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
         .wts-form-status { font-size: 0.92rem; margin-top: 1rem; }
         .wts-form-status--error { color: #e07a5f; }
         .wts-form-status--ok { color: var(--accent); }
+        .wts-alt-route { margin-top: 1.6rem; font-size: 0.95rem; }
+        .wts-alt-route a { color: var(--text-muted); }
+        .wts-alt-route a:hover { color: var(--accent); }
     </style>
 </head>
 <body>
@@ -82,22 +104,34 @@
 
     <main>
         <a href="/where-to-start" class="wts-back">&larr; Where to Start</a>
-        <p class="wts-label">Commercial Review</p>
-        <h1><%= offer.name %></h1>
-        <p class="wts-price">£<%= (offer.pricePence / 100).toLocaleString('en-GB') %></p>
-        <p>This is a genuine piece of commercial work, not a shorter or lesser version of the Full Commercial Review. It is a single, tightly defined piece of Tom's judgement on one thing you want looked at properly.</p>
 
-        <div class="wts-what">
-            <h2>What you get</h2>
-            <p>You give Tom enough initial context to work with, potentially through a short questionnaire. He sits down with the business and listens for as long as it takes: sometimes thirty minutes, sometimes two hours. There is no fixed slot to book, and the conversation is not sold by the minute.</p>
-            <p>The conversation can be recorded, so it can be listened back to and assessed properly rather than judged in the moment. Tom then considers the business and the relevant evidence, and produces a written report: his assessment, his recommendations, a proposed direction, and next steps.</p>
-            <p>The report is completed within 4 business days.</p>
-            <p>If you go on to the Full Commercial Review, the £<%= (offer.pricePence / 100).toLocaleString('en-GB') %> you pay here is credited in full against it.</p>
+        <div class="wts-hero-head">
+            <h1><%= offer.name %></h1>
+            <p class="wts-price">£<%= (offer.pricePence / 100).toLocaleString('en-GB') %></p>
+        </div>
+        <p class="wts-lede">A genuine Commercial Review in its own right, not a smaller version of the Full Commercial Review. Its value is the judgement, not the minutes.</p>
+
+        <div class="wts-section">
+            <h2>What happens</h2>
+            <p>We listen for as long as it genuinely takes to understand the position &mdash; thirty minutes or two hours. The call may be recorded so it can be reviewed properly rather than judged in the moment.</p>
+            <p>We then assess the business and whatever else is relevant, and produce a written report: assessment, recommendations, direction, and next steps.</p>
         </div>
 
-        <div class="wts-form">
-            <h2>Start the Commercial Review</h2>
-            <p>Payment is handled securely by Stripe. Card details are never seen by or stored on this site.</p>
+        <div class="wts-section">
+            <h2>Timeline</h2>
+            <p>The report is completed within 4 business days.</p>
+        </div>
+
+        <div class="wts-section">
+            <h2>The credit</h2>
+            <div class="wts-credit-note">
+                <p>If you go on to a Full Commercial Review, the £<%= (offer.pricePence / 100).toLocaleString('en-GB') %> you pay here is credited in full.</p>
+            </div>
+        </div>
+
+        <div class="wts-form-section">
+            <h2>Start your Commercial Review</h2>
+            <p class="wts-form-note">Payment is handled securely by Stripe. Card details are never seen by or stored on this site.</p>
             <form id="wtsCheckoutForm" data-offer="commercial_review">
                 <label for="wtsEmail">Your email</label>
                 <input type="email" id="wtsEmail" name="email" required maxlength="255" autocomplete="email">
@@ -105,10 +139,10 @@
                     <label for="wtsWebsite">Leave this field blank</label>
                     <input type="text" id="wtsWebsite" name="website" tabindex="-1" autocomplete="off">
                 </div>
-                <button type="submit" class="btn btn-primary" id="wtsCheckoutSubmit">Pay £<%= (offer.pricePence / 100).toLocaleString('en-GB') %> and start</button>
+                <button type="submit" class="btn btn-primary" id="wtsCheckoutSubmit">Start your Commercial Review</button>
                 <p class="wts-form-status" id="wtsCheckoutStatus" role="status"></p>
             </form>
-            <p style="margin-top: 1.5rem;"><a href="/where-to-start#conversation-offer" class="btn btn-outline">Not sure? Start with the free conversation instead</a></p>
+            <p class="wts-alt-route"><a href="/where-to-start#conversation-offer">Not sure? Start with the free conversation &rarr;</a></p>
         </div>
     </main>
 
@@ -122,6 +156,7 @@
             const status = document.getElementById('wtsCheckoutStatus');
             const submitBtn = document.getElementById('wtsCheckoutSubmit');
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+            const originalLabel = submitBtn.textContent;
 
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -152,7 +187,7 @@
                     status.textContent = err.message || 'Something went wrong. Please try again.';
                     status.className = 'wts-form-status wts-form-status--error';
                     submitBtn.disabled = false;
-                    submitBtn.textContent = 'Pay £<%= (offer.pricePence / 100).toLocaleString('en-GB') %> and start';
+                    submitBtn.textContent = originalLabel;
                 }
             });
         })();
