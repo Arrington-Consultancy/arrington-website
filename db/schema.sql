@@ -169,3 +169,28 @@ CREATE INDEX IF NOT EXISTS idx_commercial_gaps_created_at ON commercial_gaps_rev
 -- Used by the deployment-independent retention sweep (see server.js) to find
 -- stale failed/abandoned rows without a full table scan.
 CREATE INDEX IF NOT EXISTS idx_commercial_gaps_status_created ON commercial_gaps_reviews (status, created_at);
+
+-- Where to Start — Stripe-backed purchases of the priced offers (see
+-- lib/whereToStartOffers.js for the catalogue, routes/whereToStart.js for
+-- the checkout/webhook flow). One row per attempted checkout, created
+-- 'pending' the moment a Checkout Session is requested and flipped to
+-- 'paid'/'failed' only by the webhook handler (never by the success-page
+-- redirect alone, which isn't trustworthy on its own). credited_toward_id
+-- is set on a completed £500 Commercial Review row once its holder goes on
+-- to pay for the Full Commercial Review with the same email, so the £500
+-- credit is only ever applied once per purchase.
+CREATE TABLE IF NOT EXISTS purchases (
+    id SERIAL PRIMARY KEY,
+    offer_id VARCHAR(50) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    amount_pence INTEGER NOT NULL,
+    currency VARCHAR(10) NOT NULL DEFAULT 'gbp',
+    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'failed', 'expired')),
+    stripe_session_id VARCHAR(255) UNIQUE,
+    stripe_payment_intent_id VARCHAR(255),
+    credited_toward_id INTEGER REFERENCES purchases(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_purchases_email_offer_status ON purchases (email, offer_id, status);
+CREATE INDEX IF NOT EXISTS idx_purchases_stripe_session ON purchases (stripe_session_id);
