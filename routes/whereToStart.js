@@ -326,6 +326,35 @@ function mountWebhook(app) {
             ].filter(Boolean).join('\n'),
             replyTo: purchase.email
           });
+
+          // Customer-facing confirmation — separate from the owner
+          // notification above. Without this, the only things a paying
+          // customer gets are the confirmation page and whatever Stripe's
+          // own account-level receipt/invoice email settings happen to be
+          // (both outside this codebase's control, see
+          // buildCheckoutSessionParams). The confirmation page copy
+          // already promises "you will receive a short intake
+          // questionnaire by email" — this is what actually sends that,
+          // rather than leaving it as a promise nothing fulfils.
+          if (transporter) {
+            const isCommercialReview = purchase.offer_id === 'commercial_review';
+            transporter.sendMail({
+              from: NOTIFY_FROM,
+              to: purchase.email,
+              subject: `Arrington Consultancy: payment received — ${offer ? offer.name : purchase.offer_id}`,
+              text: [
+                `Thank you — your payment for the ${offer ? offer.name : purchase.offer_id} has gone through.`,
+                '',
+                isCommercialReview
+                  ? "Next, you'll receive a short questionnaire by email so Tom has enough context before you talk. The written report follows within 4 business days of that conversation."
+                  : "Next, you'll receive a short questionnaire by email to get started. Tom will be in touch to confirm the working plan and timeline.",
+                '',
+                'If anything about this is unclear, just reply to this email.'
+              ].join('\n')
+            }).catch((err) => console.error('Customer confirmation email failed:', err.message));
+          } else {
+            console.warn('GMAIL_APP_PASSWORD not set — skipping customer confirmation email.');
+          }
         }
       } else if (event.type === 'checkout.session.expired') {
         await db.query(
