@@ -202,11 +202,16 @@ router.post('/api/checkout/:offerId', checkoutLimiter, async (req, res) => {
       return res.status(503).json({ error: 'Payments are not yet configured. Please use the conversation link instead.' });
     }
 
-    // £500 credit: if this checkout is for the offer that offer.creditFrom
-    // points at, and this email has a completed, not-yet-credited purchase
-    // of that earlier offer, apply a one-off Stripe coupon for the credit
-    // amount rather than asking the customer to enter any kind of code.
-    let discountCouponId = null;
+    // £500 credit: tracked as an Arrington-owned entitlement in our own
+    // purchases table, not a Stripe coupon (see buildCheckoutSessionParams
+    // for why). If this checkout is for the offer that offer.creditFrom
+    // points at, and this email has a paid, not-yet-credited purchase of
+    // that earlier offer, the Checkout Session's line item is simply built
+    // at the already-discounted amount. Email match is a convenience, not
+    // the sole authority — if a customer paid under a different email, Tom
+    // can apply the credit manually afterwards via
+    // PUT /api/admin/purchases/:id/apply-credit (routes/admin.js).
+    let creditAppliedPence = 0;
     if (offer.creditFrom) {
       const { rows: creditRows } = await db.query(
         `SELECT id FROM purchases
@@ -215,15 +220,10 @@ router.post('/api/checkout/:offerId', checkoutLimiter, async (req, res) => {
         [email, offer.creditFrom]
       );
       if (creditRows.length > 0) {
-        const coupon = await stripe.coupons.create({
-          amount_off: offer.creditAmountPence,
-          currency: offer.currency,
-          duration: 'once',
-          name: 'Commercial Review credit'
-        });
-        discountCouponId = coupon.id;
+        creditAppliedPence = offer.creditAmountPence;
       }
     }
+    const chargeAmountPence = offer.pricePence - creditAppliedPence;
 
     const origin = `${req.protocol}://${req.get('host')}`;
     const params = buildCheckoutSessionParams({
@@ -231,21 +231,24 @@ router.post('/api/checkout/:offerId', checkoutLimiter, async (req, res) => {
       email,
       successUrl: `${origin}/where-to-start/confirmation?session_id={CHECKOUT_SESSION_ID}`,
       cancelUrl: `${origin}/where-to-start/${offer.id === 'commercial_review' ? 'commercial-review' : 'full-commercial-review'}`,
-      discountCouponId
+      chargeAmountPence,
+      creditAppliedPence
     });
 
     const session = await stripe.checkout.sessions.create(params);
 
     await db.query(
-      `INSERT INTO purchases (offer_id, email, amount_pence, currency, status, stripe_session_id, credited_toward_id)
-       VALUES ($1, $2, $3, $4, 'pending', $5, NULL)`,
-      [offer.id, email, offer.pricePence - (discountCouponId ? offer.creditAmountPence : 0), offer.currency, session.id]
+      `INSERT INTO purchases (offer_id, email, list_price_pence, amount_pence, credit_applied_pence, currency, status, stripe_session_id, credited_toward_id)
+       VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, NULL)`,
+      [offer.id, email, offer.pricePence, chargeAmountPence, creditAppliedPence, offer.currency, session.id]
     );
 
-    // The £500 credit is only ever marked applied (credited_toward_id set
-    // on the source purchase) once the webhook below confirms this new
-    // session actually completed — never here at session-creation time,
-    // since the customer hasn't paid yet and may abandon checkout.
+    // The £500 credit is only ever marked consumed (credited_toward_id set
+    // on the original £500 purchase) once the webhook below confirms this
+    // new session actually completed — never here at session-creation
+    // time, since the customer hasn't paid yet and may abandon checkout.
+    // The original £500 row itself is never touched beyond that one field,
+    // so it stays exactly as charged: a fully auditable £500 payment.
 
     res.json({ ok: true, url: session.url });
   } catch (err) {
@@ -286,7 +289,7 @@ function mountWebhook(app) {
           `UPDATE purchases
            SET status = 'paid', stripe_payment_intent_id = $1, updated_at = NOW()
            WHERE stripe_session_id = $2
-           RETURNING id, offer_id, email, amount_pence, currency`,
+           RETURNING id, offer_id, email, list_price_pence, amount_pence, credit_applied_pence, currency`,
           [session.payment_intent || '', session.id]
         );
         const purchase = rows[0];
@@ -311,13 +314,16 @@ function mountWebhook(app) {
           notify({
             subject: `Where to Start: paid — ${offer ? offer.name : purchase.offer_id} (${purchase.email})`,
             text: [
-              `Offer: ${offer ? offer.name : purchase.offer_id}`,
+              `Offer: ${offer ? offer.name : purchase.offer_id} (list price £${(purchase.list_price_pence / 100).toFixed(2)})`,
               `Email: ${purchase.email}`,
               `Amount charged: £${(purchase.amount_pence / 100).toFixed(2)} ${String(purchase.currency).toUpperCase()}`,
+              purchase.credit_applied_pence > 0
+                ? `£${(purchase.credit_applied_pence / 100).toFixed(2)} Commercial Review credit applied automatically (matched by email).`
+                : '',
               `Stripe session: ${session.id}`,
               '',
               'Next step: send the intake questionnaire and confirm the working timeline.'
-            ].join('\n'),
+            ].filter(Boolean).join('\n'),
             replyTo: purchase.email
           });
         }

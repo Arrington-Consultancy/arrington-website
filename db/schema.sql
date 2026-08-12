@@ -175,15 +175,30 @@ CREATE INDEX IF NOT EXISTS idx_commercial_gaps_status_created ON commercial_gaps
 -- the checkout/webhook flow). One row per attempted checkout, created
 -- 'pending' the moment a Checkout Session is requested and flipped to
 -- 'paid'/'failed' only by the webhook handler (never by the success-page
--- redirect alone, which isn't trustworthy on its own). credited_toward_id
--- is set on a completed £500 Commercial Review row once its holder goes on
--- to pay for the Full Commercial Review with the same email, so the £500
--- credit is only ever applied once per purchase.
+-- redirect alone, which isn't trustworthy on its own).
+--
+-- The £500 Commercial Review credit is tracked as an Arrington-owned
+-- entitlement in this table, not as a Stripe coupon: credited_toward_id is
+-- set on the original £500 row once its credit has been consumed by a
+-- later Full Commercial Review purchase (by automatic email match in
+-- routes/whereToStart.js, or by Tom's manual override in routes/admin.js
+-- when the customer paid under a different email). A row can only ever be
+-- the source of one credit — every lookup filters on
+-- credited_toward_id IS NULL — and the original £500 row is never mutated
+-- beyond that one field, so it stays a fully auditable record of what was
+-- actually charged. list_price_pence is the offer's real price (always
+-- 250000 for the Full Commercial Review, regardless of any credit) so the
+-- service itself always reads as what it is; amount_pence is what Stripe
+-- actually charged on this specific session, which is list_price_pence
+-- minus credit_applied_pence when a credit was applied.
 CREATE TABLE IF NOT EXISTS purchases (
     id SERIAL PRIMARY KEY,
     offer_id VARCHAR(50) NOT NULL,
     email VARCHAR(255) NOT NULL,
+    list_price_pence INTEGER NOT NULL,
     amount_pence INTEGER NOT NULL,
+    credit_applied_pence INTEGER NOT NULL DEFAULT 0,
+    credit_applied_manually BOOLEAN NOT NULL DEFAULT false,
     currency VARCHAR(10) NOT NULL DEFAULT 'gbp',
     status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'failed', 'expired')),
     stripe_session_id VARCHAR(255) UNIQUE,

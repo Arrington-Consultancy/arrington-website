@@ -48,7 +48,8 @@ describe('buildCheckoutSessionParams', () => {
     assert.equal(params.line_items[0].price_data.currency, 'gbp');
     assert.equal(params.line_items[0].price_data.product_data.name, 'Commercial Review');
     assert.equal(params.metadata.offer_id, 'commercial_review');
-    assert.equal(params.discounts, undefined);
+    assert.equal(params.metadata.list_price_pence, '50000');
+    assert.equal(params.metadata.credit_applied_pence, '0');
   });
 
   test('never hardcodes payment_method_types, so Stripe decides dynamically per the account/Dashboard', () => {
@@ -61,22 +62,46 @@ describe('buildCheckoutSessionParams', () => {
     assert.equal('payment_method_types' in params, false);
   });
 
-  test('attaches a discount coupon when one is supplied (the £500 credit path)', () => {
+  test('explicitly sets receipt_email on the PaymentIntent rather than relying on account defaults', () => {
+    const params = buildCheckoutSessionParams({
+      offer: OFFERS.commercial_review,
+      email: 'owner@example.com',
+      successUrl: 'https://example.com/success',
+      cancelUrl: 'https://example.com/cancel'
+    });
+    assert.equal(params.payment_intent_data.receipt_email, 'owner@example.com');
+  });
+
+  test('charges the discounted amount directly when a credit is applied (the £500 credit path) — no Stripe coupon involved', () => {
     // Deliberately builds a local fixture rather than depending on
     // OFFERS.full_commercial_review.purchasable, which follows the
     // reversible FULL_REVIEW_PURCHASE_MODE toggle and may be false today —
-    // this test is about the discount-attachment logic, not about whether
-    // that offer happens to be directly purchasable right now.
+    // this test is about the charge-amount logic, not about whether that
+    // offer happens to be directly purchasable right now.
     const purchasableFullReview = { ...OFFERS.full_commercial_review, purchasable: true };
     const params = buildCheckoutSessionParams({
       offer: purchasableFullReview,
       email: 'owner@example.com',
       successUrl: 'https://example.com/success',
       cancelUrl: 'https://example.com/cancel',
-      discountCouponId: 'coupon_test_123'
+      chargeAmountPence: 200000,
+      creditAppliedPence: 50000
     });
-    assert.deepEqual(params.discounts, [{ coupon: 'coupon_test_123' }]);
-    assert.equal(params.line_items[0].price_data.unit_amount, 250000);
+    assert.equal(params.line_items[0].price_data.unit_amount, 200000);
+    assert.equal('discounts' in params, false);
+    assert.equal(params.metadata.list_price_pence, '250000');
+    assert.equal(params.metadata.credit_applied_pence, '50000');
+  });
+
+  test('refuses to build params with a negative charge amount', () => {
+    const purchasableFullReview = { ...OFFERS.full_commercial_review, purchasable: true };
+    assert.throws(() => buildCheckoutSessionParams({
+      offer: purchasableFullReview,
+      email: 'owner@example.com',
+      successUrl: 'https://example.com/success',
+      cancelUrl: 'https://example.com/cancel',
+      chargeAmountPence: -100
+    }), /negative/);
   });
 
   test('refuses to build params for an offer that is not purchasable', () => {

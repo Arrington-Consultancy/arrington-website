@@ -85,6 +85,18 @@ async function seed() {
   `);
   await db.query(`CREATE INDEX IF NOT EXISTS idx_commercial_gaps_status_created ON commercial_gaps_reviews (status, created_at);`);
 
+  // Migration: Where to Start purchases table columns, added 09/08/2026
+  // during the corrections pass on the £500 credit design (see
+  // routes/whereToStart.js). Nothing has deployed with the old shape yet,
+  // but this follows the same idempotent ALTER pattern as every other
+  // schema change in this file rather than assuming a fresh CREATE TABLE.
+  await db.query(`
+    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS list_price_pence INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS credit_applied_pence INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS credit_applied_manually BOOLEAN NOT NULL DEFAULT false;
+  `);
+  console.log('Purchases table columns verified.');
+
   const { rows: needsReference } = await db.query(
     'SELECT id FROM commercial_gaps_reviews WHERE short_reference IS NULL'
   );
