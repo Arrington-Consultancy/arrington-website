@@ -52,6 +52,16 @@ describe('buildCheckoutSessionParams', () => {
     assert.equal(params.metadata.credit_applied_pence, '0');
   });
 
+  test('enables invoice_creation so every purchase generates a real Stripe Invoice', () => {
+    const params = buildCheckoutSessionParams({
+      offer: OFFERS.commercial_review,
+      email: 'owner@example.com',
+      successUrl: 'https://example.com/success',
+      cancelUrl: 'https://example.com/cancel'
+    });
+    assert.equal(params.invoice_creation.enabled, true);
+  });
+
   test('never hardcodes payment_method_types, so Stripe decides dynamically per the account/Dashboard', () => {
     const params = buildCheckoutSessionParams({
       offer: OFFERS.commercial_review,
