@@ -28,7 +28,7 @@ const nodemailer = require('nodemailer');
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const db = require('../db/pool');
 const themes = require('../db/themes');
-const { getStripeClient } = require('../lib/stripeClient');
+const { getStripeClient, getStripeKeyStatus } = require('../lib/stripeClient');
 const { OFFERS, FULL_REVIEW_PURCHASE_MODE, getOffer, buildCheckoutSessionParams } = require('../lib/whereToStartOffers');
 const { getSiteShellData } = require('../lib/navShell');
 
@@ -287,7 +287,9 @@ function mountWebhook(app) {
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
     if (!stripe || !webhookSecret) {
       const reason = !stripe
-        ? 'STRIPE_SECRET_KEY is unset or was refused (e.g. a live key on this test-only branch — see lib/stripeClient.js)'
+        ? (getStripeKeyStatus() === 'live_key_refused'
+            ? 'STRIPE_SECRET_KEY is a live key (sk_live_...) — this branch refuses to initialise Stripe against it (see lib/stripeClient.js)'
+            : 'STRIPE_SECRET_KEY is unset')
         : 'STRIPE_WEBHOOK_SECRET is unset';
       console.warn(`Stripe webhook received but not configured (${reason}) — ignoring.`);
       await logWebhookAttempt({ outcome: 'not_configured', detail: reason });
