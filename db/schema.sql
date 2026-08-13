@@ -209,3 +209,29 @@ CREATE TABLE IF NOT EXISTS purchases (
 );
 CREATE INDEX IF NOT EXISTS idx_purchases_email_offer_status ON purchases (email, offer_id, status);
 CREATE INDEX IF NOT EXISTS idx_purchases_stripe_session ON purchases (stripe_session_id);
+
+-- Diagnostic log of every POST to /api/stripe/webhook, success or failure.
+-- Added 13/08/2026 after a real test purchase (£2,500 Full Commercial
+-- Review, genuinely paid on Stripe's side) left its purchases row stuck on
+-- 'pending' with no way to tell why: this sandbox has no outbound access to
+-- api.stripe.com or the live site, and the Stripe MCP tool available in
+-- that session did not expose an events-list or webhook-delivery-attempts
+-- operation, so there was no way to read Stripe's own delivery record for
+-- that event. This table makes the outcome of every future webhook attempt
+-- readable from inside the app itself (admin panel -> System -> Webhook
+-- log), independent of any external tool's availability. outcome is one of
+-- 'processed' (signature verified, event handled), 'signature_invalid'
+-- (STRIPE_WEBHOOK_SECRET mismatch — the prime suspect for the incident
+-- above), 'not_configured' (STRIPE_SECRET_KEY or STRIPE_WEBHOOK_SECRET
+-- unset/refused, e.g. a live key on this test-only branch), or
+-- 'processing_error' (signature verified but the handler itself threw).
+CREATE TABLE IF NOT EXISTS webhook_log (
+    id SERIAL PRIMARY KEY,
+    provider VARCHAR(20) NOT NULL DEFAULT 'stripe',
+    outcome VARCHAR(30) NOT NULL,
+    event_type VARCHAR(100),
+    stripe_event_id VARCHAR(255),
+    detail TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_webhook_log_created_at ON webhook_log (created_at DESC);
