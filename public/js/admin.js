@@ -887,6 +887,50 @@
         }
     };
 
+    // Webhook log loader. Diagnostic-only (see db/schema.sql's webhook_log
+    // table): every /api/stripe/webhook POST, success or failure, so a
+    // delivery problem can be read here instead of needing Stripe Dashboard
+    // or MCP tool access. 'signature_invalid' almost always means
+    // STRIPE_WEBHOOK_SECRET on Railway doesn't match the signing secret
+    // shown for this endpoint in the Stripe Dashboard.
+    const webhookLogEntries = document.getElementById('cmsWebhookLogEntries');
+    detailLoaders['cmsWebhookLogDetail'] = async () => {
+        if (!webhookLogEntries) return;
+        webhookLogEntries.innerHTML = '<span class="cms-log-loading">Loading...</span>';
+        try {
+            const res = await fetch('/api/admin/webhook-log', {
+                headers: { 'X-CSRF-Token': csrfToken }
+            });
+            const data = await res.json();
+            if (!data.entries || data.entries.length === 0) {
+                webhookLogEntries.innerHTML = '<span class="cms-log-empty">No webhook attempts recorded yet.</span>';
+                return;
+            }
+            const outcomeLabels = {
+                processed: 'Processed',
+                signature_invalid: 'Signature invalid (secret mismatch?)',
+                not_configured: 'Not configured',
+                processing_error: 'Processing error'
+            };
+            webhookLogEntries.innerHTML = data.entries.map(entry => {
+                const date = new Date(entry.created_at);
+                const timeStr = date.toLocaleDateString('en-GB', {
+                    day: '2-digit', month: 'short', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                });
+                const label = outcomeLabels[entry.outcome] || entry.outcome;
+                const parts = [`<span class="log-action">${escapeHtml(label)}</span>`];
+                if (entry.event_type) parts.push(` <span class="log-user">${escapeHtml(entry.event_type)}</span>`);
+                parts.push('<br>');
+                if (entry.detail) parts.push(`${escapeHtml(entry.detail)}<br>`);
+                parts.push(`<span class="log-time">${timeStr}</span>`);
+                return `<div class="cms-log-entry">${parts.join('')}</div>`;
+            }).join('');
+        } catch (err) {
+            webhookLogEntries.innerHTML = '<span class="cms-log-error">Failed to load webhook log.</span>';
+        }
+    };
+
     // ---- CSP VIOLATIONS (admin only) ----
     function escapeHtml(s) {
         return String(s)

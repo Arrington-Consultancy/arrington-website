@@ -264,12 +264,33 @@ router.post('/api/checkout/:offerId', checkoutLimiter, async (req, res) => {
 // don't send our CSRF token, so it must be exempt, same reasoning as any
 // third-party webhook).
 // ------------------------------------------------------------
+// Records the outcome of every /api/stripe/webhook POST — success or
+// failure — so it can be read from the admin panel (System -> Webhook log)
+// without needing Stripe Dashboard or MCP access. Never throws: a logging
+// failure must not turn a real webhook problem into a second, unrelated
+// one, or (worse) stop the actual response Stripe is waiting on.
+async function logWebhookAttempt({ outcome, eventType, stripeEventId, detail }) {
+  try {
+    await db.query(
+      `INSERT INTO webhook_log (provider, outcome, event_type, stripe_event_id, detail)
+       VALUES ('stripe', $1, $2, $3, $4)`,
+      [outcome, eventType || null, stripeEventId || null, detail || '']
+    );
+  } catch (err) {
+    console.error('Webhook log write failed:', err.message);
+  }
+}
+
 function mountWebhook(app) {
   app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
     const stripe = getStripeClient();
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
     if (!stripe || !webhookSecret) {
-      console.warn('Stripe webhook received but STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET not configured — ignoring.');
+      const reason = !stripe
+        ? 'STRIPE_SECRET_KEY is unset or was refused (e.g. a live key on this test-only branch — see lib/stripeClient.js)'
+        : 'STRIPE_WEBHOOK_SECRET is unset';
+      console.warn(`Stripe webhook received but not configured (${reason}) — ignoring.`);
+      await logWebhookAttempt({ outcome: 'not_configured', detail: reason });
       return res.status(503).send('Not configured.');
     }
 
@@ -279,6 +300,10 @@ function mountWebhook(app) {
       event = stripe.webhooks.constructEvent(req.body, signature, webhookSecret);
     } catch (err) {
       console.error('Stripe webhook signature verification failed:', err.message);
+      // The single most likely cause: STRIPE_WEBHOOK_SECRET on Railway
+      // doesn't match the signing secret shown for this endpoint in the
+      // Stripe Dashboard. err.message from Stripe's SDK says so directly.
+      await logWebhookAttempt({ outcome: 'signature_invalid', detail: err.message });
       return res.status(400).send('Invalid signature.');
     }
 
@@ -293,6 +318,20 @@ function mountWebhook(app) {
           [session.payment_intent || '', session.id]
         );
         const purchase = rows[0];
+
+        if (!purchase) {
+          // Signature verified fine, but no purchases row matched this
+          // session — a different failure mode from a secret mismatch
+          // (e.g. the session was created outside the app's own checkout
+          // route, or the row was somehow lost). Worth its own outcome so
+          // it isn't confused with a secret problem in the log.
+          await logWebhookAttempt({
+            outcome: 'processed',
+            eventType: event.type,
+            stripeEventId: event.id,
+            detail: `No purchases row found for stripe_session_id=${session.id}`
+          });
+        }
 
         if (purchase) {
           const offer = getOffer(purchase.offer_id);
@@ -355,17 +394,47 @@ function mountWebhook(app) {
           } else {
             console.warn('GMAIL_APP_PASSWORD not set — skipping customer confirmation email.');
           }
+
+          await logWebhookAttempt({
+            outcome: 'processed',
+            eventType: event.type,
+            stripeEventId: event.id,
+            detail: `purchases.id=${purchase.id} offer_id=${purchase.offer_id} marked paid`
+          });
         }
       } else if (event.type === 'checkout.session.expired') {
         await db.query(
           `UPDATE purchases SET status = 'expired', updated_at = NOW() WHERE stripe_session_id = $1`,
           [event.data.object.id]
         );
+        await logWebhookAttempt({
+          outcome: 'processed',
+          eventType: event.type,
+          stripeEventId: event.id,
+          detail: `stripe_session_id=${event.data.object.id} marked expired`
+        });
+      } else {
+        // Signature verified, but an event type we don't act on (the
+        // endpoint is only registered for checkout.session.completed and
+        // .expired in the Stripe Dashboard — this branch is a safety net,
+        // not the expected path).
+        await logWebhookAttempt({
+          outcome: 'processed',
+          eventType: event.type,
+          stripeEventId: event.id,
+          detail: 'Event type not handled by this endpoint.'
+        });
       }
 
       res.json({ received: true });
     } catch (err) {
       console.error('Stripe webhook handling failed:', err.message);
+      await logWebhookAttempt({
+        outcome: 'processing_error',
+        eventType: event.type,
+        stripeEventId: event.id,
+        detail: err.message
+      });
       // Non-2xx so Stripe retries delivery rather than silently dropping a
       // payment confirmation we failed to record.
       res.status(500).send('Webhook handling failed.');

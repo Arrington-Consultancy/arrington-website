@@ -1000,6 +1000,23 @@ router.get('/purchases', requireCapability('view_activity'), async (req, res) =>
   }
 });
 
+// Diagnostic log of every /api/stripe/webhook POST (see db/schema.sql's
+// webhook_log table and routes/whereToStart.js's logWebhookAttempt). Built
+// 13/08/2026 specifically so a webhook delivery problem can be diagnosed
+// from inside the app — no Stripe Dashboard or MCP tool access required.
+router.get('/webhook-log', requireCapability('view_activity'), async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT id, provider, outcome, event_type, stripe_event_id, detail, created_at
+       FROM webhook_log ORDER BY created_at DESC LIMIT 200`
+    );
+    res.json({ entries: rows });
+  } catch (err) {
+    console.error('Webhook log list error:', err);
+    res.status(500).json({ error: 'Failed to load webhook log' });
+  }
+});
+
 // Records that an earlier paid Commercial Review (sourcePurchaseId) credits
 // a later paid Full Commercial Review (targetPurchaseId), when the
 // automatic email match at checkout time didn't catch it (different
