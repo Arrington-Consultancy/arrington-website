@@ -21,7 +21,7 @@ describe('Where to Start offer catalogue', () => {
     assert.equal(OFFERS.commercial_review.creditTowards, 'full_commercial_review');
   });
 
-  test('the Commercial Review + Implementation route is £2,500 and credits from the Commercial Review', () => {
+  test('the Commercial Review and Implementation route is £2,500 and credits from the Commercial Review', () => {
     assert.equal(OFFERS.full_commercial_review.pricePence, 250000);
     assert.equal(OFFERS.full_commercial_review.creditFrom, 'commercial_review');
     assert.equal(OFFERS.full_commercial_review.creditAmountPence, 50000);
