@@ -7,14 +7,10 @@
 // mountPageRoute ahead of the global CSRF middleware, own rate limiter, own
 // DB table (see db/schema.sql: purchases).
 //
-// TEST MODE ONLY. See lib/stripeClient.js — it refuses to initialise
-// against anything that looks like a live secret key. Nothing here has been
-// through a real Stripe test-mode round trip: this sandbox has no outbound
-// access to api.stripe.com (confirmed via curl, same restriction as the
-// live site and Stripe's own docs), so the Checkout Session creation and
-// webhook handling below are written against stable, long-standing Stripe
-// Checkout Sessions API conventions rather than a live docs check today.
-// Flagged in full in the branch's decision report and commit message.
+// Stripe live mode is explicitly gated in lib/stripeClient.js. Test keys work
+// by default; live keys only initialise after ENABLE_STRIPE_LIVE_MODE=true is
+// set in the deployment environment. Payment confirmation still comes only
+// from a verified Stripe webhook, never from the success-page redirect alone.
 //
 // Payment confirmation is never trusted from the success-page redirect
 // alone — a purchase only becomes 'paid' when the webhook independently
@@ -286,11 +282,17 @@ function mountWebhook(app) {
     const stripe = getStripeClient();
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
     if (!stripe || !webhookSecret) {
-      const reason = !stripe
-        ? (getStripeKeyStatus() === 'live_key_refused'
-            ? 'STRIPE_SECRET_KEY is a live key (sk_live_...) — this branch refuses to initialise Stripe against it (see lib/stripeClient.js)'
-            : 'STRIPE_SECRET_KEY is unset')
-        : 'STRIPE_WEBHOOK_SECRET is unset';
+      let reason = 'STRIPE_SECRET_KEY is unset';
+      if (!stripe) {
+        const keyStatus = getStripeKeyStatus();
+        if (keyStatus === 'live_key_refused') {
+          reason = 'STRIPE_SECRET_KEY is a live key but ENABLE_STRIPE_LIVE_MODE is not true';
+        } else if (keyStatus === 'invalid_key_prefix') {
+          reason = 'STRIPE_SECRET_KEY does not look like a valid Stripe secret or restricted key';
+        }
+      } else {
+        reason = 'STRIPE_WEBHOOK_SECRET is unset';
+      }
       console.warn(`Stripe webhook received but not configured (${reason}) — ignoring.`);
       await logWebhookAttempt({ outcome: 'not_configured', detail: reason });
       return res.status(503).send('Not configured.');

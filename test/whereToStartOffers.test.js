@@ -72,6 +72,16 @@ describe('buildCheckoutSessionParams', () => {
     assert.equal('payment_method_types' in params, false);
   });
 
+  test('tags Checkout Sessions with an Arrington integration identifier', () => {
+    const params = buildCheckoutSessionParams({
+      offer: OFFERS.commercial_review,
+      email: 'owner@example.com',
+      successUrl: 'https://example.com/success',
+      cancelUrl: 'https://example.com/cancel'
+    });
+    assert.match(params.integration_identifier, /^arrington_wts_[a-z]{8}$/);
+  });
+
   test('explicitly sets receipt_email on the PaymentIntent rather than relying on account defaults', () => {
     const params = buildCheckoutSessionParams({
       offer: OFFERS.commercial_review,
