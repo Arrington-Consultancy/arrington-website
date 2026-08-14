@@ -13,7 +13,7 @@
         : 'Owner Dependency Quiz | Arrington Consultancy';
       const _pageDescription = shareResult
         ? `See where a real business owner's own business still depends on them, then take the same free 5 minute quiz yourself.`
-        : 'A free, practical 5 minute quiz to help you see where your business still depends too heavily on you as the owner. No email required, no diagnosis - just a clear, honest look.';
+        : 'A free, practical 5 minute quiz to help you see what still sits with you as the owner. No email required, no diagnosis - just a clear, honest look.';
       const _ogUrl = shareResult ? requestUrl : 'https://www.arringtonconsultancy.com/owner-dependency-quiz';
     %>
     <title><%= _pageTitle %></title>
@@ -482,7 +482,7 @@
                 <p>Worth reading: <a href="/useful-thinking/the-turning-that-never-came" id="odr-related-link">The Turning That Never Came</a><span id="odr-related-hook"> &mdash; on knowing the answer and still not acting on it.</span></p>
             </div>
 
-            <p class="odr-disclaimer">This is a general reflection tool based on common patterns in owner run businesses, not a professional assessment of your specific business. It does not replace proper financial, legal or commercial advice.</p>
+            <p class="odr-disclaimer">This is a general reflection tool based on common patterns in owner run businesses, not a professional assessment of your specific business. It does not replace qualified financial, legal or commercial advice.</p>
 
             <div class="odr-email-capture">
                 <h2>Send me a copy of my result</h2>
@@ -502,7 +502,7 @@
 
             <div class="odr-cta">
                 <h2>If any of this sounds familiar</h2>
-                <p>A straightforward 30 minute conversation is usually enough to work out whether a proper commercial review would actually help, with no pressure either way.</p>
+                <p>A straightforward 30 minute conversation is usually enough to work out whether a commercial review would actually help, with no pressure either way.</p>
                 <div class="odr-cta-actions">
                     <a href="/book-a-30-minute-conversation" class="btn btn-primary" id="odr-cta-book">Book a 30 minute conversation</a>
                     <button type="button" class="btn btn-outline" id="odr-restart">Start again</button>
@@ -526,16 +526,16 @@
             {
                 id: 'freedom',
                 category: 'Freedom from the business',
-                text: 'Could you take a proper two-week holiday, turn your phone off and trust the business to run without you?',
+                text: 'Could you take a genuine two-week holiday, turn your phone off and trust the business to run without you?',
                 options: [
                     { text: 'No. I would expect calls, problems or things to stall without me.', score: 2 },
                     { text: 'Probably, but I would still need to check in and stay available.', score: 1 },
-                    { text: 'Yes. The business would carry on properly without my involvement.', score: 0 }
+                    { text: 'Yes. The business would carry on without my involvement.', score: 0 }
                 ],
                 indicator: {
                     red: "You'd expect to be called, chased or needed while away.",
                     amber: "You could step back briefly, but would still need to check in.",
-                    green: "The business would continue properly without you for a genuine break."
+                    green: "The business would continue without you for a genuine break."
                 }
             },
             {
@@ -556,7 +556,7 @@
             {
                 id: 'visibility',
                 category: 'Visibility',
-                text: 'How do you get a clear picture of how the business is running and whether everything is working properly?',
+                text: 'How do you get a clear picture of how the business is running and whether everything is working as expected?',
                 options: [
                     { text: 'By being there, watching what is happening and picking things up myself.', score: 2 },
                     { text: 'I get some updates and figures, but I still have to chase or join the dots.', score: 1 },
@@ -575,12 +575,12 @@
                 options: [
                     { text: 'I still end up checking it, chasing it or taking it back.', score: 2 },
                     { text: 'It depends on the person or the task.', score: 1 },
-                    { text: 'It gets handled properly without coming back to me.', score: 0 }
+                    { text: 'It gets handled without coming back to me.', score: 0 }
                 ],
                 indicator: {
                     red: "Work you hand off tends to come back to you, one way or another.",
                     amber: "It depends on the person or the task.",
-                    green: "What you delegate gets handled properly without returning to you."
+                    green: "What you delegate gets handled without returning to you."
                 }
             },
             {
@@ -635,7 +635,7 @@
                 options: [
                     { text: "I mostly find out about cash problems once they've already happened.", score: 2 },
                     { text: "I check it, but not consistently, and I'm sometimes caught out by the position.", score: 1 },
-                    { text: 'I have clear, regular visibility of cash, weekly or better, and rarely find surprises.', score: 0 }
+                    { text: 'I have clear, regular visibility of cash at least weekly, and rarely find surprises.', score: 0 }
                 ],
                 indicator: {
                     red: "You mostly find out about cash problems once they've happened.",

@@ -185,7 +185,7 @@
             <p class="mrt-label">MARKET READY TEST</p>
             <h1>How ready is your business for a new owner?</h1>
             <p>The Market Ready Test looks beyond headline profit and asks the questions a serious buyer is likely to ask.</p>
-            <p>Answer ten questions honestly and receive a New Owner Ready Score, including the strengths a buyer may value, the weaknesses they may challenge and the areas worth strengthening before a sale.</p>
+            <p>Answer ten questions honestly and receive a New Owner Ready Score, including the strengths a buyer may value, the questions they may ask and the areas worth strengthening before a sale.</p>
             <p class="mrt-meta">Around 5 minutes. Multiple choice, with space at the end for anything else.</p>
 
             <div class="mrt-callout">
@@ -351,7 +351,7 @@
         <section class="mrt-screen" id="mrt-error">
             <p class="mrt-label">SOMETHING WENT WRONG</p>
             <div class="mrt-error-box">
-                <p id="mrt-error-message">We could not complete your assessment properly. Your answers have been saved and no score has been guessed.</p>
+                <p id="mrt-error-message">We could not complete your assessment reliably. Your answers have been saved and no score has been guessed.</p>
             </div>
             <p>Your answers are still here — you can try again, or contact us directly.</p>
             <div class="mrt-nav">
@@ -693,7 +693,7 @@
                     window.location.href = result.data.resultUrl;
                 } else {
                     document.getElementById('mrt-error-message').textContent =
-                        (result.data && result.data.error) || 'We could not complete your assessment properly. Your answers have been saved and no score has been guessed. Please try again or contact us at tom@arringtonconsultancy.com.';
+                        (result.data && result.data.error) || 'We could not complete your assessment reliably. Your answers have been saved and no score has been guessed. Please try again or contact us at tom@arringtonconsultancy.com.';
                     showScreen('mrt-error');
                 }
             }).catch(function () {

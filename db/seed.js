@@ -328,9 +328,9 @@ async function seed() {
           const rows = [
             [`${docsId}.label`, 'Examples'],
             [`${docsId}.heading`, 'What the work looks like'],
-            [`${docsId}.intro`, 'These are genuine examples of work produced during a proper commercial review. Names, organisations, locations and other identifying details have been removed or generalised, but the commercial findings and recommendations remain unchanged.'],
+            [`${docsId}.intro`, 'These are genuine examples of work produced during a commercial review. Names, organisations, locations and other identifying details have been removed or generalised, but the commercial findings and recommendations remain unchanged.'],
             [`${ctaId}.heading`, 'Every business is different'],
-            [`${ctaId}.subtext`, 'The work follows the evidence, but the aim is always the same: clearer decisions, better control and a business that relies less heavily on the owner.'],
+            [`${ctaId}.subtext`, 'The work follows the evidence, but the aim is always the same: clearer decisions, more control in the business and less day-to-day weight sitting with the owner.'],
             [`${ctaId}.button_text`, 'Tell us what is going on'],
             // Empty slug means the button scrolls to the contact block in the footer.
             [`${ctaId}.button_link`, '']
@@ -627,7 +627,7 @@ async function seed() {
             + "We'll build it around your business, not around a template.";
           const rows = [
             // SECTION 1 — hero (£999 offer headline)
-            [`${heroId}.heading`, 'A genuinely bespoke website for £999'],
+            [`${heroId}.heading`, 'A business website built around how you work'],
             [`${heroId}.subtext`, newHeroSubtext],
             [`${heroId}.cta`, 'Tell us what you want to build'],
             [`${heroId}.whatsapp`, ''],
@@ -642,28 +642,28 @@ async function seed() {
             [`${wsaId}.button_href`, 'https://www.worldstudentadvisors.com/'],
 
             // SECTION 3 — biography (start with the business, not the technology)
-            [`${startId}.label`, 'COMMERCIAL PROBLEMS FIRST'],
+            [`${startId}.label`, 'THE BUSINESS FIRST'],
             [`${startId}.heading`, 'Start with the business, not the technology'],
-            [`${startId}.col_1_p1`, 'Most businesses do not have a website problem. They have business problems that a website or AI can sometimes solve.'],
-            [`${startId}.col_1_p2`, "That might be poor quality enquiries, too many repetitive questions, or knowledge that only exists in the owner's head."],
-            [`${startId}.col_2_p1`, 'It might be weak follow-up, manual administration that eats a day a week, or a business that cannot run properly without the owner in the room.'],
+            [`${startId}.col_1_p1`, 'Most businesses do not need a website judged in isolation. The useful question is what the website, AI or systems can help the business do.'],
+            [`${startId}.col_1_p2`, "That might be enquiries that need more context before a conversation, repeated questions, or knowledge that still sits mostly with the owner."],
+            [`${startId}.col_2_p1`, 'It might be follow-up spread across too many manual steps, administration that takes time from higher-value work, or decisions still waiting for the owner because the business has grown around them.'],
             [`${startId}.col_2_p2`, 'We look at what is actually happening in the business first. The technology comes after, and only where it earns its place.'],
 
             // SECTION 4 — filter (built around you)
             [`${whyId}.label`, 'WHY WE ARE DIFFERENT'],
             [`${whyId}.heading`, 'We start with the business, not the brief'],
-            [`${whyId}.p1`, "Most websites start with a template. We start with the business. We listen properly, understand what you're trying to achieve and build around that."],
-            [`${whyId}.p2`, "We'll challenge ideas when we think there's a better way and explain why. The decisions stay with you. It's your business and your website."],
+            [`${whyId}.p1`, "Most websites start with a template. We start with the business. We listen carefully, understand what you're trying to achieve and build around that."],
+            [`${whyId}.p2`, "We bring an outside perspective, explain the trade-offs and help shape the route that fits the business. The decisions stay with you. It's your business and your website."],
             [`${whyId}.button_text`, ''],
             [`${whyId}.button_link`, 'main'],
 
             // SECTION 5 — biography (two implementation areas)
             [`${areasId}.label`, 'TWO WAYS WE PUT IT INTO PRACTICE'],
             [`${areasId}.heading`, 'Two implementation areas'],
-            [`${areasId}.col_1_p1`, '<strong>Commercial websites.</strong> Better enquiries, clearer positioning and stronger credibility.'],
-            [`${areasId}.col_1_p2`, 'Higher quality conversations, useful information captured before a meeting even starts, and less time wasted on the wrong prospects.'],
-            [`${areasId}.col_2_p1`, "<strong>Practical AI.</strong> Internal knowledge that does not live only in the owner's head, better enquiry handling, and sharper business reviews."],
-            [`${areasId}.col_2_p2`, 'Faster document analysis, better meeting preparation, more support for staff, and less reliance on the owner for every answer.'],
+            [`${areasId}.col_1_p1`, '<strong>Commercial websites.</strong> More suitable enquiries, clearer positioning and stronger credibility.'],
+            [`${areasId}.col_1_p2`, 'More useful conversations, the right information captured before a meeting even starts, and less time spent with people who were never a fit.'],
+            [`${areasId}.col_2_p1`, "<strong>Practical AI.</strong> Internal knowledge that does not live only in the owner's head, consistent enquiry handling, and clearer business reviews."],
+            [`${areasId}.col_2_p2`, 'Faster document analysis, stronger meeting preparation, more support for staff, and less reliance on the owner for every answer.'],
 
             // SECTION 6 — insights (real examples)
             [`${examplesId}.label`, 'REAL ARRINGTON EXAMPLES'],
@@ -671,7 +671,7 @@ async function seed() {
             [`${examplesId}.subtext`, 'We do not ask a business to try something we have not tried ourselves.'],
             [`${examplesId}.card_1_tag`, 'OWNER CHECK'],
             [`${examplesId}.card_1_title`, 'Owner Check'],
-            [`${examplesId}.card_1_body`, 'A practical self-diagnostic that shows an owner where the business still depends too heavily on them, with an actionable score rather than a vague opinion.'],
+            [`${examplesId}.card_1_body`, 'A practical self-diagnostic that shows an owner where their judgement, knowledge or oversight still carries the business day to day, with an actionable score rather than a vague opinion.'],
             [`${examplesId}.card_2_tag`, 'COMMERCIAL GAPS REVIEW'],
             [`${examplesId}.card_2_title`, 'Commercial Gaps Review'],
             [`${examplesId}.card_2_body`, 'An automated commercial review that gives an owner real clarity on where the pressure is, built so it costs nothing to run and never invents a fact about the business.'],
@@ -681,31 +681,31 @@ async function seed() {
 
             // SECTION 7 — fourcards (how the work happens)
             [`${howId}.label`, 'HOW THE WORK HAPPENS'],
-            [`${howId}.heading`, 'Understand, design, build, improve'],
+            [`${howId}.heading`, 'Understand, design, build, refine'],
             [`${howId}.card_1_number`, '01'],
             [`${howId}.card_1_title`, 'Understand'],
             [`${howId}.card_1_body`, 'We look at what is actually happening in the business before anything is designed or built.'],
             [`${howId}.card_2_number`, '02'],
             [`${howId}.card_2_title`, 'Design'],
-            [`${howId}.card_2_body`, 'We decide what should change, and whether a website, AI, a process fix or a combination is the right answer.'],
+            [`${howId}.card_2_body`, 'We decide what is worth building, and whether a website, AI, a process change or a combination is the right answer.'],
             [`${howId}.card_3_number`, '03'],
             [`${howId}.card_3_title`, 'Build'],
             [`${howId}.card_3_body`, 'We build only what earns its place, in plain language the business can actually use.'],
             [`${howId}.card_4_number`, '04'],
-            [`${howId}.card_4_title`, 'Improve'],
-            [`${howId}.card_4_body`, 'We check what is working and change what is not. The business keeps control of it, not us.'],
+            [`${howId}.card_4_title`, 'Refine'],
+            [`${howId}.card_4_body`, 'We check what is working and refine where the evidence says it is worth refining. The business keeps control of it, not us.'],
 
             // SECTION 8 — filter (technology section)
             [`${wontId}.label`, 'WHAT WE WILL NOT DO'],
             [`${wontId}.heading`, 'Technology should earn its place'],
-            [`${wontId}.p1`, "We recommend websites, AI and systems when they genuinely improve the business. If they don't, we won't recommend them."],
+            [`${wontId}.p1`, "We recommend websites, AI and systems when they genuinely help the business. If they don't, we won't recommend them."],
             [`${wontId}.p2`, ''],
             [`${wontId}.button_text`, ''],
             [`${wontId}.button_link`, 'main'],
 
             // SECTION 9 — intervention (closing)
-            [`${closingId}.heading`, 'Technology should make the business stronger, not more complicated'],
-            [`${closingId}.subtext`, 'If a stronger website, better systems or practical AI could genuinely improve the way the business operates, that is where the conversation should start.'],
+            [`${closingId}.heading`, 'Technology should make the business easier to run, not more complicated'],
+            [`${closingId}.subtext`, 'If a website, practical AI or connected systems could help the business show its real standard and reduce repeated manual work, that is where the conversation should start.'],
             [`${closingId}.button_text`, 'Tell us what you want to build'],
             [`${closingId}.button_link`, 'book-a-30-minute-conversation'],
 
@@ -784,7 +784,7 @@ async function seed() {
 
       if (heroId) {
         const newHeroSubtext = 'Tell us what you want your website to do.<br><br>'
-          + 'That might be a simple holding page. It might be a substantial bespoke build with Pipedrive CRM, Microsoft 365 email, Google Reviews, YouTube, AI tools or a chatbot built into the site.<br><br>'
+          + 'That might be a simple holding page. It might be a substantial coded build with Pipedrive CRM, Microsoft 365 email, Google Reviews, YouTube, AI tools or an AI assistant built into the site.<br><br>'
           + 'The price is £999.<br><br>'
           + 'We agree the website during a one-hour recorded conversation, build what was agreed and include one structured round of changes after the first complete version.<br><br>'
           + 'Further changes are charged at £300 per day, based on approximately six working hours.';
@@ -795,10 +795,10 @@ async function seed() {
           [`${heroId}.heading`]
         );
         const existingHeading = (hRows[0] && hRows[0].content) || '';
-        if (existingHeading !== 'A genuinely bespoke website for £999' && existingHeading !== 'A proper business website for £999') {
+        if (existingHeading !== 'A business website built around how you work') {
           await db.query(
             'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content',
-            [`${heroId}.heading`, 'A genuinely bespoke website for £999']
+            [`${heroId}.heading`, 'A business website built around how you work']
           );
           await db.query(
             'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content',
@@ -840,7 +840,7 @@ async function seed() {
               [`${wsaId}.label`, 'OUR WORK'],
               [`${wsaId}.heading`, 'World Student Advisors'],
               [`${wsaId}.intro`, 'We built World Student Advisors for £999.'],
-              [`${wsaId}.body`, "It's a fully bespoke HTML website with Pipedrive CRM, Microsoft 365 integration, Google Reviews, AI interview practice, AI visa interview preparation and responsive layouts across desktop, tablet and mobile.<br><br>Everything was built around how the business actually works."],
+              [`${wsaId}.body`, "It's a fully coded HTML website with Pipedrive CRM, Microsoft 365 integration, Google Reviews, AI interview practice, AI visa interview preparation and responsive layouts across desktop, tablet and mobile.<br><br>Everything was built around how the business actually works."],
               [`${wsaId}.outcome`, 'That is the standard we expect £999 to deliver.'],
               [`${wsaId}.button_text`, 'View the World Student Advisors website'],
               [`${wsaId}.button_href`, 'https://www.worldstudentadvisors.com/']
@@ -938,7 +938,7 @@ async function seed() {
           'SELECT content FROM content WHERE section_key = $1',
           [`${heroId}.heading`]
         );
-        hasFinalHeading = ((finalHeadingRows[0] && finalHeadingRows[0].content) || '') === 'A proper business website for £999';
+        hasFinalHeading = ((finalHeadingRows[0] && finalHeadingRows[0].content) || '') === 'A business website built around how you work';
       }
 
       if (!hasFinalHeading) {
@@ -961,13 +961,13 @@ async function seed() {
         }
 
         if (whyId) {
-          await upsert(`${whyId}.p1`, "Most websites start with a template. We start with the business. We listen properly, understand what you're trying to achieve and build around that.");
-          await upsert(`${whyId}.p2`, "We'll challenge ideas when we think there's a better way and explain why. The decisions stay with you. It's your business and your website.");
+          await upsert(`${whyId}.p1`, "Most websites start with a template. We start with the business. We listen carefully, understand what you're trying to achieve and build around that.");
+          await upsert(`${whyId}.p2`, "We bring an outside perspective, explain the trade-offs and help shape the route that fits the business. The decisions stay with you. It's your business and your website.");
         }
 
         if (wontId) {
           await upsert(`${wontId}.heading`, 'Technology should earn its place');
-          await upsert(`${wontId}.p1`, "We recommend websites, AI and systems when they genuinely improve the business. If they don't, we won't recommend them.");
+          await upsert(`${wontId}.p1`, "We recommend websites, AI and systems when they genuinely help the business. If they don't, we won't recommend them.");
           await upsert(`${wontId}.p2`, '');
         }
 
@@ -1135,8 +1135,8 @@ async function seed() {
       };
 
       if (heroId) {
-        await upsert(`${heroId}.label`, 'BESPOKE BUSINESS WEBSITES');
-        await upsert(`${heroId}.heading`, 'A proper business website for £999');
+        await upsert(`${heroId}.label`, 'BUSINESS WEBSITES');
+        await upsert(`${heroId}.heading`, 'A business website built around how you work');
         await upsert(`${heroId}.subtext`, 'If we built World Student Advisors for £999, imagine what we could build for your business.<br><br>Built around the way your business actually operates. Not dropped into a template.');
         await upsert(`${heroId}.proof_text`, 'Look at our latest example of what we have built');
         await upsert(`${heroId}.proof_href`, wsaId ? `#${wsaId}` : '#conversation');
@@ -1157,7 +1157,7 @@ async function seed() {
       if (wsaId) {
         await upsert(`${wsaId}.label`, 'BUILT FOR £999');
         await upsert(`${wsaId}.heading`, 'World Student Advisors');
-        await upsert(`${wsaId}.intro`, 'World Student Advisors is a fully bespoke website we built for £999.');
+        await upsert(`${wsaId}.intro`, 'World Student Advisors is a fully coded website we built for £999.');
         await upsert(`${wsaId}.body`, 'It includes Pipedrive CRM, Microsoft 365, Google Reviews, AI interview practice, AI visa interview preparation and responsive layouts across desktop and mobile.<br><br>Every part of it was built around how the organisation actually works.');
         await upsert(`${wsaId}.included_heading`, 'Included in the build');
         await upsert(`${wsaId}.item_1`, 'Pipedrive CRM integration');
@@ -1223,7 +1223,7 @@ async function seed() {
         await upsert(`${whyId}.label`, 'WHY ARRINGTON');
         await upsert(`${whyId}.heading`, 'Built by someone who understands business');
         await upsert(`${whyId}.p1`, 'This is not a design agency selling a favourite style.');
-        await upsert(`${whyId}.p2`, 'Tom has built, operated and sold real businesses. The website is judged by whether it helps the business communicate clearly, handle enquiries properly and win better work.');
+        await upsert(`${whyId}.p2`, 'Tom has built, operated and sold real businesses. The website is judged by whether it helps the business communicate clearly, handle enquiries in its own voice and win the right work.');
         await upsert(`${whyId}.closing`, 'The technology matters. Understanding the business matters more.');
       }
 
@@ -1234,8 +1234,8 @@ async function seed() {
       await upsert('wai.contact_message_placeholder', 'Tell us what you want the website to do');
       await upsert('wai.contact_submit_text', 'Send enquiry');
 
-      const waiMetaTitle = 'A Proper Business Website for £999 | Arrington Consultancy';
-      const waiMetaDescription = 'A proper £999 business website, built around the way your business actually operates. See the World Student Advisors site built for the same fixed price.';
+      const waiMetaTitle = 'A Business Website Built Around How You Work | Arrington Consultancy';
+      const waiMetaDescription = 'A £999 business website built around the way your business actually operates. See the World Student Advisors site built for the same fixed price.';
       await db.query(
         `UPDATE pages
          SET meta_title = $1,
@@ -2053,7 +2053,7 @@ async function seed() {
         await db.query(
           `INSERT INTO content (section_key, content) VALUES
              ($1, 'If any of this sounds familiar'),
-             ($2, 'One straightforward question is usually enough to work out whether a proper commercial review would help.'),
+             ($2, 'One straightforward question is usually enough to work out whether a commercial review would help.'),
              ($3, 'Take the Owner Dependency Quiz'),
              ($4, 'owner-dependency-quiz')
            ON CONFLICT (section_key) DO NOTHING`,
