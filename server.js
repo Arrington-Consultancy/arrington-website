@@ -407,12 +407,13 @@ app.get('/sitemap.xml', async (req, res, next) => {
       'where-to-start': '2026-08-09',
       'where-to-start/commercial-review': '2026-08-09',
       'where-to-start/full-commercial-review': '2026-08-09',
-      'where-to-start/website-build': '2026-08-14'
+      'where-to-start/website-build': '2026-08-14',
+      'where-to-start/full-review-website-build': '2026-08-14'
     };
     // where-to-start/confirmation is deliberately excluded — private,
     // per-visitor payment status, noindex/nofollow on the page itself,
     // same treatment as the quiz/review result pages.
-    for (const slug of ['owner-check', 'owner-dependency-quiz', 'commercial-gaps-review', 'privacy', 'where-to-start', 'where-to-start/commercial-review', 'where-to-start/full-commercial-review', 'where-to-start/website-build']) {
+    for (const slug of ['owner-check', 'owner-dependency-quiz', 'commercial-gaps-review', 'privacy', 'where-to-start', 'where-to-start/commercial-review', 'where-to-start/full-commercial-review', 'where-to-start/website-build', 'where-to-start/full-review-website-build']) {
       urlEntries.push(`  <url><loc>${escapeXml(`${base}/${slug}`)}</loc><lastmod>${ASSESSMENT_ROUTE_LASTMOD[slug]}</lastmod></url>`);
     }
     res.type('application/xml').send(

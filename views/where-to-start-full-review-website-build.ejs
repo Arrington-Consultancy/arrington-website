@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Commercial Review | Arrington Consultancy</title>
-    <meta name="description" content="A genuine, standalone Commercial Review: we listen for as long as it takes, then produce a written assessment, recommendations and next steps within 4 business days. £500, credited in full against the Full Commercial Review.">
-    <link rel="canonical" href="https://www.arringtonconsultancy.com/where-to-start/commercial-review">
+    <title>Full Commercial Review + Website Build | Arrington Consultancy</title>
+    <meta name="description" content="A Full Commercial Review followed by a website build shaped by what the business needs. Fixed price £3,400.">
+    <link rel="canonical" href="https://www.arringtonconsultancy.com/where-to-start/full-review-website-build">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Commercial Review | Arrington Consultancy">
-    <meta property="og:description" content="A genuine, standalone Commercial Review. £500, credited in full against the Full Commercial Review.">
-    <meta property="og:url" content="https://www.arringtonconsultancy.com/where-to-start/commercial-review">
+    <meta property="og:title" content="Full Commercial Review + Website Build | Arrington Consultancy">
+    <meta property="og:description" content="The most complete short term route: review the business, then build the website from that understanding.">
+    <meta property="og:url" content="https://www.arringtonconsultancy.com/where-to-start/full-review-website-build">
     <meta property="og:image" content="https://www.arringtonconsultancy.com/img/logo">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="csrf-token" content="<%= csrfToken %>">
@@ -34,69 +34,54 @@
             <% } %>
         }
         * { box-sizing: border-box; }
+        @media (prefers-reduced-motion: reduce) {
+            * { transition: none !important; animation: none !important; }
+        }
         body { margin: 0; font-family: 'DM Sans', sans-serif; background: var(--black); color: var(--text); line-height: 1.6; }
         <%- include('partials/site-chrome-styles') %>
 
         h1, h2 { font-family: 'DM Serif Display', serif; font-weight: 400; color: var(--text-bright); line-height: 1.2; margin: 0; }
-        p { color: var(--text); margin: 0 0 1.2rem; }
-
-        .wts-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; color: var(--accent); margin-bottom: 1rem; display: block; }
-        .btn { display: inline-block; font-family: 'DM Sans', sans-serif; font-size: 0.92rem; font-weight: 600; padding: 0.6rem 1.5rem; border-radius: 3px; text-decoration: none; cursor: pointer; border: 1px solid transparent; }
+        p { color: var(--text); margin: 0; }
+        .wts-label { display: block; margin-bottom: 1rem; color: var(--accent); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
+        .btn { display: inline-block; max-width: 100%; padding: 0.6rem 1.5rem; border: 1px solid transparent; border-radius: 3px; font-family: 'DM Sans', sans-serif; font-size: 0.92rem; font-weight: 600; text-decoration: none; cursor: pointer; }
         .btn-primary { background: var(--accent); color: var(--black); border-color: var(--accent); }
         .btn-primary:hover, .btn-primary:focus-visible { background: var(--accent-hover); border-color: var(--accent-hover); }
         .btn-primary:disabled { opacity: 0.6; cursor: default; }
         .btn-outline { background: transparent; color: var(--text-bright); border-color: var(--border); }
         .btn-outline:hover, .btn-outline:focus-visible { border-color: var(--accent); color: var(--accent); }
 
-        main { max-width: 640px; margin: 0 auto; padding: 8rem 1.5rem 5rem; }
-        .wts-back { font-size: 0.9rem; color: var(--text-muted); text-decoration: none; display: inline-block; margin-bottom: 2.5rem; }
+        main { max-width: 660px; margin: 0 auto; padding: 8rem 1.5rem 5rem; }
+        .wts-back { display: inline-block; margin-bottom: 2.5rem; color: var(--text-muted); font-size: 0.9rem; text-decoration: none; }
         .wts-back:hover { color: var(--accent); }
-
-        /* Price gets real weight here — this is the page whose whole job is
-           to make the purchase feel concrete, not the page to be coy on. */
-        .wts-hero-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 1.4rem; }
-        .wts-hero-head h1 { font-size: clamp(1.9rem, 4.5vw, 2.4rem); }
-        .wts-price { font-family: 'DM Serif Display', serif; font-size: clamp(2.4rem, 6vw, 3rem); color: var(--accent); line-height: 1; }
-        .wts-lede { font-size: 1.12rem; color: var(--text-bright); max-width: 560px; }
-
-        .wts-section { border-top: 1px solid var(--border); padding-top: 2rem; margin-top: 2.5rem; }
-        .wts-section h2 { font-size: 1.05rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: 1.2rem; }
-        .wts-section p { font-size: 1.02rem; }
-        .wts-credit-note {
-            display: inline-block;
-            margin-top: 0.3rem;
-            padding: 0.9rem 1.2rem;
-            border: 1px solid var(--border);
-            border-left: 3px solid var(--accent);
-            border-radius: 2px;
-            font-size: 0.98rem;
-            color: var(--text-bright);
-        }
-        .wts-credit-note p { margin: 0; }
-
-        .wts-form-section { border-top: 1px solid var(--border); padding-top: 2.5rem; margin-top: 2.5rem; }
-        .wts-form-section h2 { font-size: 1.4rem; margin-bottom: 0.5rem; }
-        .wts-form-note { font-size: 0.92rem; color: var(--text-muted); margin-bottom: 1.6rem; }
-        .wts-form label { display: block; font-size: 0.88rem; color: var(--text-muted); margin-bottom: 0.4rem; }
-        .wts-form input[type="email"] {
-            width: 100%;
-            padding: 0.9rem 1rem;
-            background: transparent;
-            border: 1px solid var(--border);
-            border-radius: 3px;
-            color: var(--text-bright);
-            font-family: 'DM Sans', sans-serif;
-            font-size: 1rem;
-            margin-bottom: 1.4rem;
-        }
+        .wts-hero-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 1rem 1.5rem; margin-bottom: 1.2rem; }
+        .wts-hero-head h1 { font-size: clamp(1.9rem, 4.5vw, 2.45rem); }
+        .wts-price { margin-left: auto; color: var(--accent); font-family: 'DM Serif Display', serif; font-size: clamp(2.4rem, 6vw, 3rem); line-height: 1; }
+        .wts-lede { max-width: 570px; margin-bottom: 1.5rem; color: var(--text-bright); font-size: 1.12rem; }
+        .wts-section { margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid var(--border); }
+        .wts-section h2 { margin-bottom: 1.2rem; color: var(--accent); font-family: 'DM Sans', sans-serif; font-size: 1.02rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+        .wts-section p { font-size: 1.02rem; margin-bottom: 1rem; }
+        .wts-includes { margin: 0; padding: 0; list-style: none; }
+        .wts-includes li { position: relative; margin-bottom: 0.7rem; padding-left: 1.4rem; font-size: 1.02rem; }
+        .wts-includes li::before { content: ''; position: absolute; left: 0; top: 0.65em; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+        .wts-note { display: inline-block; margin-top: 0.3rem; padding: 0.9rem 1.2rem; border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 2px; color: var(--text-bright); font-size: 0.98rem; }
+        .wts-note p { margin: 0; }
+        .wts-form-section { margin-top: 2.5rem; padding-top: 2.5rem; border-top: 1px solid var(--border); }
+        .wts-form-section h2 { margin-bottom: 0.5rem; font-size: 1.42rem; }
+        .wts-form-note { margin-bottom: 1.6rem; color: var(--text-muted); font-size: 0.92rem; }
+        .wts-form label { display: block; margin-bottom: 0.4rem; color: var(--text-muted); font-size: 0.88rem; }
+        .wts-form input[type="email"] { width: 100%; margin-bottom: 1.4rem; padding: 0.9rem 1rem; border: 1px solid var(--border); border-radius: 3px; background: transparent; color: var(--text-bright); font-family: 'DM Sans', sans-serif; font-size: 1rem; }
         .wts-form input[type="email"]:focus { outline: none; border-color: var(--accent); }
         .wts-website-field { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
-        .wts-form-status { font-size: 0.92rem; margin-top: 1rem; }
+        .wts-form-status { margin-top: 1rem; font-size: 0.92rem; }
         .wts-form-status--error { color: #e07a5f; }
         .wts-form-status--ok { color: var(--accent); }
         .wts-alt-route { margin-top: 1.6rem; font-size: 0.95rem; }
         .wts-alt-route a { color: var(--text-muted); }
         .wts-alt-route a:hover { color: var(--accent); }
+        @media (max-width: 520px) {
+            main { padding-top: 6.5rem; }
+            .wts-price { margin-left: 0; }
+        }
     </style>
 </head>
 <body>
@@ -105,44 +90,61 @@
     <main>
         <a href="/where-to-start" class="wts-back">&larr; Where to Start</a>
 
+        <span class="wts-label">Most complete route</span>
         <div class="wts-hero-head">
             <h1><%= offer.name %></h1>
             <p class="wts-price">£<%= (offer.pricePence / 100).toLocaleString('en-GB') %></p>
         </div>
-        <p class="wts-lede">A genuine Commercial Review in its own right, not a smaller version of the Full Commercial Review. Its value is the judgement, not the minutes.</p>
+        <p class="wts-lede">First we review the business properly. Then we build the website from what the work shows.</p>
 
         <div class="wts-section">
-            <h2>What happens</h2>
-            <p>We listen for as long as it genuinely takes to understand the position, whether thirty minutes or two hours. The call may be recorded so it can be reviewed properly rather than judged in the moment.</p>
-            <p>We then assess the business and whatever else is relevant, and produce a written report: assessment, recommendations, direction, and next steps.</p>
+            <h2>What is included</h2>
+            <ul class="wts-includes">
+                <li>The Full Commercial Review</li>
+                <li>A practical action plan</li>
+                <li>A website designed around the way your business actually operates</li>
+                <li>Responsive desktop and mobile build</li>
+                <li>The agreed pages, forms and functionality</li>
+                <li>Basic technical and on-page SEO setup</li>
+                <li>One complete first website version</li>
+                <li>One structured round of website changes</li>
+            </ul>
         </div>
 
         <div class="wts-section">
-            <h2>Timeline</h2>
-            <p>The report is completed within 4 business days.</p>
+            <h2>Why this price</h2>
+            <p>Buying the Full Commercial Review and Website Build separately would be £3,499. The package is £3,400 because the review removes guesswork from the build.</p>
         </div>
 
+        <div class="wts-section">
+            <h2>How it works</h2>
+            <p>The review comes first. We understand the business, agree what needs to change, then build the website around that direction.</p>
+            <p>This is for owners who want the commercial thinking and the website dealt with together.</p>
+        </div>
+
+        <% if (offer.creditFrom) { %>
         <div class="wts-section">
             <h2>The credit</h2>
-            <div class="wts-credit-note">
-                <p>If you go on to a Full Commercial Review, the £<%= (offer.pricePence / 100).toLocaleString('en-GB') %> you pay here is credited in full.</p>
+            <div class="wts-note">
+                <p>If you have already paid for a Commercial Review, that £500 is credited in full against this price.</p>
             </div>
         </div>
+        <% } %>
 
         <div class="wts-form-section">
-            <h2>Start your Commercial Review</h2>
+            <h2>Start the full package</h2>
             <p class="wts-form-note">Payment is handled securely by Stripe. Card details are never seen by or stored on this site.</p>
-            <form id="wtsCheckoutForm" data-offer="commercial_review">
+            <form id="wtsCheckoutForm" class="wts-form" data-offer="full_review_website_build">
                 <label for="wtsEmail">Your email</label>
                 <input type="email" id="wtsEmail" name="email" required maxlength="255" autocomplete="email">
                 <div class="wts-website-field" aria-hidden="true">
                     <label for="wtsWebsite">Leave this field blank</label>
                     <input type="text" id="wtsWebsite" name="website" tabindex="-1" autocomplete="off">
                 </div>
-                <button type="submit" class="btn btn-primary" id="wtsCheckoutSubmit">Start your Commercial Review</button>
+                <button type="submit" class="btn btn-primary" id="wtsCheckoutSubmit">Pay £3,400 securely</button>
                 <p class="wts-form-status" id="wtsCheckoutStatus" role="status"></p>
             </form>
-            <p class="wts-alt-route"><a href="/where-to-start#conversation-offer">Not sure? Start with the free conversation &rarr;</a></p>
+            <p class="wts-alt-route"><a href="#conversation">Prefer to talk first? Start with a conversation &rarr;</a></p>
         </div>
     </main>
 
@@ -163,7 +165,7 @@
                 status.textContent = '';
                 status.className = 'wts-form-status';
                 submitBtn.disabled = true;
-                submitBtn.textContent = 'Starting checkout…';
+                submitBtn.textContent = 'Starting checkout...';
 
                 const data = {
                     email: document.getElementById('wtsEmail').value,
@@ -180,7 +182,7 @@
                     if (!res.ok || !result.ok) {
                         throw new Error(result.error || 'Something went wrong.');
                     }
-                    status.textContent = 'Redirecting to secure payment…';
+                    status.textContent = 'Redirecting to secure payment...';
                     status.className = 'wts-form-status wts-form-status--ok';
                     window.location.href = result.url;
                 } catch (err) {

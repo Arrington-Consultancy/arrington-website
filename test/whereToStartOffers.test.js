@@ -35,6 +35,14 @@ describe('Where to Start offer catalogue', () => {
     assert.equal(OFFERS.website_build.creditTowards, undefined);
   });
 
+  test('the Full Commercial Review + Website Build package is £3,400 and credits from the Commercial Review', () => {
+    assert.equal(OFFERS.full_review_website_build.pricePence, 340000);
+    assert.equal(OFFERS.full_review_website_build.purchasable, true);
+    assert.equal(OFFERS.full_review_website_build.path, '/where-to-start/full-review-website-build');
+    assert.equal(OFFERS.full_review_website_build.creditFrom, 'commercial_review');
+    assert.equal(OFFERS.full_review_website_build.creditAmountPence, 50000);
+  });
+
   test('getOffer returns null for an unknown id', () => {
     assert.equal(getOffer('not_a_real_offer'), null);
   });
@@ -82,6 +90,20 @@ describe('buildCheckoutSessionParams', () => {
     assert.equal(params.line_items[0].price_data.product_data.name, 'Website Build');
     assert.equal(params.metadata.offer_id, 'website_build');
     assert.equal(params.metadata.credit_applied_pence, '0');
+  });
+
+  test('builds a £3,400 session for the Full Commercial Review + Website Build package', () => {
+    const params = buildCheckoutSessionParams({
+      offer: OFFERS.full_review_website_build,
+      email: 'owner@example.com',
+      successUrl: 'https://example.com/where-to-start/confirmation?session_id={CHECKOUT_SESSION_ID}',
+      cancelUrl: 'https://example.com/where-to-start/full-review-website-build'
+    });
+
+    assert.equal(params.line_items[0].price_data.unit_amount, 340000);
+    assert.equal(params.line_items[0].price_data.product_data.name, 'Full Commercial Review + Website Build');
+    assert.equal(params.metadata.offer_id, 'full_review_website_build');
+    assert.equal(params.metadata.list_price_pence, '340000');
   });
 
   test('never hardcodes payment_method_types, so Stripe decides dynamically per the account/Dashboard', () => {
