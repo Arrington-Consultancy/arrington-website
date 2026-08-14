@@ -657,20 +657,69 @@ Stripe-hosted Checkout Sessions are used; card details never touch this app.
 - **Latest payment/copy commit:** `3d3a6ade5e4a9f265ac49e3551b7c6ee73b44d48` (`Clarify where to start offer ladder`), pushed to `main` and `codex/website-build-checkout`, deployed by GitHub Actions run `31795901686`.
 - **Current pushed branch kept for traceability:** `codex/website-build-checkout`.
 - **Public routes:** `/where-to-start`, `/where-to-start/commercial-review`, `/where-to-start/full-commercial-review`, `/where-to-start/website-build`, `/where-to-start/full-review-website-build`, and private noindex confirmation route `/where-to-start/confirmation`.
-- **Purchasable offers:** `commercial_review` (£500), `website_build` (£999), `full_commercial_review` (£2,500, customer-facing name `Commercial Review + Implementation`), `full_review_website_build` (£3,400, customer-facing name `Commercial Review + Website Build`).
+- **Purchasable offers:** `commercial_review` (£500), `website_build` (£999), `full_commercial_review` (£2,500, customer-facing name `Commercial Review and Implementation`), `full_review_website_build` (£3,400, customer-facing name `Commercial Review + Website Build`).
 - **Website Build is live as an upfront £999 payment route.** Do not treat old Claude branch commit `6687f91` as the current source of truth; it was superseded by main, which adapted the useful pieces and added proper cancel paths, website-specific confirmation copy, sitemap inclusion, tests, and live smoke validation.
 - **The combined review/website offer is now buyable at £3,400.** Public copy deliberately avoids the `Full Commercial Review` versus `Commercial Review` ladder because that cheapens the £500 review. Customer-facing language should explain the difference as review, website build, review plus implementation, and review plus website build.
-- **Stripe live money is still gated.** Railway currently uses a `sk_test_` key and `ENABLE_STRIPE_LIVE_MODE` is not set. `lib/stripeClient.js` deliberately refuses live keys unless that flag is exactly `true`.
+- **Stripe live money is now on.** As of 14/08/2026 Railway has a real `sk_live_` key and `ENABLE_STRIPE_LIVE_MODE=true` set — `lib/stripeClient.js`'s gate is satisfied deliberately, not by accident. Verified directly against the live Stripe account (not from a commit message): real `cs_live_...` Checkout Sessions exist for the £500 and £3,400 offers, created by Codex's own "live-mode verification" smoke tests. Those specific sessions were left `unpaid`/`open` (nobody completed card entry) — a real end-to-end completed payment through the webhook → `purchases` row → confirmation email chain in live mode has not been independently confirmed by anyone outside Codex's own session. If you need to prove that chain, don't assume it from this note — check the live Purchases list and Webhook log in the admin panel for an actual `paid` row.
 - **Latest live smoke test:** `/where-to-start`, `/where-to-start/commercial-review`, `/where-to-start/full-commercial-review`, `/where-to-start/full-review-website-build`, and `/sitemap.xml` all returned 200 after deploy. Public rendered copy no longer contains `Full Commercial Review`; `/where-to-start/full-review-website-build` includes `data-offer="full_review_website_build"` and `Pay £3,400 securely`; `/sitemap.xml` includes `/where-to-start/full-review-website-build`.
 - **Verified Stripe session shape:** live POST to `/api/checkout/full_review_website_build` created sandbox session `cs_test_a18Jg5vZnubqQIhZvWokK1A4hseyf8aXD8Gomta1DH01F7WbePewbTsaST`; `amount_total=340000`, `currency=gbp`, `livemode=false`, `metadata.offer_id=full_review_website_build`, `list_price_pence=340000`, `credit_applied_pence=0`, `invoice_creation.enabled=true`, `integration_identifier=arrington_wts_fnfadymw`, `cancel_url=https://www.arringtonconsultancy.com/where-to-start/full-review-website-build`.
-- **Tests at implementation:** JS syntax checks passed; `npm test` passed 51/51; EJS direct renders passed for Where to Start hub, Commercial Review, Commercial Review + Implementation, and Commercial Review + Website Build templates with the old public `Full Commercial Review` wording absent.
+- **Tests at implementation:** JS syntax checks passed; `npm test` passed 51/51; EJS direct renders passed for Where to Start hub, Commercial Review, Commercial Review and Implementation, and Commercial Review + Website Build templates with the old public `Full Commercial Review` wording absent.
 
-Before enabling live Stripe payments: prove one complete sandbox payment chain
+**Still not proven, now that live mode is on:** one complete live payment chain
 end to end (payment complete, webhook 200, purchase row paid, customer email,
-owner notification, confirmation page) and separately prove the £500 to £2,500
-credit path. Also confirm Stripe account capabilities/verification, live
-webhook endpoint/signing secret, refund/cancellation wording, and whether a
+owner notification, confirmation page) and separately the £500 to £2,500/£3,400
+credit path in live mode. Confirm the live webhook endpoint/signing secret is
+set (a live key needs its own `STRIPE_WEBHOOK_SECRET` from the live Dashboard
+webhook, not the sandbox one), refund/cancellation wording, and whether a
 restricted live key can replace a full secret key.
+
+## Where to Start refinement pass (14/08/2026)
+
+Renamed the £2,500 offer from "Commercial Review + Implementation" to
+"Commercial Review and Implementation" everywhere it appears (`offer.name` in
+`lib/whereToStartOffers.js`, so most render paths picked it up automatically;
+a few hardcoded `<title>`/`og:title`/prose mentions in
+`views/where-to-start-full-commercial-review.ejs`,
+`views/where-to-start-commercial-review.ejs` and
+`views/where-to-start-full-review-website-build.ejs` needed manual edits).
+"Commercial Review + Website Build" (the £3,400 offer's own name) was
+deliberately left untouched — not part of the rename.
+
+Removed the £3,400 page's "would be £3,499 separately, save £99" framing
+(the maths was thin enough to undermine trust rather than build it) and
+replaced it with the review-informs-the-build/no-duplicated-discovery
+argument that was already sitting unused next to it.
+
+Added a "See the standard" evidence section to the £3,400 page (same real
+document previews as the £2,500 page, plus a link to the World Student
+Advisors build) — previously the single biggest, cold-sell purchase on the
+site had no proof section at all while the tier below it did.
+
+Fixed a live broken anchor: `views/where-to-start-website-build.ejs`'s proof
+link was hardcoded to `/websites-and-ai#casestudy2`, which doesn't exist —
+verified directly against the live page that the real section id is
+`#casestudy2__4` (the bare `casestudy2` id is already taken by the Tristan
+Story case study on another page, same collision class documented under
+"Add-section instance allocation" above). The hero's own internal proof link
+on that page already built this correctly at seed time from the real
+allocated id; this was the one place it was hand-typed instead. Fixed by
+hardcoding the currently-correct id, matching the narrow scope asked for —
+worth knowing this is the same fragility class as the original bug (the id
+isn't guaranteed stable if that section is ever deleted/re-added), not a
+structural fix.
+
+CTA buttons on the £500 and £2,500 offer pages changed from "Start your
+Commercial Review" / "Start review and implementation" to "Pay £500
+securely" / "Pay £2,500 securely", matching the pattern already used on the
+£999 and £3,400 pages. Hub page buttons deliberately left unchanged — the
+hub is navigation to the offer pages, not a purchase surface itself.
+
+Tightened two repeated/awkward phrases: "built around the way your business
+actually operates" appeared on both the hub and the Website Build page
+word-for-word — varied the hub's copy instead of repeating it. "The
+[commercial] thinking and the [site/website] dealt with together" appeared
+on both the hub and the £3,400 page — replaced on both with a concrete
+version naming the review and the build directly.
 
 ## Custom domains
 

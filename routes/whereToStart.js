@@ -144,7 +144,7 @@ function mountPageRoute(app, generateCsrfToken) {
 
   app.get('/where-to-start/website-build', async (req, res, next) => {
     try {
-      const { theme, navPages, content, pageContact } = await loadThemeAndShell();
+      const { theme, navPages, content, pageContact, websiteBuildProofHref } = await loadThemeAndShell();
       res.render('where-to-start-website-build', {
         theme,
         ga4Id: process.env.GA4_MEASUREMENT_ID || '',
@@ -152,7 +152,8 @@ function mountPageRoute(app, generateCsrfToken) {
         navPages,
         content,
         pageContact,
-        offer: OFFERS.website_build
+        offer: OFFERS.website_build,
+        websiteBuildProofHref
       });
     } catch (err) {
       next(err);
@@ -161,7 +162,7 @@ function mountPageRoute(app, generateCsrfToken) {
 
   app.get('/where-to-start/full-review-website-build', async (req, res, next) => {
     try {
-      const { theme, navPages, content, pageContact } = await loadThemeAndShell();
+      const { theme, navPages, content, pageContact, websiteBuildProofHref } = await loadThemeAndShell();
       res.render('where-to-start-full-review-website-build', {
         theme,
         ga4Id: process.env.GA4_MEASUREMENT_ID || '',
@@ -169,7 +170,8 @@ function mountPageRoute(app, generateCsrfToken) {
         navPages,
         content,
         pageContact,
-        offer: OFFERS.full_review_website_build
+        offer: OFFERS.full_review_website_build,
+        websiteBuildProofHref
       });
     } catch (err) {
       next(err);

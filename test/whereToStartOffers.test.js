@@ -21,7 +21,7 @@ describe('Where to Start offer catalogue', () => {
     assert.equal(OFFERS.commercial_review.creditTowards, 'full_commercial_review');
   });
 
-  test('the Commercial Review + Implementation route is £2,500 and credits from the Commercial Review', () => {
+  test('the Commercial Review and Implementation route is £2,500 and credits from the Commercial Review', () => {
     assert.equal(OFFERS.full_commercial_review.pricePence, 250000);
     assert.equal(OFFERS.full_commercial_review.creditFrom, 'commercial_review');
     assert.equal(OFFERS.full_commercial_review.creditAmountPence, 50000);
@@ -35,7 +35,7 @@ describe('Where to Start offer catalogue', () => {
     assert.equal(OFFERS.website_build.creditTowards, undefined);
   });
 
-  test('the Commercial Review + Website Build package is £3,400 and credits from the Commercial Review', () => {
+  test('the Commercial Review and Website Build package is £3,400 and credits from the Commercial Review', () => {
     assert.equal(OFFERS.full_review_website_build.pricePence, 340000);
     assert.equal(OFFERS.full_review_website_build.purchasable, true);
     assert.equal(OFFERS.full_review_website_build.path, '/where-to-start/full-review-website-build');
@@ -92,7 +92,7 @@ describe('buildCheckoutSessionParams', () => {
     assert.equal(params.metadata.credit_applied_pence, '0');
   });
 
-  test('builds a £3,400 session for the Commercial Review + Website Build package', () => {
+  test('builds a £3,400 session for the Commercial Review and Website Build package', () => {
     const params = buildCheckoutSessionParams({
       offer: OFFERS.full_review_website_build,
       email: 'owner@example.com',
@@ -101,7 +101,7 @@ describe('buildCheckoutSessionParams', () => {
     });
 
     assert.equal(params.line_items[0].price_data.unit_amount, 340000);
-    assert.equal(params.line_items[0].price_data.product_data.name, 'Commercial Review + Website Build');
+    assert.equal(params.line_items[0].price_data.product_data.name, 'Commercial Review and Website Build');
     assert.equal(params.metadata.offer_id, 'full_review_website_build');
     assert.equal(params.metadata.list_price_pence, '340000');
   });

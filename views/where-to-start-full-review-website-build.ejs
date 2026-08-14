@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Commercial Review + Website Build | Arrington Consultancy</title>
-    <meta name="description" content="A commercial review followed by a website build shaped by what the business needs. Fixed price £3,400.">
+    <title>Commercial Review and Website Build | Arrington Consultancy</title>
+    <meta name="description" content="For established businesses whose external presentation no longer matches what the business has become. Commercial Review and Website Build for £3,400.">
     <link rel="canonical" href="https://www.arringtonconsultancy.com/where-to-start/full-review-website-build">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Commercial Review + Website Build | Arrington Consultancy">
-    <meta property="og:description" content="Review the business, then build the website from that understanding.">
+    <meta property="og:title" content="Commercial Review and Website Build | Arrington Consultancy">
+    <meta property="og:description" content="Review the business internally, then rebuild the website so the outside matches what the business has become.">
     <meta property="og:url" content="https://www.arringtonconsultancy.com/where-to-start/full-review-website-build">
     <meta property="og:image" content="https://www.arringtonconsultancy.com/img/logo">
     <meta name="twitter:card" content="summary_large_image">
@@ -65,6 +65,25 @@
         .wts-includes li::before { content: ''; position: absolute; left: 0; top: 0.65em; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
         .wts-note { display: inline-block; margin-top: 0.3rem; padding: 0.9rem 1.2rem; border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 2px; color: var(--text-bright); font-size: 0.98rem; }
         .wts-note p { margin: 0; }
+
+        /* EVIDENCE — same real-document treatment as the £2,500 page. This
+           is the biggest purchase on the page and the only one sold with no
+           discovery call first, so it carries the same proof, not less. */
+        .wts-evidence-note { font-size: 0.95rem; color: var(--text-muted); margin-bottom: 1.4rem; }
+        .wts-evidence-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.75rem; }
+        .wts-evidence-card { display: flex; flex-direction: column; align-items: center; text-align: center; text-decoration: none; padding: 1.5rem 1.25rem; border: 1px solid var(--border); border-radius: 3px; }
+        .wts-evidence-card:hover, .wts-evidence-card:focus-visible { border-color: var(--accent); }
+        .wts-evidence-thumb { width: 100%; max-width: 190px; height: auto; border-radius: 2px; border: 1px solid var(--border); box-shadow: 0 10px 26px rgba(0,0,0,0.45); margin-bottom: 1.1rem; }
+        .wts-evidence-title { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--text-bright); margin-bottom: 0.4rem; }
+        .wts-evidence-card p { font-size: 0.9rem; color: var(--text-muted); margin: 0; max-width: 22rem; }
+        .wts-direct-proof { margin-top: 1.2rem; margin-bottom: 0; color: var(--text-muted); }
+        .wts-direct-proof a { color: var(--accent); font-weight: 700; }
+        .wts-direct-proof a:hover { color: var(--accent-hover); }
+        @media (max-width: 640px) {
+            .wts-evidence-grid { grid-template-columns: 1fr; gap: 1.5rem; }
+            .wts-evidence-thumb { max-width: 220px; }
+        }
+
         .wts-form-section { margin-top: 2.5rem; padding-top: 2.5rem; border-top: 1px solid var(--border); }
         .wts-form-section h2 { margin-bottom: 0.5rem; font-size: 1.42rem; }
         .wts-form-note { margin-bottom: 1.6rem; color: var(--text-muted); font-size: 0.92rem; }
@@ -95,12 +114,12 @@
             <h1><%= offer.name %></h1>
             <p class="wts-price">£<%= (offer.pricePence / 100).toLocaleString('en-GB') %></p>
         </div>
-        <p class="wts-lede">First we review the business. Then we build the website from what the work shows.</p>
+        <p class="wts-lede">For established businesses whose website no longer matches what the business has become.</p>
 
         <div class="wts-section">
             <h2>What is included</h2>
             <ul class="wts-includes">
-                <li>The Commercial Review + Implementation process</li>
+                <li>The Commercial Review and Implementation process</li>
                 <li>A practical action plan</li>
                 <li>A website designed around the way your business actually operates</li>
                 <li>Responsive desktop and mobile build</li>
@@ -112,14 +131,15 @@
         </div>
 
         <div class="wts-section">
-            <h2>Why this price</h2>
-            <p>Buying Commercial Review + Implementation and the Website Build separately would be £3,499. The package is £3,400 because the review removes guesswork from the build.</p>
+            <h2>Why this package exists</h2>
+            <p>Some businesses reach a point where they have outgrown what they once were. They have grown, changed direction, added services, changed systems, changed customers or become materially different.</p>
+            <p>The Commercial Review addresses the business internally. The Website Build then makes sure the external presentation reflects that new direction.</p>
         </div>
 
         <div class="wts-section">
             <h2>How it works</h2>
-            <p>The review comes first. We understand the business, agree what needs to change, then build the website around that direction.</p>
-            <p>This is for owners who want the commercial thinking and the website dealt with together.</p>
+            <p>The review comes first. We understand the business, agree what needs to change, then build the website around the business that actually exists now.</p>
+            <p>Together, the work gives the business a fresh commercial platform for its next stage. It also avoids paying for the same discovery work twice, because the review has already done the hard thinking.</p>
         </div>
 
         <% if (offer.creditFrom) { %>
@@ -130,6 +150,24 @@
             </div>
         </div>
         <% } %>
+
+        <div class="wts-section">
+            <h2>See the standard</h2>
+            <p class="wts-evidence-note">Real work, not a description of work.</p>
+            <div class="wts-evidence-grid">
+                <a class="wts-evidence-card" href="/evidence#documents">
+                    <img class="wts-evidence-thumb" src="/img/docs/half-time-team-talk.jpg" alt="Preview of the Half-Time Team Talk document" loading="lazy">
+                    <p class="wts-evidence-title">Half-Time Team Talk</p>
+                    <p>The commercial assessment that comes from following the evidence.</p>
+                </a>
+                <a class="wts-evidence-card" href="/evidence#documents">
+                    <img class="wts-evidence-thumb" src="/img/docs/90-day-action-plan.jpg" alt="Preview of the 90-Day Action Plan document" loading="lazy">
+                    <p class="wts-evidence-title">90-Day Action Plan</p>
+                    <p>How findings become a practical plan of action.</p>
+                </a>
+            </div>
+            <p class="wts-direct-proof"><a href="<%= websiteBuildProofHref || '/websites-and-ai' %>">See the website work itself, built for World Student Advisors</a>.</p>
+        </div>
 
         <div class="wts-form-section">
             <h2>Start review and website build</h2>
