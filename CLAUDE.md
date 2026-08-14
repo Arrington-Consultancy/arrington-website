@@ -648,6 +648,30 @@ npm run dev
 - **GitHub Action (`.github/workflows/deploy.yml`, added 25/07/2026):** runs `railway up --service arrington-prototype --environment production --detach` via the Railway CLI on every push to `main`, as a more reliable alternative to Railway's built-in GitHub auto-deploy, plus a preceding diagnostic step (`railway whoami`/`status`/`variables --json`) that prints project/environment/service identity and variable names/lengths/prefixes — never values — into the Action's own logs, useful for verifying exactly what the live deploy target sees without needing dashboard access. Requires a `RAILWAY_TOKEN` secret in the repo's GitHub Actions settings — must be a **project token** (Railway dashboard → the service → Settings → Tokens → create a token scoped to that service/environment), not a personal account token, so `railway up` needs no `railway link` step and can't accidentally target the wrong project. Manual `railway up` from a local checkout is still fine as a fallback/for out-of-band deploys.
 - **GitHub:** `github.com/natparnell/arrington-prototype` (private)
 
+## Payments / Where to Start (14/08/2026)
+
+Current public payment architecture lives in `routes/whereToStart.js`,
+`lib/whereToStartOffers.js`, and the `views/where-to-start*.ejs` templates.
+Stripe-hosted Checkout Sessions are used; card details never touch this app.
+
+- **Live deployed commit:** `e231f286a112cacb5320d58947be2506db081eaa` (`Add upfront website build checkout`), pushed to `main` and deployed by GitHub Actions run `31793220152`.
+- **Current pushed branch kept for traceability:** `codex/website-build-checkout`.
+- **Public routes:** `/where-to-start`, `/where-to-start/commercial-review`, `/where-to-start/full-commercial-review`, `/where-to-start/website-build`, and private noindex confirmation route `/where-to-start/confirmation`.
+- **Purchasable offers:** `commercial_review` (£500), `full_commercial_review` (£2,500), `website_build` (£999).
+- **Website Build is now live as an upfront £999 payment route.** Do not treat old Claude branch commit `6687f91` as the current source of truth; it was superseded by `e231f28`, which adapted the useful pieces and added proper cancel paths, website-specific confirmation copy, sitemap inclusion, tests, and live smoke validation.
+- **Full Commercial Review + Website Build** is shown only as a non-priced conversation route. Do not invent a checkout price for it until Tom explicitly locks scope and price.
+- **Stripe live money is still gated.** Railway currently uses a `sk_test_` key and `ENABLE_STRIPE_LIVE_MODE` is not set. `lib/stripeClient.js` deliberately refuses live keys unless that flag is exactly `true`.
+- **Latest live smoke test:** `/where-to-start` 200 with gold Website Build CTA; `/where-to-start/website-build` 200 with `data-offer="website_build"` and `Pay £999 securely`; `/sitemap.xml` 200 and includes `/where-to-start/website-build`; live POST to `/api/checkout/website_build` created sandbox session `cs_test_a109vXeRT8yUEX4AM0ZPGWcuyuDRr35Uk5Yrtff0fQ8u25YnsL01e0OKPQ`.
+- **Verified Stripe session shape:** `amount_total=99900`, `currency=gbp`, `livemode=false`, `metadata.offer_id=website_build`, `list_price_pence=99900`, `credit_applied_pence=0`, `invoice_creation.enabled=true`, `integration_identifier=arrington_wts_ujmsqrcy`, `cancel_url=https://www.arringtonconsultancy.com/where-to-start/website-build`.
+- **Tests at implementation:** JS syntax checks passed; `npm test` passed 49/49; EJS direct renders passed for the Where to Start hub, Website Build payment page, and confirmation page. Local full app start was not run because no local `DATABASE_URL`/Postgres was configured in the Codex shell; live Railway smoke tests covered the deployed path.
+
+Before enabling live Stripe payments: prove one complete sandbox payment chain
+end to end (payment complete, webhook 200, purchase row paid, customer email,
+owner notification, confirmation page) and separately prove the £500 to £2,500
+credit path. Also confirm Stripe account capabilities/verification, live
+webhook endpoint/signing secret, refund/cancellation wording, and whether a
+restricted live key can replace a full secret key.
+
 ## Custom domains
 
 Custom domains on the `arrington-prototype` service in Railway: `www.arringtonconsultancy.com`, `arringtonconsultancy.com` (apex), and `www.arringtonconsultancy.co.uk` are bound and serving. **`arringtonconsultancy.co.uk` (apex) is NOT yet attached in Railway as of 30/06/2026** — its Wix DNS already points at Railway's edge, but until it's added as a custom domain in the Railway dashboard (Settings → Networking → + Custom Domain → `arringtonconsultancy.co.uk`, target port 8080) Railway has no cert for it and the apex returns a TLS "no matching certificate" error. The Railway CLI can't add it (the known misleading "Unauthorized" custom-domain-add bug), so this must be done in the dashboard; the cert provisions within a few minutes once added. DNS for both domains lives at Wix (`ns12`/`ns13.wixdns.net`). Because Wix doesn't offer ANAME on Tom's plan, each apex uses A records pointing at Railway's anycast edge IPs — apex-via-A-record is the workaround when a registrar lacks ANAME/CNAME-flattening.
