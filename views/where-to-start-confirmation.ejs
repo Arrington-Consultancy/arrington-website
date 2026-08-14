@@ -47,7 +47,11 @@
             <span class="wts-status-label">Payment received</span>
             <h1>Thank you.</h1>
             <p>Your payment for <%= offer ? offer.name : 'your order' %> has gone through. A receipt has been sent to your email, and Tom has been notified.</p>
-            <p>Next, you will receive a short intake questionnaire by email. Once that comes back, work begins.</p>
+            <% if (purchase.offer_id === 'website_build') { %>
+                <p>Next, Tom will email you to book the recorded planning conversation and confirm what the website needs to do.</p>
+            <% } else { %>
+                <p>Next, you will receive a short intake questionnaire by email. Once that comes back, work begins.</p>
+            <% } %>
         <% } else if (purchase && purchase.status === 'pending') { %>
             <span class="wts-status-label">Confirming payment</span>
             <h1>Almost there.</h1>

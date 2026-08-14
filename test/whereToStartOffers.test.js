@@ -27,6 +27,14 @@ describe('Where to Start offer catalogue', () => {
     assert.equal(OFFERS.full_commercial_review.creditAmountPence, 50000);
   });
 
+  test('the Website Build is £999, purchasable, and carries no credit mechanism', () => {
+    assert.equal(OFFERS.website_build.pricePence, 99900);
+    assert.equal(OFFERS.website_build.purchasable, true);
+    assert.equal(OFFERS.website_build.path, '/where-to-start/website-build');
+    assert.equal(OFFERS.website_build.creditFrom, undefined);
+    assert.equal(OFFERS.website_build.creditTowards, undefined);
+  });
+
   test('getOffer returns null for an unknown id', () => {
     assert.equal(getOffer('not_a_real_offer'), null);
   });
@@ -60,6 +68,20 @@ describe('buildCheckoutSessionParams', () => {
       cancelUrl: 'https://example.com/cancel'
     });
     assert.equal(params.invoice_creation.enabled, true);
+  });
+
+  test('builds a £999 session for the Website Build offer with no credit applied', () => {
+    const params = buildCheckoutSessionParams({
+      offer: OFFERS.website_build,
+      email: 'owner@example.com',
+      successUrl: 'https://example.com/where-to-start/confirmation?session_id={CHECKOUT_SESSION_ID}',
+      cancelUrl: 'https://example.com/where-to-start/website-build'
+    });
+
+    assert.equal(params.line_items[0].price_data.unit_amount, 99900);
+    assert.equal(params.line_items[0].price_data.product_data.name, 'Website Build');
+    assert.equal(params.metadata.offer_id, 'website_build');
+    assert.equal(params.metadata.credit_applied_pence, '0');
   });
 
   test('never hardcodes payment_method_types, so Stripe decides dynamically per the account/Dashboard', () => {

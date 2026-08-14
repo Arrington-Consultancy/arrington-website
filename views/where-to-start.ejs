@@ -4,16 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Where to Start | Arrington Consultancy</title>
-    <meta name="description" content="Three ways to start working with Arrington Consultancy, what each one costs, and what happens next. A free conversation, a £500 Commercial Review, or a £2,500 Full Commercial Review.">
+    <meta name="description" content="Choose how to start with Arrington Consultancy: free conversation, £500 Commercial Review, £2,500 Full Commercial Review, or a fixed £999 Website Build.">
     <link rel="canonical" href="https://www.arringtonconsultancy.com/where-to-start">
     <meta property="og:type" content="website">
     <meta property="og:title" content="Where to Start | Arrington Consultancy">
-    <meta property="og:description" content="Three ways to start working with Arrington Consultancy, what each one costs, and what happens next.">
+    <meta property="og:description" content="Choose how to start with Arrington Consultancy, what each option costs, and what happens next.">
     <meta property="og:url" content="https://www.arringtonconsultancy.com/where-to-start">
     <meta property="og:image" content="https://www.arringtonconsultancy.com/img/logo">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Where to Start | Arrington Consultancy">
-    <meta name="twitter:description" content="Three ways to start working with Arrington Consultancy, what each one costs, and what happens next.">
+    <meta name="twitter:description" content="Choose how to start with Arrington Consultancy, what each option costs, and what happens next.">
     <meta name="twitter:image" content="https://www.arringtonconsultancy.com/img/logo">
     <meta name="csrf-token" content="<%= csrfToken %>">
     <link rel="icon" href="/favicon.ico" sizes="any">
@@ -160,13 +160,13 @@
             .wts-step-marker { position: static; display: block; font-size: 2.4rem; margin-bottom: 0.6rem; }
         }
 
-        /* WEBSITE BUILD — deliberately set apart from the three steps above:
-           a bordered panel rather than another numbered step, quieter CTA,
-           its own short framing sentence making the distinction explicit
-           rather than leaving it to layout alone. */
-        .wts-build {
+        .wts-offshoots {
             margin-top: 3rem;
-            padding: 2.75rem;
+            display: grid;
+            gap: 1rem;
+        }
+        .wts-build {
+            padding: 2.35rem;
             border: 1px solid var(--border);
             border-radius: 4px;
         }
@@ -184,9 +184,9 @@
             font-family: 'DM Sans', sans-serif;
             font-weight: 700;
             font-size: 1.15rem;
-            color: var(--text-bright);
+            color: var(--accent);
         }
-        .wts-build p.wts-build-body { font-size: 1rem; color: var(--text-muted); max-width: 520px; margin-bottom: 1.4rem; }
+        .wts-build p.wts-build-body { font-size: 1rem; color: var(--text-muted); max-width: 540px; margin-bottom: 1.4rem; }
 
         @media (max-width: 640px) {
             .wts-build { padding: 2rem 1.5rem; }
@@ -205,8 +205,8 @@
 
     <div class="wts-intro">
         <p class="wts-label">Where to Start</p>
-        <h1>Three ways to start working with us.</h1>
-        <p>Talk first, or go straight to a fixed-price piece of work. Either way, here is exactly what it costs and what happens next.</p>
+        <h1>Choose the way in.</h1>
+        <p>Talk first, buy a commercial review, or pay upfront for the website build. Here is what each route costs and what happens next.</p>
     </div>
 
     <main>
@@ -245,15 +245,26 @@
             </section>
         </div>
 
-        <section class="wts-build" id="website-build-offer">
-            <p class="wts-label">A different kind of project</p>
-            <div class="wts-build-head">
-                <h2>Website Build</h2>
-                <p class="wts-build-price">From £999</p>
-            </div>
-            <p class="wts-build-body">A genuinely bespoke website. Build work, not commercial diagnosis &mdash; a different kind of project from the two reviews above.</p>
-            <a href="/websites-and-ai" class="btn btn-outline">See the website offer</a>
-        </section>
+        <div class="wts-offshoots">
+            <section class="wts-build" id="website-build-offer">
+                <p class="wts-label">Website</p>
+                <div class="wts-build-head">
+                    <h2><%= offers.website_build.name %></h2>
+                    <p class="wts-build-price">£<%= (offers.website_build.pricePence / 100).toLocaleString('en-GB') %></p>
+                </div>
+                <p class="wts-build-body">Pay upfront for the fixed-price website build. Built around the way your business actually operates, with a recorded planning conversation, first version and one structured round of changes.</p>
+                <a href="/where-to-start/website-build" class="btn btn-primary">Start your Website Build</a>
+            </section>
+
+            <section class="wts-build" id="full-works-offer">
+                <p class="wts-label">Most in-depth short-term route</p>
+                <div class="wts-build-head">
+                    <h2>Full Commercial Review + Website Build</h2>
+                </div>
+                <p class="wts-build-body">For owners who want the commercial review first, then a website built around what the business actually needs to change. This is a joined-up route, not a separate checkout product.</p>
+                <a href="#conversation" class="btn btn-outline">Talk about the full works</a>
+            </section>
+        </div>
 
         <section class="wts-else" id="something-else-offer">
             <p>Something else? Tell us what is going on and we will tell you honestly whether we can help.</p>

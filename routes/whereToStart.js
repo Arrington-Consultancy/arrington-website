@@ -142,6 +142,23 @@ function mountPageRoute(app, generateCsrfToken) {
     }
   });
 
+  app.get('/where-to-start/website-build', async (req, res, next) => {
+    try {
+      const { theme, navPages, content, pageContact } = await loadThemeAndShell();
+      res.render('where-to-start-website-build', {
+        theme,
+        ga4Id: process.env.GA4_MEASUREMENT_ID || '',
+        csrfToken: generateCsrfToken(req, res),
+        navPages,
+        content,
+        pageContact,
+        offer: OFFERS.website_build
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   app.get('/where-to-start/confirmation', async (req, res, next) => {
     try {
       const sessionId = plainText(req.query.session_id, 255);
@@ -226,7 +243,7 @@ router.post('/api/checkout/:offerId', checkoutLimiter, async (req, res) => {
       offer,
       email,
       successUrl: `${origin}/where-to-start/confirmation?session_id={CHECKOUT_SESSION_ID}`,
-      cancelUrl: `${origin}/where-to-start/${offer.id === 'commercial_review' ? 'commercial-review' : 'full-commercial-review'}`,
+      cancelUrl: `${origin}${offer.path || '/where-to-start'}`,
       chargeAmountPence,
       creditAppliedPence
     });
@@ -365,7 +382,9 @@ function mountWebhook(app) {
                 : '',
               `Stripe session: ${session.id}`,
               '',
-              'Next step: send the intake questionnaire and confirm the working timeline.'
+              purchase.offer_id === 'website_build'
+                ? 'Next step: book the recorded planning conversation and confirm what the website needs to do.'
+                : 'Next step: send the intake questionnaire and confirm the working timeline.'
             ].filter(Boolean).join('\n'),
             replyTo: purchase.email
           });
@@ -381,6 +400,7 @@ function mountWebhook(app) {
           // rather than leaving it as a promise nothing fulfils.
           if (transporter) {
             const isCommercialReview = purchase.offer_id === 'commercial_review';
+            const isWebsiteBuild = purchase.offer_id === 'website_build';
             transporter.sendMail({
               from: NOTIFY_FROM,
               to: purchase.email,
@@ -388,7 +408,9 @@ function mountWebhook(app) {
               text: [
                 `Thank you — your payment for the ${offer ? offer.name : purchase.offer_id} has gone through.`,
                 '',
-                isCommercialReview
+                isWebsiteBuild
+                  ? "Next, Tom will email you to book the recorded planning conversation and confirm what the website needs to do."
+                  : isCommercialReview
                   ? "Next, you'll receive a short questionnaire by email so Tom has enough context before you talk. The written report follows within 4 business days of that conversation."
                   : "Next, you'll receive a short questionnaire by email to get started. Tom will be in touch to confirm the working plan and timeline.",
                 '',
