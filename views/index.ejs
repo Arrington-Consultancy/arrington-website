@@ -439,15 +439,30 @@
 
         /* Restrained credibility line beneath the CTA (15/08/2026) —
            deliberately no border, background, icon or badge treatment.
-           Smaller and quieter than the CTA and supporting line, spaced
-           out slightly rather than boxed, so it reads as a quiet fact
-           rather than an award strip. */
+           Quieter than the CTA and supporting line, separated by space
+           rather than boxed, so it reads as a quiet fact rather than an
+           award strip.
+
+           Laid out as flex items rather than one run of text (15/08/2026):
+           the credentials were previously joined by " · " in the content
+           value, which stranded a separator at the end of a line whenever
+           the strip wrapped. The view now splits that same content value
+           on the middot and renders each credential as its own nowrap
+           item, so the gap does the separating and nothing can dangle.
+           The stored content keeps its readable "A · B · C" form for
+           whoever edits it in the CMS. */
         .hero-proof-strip {
-            margin: 1.4rem 0 0;
-            font-size: 0.78rem;
-            letter-spacing: 0.02em;
-            color: var(--text-muted);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem 1.4rem;
+            margin: 1.05rem 0 0;
+            font-size: 0.82rem;
+            font-weight: 500;
+            letter-spacing: 0.03em;
+            color: var(--text);
         }
+
+        .hero-proof-strip span { white-space: nowrap; }
 
         .hero-photo {
             background: var(--black);
@@ -558,6 +573,39 @@
         .hero[data-section-id="hero"] .hero-photo img { object-position: 60% 40%; }
         .hero[data-section-id="hero__3"] .hero-photo img { object-position: 65% 50%; }
         .hero[data-section-id="hero__4"] .hero-photo img { object-position: 60% 40%; }
+
+        /* Homepage hero only (15/08/2026): bind the supporting sentence,
+           CTA and credibility line into one sequence — message, action,
+           reassurance — rather than three evenly-spaced slabs. Scoped to
+           this instance deliberately: the other heroes carry different
+           supporting copy and no credibility line, and shifting their
+           rhythm would be an unrelated change. */
+        .hero[data-section-id="hero"] .hero-text .sub { margin-bottom: 2rem; }
+
+        /* Continuation cue. The hero deliberately stays full-screen, so
+           without this the page reads as complete at the fold. Static and
+           low-opacity on purpose — a moving arrow would undercut the tone,
+           and nothing here needs the viewer's attention pulled. Hidden by
+           default; only the homepage hero shows it. */
+        .hero-scroll-cue { display: none; }
+
+        .hero[data-section-id="hero"] .hero-scroll-cue {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 1.25rem;
+            z-index: 2;
+            display: flex;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        .hero[data-section-id="hero"] .hero-scroll-cue svg {
+            width: 22px;
+            height: 22px;
+            color: var(--accent);
+            opacity: 0.45;
+        }
 
         @media (max-width: 700px) {
             .hero[data-section-id="hero"],
@@ -2446,6 +2494,16 @@
                 font-size: 1rem;
             }
 
+            /* Homepage hero only: at 1rem this sentence wrapped to four
+               lines on a 390px screen and dropped "owner." alone onto the
+               last one. Half a step down lands it on three balanced lines;
+               text-wrap: pretty guards the rag where the browser supports
+               it, and is harmlessly ignored where it does not. */
+            .hero[data-section-id="hero"] .hero-text .sub {
+                font-size: 0.95rem;
+                text-wrap: pretty;
+            }
+
             .hero-bullets {
                 flex-direction: column;
                 gap: 0.65rem;
@@ -2576,9 +2634,19 @@
                 <a href="<%= _heroSecondaryHref %>" class="hero-secondary-link"><%- content[_k + '.secondary_text'] %></a>
                 <% } %>
             </div>
-            <% const _heroProofLine = (content[_k + '.proof_line'] || '').replace(/<[^>]+>/g, '').trim(); %>
+            <%
+              const _heroProofLine = (content[_k + '.proof_line'] || '').replace(/<[^>]+>/g, '').trim();
+              // Split on the middot the content value uses to join the
+              // credentials, so each one becomes its own nowrap item and a
+              // separator can never be left stranded at a line break. A
+              // value with no middot simply renders as a single item.
+              const _heroProofItems = (content[_k + '.proof_line'] || '')
+                .split('·')
+                .map(function (s) { return s.trim(); })
+                .filter(Boolean);
+            %>
             <% if (_heroProofLine) { %>
-            <p class="hero-proof-strip"><%- content[_k + '.proof_line'] %></p>
+            <p class="hero-proof-strip"><% _heroProofItems.forEach(function (_item) { %><span><%- _item %></span><% }); %></p>
             <% } %>
         </div>
         <div class="hero-photo">
@@ -2588,6 +2656,9 @@
             </picture>
             <% if (canEdit) { %><button class="cms-img-btn" data-image="<%= _heroImg %>" title="Change photo">&#9998;</button><% } %>
         </div>
+    </div>
+    <div class="hero-scroll-cue" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
     </div>
 </section>
 <% } %>
