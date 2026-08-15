@@ -1137,12 +1137,24 @@ async function seed() {
       if (heroId) {
         await upsert(`${heroId}.label`, 'BUSINESS WEBSITES');
         await upsert(`${heroId}.heading`, 'A business website built around how you work');
-        await upsert(`${heroId}.subtext`, 'If we built World Student Advisors for £999, imagine what we could build for your business.<br><br>Built around the way your business actually operates. Not dropped into a template.');
-        await upsert(`${heroId}.proof_text`, 'Look at our latest example of what we have built');
+        // Conversion polish (15/08/2026): "built around how your business
+        // operates" was stated four times, three of them inside the first
+        // phone screen (headline, this subtext, bullet 3) and again as the
+        // first "What you get" line. The headline keeps it; the repeats are
+        // dropped. The second sentence here carries a genuinely different
+        // claim, so only the duplicated one goes.
+        await upsert(`${heroId}.subtext`, 'If we built World Student Advisors for £999, imagine what we could build for your business.<br><br>Not dropped into a template.');
+        // proof_text is deliberately empty: it and the CTA below both pointed
+        // at the same WSA anchor, two links ~200px apart in the hero doing an
+        // identical job. "See what £999 looks like" is the stronger of the
+        // two because it ties the price to the evidence, so it is the one
+        // kept. proof_href is left set and simply unused - the hero only
+        // renders the link when proof_text is non-empty.
+        await upsert(`${heroId}.proof_text`, '');
         await upsert(`${heroId}.proof_href`, wsaId ? `#${wsaId}` : '#conversation');
         await upsert(`${heroId}.bullet_1`, 'Fixed £999 price');
         await upsert(`${heroId}.bullet_2`, 'Mobile ready');
-        await upsert(`${heroId}.bullet_3`, 'Built around the way your business actually operates');
+        await upsert(`${heroId}.bullet_3`, '');
         await upsert(`${heroId}.cta`, 'See what £999 looks like');
         await upsert(`${heroId}.cta_href`, wsaId ? `#${wsaId}` : '#conversation');
         await upsert(`${heroId}.secondary_text`, 'Tell us what you want to build');
@@ -1185,7 +1197,12 @@ async function seed() {
         await upsert(`${includesId}.intro`, 'We agree what the website needs to do before we start.');
         await upsert(`${includesId}.p1`, '');
         await upsert(`${includesId}.p2`, '');
-        await upsert(`${includesId}.item_1`, 'A website designed around the way your business actually operates');
+        // item_1 was the fourth statement of the "built around how your
+        // business operates" idea, and the only line in this list that was a
+        // positioning claim rather than a concrete deliverable. Dropped: the
+        // remaining seven are all things the buyer actually receives. The
+        // filter template skips empty items, so the list simply renders seven.
+        await upsert(`${includesId}.item_1`, '');
         await upsert(`${includesId}.item_2`, 'Responsive desktop and mobile build');
         await upsert(`${includesId}.item_3`, 'The agreed pages, forms and functionality');
         await upsert(`${includesId}.item_4`, 'Basic technical and on-page SEO setup');
@@ -1194,6 +1211,17 @@ async function seed() {
         await upsert(`${includesId}.item_7`, 'One structured round of changes');
         await upsert(`${includesId}.item_8`, 'CMS access where appropriate');
         await upsert(`${includesId}.closing`, 'The price is £999.<br><br>Further changes after the agreed build and included revision are charged at £300 per day, based on approximately six working hours.');
+        // Mid-page CTA (15/08/2026). Between the hero and the enquiry form
+        // there were roughly six phone screens with only one clickable thing
+        // in them, and that one was the World Student Advisors link, which
+        // leaves the site in a new tab. So a reader convinced by "What you
+        // get" - the section that actually justifies the £999 - had nothing
+        // to act on without scrolling three more screens. An empty
+        // button_link resolves to #conversation (the page's own enquiry form)
+        // and renders as the primary button style; see the filter template's
+        // _fBtnHref / _fIsPrimaryCta handling in views/index.ejs.
+        await upsert(`${includesId}.button_text`, 'Tell us what you want to build');
+        await upsert(`${includesId}.button_link`, '');
       }
 
       if (processId) {
@@ -1228,7 +1256,13 @@ async function seed() {
       }
 
       await upsert('wai.header_cta_text', 'TELL US WHAT YOU WANT TO BUILD');
-      await upsert('wai.contact_label', 'TELL US WHAT YOU WANT TO BUILD');
+      // The eyebrow label and the heading were the same sentence stacked on
+      // top of each other ("TELL US WHAT YOU WANT TO BUILD" directly above
+      // "Tell us what you want to build."), which read as a rendering fault
+      // rather than a design choice. The heading is the clearer of the two,
+      // so the label is dropped. site-footer.ejs skips the label element
+      // entirely when it is empty, so this leaves no stray gap.
+      await upsert('wai.contact_label', '');
       await upsert('wai.contact_heading', 'Tell us what you want to build.');
       await upsert('wai.contact_body', 'You do not need a specification or wireframes.<br><br>Tell us what you are trying to achieve and we will tell you what we would do and why.');
       await upsert('wai.contact_message_placeholder', 'Tell us what you want the website to do');

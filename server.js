@@ -869,7 +869,15 @@ async function renderPage(req, res, next, pageSlug) {
     };
     if (pageSlug === 'websites-and-ai') {
       pageContact.headerCtaText = plainText(content['wai.header_cta_text']) || pageContact.headerCtaText;
-      pageContact.label = content['wai.contact_label'] || pageContact.label;
+      // Label resolves on "is the override present" rather than "is it
+      // truthy" (15/08/2026). This page deliberately has no eyebrow label -
+      // it previously repeated its own heading word for word - and a plain
+      // `||` would treat that empty override as "unset" and fall back to the
+      // site-wide contact label, putting unrelated consultancy copy above
+      // the website enquiry form. An absent key still falls back as before.
+      pageContact.label = content['wai.contact_label'] === undefined
+        ? pageContact.label
+        : content['wai.contact_label'];
       pageContact.heading = content['wai.contact_heading'] || pageContact.heading;
       pageContact.body    = content['wai.contact_body']    || pageContact.body;
       pageContact.messagePlaceholder = plainText(content['wai.contact_message_placeholder']) || pageContact.messagePlaceholder;

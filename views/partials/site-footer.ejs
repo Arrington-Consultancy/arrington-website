@@ -28,7 +28,9 @@
     <div class="footer-contact cms-section" data-section="contact">
         <% if (canEdit) { %><button class="cms-edit-btn" data-section="contact" title="Edit section">&#9998;</button><% } %>
         <% if (!_suppressLeadForm) { %>
+        <% if ((pageContact.label || '').replace(/<[^>]+>/g, '').trim()) { %>
         <p class="section-label"><%- pageContact.label %></p>
+        <% } %>
         <h2 class="section-heading"><%- pageContact.heading %></h2>
         <p><%- pageContact.body %></p>
         <form class="lead-form" id="leadForm">
