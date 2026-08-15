@@ -1178,7 +1178,7 @@ async function seed() {
         await upsert(`${wsaId}.item_4`, 'AI interview practice');
         await upsert(`${wsaId}.item_5`, 'AI visa interview preparation');
         await upsert(`${wsaId}.item_6`, 'Responsive desktop and mobile layouts');
-        await upsert(`${wsaId}.item_7`, 'Detailed enquiry and registration journeys');
+        await upsert(`${wsaId}.item_7`, 'Enquiry and registration forms built around what the team actually needs');
         await upsert(`${wsaId}.item_8`, '');
         await upsert(`${wsaId}.stat_number`, '');
         await upsert(`${wsaId}.stat_label`, '');
