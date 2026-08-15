@@ -2731,7 +2731,26 @@ async function seed() {
   );
   if (prunedBackups > 0) console.log(`Pruned ${prunedBackups} old backup(s); keeping the 3 most recent.`);
 
-  // Seed images (idempotent: ON CONFLICT DO NOTHING)
+  // Seed images (idempotent: ON CONFLICT DO NOTHING) — this only ever
+  // populates a MISSING row (fresh database, local dev, disaster recovery),
+  // never touches a `headshot` row that already exists, so it can never
+  // overwrite whatever is live on production.
+  //
+  // `headshot` (15/08/2026): `hero-homepage.jpg` — the approved coastal/
+  // window homepage hero photo. Previously this key fell back to
+  // `headshot.png`, an unrelated AI-generated portrait that had been
+  // checked into the repo root as a byproduct of an earlier session's
+  // throwaway Playwright diagnostic tooling (PR #58, "Fix hang in
+  // full-review diagnostic") and never should have been usable as a hero
+  // fallback. `hero-homepage.jpg` is the exact production `/img/headshot`
+  // bytes (md5 ff3ce00eaaa3e6a000ebaf1383dfb58b, confirmed matching a
+  // direct fetch of the live URL) — not recompressed, cropped or
+  // regenerated. Known gap not yet fixed: there is still no `headshot__webp`
+  // seed row, so a fresh database's `/img/headshot.webp` request 404s;
+  // production has one because it was uploaded via the CMS. Needs the same
+  // exact-bytes treatment before it's closed, not a re-encode assumed to be
+  // equivalent.
+  //
   // `headshot__hero__5` is the per-instance photo for the Websites and AI
   // page's hero (confirmed live as instance id hero__5 — see the migration
   // above). Tom's own photo, supplied after the page went live; before this
@@ -2741,7 +2760,7 @@ async function seed() {
   // well under the CMS's 2MB upload cap.
   const images = [
     { key: 'logo', file: 'logo.png', mime: 'image/png' },
-    { key: 'headshot', file: 'headshot.png', mime: 'image/png' },
+    { key: 'headshot', file: 'hero-homepage.jpg', mime: 'image/jpeg' },
     { key: 'oxford', file: 'oxford.png', mime: 'image/png' },
     { key: 'headshot__hero__5', file: 'hero-websites-and-ai.jpg', mime: 'image/jpeg' },
     // The <picture> element's <source> always requests `<key>__webp` and,
