@@ -2842,6 +2842,37 @@ async function seed() {
     }
   }
 
+  // Migration: homepage hero — restrained credibility line beneath the CTA
+  // (15/08/2026). All three facts independently checked against controlled
+  // evidence before this was written: "Two decades..." matches the Master
+  // CV and the live About Us copy (both say "two decades"/"nearly two
+  // decades" of Abacus/TNFP ownership, not "20+"); "Oxford Saïd,
+  // Distinction" matches the Master CV and the Brand Operating System's
+  // proof principles; "5.0 on Google" matches the exact "5.0 from 5
+  // reviews on Google" text already live on the homepage. New optional
+  // hero.proof_line field, empty by default (see db/lorem.js), seeded only
+  // for the base homepage hero instance. Marker-guarded so it fires once
+  // and never re-clobbers a future manual edit via the CMS.
+  {
+    const HERO_PROOF_LINE_MARKER = 'hero.proof_line_2026-08-15';
+    const { rows: proofLineMarkerRows } = await db.query(
+      'SELECT 1 FROM content WHERE section_key = $1',
+      [HERO_PROOF_LINE_MARKER]
+    );
+    if (proofLineMarkerRows.length === 0) {
+      await db.query(
+        `INSERT INTO content (section_key, content) VALUES ('hero.proof_line', $1)
+         ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content`,
+        ['Two decades building, buying and selling businesses · Oxford Saïd, Distinction · 5.0 on Google']
+      );
+      await db.query(
+        'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+        [HERO_PROOF_LINE_MARKER, 'true']
+      );
+      console.log('Homepage hero: credibility line added beneath the CTA.');
+    }
+  }
+
   console.log('Seed complete.');
 }
 

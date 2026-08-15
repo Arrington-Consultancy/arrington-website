@@ -12,7 +12,8 @@ const lorem = {
     'heading': 'Lorem ipsum dolor sit amet, consectetur adipiscing elit',
     'subtext': 'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip.',
     'cta': 'Lorem ipsum',
-    'whatsapp': ''
+    'whatsapp': '',
+    'proof_line': ''
   },
   credentials_oxford: {
     'title': 'Lorem ipsum',

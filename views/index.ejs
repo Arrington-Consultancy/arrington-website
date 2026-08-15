@@ -437,6 +437,18 @@
             color: var(--text-bright);
         }
 
+        /* Restrained credibility line beneath the CTA (15/08/2026) —
+           deliberately no border, background, icon or badge treatment.
+           Smaller and quieter than the CTA and supporting line, spaced
+           out slightly rather than boxed, so it reads as a quiet fact
+           rather than an award strip. */
+        .hero-proof-strip {
+            margin: 1.4rem 0 0;
+            font-size: 0.78rem;
+            letter-spacing: 0.02em;
+            color: var(--text-muted);
+        }
+
         .hero-photo {
             background: var(--black);
             border: 1px solid var(--border);
@@ -2564,6 +2576,10 @@
                 <a href="<%= _heroSecondaryHref %>" class="hero-secondary-link"><%- content[_k + '.secondary_text'] %></a>
                 <% } %>
             </div>
+            <% const _heroProofLine = (content[_k + '.proof_line'] || '').replace(/<[^>]+>/g, '').trim(); %>
+            <% if (_heroProofLine) { %>
+            <p class="hero-proof-strip"><%- content[_k + '.proof_line'] %></p>
+            <% } %>
         </div>
         <div class="hero-photo">
             <picture>
