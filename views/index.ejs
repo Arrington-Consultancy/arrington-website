@@ -1793,6 +1793,18 @@
                 flex-direction: column;
                 align-items: flex-start;
             }
+
+            /* About Us mobile pass (15/08/2026). Below 640px the header stacks,
+               so the founder photo sits alone above the name at 100x125, which
+               is a quarter of the column and smaller than the purely decorative
+               photo in that page's closing CTA. On an About page the face is
+               the credibility, so it gets more of the column here. Same 4:5
+               crop, mobile only: the side-by-side desktop header still uses the
+               100x125 set on .intervention-photo above and is untouched. */
+            .intervention-photo {
+                width: 150px;
+                height: 188px;
+            }
         }
 
         .intervention .btn {

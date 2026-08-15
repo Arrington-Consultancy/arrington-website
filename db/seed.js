@@ -3010,6 +3010,217 @@ async function seed() {
     }
   }
 
+  // Migration: About Us conversion and credibility pass (15/08/2026), from a
+  // mobile review of the live page. Seven approved edits, all content only.
+  //
+  // This page's copy has only ever existed in the production database, never
+  // in this file, so a one-time guarded migration is the only way to change it
+  // in code. Same pattern as the homepage hero blocks above: a marker row makes
+  // it run exactly once, and every individual edit additionally checks that the
+  // stored value is still the one it expects, so an edit Tom makes in the CMS
+  // between deploys is never clobbered. Nothing here re-asserts on later boots.
+  //
+  // What changed and why (mobile measurements at 390x844):
+  //   1. The page had no call to action for 4.1 screens and nothing leading to
+  //      a conversation for 4.9. A primary CTA now closes Tom's biography at
+  //      roughly 1.4 screens.
+  //   2. "The reason we are here" stored its paragraph breaks as literal
+  //      newlines, which HTML collapses, so four sentences rendered as one
+  //      run-on slab. Markup fixed, wording untouched. A malformed nested
+  //      <strong> in the same value is cleaned up at the same time.
+  //   3. The credentials block led with a university. The Brand Operating
+  //      System is explicit that operator proof comes first and formal
+  //      credentials support it, so the two blocks are swapped into that order:
+  //      the left block now carries the operator record, the right block keeps
+  //      the preserved "Learned in the real world" line and picks up the Oxford
+  //      naming the left block gives up. Deliberately NOT a copy of the
+  //      homepage proof strip, and no new element: this is the page's existing
+  //      credentials section saying the same things in the right order.
+  //   4. A reader four screens in wants proof, and the only link at that point
+  //      went to the Devon landing page. The Devon link is untouched; a route
+  //      to Evidence is added one section earlier. The intervention template
+  //      renders a single button and content sanitisation allows no anchors
+  //      (strong/p/br/em only), so an existing empty button field is the only
+  //      way to add this without changing the page structure.
+  //   5. The biography and "The reason we are here" both said Tom started the
+  //      business to be the outside perspective he had wished for. The second
+  //      is the better written of the two, so the clause is trimmed from the
+  //      biography.
+  //   8. The credentials sub-paragraph repeated the biography almost verbatim,
+  //      and Hannah's paragraph used "actually" twice within three sentences.
+  //
+  // Item 6 (enlarging the founder photo on mobile) is a CSS change in
+  // views/index.ejs, not content, so it is not part of this migration.
+  // Item 7 (a photograph for Hannah) is closed: Hannah does not want her
+  // photograph on the website. The monogram treatment stays. Do not revisit.
+  {
+    const ABOUT_US_MARKER = 'about-us.conversion_pass_2026-08-15';
+    const { rows: aboutMarkerRows } = await db.query(
+      'SELECT 1 FROM content WHERE section_key = $1',
+      [ABOUT_US_MARKER]
+    );
+    const { rows: aboutPageRows } = await db.query(
+      "SELECT section_order FROM pages WHERE slug = 'about-us'"
+    );
+
+    if (aboutMarkerRows.length === 0 && aboutPageRows.length > 0) {
+      const order = Array.isArray(aboutPageRows[0].section_order) ? aboutPageRows[0].section_order : [];
+      const baseOf = (id) => {
+        const m = /^([a-z0-9]+)(?:__(\d+))?$/.exec(id || '');
+        return m ? m[1] : null;
+      };
+
+      const readKey = async (key) => {
+        const { rows } = await db.query('SELECT content FROM content WHERE section_key = $1', [key]);
+        return rows.length ? (rows[0].content || '') : null;
+      };
+      const applied = [];
+      // Writes only when the stored value is still exactly what this migration
+      // was written against, so a CMS edit made in the meantime always wins.
+      const setIfUnchanged = async (key, expected, next, label) => {
+        const current = await readKey(key);
+        if (current === null || current !== expected) return false;
+        await db.query('UPDATE content SET content = $1 WHERE section_key = $2', [next, key]);
+        applied.push(label);
+        return true;
+      };
+
+      // Resolve the instances by what they contain rather than by hardcoded
+      // IDs: the biography is the intervention carrying the founder photo,
+      // Hannah's is the one carrying a monogram, and "the reason we are here"
+      // is matched on its heading.
+      const interventions = order.filter((id) => baseOf(id) === 'intervention');
+      let bioId = null;
+      let hannahId = null;
+      let reasonId = null;
+      for (const id of interventions) {
+        if (!bioId && (await readKey(`${id}.photo_key`))) { bioId = id; continue; }
+        if (!hannahId && (await readKey(`${id}.monogram`))) { hannahId = id; continue; }
+        const heading = (await readKey(`${id}.heading`)) || '';
+        if (!reasonId && /The reason we are here/i.test(heading)) reasonId = id;
+      }
+      const credId = order.find((id) => baseOf(id) === 'credentials') || null;
+
+      // --- Item 5: trim the duplicated "outside perspective" clause ---------
+      if (bioId) {
+        const bio = await readKey(`${bioId}.subtext`);
+        const DUPLICATED_CLAUSE = ' to be the outside perspective he had wished for early on';
+        if (bio && bio.includes(DUPLICATED_CLAUSE)) {
+          await db.query(
+            'UPDATE content SET content = $1 WHERE section_key = $2',
+            [bio.replace(DUPLICATED_CLAUSE, ''), `${bioId}.subtext`]
+          );
+          applied.push('5 biography duplicate clause trimmed');
+        }
+
+        // --- Item 1: primary CTA closing the biography ----------------------
+        const existingBtn = ((await readKey(`${bioId}.button_text`)) || '').trim();
+        if (!existingBtn) {
+          for (const [key, value] of [
+            [`${bioId}.button_text`, 'Start a conversation'],
+            // Empty slug resolves to #conversation (the global footer form) and
+            // renders as the primary button style. See the intervention
+            // template's _btnHref / _isPrimaryCta handling in views/index.ejs.
+            [`${bioId}.button_link`, '']
+          ]) {
+            await db.query(
+              `INSERT INTO content (section_key, content) VALUES ($1, $2)
+               ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content`,
+              [key, value]
+            );
+          }
+          applied.push('1 biography CTA added');
+        }
+      }
+
+      // --- Items 3 and 8: credentials block, operator proof first -----------
+      if (credId) {
+        await setIfUnchanged(
+          `${credId}_stat.stat`,
+          'Oxford Saïd',
+          'Two decades',
+          '3 credentials stat leads with the operator record'
+        );
+        await setIfUnchanged(
+          `${credId}_stat.text`,
+          'Executive Strategy Programme',
+          'Running, growing and eventually selling an owner run business in the South West.',
+          '3 credentials summary'
+        );
+        // The naming the left block gives up moves here, replacing a sentence
+        // that repeated the biography almost word for word. The heading above
+        // it ("Learned in the real world, then qualified in the classroom.")
+        // is deliberately untouched.
+        await setIfUnchanged(
+          `${credId}_oxford.text`,
+          'Tom studied strategy formally after twenty years of running and exiting his own business.',
+          'Oxford Saïd Business School, Executive Strategy Programme.',
+          '8 credentials sub-paragraph replaced with the Oxford naming'
+        );
+      }
+
+      // --- Item 8: one of Hannah's two "actually"s -------------------------
+      if (hannahId) {
+        const hannah = await readKey(`${hannahId}.subtext`);
+        const OLD_TAIL = 'Clear positioning, consistent messaging, and making sure the business comes across as it actually is.';
+        const NEW_TAIL = 'Clear positioning, consistent messaging, and no gap between what the business says and what it does.';
+        if (hannah && hannah.includes(OLD_TAIL)) {
+          await db.query(
+            'UPDATE content SET content = $1 WHERE section_key = $2',
+            [hannah.replace(OLD_TAIL, NEW_TAIL), `${hannahId}.subtext`]
+          );
+          applied.push('8 Hannah closing line reworded');
+        }
+      }
+
+      // --- Item 2: restore the lost paragraph breaks -----------------------
+      // --- Item 4: contextual route to Evidence ----------------------------
+      if (reasonId) {
+        const reason = await readKey(`${reasonId}.subtext`);
+        if (reason && reason.includes('\n')) {
+          const repaired = reason
+            .replace(/\r\n/g, '\n')
+            .split(/\n{2,}/)
+            .map((part) => part.trim())
+            .filter(Boolean)
+            .join('<br><br>')
+            .replace(/\n/g, ' ')
+            // Sanitised content allows <strong>, but this value had picked up a
+            // stray unclosed pair inside the closing sentence.
+            .replace(/<strong><\/strong>/g, '')
+            .replace(/<strong>\s*<strong>/g, '<strong>')
+            .replace(/<\/strong>\s*<\/strong>/g, '</strong>');
+          await db.query(
+            'UPDATE content SET content = $1 WHERE section_key = $2',
+            [repaired, `${reasonId}.subtext`]
+          );
+          applied.push('2 paragraph breaks restored');
+        }
+
+        const existingBtn = ((await readKey(`${reasonId}.button_text`)) || '').trim();
+        if (!existingBtn) {
+          for (const [key, value] of [
+            [`${reasonId}.button_text`, 'See what that looks like in practice'],
+            [`${reasonId}.button_link`, 'evidence']
+          ]) {
+            await db.query(
+              `INSERT INTO content (section_key, content) VALUES ($1, $2)
+               ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content`,
+              [key, value]
+            );
+          }
+          applied.push('4 Evidence route added');
+        }
+      }
+
+      await db.query(
+        'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+        [ABOUT_US_MARKER, 'true']
+      );
+      console.log(`About Us conversion pass applied (${applied.length ? applied.join('; ') : 'no changes needed'}).`);
+    }
+  }
+
   console.log('Seed complete.');
 }
 
