@@ -98,6 +98,20 @@ app.use(helmet({
         'https://www.googleadservices.com',
         'https://challenges.cloudflare.com'
       ],
+      // www.google.com (added 15/08/2026): gtag.js hardcodes this host for
+      // two Google Ads conversion-measurement endpoints — /ccm/collect and
+      // /pagead/1p-conversion — verified by reading the live gtag.js served
+      // for AW-18129914078. Both are sent as a pixel or a beacon, so they
+      // need img-src and connect-src and nothing else. Deliberately NOT
+      // added to script-src or frame-src (nothing requires it there, and
+      // script-src is where the real risk sits), and no country TLDs: both
+      // endpoints are hardcoded to www.google.com, not www.google.<tld>.
+      // The legacy conversion paths (googleadservices.com) and Google Ads
+      // remarketing (googleads.g.doubleclick.net/pagead/viewthroughconversion)
+      // were already allowed and are unaffected. Display/Floodlight hosts
+      // (pagead2.googlesyndication.com, ad.doubleclick.net, *.fls.doubleclick.net,
+      // ade.googlesyndication.com) stay blocked — a search-only Ads account
+      // does not use them.
       imgSrc: [
         "'self'",
         'data:',
@@ -105,6 +119,7 @@ app.use(helmet({
         'https://www.google-analytics.com',
         'https://www.googleadservices.com',
         'https://googleads.g.doubleclick.net',
+        'https://www.google.com',
         'https://lh3.googleusercontent.com'
       ],
       connectSrc: [
@@ -112,7 +127,8 @@ app.use(helmet({
         'https://www.googletagmanager.com',
         'https://www.google-analytics.com',
         'https://www.googleadservices.com',
-        'https://googleads.g.doubleclick.net'
+        'https://googleads.g.doubleclick.net',
+        'https://www.google.com'
       ],
       frameSrc: ["'self'", 'https://td.doubleclick.net', 'https://challenges.cloudflare.com'],
       objectSrc: ["'none'"],
