@@ -353,7 +353,7 @@
             <div class="mrt-error-box">
                 <p id="mrt-error-message">We could not complete your assessment reliably. Your answers have been saved and no score has been guessed.</p>
             </div>
-            <p>Your answers are still here — you can try again, or contact us directly.</p>
+            <p>Your answers are still here. You can try again, or contact us directly.</p>
             <div class="mrt-nav">
                 <button type="button" class="btn btn-outline" id="mrt-error-retry">Try again</button>
                 <a href="#" class="btn btn-primary" id="mrt-error-contact">Email tom@arringtonconsultancy.com</a>
@@ -580,7 +580,7 @@
             }
             html += '<div class="mrt-review-block"><div class="mrt-review-q">' +
                 (state.contact.email ? 'Sending your result to' : 'Your result will be shown to') + '</div><div class="mrt-review-a">' +
-                escapeHtml(state.contact.email ? (state.contact.firstName + ' — ' + state.contact.email) : state.contact.firstName) + '</div></div>';
+                escapeHtml(state.contact.email ? (state.contact.firstName + ', ' + state.contact.email) : state.contact.firstName) + '</div></div>';
             body.innerHTML = html;
             body.querySelectorAll('[data-edit-q]').forEach(function (btn) {
                 btn.addEventListener('click', function () {
