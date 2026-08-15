@@ -190,8 +190,22 @@ app.use(express.static(path.join(__dirname, 'public'), {
 // photo until Tom uploads a different one. A `.webp` suffix looks up the
 // `<key>__webp` row instead (same fallback rule applied to the webp variant),
 // so <picture><source> requests resolve without ever 404ing — a failed
-// <source> fetch has no defined fallback in the picture-element spec, so the
-// webp row must always exist wherever a <picture> element references one.
+// <source> fetch has no defined fallback in the picture-element spec (see
+// "Per-instance hero images" in CLAUDE.md).
+//
+// Candidate order for a `.webp` request is deliberately NOT just "this
+// instance's webp, then the base webp": the CMS's image upload route
+// (`PUT /api/content/image/:key`) only ever writes the exact key clicked —
+// uploading a per-instance photo (e.g. `headshot__hero__2`) never creates a
+// matching `headshot__hero__2__webp` row (that pairing is only ever created
+// by a one-off seed migration, as documented for `headshot__hero__5`). If
+// the webp candidates jumped straight from the instance's own webp to the
+// *base* webp, a WebP-capable browser would silently render a different
+// photo (the generic default) than a non-WebP browser rendering the same
+// instance's real upload via the plain `<img>` fallback — loads without
+// erroring, but the wrong picture. So this instance's own original-format
+// upload is tried before ever falling through to the generic base image,
+// in either format.
 app.get('/img/:key', async (req, res, next) => {
   try {
     let requested = req.params.key;
@@ -201,9 +215,11 @@ app.get('/img/:key', async (req, res, next) => {
       requested = requested.slice(0, -5);
     }
     const toLookupKey = (k) => wantsWebp ? `${k}__webp` : k;
-    const candidates = [toLookupKey(requested)];
     const sep = requested.indexOf('__');
-    if (sep > 0) candidates.push(toLookupKey(requested.slice(0, sep)));
+    const base = sep > 0 ? requested.slice(0, sep) : null;
+    const candidates = wantsWebp
+      ? [toLookupKey(requested), requested, ...(base ? [toLookupKey(base), base] : [])]
+      : [requested, ...(base ? [base] : [])];
     for (const key of candidates) {
       const { rows } = await db.query(
         'SELECT data, mime_type FROM images WHERE image_key = $1',
