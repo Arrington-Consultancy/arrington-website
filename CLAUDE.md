@@ -346,6 +346,25 @@ Two templates were deliberately ruled out for the two "list-shaped" sections (im
 
 **Migration:** `db/seed.js`, guarded on `pages.slug = 'websites-and-ai'` not existing and on `what-we-do` existing. Uses the same collision-avoidance `allocate()` helper as the "what the work looks like" documents migration (collects every instance ID in use across all pages' `section_order` plus all distinct content-table prefixes before picking new ones), rather than hardcoding instance IDs.
 
+### Seed contract for this page (added 15/08/2026)
+
+This page is assembled by **four** chained migrations in `db/seed.js`, not one: the 30/07 page build, the 03/08 hero + World Student Advisors proof layer, the 03/08 copy refinement, and the 03/08 £999 conversion rebuild. Each layer deliberately overwrites the one before it with `ON CONFLICT DO UPDATE`, and the last of them originally had **no guard at all**, so every boot re-asserted the seeded copy, `section_order`, `hidden_sections`/`deleted_sections` and the page's SEO columns. Any CMS edit Tom made to `/websites-and-ai` was therefore silently reverted by the next deploy. The two middle layers were guarded on an exact match of the hero heading, a guard that *inverts* the moment that heading is edited, so they had the same failure mode one step removed.
+
+The chain is now gated as a whole. `WAI_SEED_REVISION` plus the marker row `content['seed.websites_and_ai_revision']` select exactly one mode per seed run, resolved by `lib/waiSeedMode.js` before any of the four migrations execute:
+
+| Mode | Condition | Behaviour |
+|---|---|---|
+| `fresh` | page row absent at start of run | full chain runs as before, then stamps the marker |
+| `adopt` | page present, no marker | writes nothing, stamps the marker only |
+| `skip` | marker matches `WAI_SEED_REVISION` | no writes at all (the steady state) |
+| `replay` | marker present but different | chain runs and overwrites live content, then re-stamps |
+
+**The live database is now the source of truth for this page's content.** `replay` is the only path that can overwrite a CMS edit again, and reaching it requires deliberately bumping `WAI_SEED_REVISION` in code, which is a destructive act on this page. Routine copy changes belong in the CMS, not the seed.
+
+Covered by `test/waiSeedMode.test.js`: unit tests for all four modes plus a guard asserting all four write branches stay gated, and a three-pass integration test (fresh build, then a simulated CMS edit surviving a redeploy, then the `adopt` path) that shells out to the real `node db/seed.js`. The integration half is skipped unless `WAI_SEED_TEST_DATABASE_URL` points at a throwaway database, since it drops and recreates the schema.
+
+Note that the other seeded pages never had this problem: they all use the run-once-guard plus `ON CONFLICT DO NOTHING` pattern, which is what this gate restores for Websites and AI.
+
 ## Section management (reorder, hide, delete, add, duplicate)
 
 Each editable section has five hover-revealed buttons in this visual order, left to right: ✎ edit · 👁 hide · ▲ up · ▼ down · ✕ delete. Edit and the up/down arrows behave as before; the rest are described below.

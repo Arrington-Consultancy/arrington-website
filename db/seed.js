@@ -21,6 +21,7 @@ const {
 } = require('../lib/usefulThinkingSeed');
 const { ARTICLES: UT_ARTICLES } = require('../lib/usefulThinkingArticles');
 const { generateUniqueShortReference } = require('../lib/shortReference');
+const { resolveWaiSeedMode, waiSeedWrites: waiWritesAllowed } = require('../lib/waiSeedMode');
 
 const BCRYPT_ROUNDS = 12;
 
@@ -573,6 +574,57 @@ async function seed() {
     }
   }
 
+  // ==========================================================================
+  // /websites-and-ai seed contract (15/08/2026)
+  // ==========================================================================
+  //
+  // The four migrations below (page build 30/07, hero + WSA proof 03/08, copy
+  // refinement 03/08, £999 conversion rebuild 03/08) together assemble this
+  // page. They were written as a chain in which each layer overwrites the one
+  // before it with `ON CONFLICT DO UPDATE`, and the last of them had no guard
+  // at all. That was correct while the page was being built out, but it means
+  // every boot re-asserted the seeded copy, section order, hidden/deleted
+  // arrays and SEO fields, so any edit Tom made in the CMS was silently
+  // reverted by the next deploy. Every other page in this file uses the safe
+  // pattern instead: a run-once guard plus `ON CONFLICT DO NOTHING`, so the
+  // database stays the source of truth once a page is live.
+  //
+  // This gate applies that same rule to the chain as a whole, without
+  // rewriting the four migrations or changing a single instance ID. Exactly
+  // one mode is chosen per seed run, before any of them execute:
+  //
+  //   'fresh'   the page row did not exist when this run started, so this is
+  //             a new database or a disaster-recovery rebuild. The full chain
+  //             runs exactly as it always has (each layer still overwrites the
+  //             last, which is what produces the final approved page), then
+  //             the marker is stamped.
+  //
+  //   'adopt'   the page exists but carries no marker: a database seeded
+  //             before this gate existed, which is production today. Nothing
+  //             is written. The marker is stamped so the run becomes 'skip'
+  //             from then on. Live content is left exactly as it is.
+  //
+  //   'skip'    the marker already matches WAI_SEED_REVISION. No writes at
+  //             all. This is the steady state on every normal deploy.
+  //
+  //   'replay'  the marker is present but different, i.e. someone has
+  //             deliberately bumped WAI_SEED_REVISION. The chain runs and
+  //             overwrites live content, then re-stamps. This is the only
+  //             way seeded copy can ever overwrite a CMS edit again, and it
+  //             requires an explicit code change to trigger.
+  //
+  // Bumping WAI_SEED_REVISION is therefore a destructive act on this page and
+  // should only be done when the seed is deliberately being made the source of
+  // truth again. Routine copy changes belong in the CMS.
+  //
+  // Covered by test/websites-and-ai-seed.test.js, which asserts each mode's
+  // behaviour directly, and by the two-pass seed check in the same file.
+  const WAI_SEED_REVISION = '2026-08-15-999-conversion-page';
+  const WAI_REVISION_KEY = 'seed.websites_and_ai_revision';
+  const waiSeedMode = await resolveWaiSeedMode(db, WAI_SEED_REVISION, WAI_REVISION_KEY);
+  const waiSeedWrites = waiWritesAllowed(waiSeedMode);
+  console.log(`Websites and AI seed mode: ${waiSeedMode}${waiSeedWrites ? '' : ' (no content writes)'}.`);
+
   // Migration: build the new "Websites and AI" page (30/07/2026, Tom's
   // brief). A new service page combining commercial website development
   // with practical AI implementation, kept out of the main nav (it renders
@@ -768,7 +820,10 @@ async function seed() {
     const { rows: wsRows } = await db.query(
       "SELECT section_order FROM pages WHERE slug = 'websites-and-ai'"
     );
-    if (wsRows.length > 0) {
+    // Gated by the seed contract above: this layer's own guard was an exact
+    // match on the hero heading, which inverts the moment Tom edits that
+    // heading in the CMS and would then overwrite his edit.
+    if (waiSeedWrites && wsRows.length > 0) {
       const pageOrder = Array.isArray(wsRows[0].section_order) ? wsRows[0].section_order : [];
       const baseOf = (id) => {
         const m = /^([a-z0-9]+)(?:__(\d+))?$/.exec(id || '');
@@ -912,7 +967,9 @@ async function seed() {
     const { rows: waRows } = await db.query(
       "SELECT section_order FROM pages WHERE slug = 'websites-and-ai'"
     );
-    if (waRows.length > 0) {
+    // Gated by the seed contract above: same inverting hero-heading guard as
+    // the previous layer.
+    if (waiSeedWrites && waRows.length > 0) {
       const pageOrder = Array.isArray(waRows[0].section_order) ? waRows[0].section_order : [];
       const baseOf = (id) => {
         const m = /^([a-z0-9]+)(?:__(\d+))?$/.exec(id || '');
@@ -1042,7 +1099,10 @@ async function seed() {
       );
     };
 
-    if (waRows.length === 0) {
+    // Gated by the seed contract above. This layer previously had no guard of
+    // any kind: it re-asserted every content key, the section order, the
+    // hidden/deleted arrays and the page's SEO fields on every single boot.
+    if (waiSeedWrites && waRows.length === 0) {
       const used = await collectUsedIds();
       const allocate = makeAllocator(used);
       const seedOrder = [
@@ -1072,7 +1132,7 @@ async function seed() {
       waRows = [{ section_order: seedOrder }];
     }
 
-    if (waRows.length > 0) {
+    if (waiSeedWrites && waRows.length > 0) {
       const pageOrder = Array.isArray(waRows[0].section_order) ? waRows[0].section_order : [];
       const { rows: pageContentRows } = await db.query(
         `SELECT section_key, content
@@ -1293,6 +1353,30 @@ async function seed() {
       );
 
       console.log('Websites and AI: £999 conversion-page rebuild applied.');
+    }
+  }
+
+  // Stamp the /websites-and-ai revision marker, closing the contract opened
+  // above. Deliberately placed after all four migrations so a run that threw
+  // part-way through never records itself as applied.
+  //
+  // Guarded on the page actually existing: if the chain was skipped because
+  // What We Do was not there yet (a genuinely empty database on its very first
+  // pass), the marker must not be written, or the page would never be built.
+  //
+  // Uses DO UPDATE rather than DO NOTHING because 'replay' has to move the
+  // marker forward to the new revision, which is the whole point of that mode.
+  if (waiSeedMode !== 'skip') {
+    const { rows: waiPageRows } = await db.query(
+      "SELECT 1 FROM pages WHERE slug = 'websites-and-ai'"
+    );
+    if (waiPageRows.length > 0) {
+      await db.query(
+        `INSERT INTO content (section_key, content) VALUES ($1, $2)
+         ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content`,
+        [WAI_REVISION_KEY, WAI_SEED_REVISION]
+      );
+      console.log(`Websites and AI: seed revision marked as ${WAI_SEED_REVISION} (mode: ${waiSeedMode}).`);
     }
   }
 
