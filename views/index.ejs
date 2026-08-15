@@ -476,7 +476,6 @@
             overflow: hidden;
         }
 
-        .hero[data-section-id="hero"]::after,
         .hero[data-section-id="hero__3"]::after,
         .hero[data-section-id="hero__4"]::after {
             content: '';
@@ -484,6 +483,24 @@
             inset: 0;
             z-index: 1;
             background: linear-gradient(0deg, rgba(0,10,25,0.94) 0%, rgba(0,10,25,0.55) 42%, rgba(0,10,25,0.15) 68%, rgba(0,10,25,0.35) 100%);
+            pointer-events: none;
+        }
+
+        /* Homepage hero only (15/08/2026): the shared gradient above dips to
+           0.15 opacity around the 68% stop, which is exactly where the
+           headline's brightest lines sit against open sky — the weak point
+           flagged in the mobile contrast review. Raised and made monotonic
+           from 42% to the top so the whole zone behind the headline is
+           consistently darker, while the 0%/42% stops (behind the supporting
+           line and CTA, already good contrast) are left untouched — tapers
+           back to the existing treatment lower down rather than darkening
+           the full image. */
+        .hero[data-section-id="hero"]::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            background: linear-gradient(0deg, rgba(0,10,25,0.94) 0%, rgba(0,10,25,0.55) 42%, rgba(0,10,25,0.6) 65%, rgba(0,10,25,0.7) 100%);
             pointer-events: none;
         }
 

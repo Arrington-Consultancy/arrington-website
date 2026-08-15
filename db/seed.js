@@ -2816,6 +2816,32 @@ async function seed() {
     }
   }
 
+  // Migration: homepage hero — consolidate the two supporting text blocks
+  // into a single line (15/08/2026). The live hero.subtext value was set
+  // directly via the CMS (never tracked by a seed migration), so this is
+  // guarded by a dedicated marker key rather than a known-old-value match —
+  // applies regardless of the exact current text, fires once, and never
+  // re-clobbers a future manual edit Tom makes via the CMS.
+  {
+    const HERO_SUBTEXT_MARKER = 'hero.subtext_single_line_2026-08-15';
+    const { rows: heroMarkerRows } = await db.query(
+      'SELECT 1 FROM content WHERE section_key = $1',
+      [HERO_SUBTEXT_MARKER]
+    );
+    if (heroMarkerRows.length === 0) {
+      await db.query(
+        `INSERT INTO content (section_key, content) VALUES ('hero.subtext', $1)
+         ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content`,
+        ['Business consultant for established owner run businesses across Devon and Cornwall where too much still depends on the owner.']
+      );
+      await db.query(
+        'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+        [HERO_SUBTEXT_MARKER, 'true']
+      );
+      console.log('Homepage hero: supporting copy consolidated into a single line.');
+    }
+  }
+
   console.log('Seed complete.');
 }
 

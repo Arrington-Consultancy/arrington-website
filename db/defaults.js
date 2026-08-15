@@ -5,7 +5,7 @@
 const defaults = {
   // Hero
   'hero.heading': 'Nineteen years of operational grit. Oxford-backed strategy. A million-pound exit.',
-  'hero.subtext': 'Trying to improve a business from a textbook is like trying to cross the Channel by reading tide charts. I have run the trade. I have done the hours. I know what actually moves the needle.',
+  'hero.subtext': 'Business consultant for established owner run businesses across Devon and Cornwall where too much still depends on the owner.',
   'hero.cta': 'Start a conversation',
 
   // Credentials - Oxford
