@@ -4094,6 +4094,90 @@ async function seed() {
     }
   }
 
+  // Migration: What We Do review section reframed (16/08/2026).
+  //
+  // The section was "Four questions worth answering", numbered 01-04. The
+  // copy was reasonably hedged but the numerals were not: a numbered set
+  // reads as a sequence, so four things that happen to get looked at read as
+  // a fixed four-step method. There is no fixed method, so the numbers go and
+  // the cards are reframed as what gets listened to rather than what gets
+  // answered. The fourth card is deliberately open-ended so the set cannot be
+  // read as a complete list.
+  //
+  // Blanking card_N_number is what removes the numerals; views/index.ejs
+  // skips the whole card header when a card has no number.
+  //
+  // Guarded twice so a CMS edit always wins: a run-once marker, and a check
+  // that the heading is still the one being replaced.
+  {
+    const WWD_REVIEW_MARKER = 'what-we-do.review_no_checklist_2026-08-16';
+    const OLD_HEADING = 'Four questions worth answering';
+
+    const { rows: markerRows } = await db.query(
+      'SELECT 1 FROM content WHERE section_key = $1', [WWD_REVIEW_MARKER]
+    );
+
+    if (markerRows.length === 0) {
+      const { rows: pageRows } = await db.query(
+        "SELECT section_order FROM pages WHERE slug = 'what-we-do'"
+      );
+
+      if (pageRows.length) {
+        const order = Array.isArray(pageRows[0].section_order) ? pageRows[0].section_order : [];
+        const fcId = order.find((id) => /^fourcards(?:__\d+)?$/.test(id));
+
+        if (fcId) {
+          const { rows: headingRows } = await db.query(
+            'SELECT content FROM content WHERE section_key = $1', [`${fcId}.heading`]
+          );
+          const currentHeading = ((headingRows[0] && headingRows[0].content) || '')
+            .replace(/<[^>]+>/g, '').trim();
+
+          if (currentHeading === OLD_HEADING) {
+            const values = {
+              'heading': 'There is no checklist',
+              'evidence_intro': 'What we look at depends on the business and what you want from it. '
+                + 'Nobody sees everything in their own business. We don’t pretend we would either.'
+                + '<br><br>What we bring is twenty years of experience, instinct and a fresh pair of eyes.',
+              'card_1_number': '',
+              'card_1_title': 'The owner',
+              'card_1_body': 'What you want from the business matters. More profit, less pressure or '
+                + 'more time can take us in completely different directions.',
+              'card_2_number': '',
+              'card_2_title': 'The people',
+              'card_2_body': 'We listen to the people around the business. They see it from a '
+                + 'different angle again.',
+              'card_3_number': '',
+              'card_3_title': 'The numbers',
+              'card_3_body': 'Accounts, costs, margins, price and demand can all tell us something. '
+                + 'What matters depends on what we find.',
+              'card_4_number': '',
+              'card_4_title': 'And everything else',
+              'card_4_body': 'Customers, reviews, the website, the office, a comment in passing. '
+                + 'We have seen enough situations to know when something deserves a closer look.'
+            };
+
+            for (const [suffix, value] of Object.entries(values)) {
+              await db.query(
+                `INSERT INTO content (section_key, content) VALUES ($1, $2)
+                 ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content`,
+                [`${fcId}.${suffix}`, value]
+              );
+            }
+            console.log(`What We Do review section reframed (${fcId}).`);
+          } else {
+            console.log('What We Do review section skipped (already edited).');
+          }
+
+          await db.query(
+            'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+            [WWD_REVIEW_MARKER, 'true']
+          );
+        }
+      }
+    }
+  }
+
   console.log('Seed complete.');
 }
 

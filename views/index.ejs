@@ -1376,36 +1376,11 @@
         /* The numerals were 2rem at opacity 0.4, which on this navy reads as
            barely there. Full-strength accent at a larger size, with the muting
            done by weight and letterform rather than transparency. */
-        .page-what-we-do .fourcard-number {
-            font-size: 2.6rem;
-            opacity: 0.75;
-        }
-
-        @media (max-width: 600px) {
-            /* Number and question on one line instead of stacked, which is
-               worth roughly 24px a card and makes four items read as four
-               rather than eight. */
-            .page-what-we-do .fourcard {
-                display: grid;
-                grid-template-columns: auto 1fr;
-                column-gap: 1rem;
-                align-items: baseline;
-            }
-
-            .page-what-we-do .fourcard-number {
-                font-size: 2.2rem;
-                grid-row: 1;
-            }
-
-            .page-what-we-do .fourcard h3 {
-                grid-column: 2;
-                grid-row: 1;
-            }
-
-            .page-what-we-do .fourcard p {
-                grid-column: 2;
-            }
-        }
+        /* The numeral rules that used to live here are gone with the numerals
+           themselves. 01-04 read as a sequence, which made four things we
+           happen to look at look like a four-step method. The cards now carry
+           a name instead, and the card header is skipped entirely when a card
+           has no number, so nothing is left holding its space. */
 
         /* Six months on: supporting information, not another chapter. A thin
            band with an accent rule, at body scale, instead of a full section
@@ -3507,10 +3482,12 @@
             %>
             <% if (_fcHasContent) { %>
             <article class="fourcard">
+               <% if (_fcNum) { %>
                <div class="fourcard-header">
                    <% if (_fcInitial) { %><div class="fourcard-avatar" aria-hidden="true"><%= _fcInitial %></div><% } %>
                     <div class="fourcard-number"><%- content[_k + '.card_' + _n + '_number'] %></div>
                 </div>
+                <% } %>
                 <h3><%- content[_k + '.card_' + _n + '_title'] %></h3>
                 <p><%- content[_k + '.card_' + _n + '_body'] %></p>
                 <% if (_fcMatch) { %>
