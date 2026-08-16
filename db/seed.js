@@ -3996,6 +3996,7 @@ async function seed() {
     );
 
     if (mRows.length === 0) {
+      let shouldMark = false;
       const { rows: wwdRows } = await db.query(
         "SELECT section_order FROM pages WHERE slug = 'what-we-do'"
       );
@@ -4003,6 +4004,7 @@ async function seed() {
         const order = Array.isArray(wwdRows[0].section_order) ? wwdRows[0].section_order : [];
         const routesId = order.find((id) => /^insights(?:__\d+)?$/.test(id));
         if (routesId) {
+          shouldMark = true;
           const imageKey = `${routesId}.card_2_image`;
           const linkKey = `${routesId}.card_2_link`;
           const { rows: imageRows } = await db.query(
@@ -4025,10 +4027,12 @@ async function seed() {
           }
         }
       }
-      await db.query(
-        'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
-        [WWD_FINISHING_MARKER, 'true']
-      );
+      if (shouldMark) {
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [WWD_FINISHING_MARKER, 'true']
+        );
+      }
     }
   }
 
