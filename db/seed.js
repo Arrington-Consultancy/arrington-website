@@ -3536,6 +3536,170 @@ async function seed() {
     }
   }
 
+  // Migration: What We Do presentation rebuild (16/08/2026), on Tom's approved
+  // copy and structure. The previous pass fixed the sequence but left the page
+  // reading as an essay: 44% of its mobile height was body text against 23% on
+  // Websites and AI, it used only two background tones across six sections, and
+  // the two prices sat in a two-column prose block where neither stood out.
+  //
+  // Final structure, chosen so the background alternates and the eye has
+  // somewhere to stop:
+  //   1 intervention  navy   short proposition
+  //   2 fourcards     dark   four commercial questions, large gold numerals
+  //   3 offerpair     mid    £500 / £2,500, purpose-built for this
+  //   4 intervention  navy   six months, two lines
+  //   5 insights      mid    Evidence, Useful Thinking, Websites and AI
+  //
+  // The filter and biography instances and the two bridge interventions are
+  // dropped from the page order only. Their content stays in the content table
+  // and shows up in the admin "Reuse existing" tab.
+  {
+    const WWD_PRESENTATION_MARKER = 'what-we-do.presentation_rebuild_2026-08-16';
+    const { rows: mRows } = await db.query(
+      'SELECT 1 FROM content WHERE section_key = $1', [WWD_PRESENTATION_MARKER]
+    );
+    const { rows: pRows } = await db.query(
+      "SELECT section_order FROM pages WHERE slug = 'what-we-do'"
+    );
+
+    if (mRows.length === 0 && pRows.length > 0) {
+      const order = Array.isArray(pRows[0].section_order) ? pRows[0].section_order : [];
+      const baseOf = (id) => {
+        const m = /^([a-z0-9]+)(?:__(\d+))?$/.exec(id || '');
+        return m ? m[1] : null;
+      };
+      const plain = (s) => (s || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+
+      const used = new Set();
+      const { rows: allOrders } = await db.query('SELECT section_order FROM pages');
+      for (const r of allOrders) {
+        if (Array.isArray(r.section_order)) r.section_order.forEach((s) => used.add(s));
+      }
+      const { rows: prefixes } = await db.query(
+        "SELECT DISTINCT split_part(section_key, '.', 1) AS instance_id FROM content"
+      );
+      prefixes.forEach((r) => used.add(r.instance_id));
+      const allocate = (tpl) => {
+        if (!used.has(tpl)) { used.add(tpl); return tpl; }
+        for (let n = 2; n <= 99; n++) {
+          const id = `${tpl}__${n}`;
+          if (!used.has(id)) { used.add(id); return id; }
+        }
+        return null;
+      };
+
+      // Locate the two sections being kept and rewritten, by content rather
+      // than by hardcoded instance ID.
+      let openingId = null;
+      let sixMonthsId = null;
+      for (const id of order.filter((i) => baseOf(i) === 'intervention')) {
+        const { rows } = await db.query(
+          'SELECT content FROM content WHERE section_key = $1', [`${id}.heading`]
+        );
+        const h = plain(rows[0] && rows[0].content);
+        if (!openingId && h === 'a proper commercial review of how the business really works.') openingId = id;
+        if (!sixMonthsId && h === 'six months on.') sixMonthsId = id;
+      }
+
+      const questionsId = allocate('fourcards');
+      const offersId = allocate('offerpair');
+      const routesId = allocate('insights');
+
+      if (!openingId || !sixMonthsId || !questionsId || !offersId || !routesId) {
+        console.log('What We Do presentation rebuild skipped: could not resolve all sections.');
+      } else {
+        const set = async (key, value) => {
+          await db.query(
+            `INSERT INTO content (section_key, content) VALUES ($1, $2)
+             ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content`,
+            [key, value]
+          );
+        };
+        const put = async (key, value) => {
+          await db.query(
+            'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+            [key, value]
+          );
+        };
+
+        // 1. Opening. Heading unchanged; body cut to three short paragraphs.
+        await set(`${openingId}.subtext`,
+          'You know your business better than anyone. That is exactly why parts of it are hard to see from where you are standing.<br><br>'
+          + 'We come in without the history. No assumptions about why something is done that way, and no habit of walking past it. What we bring is experience of running businesses, making commercial decisions and knowing where it is worth looking more closely.<br><br>'
+          + 'Change one thing in a business and something else often moves. Understanding where that lands matters just as much as spotting the change in the first place.');
+        await set(`${openingId}.button_text`, '');
+        await set(`${openingId}.button_link`, '');
+
+        // 2. The four commercial questions.
+        await put(`${questionsId}.label`, 'THE REVIEW');
+        await put(`${questionsId}.heading`, 'Four questions worth answering');
+        await put(`${questionsId}.card_1_number`, '01');
+        await put(`${questionsId}.card_1_title`, 'What are you too close to see?');
+        await put(`${questionsId}.card_1_body`, 'Things that changed slowly, became familiar and stopped being questioned.');
+        await put(`${questionsId}.card_2_number`, '02');
+        await put(`${questionsId}.card_2_title`, 'Where is the business making and losing money?');
+        await put(`${questionsId}.card_2_body`, 'The accounts are part of it. So is understanding what actually creates margin and where time and money are being absorbed.');
+        await put(`${questionsId}.card_3_number`, '03');
+        await put(`${questionsId}.card_3_title`, 'Where does everything still come back to you?');
+        await put(`${questionsId}.card_3_body`, 'The decisions, knowledge and responsibilities that have gathered around the owner.');
+        await put(`${questionsId}.card_4_number`, '04');
+        await put(`${questionsId}.card_4_title`, 'Where is there more potential?');
+        await put(`${questionsId}.card_4_body`, 'Opportunities, capacity or improvements that are difficult to see while you are running the business day to day.');
+        for (let n = 1; n <= 4; n++) await put(`${questionsId}.card_${n}_link`, '');
+
+        // 3. The two offers.
+        await put(`${offersId}.label`, 'HOW FAR WE GO');
+        await put(`${offersId}.heading`, 'Two ways to work with us');
+        await put(`${offersId}.offer_1_price`, '£500');
+        await put(`${offersId}.offer_1_name`, 'Commercial Review');
+        await put(`${offersId}.offer_1_body`, 'We assess the business and give you our commercial view in a written report: what stood out, what we would prioritise and what we would do next.');
+        await put(`${offersId}.offer_2_price`, '£2,500');
+        await put(`${offersId}.offer_2_name`, 'Commercial Review and Implementation');
+        await put(`${offersId}.offer_2_body`, 'The review, and then we stay involved to help put the agreed priorities into practice.');
+        await put(`${offersId}.note`, 'The difference is scope and involvement. If you have already paid for the Commercial Review, that comes off the £2,500.');
+        await put(`${offersId}.button_text`, 'See the Commercial Review');
+        await put(`${offersId}.button_link`, 'where-to-start/commercial-review');
+
+        // 4. Six months on, cut to two lines.
+        await set(`${sixMonthsId}.subtext`,
+          'Six months later, we come back to see what changed, what worked and what needs another look. The check-in is included with both options.');
+        await set(`${sixMonthsId}.button_text`, '');
+        await set(`${sixMonthsId}.button_link`, '');
+
+        // 5. The three routes, collapsed from three near-identical sections
+        //    into one scannable row. Evidence keeps first position, which is
+        //    its extra prominence; no new treatment was invented for it.
+        await put(`${routesId}.label`, 'WHERE TO GO NEXT');
+        await put(`${routesId}.heading`, 'More on how we work');
+        await put(`${routesId}.subtext`, '');
+        await put(`${routesId}.card_1_tag`, 'EVIDENCE');
+        await put(`${routesId}.card_1_title`, 'What we have done');
+        await put(`${routesId}.card_1_body`, 'Real client work, redacted and published.');
+        await put(`${routesId}.card_1_link`, 'evidence');
+        await put(`${routesId}.card_2_tag`, 'USEFUL THINKING');
+        await put(`${routesId}.card_2_title`, 'How we think');
+        await put(`${routesId}.card_2_body`, 'Short pieces on judgement, growth and risk.');
+        await put(`${routesId}.card_2_link`, 'useful-thinking');
+        await put(`${routesId}.card_3_tag`, 'WEBSITES AND AI');
+        await put(`${routesId}.card_3_title`, 'Building the practical things');
+        await put(`${routesId}.card_3_body`, 'Once the commercial need is clear, we can build it.');
+        await put(`${routesId}.card_3_link`, 'websites-and-ai');
+
+        const newOrder = [openingId, questionsId, offersId, sixMonthsId, routesId];
+        await db.query(
+          "UPDATE pages SET section_order = $1::jsonb WHERE slug = 'what-we-do'",
+          [JSON.stringify(newOrder)]
+        );
+
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [WWD_PRESENTATION_MARKER, 'true']
+        );
+        console.log(`What We Do presentation rebuild applied (${newOrder.join(' ')}).`);
+      }
+    }
+  }
+
   console.log('Seed complete.');
 }
 

@@ -61,6 +61,19 @@ const lorem = {
     'card_3_title': 'Duis aute irure dolor in reprehenderit',
     'card_3_body': 'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore.'
   },
+  offerpair: {
+    'label': 'Lorem ipsum',
+    'heading': 'Lorem ipsum dolor sit amet',
+    'offer_1_price': '£000',
+    'offer_1_name': 'Lorem ipsum',
+    'offer_1_body': 'Lorem ipsum dolor sit amet, consectetur adipiscing elit sed do eiusmod tempor.',
+    'offer_2_price': '£0,000',
+    'offer_2_name': 'Dolor sit amet',
+    'offer_2_body': 'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi.',
+    'note': 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+    'button_text': '',
+    'button_link': 'main'
+  },
   fourcards: {
     'label': 'Lorem ipsum',
     'heading': 'Lorem ipsum dolor sit amet consectetur',

@@ -1267,6 +1267,89 @@
             }
         }
 
+        /* ---- OFFER PAIR ----
+           Two priced options side by side, built 16/08/2026 for What We Do.
+           No existing template could carry this: assessment renders six boxes
+           unconditionally, insights three and fourcards four, so all would show
+           empty slots for a two-item comparison, credentials has the Oxford
+           badge hardcoded, and biography cannot style a price because content
+           sanitisation strips class attributes.
+
+           Deliberately in the same de-boxed language as fourcards, insights and
+           the Where to Start offer rows: a top hairline, no filled card, with
+           the price carrying the weight. Both columns are styled identically so
+           neither option can read as the lesser one. */
+        /* --near-black, the same section tone as insights, assessment and
+           credentials. Deliberately not --charcoal: nothing else on the site
+           uses that as a full-section background, and this block should sit
+           inside the established rhythm rather than introduce a new tone. */
+        .offerpair {
+            background: var(--near-black);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .offerpair-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 3rem;
+            margin-top: 3rem;
+        }
+
+        .offer-item {
+            padding-top: 1.75rem;
+            border-top: 1px solid var(--border);
+        }
+
+        /* Scoped to .offer-item so it outranks the `.offer-item p` body rule
+           below, which is a class-plus-element selector and would otherwise
+           win and render the price at body size in body grey. */
+        .offer-item .offer-price {
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 500;
+            font-size: 2.3rem;
+            letter-spacing: -0.01em;
+            color: var(--accent);
+            line-height: 1;
+            margin-bottom: 0.6rem;
+        }
+
+        .offer-item h3 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.15rem;
+            color: var(--text-bright);
+            line-height: 1.35;
+            margin-bottom: 0.85rem;
+        }
+
+        .offer-item p {
+            font-size: 0.95rem;
+            color: var(--text);
+            line-height: 1.7;
+        }
+
+        .offerpair-note {
+            margin-top: 2.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.9rem;
+            color: var(--text);
+            line-height: 1.7;
+        }
+
+        .offerpair .btn {
+            display: inline-flex;
+            margin-top: 2rem;
+        }
+
+        @media (max-width: 700px) {
+            .offerpair-grid {
+                grid-template-columns: 1fr;
+                gap: 2.25rem;
+                margin-top: 2.25rem;
+            }
+        }
+
         /* ---- DOCUMENTS ---- */
         .documents {
             background: var(--near-black);
@@ -2923,6 +3006,48 @@
             </article>
             <% } %>
         </div>
+    </div>
+</section>
+<% } %>
+
+<% if (_tpl === 'offerpair') { %>
+<% const _k = _iid; %>
+<!-- OFFER PAIR -->
+<section class="offerpair<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
+    <div class="section-inner cms-section" data-section="<%= _k %>">
+        <% if (canEdit) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
+        <% if ((content[_k + '.label'] || '').replace(/<[^>]+>/g, '').trim()) { %>
+        <p class="section-label"><%- content[_k + '.label'] %></p>
+        <% } %>
+        <% const _hTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %><<%= _hTag %> class="section-heading"><%- content[_k + '.heading'] %></<%= _hTag %>>
+        <div class="offerpair-grid">
+            <% for (let _o = 1; _o <= 2; _o++) { %>
+            <div class="offer-item">
+                <p class="offer-price"><%- content[_k + '.offer_' + _o + '_price'] %></p>
+                <h3><%- content[_k + '.offer_' + _o + '_name'] %></h3>
+                <p><%- content[_k + '.offer_' + _o + '_body'] %></p>
+            </div>
+            <% } %>
+        </div>
+        <% if ((content[_k + '.note'] || '').replace(/<[^>]+>/g, '').trim()) { %>
+        <p class="offerpair-note"><%- content[_k + '.note'] %></p>
+        <% } %>
+        <%
+          // Same link handling as the filter template, including the optional
+          // nested path segment so this can point at a Where to Start route,
+          // which is an Express route rather than a `pages` row.
+          const _opBtnText = (content[_k + '.button_text'] || '').replace(/<[^>]+>/g, '').trim();
+          const _opBtnSlug = (content[_k + '.button_link'] || '').trim();
+          const _opValid = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)?(#[a-z0-9_-]+)?$/.test(_opBtnSlug);
+          const _opHref = _opBtnSlug === 'main' ? '/' : (_opValid ? _resolvePageHref(_opBtnSlug) : '#conversation');
+        %>
+        <% if (_opBtnText) { %>
+        <a href="<%= _opHref %>" class="btn btn-primary"><%- content[_k + '.button_text'] %></a>
+        <% } %>
     </div>
 </section>
 <% } %>

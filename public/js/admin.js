@@ -68,6 +68,17 @@
         'insights.card_3_title': 'Card 3 title',
         'insights.card_3_body': 'Card 3 body',
         'insights.card_3_link': 'Card 3 link (page slug, optional)',
+        'offerpair.label': 'Section label',
+        'offerpair.heading': 'Heading',
+        'offerpair.offer_1_price': 'Offer 1 price',
+        'offerpair.offer_1_name': 'Offer 1 name',
+        'offerpair.offer_1_body': 'Offer 1 description',
+        'offerpair.offer_2_price': 'Offer 2 price',
+        'offerpair.offer_2_name': 'Offer 2 name',
+        'offerpair.offer_2_body': 'Offer 2 description',
+        'offerpair.note': 'Note beneath both offers',
+        'offerpair.button_text': 'Button text',
+        'offerpair.button_link': 'Button link',
         'fourcards.label': 'Section label',
         'fourcards.heading': 'Heading',
         'fourcards.card_1_number': 'Card 1 number',
@@ -197,6 +208,7 @@
         approach: 'Approach',
         insights: 'Insights',
         fourcards: 'Four cards',
+        offerpair: 'Two offers',
         documents: 'Documents',
         casestudy: 'Case Study',
         casestudy2: 'Case Study (editorial)',
@@ -215,6 +227,7 @@
             key.includes('cta') || key.includes('email') || key.includes('phone') ||
             key.includes('_title') || key.includes('_number') ||
             key.includes('_action') || key.includes('_client') ||
+            key.includes('_price') || key.includes('_name') ||
             key.includes('_file') || key.includes('_image') || key.endsWith('.image') || key.includes('_meta') ||
             key.includes('_link') || key.includes('button_text') ||
             key.includes('placeholder') || key.includes('submit_text')) {
