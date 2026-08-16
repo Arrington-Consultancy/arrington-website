@@ -602,7 +602,7 @@ app.use(whereToStart.router);
 app.get('/v1.html', (req, res) => res.redirect(301, '/'));
 
 // Valid section templates (shared with routes/content.js)
-const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','fourcards','documents','casestudy','casestudy2','assessment','filter','proofstrip','offerpair','contact','googlereviews','article','utlibrary'];
+const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','fourcards','documents','casestudy','casestudy2','assessment','filter','proofstrip','offerpair','heromontage','contact','googlereviews','article','utlibrary'];
 // Default auto-merge order — excludes 'contact' (now rendered globally in
 // the footer), 'fourcards', 'documents' and 'proofstrip' (picker-only). Users
 // pick those explicitly.

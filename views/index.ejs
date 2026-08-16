@@ -1023,12 +1023,103 @@
            not a filled card — this section already sits inside its own
            distinct background band, so a card-within-a-card read as
            doubled-up boxing. */
+        /* Made a whole-card destination 16/08/2026. Previously only the small
+           title text was clickable, so three routes read as three more blocks
+           of body copy. The click target is stretched from the existing title
+           anchor with a pseudo-element rather than by wrapping the card in an
+           <a>: one real anchor, correct semantics for screen readers, no
+           markup restructure. */
         .insight-card {
             padding-top: 1.75rem;
             border-top: 1px solid var(--border);
+            position: relative;
+            transition: border-color 0.2s;
         }
 
-        .insight-tag {
+        .insight-card:hover,
+        .insight-card:focus-within {
+            border-top-color: var(--accent);
+            cursor: pointer;
+        }
+
+        .insight-card h3 a::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+        }
+
+        /* Optional per-card image. Renders nothing when the field is empty, so
+           a card without artwork is a deliberate state rather than a gap.
+           object-position: top because both real assets here (a document's
+           first page, a website homepage) carry their identity at the top;
+           a centred cover crop lands mid-page and reads as grey texture. */
+        .insight-image {
+            display: block;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            object-fit: cover;
+            object-position: top;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            margin-bottom: 1.25rem;
+            opacity: 0.85;
+            transition: opacity 0.2s;
+        }
+
+        /* When some cards in a row have artwork and others do not, the
+           imageless card's text would start higher and the row reads as
+           broken rather than as a deliberate choice. This reserves the same
+           vertical slot with nothing in it: transparent, so it is whitespace
+           on the section background, and the three text blocks line up. */
+        .insight-image-spacer {
+            display: block;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            margin-bottom: 1.25rem;
+        }
+
+        @media (max-width: 900px) {
+            /* Stacked, so there is no row to align to and the empty slot
+               would just be dead space. */
+            .insight-image-spacer { display: none; }
+        }
+
+        .insight-card:hover .insight-image,
+        .insight-card:focus-within .insight-image {
+            opacity: 1;
+        }
+
+        /* Arrow affordance. Kept in the markup as a span so it can move
+           independently of the title text. */
+        .insight-arrow {
+            display: inline-block;
+            margin-left: 0.35rem;
+            color: var(--accent);
+            transition: transform 0.2s;
+        }
+
+        .insight-card:hover .insight-arrow,
+        .insight-card:focus-within .insight-arrow {
+            transform: translateX(4px);
+        }
+
+        /* The stretched anchor has no box of its own, so the browser's default
+           focus ring would be invisible. Put it on the card instead. */
+        .insight-card h3 a:focus-visible {
+            outline: none;
+        }
+
+        .insight-card:focus-within {
+            outline: 2px solid var(--accent);
+            outline-offset: 6px;
+        }
+
+        /* Scoped to .insight-card so it outranks the `.insight-card p` body
+           rule below. .insight-tag is itself a <p> inside that card, so the
+           class-plus-element selector was winning and every insights tag on
+           the site rendered in body grey instead of accent gold. Same
+           specificity trap that rendered the offerpair prices at body size. */
+        .insight-card .insight-tag {
             font-size: 0.7rem;
             text-transform: uppercase;
             letter-spacing: 0.12em;
@@ -1265,6 +1356,201 @@
             .fourcards-grid {
                 grid-template-columns: 1fr;
             }
+        }
+
+        /* ---- WHAT WE DO PAGE SCOPE ----
+           Everything here is scoped to .page-what-we-do so the shared
+           fourcards and intervention templates keep their existing appearance
+           on Websites and AI and everywhere else. */
+
+        /* Four commercial questions, 2x2 rather than 4-across. At the 1100px
+           container, four columns give each question 245px and two of the four
+           wrap onto two lines. 2x2 gives ~525px and all four fit on one line. */
+        @media (min-width: 901px) {
+            .page-what-we-do .fourcards-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 3rem 4rem;
+            }
+        }
+
+        /* The numerals were 2rem at opacity 0.4, which on this navy reads as
+           barely there. Full-strength accent at a larger size, with the muting
+           done by weight and letterform rather than transparency. */
+        .page-what-we-do .fourcard-number {
+            font-size: 2.6rem;
+            opacity: 0.75;
+        }
+
+        @media (max-width: 600px) {
+            /* Number and question on one line instead of stacked, which is
+               worth roughly 24px a card and makes four items read as four
+               rather than eight. */
+            .page-what-we-do .fourcard {
+                display: grid;
+                grid-template-columns: auto 1fr;
+                column-gap: 1rem;
+                align-items: baseline;
+            }
+
+            .page-what-we-do .fourcard-number {
+                font-size: 2.2rem;
+                grid-row: 1;
+            }
+
+            .page-what-we-do .fourcard h3 {
+                grid-column: 2;
+                grid-row: 1;
+            }
+
+            .page-what-we-do .fourcard p {
+                grid-column: 2;
+            }
+        }
+
+        /* Six months on: supporting information, not another chapter. A thin
+           band with an accent rule, at body scale, instead of a full section
+           with a centred display heading.
+           Scoped to .page-what-we-do .intervention rather than a modifier
+           class because after this rebuild the six-months block is the only
+           intervention left on the page. If a second one is ever added here it
+           will inherit this treatment, which is the trade for not adding a
+           template field nobody else would use. */
+        /* The height comes from the global `section { padding: 6rem 2rem }`,
+           so the strip has to reduce that, not just the inner block. */
+        .page-what-we-do .intervention {
+            padding-top: 2.5rem;
+            padding-bottom: 2.5rem;
+        }
+
+        .page-what-we-do .intervention .section-inner {
+            border-left: 3px solid var(--accent);
+            padding-left: 1.5rem;
+            text-align: left;
+            max-width: 900px;
+        }
+
+        .page-what-we-do .intervention .section-heading {
+            font-size: 1.15rem;
+            text-align: left;
+            margin-bottom: 0.6rem;
+        }
+
+        .page-what-we-do .intervention .intervention-body {
+            font-size: 0.95rem;
+            text-align: left;
+            max-width: 720px;
+        }
+
+        /* Offers: a little more air between the two on mobile so they do not
+           blur into one list, and the price bound more tightly to its name. */
+        @media (max-width: 700px) {
+            .page-what-we-do .offerpair-grid { gap: 3rem; }
+        }
+
+        .page-what-we-do .offer-item .offer-price { margin-bottom: 0.35rem; }
+
+        /* ---- HERO MONTAGE ----
+           Opening treatment for What We Do (16/08/2026). The page describes a
+           commercial review; what a commercial review produces is the four
+           documents already published, redacted, on Evidence. Showing the real
+           output beats another photograph of Tom, and needs no new asset.
+
+           Built as its own template rather than bending `intervention`,
+           because that template has no image slot and forcing one in is what
+           produced the empty-slot problems elsewhere in this stylesheet.
+
+           Grid areas rather than nesting, so mobile can put the montage
+           between the opening line and the rest of the copy while desktop
+           keeps it in a column of its own. */
+        .heromontage {
+            background: var(--dark-grey);
+        }
+
+        .hm-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-areas:
+                "heading montage"
+                "intro   montage"
+                "body    montage";
+            grid-template-rows: auto auto 1fr;
+            gap: 0 4rem;
+            align-items: start;
+        }
+
+        .hm-heading { grid-area: heading; margin-bottom: 1.75rem; }
+        .hm-intro   { grid-area: intro; }
+        .hm-body    { grid-area: body; }
+        .hm-montage { grid-area: montage; }
+
+        .hm-intro,
+        .hm-body {
+            font-size: 1.05rem;
+            color: var(--text);
+            line-height: 1.8;
+            max-width: 620px;
+        }
+
+        .hm-intro { margin-bottom: 1.6rem; }
+
+        /* Same fanned-sheet device as the documents montage on Evidence:
+           absolute sheets, rotation increasing outward, shadow for depth. */
+        /* Height is a ratio of the container width, not a fixed pixel value:
+           the sheets are absolutely positioned and sized as a percentage of
+           this box, so a fixed height stops matching them the moment the
+           viewport changes and they spill over whatever follows. Sized for
+           the tallest asset (a portrait A4 first page, ratio 1.414) plus the
+           rotation and offset the fan applies. */
+        .hm-montage {
+            position: relative;
+            aspect-ratio: 100 / 66;
+        }
+
+        .hm-montage img {
+            position: absolute;
+            top: 0;
+            width: 42%;
+            border-radius: 3px;
+            border: 1px solid var(--border);
+            box-shadow: 0 18px 42px rgba(0,0,0,0.55);
+            background: var(--charcoal);
+        }
+
+        .hm-montage img:nth-child(1) { left: 0;   z-index: 1; transform: rotate(-7deg)   translateY(16px); }
+        .hm-montage img:nth-child(2) { left: 18%; z-index: 2; transform: rotate(-2.5deg) translateY(4px); }
+        .hm-montage img:nth-child(3) { left: 36%; z-index: 3; transform: rotate(2.5deg)  translateY(4px); }
+        .hm-montage img:nth-child(4) { left: 54%; z-index: 4; transform: rotate(7deg)    translateY(16px); }
+
+        .heromontage .cms-edit-btn,
+        .heromontage .cms-move-btn {
+            z-index: 5;
+            background: rgba(10,10,10,0.8);
+        }
+
+        @media (max-width: 900px) {
+            .hm-grid {
+                grid-template-columns: 1fr;
+                grid-template-areas:
+                    "heading"
+                    "intro"
+                    "montage"
+                    "body";
+                gap: 0;
+            }
+
+            /* Capped because the sheets are sized as a percentage of this
+               box: single-column at tablet width it would otherwise grow to
+               most of the screen. */
+            .hm-montage {
+                aspect-ratio: 100 / 72;
+                max-width: 460px;
+                margin: 0.5rem 0 2rem;
+            }
+
+            .hm-montage img { width: 44%; }
+
+            .hm-intro,
+            .hm-body { font-size: 1rem; }
         }
 
         /* ---- OFFER PAIR ----
@@ -2666,7 +2952,12 @@
         }
     </style>
 </head>
-<body>
+<%# Page-scoping hook (16/08/2026). Templates are shared across pages, so
+    per-page styling needs something to scope against and there was nothing.
+    Scoping by section instance ID instead would break the moment a section is
+    deleted and re-added, since the ID changes. Slug is already validated as
+    lowercase-and-hyphens before it reaches a route, so it is safe in a class. %>
+<body class="page-<%= currentPage.slug %>">
 
 <%- include('partials/site-header', { currentPage, navPages, canEdit, content, pageContact }) %>
 
@@ -2993,6 +3284,16 @@
             <% const _hTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %><<%= _hTag %> class="section-heading"><%- content[_k + '.heading'] %></<%= _hTag %>>
             <p class="section-sub"><%- content[_k + '.subtext'] %></p>
         </div>
+        <%
+          // Does any card in this instance carry artwork? If so the cards
+          // that do not get an empty slot of the same height so the row's
+          // text stays aligned (see .insight-image-spacer).
+          const _inImgValid = (v) => /^\/[A-Za-z0-9._\-\/]*\.(jpe?g|png|webp|avif)$/.test(v) && !v.includes('..');
+          let _inAnyImg = false;
+          for (let _c = 1; _c <= 3; _c++) {
+            if (_inImgValid((content[_k + '.card_' + _c + '_image'] || '').trim())) { _inAnyImg = true; }
+          }
+        %>
         <div class="insights-grid">
             <% for (let _n = 1; _n <= 3; _n++) { %>
             <%
@@ -3003,10 +3304,23 @@
               const _inLink = (content[_k + '.card_' + _n + '_link'] || '').trim();
               const _inMatch = /^([a-z0-9]+(?:-[a-z0-9]+)*)(?:#([a-z0-9]+(?:__[0-9]+)?))?$/.exec(_inLink);
             %>
+            <%
+              // Optional card artwork. Validated the same way as the documents
+              // template's paths: root-relative, known image extension, no
+              // traversal. Empty or invalid simply renders no image, so cards
+              // without artwork stay a deliberate state rather than a gap.
+              const _inImg = (content[_k + '.card_' + _n + '_image'] || '').trim();
+              const _inImgOk = _inImgValid(_inImg);
+            %>
             <article class="insight-card">
+                <% if (_inImgOk) { %>
+                <img class="insight-image" src="<%= _inImg %>" alt="" loading="lazy">
+                <% } else if (_inAnyImg) { %>
+                <span class="insight-image-spacer" aria-hidden="true"></span>
+                <% } %>
                 <p class="insight-tag"><%- content[_k + '.card_' + _n + '_tag'] %></p>
                 <% if (_inMatch) { %>
-                <h3><a href="<%= _resolvePageHref(_inMatch[1] + (_inMatch[2] ? '#' + _inMatch[2] : '')) %>"><%- content[_k + '.card_' + _n + '_title'] %></a></h3>
+                <h3><a href="<%= _resolvePageHref(_inMatch[1] + (_inMatch[2] ? '#' + _inMatch[2] : '')) %>"><%- content[_k + '.card_' + _n + '_title'] %><span class="insight-arrow" aria-hidden="true">&rarr;</span></a></h3>
                 <% } else { %>
                 <h3><%- content[_k + '.card_' + _n + '_title'] %></h3>
                 <% } %>
@@ -3018,6 +3332,43 @@
 </section>
 <% } %>
 
+
+<% if (_tpl === 'heromontage') { %>
+<% const _k = _iid; %>
+<!-- HERO MONTAGE -->
+<section class="heromontage<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
+    <div class="section-inner cms-section" data-section="<%= _k %>">
+        <% if (canEdit) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-move-down" data-section-id="<%= _iid %>" title="Move down">&#9660;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
+        <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
+        <div class="hm-grid">
+            <% const _hTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %><<%= _hTag %> class="section-heading hm-heading"><%- content[_k + '.heading'] %></<%= _hTag %>>
+            <div class="hm-intro"><%- content[_k + '.intro'] %></div>
+            <%
+              // Montage sheets. Each path is validated the same way as the
+              // documents template's: root-relative, known image extension, no
+              // traversal. An invalid or empty slot renders nothing, so the fan
+              // simply has fewer sheets rather than a broken image.
+              const _hmImgs = [];
+              for (let _m = 1; _m <= 4; _m++) {
+                const _p = (content[_k + '.image_' + _m] || '').trim();
+                if (/^\/[A-Za-z0-9._\-\/]*\.(jpe?g|png|webp|avif)$/.test(_p) && !_p.includes('..')) _hmImgs.push(_p);
+              }
+            %>
+            <% if (_hmImgs.length) { %>
+            <div class="hm-montage" aria-hidden="true">
+                <% _hmImgs.forEach(function (_p) { %>
+                <img src="<%= _p %>" alt="" loading="lazy">
+                <% }); %>
+            </div>
+            <% } %>
+            <div class="hm-body"><%- content[_k + '.body'] %></div>
+        </div>
+    </div>
+</section>
+<% } %>
 <% if (_tpl === 'offerpair') { %>
 <% const _k = _iid; %>
 <!-- OFFER PAIR -->

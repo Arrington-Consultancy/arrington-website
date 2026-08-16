@@ -59,7 +59,19 @@ const lorem = {
     'card_2_body': 'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip.',
     'card_3_tag': 'Dolor',
     'card_3_title': 'Duis aute irure dolor in reprehenderit',
-    'card_3_body': 'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore.'
+    'card_3_body': 'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore.',
+    'card_1_image': '',
+    'card_2_image': '',
+    'card_3_image': ''
+  },
+  heromontage: {
+    'heading': 'Lorem ipsum dolor sit amet consectetur',
+    'intro': 'Lorem ipsum dolor sit amet, consectetur adipiscing elit sed do eiusmod tempor.',
+    'body': 'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip.',
+    'image_1': '',
+    'image_2': '',
+    'image_3': '',
+    'image_4': ''
   },
   offerpair: {
     'label': 'Lorem ipsum',

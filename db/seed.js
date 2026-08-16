@@ -3856,6 +3856,128 @@ async function seed() {
     }
   }
 
+  // Migration: What We Do visual pass (16/08/2026). Approved presentation
+  // work only. No approved copy is rewritten: the opening paragraphs are
+  // moved between fields verbatim, and every other string already on the page
+  // is left exactly as it is.
+  //
+  //   - the opening intervention becomes a heromontage, so the page can carry
+  //     the four real document previews already published on Evidence. Those
+  //     are genuine redacted client deliverables; nothing is fabricated.
+  //   - Evidence and Websites and AI cards gain real artwork. Useful Thinking
+  //     is deliberately left without an image: only one of the twelve articles
+  //     has artwork, and a card is better with no image than with a borrowed
+  //     one. The field is optional and renders nothing when empty.
+  {
+    const WWD_VISUAL_MARKER = 'what-we-do.visual_pass_2026-08-16';
+    const { rows: mRows } = await db.query(
+      'SELECT 1 FROM content WHERE section_key = $1', [WWD_VISUAL_MARKER]
+    );
+    const { rows: pRows } = await db.query(
+      "SELECT section_order FROM pages WHERE slug = 'what-we-do'"
+    );
+
+    if (mRows.length === 0 && pRows.length > 0) {
+      const order = Array.isArray(pRows[0].section_order) ? pRows[0].section_order : [];
+      const plain = (s) => (s || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+      const applied = [];
+
+      const used = new Set();
+      const { rows: allOrders } = await db.query('SELECT section_order FROM pages');
+      for (const r of allOrders) {
+        if (Array.isArray(r.section_order)) r.section_order.forEach((s) => used.add(s));
+      }
+      const { rows: prefixes } = await db.query(
+        "SELECT DISTINCT split_part(section_key, '.', 1) AS instance_id FROM content"
+      );
+      prefixes.forEach((r) => used.add(r.instance_id));
+      const allocate = (tpl) => {
+        if (!used.has(tpl)) { used.add(tpl); return tpl; }
+        for (let n = 2; n <= 99; n++) {
+          const id = `${tpl}__${n}`;
+          if (!used.has(id)) { used.add(id); return id; }
+        }
+        return null;
+      };
+
+      const put = async (key, value) => {
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [key, value]
+        );
+      };
+
+      // Find the opening intervention by its approved heading.
+      let openingId = null;
+      for (const id of order.filter((i) => /^intervention(?:__\d+)?$/.test(i))) {
+        const { rows } = await db.query(
+          'SELECT content FROM content WHERE section_key = $1', [`${id}.heading`]
+        );
+        if (rows.length && plain(rows[0].content) === 'a commercial review of how the business really works.') {
+          openingId = id; break;
+        }
+      }
+
+      const montageId = allocate('heromontage');
+
+      if (openingId && montageId) {
+        const { rows: hRows } = await db.query(
+          'SELECT content FROM content WHERE section_key = $1', [`${openingId}.heading`]
+        );
+        const { rows: sRows } = await db.query(
+          'SELECT content FROM content WHERE section_key = $1', [`${openingId}.subtext`]
+        );
+        const heading = (hRows[0] && hRows[0].content) || '';
+        const subtext = (sRows[0] && sRows[0].content) || '';
+
+        // Split the approved copy on its existing paragraph breaks. First
+        // paragraph leads, the rest sits below the montage. Nothing rewritten.
+        const paras = subtext.split(/<br\s*\/?>\s*<br\s*\/?>/i).map((s) => s.trim()).filter(Boolean);
+        const intro = paras.shift() || '';
+        const body = paras.join('<br><br>');
+
+        await put(`${montageId}.heading`, heading);
+        await put(`${montageId}.intro`, intro);
+        await put(`${montageId}.body`, body);
+        await put(`${montageId}.image_1`, '/img/docs/half-time-team-talk.jpg');
+        await put(`${montageId}.image_2`, '/img/docs/90-day-action-plan.jpg');
+        await put(`${montageId}.image_3`, '/img/docs/the-mind-that-built-the-business.jpg');
+        await put(`${montageId}.image_4`, '/img/docs/enactment-sheet.jpg');
+
+        const newOrder = order.map((id) => (id === openingId ? montageId : id));
+        await db.query(
+          "UPDATE pages SET section_order = $1::jsonb WHERE slug = 'what-we-do'",
+          [JSON.stringify(newOrder)]
+        );
+        applied.push(`opening became ${montageId}`);
+      }
+
+      // Card artwork, real assets only.
+      const routesId = order.find((id) => /^insights(?:__\d+)?$/.test(id));
+      if (routesId) {
+        const setIf = async (key, value) => {
+          const { rows } = await db.query('SELECT content FROM content WHERE section_key = $1', [key]);
+          if (rows.length && (rows[0].content || '').trim()) return;
+          await db.query(
+            `INSERT INTO content (section_key, content) VALUES ($1, $2)
+             ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content`,
+            [key, value]
+          );
+        };
+        await setIf(`${routesId}.card_1_image`, '/img/docs/half-time-team-talk.jpg');
+        await setIf(`${routesId}.card_2_image`, '');
+        await setIf(`${routesId}.card_3_image`, '/img/wsa/wsa-homepage.jpg');
+        applied.push('card artwork added (Useful Thinking deliberately left without)');
+      }
+
+      await db.query(
+        'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+        [WWD_VISUAL_MARKER, 'true']
+      );
+      console.log(`What We Do visual pass applied (${applied.length ? applied.join('; ') : 'nothing matched'}).`);
+    }
+  }
+
   console.log('Seed complete.');
 }
 
