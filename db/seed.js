@@ -3221,6 +3221,192 @@ async function seed() {
     }
   }
 
+  // Migration: What We Do rebuilt around the real sequence (16/08/2026), on
+  // Tom's approved copy. The page previously led with a four-card block
+  // (01 Listening / 02 Operations / 03 Numbers / 04 Action Plan) that
+  // described categories rather than what happens after an owner gets in
+  // touch, and whose fourth card stated an outcome ("The business feels
+  // clearer, lighter and easier to run") in the slot meant for the plan.
+  //
+  // The page now follows: conversation, understanding the business properly,
+  // clear priorities, implementation if wanted, later check-in. The three
+  // existing bridge sections (Evidence, Useful Thinking, Websites and AI) keep
+  // their instances, their order and their copy.
+  //
+  // This page's copy only ever existed in the production database, so a
+  // one-time guarded migration is the only way to change it in code. Same
+  // pattern as the About Us pass above: a marker row makes it run exactly once,
+  // and the rewrite of the existing "Six months on" section additionally checks
+  // the stored value is still the one it was written against, so a CMS edit
+  // made in between is never clobbered.
+  //
+  // The old fourcards content is deliberately left in the content table. The
+  // instance is only dropped from this page's section_order, so it shows up in
+  // the admin "Reuse existing" tab and can be reattached if Tom wants it back.
+  {
+    const WWD_MARKER = 'what-we-do.review_sequence_2026-08-16';
+    const { rows: wwdMarkerRows } = await db.query(
+      'SELECT 1 FROM content WHERE section_key = $1',
+      [WWD_MARKER]
+    );
+    const { rows: wwdPageRows } = await db.query(
+      "SELECT section_order FROM pages WHERE slug = 'what-we-do'"
+    );
+
+    if (wwdMarkerRows.length === 0 && wwdPageRows.length > 0) {
+      const order = Array.isArray(wwdPageRows[0].section_order) ? wwdPageRows[0].section_order : [];
+      const baseOf = (id) => {
+        const m = /^([a-z0-9]+)(?:__(\d+))?$/.exec(id || '');
+        return m ? m[1] : null;
+      };
+
+      // Same collision-avoidance approach as the Websites and AI migration:
+      // collect every instance ID in use across all pages plus every distinct
+      // content-table prefix before picking new ones, rather than hardcoding.
+      const used = new Set();
+      const { rows: allOrders } = await db.query('SELECT section_order FROM pages');
+      for (const r of allOrders) {
+        if (Array.isArray(r.section_order)) r.section_order.forEach((s) => used.add(s));
+      }
+      const { rows: prefixes } = await db.query(
+        "SELECT DISTINCT split_part(section_key, '.', 1) AS instance_id FROM content"
+      );
+      prefixes.forEach((r) => used.add(r.instance_id));
+      const allocate = (tpl) => {
+        if (!used.has(tpl)) { used.add(tpl); return tpl; }
+        for (let n = 2; n <= 99; n++) {
+          const id = `${tpl}__${n}`;
+          if (!used.has(id)) { used.add(id); return id; }
+        }
+        return null;
+      };
+
+      const conversationId = allocate('intervention');
+      const lookId = allocate('filter');
+      const levelsId = allocate('biography');
+
+      if (conversationId && lookId && levelsId) {
+        const put = async (key, value) => {
+          await db.query(
+            'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+            [key, value]
+          );
+        };
+
+        // 1. The conversation. This becomes the page's first section, so its
+        //    heading is promoted to <h1> by the view's _h1Used logic, which
+        //    puts the page's strongest line in the H1 for the first time: it
+        //    was previously the small eyebrow label above a weaker heading.
+        await put(`${conversationId}.heading`, 'A proper commercial review of how the business really works.');
+        await put(`${conversationId}.subtext`,
+          'It starts with a conversation.<br><br>'
+          + 'That is the 30 Minute Conversation on this site. If it runs over a bit because the conversation is worth having, nobody is watching the clock.<br><br>'
+          + 'You tell us what is going on, where the pressure is showing, what is frustrating you and what you are trying to get to. There is nothing to prepare and no need to have it worked out first. Most of what we need is already in your head.<br><br>'
+          + 'Then we go and look at the business itself.');
+        await put(`${conversationId}.button_text`, '');
+        await put(`${conversationId}.button_link`, '');
+
+        // 2. What we look at. filter is the only template that skips empty
+        //    list slots, so it is the one that can carry this list honestly.
+        await put(`${lookId}.label`, 'WHAT WE LOOK AT');
+        await put(`${lookId}.heading`, 'Most owners are too close to see all of it.');
+        // Both paragraphs go in p1. The filter template renders
+        // intro -> p1 -> list -> p2 -> closing, so splitting these across p1
+        // and p2 would drop the list in between them and leave "So we look at
+        // it from more than one angle" sitting after the list it introduces.
+        // p2 is guarded on being non-empty, so leaving it blank renders nothing.
+        await put(`${lookId}.p1`,
+          'That is not a criticism. You have lived inside the business every day for years. You stop noticing what you walk past, and the things that have changed slowly are often the hardest to spot.<br><br>'
+          + 'So we look at it from more than one angle. The information is usually already inside the business, it just needs pulling together properly.');
+        await put(`${lookId}.p2`, '');
+        await put(`${lookId}.item_1`, 'What you see, and what your staff see');
+        await put(`${lookId}.item_2`, 'How the business actually works day to day');
+        await put(`${lookId}.item_3`, 'What the numbers say, including the bank statements and the accounts');
+        await put(`${lookId}.item_4`, 'What has quietly become normal');
+        await put(`${lookId}.item_5`, 'Where margin and time are going');
+        await put(`${lookId}.item_6`, 'Opportunities the business is close to but not taking');
+        await put(`${lookId}.item_7`, 'Who decides what, and who ends up carrying it');
+        await put(`${lookId}.item_8`, 'Where the business still depends on you when it does not need to');
+        await put(`${lookId}.closing`,
+          'Often, the problems are not dramatic. They have simply become normal.<br><br>'
+          + 'We are not hunting for faults. You have built something that works and most of it stays as it is. You get a clear view of what matters, what to change first and what to leave alone, then what to do next, in order.');
+        await put(`${lookId}.intro`, '');
+        await put(`${lookId}.button_text`, '');
+        await put(`${lookId}.button_link`, 'main');
+        for (let n = 1; n <= 3; n++) {
+          await put(`${lookId}.row_${n}_action`, '');
+          await put(`${lookId}.row_${n}_client`, '');
+        }
+
+        // 3. The two engagement levels. biography's two columns are the right
+        //    shape for a genuine comparison; each column opens with a bold
+        //    lead-in because the template has no per-column heading field.
+        await put(`${levelsId}.label`, 'HOW FAR WE GO');
+        await put(`${levelsId}.heading`, 'Two levels of involvement');
+        await put(`${levelsId}.col_1_p1`, '<strong>Commercial Review, £500.</strong> We listen, go through the business and the evidence, and write it up: what we found, what we would do about it, and what to do first.');
+        await put(`${levelsId}.col_1_p2`, 'It stands on its own. You get a clear written view of what we found, what we think matters and what we would do next. Plenty of owners take it from there and make the changes themselves.');
+        await put(`${levelsId}.col_2_p1`, '<strong>Commercial Review and Implementation, £2,500 in total.</strong> The review with a lot more time behind it, and then we stay involved and help you put the plan into practice.');
+        await put(`${levelsId}.col_2_p2`, 'That might be commercial reporting, systems, business structure, practical AI tools, website work, or working alongside your accountant where the advice needs to sit with them. No business needs all of it. If you have already paid £500 for the Commercial Review, that comes off the £2,500.');
+        await put(`${levelsId}.photo_key`, '');
+        await put(`${levelsId}.stat_number`, '');
+        await put(`${levelsId}.stat_label`, '');
+
+        // 4. Rewrite the existing "Six months on" section in place, keeping its
+        //    instance and its Evidence button. Guarded on the stored heading so
+        //    a CMS edit made in the meantime wins.
+        let sixMonthsId = null;
+        for (const id of order.filter((i) => baseOf(i) === 'intervention')) {
+          const { rows: hRows } = await db.query(
+            'SELECT content FROM content WHERE section_key = $1',
+            [`${id}.heading`]
+          );
+          if (hRows.length > 0 && (hRows[0].content || '').trim() === 'Six months on.') {
+            sixMonthsId = id;
+            break;
+          }
+        }
+        let sixMonthsRewritten = false;
+        if (sixMonthsId) {
+          const { rows: shRows } = await db.query(
+            'SELECT content FROM content WHERE section_key = $1',
+            [`${sixMonthsId}.subtext`]
+          );
+          if (shRows.length > 0) {
+            await db.query(
+              'UPDATE content SET content = $1 WHERE section_key = $2',
+              [
+                'Six months later we check in and see what actually changed.<br><br>'
+                + 'Some of it will have stuck, some of it will have slipped, and the business will have moved on in places. Usually it is a straightforward conversation. Occasionally there is more worth doing.<br><br>'
+                + 'The check-in comes with both the review and the implementation work. It is a phone call, not another stage to book. Six months is long enough to see what actually changed and whether the work was useful.',
+                `${sixMonthsId}.subtext`
+              ]
+            );
+            sixMonthsRewritten = true;
+          }
+        }
+
+        // 5. New order: the three new sections first, then everything that was
+        //    already there minus the fourcards block. Building it by filter
+        //    rather than by literal list keeps the existing bridge sections in
+        //    whatever order Tom has them in.
+        const kept = order.filter((id) => baseOf(id) !== 'fourcards');
+        const newOrder = [conversationId, lookId, levelsId, ...kept];
+        await db.query(
+          "UPDATE pages SET section_order = $1::jsonb WHERE slug = 'what-we-do'",
+          [JSON.stringify(newOrder)]
+        );
+
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [WWD_MARKER, 'true']
+        );
+        console.log(`What We Do rebuilt (${conversationId}, ${lookId}, ${levelsId}; six-months rewritten: ${sixMonthsRewritten}; order: ${newOrder.join(' ')}).`);
+      } else {
+        console.log('What We Do rebuild skipped: could not allocate instance IDs.');
+      }
+    }
+  }
+
   console.log('Seed complete.');
 }
 
