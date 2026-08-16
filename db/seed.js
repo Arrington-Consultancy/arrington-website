@@ -3407,6 +3407,66 @@ async function seed() {
     }
   }
 
+  // Follow-up to the What We Do rebuild above (16/08/2026). That migration
+  // matched the "Six months on" section on an exact string comparison of the
+  // stored heading, which succeeded locally but returned no match on
+  // production, so the three new sections shipped while this one kept its old
+  // copy. The live heading renders as "Six months on." but the stored value
+  // evidently differs from that exact string, most likely by markup or
+  // whitespace, so this pass strips tags and normalises whitespace before
+  // comparing rather than guessing which.
+  //
+  // Its own marker, because the first migration has already stamped and will
+  // not re-run. Guarded twice over: the section is only rewritten if its
+  // subtext still contains the old opening line, so a CMS edit always wins.
+  {
+    const WWD_SIX_MONTHS_MARKER = 'what-we-do.six_months_copy_2026-08-16';
+    const { rows: markerRows } = await db.query(
+      'SELECT 1 FROM content WHERE section_key = $1',
+      [WWD_SIX_MONTHS_MARKER]
+    );
+    const { rows: pageRows } = await db.query(
+      "SELECT section_order FROM pages WHERE slug = 'what-we-do'"
+    );
+
+    if (markerRows.length === 0 && pageRows.length > 0) {
+      const order = Array.isArray(pageRows[0].section_order) ? pageRows[0].section_order : [];
+      const plain = (s) => (s || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+      const NEW_SUBTEXT =
+        'Six months later we check in and see what actually changed.<br><br>'
+        + 'Some of it will have stuck, some of it will have slipped, and the business will have moved on in places. Usually it is a straightforward conversation. Occasionally there is more worth doing.<br><br>'
+        + 'The check-in comes with both the review and the implementation work. It is a phone call, not another stage to book. Six months is long enough to see what actually changed and whether the work was useful.';
+
+      let rewritten = null;
+      for (const id of order) {
+        if (!/^intervention(?:__\d+)?$/.test(id)) continue;
+        const { rows: hRows } = await db.query(
+          'SELECT content FROM content WHERE section_key = $1', [`${id}.heading`]
+        );
+        if (hRows.length === 0 || plain(hRows[0].content) !== 'six months on.') continue;
+
+        const { rows: sRows } = await db.query(
+          'SELECT content FROM content WHERE section_key = $1', [`${id}.subtext`]
+        );
+        if (sRows.length === 0) continue;
+        if (!plain(sRows[0].content).includes('the work does not end when the review is finished')) continue;
+
+        await db.query(
+          'UPDATE content SET content = $1 WHERE section_key = $2',
+          [NEW_SUBTEXT, `${id}.subtext`]
+        );
+        rewritten = id;
+        break;
+      }
+
+      await db.query(
+        'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+        [WWD_SIX_MONTHS_MARKER, 'true']
+      );
+      console.log(`What We Do six-months copy: ${rewritten ? 'rewritten (' + rewritten + ')' : 'no matching section found, left unchanged'}.`);
+    }
+  }
+
   console.log('Seed complete.');
 }
 
