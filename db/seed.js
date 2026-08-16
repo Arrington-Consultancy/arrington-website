@@ -3978,6 +3978,64 @@ async function seed() {
     }
   }
 
+  // Migration: What We Do finishing pass (16/08/2026).
+  //
+  // The mobile opening stayed too tall after the montage pass; that is a CSS
+  // fix in views/index.ejs, not stored content. The one content change here is
+  // the Useful Thinking card: the live row now uses the genuine existing
+  // article artwork already published for "A Profitable Job Is Not Necessarily
+  // Good Business", specifically the landscape social/share image that fits the
+  // insights card's 16:9 slot better than the portrait in-page header image.
+  //
+  // Guarded so a CMS edit always wins: only writes when the card still points
+  // at /useful-thinking and its image field is blank.
+  {
+    const WWD_FINISHING_MARKER = 'what-we-do.finishing_pass_2026-08-16';
+    const { rows: mRows } = await db.query(
+      'SELECT 1 FROM content WHERE section_key = $1', [WWD_FINISHING_MARKER]
+    );
+
+    if (mRows.length === 0) {
+      let shouldMark = false;
+      const { rows: wwdRows } = await db.query(
+        "SELECT section_order FROM pages WHERE slug = 'what-we-do'"
+      );
+      if (wwdRows.length) {
+        const order = Array.isArray(wwdRows[0].section_order) ? wwdRows[0].section_order : [];
+        const routesId = order.find((id) => /^insights(?:__\d+)?$/.test(id));
+        if (routesId) {
+          shouldMark = true;
+          const imageKey = `${routesId}.card_2_image`;
+          const linkKey = `${routesId}.card_2_link`;
+          const { rows: imageRows } = await db.query(
+            'SELECT content FROM content WHERE section_key = $1', [imageKey]
+          );
+          const { rows: linkRows } = await db.query(
+            'SELECT content FROM content WHERE section_key = $1', [linkKey]
+          );
+          const currentImage = (imageRows[0] && imageRows[0].content) || '';
+          const currentLink = (linkRows[0] && linkRows[0].content) || '';
+          if (!currentImage.trim() && currentLink.trim() === 'useful-thinking') {
+            await db.query(
+              `INSERT INTO content (section_key, content) VALUES ($1, $2)
+               ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content`,
+              [imageKey, '/img/useful-thinking/a-profitable-job-og.jpg']
+            );
+            console.log('What We Do finishing pass applied (Useful Thinking card artwork added).');
+          } else {
+            console.log('What We Do finishing pass skipped content write (card already customised).');
+          }
+        }
+      }
+      if (shouldMark) {
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [WWD_FINISHING_MARKER, 'true']
+        );
+      }
+    }
+  }
+
   console.log('Seed complete.');
 }
 
