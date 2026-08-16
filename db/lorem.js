@@ -67,9 +67,13 @@ const lorem = {
     'offer_1_price': '£000',
     'offer_1_name': 'Lorem ipsum',
     'offer_1_body': 'Lorem ipsum dolor sit amet, consectetur adipiscing elit sed do eiusmod tempor.',
+    'offer_1_button_text': '',
+    'offer_1_button_link': 'main',
     'offer_2_price': '£0,000',
     'offer_2_name': 'Dolor sit amet',
     'offer_2_body': 'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi.',
+    'offer_2_button_text': '',
+    'offer_2_button_link': 'main',
     'note': 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
     'button_text': '',
     'button_link': 'main'

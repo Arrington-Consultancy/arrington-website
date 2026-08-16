@@ -3700,6 +3700,162 @@ async function seed() {
     }
   }
 
+  // Migration: drop "proper" from the offer language, plus the approved What
+  // We Do and global footer copy fixes (16/08/2026).
+  //
+  // "proper commercial review" was the Brand OS's designated offer language.
+  // Tom has decided the offer should not lean on that word for credibility,
+  // so it comes out of all nine places it appears. In every one of them the
+  // sentence works with the single word deleted, so nothing is rewritten.
+  //
+  // Naming convention this settles: "Commercial Review" capitalised is the
+  // named thing you buy (offer pages, the offerpair block); "commercial
+  // review" lowercase describes the activity inside a sentence. The offer
+  // pages already did the former, so this removes an inconsistency rather
+  // than creating one. Ordinary uses of "properly" elsewhere are left alone:
+  // they are plain English, not the offer name.
+  //
+  // Every edit is guarded on the stored value still containing the phrase it
+  // expects, so a CMS edit made in the meantime always wins.
+  {
+    const PROPER_MARKER = 'site.offer_language_2026-08-16';
+    const { rows: mRows } = await db.query(
+      'SELECT 1 FROM content WHERE section_key = $1', [PROPER_MARKER]
+    );
+
+    if (mRows.length === 0) {
+      const applied = [];
+      // Replaces `find` with `next` in a stored value, only when `find` is
+      // actually present. Never creates a key that does not exist.
+      const swap = async (key, find, next, label) => {
+        const { rows } = await db.query(
+          'SELECT content FROM content WHERE section_key = $1', [key]
+        );
+        if (rows.length === 0) return false;
+        const current = rows[0].content || '';
+        if (!current.includes(find)) return false;
+        await db.query(
+          'UPDATE content SET content = $1 WHERE section_key = $2',
+          [current.split(find).join(next), key]
+        );
+        applied.push(label);
+        return true;
+      };
+
+      // 1. Every occurrence of the offer phrase, wherever it is stored. Done
+      //    as a scan rather than a hardcoded key list so the Evidence, About
+      //    Us, Useful Thinking and Business Consultant Devon instances are all
+      //    caught without depending on their instance IDs.
+      const { rows: properRows } = await db.query(
+        "SELECT section_key FROM content WHERE content ILIKE '%proper commercial review%'"
+      );
+      let phraseCount = 0;
+      for (const r of properRows) {
+        if (await swap(r.section_key, 'proper commercial review', 'commercial review', r.section_key)) phraseCount++;
+      }
+      if (phraseCount) applied.push(`offer phrase removed from ${phraseCount} content rows`);
+
+      // 2. Global footer: blank the label and drop the sentence that repeats
+      //    the heading two lines below it. site-footer.ejs already renders
+      //    nothing when the label is empty.
+      const { rows: labelRows } = await db.query(
+        "SELECT content FROM content WHERE section_key = 'contact.label'"
+      );
+      if (labelRows.length && (labelRows[0].content || '').trim()) {
+        await db.query("UPDATE content SET content = '' WHERE section_key = 'contact.label'");
+        applied.push('footer label cleared');
+      }
+      // Deliberately tolerant of whatever separates the duplicated sentence
+      // from the next one (space, double space, <br>): remove the sentence
+      // itself, then tidy the seam. An exact adjacent-sentence match would
+      // fail silently if the stored value spaced it differently, and this
+      // edit only gets one run.
+      {
+        const DUP = 'You tell us where the pressure is showing.';
+        const { rows } = await db.query(
+          "SELECT content FROM content WHERE section_key = 'contact.body'"
+        );
+        if (rows.length && (rows[0].content || '').includes(DUP)) {
+          const cleaned = (rows[0].content || '')
+            .split(DUP).join('')
+            .replace(/\s{2,}/g, ' ')
+            .replace(/(<br\s*\/?>)\s+/gi, '$1')
+            .replace(/(<br\s*\/?>\s*)+\s*$/i, '')
+            .trim();
+          await db.query(
+            "UPDATE content SET content = $1 WHERE section_key = 'contact.body'", [cleaned]
+          );
+          applied.push('footer duplicate sentence removed');
+        } else {
+          applied.push('footer duplicate sentence NOT FOUND');
+        }
+      }
+
+      // 3. What We Do: the two question bodies that asserted a finding before
+      //    the business has been looked at.
+      const { rows: wwdRows } = await db.query(
+        "SELECT section_order FROM pages WHERE slug = 'what-we-do'"
+      );
+      if (wwdRows.length) {
+        const order = Array.isArray(wwdRows[0].section_order) ? wwdRows[0].section_order : [];
+        const fourcardsId = order.find((id) => /^fourcards(?:__\d+)?$/.test(id));
+        const offerpairId = order.find((id) => /^offerpair(?:__\d+)?$/.test(id));
+        const plain = (s) => (s || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+
+        if (fourcardsId) {
+          await swap(`${fourcardsId}.card_2_body`,
+            'where time and money are being absorbed',
+            'where time and money go',
+            'question 02 assumption removed');
+          await swap(`${fourcardsId}.card_3_body`,
+            'The decisions, knowledge and responsibilities that have gathered around the owner.',
+            'Decisions, knowledge and responsibilities that tend to gather around the owner.',
+            'question 03 assumption removed');
+        }
+
+        // 4. Six months on: the heading already carries the timeframe.
+        for (const id of order.filter((i) => /^intervention(?:__\d+)?$/.test(i))) {
+          const { rows } = await db.query(
+            'SELECT content FROM content WHERE section_key = $1', [`${id}.heading`]
+          );
+          if (rows.length && plain(rows[0].content) === 'six months on.') {
+            await swap(`${id}.subtext`,
+              'Six months later, we come back to see',
+              'We come back to see',
+              'six months repetition removed');
+            break;
+          }
+        }
+
+        // 5. Both offers get their own route. The shared CTA is cleared so
+        //    the £500 does not end up with two buttons to the £2,500's one.
+        if (offerpairId) {
+          for (const [key, value] of [
+            [`${offerpairId}.offer_1_button_text`, 'See the Commercial Review'],
+            [`${offerpairId}.offer_1_button_link`, 'where-to-start/commercial-review'],
+            [`${offerpairId}.offer_2_button_text`, 'See review and implementation'],
+            [`${offerpairId}.offer_2_button_link`, 'where-to-start/full-commercial-review'],
+            [`${offerpairId}.button_text`, ''],
+            [`${offerpairId}.button_link`, '']
+          ]) {
+            await db.query(
+              `INSERT INTO content (section_key, content) VALUES ($1, $2)
+               ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content`,
+              [key, value]
+            );
+          }
+          applied.push('per-offer routes added');
+        }
+      }
+
+      await db.query(
+        'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+        [PROPER_MARKER, 'true']
+      );
+      console.log(`Offer language + copy fixes applied (${applied.length ? applied.join('; ') : 'nothing matched'}).`);
+    }
+  }
+
   console.log('Seed complete.');
 }
 

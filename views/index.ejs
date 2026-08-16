@@ -1328,6 +1328,14 @@
             line-height: 1.7;
         }
 
+        /* Identical treatment on both offers, deliberately: neither route may
+           read as the dominant one. display:flex so the button sizes to its
+           own text rather than filling the column. */
+        .offer-item .offer-btn {
+            display: inline-flex;
+            margin-top: 1.6rem;
+        }
+
         .offerpair-note {
             margin-top: 2.5rem;
             padding-top: 1.5rem;
@@ -3026,10 +3034,25 @@
         <% const _hTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %><<%= _hTag %> class="section-heading"><%- content[_k + '.heading'] %></<%= _hTag %>>
         <div class="offerpair-grid">
             <% for (let _o = 1; _o <= 2; _o++) { %>
+            <%
+              // Per-offer route (16/08/2026). Both options are presented as
+              // genuine choices, so each carries its own button to its own
+              // offer page, styled identically, rather than one shared CTA
+              // that could only point at one of them. Same link validation as
+              // the shared button below, including the optional nested path
+              // segment for Where to Start routes.
+              const _oBtnText = (content[_k + '.offer_' + _o + '_button_text'] || '').replace(/<[^>]+>/g, '').trim();
+              const _oBtnSlug = (content[_k + '.offer_' + _o + '_button_link'] || '').trim();
+              const _oValid = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)?(#[a-z0-9_-]+)?$/.test(_oBtnSlug);
+              const _oHref = _oBtnSlug === 'main' ? '/' : (_oValid ? _resolvePageHref(_oBtnSlug) : '#conversation');
+            %>
             <div class="offer-item">
                 <p class="offer-price"><%- content[_k + '.offer_' + _o + '_price'] %></p>
                 <h3><%- content[_k + '.offer_' + _o + '_name'] %></h3>
                 <p><%- content[_k + '.offer_' + _o + '_body'] %></p>
+                <% if (_oBtnText) { %>
+                <a href="<%= _oHref %>" class="btn btn-primary offer-btn"><%- content[_k + '.offer_' + _o + '_button_text'] %></a>
+                <% } %>
             </div>
             <% } %>
         </div>
