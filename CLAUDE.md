@@ -7,7 +7,7 @@ This site was handed over to Tom Arrington to self-manage. Read `HANDOVER.md` fi
 - **Code** now also lives in Tom's GitHub org: `github.com/Arrington-Consultancy/arrington-website` (Nat is an org owner). `natparnell/arrington-prototype` is now an archive copy.
 - **Hosting** was transferred via Railway's "Transfer Project" onto Tom's own **Railway Pro** account (service + Postgres + both custom domains moved intact, no downtime, nothing in Wix changed). Nat no longer deploys or controls it, so the `railway up` deploy instructions further down apply to Tom's account, not Nat's.
 - **Live content** (all pages, copy, images, permissions) moved with the database. A point-in-time snapshot is committed at `handover/live-content-export-2026-07-21.sql` (idempotent upserts), regenerable via `handover/regenerate-export.js`.
-- **Loose end:** the bare `arringtonconsultancy.co.uk` apex still needs adding as a custom domain in Railway (long-standing, pre-handover; see Custom domains).
+- ~~**Loose end:** the bare `arringtonconsultancy.co.uk` apex still needs adding as a custom domain in Railway.~~ **Resolved.** All four custom domains are bound in Railway with valid certificates. Since commit `00c2b91` (16/08/2026) both `.co.uk` hostnames permanently redirect to the canonical host rather than serving the site (see Custom domains).
 - On the same day the 19 agreed copy-review changes were applied to the live site (see Copy review below).
 
 ## Brand, voice and strategy: Google Drive is the authority, not this file
@@ -50,9 +50,9 @@ Single-page website for Arrington Business Consultancy (Tom Arrington), with a C
 
 - **Primary:** https://www.arringtonconsultancy.com
 - **Apex:** https://arringtonconsultancy.com (A records point at Railway's anycast edge `69.46.46.89` / `69.46.46.15` — Wix doesn't support ANAME on Tom's plan, so apex-via-A-record is the workaround. **Updated 30/06/2026** from the old Fastly IPs `151.101.2.15` / `151.101.66.15`, which went dead when Railway migrated its edge off Fastly — see Custom domains below)
-- **Railway-generated:** https://arrington-prototype-production.up.railway.app (still live, handy for smoke-testing without DNS)
+- **Railway-generated:** https://arrington-prototype-production.up.railway.app (bound, but since commit `00c2b91` it **301s to the canonical host** like every other non-canonical hostname, so it can no longer be used to smoke-test page content without DNS. `/health` is exempt from the host rewrite, so this hostname still works for confirming the app is alive if DNS for the custom domains ever breaks.)
 - **Login:** append `/login` to any of the above
-- **V1 (preserved, no public link):** `/v1.html` (warm palette, "We" voice, Outward Mindset approach — served with a per-route relaxed CSP because it's a static page that predates the nonce setup)
+- **V1 (retired 16/08/2026):** `/v1.html` **permanently redirects to `/`**. It used to be served as a static page with a per-route relaxed CSP (its inline `<style>`/`<script>` blocks predate the nonce setup), but it is a complete alternative version of the site's content in the old warm palette and "We" voice: publicly reachable, crawlable, carrying no `noindex` and in no sitemap, so a superseded statement of the company's positioning was indexable alongside the live one. The `v1.html` file stays in the repository as the historical record; only the public route is gone, and the relaxed CSP override went with it.
 
 **Brand naming:** the browser tab uses the short form "Arrington Consultancy" (set in `views/index.ejs` `<title>`). The full business name "Arrington Business Consultancy" is still used in the logo alt text, hero photo alt, and on-page copy — only the tab/page title is shortened.
 
@@ -603,7 +603,7 @@ Active theme stored in DB, applied via CSS variables. Affects main site and logi
 
 ## Security posture (hardened 2026-04-11)
 
-- **Strict CSP** with per-request nonces. Inline `<style>` and `<script>` blocks in `index.ejs` and `login.ejs` carry `nonce="<%= nonce %>"`. No `'unsafe-inline'` for scripts or styles. `v1.html` has a per-route CSP override that still allows `'unsafe-inline'` because it's a legacy static page.
+- **Strict CSP** with per-request nonces. Inline `<style>` and `<script>` blocks in `index.ejs` and `login.ejs` carry `nonce="<%= nonce %>"`. No `'unsafe-inline'` for scripts or styles. (Until 16/08/2026 `v1.html` had a per-route CSP override allowing `'unsafe-inline'`; that route now 301s to `/` and the override is gone, so there is no longer any relaxed-CSP route on the site.)
 - **HSTS** (`max-age=31536000; includeSubDomains; preload`) in production
 - **App-level HTTPS redirect** via `x-forwarded-proto` check (belt-and-braces on top of Railway's TLS termination)
 - **Rate limiting:** 5 login attempts per 15 min per IP, 60 authenticated write requests per minute per session on `/api/content` and `/api/admin`
@@ -747,9 +747,13 @@ version naming the review and the build directly.
 
 ## Custom domains
 
-Custom domains on the `arrington-prototype` service in Railway: `www.arringtonconsultancy.com`, `arringtonconsultancy.com` (apex), and `www.arringtonconsultancy.co.uk` are bound and serving. **`arringtonconsultancy.co.uk` (apex) is NOT yet attached in Railway as of 30/06/2026** — its Wix DNS already points at Railway's edge, but until it's added as a custom domain in the Railway dashboard (Settings → Networking → + Custom Domain → `arringtonconsultancy.co.uk`, target port 8080) Railway has no cert for it and the apex returns a TLS "no matching certificate" error. The Railway CLI can't add it (the known misleading "Unauthorized" custom-domain-add bug), so this must be done in the dashboard; the cert provisions within a few minutes once added. DNS for both domains lives at Wix (`ns12`/`ns13.wixdns.net`). Because Wix doesn't offer ANAME on Tom's plan, each apex uses A records pointing at Railway's anycast edge IPs — apex-via-A-record is the workaround when a registrar lacks ANAME/CNAME-flattening.
+**Only one hostname serves the site: `www.arringtonconsultancy.com`.** Four custom domains are bound on the `arrington-prototype` service in Railway, all with valid certificates: `www.arringtonconsultancy.com`, `arringtonconsultancy.com` (apex), `www.arringtonconsultancy.co.uk` and `arringtonconsultancy.co.uk` (apex). Since commit `00c2b91` (16/08/2026) every one of them except the canonical host, plus Railway's own service domain, **permanently redirects (301) to `https://www.arringtonconsultancy.com`**, preserving path and query in a single hop.
 
-**Railway edge migration (30/06/2026 incident).** Railway moved its edge off Fastly (old anycast `151.101.2.15` / `151.101.66.15`) onto its own anycast edge (`69.46.46.x`). The `www` records are CNAMEs that auto-follow Railway's per-domain target, so they re-pointed to the new edge automatically and never broke. But both **apex** records are hard-coded A records that still pointed at the dead Fastly IPs, so apex traffic hit Fastly (which no longer knows these domains) and returned a TLS connection reset / "unknown domain" — the symptom that broke Facebook links (Facebook strips `www` and hits the apex). Fix applied 30/06/2026: repointed both apex A records in Wix from the Fastly IPs to `69.46.46.89` / `69.46.46.15` (verified serving the apex Host with valid certs). The `.co.uk` apex also had to be **added as a custom domain in Railway** (it previously only redirected via Wix; now it serves the site directly like the `.com` apex). Every other Railway site Nat runs was unaffected because they all use Cloudflare CNAME-flattening at the apex, which followed the edge move on its own.
+Before that change only the `.com` apex was rewritten, so both `.co.uk` forms and the Railway hostname each served a full 200 copy of every page with a self-referencing canonical tag: the whole site was independently indexable under three extra hostnames. The rewrite lives in the host/HTTPS middleware near the top of `server.js` and is written as a rule ("anything that is not the canonical host") rather than a list, so adding a domain in Railway later cannot quietly reintroduce the duplication. Two deliberate exemptions: local/internal hosts (localhost, bare IPs, anything without a dot) are untouched so development behaviour is unchanged, and `/health` is never host-rewritten so uptime monitors on any hostname still get a real status.
+
+DNS for both domains lives at Wix (`ns12`/`ns13.wixdns.net`). Because Wix doesn't offer ANAME on Tom's plan, each apex uses A records pointing at Railway's anycast edge IPs — apex-via-A-record is the workaround when a registrar lacks ANAME/CNAME-flattening. The DNS side is unchanged by the redirect work: all four hostnames still resolve to Railway, they just answer with a 301 instead of the page.
+
+**Railway edge migration (30/06/2026 incident).** Railway moved its edge off Fastly (old anycast `151.101.2.15` / `151.101.66.15`) onto its own anycast edge (`69.46.46.x`). The `www` records are CNAMEs that auto-follow Railway's per-domain target, so they re-pointed to the new edge automatically and never broke. But both **apex** records are hard-coded A records that still pointed at the dead Fastly IPs, so apex traffic hit Fastly (which no longer knows these domains) and returned a TLS connection reset / "unknown domain" — the symptom that broke Facebook links (Facebook strips `www` and hits the apex). Fix applied 30/06/2026: repointed both apex A records in Wix from the Fastly IPs to `69.46.46.89` / `69.46.46.15` (verified serving the apex Host with valid certs). The `.co.uk` apex also had to be **added as a custom domain in Railway** (it previously only redirected via Wix; at that point it began serving the site directly like the `.com` apex — superseded 16/08/2026, it now 301s to the canonical host, see above). Every other Railway site Nat runs was unaffected because they all use Cloudflare CNAME-flattening at the apex, which followed the edge move on its own.
 
 DNS records currently in Wix (both domains, `.com` shown; `.co.uk` mirrors it):
 - `www` CNAME → `s7k9w403.up.railway.app` (`.co.uk` www → `lads91wn.up.railway.app`)
@@ -788,11 +792,15 @@ To resume: open a Wix support ticket (chat or email) saying:
 
 When the change goes through, all Cloudflare records take over with no further work needed in Cloudflare. Then verify the four rows in Resend's domain page (they should turn green within minutes), set `CONTACT_FROM` on Railway to a real `@arringtonconsultancy.com` address, and deploy `feature/contact-form`.
 
-## `arringtonconsultancy.co.uk` (now served directly from Railway)
+## `arringtonconsultancy.co.uk` (redirects to the canonical host)
 
-**Superseded 30/06/2026.** The `.co.uk` no longer relies on a Wix platform-level redirect. As part of the edge-migration fix, its Wix A/CNAME records point at Railway's edge so it serves the same site directly. `www.arringtonconsultancy.co.uk` is bound in Railway and serving (HTTP 200). **The `arringtonconsultancy.co.uk` apex still needs attaching in the Railway dashboard to get its cert (pending as of 30/06/2026 — see Custom domains above); until then the bare `.co.uk` apex shows a TLS cert error even though its DNS is correct.** SEO canonicalisation is handled in-app by the resolved `canonical_url`, so duplicate-content risk is covered without a redirect once the apex is live.
+**Current behaviour, since commit `00c2b91` (16/08/2026):** both `www.arringtonconsultancy.co.uk` and the bare `arringtonconsultancy.co.uk` apex are bound in Railway with valid certificates and **301 to `https://www.arringtonconsultancy.com`**, path and query preserved. The `.co.uk` does not serve the site.
 
-(Historic note: the `.co.uk` previously redirected to `arringtonconsultancy.com` via Wix's platform-level redirect. If the Cloudflare migration is later completed, decide deliberately whether to keep `.co.uk` serving directly or to add a Cloudflare bulk redirect `*.arringtonconsultancy.co.uk/*` → `https://www.arringtonconsultancy.com/$1`. Either is fine; serving directly is the current behaviour.)
+This was done in the app, not in DNS or Wix, so the `.co.uk` DNS records are unchanged and still point at Railway. It is the same middleware that handles the `.com` apex and HTTPS enforcement, so no chain forms.
+
+**Why it changed:** between 30/06/2026 and 16/08/2026 the `.co.uk` served the site directly. The intention at the time was that in-app `canonical_url` resolution would cover the duplicate-content risk, but `canonical_url` is blank on almost every page and falls back to the request host, so each `.co.uk` page emitted a canonical pointing at itself. The site was therefore fully indexable under `.co.uk` as well as `.com`. Redirecting is the fix.
+
+**If the Cloudflare migration is later completed**, this stays as it is: the redirect is in the app, so it survives any DNS change. A Cloudflare bulk redirect would be redundant. Reverting to `.co.uk` serving the site directly is a commercial decision for Tom, and would reintroduce the duplicate-indexing problem unless per-page `canonical_url` values were set explicitly.
 
 ## Partial Wix-only workaround if Cloudflare migration stalls
 
@@ -834,7 +842,7 @@ Tom returned an agreed-changes brief (`arrington_copy_review_agreed_changes_20_j
 - `public/pdfs/` — the four public/redacted client documents served by the documents template
 - `public/img/docs/` — first-page preview JPEGs for those PDFs (generated with `pdftoppm`)
 - `index.html` — original static V2 (pre-CMS)
-- `v1.html` — original V1 (warm palette, "We" voice), served with a per-route relaxed CSP
+- `v1.html` — original V1 (warm palette, "We" voice). Kept in the repository as the historical record only; the `/v1.html` route was retired 16/08/2026 and now 301s to `/`
 - `headshot.png` — original hero photo (now served from DB)
 - `logo.avif` — original logo (now served from DB)
 - `oxford.png` — original Oxford badge (now served from DB)
