@@ -402,7 +402,7 @@ app.get('/robots.txt', (req, res) => {
     // deliberately no longer listed here; its own per-visitor result pages
     // stay noindex/nofollow regardless, since those carry one visitor's
     // private answers rather than being the public tool page.
-    `User-agent: *\nAllow: /\nDisallow: /login\nDisallow: /market-ready-test\n\nSitemap: ${base}/sitemap.xml\n`
+    `User-agent: *\nAllow: /\nDisallow: /login\nDisallow: /market-ready-test/result/\nDisallow: /commercial-gaps-review/result/\n\nSitemap: ${base}/sitemap.xml\n`
   );
 });
 
@@ -446,11 +446,13 @@ app.get('/sitemap.xml', async (req, res, next) => {
       }
       return `  <url><loc>${escapeXml(loc)}</loc>${lastmod}</url>`;
     }));
-    // Owner Check, Owner Dependency Quiz, Commercial Gaps Review and Privacy
-    // aren't rows in `pages` (Owner Check is a synthetic nav entry, the other
-    // three are standalone routes, not CMS content), so each needs its own
-    // explicit entry. Market Ready Test stays out of this list until it is
-    // approved for launch (unpublished, see robots.txt above).
+    // Owner Check, the three assessment tools and Privacy aren't rows in
+    // `pages` (Owner Check is a synthetic nav entry, the rest are standalone
+    // routes, not CMS content), so each needs its own explicit entry. Market
+    // Ready Test joined this list on 16/08/2026 when Tom signed off publishing
+    // it into the Owner Check hub. Only the assessment pages themselves are
+    // listed: every tool's per-visitor result page stays out, noindex and
+    // robots-disallowed.
     //
     // Their copy lives in static EJS templates, not the database, so there's
     // no updated_at to read a real lastmod from. ASSESSMENT_ROUTE_LASTMOD
@@ -464,6 +466,7 @@ app.get('/sitemap.xml', async (req, res, next) => {
       'owner-check': '2026-08-01',
       'owner-dependency-quiz': '2026-08-01',
       'commercial-gaps-review': '2026-08-01',
+      'market-ready-test': '2026-08-16',
       'privacy': '2026-08-03',
       'where-to-start': '2026-08-09',
       'where-to-start/commercial-review': '2026-08-09',
@@ -474,7 +477,7 @@ app.get('/sitemap.xml', async (req, res, next) => {
     // where-to-start/confirmation is deliberately excluded — private,
     // per-visitor payment status, noindex/nofollow on the page itself,
     // same treatment as the quiz/review result pages.
-    for (const slug of ['owner-check', 'owner-dependency-quiz', 'commercial-gaps-review', 'privacy', 'where-to-start', 'where-to-start/commercial-review', 'where-to-start/full-commercial-review', 'where-to-start/website-build', 'where-to-start/full-review-website-build']) {
+    for (const slug of ['owner-check', 'owner-dependency-quiz', 'commercial-gaps-review', 'market-ready-test', 'privacy', 'where-to-start', 'where-to-start/commercial-review', 'where-to-start/full-commercial-review', 'where-to-start/website-build', 'where-to-start/full-review-website-build']) {
       urlEntries.push(`  <url><loc>${escapeXml(`${base}/${slug}`)}</loc><lastmod>${ASSESSMENT_ROUTE_LASTMOD[slug]}</lastmod></url>`);
     }
     res.type('application/xml').send(
@@ -558,7 +561,7 @@ app.use('/api/admin', authedWriteLimiter, adminRoutes);
 // session required, so it carries its own rate limiters (see routes/leads.js).
 app.use(leadRoutes);
 
-// Market Ready Test — unpublished, standalone tool (see routes/marketReadyTest.js
+// Market Ready Test — standalone tool, published 16/08/2026 (see routes/marketReadyTest.js
 // for the full brief). Page routes registered directly (same pattern as the
 // Owner Dependency Quiz above) so the submit form's CSRF token is generated
 // here rather than relying on the global res.locals middleware; the POST

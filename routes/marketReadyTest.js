@@ -11,13 +11,25 @@ const { verifyTurnstileToken, SITE_KEY: TURNSTILE_SITE_KEY } = require('../lib/t
 const router = express.Router();
 
 // ============================================================
-// UNPUBLISHED — Market Ready Test
+// Market Ready Test
 // Standalone tool, not part of the pages/content CMS, same pattern as the
-// Owner Dependency Quiz. Deliberately not linked from any nav, not in
-// sitemap.xml, and noindex/nofollow on the page itself, per the build brief:
-// this stays private (direct-URL-only) until Tom explicitly approves launch.
-// Nothing here touches the live site's nav, pages table, other routes, or
-// the existing Owner Dependency Quiz.
+// Owner Dependency Quiz.
+//
+// PUBLISHED 16/08/2026 on Tom's explicit sign-off. It was built unpublished
+// (direct URL only, noindex/nofollow, robots-disallowed, out of sitemap.xml)
+// pending that approval, which has now been given: it is the third check on
+// the Owner Check hub alongside the Owner Dependency Quiz and Commercial Gaps
+// Review, and is indexed like them. The per-visitor result pages under
+// /market-ready-test/result/ stay noindex and robots-disallowed, because they
+// are private reports about a named business reached by an unguessable token,
+// and the result page offers social sharing.
+//
+// Per the Current Operating Position in Drive, the three checks must stay
+// commercially distinct: Owner Dependency covers day-to-day reliance on the
+// owner, Commercial Gaps is a free-text commercial read, and this one answers
+// whether the business could be taken on by a new owner. It may support
+// succession and saleability conversations but must not drift into brokerage,
+// valuation or exit advice.
 //
 // Rebuilt 26/07/2026 to score deterministically in code instead of calling
 // the Anthropic API. See CLAUDE.md for why: a public page that spends money
