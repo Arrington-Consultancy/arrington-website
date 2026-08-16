@@ -50,12 +50,41 @@ app.set('views', path.join(__dirname, 'views'));
 // the bare apex is rewritten to www — any other host (e.g. Railway's own
 // default domain) is left alone, it just gets the HTTPS check.
 const CANONICAL_HOST = 'www.arringtonconsultancy.com';
-const APEX_HOST = 'arringtonconsultancy.com';
+
+// Extended 15/08/2026 from "rewrite the .com apex only" to "rewrite every
+// non-canonical hostname". Five hostnames are bound to this service: the two
+// .com forms, the two .co.uk forms and Railway's own service domain. Only the
+// .com apex was being rewritten, so the other three each served a full 200
+// copy of every page with a self-referencing canonical tag, making the whole
+// site independently indexable under three extra hostnames.
+//
+// Deliberately a rule rather than a list of the three known hosts, so a domain
+// added in Railway later cannot quietly reintroduce the same duplication. Two
+// exemptions:
+//
+//   - Local and internal hosts (localhost, a bare IP, anything without a dot)
+//     are left alone, so development and any in-container request behave
+//     exactly as before. isProd already covers most of this; this is belt and
+//     braces for a prod-like environment reached over a private hostname.
+//   - /health is never host-rewritten, so an external uptime monitor pointed
+//     at any of the five hostnames still gets a real 200/503 rather than a
+//     301. It also means Railway's own domain stays usable to confirm the app
+//     is alive if DNS for the custom domains ever breaks.
+//
+// req.url carries path and query together, so both survive the redirect, and
+// the HTTPS check is folded into the same hop to avoid a redirect chain.
+const isInternalHost = (host) =>
+  !host ||
+  !host.includes('.') ||
+  /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host) ||
+  /^\d{1,3}(\.\d{1,3}){3}(:\d+)?$/.test(host);
+
 app.use((req, res, next) => {
   if (!isProd) return next();
   const host = (req.header('host') || '').toLowerCase();
-  const targetHost = host === APEX_HOST ? CANONICAL_HOST : host;
   const isHttps = req.header('x-forwarded-proto') === 'https';
+  const mayRewriteHost = !isInternalHost(host) && req.path !== '/health';
+  const targetHost = mayRewriteHost && host !== CANONICAL_HOST ? CANONICAL_HOST : host;
   if (targetHost !== host || !isHttps) {
     return res.redirect(301, `https://${targetHost}${req.url}`);
   }
@@ -554,17 +583,20 @@ app.use(commercialGapsReview.router);
 whereToStart.mountPageRoute(app, generateCsrfToken);
 app.use(whereToStart.router);
 
-// Serve v1.html as static with a relaxed CSP (legacy static page has
-// inline <style>/<script> blocks that predate the nonce setup).
-app.get('/v1.html', (req, res) => {
-  res.setHeader(
-    'Content-Security-Policy',
-    "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-    "font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; " +
-    "img-src 'self' data:; object-src 'none'; base-uri 'self'"
-  );
-  res.sendFile(path.join(__dirname, 'v1.html'));
-});
+// /v1.html — retired from public serving (15/08/2026). The original V1
+// single-page site was kept served as a reference copy, with a relaxed
+// per-route CSP because its inline <style>/<script> blocks predate the nonce
+// setup. The problem was that it is a complete alternative version of the
+// site's own content, in the old warm palette and the old "We" voice: publicly
+// reachable, crawlable, carrying no noindex and listed in no sitemap. That
+// made a superseded statement of the company's positioning indexable
+// alongside the live one.
+//
+// It now redirects permanently to the homepage, which is the page whose
+// content it duplicates. The v1.html file itself stays in the repository as
+// the historical record, exactly as CLAUDE.md describes it, and the relaxed
+// CSP override goes with the route that needed it.
+app.get('/v1.html', (req, res) => res.redirect(301, '/'));
 
 // Valid section templates (shared with routes/content.js)
 const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','fourcards','documents','casestudy','casestudy2','assessment','filter','proofstrip','contact','googlereviews','article','utlibrary'];
@@ -942,6 +974,18 @@ app.get('/:slug', (req, res, next) => {
   // Don't catch routes that belong to other handlers
   if (/\.\w+$/.test(slug)) return next(); // file extensions (v1.html etc.)
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return next(); // only lowercase-hyphenated slugs
+  // A Useful Thinking article is a normal `pages` row underneath, so this
+  // catch-all rendered every article at the flat /{slug} as well as at its own
+  // /useful-thinking/{slug} route. Both returned 200 with identical content and
+  // only the canonical tag told them apart, which relies on the crawler
+  // honouring it. The flat URL now redirects permanently to the article's real
+  // route, leaving one indexable URL per article. Scoped to known article slugs
+  // only, so every ordinary CMS page at the root is untouched, and the nested
+  // route above is unaffected because it never reaches this handler.
+  if (findUsefulThinkingArticle(slug)) {
+    const queryString = req.originalUrl.slice(req.path.length);
+    return res.redirect(301, `/useful-thinking/${slug}${queryString}`);
+  }
   renderPage(req, res, next, slug);
 });
 
