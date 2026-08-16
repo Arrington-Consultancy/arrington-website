@@ -76,10 +76,7 @@
         main {
             max-width: 640px;
             margin: 0 auto;
-            padding: calc(88px + 2.5rem) 1.5rem 5rem;
-        }
-        @media (max-width: 900px) {
-            main { padding-top: calc(64px + 2.5rem); }
+            padding: calc(var(--site-chrome) + 2.5rem) 1.5rem 5rem;
         }
         /* Screen transitions call scrollIntoView() on the newly-active
            .odr-screen — without this, the browser scrolls its top edge
@@ -87,10 +84,7 @@
            nav (and, when 2+ pages exist, the secondary page-menu bar
            beneath it — 88px + 36px). Matches main's own padding-top
            formula so there is always clearance to spare either way. */
-        .odr-screen { scroll-margin-top: calc(88px + 2.5rem); }
-        @media (max-width: 900px) {
-            .odr-screen { scroll-margin-top: calc(64px + 2.5rem); }
-        }
+        .odr-screen { scroll-margin-top: calc(var(--site-chrome) + 2.5rem); }
         .odr-label {
             font-size: 0.72rem;
             text-transform: uppercase;

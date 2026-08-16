@@ -1,6 +1,22 @@
 <%# SHARED SITE CHROME CSS — extracted from views/index.ejs. Raw rules only
     (no <style> tag), so both index.ejs and standalone tool pages can each
     wrap this in their own nonced <style> block. %>
+/* ---- FIXED CHROME HEIGHT ----
+   The site header is fixed, so it takes no space in the flow and page
+   content has to reserve its height by hand. That height is the 88px nav
+   PLUS the 37px page-menu bar sitting under it, which is easy to forget:
+   several pages padded for the nav alone and ended up with 3px of daylight
+   under the header, or none at all. Anything that needs to start below the
+   header should use calc(var(--site-chrome) + <gap>) rather than a literal,
+   so it cannot drift out of step with the header again. Full-bleed hero
+   photos deliberately sit under the header and do not use this. */
+:root { --site-chrome: 125px; }
+
+@media (max-width: 900px) {
+    /* The page menu is hidden at this width. */
+    :root { --site-chrome: 65px; }
+}
+
 /* ---- NAV ---- */
 nav {
     position: fixed;

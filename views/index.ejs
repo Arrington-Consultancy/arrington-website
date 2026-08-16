@@ -139,6 +139,20 @@
             <% for (const [prop, val] of Object.entries(theme.vars)) { %>
             <%= prop %>: <%= val %>;
             <% } %>
+
+            /* Height of the fixed header: the 88px nav plus the 37px page
+               menu under it. The header takes no space in the flow, so
+               anything that must start below it reserves this by hand.
+               Standalone pages get the same variable from
+               partials/site-chrome-styles.ejs; this file carries its own copy
+               of the chrome CSS and does not include that partial, so the
+               value is declared in both places and must stay in step. */
+            --site-chrome: 125px;
+        }
+
+        @media (max-width: 900px) {
+            /* The page menu is hidden at this width. */
+            :root { --site-chrome: 65px; }
         }
 
         html {
@@ -2824,9 +2838,13 @@
             color: var(--accent);
         }
 
-        /* ---- FIRST-SECTION NAV CLEARANCE ---- */
+        /* ---- FIRST-SECTION NAV CLEARANCE ----
+           Was a flat 8.5rem (136px) against a 125px header, so the first
+           heading on every CMS page cleared the page-menu bar by 11px, which
+           reads as content jammed under the header rather than as a page
+           starting. Derived from --site-chrome now so it tracks the header. */
         #cms-sections > section:first-child:not(.hero) {
-            padding-top: 8.5rem;
+            padding-top: calc(var(--site-chrome) + 3rem);
         }
 
         /* ---- MOBILE ---- */
