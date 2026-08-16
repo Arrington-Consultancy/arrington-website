@@ -1577,11 +1577,25 @@
                 margin-bottom: 1rem;
             }
 
+            /* The montage is shortened by shrinking the sheets, not by
+               shrinking the box. The sheets are absolutely positioned and
+               sized as a percentage of this container, so cutting the
+               container's height alone does not move them: they keep their
+               size and spill out of the bottom onto the body copy below.
+               Narrower sheets, with the fan's offsets rescaled so the group
+               still spans the full width, and a ratio that contains them. */
             .page-what-we-do .hm-montage {
-                aspect-ratio: 100 / 52;
+                aspect-ratio: 100 / 58;
                 max-width: 390px;
                 margin: 0.25rem 0 1.4rem;
             }
+
+            .page-what-we-do .hm-montage img { width: 34%; }
+
+            .page-what-we-do .hm-montage img:nth-child(1) { left: 0; }
+            .page-what-we-do .hm-montage img:nth-child(2) { left: 21%; }
+            .page-what-we-do .hm-montage img:nth-child(3) { left: 43%; }
+            .page-what-we-do .hm-montage img:nth-child(4) { left: 64%; }
         }
 
         /* ---- OFFER PAIR ----
