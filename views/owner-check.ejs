@@ -95,12 +95,24 @@
         }
 
         /* Hero */
+        /* The site header is fixed: an 88px nav with a 37px page menu under
+           it. This hero reserved no space for either, so its content, which
+           is bottom-aligned inside a 62vh box, slid up behind the header as
+           soon as the viewport got short and the heading was cut off at the
+           top. The padding keeps the content clear of the chrome at any
+           height; the hero grows past its min-height rather than clipping. */
         .oc-hero {
             position: relative;
             min-height: 62vh;
+            padding-top: 10rem;
             display: flex;
             align-items: flex-end;
             overflow: hidden;
+        }
+        @media (max-width: 900px) {
+            /* The page menu is hidden at this width, so only the nav needs
+               clearing. */
+            .oc-hero { padding-top: 6rem; }
         }
         .oc-hero-photo {
             position: absolute;
