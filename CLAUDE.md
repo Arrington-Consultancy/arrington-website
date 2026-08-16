@@ -564,6 +564,21 @@ A standalone assessment tool, built the same way as the Owner Dependency Quiz (i
 
 **Local testing note for future sessions in a similarly network-restricted environment:** this was built and fully tested (including real HTTP round-trips and Chromium screenshots) using a local Postgres 16 + local Node server inside the sandbox, since this session had no outbound access to the live site.
 
+## Copilot Actions stability note (16/08/2026)
+
+If a Copilot cloud-agent run in GitHub Actions needs visual checks, prefer
+`playwright-browser_snapshot` (DOM/accessibility tree) and direct file/CSS
+inspection over screenshot-file workflows. Repeated failures in this repo have
+the same signature — after `playwright-browser_take_screenshot` and/or `view`
+of PNG/JPG files, the run can abort with:
+
+`CAPIError: 400 Error while downloading file. Upstream status code: 404`
+
+So for routine validation in cloud runs:
+- avoid relying on screenshot files under `/tmp` for final reasoning;
+- avoid batching multiple binary `view` calls in one turn;
+- use markup/style assertions and route checks as the default verification path.
+
 ## Image management
 
 - Logo, headshot, and Oxford badge are stored as binary in PostgreSQL
