@@ -1553,6 +1553,31 @@
             .hm-body { font-size: 1rem; }
         }
 
+        /* Final mobile trim for What We Do (16/08/2026): the opening was still
+           taking too long to clear on a 390px viewport even after the montage
+           pass. Keep the approved heading and copy; only tighten the phone
+           spacing and the montage's reserved height on this page. */
+        @media (max-width: 480px) {
+            .page-what-we-do .heromontage {
+                padding-top: 4.25rem;
+                padding-bottom: 4rem;
+            }
+
+            .page-what-we-do .hm-heading {
+                margin-bottom: 1.25rem;
+            }
+
+            .page-what-we-do .hm-intro {
+                margin-bottom: 1rem;
+            }
+
+            .page-what-we-do .hm-montage {
+                aspect-ratio: 100 / 56;
+                max-width: 390px;
+                margin: 0.25rem 0 1.4rem;
+            }
+        }
+
         /* ---- OFFER PAIR ----
            Two priced options side by side, built 16/08/2026 for What We Do.
            No existing template could carry this: assessment renders six boxes
