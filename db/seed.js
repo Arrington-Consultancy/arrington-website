@@ -4036,6 +4036,64 @@ async function seed() {
     }
   }
 
+  // Migration: What We Do meta description (16/08/2026).
+  //
+  // The stored description still opened "A proper commercial review", which
+  // is the wording the Brand Operating System has since dropped in favour of
+  // plain "Commercial Review". Metadata only: no page copy, no template and
+  // no other SEO field changes.
+  //
+  // og:description and twitter:description both render from seo.ogDescription
+  // in server.js, which falls back to the meta description when the page's
+  // og_description is blank. So this writes the one field and blanks
+  // og_description if it is still carrying the old wording, which leaves all
+  // three tags resolving from a single source.
+  //
+  // Guarded twice so a later CMS edit always wins: a run-once marker, and a
+  // value check that only rewrites while the rejected phrase is still there.
+  {
+    const WWD_SEO_MARKER = 'what-we-do.seo_description_2026-08-16';
+    const NEW_DESC = 'A commercial review for owner run businesses in Devon and Cornwall. '
+      + 'An experienced outside view of what matters, what to prioritise and what to do next.';
+
+    const { rows: markerRows } = await db.query(
+      'SELECT 1 FROM content WHERE section_key = $1', [WWD_SEO_MARKER]
+    );
+
+    if (markerRows.length === 0) {
+      const { rows: pageRows } = await db.query(
+        "SELECT meta_description, og_description FROM pages WHERE slug = 'what-we-do'"
+      );
+
+      if (pageRows.length) {
+        const stale = (v) => /proper\s+commercial\s+review/i.test((v || '').trim());
+        const currentMeta = pageRows[0].meta_description;
+        const currentOg = pageRows[0].og_description;
+
+        if (stale(currentMeta)) {
+          await db.query(
+            "UPDATE pages SET meta_description = $1 WHERE slug = 'what-we-do'", [NEW_DESC]
+          );
+          console.log('What We Do meta description updated.');
+        } else {
+          console.log('What We Do meta description skipped (already edited).');
+        }
+
+        if (stale(currentOg)) {
+          await db.query(
+            "UPDATE pages SET og_description = '' WHERE slug = 'what-we-do'"
+          );
+          console.log('What We Do og_description cleared so it resolves from the meta description.');
+        }
+
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [WWD_SEO_MARKER, 'true']
+        );
+      }
+    }
+  }
+
   console.log('Seed complete.');
 }
 
