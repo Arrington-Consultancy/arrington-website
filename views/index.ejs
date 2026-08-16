@@ -3301,7 +3301,16 @@
               const _fBtnSlug = (content[_k + '.button_link'] || '').trim();
               // Optional trailing #fragment — see the matching comment on
               // the intervention template's button_link handling above.
-              const _fValidSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*(#[a-z0-9_-]+)?$/.test(_fBtnSlug);
+              // Allows one optional nested path segment on top of the plain
+              // slug pattern, so a filter button can point at a route that is
+              // not a `pages` row, e.g. "where-to-start/commercial-review".
+              // Without this the value fails validation and _fBtnHref silently
+              // falls back to #conversation, which would render a button whose
+              // label promises one destination and whose href goes somewhere
+              // else. _resolvePageHref already builds the path correctly once
+              // the value is allowed through. Scoped to the filter template on
+              // purpose; the intervention picker is unchanged.
+              const _fValidSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)?(#[a-z0-9_-]+)?$/.test(_fBtnSlug);
               const _fBtnHref = _fBtnSlug === 'main' ? '/' : (_fValidSlug ? _resolvePageHref(_fBtnSlug) : '#conversation');
               const _fIsPrimaryCta = _fBtnSlug === '' || _fBtnSlug === 'book-a-30-minute-conversation';
             %>

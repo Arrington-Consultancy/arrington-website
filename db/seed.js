@@ -3467,6 +3467,75 @@ async function seed() {
     }
   }
 
+  // Migration: CTA on the What We Do "what we look at" section (16/08/2026).
+  // The rebuilt page put its first call to action 4.1 screens down on mobile,
+  // up from 2.4 before, because the three new sections carry none and the first
+  // one is the Evidence link. This fills the button fields that section already
+  // has, so no copy, layout or styling changes.
+  //
+  // The destination is the £500 Commercial Review at
+  // /where-to-start/commercial-review. That is an Express route rather than a
+  // `pages` row, so the button_link value carries a nested path; the filter
+  // template's slug validator was widened to accept one nested segment in the
+  // same change, otherwise the value fails validation and the href silently
+  // falls back to #conversation.
+  //
+  // Renders as btn-outline, since _fIsPrimaryCta is only true for an empty slug
+  // or the booking page, which matches the other mid-page CTAs.
+  {
+    const WWD_CTA_MARKER = 'what-we-do.look_section_cta_2026-08-16';
+    const { rows: markerRows } = await db.query(
+      'SELECT 1 FROM content WHERE section_key = $1', [WWD_CTA_MARKER]
+    );
+    const { rows: pageRows } = await db.query(
+      "SELECT section_order FROM pages WHERE slug = 'what-we-do'"
+    );
+
+    if (markerRows.length === 0 && pageRows.length > 0) {
+      const order = Array.isArray(pageRows[0].section_order) ? pageRows[0].section_order : [];
+      const plain = (s) => (s || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+      let target = null;
+      for (const id of order) {
+        if (!/^filter(?:__\d+)?$/.test(id)) continue;
+        const { rows } = await db.query(
+          'SELECT content FROM content WHERE section_key = $1', [`${id}.heading`]
+        );
+        if (rows.length && plain(rows[0].content) === 'most owners are too close to see all of it.') { target = id; break; }
+      }
+
+      if (target) {
+        // Only fills the fields if they are still empty, so a button Tom has
+        // since set in the CMS is never overwritten.
+        const isBlank = async (key) => {
+          const { rows } = await db.query('SELECT content FROM content WHERE section_key = $1', [key]);
+          return rows.length === 0 || !(rows[0].content || '').trim();
+        };
+        if (await isBlank(`${target}.button_text`)) {
+          for (const [key, value] of [
+            [`${target}.button_text`, 'See the Commercial Review'],
+            [`${target}.button_link`, 'where-to-start/commercial-review']
+          ]) {
+            await db.query(
+              `INSERT INTO content (section_key, content) VALUES ($1, $2)
+               ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content`,
+              [key, value]
+            );
+          }
+          console.log(`What We Do: Commercial Review CTA added to ${target}.`);
+        } else {
+          console.log(`What We Do: ${target} already has a button, left unchanged.`);
+        }
+      } else {
+        console.log('What We Do CTA skipped: target filter section not found.');
+      }
+
+      await db.query(
+        'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+        [WWD_CTA_MARKER, 'true']
+      );
+    }
+  }
+
   console.log('Seed complete.');
 }
 
