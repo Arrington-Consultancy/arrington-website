@@ -4178,6 +4178,62 @@ async function seed() {
     }
   }
 
+  // Migration: What We Do review intro, second paragraph (16/08/2026).
+  //
+  // "What we bring is twenty years of experience..." repeated the hero's
+  // construction almost exactly, which opens "What we bring is experience of
+  // running businesses...". Drops the three-word lead-in only. Copy change,
+  // nothing else.
+  //
+  // Guarded twice, as before: a run-once marker, and a check that the old
+  // lead-in is still there, so a CMS edit wins.
+  {
+    const WWD_INTRO_MARKER = 'what-we-do.review_intro_lead_2026-08-16';
+    const OLD_LEAD = 'What we bring is twenty years of experience';
+    const NEW_INTRO = 'What we look at depends on the business and what you want from it. '
+      + 'Nobody sees everything in their own business. We don’t pretend we would either.'
+      + '<br><br>Twenty years of experience, instinct and a fresh pair of eyes.';
+
+    const { rows: markerRows } = await db.query(
+      'SELECT 1 FROM content WHERE section_key = $1', [WWD_INTRO_MARKER]
+    );
+
+    if (markerRows.length === 0) {
+      const { rows: pageRows } = await db.query(
+        "SELECT section_order FROM pages WHERE slug = 'what-we-do'"
+      );
+
+      if (pageRows.length) {
+        const order = Array.isArray(pageRows[0].section_order) ? pageRows[0].section_order : [];
+        const fcId = order.find((id) => /^fourcards(?:__\d+)?$/.test(id));
+
+        if (fcId) {
+          const key = `${fcId}.evidence_intro`;
+          const { rows: introRows } = await db.query(
+            'SELECT content FROM content WHERE section_key = $1', [key]
+          );
+          const current = (introRows[0] && introRows[0].content) || '';
+
+          if (current.includes(OLD_LEAD)) {
+            await db.query(
+              `INSERT INTO content (section_key, content) VALUES ($1, $2)
+               ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content`,
+              [key, NEW_INTRO]
+            );
+            console.log('What We Do review intro lead-in dropped.');
+          } else {
+            console.log('What We Do review intro skipped (already edited).');
+          }
+
+          await db.query(
+            'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+            [WWD_INTRO_MARKER, 'true']
+          );
+        }
+      }
+    }
+  }
+
   console.log('Seed complete.');
 }
 
