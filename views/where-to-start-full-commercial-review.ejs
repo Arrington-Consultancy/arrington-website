@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Commercial Review and Implementation | Arrington Consultancy</title>
-    <meta name="description" content="A deeper commercial review with implementation support: more access, evidence followed rather than assumed, and practical help putting the right things in place. Completed within 4 weeks. £2,500.">
+    <meta name="description" content="Commercial Review and Implementation for £2,500: deeper review, practical action planning and support starting the agreed changes within 4 weeks.">
     <link rel="canonical" href="https://www.arringtonconsultancy.com/where-to-start/full-commercial-review">
     <meta property="og:type" content="website">
     <meta property="og:title" content="Commercial Review and Implementation | Arrington Consultancy">
@@ -27,6 +27,13 @@
         gtag('config', '<%= ga4Id %>');
         <% } %>
     </script>
+    <%- include('partials/where-to-start-schema', {
+        nonce,
+        path: '/where-to-start/full-commercial-review',
+        name: 'Commercial Review and Implementation',
+        description: 'Deeper review, practical action planning and support starting the agreed changes within 4 weeks.',
+        price: 2500
+    }) %>
     <style nonce="<%= nonce %>">
         :root {
             <% for (const [prop, val] of Object.entries(theme.vars)) { %>
@@ -183,12 +190,12 @@
             <p class="wts-evidence-note">Real work, not a description of work.</p>
             <div class="wts-evidence-grid">
                 <a class="wts-evidence-card" href="/evidence#documents">
-                    <img class="wts-evidence-thumb" src="/img/docs/half-time-team-talk.jpg" alt="Preview of the Half-Time Team Talk document" loading="lazy">
+                    <img class="wts-evidence-thumb" src="/img/docs/half-time-team-talk.jpg" alt="Preview of the Half-Time Team Talk document" loading="lazy" width="910" height="1287">
                     <p class="wts-evidence-title">Half-Time Team Talk</p>
                     <p>The commercial assessment that comes from following the evidence.</p>
                 </a>
                 <a class="wts-evidence-card" href="/evidence#documents">
-                    <img class="wts-evidence-thumb" src="/img/docs/90-day-action-plan.jpg" alt="Preview of the 90-Day Action Plan document" loading="lazy">
+                    <img class="wts-evidence-thumb" src="/img/docs/90-day-action-plan.jpg" alt="Preview of the 90-Day Action Plan document" loading="lazy" width="910" height="1287">
                     <p class="wts-evidence-title">90-Day Action Plan</p>
                     <p>How findings become a practical plan of action.</p>
                 </a>

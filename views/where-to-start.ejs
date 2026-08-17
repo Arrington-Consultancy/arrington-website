@@ -34,6 +34,12 @@
         gtag('config', '<%= ga4Id %>');
         <% } %>
     </script>
+    <%- include('partials/where-to-start-schema', {
+        nonce,
+        path: '/where-to-start',
+        name: 'Where to Start',
+        description: 'Choose how to start with Arrington Consultancy, what each option costs, and what happens next.'
+    }) %>
     <style nonce="<%= nonce %>">
         :root {
             <% for (const [prop, val] of Object.entries(theme.vars)) { %>

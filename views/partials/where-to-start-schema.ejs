@@ -1,0 +1,56 @@
+<%
+  const _schemaUrl = `https://www.arringtonconsultancy.com${path}`;
+  const _schemaGraph = [
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.arringtonconsultancy.com/' },
+        { '@type': 'ListItem', position: 2, name: 'Where to Start', item: 'https://www.arringtonconsultancy.com/where-to-start' }
+      ]
+    }
+  ];
+  if (path !== '/where-to-start') {
+    _schemaGraph[0].itemListElement.push({
+      '@type': 'ListItem',
+      position: 3,
+      name,
+      item: _schemaUrl
+    });
+  }
+  if (typeof price === 'number') {
+    _schemaGraph.push({
+      '@type': 'Service',
+      name,
+      description,
+      provider: {
+        '@type': 'Organization',
+        name: 'Arrington Consultancy',
+        url: 'https://www.arringtonconsultancy.com/'
+      },
+      areaServed: [
+        { '@type': 'AdministrativeArea', name: 'Devon' },
+        { '@type': 'AdministrativeArea', name: 'Cornwall' }
+      ],
+      offers: {
+        '@type': 'Offer',
+        price: String(price),
+        priceCurrency: 'GBP',
+        availability: 'https://schema.org/InStock',
+        url: _schemaUrl
+      },
+      url: _schemaUrl
+    });
+  } else {
+    _schemaGraph.push({
+      '@type': 'WebPage',
+      name,
+      description,
+      url: _schemaUrl
+    });
+  }
+  const _schema = {
+    '@context': 'https://schema.org',
+    '@graph': _schemaGraph
+  };
+%>
+<script type="application/ld+json" nonce="<%= nonce %>"><%- JSON.stringify(_schema).replace(/</g, '\\u003c') %></script>

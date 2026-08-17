@@ -2820,6 +2820,56 @@ async function seed() {
     if (devonFixCount > 0) console.log(`Business Consultant Devon: corrected voice / removed fire metaphor on ${devonFixCount} row(s).`);
   }
 
+  // Migration: tighten SEO snippets flagged in the 17/08/2026 audit. The
+  // visible page titles and article copy stay intact; this only updates search
+  // metadata where it is blank, too long for a clean result, or still contains
+  // retired offer language.
+  {
+    const seoFixes = [
+      [
+        'business-consultant-devon',
+        'Business Consultant Devon & Cornwall | Arrington Consultancy',
+        'Business consultant for owner run businesses across Devon and Cornwall. Outside perspective on commercial decisions, owner dependency and practical next steps.'
+      ],
+      [
+        'you-dont-get-to-decide-when-youve-made-things-right',
+        'When Making Things Right Still Costs the Account | Arrington',
+        'A late airport transfer cost Tom a major account despite the apology and refund. A Useful Thinking article on responsibility and consequences.'
+      ],
+      [
+        'the-tightrope-between-staff-loyalty-and-damage-control',
+        'Staff Loyalty and Damage Control | Arrington Consultancy',
+        'A Useful Thinking article on loyalty, tolerance and the commercial cost of leaving a persistent problem untouched for too long.'
+      ],
+      [
+        'you-build-a-business-one-problem-at-a-time',
+        'You Build a Business One Problem at a Time | Arrington',
+        'A Useful Thinking article on how a buyer can reveal the commercial shape of a business the owner built one problem at a time.'
+      ]
+    ];
+    let seoFixCount = 0;
+    for (const [slug, metaTitle, metaDescription] of seoFixes) {
+      const { rowCount } = await db.query(
+        `UPDATE pages
+         SET meta_title = CASE
+               WHEN meta_title = '' OR char_length(meta_title) > 65 THEN $1
+               ELSE meta_title
+             END,
+             meta_description = CASE
+               WHEN meta_description = ''
+                 OR char_length(meta_description) > 160
+                 OR meta_description ILIKE '%proper commercial review%'
+               THEN $2
+               ELSE meta_description
+             END
+         WHERE slug = $3`,
+        [metaTitle, metaDescription, slug]
+      );
+      seoFixCount += rowCount;
+    }
+    if (seoFixCount > 0) console.log(`SEO audit: checked/tightened metadata on ${seoFixCount} page row(s).`);
+  }
+
   // Migration: set a site-wide default Open Graph image (01/08/2026, per
   // Tom's review follow-up — every page was rendering with no og:image at
   // all, so shared links had no preview anywhere). Uses the existing logo
@@ -2879,6 +2929,7 @@ async function seed() {
   const images = [
     { key: 'logo', file: 'logo.png', mime: 'image/png' },
     { key: 'headshot', file: 'hero-homepage.jpg', mime: 'image/jpeg' },
+    { key: 'headshot__webp', file: 'headshot.webp', mime: 'image/webp' },
     { key: 'oxford', file: 'oxford.png', mime: 'image/png' },
     { key: 'headshot__hero__5', file: 'hero-websites-and-ai.jpg', mime: 'image/jpeg' },
     // The <picture> element's <source> always requests `<key>__webp` and,

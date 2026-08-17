@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Website Build | Arrington Consultancy</title>
-    <meta name="description" content="Pay upfront for the fixed £999 Website Build from Arrington Consultancy. Includes planning, build, mobile-ready pages and one structured round of changes.">
+    <meta name="description" content="A fixed £999 Website Build for owner run businesses: planning, build, mobile-ready pages, agreed functionality and one structured round of changes.">
     <link rel="canonical" href="https://www.arringtonconsultancy.com/where-to-start/website-build">
     <meta property="og:type" content="website">
     <meta property="og:title" content="Website Build | Arrington Consultancy">
@@ -34,6 +34,13 @@
         gtag('config', '<%= ga4Id %>');
         <% } %>
     </script>
+    <%- include('partials/where-to-start-schema', {
+        nonce,
+        path: '/where-to-start/website-build',
+        name: 'Website Build',
+        description: 'Planning, build, mobile-ready pages, agreed functionality and one structured round of changes.',
+        price: 999
+    }) %>
     <style nonce="<%= nonce %>">
         :root {
             <% for (const [prop, val] of Object.entries(theme.vars)) { %>

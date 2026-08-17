@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Commercial Review | Arrington Consultancy</title>
-    <meta name="description" content="A genuine, standalone Commercial Review: we listen for as long as it takes, then produce a written assessment, recommendations and next steps within 4 business days. £500, credited in full against either bigger review route.">
+    <meta name="description" content="A £500 Commercial Review for owner run businesses: a careful conversation, written assessment, recommendations and next steps within 4 business days.">
     <link rel="canonical" href="https://www.arringtonconsultancy.com/where-to-start/commercial-review">
     <meta property="og:type" content="website">
     <meta property="og:title" content="Commercial Review | Arrington Consultancy">
@@ -27,6 +27,13 @@
         gtag('config', '<%= ga4Id %>');
         <% } %>
     </script>
+    <%- include('partials/where-to-start-schema', {
+        nonce,
+        path: '/where-to-start/commercial-review',
+        name: 'Commercial Review',
+        description: 'A careful conversation, written assessment, recommendations and next steps within 4 business days.',
+        price: 500
+    }) %>
     <style nonce="<%= nonce %>">
         :root {
             <% for (const [prop, val] of Object.entries(theme.vars)) { %>

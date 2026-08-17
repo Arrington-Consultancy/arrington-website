@@ -127,20 +127,11 @@ app.use(helmet({
         'https://www.googleadservices.com',
         'https://challenges.cloudflare.com'
       ],
-      // www.google.com (added 15/08/2026): gtag.js hardcodes this host for
-      // two Google Ads conversion-measurement endpoints — /ccm/collect and
-      // /pagead/1p-conversion — verified by reading the live gtag.js served
-      // for AW-18129914078. Both are sent as a pixel or a beacon, so they
-      // need img-src and connect-src and nothing else. Deliberately NOT
-      // added to script-src or frame-src (nothing requires it there, and
-      // script-src is where the real risk sits), and no country TLDs: both
-      // endpoints are hardcoded to www.google.com, not www.google.<tld>.
-      // The legacy conversion paths (googleadservices.com) and Google Ads
-      // remarketing (googleads.g.doubleclick.net/pagead/viewthroughconversion)
-      // were already allowed and are unaffected. Display/Floodlight hosts
-      // (pagead2.googlesyndication.com, ad.doubleclick.net, *.fls.doubleclick.net,
-      // ade.googlesyndication.com) stay blocked — a search-only Ads account
-      // does not use them.
+      // Google Ads conversion and remarketing endpoints are sent as pixels or
+      // beacons, so they need img-src/connect-src and nothing else. These hosts
+      // were verified from live gtag traffic for AW-18129914078 during the
+      // August tracking and SEO sweeps. They are deliberately not added to
+      // script-src or frame-src.
       imgSrc: [
         "'self'",
         'data:',
@@ -149,6 +140,8 @@ app.use(helmet({
         'https://www.googleadservices.com',
         'https://googleads.g.doubleclick.net',
         'https://www.google.com',
+        'https://ad.doubleclick.net',
+        'https://www.google.co.uk',
         'https://lh3.googleusercontent.com'
       ],
       connectSrc: [
@@ -157,7 +150,8 @@ app.use(helmet({
         'https://www.google-analytics.com',
         'https://www.googleadservices.com',
         'https://googleads.g.doubleclick.net',
-        'https://www.google.com'
+        'https://www.google.com',
+        'https://ad.doubleclick.net'
       ],
       frameSrc: ["'self'", 'https://td.doubleclick.net', 'https://challenges.cloudflare.com'],
       objectSrc: ["'none'"],
@@ -363,6 +357,15 @@ app.get('/what-the-work-looks-like', (req, res) => {
 app.get('/what-business-owners-say', (req, res) => {
   res.redirect(301, '/evidence#googlereviews');
 });
+app.get('/30-minute-conversation', (req, res) => {
+  res.redirect(301, '/book-a-30-minute-conversation');
+});
+app.get('/about', (req, res) => {
+  res.redirect(301, '/about-us');
+});
+app.get('/contact', (req, res) => {
+  res.redirect(301, '/#conversation');
+});
 
 // Owner Check — library/hub page for short self-assessment tools (currently
 // Owner Dependency Quiz, with a second check to follow). Not a CMS page:
@@ -421,6 +424,15 @@ app.get('/sitemap.xml', async (req, res, next) => {
       'SELECT id, slug, hidden, noindex, section_order FROM pages ORDER BY sort_order, created_at'
     );
     const pubPages = rows.filter(p => !p.hidden && !p.noindex && !restrictedIds.has(p.id));
+    const SEO_AUDIT_ROUTE_LASTMOD = {
+      main: '2026-08-17',
+      'what-we-do': '2026-08-17',
+      'websites-and-ai': '2026-08-17',
+      'business-consultant-devon': '2026-08-17',
+      'you-dont-get-to-decide-when-youve-made-things-right': '2026-08-17',
+      'the-tightrope-between-staff-loyalty-and-damage-control': '2026-08-17',
+      'you-build-a-business-one-problem-at-a-time': '2026-08-17'
+    };
     const urlEntries = await Promise.all(pubPages.map(async (p) => {
       const loc = p.slug === 'main'
         ? `${base}/`
@@ -443,6 +455,9 @@ app.get('/sitemap.xml', async (req, res, next) => {
         if (maxUpdated) {
           try { lastmod = `<lastmod>${new Date(maxUpdated).toISOString().slice(0, 10)}</lastmod>`; } catch (e) { /* skip */ }
         }
+      }
+      if (SEO_AUDIT_ROUTE_LASTMOD[p.slug]) {
+        lastmod = `<lastmod>${SEO_AUDIT_ROUTE_LASTMOD[p.slug]}</lastmod>`;
       }
       return `  <url><loc>${escapeXml(loc)}</loc>${lastmod}</url>`;
     }));
@@ -468,11 +483,11 @@ app.get('/sitemap.xml', async (req, res, next) => {
       'commercial-gaps-review': '2026-08-01',
       'market-ready-test': '2026-08-16',
       'privacy': '2026-08-03',
-      'where-to-start': '2026-08-09',
-      'where-to-start/commercial-review': '2026-08-09',
-      'where-to-start/full-commercial-review': '2026-08-09',
-      'where-to-start/website-build': '2026-08-14',
-      'where-to-start/full-review-website-build': '2026-08-14'
+      'where-to-start': '2026-08-17',
+      'where-to-start/commercial-review': '2026-08-17',
+      'where-to-start/full-commercial-review': '2026-08-17',
+      'where-to-start/website-build': '2026-08-17',
+      'where-to-start/full-review-website-build': '2026-08-17'
     };
     // where-to-start/confirmation is deliberately excluded — private,
     // per-visitor payment status, noindex/nofollow on the page itself,
@@ -923,6 +938,7 @@ async function renderPage(req, res, next, pageSlug) {
       content, theme, activeTheme, themes,
       sectionOrder: renderOrder, hiddenSections, instanceTemplates,
       currentPage, allPages, navPages, seo, caseStudyAnchors, googleReviews,
+      isUsefulThinkingArticle,
       canEdit, capabilities, showAdminPanel,
       pageContact,
       screenshotKeys,

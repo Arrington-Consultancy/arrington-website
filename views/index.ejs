@@ -87,6 +87,62 @@
     }
     </script>
     <% } %>
+    <%
+      const _schemaPageName = currentPage.slug === 'main' ? 'Home' : (currentPage.title || seo.title || '');
+      const _schemaBreadcrumb = {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.arringtonconsultancy.com/' },
+          { '@type': 'ListItem', position: 2, name: _schemaPageName, item: seo.canonical }
+        ]
+      };
+      const _schemaServices = {
+        'what-we-do': {
+          '@context': 'https://schema.org',
+          '@type': 'Service',
+          name: 'Business consultancy for owner run businesses',
+          provider: { '@type': 'Organization', name: 'Arrington Consultancy', url: 'https://www.arringtonconsultancy.com/' },
+          areaServed: [{ '@type': 'AdministrativeArea', name: 'Devon' }, { '@type': 'AdministrativeArea', name: 'Cornwall' }],
+          url: seo.canonical
+        },
+        'websites-and-ai': {
+          '@context': 'https://schema.org',
+          '@type': 'Service',
+          name: 'Websites and AI for owner run businesses',
+          provider: { '@type': 'Organization', name: 'Arrington Consultancy', url: 'https://www.arringtonconsultancy.com/' },
+          areaServed: [{ '@type': 'AdministrativeArea', name: 'Devon' }, { '@type': 'AdministrativeArea', name: 'Cornwall' }],
+          offers: { '@type': 'Offer', price: '999', priceCurrency: 'GBP', url: seo.canonical },
+          url: seo.canonical
+        },
+        'business-consultant-devon': {
+          '@context': 'https://schema.org',
+          '@type': 'Service',
+          name: 'Business consultant Devon and Cornwall',
+          provider: { '@type': 'Organization', name: 'Arrington Consultancy', url: 'https://www.arringtonconsultancy.com/' },
+          areaServed: [{ '@type': 'AdministrativeArea', name: 'Devon' }, { '@type': 'AdministrativeArea', name: 'Cornwall' }],
+          url: seo.canonical
+        }
+      };
+      const _schemaExtra = isUsefulThinkingArticle
+        ? {
+            '@context': 'https://schema.org',
+            '@type': 'Article',
+            headline: currentPage.title,
+            description: seo.description,
+            author: { '@type': 'Person', name: 'Tom Arrington' },
+            publisher: { '@type': 'Organization', name: 'Arrington Consultancy', url: 'https://www.arringtonconsultancy.com/' },
+            mainEntityOfPage: seo.canonical,
+            url: seo.canonical
+          }
+        : _schemaServices[currentPage.slug];
+      const _schemaList = currentPage.slug === 'main'
+        ? []
+        : [_schemaBreadcrumb].concat(_schemaExtra ? [_schemaExtra] : []);
+    %>
+    <% _schemaList.forEach(function(_schema) { %>
+    <script type="application/ld+json" nonce="<%= nonce %>"><%- JSON.stringify(_schema).replace(/</g, '\\u003c') %></script>
+    <% }); %>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=DM+Serif+Display&display=swap">
@@ -679,7 +735,7 @@
 
         .btn-primary {
             background: var(--accent);
-            color: #fff;
+            color: var(--black);
         }
 
         .btn-primary:hover {
@@ -3704,7 +3760,7 @@
                 <% if (canEdit || _hasScreenshot) { %>
                 <figure class="cs2-screenshot" data-img-key="<%= _ssKey %>">
                     <% if (_hasScreenshot) { %>
-                    <img src="/img/<%= _ssKey %>" alt="Screenshot <%= _ssN %>" loading="lazy">
+                    <img src="/img/<%= _ssKey %>" alt="Screenshot <%= _ssN %>" loading="lazy" width="1440" height="1000">
                     <% } %>
                     <% if (canEdit) { %><button class="cms-img-btn" data-image="<%= _ssKey %>" title="Upload screenshot <%= _ssN %>">&#9998;</button><% } %>
                 </figure>

@@ -27,6 +27,13 @@
         gtag('config', '<%= ga4Id %>');
         <% } %>
     </script>
+    <%- include('partials/where-to-start-schema', {
+        nonce,
+        path: '/where-to-start/full-review-website-build',
+        name: 'Commercial Review and Website Build',
+        description: 'Review the business internally, then rebuild the website so the outside matches what the business has become.',
+        price: 3400
+    }) %>
     <style nonce="<%= nonce %>">
         :root {
             <% for (const [prop, val] of Object.entries(theme.vars)) { %>
@@ -156,12 +163,12 @@
             <p class="wts-evidence-note">Real work, not a description of work.</p>
             <div class="wts-evidence-grid">
                 <a class="wts-evidence-card" href="/evidence#documents">
-                    <img class="wts-evidence-thumb" src="/img/docs/half-time-team-talk.jpg" alt="Preview of the Half-Time Team Talk document" loading="lazy">
+                    <img class="wts-evidence-thumb" src="/img/docs/half-time-team-talk.jpg" alt="Preview of the Half-Time Team Talk document" loading="lazy" width="910" height="1287">
                     <p class="wts-evidence-title">Half-Time Team Talk</p>
                     <p>The commercial assessment that comes from following the evidence.</p>
                 </a>
                 <a class="wts-evidence-card" href="/evidence#documents">
-                    <img class="wts-evidence-thumb" src="/img/docs/90-day-action-plan.jpg" alt="Preview of the 90-Day Action Plan document" loading="lazy">
+                    <img class="wts-evidence-thumb" src="/img/docs/90-day-action-plan.jpg" alt="Preview of the 90-Day Action Plan document" loading="lazy" width="910" height="1287">
                     <p class="wts-evidence-title">90-Day Action Plan</p>
                     <p>How findings become a practical plan of action.</p>
                 </a>
