@@ -4285,6 +4285,26 @@ async function seed() {
     }
   }
 
+  // Migration: homepage hero heading copy tweak (18/08/2026). Tom's exact
+  // wording change, scoped to hero.heading only. Guarded with an atomic
+  // UPDATE ... WHERE content = <old value>, matched against the precise
+  // stored value (including its <strong>/<br /> markup and embedded
+  // newline — confirmed against handover/live-content-export-2026-07-21.sql
+  // rather than assumed from the plain-text reading of it), not a
+  // normalised/plain-text version — so a later CMS edit to this field is
+  // never silently overwritten: if the current value doesn't match this
+  // exact string, the UPDATE affects 0 rows and this is a no-op, same as
+  // the image-hash-guarded swaps above.
+  {
+    const oldHeroHeading = '<strong>You’ve built something you’re proud of.</strong><br />\nSo why does it still feel like everything runs through you?';
+    const newHeroHeading = '<strong>You’ve built something you’re proud of.</strong><br />\nWhy does everything still run through you?';
+    const { rowCount } = await db.query(
+      `UPDATE content SET content = $1 WHERE section_key = 'hero.heading' AND content = $2`,
+      [newHeroHeading, oldHeroHeading]
+    );
+    console.log(`Homepage hero heading migration: ${rowCount} row(s) updated.`);
+  }
+
   console.log('Seed complete.');
 }
 
