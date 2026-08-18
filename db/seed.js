@@ -4323,6 +4323,127 @@ async function seed() {
     console.log(`Homepage hero heading migration: ${rowCount} row(s) updated.`);
   }
 
+  // Migration: homepage hero heading final wording (18/08/2026).
+  //
+  // Restores Tom's approved conversational "So" after the earlier scoped edit
+  // removed it. Guarded against the exact current production value only, so a
+  // later CMS edit wins and this never broadens into a fuzzy heading rewrite.
+  {
+    const oldHeroHeading = '<strong>You’ve built something you’re proud of.</strong><br />\nWhy does everything still run through you?';
+    const newHeroHeading = '<strong>You’ve built something you’re proud of.</strong><br />\nSo why does everything still run through you?';
+    const { rowCount } = await db.query(
+      `UPDATE content SET content = $1 WHERE section_key = 'hero.heading' AND content = $2`,
+      [newHeroHeading, oldHeroHeading]
+    );
+    console.log(`Homepage hero final wording migration: ${rowCount} row(s) updated.`);
+  }
+
+  // Migration: SEO metadata pass from the 18/08/2026 read-only assessment.
+  //
+  // Metadata only: no visible page copy, no offer architecture and no title
+  // change to the homepage's Business Consultancy Devon & Cornwall positioning.
+  // Each field changes only while it still contains the exact inspected live
+  // value, so CMS edits made after this deployment are left alone.
+  {
+    const seoMetadataFixes = [
+      {
+        slug: 'main',
+        oldMetaDescription: 'Business consultancy for owner run businesses across Devon and Cornwall. We help owners reduce dependency, improve visibility and build stronger businesses.',
+        newMetaDescription: 'Business consultancy for established owner run businesses across Devon and Cornwall. Outside perspective on decisions, structure and what deserves attention next.'
+      },
+      {
+        slug: 'websites-and-ai',
+        oldMetaTitle: 'A Business Website Built Around How You Work | Arrington Consultancy',
+        newMetaTitle: 'Website Build for Owner Run Businesses | Arrington Consultancy',
+        oldMetaDescription: 'A £999 business website built around the way your business actually operates. See the World Student Advisors site built for the same fixed price.',
+        newMetaDescription: 'A fixed £999 business website built around the way your business actually operates, with real World Student Advisors proof.'
+      },
+      {
+        slug: 'evidence',
+        oldMetaTitle: 'Evidence | Arrington Consultancy',
+        newMetaTitle: 'Business Consultancy Case Studies | Arrington Consultancy',
+        oldMetaDescription: 'Arrington Consultancy helps owner run businesses across Devon and Cornwall improve structure, control, margin and owner independence through a commercial review.',
+        newMetaDescription: 'Real Arrington Consultancy evidence from owner run businesses: turnaround work, margin recovery and Google reviews from business owners.'
+      },
+      {
+        slug: 'book-a-30-minute-conversation',
+        oldMetaDescription: 'Book a straightforward 30 minute conversation with Arrington Consultancy to talk through what is happening in your business and whether a proper commercial review would help.',
+        newMetaDescription: 'Book a straightforward 30 minute conversation with Arrington Consultancy to talk through what is happening in your business and whether we can help.'
+      }
+    ];
+
+    let metadataRowsTouched = 0;
+    for (const fix of seoMetadataFixes) {
+      const params = [
+        fix.slug,
+        fix.oldMetaTitle || null,
+        fix.newMetaTitle || null,
+        fix.oldMetaDescription,
+        fix.newMetaDescription
+      ];
+      const { rowCount } = await db.query(
+        `UPDATE pages
+         SET meta_title = CASE
+               WHEN $2::text IS NOT NULL AND meta_title = $2 THEN $3
+               ELSE meta_title
+             END,
+             meta_description = CASE
+               WHEN meta_description = $4 THEN $5
+               ELSE meta_description
+             END,
+             og_title = CASE
+               WHEN $2::text IS NOT NULL AND og_title = $2 THEN $3
+               ELSE og_title
+             END,
+             og_description = CASE
+               WHEN og_description = $4 THEN $5
+               ELSE og_description
+             END
+         WHERE slug = $1
+           AND (
+             ($2::text IS NOT NULL AND (meta_title = $2 OR og_title = $2))
+             OR meta_description = $4
+             OR og_description = $4
+           )`,
+        params
+      );
+      metadataRowsTouched += rowCount;
+    }
+    console.log(`SEO metadata pass: ${metadataRowsTouched} page row(s) updated.`);
+  }
+
+  // Migration: selective Useful Thinking related links.
+  //
+  // Uses the article template's existing single "Related" slot only, and only
+  // fills empty slots. Existing article relationships and any CMS edits stay in
+  // place. These are editorial links a human reader can follow naturally from
+  // the story, not body rewrites or link-count padding.
+  {
+    const usefulThinkingRelatedLinks = [
+      ['article__4', 'What We Do', '/what-we-do'],
+      ['article__6', 'Evidence', '/evidence'],
+      ['article__7', 'What We Do', '/what-we-do'],
+      ['article__8', 'Owner Dependency Quiz', '/owner-dependency-quiz'],
+      ['article__11', 'Commercial Gaps Review', '/commercial-gaps-review'],
+      ['article__12', 'Market Ready Test', '/market-ready-test'],
+      ['article__13', 'Market Ready Test', '/market-ready-test']
+    ];
+
+    let relatedRowsTouched = 0;
+    for (const [instanceId, relatedText, relatedLink] of usefulThinkingRelatedLinks) {
+      const { rowCount: textRows } = await db.query(
+        'UPDATE content SET content = $1 WHERE section_key = $2 AND content = $3',
+        [relatedText, `${instanceId}.related_text`, '']
+      );
+      const { rowCount: linkRows } = await db.query(
+        'UPDATE content SET content = $1 WHERE section_key = $2 AND content = $3',
+        [relatedLink, `${instanceId}.related_link`, '']
+      );
+      relatedRowsTouched += textRows + linkRows;
+    }
+    console.log(`Useful Thinking related links: ${relatedRowsTouched} content row(s) updated.`);
+  }
+
   console.log('Seed complete.');
 }
 
