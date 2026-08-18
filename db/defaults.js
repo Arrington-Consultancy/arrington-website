@@ -5,7 +5,7 @@
 const defaults = {
   // Hero
   'hero.heading': 'Nineteen years of operational grit. Oxford-backed strategy. A million-pound exit.',
-  'hero.subtext': 'Business consultant for established owner run businesses across Devon and Cornwall where too much still depends on the owner.',
+  'hero.subtext': 'Business consultant for established owner run businesses across Devon and Cornwall.',
   'hero.cta': 'Start a conversation',
 
   // Credentials - Oxford

@@ -3061,6 +3061,24 @@ async function seed() {
     }
   }
 
+  // Migration: homepage hero supporting copy — remove the final clause
+  // only when production still has the exact approved previous sentence.
+  // This protects any later CMS edit while keeping fresh installs aligned
+  // through db/defaults.js.
+  {
+    const HERO_SUBTEXT_OLD = 'Business consultant for established owner run businesses across Devon and Cornwall where too much still depends on the owner.';
+    const HERO_SUBTEXT_NEW = 'Business consultant for established owner run businesses across Devon and Cornwall.';
+    const { rowCount } = await db.query(
+      'UPDATE content SET content = $1 WHERE section_key = $2 AND content = $3',
+      [HERO_SUBTEXT_NEW, 'hero.subtext', HERO_SUBTEXT_OLD]
+    );
+    if (rowCount > 0) {
+      console.log('Homepage hero: supporting copy tightened.');
+    } else {
+      console.log('Homepage hero: supporting copy unchanged; exact old value not present.');
+    }
+  }
+
   // Migration: About Us conversion and credibility pass (15/08/2026), from a
   // mobile review of the live page. Seven approved edits, all content only.
   //
