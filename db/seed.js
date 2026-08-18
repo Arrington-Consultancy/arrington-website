@@ -4444,6 +4444,48 @@ async function seed() {
     console.log(`Useful Thinking related links: ${relatedRowsTouched} content row(s) updated.`);
   }
 
+  // Migration: Evidence page metadata explicit fallback (18/08/2026).
+  //
+  // The Evidence page was originally assembled from three older CMS pages and
+  // can have blank meta fields in some databases, leaving the renderer to fall
+  // back to a computed "Evidence | Arrington Consultancy" title and historical
+  // description. This sets explicit metadata only for that page and only while
+  // the fields are still blank or carrying the exact inspected old wording.
+  {
+    const oldEvidenceTitle = 'Evidence | Arrington Consultancy';
+    const newEvidenceTitle = 'Business Consultancy Case Studies | Arrington Consultancy';
+    const oldEvidenceDescription = 'Arrington Consultancy helps owner run businesses across Devon and Cornwall improve structure, control, margin and owner independence through a commercial review.';
+    const newEvidenceDescription = 'Real Arrington Consultancy evidence from owner run businesses: turnaround work, margin recovery and Google reviews from business owners.';
+    const { rowCount } = await db.query(
+      `UPDATE pages
+       SET meta_title = CASE
+             WHEN meta_title = '' OR meta_title = $1 THEN $2
+             ELSE meta_title
+           END,
+           meta_description = CASE
+             WHEN meta_description = '' OR meta_description = $3 THEN $4
+             ELSE meta_description
+           END,
+           og_title = CASE
+             WHEN og_title = '' OR og_title = $1 THEN $2
+             ELSE og_title
+           END,
+           og_description = CASE
+             WHEN og_description = '' OR og_description = $3 THEN $4
+             ELSE og_description
+           END
+       WHERE slug = 'evidence'
+         AND (
+           meta_title = '' OR meta_title = $1
+           OR meta_description = '' OR meta_description = $3
+           OR og_title = '' OR og_title = $1
+           OR og_description = '' OR og_description = $3
+         )`,
+      [oldEvidenceTitle, newEvidenceTitle, oldEvidenceDescription, newEvidenceDescription]
+    );
+    console.log(`Evidence metadata explicit fallback: ${rowCount} row(s) updated.`);
+  }
+
   console.log('Seed complete.');
 }
 
