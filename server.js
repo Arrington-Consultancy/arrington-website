@@ -745,21 +745,24 @@ async function renderPage(req, res, next, pageSlug) {
       ? [...allPages, ownerCheckNavEntry]
       : [...allPages.slice(0, whatWeDoIndex + 1), ownerCheckNavEntry, ...allPages.slice(whatWeDoIndex + 1)];
 
-    // Where to Start (09/08/2026) is a second standalone route synthetic nav
-    // entry, same reasoning as Owner Check above (no CMS template exists
-    // for "priced offer with a Stripe purchase button" — see
-    // routes/whereToStart.js). Deliberately placed after Evidence rather
-    // than immediately after What We Do/Owner Check: a visitor should see
-    // proof before they see prices, per the commercial-thinking review this
-    // page came out of — pricing ahead of proof reads as a shop, pricing
-    // after proof reads as "now that you've seen the work, here's how to
-    // start." Falls back to appending at the end if 'evidence' is ever
-    // renamed or removed.
-    const whereToStartNavEntry = { slug: 'where-to-start', title: 'Where to Start', nav_label: '', hidden: false, show_in_nav: true };
+    // Product Guide (22/08/2026) — this nav slot used to be "Where to
+    // Start" (linking to /where-to-start), renamed per the site refinement
+    // brief now that the Product Guide is live. It links to /product-guide
+    // directly rather than to the /where-to-start hub, since that is the
+    // page the nav label actually names. /where-to-start is NOT deleted —
+    // it still exists, is still in the sitemap, and is still linked
+    // directly from the Product Guide's own "already know what you need"
+    // link and from elsewhere on the site — it is just no longer the nav's
+    // own top-level destination. Same synthetic-nav-entry reasoning as
+    // Owner Check above (no CMS template exists for this route). Position
+    // unchanged: after Evidence, so proof is seen before the guide/prices.
+    // Falls back to appending at the end if 'evidence' is ever renamed or
+    // removed.
+    const productGuideNavEntry = { slug: 'product-guide', title: 'Product Guide', nav_label: '', hidden: false, show_in_nav: true };
     const evidenceIndex = navPagesWithOwnerCheck.findIndex(p => p.slug === 'evidence');
     const navPages = evidenceIndex === -1
-      ? [...navPagesWithOwnerCheck, whereToStartNavEntry]
-      : [...navPagesWithOwnerCheck.slice(0, evidenceIndex + 1), whereToStartNavEntry, ...navPagesWithOwnerCheck.slice(evidenceIndex + 1)];
+      ? [...navPagesWithOwnerCheck, productGuideNavEntry]
+      : [...navPagesWithOwnerCheck.slice(0, evidenceIndex + 1), productGuideNavEntry, ...navPagesWithOwnerCheck.slice(evidenceIndex + 1)];
 
     // Load content
     const { rows } = await db.query('SELECT section_key, content FROM content');

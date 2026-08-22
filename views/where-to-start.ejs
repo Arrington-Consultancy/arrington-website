@@ -104,6 +104,20 @@
         }
         .wts-intro h1 { font-size: clamp(2rem, 4.5vw, 2.7rem); margin-bottom: 0.9rem; }
         .wts-intro p { font-size: 1.08rem; color: var(--text-muted); max-width: 560px; }
+        .wts-guide-cta { margin-top: 1.75rem; }
+
+        /* Plain bridge line into the existing offer list — deliberately no
+           card, border or weight competing with the Product Guide CTA
+           above it. */
+        .wts-browse-bridge {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 0 1.5rem 2.5rem;
+            text-align: center;
+        }
+        .wts-browse-bridge p { font-size: 0.98rem; color: var(--text-muted); }
+        .wts-browse-bridge a { color: var(--accent); text-decoration: none; }
+        .wts-browse-bridge a:hover { color: var(--text-bright); }
 
         main { max-width: 780px; margin: 0 auto; padding: 0 1.5rem 5rem; }
 
@@ -183,14 +197,26 @@
 <body>
     <%- include('partials/site-header', { currentPage: { slug: 'where-to-start' }, navPages, canEdit: false, content, pageContact }) %>
 
+    <%# Restructured 22/08/2026 per the site refinement brief: this page now
+        serves two types of visitor. The Product Guide gets visual priority
+        (it is what most people who reach this page unprompted actually
+        need), with a plain bridge line into the existing offer list below
+        for anyone who already knows what they want. The five existing
+        wts-step blocks below are completely unchanged — prices, copy and
+        all — this only adds framing above them. %>
     <div class="wts-intro">
         <p class="wts-label">Where to Start</p>
-        <h1>Choose the way in.</h1>
-        <p>Start with a conversation, or buy the piece of work that already fits.</p>
+        <h1>Not sure where to start?</h1>
+        <p>Answer a few questions and we will recommend the most sensible next step.</p>
+        <a href="/product-guide" class="btn btn-primary wts-guide-cta">Use the Product Guide</a>
+    </div>
+
+    <div class="wts-browse-bridge">
+        <p>Already know what you need? <a href="#wts-options">View the options &darr;</a></p>
     </div>
 
     <main>
-        <div class="wts-path">
+        <div class="wts-path" id="wts-options">
             <section class="wts-step" id="conversation-offer">
                 <span class="wts-step-marker" aria-hidden="true">01</span>
                 <div class="wts-step-head">

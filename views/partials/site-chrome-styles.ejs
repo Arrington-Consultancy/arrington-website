@@ -17,6 +17,39 @@
     :root { --site-chrome: 65px; }
 }
 
+/* ---- THREE-SURFACE VISUAL SYSTEM (22/08/2026) ----
+   Three controlled surfaces, applied selectively, per the site refinement
+   brief: deep navy (the default background, unchanged), midnight/supporting
+   navy for process/explanation/transition sections, and warm paper/stone
+   for genuine evidence, documents and scope summaries. This is a visual
+   treatment only — it never implies a copy change, and the site stays
+   predominantly navy; paper exists for deliberate relief, not as a new
+   base tone.
+
+   .surface-midnight just swaps the section background — every theme
+   already has a --near-black one step up from --black, so no new tokens
+   were needed for this tier.
+
+   .surface-paper is the one genuinely new surface. It overrides the site's
+   own CSS custom properties for text/borders/nested-card tones within its
+   own scope, so any existing template dropped onto paper (documents,
+   case studies, scope boxes) reads correctly without every individual
+   selector needing a paper-specific override. --accent is deliberately
+   left alone: the brand accent should read the same wherever it appears. */
+.surface-midnight { background: var(--near-black); }
+
+.surface-paper {
+    background: var(--surface-paper);
+    --text: var(--surface-paper-text);
+    --text-muted: var(--surface-paper-text-muted);
+    --text-bright: var(--surface-paper-text);
+    --border: color-mix(in srgb, var(--surface-paper-text) 14%, transparent);
+    --near-black: color-mix(in srgb, var(--surface-paper) 92%, black 8%);
+    --dark-grey: color-mix(in srgb, var(--surface-paper) 88%, black 12%);
+    --charcoal: color-mix(in srgb, var(--surface-paper) 84%, black 16%);
+    --mid-grey: color-mix(in srgb, var(--surface-paper) 78%, black 22%);
+}
+
 /* ---- NAV ---- */
 nav {
     position: fixed;
