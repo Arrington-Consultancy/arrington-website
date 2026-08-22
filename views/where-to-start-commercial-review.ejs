@@ -66,27 +66,37 @@
         .wts-price { font-family: 'DM Serif Display', serif; font-size: clamp(2.4rem, 6vw, 3rem); color: var(--accent); line-height: 1; }
         .wts-lede { font-size: 1.12rem; color: var(--text-bright); max-width: 560px; }
 
-        .wts-section { border-top: 1px solid var(--border); padding-top: 2rem; margin-top: 2.5rem; }
-        .wts-section h2 { font-size: 1.05rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: 1.2rem; }
-        .wts-section p { font-size: 1.02rem; }
-        .wts-credit-note {
-            display: inline-block;
-            margin-top: 0.3rem;
-            padding: 0.9rem 1.2rem;
+        /* Main-site continuity fix (22/08/2026). This page used to separate
+           each fact with a plain top-rule, which read as a long, flat form
+           rather than a designed Arrington page — the direct opposite of
+           how Owner Check groups its content into real bordered panels
+           (.check-card). Reusing that exact device here: related facts sit
+           together inside one bordered, rounded card, with a lighter
+           internal rule only between items in the same card, not a divider
+           after every paragraph. */
+        .wts-card {
             border: 1px solid var(--border);
-            border-left: 3px solid var(--accent);
-            border-radius: 2px;
-            font-size: 0.98rem;
-            color: var(--text-bright);
+            border-radius: 6px;
+            padding: 2rem 2.25rem;
+            margin-top: 2rem;
         }
-        .wts-credit-note p { margin: 0; }
-        /* Scope/deliverable summaries get the warm-paper surface (22/08/2026
-           paid-offer scope-clarity pass) — the brief's own suggestion for
-           this exact kind of box. Explicit background here since this is a
-           small inline note, not a full-bleed section: .surface-paper's own
-           override only changes the custom properties in scope, it doesn't
-           paint a background on an element that had none. */
-        .wts-credit-note.surface-paper { background: var(--surface-paper); border-left-color: var(--accent); }
+        .wts-card-item + .wts-card-item {
+            margin-top: 1.75rem;
+            padding-top: 1.75rem;
+            border-top: 1px solid var(--border);
+        }
+        .wts-card h2 { font-size: 1.05rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: 1.2rem; font-weight: 700; }
+        .wts-card p { font-size: 1.02rem; }
+        .wts-card p:last-child { margin-bottom: 0; }
+        /* The credit is its own card on the warm-paper surface — the same
+           "deliverable summary" treatment used on the Product Guide and
+           elsewhere, so it reads as one recognisable device across the
+           site rather than a one-off. */
+        .wts-card.surface-paper { background: var(--surface-paper); }
+
+        @media (max-width: 520px) {
+            .wts-card { padding: 1.75rem 1.5rem; }
+        }
 
         .wts-form-section { border-top: 1px solid var(--border); padding-top: 2.5rem; margin-top: 2.5rem; }
         .wts-form-section h2 { font-size: 1.4rem; margin-bottom: 0.5rem; }
@@ -125,27 +135,25 @@
         </div>
         <p class="wts-lede">A genuine Commercial Review in its own right. Its value is the judgement and written direction, not the size of the package around it.</p>
 
-        <div class="wts-section">
-            <h2>What happens</h2>
-            <p>We listen for as long as it genuinely takes to understand the position, whether thirty minutes or two hours. The call may be recorded so the detail can be reviewed carefully rather than relied on from memory.</p>
-            <p>We then assess the business and whatever else is relevant, and produce a written report: assessment, recommendations, direction, and next steps.</p>
-        </div>
-
-        <div class="wts-section">
-            <h2>Timeline</h2>
-            <p>The report is completed within 4 business days.</p>
-        </div>
-
-        <div class="wts-section">
-            <h2>Six months on</h2>
-            <p>Six months later we check in to see what actually changed. It is a phone call, included with the work, not another stage to book.</p>
-        </div>
-
-        <div class="wts-section">
-            <h2>The credit</h2>
-            <div class="wts-credit-note surface-paper">
-                <p>If you go on to Commercial Review and Implementation or Commercial Review and Website Build, the £<%= (offer.pricePence / 100).toLocaleString('en-GB') %> you pay here is credited in full.</p>
+        <div class="wts-card">
+            <div class="wts-card-item">
+                <h2>What happens</h2>
+                <p>We listen for as long as it genuinely takes to understand the position, whether thirty minutes or two hours. The call may be recorded so the detail can be reviewed carefully rather than relied on from memory.</p>
+                <p>We then assess the business and whatever else is relevant, and produce a written report: assessment, recommendations, direction, and next steps.</p>
             </div>
+            <div class="wts-card-item">
+                <h2>Timeline</h2>
+                <p>The report is completed within 4 business days.</p>
+            </div>
+            <div class="wts-card-item">
+                <h2>Six months on</h2>
+                <p>Six months later we check in to see what actually changed. It is a phone call, included with the work, not another stage to book.</p>
+            </div>
+        </div>
+
+        <div class="wts-card surface-paper">
+            <h2>The credit</h2>
+            <p>If you go on to Commercial Review and Implementation or Commercial Review and Website Build, the £<%= (offer.pricePence / 100).toLocaleString('en-GB') %> you pay here is credited in full.</p>
         </div>
 
         <div class="wts-form-section">
