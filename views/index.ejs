@@ -1493,8 +1493,8 @@
            has no number, so nothing is left holding its space. */
 
         /* Six months on: supporting information, not another chapter. A thin
-           band with an accent rule, at body scale, instead of a full section
-           with a centred display heading.
+           band, at body scale, instead of a full section with a centred
+           display heading.
            Scoped to .page-what-we-do .intervention rather than a modifier
            class because after this rebuild the six-months block is the only
            intervention left on the page. If a second one is ever added here it
@@ -1502,28 +1502,31 @@
            template field nobody else would use. */
         /* The height comes from the global `section { padding: 6rem 2rem }`,
            so the strip has to reduce that, not just the inner block. */
+        /* Desktop QC (22/08/2026): this band previously ran left-aligned with
+           a left accent rule at 900px, sitting directly above the footer's
+           contact block, which is centred at 580px (.footer-contact). The two
+           read as different content systems rather than one page. Dropped
+           the left-rail treatment and matched the footer's own column width
+           so heading, body and the form below all share one centre line -
+           see the matching .page-book-a-30-minute-conversation rule below,
+           which applies the same width to that page's equivalent closing
+           sections rather than inventing a second fix. */
         .page-what-we-do .intervention {
             padding-top: 2.5rem;
             padding-bottom: 2.5rem;
         }
 
         .page-what-we-do .intervention .section-inner {
-            border-left: 3px solid var(--accent);
-            padding-left: 1.5rem;
-            text-align: left;
-            max-width: 900px;
+            max-width: 580px;
         }
 
         .page-what-we-do .intervention .section-heading {
             font-size: 1.15rem;
-            text-align: left;
             margin-bottom: 0.6rem;
         }
 
         .page-what-we-do .intervention .intervention-body {
             font-size: 0.95rem;
-            text-align: left;
-            max-width: 720px;
         }
 
         /* Offers: a little more air between the two on mobile so they do not
@@ -1533,6 +1536,21 @@
         }
 
         .page-what-we-do .offer-item .offer-price { margin-bottom: 0.35rem; }
+
+        /* ---- 30 MINUTE CONVERSATION PAGE SCOPE (desktop QC, 22/08/2026) ----
+           This page's closing sections ("Not sure yet?", "Want proof first?")
+           sit directly above the global footer contact block, which is
+           centred at 580px (.footer-contact). Both templates default to a
+           wider centred column (.filter-inner 680px, .intervention
+           .section-inner 760px), so the closing run of sections did not
+           share the footer's column edges even though each block was itself
+           centred on the page. Narrowed both to the footer's own width, the
+           same fix and the same number used on What We Do's equivalent
+           closing band above, rather than a second bespoke treatment. */
+        .page-book-a-30-minute-conversation .filter-inner,
+        .page-book-a-30-minute-conversation .intervention .section-inner {
+            max-width: 580px;
+        }
 
         /* ---- HERO MONTAGE ----
            Opening treatment for What We Do (16/08/2026). The page describes a
