@@ -221,11 +221,22 @@
            quieter, smaller and below a rule — never a comparison grid. */
         .pg-result-lead { font-size: 1.05rem; color: var(--text-muted); margin-bottom: 2.5rem; }
 
+        /* The result screen deliberately picks up the site's own surface
+           rhythm (22/08/2026 integration pass) rather than staying flat
+           navy throughout like a standalone app: a midnight backdrop for
+           "you've arrived somewhere", with the recommendation itself
+           presented as a warm-paper "deliverable" card — the same device
+           used for the scope/deliverable notes on the Where to Start offer
+           pages, so a visitor recognises it as the same site rather than a
+           different tool. Question screens stay plain navy throughout —
+           changing surface mid-flow would be a distraction, not rhythm. */
         .pg-rec {
-            border-top: 2px solid var(--accent);
-            padding-top: 2rem;
+            padding: 2.5rem 2rem;
             margin-bottom: 3rem;
+            border-radius: 6px;
+            border-top: 3px solid var(--accent);
         }
+        .pg-rec.surface-paper { background: var(--surface-paper); }
         .pg-rec-head {
             display: flex;
             align-items: baseline;
@@ -242,6 +253,11 @@
         }
         .pg-rec-why { font-size: 1.08rem; color: var(--text-bright); }
         .pg-rec-actions { margin-top: 1.75rem; }
+        .pg-rec-actions .btn-primary { font-size: 1rem; }
+
+        @media (max-width: 600px) {
+            .pg-rec { padding: 2rem 1.5rem; margin-left: -1.25rem; margin-right: -1.25rem; border-radius: 0; }
+        }
 
         .pg-next {
             border-top: 1px solid var(--border);
@@ -390,14 +406,14 @@
             <p class="pg-label">We'd start here</p>
             <p class="pg-result-lead" id="pg-result-lead">Based on what you have told us.</p>
 
-            <div class="pg-rec">
+            <div class="pg-rec surface-paper">
                 <div class="pg-rec-head">
                     <h2 id="pg-rec-name"></h2>
                     <p class="pg-rec-price" id="pg-rec-price"></p>
                 </div>
                 <p class="pg-rec-why" id="pg-rec-why"></p>
                 <div class="pg-rec-actions">
-                    <a href="/where-to-start" class="btn btn-primary" id="pg-rec-link">See what this involves</a>
+                    <a href="/where-to-start" class="btn btn-primary" id="pg-rec-link">Continue</a>
                 </div>
             </div>
 
@@ -588,11 +604,20 @@
                 document.getElementById('pg-rec-why').textContent = result.why;
                 document.getElementById('pg-next-text').textContent = result.whatHappensNext;
 
+                // The CTA always completes the route: a priced recommendation
+                // goes straight to that offer's own purchase page (which
+                // carries its own checkout form — reusing the existing route,
+                // never a new payment flow), and the £0 recommendation goes
+                // straight to the conversation form already on this page,
+                // rather than a second hop through /where-to-start.
                 var link = document.getElementById('pg-rec-link');
-                link.href = result.recommendation.path;
-                link.textContent = result.recommendation.pricePence
-                    ? 'See what this involves'
-                    : 'Start the conversation';
+                if (result.recommendation.pricePence) {
+                    link.href = result.recommendation.path;
+                    link.textContent = 'Continue to ' + result.recommendation.name + ' — ' + formatPrice(result.recommendation.pricePence);
+                } else {
+                    link.href = '#conversation';
+                    link.textContent = 'Start the conversation';
+                }
 
                 var laterWrap = document.getElementById('pg-later');
                 var laterList = document.getElementById('pg-later-list');
