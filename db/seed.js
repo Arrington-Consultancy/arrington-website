@@ -4486,6 +4486,30 @@ async function seed() {
     console.log(`Evidence metadata explicit fallback: ${rowCount} row(s) updated.`);
   }
 
+  // Migration: homepage hero credibility line — add "reviews" to the Google
+  // rating fact (22/08/2026). Tom flagged that the bare "5.0 on Google" is
+  // ambiguous next to the other two facts on this line (no stars, no word
+  // telling the reader what 5.0 is out of), unlike the site's other real
+  // Google-rating display further down the same page which reads "5.0 from
+  // 5 reviews on Google". Scoped to this one field only, adding the single
+  // word "reviews" — no stars/badges/icons added, keeping the "restrained,
+  // no award-strip" brief from the 15/08/2026 migration that introduced this
+  // line. Deliberately left as a static string, not wired to the live
+  // Google Places fetch used elsewhere on the page — Tom confirmed no need
+  // for that. Guarded with an atomic UPDATE ... WHERE content = <old value>,
+  // matched against the exact string that migration inserted, so a later
+  // CMS edit to this field is never silently overwritten: if the current
+  // value doesn't match, this affects 0 rows and is a no-op.
+  {
+    const oldProofLine = 'Two decades building, buying and selling businesses · Oxford Saïd, Distinction · 5.0 on Google';
+    const newProofLine = 'Two decades building, buying and selling businesses · Oxford Saïd, Distinction · 5.0 on Google reviews';
+    const { rowCount } = await db.query(
+      `UPDATE content SET content = $1 WHERE section_key = 'hero.proof_line' AND content = $2`,
+      [newProofLine, oldProofLine]
+    );
+    console.log(`Homepage hero proof line migration: ${rowCount} row(s) updated.`);
+  }
+
   console.log('Seed complete.');
 }
 
