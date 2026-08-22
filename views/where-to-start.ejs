@@ -106,18 +106,39 @@
         .wts-intro p { font-size: 1.08rem; color: var(--text-muted); max-width: 560px; }
         .wts-guide-cta { margin-top: 1.75rem; }
 
-        /* Plain bridge line into the existing offer list — deliberately no
-           card, border or weight competing with the Product Guide CTA
-           above it. */
+        /* Secondary route into the existing offer list (22/08/2026 visual
+           fix). Originally a plain inline text link, which read as a weak,
+           easy-to-miss afterthought and wrapped awkwardly on mobile. Now a
+           quiet outlined button — same restrained "accent wash" treatment
+           already used for this page's own "Something else?" secondary CTA
+           further down (.wts-else .btn-outline), so the two secondary
+           moments on this page look like one deliberate design language
+           rather than two different attempts. Still clearly lighter than
+           the solid gold .wts-guide-cta above it: outline only, no fill
+           until hover, smaller padding. */
         .wts-browse-bridge {
             max-width: 700px;
-            margin: 0 auto;
+            margin: 1.75rem auto 0;
             padding: 0 1.5rem 2.5rem;
             text-align: center;
         }
-        .wts-browse-bridge p { font-size: 0.98rem; color: var(--text-muted); }
-        .wts-browse-bridge a { color: var(--accent); text-decoration: none; }
-        .wts-browse-bridge a:hover { color: var(--text-bright); }
+        .wts-browse-bridge p {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            margin-bottom: 0.85rem;
+        }
+        .wts-browse-bridge .btn-outline {
+            padding: 0.65rem 1.5rem;
+            font-size: 0.88rem;
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(212, 175, 84, 0.08);
+        }
+        .wts-browse-bridge .btn-outline:hover,
+        .wts-browse-bridge .btn-outline:focus-visible {
+            background: var(--accent);
+            color: var(--black);
+        }
 
         main { max-width: 780px; margin: 0 auto; padding: 0 1.5rem 5rem; }
 
@@ -212,7 +233,8 @@
     </div>
 
     <div class="wts-browse-bridge">
-        <p>Already know what you need? <a href="#wts-options">View the options &darr;</a></p>
+        <p>Already know what you need?</p>
+        <a href="#wts-options" class="btn btn-outline">View the options &darr;</a>
     </div>
 
     <main>
