@@ -125,12 +125,22 @@
         .wts-direct-proof a { color: var(--accent); font-weight: 700; }
         .wts-direct-proof a:hover { color: var(--accent-hover); }
 
-        .wts-section {
-            margin-top: 2.5rem;
-            padding-top: 2rem;
+        /* Main-site continuity fix (22/08/2026) — same device as Owner
+           Check's bordered .check-card panels, replacing the plain
+           top-rule dividers this page used before. See
+           where-to-start-commercial-review.ejs for the fuller rationale. */
+        .wts-card {
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 2rem 2.25rem;
+            margin-top: 2rem;
+        }
+        .wts-card-item + .wts-card-item {
+            margin-top: 1.75rem;
+            padding-top: 1.75rem;
             border-top: 1px solid var(--border);
         }
-        .wts-section h2 {
+        .wts-card h2 {
             margin-bottom: 1.2rem;
             color: var(--accent);
             font-family: 'DM Sans', sans-serif;
@@ -139,7 +149,9 @@
             letter-spacing: 0.08em;
             text-transform: uppercase;
         }
-        .wts-section p { font-size: 1.02rem; margin-bottom: 1rem; }
+        .wts-card p { font-size: 1.02rem; margin-bottom: 1rem; }
+        .wts-card p:last-child { margin-bottom: 0; }
+        .wts-card.surface-paper { background: var(--surface-paper); }
         .wts-includes { margin: 0; padding: 0; list-style: none; }
         .wts-includes li {
             position: relative;
@@ -157,19 +169,6 @@
             border-radius: 50%;
             background: var(--accent);
         }
-        .wts-note {
-            display: inline-block;
-            margin-top: 0.3rem;
-            padding: 0.9rem 1.2rem;
-            border: 1px solid var(--border);
-            border-left: 3px solid var(--accent);
-            border-radius: 2px;
-            color: var(--text-bright);
-            font-size: 0.98rem;
-        }
-        .wts-note p { margin: 0; }
-        .wts-note.surface-paper { background: var(--surface-paper); border-left-color: var(--accent); }
-
         .wts-form-section { margin-top: 2.5rem; padding-top: 2.5rem; border-top: 1px solid var(--border); }
         .wts-form-section h2 { margin-bottom: 0.5rem; font-size: 1.42rem; }
         .wts-form-note { margin-bottom: 1.6rem; color: var(--text-muted); font-size: 0.92rem; }
@@ -197,6 +196,7 @@
         @media (max-width: 520px) {
             main { padding-top: 6.5rem; }
             .wts-price { margin-left: 0; }
+            .wts-card { padding: 1.75rem 1.5rem; }
         }
     </style>
 </head>
@@ -214,31 +214,30 @@
         <p class="wts-lede">A fixed-price website build shaped around what your business needs to do. Not dropped into a template.</p>
         <p class="wts-direct-proof"><a href="<%= websiteBuildProofHref || '/websites-and-ai' %>">Look at our latest example of what we have built</a> before you pay.</p>
 
-        <div class="wts-section">
-            <h2>What you get</h2>
-            <ul class="wts-includes">
-                <li>A website designed for the way your customers and team actually use it</li>
-                <li>Responsive desktop and mobile build</li>
-                <li>The agreed pages, forms and functionality</li>
-                <li>Basic technical and on-page SEO setup</li>
-                <li>A recorded planning conversation</li>
-                <li>One complete first version</li>
-                <li>One structured round of changes</li>
-                <li>CMS access where appropriate</li>
-            </ul>
-        </div>
-
-        <div class="wts-section">
-            <h2>How it works</h2>
-            <p>After payment, Tom books the recorded planning conversation. That conversation is used to agree what the website needs to do, what pages are required, and what must happen before launch.</p>
-            <p>Then we build the first version, take one structured round of changes, and prepare it for launch.</p>
-        </div>
-
-        <div class="wts-section">
-            <h2>Price and scope</h2>
-            <div class="wts-note surface-paper">
-                <p>£<%= (offer.pricePence / 100).toLocaleString('en-GB') %> is the fixed price for the build described above. Further changes after the agreed build and included revision are charged at £300 per day, based on approximately six working hours.</p>
+        <div class="wts-card">
+            <div class="wts-card-item">
+                <h2>What you get</h2>
+                <ul class="wts-includes">
+                    <li>A website designed for the way your customers and team actually use it</li>
+                    <li>Responsive desktop and mobile build</li>
+                    <li>The agreed pages, forms and functionality</li>
+                    <li>Basic technical and on-page SEO setup</li>
+                    <li>A recorded planning conversation</li>
+                    <li>One complete first version</li>
+                    <li>One structured round of changes</li>
+                    <li>CMS access where appropriate</li>
+                </ul>
             </div>
+            <div class="wts-card-item">
+                <h2>How it works</h2>
+                <p>After payment, Tom books the recorded planning conversation. That conversation is used to agree what the website needs to do, what pages are required, and what must happen before launch.</p>
+                <p>Then we build the first version, take one structured round of changes, and prepare it for launch.</p>
+            </div>
+        </div>
+
+        <div class="wts-card surface-paper">
+            <h2>Price and scope</h2>
+            <p>£<%= (offer.pricePence / 100).toLocaleString('en-GB') %> is the fixed price for the build described above. Further changes after the agreed build and included revision are charged at £300 per day, based on approximately six working hours.</p>
         </div>
 
         <div class="wts-form-section">

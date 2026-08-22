@@ -64,15 +64,20 @@
         .wts-hero-head h1 { font-size: clamp(1.9rem, 4.5vw, 2.45rem); }
         .wts-price { margin-left: auto; color: var(--accent); font-family: 'DM Serif Display', serif; font-size: clamp(2.4rem, 6vw, 3rem); line-height: 1; }
         .wts-lede { max-width: 570px; margin-bottom: 1.5rem; color: var(--text-bright); font-size: 1.12rem; }
-        .wts-section { margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid var(--border); }
-        .wts-section h2 { margin-bottom: 1.2rem; color: var(--accent); font-family: 'DM Sans', sans-serif; font-size: 1.02rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
-        .wts-section p { font-size: 1.02rem; margin-bottom: 1rem; }
+        /* Main-site continuity fix (22/08/2026) — same bordered-panel device
+           as Owner Check's .check-card, replacing the plain top-rule
+           dividers. See where-to-start-commercial-review.ejs for the
+           fuller rationale. */
+        .wts-card { border: 1px solid var(--border); border-radius: 6px; padding: 2rem 2.25rem; margin-top: 2rem; }
+        .wts-card-item + .wts-card-item { margin-top: 1.75rem; padding-top: 1.75rem; border-top: 1px solid var(--border); }
+        .wts-card h2 { margin-bottom: 1.2rem; color: var(--accent); font-family: 'DM Sans', sans-serif; font-size: 1.02rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+        .wts-card p { font-size: 1.02rem; margin-bottom: 0; }
+        .wts-card.surface-paper { background: var(--surface-paper); }
         .wts-includes { margin: 0; padding: 0; list-style: none; }
         .wts-includes li { position: relative; margin-bottom: 0.7rem; padding-left: 1.4rem; font-size: 1.02rem; }
         .wts-includes li::before { content: ''; position: absolute; left: 0; top: 0.65em; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
-        .wts-note { display: inline-block; margin-top: 0.3rem; padding: 0.9rem 1.2rem; border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 2px; color: var(--text-bright); font-size: 0.98rem; }
-        .wts-note p { margin: 0; }
-        .wts-note.surface-paper { background: var(--surface-paper); border-left-color: var(--accent); }
+        .wts-evidence-section { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border); }
+        .wts-evidence-section h2 { margin-bottom: 1.2rem; color: var(--accent); font-family: 'DM Sans', sans-serif; font-size: 1.02rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 
         /* EVIDENCE — same real-document treatment as the £2,500 page. This
            is the biggest purchase on the page and the only one sold with no
@@ -108,6 +113,7 @@
         @media (max-width: 520px) {
             main { padding-top: 6.5rem; }
             .wts-price { margin-left: 0; }
+            .wts-card { padding: 1.75rem 1.5rem; }
         }
     </style>
 </head>
@@ -124,50 +130,50 @@
         </div>
         <p class="wts-lede">For established businesses whose website no longer matches what the business has become.</p>
 
-        <div class="wts-section">
-            <h2>What is included</h2>
-            <ul class="wts-includes">
-                <li>The Commercial Review and Implementation process</li>
-                <li>A practical action plan</li>
-                <li>A website designed for the way your customers and team actually use it</li>
-                <li>Responsive desktop and mobile build</li>
-                <li>The agreed pages, forms and functionality</li>
-                <li>Basic technical and on-page SEO setup</li>
-                <li>One complete first website version</li>
-                <li>One structured round of website changes</li>
-            </ul>
+        <div class="wts-card">
+            <div class="wts-card-item">
+                <h2>What is included</h2>
+                <ul class="wts-includes">
+                    <li>The Commercial Review and Implementation process</li>
+                    <li>A practical action plan</li>
+                    <li>A website designed for the way your customers and team actually use it</li>
+                    <li>Responsive desktop and mobile build</li>
+                    <li>The agreed pages, forms and functionality</li>
+                    <li>Basic technical and on-page SEO setup</li>
+                    <li>One complete first website version</li>
+                    <li>One structured round of website changes</li>
+                </ul>
+            </div>
+            <div class="wts-card-item">
+                <h2>Why this package exists</h2>
+                <p>Some businesses reach a point where they have outgrown what they once were. They have grown, changed direction, added services, changed systems, changed customers or become materially different.</p>
+                <p>The Commercial Review addresses the business internally. The Website Build then makes sure the external presentation reflects that new direction.</p>
+            </div>
+            <div class="wts-card-item">
+                <h2>How it works</h2>
+                <p>The review comes first. We understand the business, agree what should be brought forward more clearly, then build the website around the business that actually exists now.</p>
+                <p>Together, the work gives the business a fresh commercial platform for its next stage. It also avoids paying for the same discovery work twice, because the review has already done the commercial thinking.</p>
+            </div>
+            <div class="wts-card-item">
+                <h2>Timeline</h2>
+                <p>The review is completed within 4 weeks; the website build follows once the direction from the review is agreed.</p>
+            </div>
         </div>
 
-        <div class="wts-section">
-            <h2>Why this package exists</h2>
-            <p>Some businesses reach a point where they have outgrown what they once were. They have grown, changed direction, added services, changed systems, changed customers or become materially different.</p>
-            <p>The Commercial Review addresses the business internally. The Website Build then makes sure the external presentation reflects that new direction.</p>
-        </div>
-
-        <div class="wts-section">
-            <h2>How it works</h2>
-            <p>The review comes first. We understand the business, agree what should be brought forward more clearly, then build the website around the business that actually exists now.</p>
-            <p>Together, the work gives the business a fresh commercial platform for its next stage. It also avoids paying for the same discovery work twice, because the review has already done the commercial thinking.</p>
-        </div>
-
-        <div class="wts-section">
-            <h2>Timeline and scope</h2>
-            <p>The review is completed within 4 weeks; the website build follows once the direction from the review is agreed.</p>
-            <div class="wts-note surface-paper">
+        <div class="wts-card surface-paper">
+            <div class="wts-card-item">
+                <h2>Scope</h2>
                 <p>£<%= (offer.pricePence / 100).toLocaleString('en-GB') %> is a fixed price for the scope described above. Anything materially outside that, on either the review or the build, is discussed and agreed separately before it happens, not billed afterwards.</p>
             </div>
-        </div>
-
-        <% if (offer.creditFrom) { %>
-        <div class="wts-section">
-            <h2>The credit</h2>
-            <div class="wts-note surface-paper">
+            <% if (offer.creditFrom) { %>
+            <div class="wts-card-item">
+                <h2>The credit</h2>
                 <p>If you have already paid for a Commercial Review, that £500 is credited in full against this price.</p>
             </div>
+            <% } %>
         </div>
-        <% } %>
 
-        <div class="wts-section">
+        <div class="wts-evidence-section">
             <h2>See the standard</h2>
             <p class="wts-evidence-note">Real work, not a description of work.</p>
             <div class="wts-evidence-grid">

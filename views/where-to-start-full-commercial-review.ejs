@@ -64,21 +64,35 @@
         .wts-price { font-family: 'DM Serif Display', serif; font-size: clamp(2.4rem, 6vw, 3rem); color: var(--accent); line-height: 1; }
         .wts-lede { font-size: 1.12rem; color: var(--text-bright); max-width: 560px; }
 
-        .wts-section { border-top: 1px solid var(--border); padding-top: 2rem; margin-top: 2.5rem; }
-        .wts-section h2 { font-size: 1.05rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: 1.2rem; }
-        .wts-section p { font-size: 1.02rem; }
-        .wts-credit-note {
-            display: inline-block;
-            margin-top: 0.3rem;
-            padding: 0.9rem 1.2rem;
+        /* Main-site continuity fix (22/08/2026) — same bordered-panel device
+           as Owner Check's .check-card, replacing the plain top-rule
+           dividers. See where-to-start-commercial-review.ejs for the
+           fuller rationale. */
+        .wts-card {
             border: 1px solid var(--border);
-            border-left: 3px solid var(--accent);
-            border-radius: 2px;
-            font-size: 0.98rem;
-            color: var(--text-bright);
+            border-radius: 6px;
+            padding: 2rem 2.25rem;
+            margin-top: 2rem;
         }
-        .wts-credit-note p { margin: 0; }
-        .wts-credit-note.surface-paper { background: var(--surface-paper); border-left-color: var(--accent); }
+        .wts-card-item + .wts-card-item {
+            margin-top: 1.75rem;
+            padding-top: 1.75rem;
+            border-top: 1px solid var(--border);
+        }
+        .wts-card h2 { font-size: 1.05rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: 1.2rem; font-weight: 700; }
+        .wts-card p { font-size: 1.02rem; margin-bottom: 0; }
+        .wts-card.surface-paper { background: var(--surface-paper); }
+
+        /* "See the standard" already carries its own visual weight via the
+           bordered .wts-evidence-card items inside it, so it stays a plain
+           labelled section (matching Owner Check's own section headings)
+           rather than a card wrapping a card. */
+        .wts-evidence-section { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border); }
+        .wts-evidence-section h2 { font-size: 1.05rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: 1.2rem; font-weight: 700; }
+
+        @media (max-width: 640px) {
+            .wts-card { padding: 1.75rem 1.5rem; }
+        }
 
         .wts-form-section { border-top: 1px solid var(--border); padding-top: 2.5rem; margin-top: 2.5rem; }
         .wts-form-section h2 { font-size: 1.4rem; margin-bottom: 0.5rem; }
@@ -157,39 +171,39 @@
         </div>
         <p class="wts-lede">This is for owners who want the review and help starting the changes, not just the written direction.</p>
 
-        <div class="wts-section">
-            <h2>What changes</h2>
-            <p>Substantially more time to follow the evidence and understand the detail behind the first conversation. That can include time inside the business where useful, with recommendations developed, discussed and refined in far more depth.</p>
+        <div class="wts-card">
+            <div class="wts-card-item">
+                <h2>What changes</h2>
+                <p>Substantially more time to follow the evidence and understand the detail behind the first conversation. That can include time inside the business where useful, with recommendations developed, discussed and refined in far more depth.</p>
+            </div>
+            <div class="wts-card-item">
+                <h2>Then we start the work</h2>
+                <p>We build the practical action plan and start putting the useful pieces in place. That could mean AI systems, operational systems, website work, business structure or commercial reporting, or working alongside the right tax or accountancy advisers where regulated advice is genuinely needed. The work follows what will help the business most, not a fixed list.</p>
+            </div>
+            <div class="wts-card-item">
+                <h2>Timeline</h2>
+                <p>Completed within 4 weeks.</p>
+            </div>
+            <div class="wts-card-item">
+                <h2>Six months on</h2>
+                <p>Six months later we check in to see what actually changed. It is a phone call, included with the work, not another stage to book.</p>
+            </div>
         </div>
 
-        <div class="wts-section">
-            <h2>Then we start the work</h2>
-            <p>We build the practical action plan and start putting the useful pieces in place. That could mean AI systems, operational systems, website work, business structure or commercial reporting, or working alongside the right tax or accountancy advisers where regulated advice is genuinely needed. The work follows what will help the business most, not a fixed list.</p>
-        </div>
-
-        <div class="wts-section">
-            <h2>Timeline and scope</h2>
-            <p>Completed within 4 weeks.</p>
-            <div class="wts-credit-note surface-paper">
+        <div class="wts-card surface-paper">
+            <div class="wts-card-item">
+                <h2>Scope</h2>
                 <p>£<%= (offer.pricePence / 100).toLocaleString('en-GB') %> is a fixed price as defined here. Anything materially outside that is discussed and agreed separately before it happens, not billed afterwards.</p>
             </div>
-        </div>
-
-        <div class="wts-section">
-            <h2>Six months on</h2>
-            <p>Six months later we check in to see what actually changed. It is a phone call, included with the work, not another stage to book.</p>
-        </div>
-
-        <% if (offer.creditFrom) { %>
-        <div class="wts-section">
-            <h2>The credit</h2>
-            <div class="wts-credit-note">
+            <% if (offer.creditFrom) { %>
+            <div class="wts-card-item">
+                <h2>The credit</h2>
                 <p>If you have already paid for a Commercial Review, that £500 is credited in full against this price.</p>
             </div>
+            <% } %>
         </div>
-        <% } %>
 
-        <div class="wts-section">
+        <div class="wts-evidence-section">
             <h2>See the standard</h2>
             <p class="wts-evidence-note">Real work, not a description of work.</p>
             <div class="wts-evidence-grid">
