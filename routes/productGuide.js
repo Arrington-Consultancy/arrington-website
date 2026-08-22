@@ -286,6 +286,7 @@ async function finalizeContact(submission, { name, email, wantsContact, token })
       `Wants to be contacted: ${wantsContact ? 'Yes' : 'No'}`,
       '',
       `RECOMMENDED: ${recommendationLabel}`,
+      `Link: ${result.recommendation && result.recommendation.path ? `${SITE_ORIGIN}${result.recommendation.path}` : `${SITE_ORIGIN}/where-to-start`}`,
       `Routing reason (audit): ${submission.recommendation_reason}`,
       submission.sensitive_topic ? `Sensitive topic flagged: ${submission.sensitive_topic}` : null,
       `Response timing: ${result.whatHappensNext}`,
