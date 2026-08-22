@@ -80,6 +80,13 @@
             color: var(--text-bright);
         }
         .wts-credit-note p { margin: 0; }
+        /* Scope/deliverable summaries get the warm-paper surface (22/08/2026
+           paid-offer scope-clarity pass) — the brief's own suggestion for
+           this exact kind of box. Explicit background here since this is a
+           small inline note, not a full-bleed section: .surface-paper's own
+           override only changes the custom properties in scope, it doesn't
+           paint a background on an element that had none. */
+        .wts-credit-note.surface-paper { background: var(--surface-paper); border-left-color: var(--accent); }
 
         .wts-form-section { border-top: 1px solid var(--border); padding-top: 2.5rem; margin-top: 2.5rem; }
         .wts-form-section h2 { font-size: 1.4rem; margin-bottom: 0.5rem; }
@@ -136,7 +143,7 @@
 
         <div class="wts-section">
             <h2>The credit</h2>
-            <div class="wts-credit-note">
+            <div class="wts-credit-note surface-paper">
                 <p>If you go on to Commercial Review and Implementation or Commercial Review and Website Build, the £<%= (offer.pricePence / 100).toLocaleString('en-GB') %> you pay here is credited in full.</p>
             </div>
         </div>

@@ -78,6 +78,7 @@
             color: var(--text-bright);
         }
         .wts-credit-note p { margin: 0; }
+        .wts-credit-note.surface-paper { background: var(--surface-paper); border-left-color: var(--accent); }
 
         .wts-form-section { border-top: 1px solid var(--border); padding-top: 2.5rem; margin-top: 2.5rem; }
         .wts-form-section h2 { font-size: 1.4rem; margin-bottom: 0.5rem; }
@@ -168,7 +169,10 @@
 
         <div class="wts-section">
             <h2>Timeline and scope</h2>
-            <p>Completed within 4 weeks. £<%= (offer.pricePence / 100).toLocaleString('en-GB') %> is a fixed price as defined here; anything materially outside that is discussed separately.</p>
+            <p>Completed within 4 weeks.</p>
+            <div class="wts-credit-note surface-paper">
+                <p>£<%= (offer.pricePence / 100).toLocaleString('en-GB') %> is a fixed price as defined here. Anything materially outside that is discussed and agreed separately before it happens, not billed afterwards.</p>
+            </div>
         </div>
 
         <div class="wts-section">

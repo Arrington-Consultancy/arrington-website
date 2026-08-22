@@ -72,6 +72,7 @@
         .wts-includes li::before { content: ''; position: absolute; left: 0; top: 0.65em; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
         .wts-note { display: inline-block; margin-top: 0.3rem; padding: 0.9rem 1.2rem; border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 2px; color: var(--text-bright); font-size: 0.98rem; }
         .wts-note p { margin: 0; }
+        .wts-note.surface-paper { background: var(--surface-paper); border-left-color: var(--accent); }
 
         /* EVIDENCE — same real-document treatment as the £2,500 page. This
            is the biggest purchase on the page and the only one sold with no
@@ -149,10 +150,18 @@
             <p>Together, the work gives the business a fresh commercial platform for its next stage. It also avoids paying for the same discovery work twice, because the review has already done the commercial thinking.</p>
         </div>
 
+        <div class="wts-section">
+            <h2>Timeline and scope</h2>
+            <p>The review is completed within 4 weeks; the website build follows once the direction from the review is agreed.</p>
+            <div class="wts-note surface-paper">
+                <p>£<%= (offer.pricePence / 100).toLocaleString('en-GB') %> is a fixed price for the scope described above. Anything materially outside that, on either the review or the build, is discussed and agreed separately before it happens, not billed afterwards.</p>
+            </div>
+        </div>
+
         <% if (offer.creditFrom) { %>
         <div class="wts-section">
             <h2>The credit</h2>
-            <div class="wts-note">
+            <div class="wts-note surface-paper">
                 <p>If you have already paid for a Commercial Review, that £500 is credited in full against this price.</p>
             </div>
         </div>

@@ -168,6 +168,7 @@
             font-size: 0.98rem;
         }
         .wts-note p { margin: 0; }
+        .wts-note.surface-paper { background: var(--surface-paper); border-left-color: var(--accent); }
 
         .wts-form-section { margin-top: 2.5rem; padding-top: 2.5rem; border-top: 1px solid var(--border); }
         .wts-form-section h2 { margin-bottom: 0.5rem; font-size: 1.42rem; }
@@ -235,7 +236,7 @@
 
         <div class="wts-section">
             <h2>Price and scope</h2>
-            <div class="wts-note">
+            <div class="wts-note surface-paper">
                 <p>£<%= (offer.pricePence / 100).toLocaleString('en-GB') %> is the fixed price for the build described above. Further changes after the agreed build and included revision are charged at £300 per day, based on approximately six working hours.</p>
             </div>
         </div>

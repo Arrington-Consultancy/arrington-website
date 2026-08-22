@@ -1775,8 +1775,17 @@
         }
 
         /* ---- DOCUMENTS ---- */
-        .documents {
-            background: var(--near-black);
+        /* Evidence visual pass (22/08/2026): the documents template shows
+           real client PDF pages, so it is the most literal fit in the
+           whole site for the warm-paper surface — genuine document pages,
+           on something that reads like paper. .surface-paper is added on
+           the section tag itself (see the template above); this rule pins
+           the true paper tone rather than the darker near-black-derived
+           shade .surface-paper's own override would otherwise produce here
+           (that mixed shade is still used correctly by nested elements
+           like the montage image background below). */
+        .documents.surface-paper {
+            background: var(--surface-paper);
             border-top: 1px solid var(--border);
             border-bottom: 1px solid var(--border);
         }
@@ -1840,7 +1849,7 @@
            gives it plenty of visual weight against the flat page. */
         .document-card {
             display: grid;
-            grid-template-columns: 190px 1fr;
+            grid-template-columns: 220px 1fr;
             gap: 2.5rem;
             align-items: start;
             padding-top: 2.5rem;
@@ -1850,6 +1859,17 @@
         .documents-list .document-card:first-child {
             padding-top: 0;
             border-top: none;
+        }
+
+        /* One dominant evidence asset, smaller supporting ones after it
+           (22/08/2026 evidence visual pass) — the first document's preview
+           reads meaningfully larger than the rest, rather than four
+           equal-weight thumbnails. */
+        .documents-list .document-card:first-child {
+            grid-template-columns: 320px 1fr;
+        }
+        .documents-list .document-card:first-child .document-thumb {
+            box-shadow: 0 16px 36px rgba(0,0,0,0.22);
         }
 
         /* A document with no preview image set gets the full card width. */
@@ -1929,6 +1949,7 @@
 
             .documents-list .document-card:first-child {
                 padding-top: 0;
+                grid-template-columns: 1fr;
             }
 
             .document-thumb {
@@ -2036,7 +2057,12 @@
         }
 
         .casestudy2-inner {
-            max-width: 760px;
+            /* Widened from 760px (22/08/2026 evidence visual pass) so the
+               real project screenshots below have genuine room to be
+               inspected — still a comfortable prose reading width, just no
+               longer needlessly capping the one thing on this template
+               that benefits from being larger. */
+            max-width: 860px;
         }
 
         .casestudy2-intro {
@@ -2146,6 +2172,12 @@
             border: 1px solid var(--border);
             background: var(--charcoal);
             position: relative;
+            /* Restrained case-file framing (22/08/2026 evidence visual
+               pass): a thin warm-paper mat around each real screenshot,
+               like a photo mounted in a folder, rather than the image
+               sitting flush against the section background. */
+            padding: 0.6rem;
+            background-color: var(--surface-paper);
         }
 
         .cs2-screenshots:not(.cs2-screenshots--single):not(.cs2-screenshots--pair) .cs2-screenshot:first-child {
@@ -2157,6 +2189,7 @@
             display: block;
             width: 100%;
             height: auto;
+            border-radius: 2px;
         }
 
         .cs2-screenshot.cs2-screenshot--empty {
@@ -3660,7 +3693,7 @@
   const _montage = _docs.filter(d => d.image);
 %>
 <!-- DOCUMENTS -->
-<section class="documents<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" id="<%= _iid %>" data-section-id="<%= _iid %>">
+<section class="documents surface-paper<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" id="<%= _iid %>" data-section-id="<%= _iid %>">
     <div class="section-inner cms-section" data-section="<%= _k %>">
         <% if (canEdit) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
         <% if (canEdit) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>
