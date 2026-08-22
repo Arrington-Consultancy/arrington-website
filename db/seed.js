@@ -4303,6 +4303,53 @@ async function seed() {
     }
   }
 
+  // Migration: What We Do review intro, drop trailing sentence (22/08/2026).
+  //
+  // Desktop QC: remove "Twenty years of experience, instinct and a fresh
+  // pair of eyes." from the "There is no checklist" section. The sentence
+  // simply drops; the paragraph closes on the sentence before it rather
+  // than being reworded.
+  //
+  // Guarded twice, as before: a run-once marker, and a check that the
+  // sentence being removed is still there, so a CMS edit wins.
+  {
+    const WWD_INTRO_TRIM_MARKER = 'what-we-do.review_intro_trim_2026-08-22';
+    const OLD_INTRO = 'What we look at depends on the business and what you want from it. '
+      + 'Nobody sees everything in their own business. We don’t pretend we would either.'
+      + '<br><br>Twenty years of experience, instinct and a fresh pair of eyes.';
+    const NEW_INTRO = 'What we look at depends on the business and what you want from it. '
+      + 'Nobody sees everything in their own business. We don’t pretend we would either.';
+
+    const { rows: markerRows } = await db.query(
+      'SELECT 1 FROM content WHERE section_key = $1', [WWD_INTRO_TRIM_MARKER]
+    );
+
+    if (markerRows.length === 0) {
+      const { rows: pageRows } = await db.query(
+        "SELECT section_order FROM pages WHERE slug = 'what-we-do'"
+      );
+
+      if (pageRows.length) {
+        const order = Array.isArray(pageRows[0].section_order) ? pageRows[0].section_order : [];
+        const fcId = order.find((id) => /^fourcards(?:__\d+)?$/.test(id));
+
+        if (fcId) {
+          const key = `${fcId}.evidence_intro`;
+          const { rowCount } = await db.query(
+            `UPDATE content SET content = $1 WHERE section_key = $2 AND content = $3`,
+            [NEW_INTRO, key, OLD_INTRO]
+          );
+          console.log(`What We Do review intro trailing-sentence trim: ${rowCount} row(s) updated.`);
+
+          await db.query(
+            'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+            [WWD_INTRO_TRIM_MARKER, 'true']
+          );
+        }
+      }
+    }
+  }
+
   // Migration: homepage hero heading copy tweak (18/08/2026). Tom's exact
   // wording change, scoped to hero.heading only. Guarded with an atomic
   // UPDATE ... WHERE content = <old value>, matched against the precise
