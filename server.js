@@ -20,6 +20,7 @@ const leadRoutes = require('./routes/leads');
 const marketReadyTest = require('./routes/marketReadyTest');
 const commercialGapsReview = require('./routes/commercialGapsReview');
 const whereToStart = require('./routes/whereToStart');
+const productGuide = require('./routes/productGuide');
 const { publishedArticles, findBySlug: findUsefulThinkingArticle } = require('./lib/usefulThinkingArticles');
 const { getSiteShellData } = require('./lib/navShell');
 const { SITE_KEY: TURNSTILE_SITE_KEY } = require('./lib/turnstile');
@@ -486,12 +487,13 @@ app.get('/sitemap.xml', async (req, res, next) => {
       'where-to-start/commercial-review': '2026-08-17',
       'where-to-start/full-commercial-review': '2026-08-17',
       'where-to-start/website-build': '2026-08-17',
-      'where-to-start/full-review-website-build': '2026-08-17'
+      'where-to-start/full-review-website-build': '2026-08-17',
+      'product-guide': '2026-08-22'
     };
     // where-to-start/confirmation is deliberately excluded — private,
     // per-visitor payment status, noindex/nofollow on the page itself,
     // same treatment as the quiz/review result pages.
-    for (const slug of ['owner-check', 'owner-dependency-quiz', 'commercial-gaps-review', 'market-ready-test', 'where-to-start', 'where-to-start/commercial-review', 'where-to-start/full-commercial-review', 'where-to-start/website-build', 'where-to-start/full-review-website-build']) {
+    for (const slug of ['owner-check', 'owner-dependency-quiz', 'commercial-gaps-review', 'market-ready-test', 'where-to-start', 'where-to-start/commercial-review', 'where-to-start/full-commercial-review', 'where-to-start/website-build', 'where-to-start/full-review-website-build', 'product-guide']) {
       urlEntries.push(`  <url><loc>${escapeXml(`${base}/${slug}`)}</loc><lastmod>${ASSESSMENT_ROUTE_LASTMOD[slug]}</lastmod></url>`);
     }
     res.type('application/xml').send(
@@ -599,6 +601,14 @@ app.use(commercialGapsReview.router);
 // separately, much earlier — see mountWebhook above).
 whereToStart.mountPageRoute(app, generateCsrfToken);
 app.use(whereToStart.router);
+
+// Arrington Product Guide — guided recommendation experience (see
+// routes/productGuide.js). Same registration pattern as the tools above:
+// the GET page route is registered directly so its form's CSRF token is
+// generated here, and the POST endpoints go through the router so they sit
+// behind the global CSRF middleware like every other public form.
+productGuide.mountPageRoute(app, generateCsrfToken);
+app.use(productGuide.router);
 
 // /v1.html — retired from public serving (15/08/2026). The original V1
 // single-page site was kept served as a reference copy, with a relaxed
