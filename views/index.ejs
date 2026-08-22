@@ -211,6 +211,25 @@
             :root { --site-chrome: 65px; }
         }
 
+        /* ---- THREE-SURFACE VISUAL SYSTEM (22/08/2026) ----
+           Kept in step with the identical block in
+           partials/site-chrome-styles.ejs (see the comment there for the
+           full rationale) — this file does not include that partial, so
+           the rule has to be declared here too. */
+        .surface-midnight { background: var(--near-black); }
+
+        .surface-paper {
+            background: var(--surface-paper);
+            --text: var(--surface-paper-text);
+            --text-muted: var(--surface-paper-text-muted);
+            --text-bright: var(--surface-paper-text);
+            --border: color-mix(in srgb, var(--surface-paper-text) 14%, transparent);
+            --near-black: color-mix(in srgb, var(--surface-paper) 92%, black 8%);
+            --dark-grey: color-mix(in srgb, var(--surface-paper) 88%, black 12%);
+            --charcoal: color-mix(in srgb, var(--surface-paper) 84%, black 16%);
+            --mid-grey: color-mix(in srgb, var(--surface-paper) 78%, black 22%);
+        }
+
         html {
             scroll-behavior: smooth;
             font-size: 16px;
@@ -675,6 +694,27 @@
             height: 22px;
             color: var(--accent);
             opacity: 0.45;
+        }
+
+        /* Product Guide teaser (22/08/2026) — deliberately plain: a label,
+           a heading, one line of body copy and an outline button, centred,
+           on the midnight surface. No card, no icon, no equal-weight
+           competition with the hero's own CTA above it. */
+        .pg-teaser { padding: 4rem 2rem; }
+        .pg-teaser-inner { max-width: 560px; margin: 0 auto; text-align: center; }
+        .pg-teaser-label {
+            font-size: 0.74rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 0.75rem;
+        }
+        .pg-teaser-heading { font-size: clamp(1.5rem, 3.2vw, 1.9rem); margin-bottom: 0.9rem; }
+        .pg-teaser-body { font-size: 1.02rem; color: var(--text-muted); margin-bottom: 1.75rem; }
+
+        @media (max-width: 600px) {
+            .pg-teaser { padding: 3rem 1.5rem; }
         }
 
         /* Desktop-only homepage hero refinements (15/08/2026). Deliberately
@@ -1735,8 +1775,17 @@
         }
 
         /* ---- DOCUMENTS ---- */
-        .documents {
-            background: var(--near-black);
+        /* Evidence visual pass (22/08/2026): the documents template shows
+           real client PDF pages, so it is the most literal fit in the
+           whole site for the warm-paper surface — genuine document pages,
+           on something that reads like paper. .surface-paper is added on
+           the section tag itself (see the template above); this rule pins
+           the true paper tone rather than the darker near-black-derived
+           shade .surface-paper's own override would otherwise produce here
+           (that mixed shade is still used correctly by nested elements
+           like the montage image background below). */
+        .documents.surface-paper {
+            background: var(--surface-paper);
             border-top: 1px solid var(--border);
             border-bottom: 1px solid var(--border);
         }
@@ -1800,7 +1849,7 @@
            gives it plenty of visual weight against the flat page. */
         .document-card {
             display: grid;
-            grid-template-columns: 190px 1fr;
+            grid-template-columns: 220px 1fr;
             gap: 2.5rem;
             align-items: start;
             padding-top: 2.5rem;
@@ -1810,6 +1859,17 @@
         .documents-list .document-card:first-child {
             padding-top: 0;
             border-top: none;
+        }
+
+        /* One dominant evidence asset, smaller supporting ones after it
+           (22/08/2026 evidence visual pass) — the first document's preview
+           reads meaningfully larger than the rest, rather than four
+           equal-weight thumbnails. */
+        .documents-list .document-card:first-child {
+            grid-template-columns: 320px 1fr;
+        }
+        .documents-list .document-card:first-child .document-thumb {
+            box-shadow: 0 16px 36px rgba(0,0,0,0.22);
         }
 
         /* A document with no preview image set gets the full card width. */
@@ -1889,6 +1949,7 @@
 
             .documents-list .document-card:first-child {
                 padding-top: 0;
+                grid-template-columns: 1fr;
             }
 
             .document-thumb {
@@ -1996,7 +2057,12 @@
         }
 
         .casestudy2-inner {
-            max-width: 760px;
+            /* Widened from 760px (22/08/2026 evidence visual pass) so the
+               real project screenshots below have genuine room to be
+               inspected — still a comfortable prose reading width, just no
+               longer needlessly capping the one thing on this template
+               that benefits from being larger. */
+            max-width: 860px;
         }
 
         .casestudy2-intro {
@@ -2106,6 +2172,12 @@
             border: 1px solid var(--border);
             background: var(--charcoal);
             position: relative;
+            /* Restrained case-file framing (22/08/2026 evidence visual
+               pass): a thin warm-paper mat around each real screenshot,
+               like a photo mounted in a folder, rather than the image
+               sitting flush against the section background. */
+            padding: 0.6rem;
+            background-color: var(--surface-paper);
         }
 
         .cs2-screenshots:not(.cs2-screenshots--single):not(.cs2-screenshots--pair) .cs2-screenshot:first-child {
@@ -2117,6 +2189,7 @@
             display: block;
             width: 100%;
             height: auto;
+            border-radius: 2px;
         }
 
         .cs2-screenshot.cs2-screenshot--empty {
@@ -3180,6 +3253,25 @@
 </section>
 <% } %>
 
+<% /* Product Guide teaser — homepage only, immediately below the hero,
+      hardcoded (not a CMS section) per the site refinement brief: a
+      strong but secondary entry point, deliberately not competing with
+      the hero's own CTA. Uses the midnight surface so it reads as a
+      distinct, quieter zone rather than another slab of the same navy.
+      Restricted to currentPage.slug === 'main' and the base hero instance
+      so it never appears on other pages that happen to reuse the hero
+      template (Business Consultant Devon, the booking page). */ %>
+<% if (_tpl === 'hero' && _iid === 'hero' && currentPage.slug === 'main') { %>
+<section class="pg-teaser surface-midnight">
+    <div class="pg-teaser-inner">
+        <p class="pg-teaser-label">Not sure where to start?</p>
+        <h2 class="pg-teaser-heading">Arrington Product Guide</h2>
+        <p class="pg-teaser-body">Answer a few questions and we will recommend the most sensible next step.</p>
+        <a href="/product-guide" class="btn btn-outline">Use the Product Guide</a>
+    </div>
+</section>
+<% } %>
+
 <% if (_tpl === 'credentials') { %>
 <% const _k = _iid; %>
 <% const _kOx = _iid + '_oxford'; %>
@@ -3601,7 +3693,7 @@
   const _montage = _docs.filter(d => d.image);
 %>
 <!-- DOCUMENTS -->
-<section class="documents<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" id="<%= _iid %>" data-section-id="<%= _iid %>">
+<section class="documents surface-paper<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" id="<%= _iid %>" data-section-id="<%= _iid %>">
     <div class="section-inner cms-section" data-section="<%= _k %>">
         <% if (canEdit) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>
         <% if (canEdit) { %><button class="cms-move-btn cms-move-up" data-section-id="<%= _iid %>" title="Move up">&#9650;</button><% } %>

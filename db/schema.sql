@@ -235,3 +235,36 @@ CREATE TABLE IF NOT EXISTS webhook_log (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_webhook_log_created_at ON webhook_log (created_at DESC);
+
+-- Arrington Product Guide — the guided recommendation experience (see
+-- lib/productGuide.js for the routing engine, routes/productGuide.js for the
+-- flow). Deliberately anonymous-first: a row is created when the visitor
+-- submits their answers and sees their recommendation, with NO contact
+-- details, because the approved brief requires the result to be shown before
+-- any contact capture ("Do not require somebody to surrender contact details
+-- simply to discover the recommendation"). name/email are filled in later,
+-- and only if the visitor separately chooses to be contacted or emailed —
+-- which is also the only point at which the optional AI summary runs (see
+-- lib/productGuideAI.js).
+--
+-- recommendation_id holds the offer id chosen by computeRecommendation()
+-- (matching lib/whereToStartOffers.js OFFERS keys), and recommendation_reason
+-- the audit string explaining which branch produced it, so any recommendation
+-- shown to any visitor can be reconstructed and checked after the fact
+-- without re-running the guide.
+CREATE TABLE IF NOT EXISTS product_guide_submissions (
+    id SERIAL PRIMARY KEY,
+    result_token VARCHAR(64) UNIQUE NOT NULL,
+    answers JSONB NOT NULL DEFAULT '{}'::jsonb,
+    recommendation_id VARCHAR(60) NOT NULL DEFAULT '',
+    recommendation_reason VARCHAR(120) NOT NULL DEFAULT '',
+    sensitive_topic VARCHAR(30) NOT NULL DEFAULT '',
+    name VARCHAR(200) NOT NULL DEFAULT '',
+    email VARCHAR(255) NOT NULL DEFAULT '',
+    contact_requested BOOLEAN NOT NULL DEFAULT false,
+    ai_summary TEXT NOT NULL DEFAULT '',
+    ai_mode VARCHAR(10) NOT NULL DEFAULT 'mock' CHECK (ai_mode IN ('mock', 'live')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    contacted_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_product_guide_created_at ON product_guide_submissions (created_at DESC);

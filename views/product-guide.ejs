@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arrington Product Guide | Arrington Consultancy</title>
+    <meta name="description" content="Answer a few questions and we will recommend the most sensible next step with Arrington. No contact details needed to see your recommendation.">
+    <link rel="canonical" href="https://www.arringtonconsultancy.com/product-guide">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Arrington Product Guide | Arrington Consultancy">
+    <meta property="og:description" content="Answer a few questions and we will recommend the most sensible next step with Arrington.">
+    <meta property="og:url" content="https://www.arringtonconsultancy.com/product-guide">
+    <meta property="og:image" content="https://www.arringtonconsultancy.com/img/logo">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="csrf-token" content="<%= csrfToken %>">
+    <meta name="turnstile-site-key" content="<%= turnstileSiteKey %>">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" href="/icons/icon-32.png" type="image/png" sizes="32x32">
+    <link rel="icon" href="/icons/icon-16.png" type="image/png" sizes="16x16">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <script async defer src="https://challenges.cloudflare.com/turnstile/v0/api.js"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18129914078"></script>
+    <script nonce="<%= nonce %>">
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'AW-18129914078');
+        <% if (ga4Id) { %>
+        gtag('config', '<%= ga4Id %>');
+        <% } %>
+    </script>
+    <style nonce="<%= nonce %>">
+        :root {
+            <% for (const [prop, val] of Object.entries(theme.vars)) { %>
+            <%= prop %>: <%= val %>;
+            <% } %>
+        }
+        * { box-sizing: border-box; }
+        @media (prefers-reduced-motion: reduce) {
+            * { transition: none !important; animation: none !important; }
+        }
+        body {
+            margin: 0;
+            font-family: 'DM Sans', sans-serif;
+            background: var(--black);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        <%- include('partials/site-chrome-styles') %>
+
+        h1, h2, h3 {
+            font-family: 'DM Serif Display', serif;
+            font-weight: 400;
+            color: var(--text-bright);
+            line-height: 1.18;
+            margin: 0;
+        }
+        p { color: var(--text); margin: 0 0 1.2rem; }
+
+        .pg-label {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 0.9rem;
+            display: block;
+        }
+
+        .btn {
+            display: inline-block;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            padding: 0.9rem 1.9rem;
+            border-radius: 3px;
+            text-decoration: none;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        .btn-primary { background: var(--accent); color: var(--black); border-color: var(--accent); }
+        .btn-primary:hover, .btn-primary:focus-visible { background: var(--accent-hover); border-color: var(--accent-hover); }
+        .btn-primary:disabled { opacity: 0.5; cursor: default; }
+        .btn-outline { background: transparent; color: var(--text-bright); border-color: var(--border); }
+        .btn-outline:hover, .btn-outline:focus-visible { border-color: var(--accent); color: var(--accent); }
+        .btn-quiet {
+            background: none;
+            border: none;
+            padding: 0.6rem 0;
+            color: var(--text-muted);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.92rem;
+            cursor: pointer;
+        }
+        .btn-quiet:hover { color: var(--accent); }
+
+        main {
+            max-width: 680px;
+            margin: 0 auto;
+            padding: calc(var(--site-chrome) + 3rem) 1.5rem 6rem;
+            /* Hold the viewport so the global footer (which carries its own
+               contact form) never crowds into the same visual zone as the
+               question being asked — the brief asks for one obvious primary
+               action per zone, and a second form immediately under the
+               question breaks that on a phone. */
+            min-height: 100vh;
+        }
+
+        /* ---- INTRO ---- */
+        .pg-intro h1 { font-size: clamp(2rem, 5vw, 2.7rem); margin-bottom: 1rem; }
+        .pg-intro p { font-size: 1.1rem; color: var(--text-muted); }
+        .pg-intro-note {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            border-left: 2px solid var(--border);
+            padding-left: 1.1rem;
+            margin: 2.5rem 0;
+        }
+        .pg-intro-actions { margin-top: 2.5rem; }
+        .pg-intro-alt { margin-top: 1.5rem; font-size: 0.95rem; }
+        .pg-intro-alt a { color: var(--text-muted); }
+        .pg-intro-alt a:hover { color: var(--accent); }
+
+        /* ---- QUESTION SCREENS ----
+           One question at a time, generous space, no progress bar. The
+           brief is explicit that this should feel like a composed
+           commercial check-in rather than a quiz: no scores, no bars, no
+           animation beyond a plain fade. */
+        .pg-progress {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--text-muted);
+            margin-bottom: 0.6rem;
+        }
+        .pg-progress-rule {
+            height: 1px;
+            background: var(--border);
+            margin-bottom: 3rem;
+            position: relative;
+        }
+        .pg-progress-rule span {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 1px;
+            background: var(--accent);
+            opacity: 0.5;
+            transition: width 0.35s ease;
+        }
+
+        .pg-question h2 {
+            font-size: clamp(1.5rem, 3.6vw, 2rem);
+            margin-bottom: 2.25rem;
+        }
+
+        .pg-options { display: flex; flex-direction: column; gap: 0.85rem; }
+        .pg-option {
+            display: block;
+            width: 100%;
+            text-align: left;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1.02rem;
+            line-height: 1.5;
+            color: var(--text-bright);
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            /* Large tap target — comfortably above the 44px minimum even
+               for a single-line option on a phone. */
+            padding: 1.15rem 1.35rem;
+            cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
+        }
+        .pg-option:hover, .pg-option:focus-visible {
+            border-color: var(--accent);
+            background: color-mix(in srgb, var(--accent) 7%, transparent);
+        }
+        .pg-option[aria-pressed="true"] {
+            border-color: var(--accent);
+            background: color-mix(in srgb, var(--accent) 12%, transparent);
+        }
+
+        .pg-textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 1.1rem 1.25rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-bright);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1.02rem;
+            line-height: 1.6;
+            resize: vertical;
+        }
+        .pg-textarea:focus { outline: none; border-color: var(--accent); }
+        .pg-textarea::placeholder { color: var(--text-muted); opacity: 0.75; }
+
+        .pg-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-top: 2.5rem;
+        }
+        .pg-nav-spacer { flex: 1; }
+
+        .pg-error {
+            color: #e07a5f;
+            font-size: 0.92rem;
+            margin-top: 1rem;
+        }
+
+        /* ---- RESULT ----
+           One dominant recommendation. Later routes are deliberately
+           quieter, smaller and below a rule — never a comparison grid. */
+        .pg-result-lead { font-size: 1.05rem; color: var(--text-muted); margin-bottom: 2.5rem; }
+
+        .pg-rec {
+            border-top: 2px solid var(--accent);
+            padding-top: 2rem;
+            margin-bottom: 3rem;
+        }
+        .pg-rec-head {
+            display: flex;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 0.75rem 1.5rem;
+            margin-bottom: 1.25rem;
+        }
+        .pg-rec-head h2 { font-size: clamp(1.9rem, 4.5vw, 2.5rem); }
+        .pg-rec-price {
+            font-family: 'DM Serif Display', serif;
+            font-size: clamp(1.8rem, 4vw, 2.3rem);
+            color: var(--accent);
+            line-height: 1;
+        }
+        .pg-rec-why { font-size: 1.08rem; color: var(--text-bright); }
+        .pg-rec-actions { margin-top: 1.75rem; }
+
+        .pg-next {
+            border-top: 1px solid var(--border);
+            padding-top: 2rem;
+            margin-bottom: 3rem;
+        }
+        .pg-next h3 {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 1rem;
+        }
+
+        /* Secondary by construction: smaller type, muted colour, plain
+           list, no buttons. Nothing here should read as a competing offer. */
+        .pg-later {
+            border-top: 1px solid var(--border);
+            padding-top: 2rem;
+            margin-bottom: 3rem;
+        }
+        .pg-later h3 {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+        }
+        .pg-later p { font-size: 0.95rem; color: var(--text-muted); }
+        .pg-later ul { list-style: none; padding: 0; margin: 0 0 1rem; }
+        .pg-later li {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            padding: 0.35rem 0;
+        }
+        .pg-later li a { color: var(--text-muted); }
+        .pg-later li a:hover { color: var(--accent); }
+
+        /* ---- CONTACT (always after the result) ---- */
+        .pg-contact {
+            border-top: 1px solid var(--border);
+            padding-top: 2.5rem;
+        }
+        .pg-contact h3 { font-size: 1.35rem; margin-bottom: 0.6rem; }
+        .pg-contact-note { font-size: 0.95rem; color: var(--text-muted); margin-bottom: 1.75rem; }
+        .pg-field { margin-bottom: 1.25rem; }
+        .pg-field label { display: block; font-size: 0.88rem; color: var(--text-muted); margin-bottom: 0.4rem; }
+        .pg-field input[type="text"], .pg-field input[type="email"] {
+            width: 100%;
+            padding: 0.9rem 1rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            color: var(--text-bright);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+        }
+        .pg-field input:focus { outline: none; border-color: var(--accent); }
+        .pg-check {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.7rem;
+            font-size: 0.95rem;
+            color: var(--text);
+            margin-bottom: 1.5rem;
+            cursor: pointer;
+        }
+        .pg-check input { margin-top: 0.35rem; width: 1.05rem; height: 1.05rem; flex-shrink: 0; }
+        .pg-website-field { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+        .pg-turnstile { margin: 0 0 1.25rem; }
+        .pg-status { font-size: 0.95rem; margin-top: 1rem; }
+        .pg-status--ok { color: var(--accent); }
+        .pg-status--error { color: #e07a5f; }
+
+        /* Plain-language AI disclosure, deliberately understated — not a
+           badge, not decoration. */
+        .pg-disclosure {
+            margin-top: 3.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        [hidden] { display: none !important; }
+
+        @media (max-width: 600px) {
+            main { padding: calc(var(--site-chrome) + 2rem) 1.25rem 4.5rem; }
+            .pg-progress-rule { margin-bottom: 2.25rem; }
+            .pg-question h2 { margin-bottom: 1.75rem; }
+            .pg-nav { flex-wrap: wrap; }
+            .pg-nav .btn { width: 100%; text-align: center; }
+            .pg-nav-spacer { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <%- include('partials/site-header', { currentPage: { slug: 'product-guide' }, navPages, canEdit: false, content, pageContact }) %>
+
+    <main>
+        <!-- ---- INTRO ---- -->
+        <section id="pg-intro" class="pg-intro">
+            <p class="pg-label">Arrington Product Guide</p>
+            <h1>Not sure where to start?</h1>
+            <p>Answer a few questions about the business and we will tell you which piece of work makes the most sense to start with, if any.</p>
+            <div class="pg-intro-note">
+                <p>This is not a diagnostic and it does not replace Tom looking properly at the business. It is here to help you work out a sensible next step. You will see the recommendation straight away, without giving us your details.</p>
+            </div>
+            <div class="pg-intro-actions">
+                <button type="button" class="btn btn-primary" id="pg-start">Start the guide</button>
+            </div>
+            <p class="pg-intro-alt"><a href="/where-to-start">Already know what you need? See the options &rarr;</a></p>
+        </section>
+
+        <!-- ---- QUESTIONS ---- -->
+        <section id="pg-questions" hidden>
+            <p class="pg-progress" id="pg-progress-text"></p>
+            <div class="pg-progress-rule"><span id="pg-progress-bar"></span></div>
+
+            <div class="pg-question">
+                <h2 id="pg-question-text"></h2>
+
+                <div class="pg-options" id="pg-options" hidden></div>
+
+                <div id="pg-text-wrap" hidden>
+                    <label class="pg-website-field" for="pg-textarea">Your answer</label>
+                    <textarea id="pg-textarea" class="pg-textarea"></textarea>
+                </div>
+
+                <p class="pg-error" id="pg-question-error" hidden></p>
+
+                <div class="pg-nav">
+                    <button type="button" class="btn-quiet" id="pg-back">&larr; Back</button>
+                    <span class="pg-nav-spacer"></span>
+                    <button type="button" class="btn btn-primary" id="pg-continue">Continue</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ---- RESULT ---- -->
+        <section id="pg-result" hidden>
+            <p class="pg-label">We'd start here</p>
+            <p class="pg-result-lead" id="pg-result-lead">Based on what you have told us.</p>
+
+            <div class="pg-rec">
+                <div class="pg-rec-head">
+                    <h2 id="pg-rec-name"></h2>
+                    <p class="pg-rec-price" id="pg-rec-price"></p>
+                </div>
+                <p class="pg-rec-why" id="pg-rec-why"></p>
+                <div class="pg-rec-actions">
+                    <a href="/where-to-start" class="btn btn-primary" id="pg-rec-link">See what this involves</a>
+                </div>
+            </div>
+
+            <div class="pg-next">
+                <h3>What happens next</h3>
+                <p id="pg-next-text"></p>
+            </div>
+
+            <div class="pg-later" id="pg-later" hidden>
+                <h3>Possible later routes</h3>
+                <p>These are not recommendations. Whether any of them make sense is a decision for after the work above, not now.</p>
+                <ul id="pg-later-list"></ul>
+            </div>
+
+            <!-- Contact capture — deliberately after the result, never
+                 before it, and entirely optional. -->
+            <div class="pg-contact">
+                <h3>Want this sent to you?</h3>
+                <p class="pg-contact-note">Optional. We will send you a copy of this recommendation, and get in touch only if you ask us to.</p>
+
+                <form id="pg-contact-form">
+                    <div class="pg-field">
+                        <label for="pg-name">Your name</label>
+                        <input type="text" id="pg-name" name="name" maxlength="200" autocomplete="name" required>
+                    </div>
+                    <div class="pg-field">
+                        <label for="pg-email">Your email</label>
+                        <input type="email" id="pg-email" name="email" maxlength="255" autocomplete="email" required>
+                    </div>
+                    <div class="pg-website-field" aria-hidden="true">
+                        <label for="pg-website">Leave this field blank</label>
+                        <input type="text" id="pg-website" name="website" tabindex="-1" autocomplete="off">
+                    </div>
+                    <label class="pg-check">
+                        <input type="checkbox" id="pg-wants-contact">
+                        <span>Yes, I would like Arrington to get in touch about this.</span>
+                    </label>
+                    <div id="pg-turnstile" class="pg-turnstile"></div>
+                    <button type="submit" class="btn btn-primary" id="pg-contact-submit" disabled>Send me this recommendation</button>
+                    <p class="pg-status" id="pg-contact-status" role="status"></p>
+                </form>
+            </div>
+
+            <p class="pg-disclosure">The recommendation above is worked out from your answers using fixed rules written by us, not generated by a model. If you ask us to get in touch, we may use AI to summarise what you wrote so Tom can read it quickly before replying. Nothing you write is used to decide what you are shown.</p>
+        </section>
+    </main>
+
+    <%- include('partials/site-footer', { canEdit: false, pageContact, content }) %>
+    <script nonce="<%= nonce %>">
+        <%- include('partials/site-chrome-script') %>
+
+        (function () {
+            var QUESTIONS = <%- JSON.stringify(questions) %>;
+            var state = { index: 0, answers: {}, resultToken: null };
+
+            var elIntro = document.getElementById('pg-intro');
+            var elQuestions = document.getElementById('pg-questions');
+            var elResult = document.getElementById('pg-result');
+            var elProgressText = document.getElementById('pg-progress-text');
+            var elProgressBar = document.getElementById('pg-progress-bar');
+            var elQuestionText = document.getElementById('pg-question-text');
+            var elOptions = document.getElementById('pg-options');
+            var elTextWrap = document.getElementById('pg-text-wrap');
+            var elTextarea = document.getElementById('pg-textarea');
+            var elQuestionError = document.getElementById('pg-question-error');
+            var elBack = document.getElementById('pg-back');
+            var elContinue = document.getElementById('pg-continue');
+
+            function show(el) {
+                elIntro.hidden = el !== elIntro;
+                elQuestions.hidden = el !== elQuestions;
+                elResult.hidden = el !== elResult;
+                window.scrollTo({ top: 0, behavior: 'auto' });
+            }
+
+            document.getElementById('pg-start').addEventListener('click', function () {
+                state.index = 0;
+                show(elQuestions);
+                renderQuestion();
+            });
+
+            function renderQuestion() {
+                var q = QUESTIONS[state.index];
+                elQuestionError.hidden = true;
+
+                elProgressText.textContent = 'Question ' + (state.index + 1) + ' of ' + QUESTIONS.length;
+                elProgressBar.style.width = Math.round(((state.index) / QUESTIONS.length) * 100) + '%';
+
+                elQuestionText.textContent = q.prompt;
+                elBack.hidden = state.index === 0;
+
+                if (q.type === 'choice') {
+                    elTextWrap.hidden = true;
+                    elOptions.hidden = false;
+                    elOptions.innerHTML = '';
+                    q.options.forEach(function (opt) {
+                        var btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'pg-option';
+                        btn.textContent = opt.label;
+                        btn.setAttribute('aria-pressed', state.answers[q.id] === opt.value ? 'true' : 'false');
+                        btn.addEventListener('click', function () {
+                            state.answers[q.id] = opt.value;
+                            // Selecting an option advances straight away —
+                            // no separate confirm step for a single choice.
+                            advance();
+                        });
+                        elOptions.appendChild(btn);
+                    });
+                    elContinue.hidden = true;
+                } else {
+                    elOptions.hidden = true;
+                    elTextWrap.hidden = false;
+                    elTextarea.value = state.answers[q.id] || '';
+                    elTextarea.placeholder = q.placeholder || '';
+                    elTextarea.maxLength = q.maxLength;
+                    elContinue.hidden = false;
+                    elContinue.textContent = state.index === QUESTIONS.length - 1 ? 'See my recommendation' : 'Continue';
+                    elTextarea.focus();
+                }
+            }
+
+            function advance() {
+                if (state.index < QUESTIONS.length - 1) {
+                    state.index += 1;
+                    renderQuestion();
+                } else {
+                    submit();
+                }
+            }
+
+            elContinue.addEventListener('click', function () {
+                var q = QUESTIONS[state.index];
+                if (q.type === 'text') {
+                    var value = elTextarea.value.trim();
+                    if (q.required && !value) {
+                        elQuestionError.textContent = 'Please answer this before continuing.';
+                        elQuestionError.hidden = false;
+                        return;
+                    }
+                    state.answers[q.id] = value;
+                }
+                advance();
+            });
+
+            elBack.addEventListener('click', function () {
+                if (state.index > 0) {
+                    state.index -= 1;
+                    renderQuestion();
+                }
+            });
+
+            function formatPrice(pence) {
+                if (!pence) return '£0';
+                return '£' + (pence / 100).toLocaleString('en-GB');
+            }
+
+            function submit() {
+                elContinue.disabled = true;
+                var csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+                fetch('/api/product-guide/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                    body: JSON.stringify({ answers: state.answers, website: document.getElementById('pg-website').value })
+                }).then(function (res) {
+                    return res.json().catch(function () { return {}; }).then(function (data) {
+                        return { ok: res.ok, data: data };
+                    });
+                }).then(function (out) {
+                    elContinue.disabled = false;
+                    if (!out.ok || !out.data || !out.data.result) {
+                        elQuestionError.textContent = (out.data && out.data.error) || 'Something went wrong. Please try again.';
+                        elQuestionError.hidden = false;
+                        return;
+                    }
+                    state.resultToken = out.data.resultToken;
+                    renderResult(out.data.result);
+                }).catch(function () {
+                    elContinue.disabled = false;
+                    elQuestionError.textContent = 'Something went wrong. Please try again.';
+                    elQuestionError.hidden = false;
+                });
+            }
+
+            function renderResult(result) {
+                document.getElementById('pg-rec-name').textContent = result.recommendation.name;
+                document.getElementById('pg-rec-price').textContent = formatPrice(result.recommendation.pricePence);
+                document.getElementById('pg-rec-why').textContent = result.why;
+                document.getElementById('pg-next-text').textContent = result.whatHappensNext;
+
+                var link = document.getElementById('pg-rec-link');
+                link.href = result.recommendation.path;
+                link.textContent = result.recommendation.pricePence
+                    ? 'See what this involves'
+                    : 'Start the conversation';
+
+                var laterWrap = document.getElementById('pg-later');
+                var laterList = document.getElementById('pg-later-list');
+                laterList.innerHTML = '';
+                if (result.laterRoutes && result.laterRoutes.length) {
+                    result.laterRoutes.forEach(function (route) {
+                        var li = document.createElement('li');
+                        var a = document.createElement('a');
+                        a.href = route.path;
+                        a.textContent = route.name + (route.pricePence ? ' — ' + formatPrice(route.pricePence) : '');
+                        li.appendChild(a);
+                        laterList.appendChild(li);
+                    });
+                    laterWrap.hidden = false;
+                } else {
+                    laterWrap.hidden = true;
+                }
+
+                show(elResult);
+                renderTurnstileWidget();
+            }
+
+            // ---- Human verification, only on the optional contact form ----
+            var turnstileToken = null;
+            var turnstileWidgetId = null;
+            function renderTurnstileWidget() {
+                turnstileToken = null;
+                document.getElementById('pg-contact-submit').disabled = true;
+
+                function render() {
+                    if (typeof turnstile === 'undefined') {
+                        window.setTimeout(render, 300);
+                        return;
+                    }
+                    if (turnstileWidgetId !== null) {
+                        turnstile.reset(turnstileWidgetId);
+                        return;
+                    }
+                    var siteKey = document.querySelector('meta[name="turnstile-site-key"]')?.content;
+                    turnstileWidgetId = turnstile.render('#pg-turnstile', {
+                        sitekey: siteKey,
+                        callback: function (token) {
+                            turnstileToken = token;
+                            document.getElementById('pg-contact-submit').disabled = false;
+                        },
+                        'error-callback': function () {
+                            document.getElementById('pg-contact-submit').disabled = true;
+                        },
+                        'expired-callback': function () {
+                            turnstileToken = null;
+                            document.getElementById('pg-contact-submit').disabled = true;
+                        }
+                    });
+                }
+                render();
+            }
+
+            document.getElementById('pg-contact-form').addEventListener('submit', function (e) {
+                e.preventDefault();
+                if (!turnstileToken) return;
+
+                var status = document.getElementById('pg-contact-status');
+                var submitBtn = document.getElementById('pg-contact-submit');
+                status.textContent = '';
+                status.className = 'pg-status';
+                submitBtn.disabled = true;
+
+                var csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+                fetch('/api/product-guide/contact', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                    body: JSON.stringify({
+                        token: state.resultToken,
+                        name: document.getElementById('pg-name').value,
+                        email: document.getElementById('pg-email').value,
+                        wantsContact: document.getElementById('pg-wants-contact').checked,
+                        website: document.getElementById('pg-website').value,
+                        turnstileToken: turnstileToken
+                    })
+                }).then(function (res) {
+                    return res.json().catch(function () { return {}; }).then(function (data) {
+                        return { ok: res.ok, data: data };
+                    });
+                }).then(function (out) {
+                    if (out.ok && out.data && out.data.ok) {
+                        status.textContent = 'Sent. Check your inbox shortly.';
+                        status.className = 'pg-status pg-status--ok';
+                    } else {
+                        status.textContent = (out.data && out.data.error) || 'Something went wrong. Please try again.';
+                        status.className = 'pg-status pg-status--error';
+                        submitBtn.disabled = false;
+                        renderTurnstileWidget();
+                    }
+                }).catch(function () {
+                    status.textContent = 'Something went wrong. Please try again.';
+                    status.className = 'pg-status pg-status--error';
+                    submitBtn.disabled = false;
+                    renderTurnstileWidget();
+                });
+            });
+        })();
+    </script>
+</body>
+</html>

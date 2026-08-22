@@ -19,7 +19,10 @@ const themes = {
       '--text': '#d4d0c8',
       '--text-muted': '#a8a49e',
       '--text-bright': '#f0ece6',
-      '--border': 'rgba(255,255,255,0.06)'
+      '--border': 'rgba(255,255,255,0.06)',
+      '--surface-paper': '#f4efe4',
+      '--surface-paper-text': '#2a2620',
+      '--surface-paper-text-muted': '#6b6255'
     }
   },
   oxford: {
@@ -38,7 +41,10 @@ const themes = {
       '--text': '#c8d0dc',
       '--text-muted': '#9aaabe',
       '--text-bright': '#e8edf4',
-      '--border': 'rgba(255,255,255,0.08)'
+      '--border': 'rgba(255,255,255,0.08)',
+      '--surface-paper': '#f2ede0',
+      '--surface-paper-text': '#1c2430',
+      '--surface-paper-text-muted': '#5c6675'
     }
   },
   light: {
@@ -57,7 +63,10 @@ const themes = {
       '--text': '#3a3a3a',
       '--text-muted': '#6a6a6a',
       '--text-bright': '#1a1a1a',
-      '--border': 'rgba(0,0,0,0.08)'
+      '--border': 'rgba(0,0,0,0.08)',
+      '--surface-paper': '#ece3d2',
+      '--surface-paper-text': '#2a2a2a',
+      '--surface-paper-text-muted': '#6a6a6a'
     }
   },
   slate: {
@@ -76,7 +85,10 @@ const themes = {
       '--text': '#b8c0cc',
       '--text-muted': '#94a0b4',
       '--text-bright': '#e4e8f0',
-      '--border': 'rgba(255,255,255,0.07)'
+      '--border': 'rgba(255,255,255,0.07)',
+      '--surface-paper': '#eee9df',
+      '--surface-paper-text': '#242a30',
+      '--surface-paper-text-muted': '#5f6874'
     }
   },
   ember: {
@@ -95,7 +107,10 @@ const themes = {
       '--text': '#d0c4b8',
       '--text-muted': '#a89c90',
       '--text-bright': '#f0e8de',
-      '--border': 'rgba(255,255,255,0.06)'
+      '--border': 'rgba(255,255,255,0.06)',
+      '--surface-paper': '#f2e8da',
+      '--surface-paper-text': '#2a2018',
+      '--surface-paper-text-muted': '#6b5d50'
     }
   }
 };

@@ -4510,6 +4510,34 @@ async function seed() {
     console.log(`Homepage hero proof line migration: ${rowCount} row(s) updated.`);
   }
 
+  // Migration: restore Useful Thinking to the main nav (22/08/2026). The
+  // approved site refinement brief's Section 9 lists the principal nav
+  // routes explicitly as "What We Do, Evidence, Useful Thinking, Owner
+  // Check, Websites and AI, About Us, Product Guide" — naming Useful
+  // Thinking plainly alongside the other top-level items, with no
+  // qualification. It had been show_in_nav = false since the 30/07/2026
+  // Evidence merge (discoverable only via contextual links). This flips it
+  // back to true exactly once, marker-guarded so a later deliberate
+  // decision to hide it again via the admin panel is never re-overwritten
+  // by a future boot.
+  {
+    const UT_NAV_MARKER = 'nav.useful_thinking_restored_2026-08-22';
+    const { rows: utNavMarkerRows } = await db.query(
+      'SELECT 1 FROM content WHERE section_key = $1',
+      [UT_NAV_MARKER]
+    );
+    if (utNavMarkerRows.length === 0) {
+      const { rowCount } = await db.query(
+        `UPDATE pages SET show_in_nav = true WHERE slug = 'useful-thinking' AND show_in_nav = false`
+      );
+      await db.query(
+        'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+        [UT_NAV_MARKER, 'true']
+      );
+      console.log(`Useful Thinking nav restore: ${rowCount} page row(s) updated.`);
+    }
+  }
+
   console.log('Seed complete.');
 }
 

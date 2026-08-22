@@ -24,9 +24,15 @@
     </div>
 </nav>
 
+<% /* Home is deliberately not listed in either nav loop below — the logo
+      already returns to the homepage, and the approved nav list treats
+      Home as redundant alongside it (22/08/2026). This filters the `main`
+      page out of the loop only; it stays a completely normal page row
+      otherwise (reorderable, cannot be hidden, etc). */ %>
+<% const _navLoopPages = navPages.filter((p) => p.slug !== 'main'); %>
 <div class="mobile-menu" id="mobileMenu">
-    <% if (navPages.length > 1) { %>
-        <% for (const _p of navPages) { %>
+    <% if (_navLoopPages.length > 0) { %>
+        <% for (const _p of _navLoopPages) { %>
             <% if (!_p.hidden || canEdit) { %>
             <a href="<%= _p.slug === 'main' ? '/' : '/' + _p.slug %>"
                class="<%= _p.slug === currentPage.slug ? 'active' : '' %>">
@@ -46,10 +52,10 @@
     <% } %>
 </div>
 
-<% if (navPages.length > 1) { %>
+<% if (_navLoopPages.length > 0) { %>
 <div class="page-menu" id="pageMenu">
     <div class="page-menu-inner">
-        <% for (const _p of navPages) { %>
+        <% for (const _p of _navLoopPages) { %>
         <a href="<%= _p.slug === 'main' ? '/' : '/' + _p.slug %>"
            class="page-menu-link<%= _p.slug === currentPage.slug ? ' active' : '' %><%= ((_p.hidden || !_p.show_in_nav) && canEdit) ? ' page-menu-hidden' : '' %>"
            <% if (canEdit && !_p.hidden && !_p.show_in_nav) { %>title="Out of the main nav (Show in nav is off), but reachable by direct URL and indexed"<% } %>>
