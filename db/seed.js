@@ -4585,6 +4585,38 @@ async function seed() {
     }
   }
 
+  // Migration: buyer-language standfirst test (23/08/2026). Tom approved a
+  // narrow, controlled AI-recommendation-visibility test (see the AI
+  // Recommendation Visibility worker handoff in Drive, "23 AUGUST 2026 —
+  // APPROVED BUYER-LANGUAGE STANDFIRST TEST"): add one plain-English
+  // standfirst line directly beneath the title of selected existing Useful
+  // Thinking articles, restating the buyer's problem in natural language,
+  // without touching the title, body, story or conclusion.
+  //
+  // A third approved article, "The Reverse Economy of Scale", is
+  // deliberately NOT seeded here. It is still a held, unpublished instance
+  // (article__5 — see lib/usefulThinkingArticles.js's explicit hold note),
+  // with no page row and no live route, so there is nothing to add a
+  // standfirst beneath yet. Seed it once Tom separately approves publishing
+  // that article.
+  //
+  // New content keys only, so ON CONFLICT DO NOTHING is sufficient — no
+  // exact-old-value guard needed (unlike an in-place text edit), and a
+  // later CMS edit to either field is never overwritten by a future boot.
+  {
+    const standfirsts = [
+      ['article__9.standfirst', 'When everything about how the business works is still in your head, the business still depends on you.'],
+      ['article__2.standfirst', 'If customers and staff can reach you whenever they want, the business has not really learnt to operate without you.']
+    ];
+    for (const [key, value] of standfirsts) {
+      await db.query(
+        'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+        [key, value]
+      );
+    }
+    console.log('Buyer-language standfirst test: 2 article standfirst(s) seeded (article__9, article__2).');
+  }
+
   console.log('Seed complete.');
 }
 
