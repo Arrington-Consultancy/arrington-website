@@ -203,6 +203,7 @@
         'wai.contact_submit_text': 'Websites and AI submit button text',
         'article.label': 'Section label',
         'article.heading': 'Title',
+        'article.standfirst': 'Standfirst (optional, one plain-English line shown under the title; leave empty to hide)',
         'article.body': 'Body text',
         'article.index_summary': 'Library summary (one line, shown on the Useful Thinking list)',
         'article.related_text': 'Related link text (leave empty to hide)',

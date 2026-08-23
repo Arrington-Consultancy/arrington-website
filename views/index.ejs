@@ -2519,6 +2519,19 @@
             margin: 0 auto;
         }
 
+        /* Buyer-language standfirst (23/08/2026, approved AI Recommendation
+           Visibility test — see db/seed.js for the source instruction).
+           Deliberately plain sans-serif at body scale, not the serif
+           .section-heading display face, so it reads as a restrained
+           subheading under the title rather than a second headline. */
+        .article-standfirst {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-top: 0.35rem;
+            margin-bottom: 1.5rem;
+        }
+
         .article-image {
             display: block;
             width: 100%;
@@ -4139,6 +4152,9 @@
             <a href="/useful-thinking" class="article-back">&larr; Useful Thinking</a>
             <p class="section-label"><%- content[_k + '.label'] %></p>
             <% const _hTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %><<%= _hTag %> class="section-heading"><%- content[_k + '.heading'] %></<%= _hTag %>>
+            <% if ((content[_k + '.standfirst'] || '').replace(/<[^>]+>/g, '').trim()) { %>
+            <p class="article-standfirst"><%- content[_k + '.standfirst'] %></p>
+            <% } %>
             <%
               const _artImgRaw = (content[_k + '.image'] || '').trim();
               const _artImg = /^\/[A-Za-z0-9._\-\/]*\.(jpe?g|png|webp|avif)$/i.test(_artImgRaw) && !_artImgRaw.includes('..') ? _artImgRaw : '';
