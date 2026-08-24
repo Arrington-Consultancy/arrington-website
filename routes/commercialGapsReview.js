@@ -102,7 +102,8 @@ function mountPageRoute(app, generateCsrfToken) {
         navPages,
         content,
         pageContact,
-        turnstileSiteKey: TURNSTILE_SITE_KEY
+        turnstileSiteKey: TURNSTILE_SITE_KEY,
+        ga4Id: process.env.GA4_MEASUREMENT_ID || ''
       });
     } catch (err) {
       next(err);
@@ -145,7 +146,8 @@ function mountPageRoute(app, generateCsrfToken) {
           csrfToken: generateCsrfToken(req, res),
           navPages,
           content,
-          pageContact
+          pageContact,
+          ga4Id: process.env.GA4_MEASUREMENT_ID || ''
         });
       }
 
@@ -157,7 +159,8 @@ function mountPageRoute(app, generateCsrfToken) {
           csrfToken: generateCsrfToken(req, res),
           navPages,
           content,
-          pageContact
+          pageContact,
+          ga4Id: process.env.GA4_MEASUREMENT_ID || ''
         });
       }
 
@@ -182,7 +185,8 @@ function mountPageRoute(app, generateCsrfToken) {
         csrfToken: generateCsrfToken(req, res),
         navPages,
         content,
-        pageContact
+        pageContact,
+        ga4Id: process.env.GA4_MEASUREMENT_ID || ''
       });
     } catch (err) {
       next(err);
