@@ -17,6 +17,7 @@ const {
   TENTH_PUBLISHED_ARTICLE,
   ELEVENTH_PUBLISHED_ARTICLE,
   TWELFTH_PUBLISHED_ARTICLE,
+  THIRTEENTH_PUBLISHED_ARTICLE,
   buildUsefulThinkingPageOrder
 } = require('../lib/usefulThinkingSeed');
 const { ARTICLES: UT_ARTICLES } = require('../lib/usefulThinkingArticles');
@@ -2784,6 +2785,89 @@ async function seed() {
       );
 
       console.log(`Useful Thinking: 12th article published (${a13}, ${TWELFTH_PUBLISHED_ARTICLE.slug}).`);
+    }
+  }
+
+  // Migration: thirteenth Useful Thinking article, "You Can Train, But You
+  // Shouldn't Blame" (26/08/2026), supplied directly by Tom via the current
+  // Google Drive document of the same name ("Useful Thinking - You Can
+  // Train, But You Shouldn't Blame"). Reproduced verbatim from the
+  // public-facing portion only — the Drive doc's "INTERNAL NOTES — NOT FOR
+  // PUBLICATION" section (status line, buyer-language note, divider) is
+  // explicitly excluded per Tom's own instruction; the public article
+  // starts at "We used to make the dry joke...". Paragraph breaks preserved
+  // exactly as written in Drive, including "blaming them afterwards is
+  // bollocks" and the specific accident detail — both consciously approved
+  // by Tom, not sanitised or anonymised further. Deliberately not connected
+  // into either the Commercial Gaps Review or the Owner Dependency Quiz:
+  // the Drive doc's internal notes name a buyer-language problem ("Why
+  // does everyone still come to me for decisions?") that maps naturally to
+  // the Commercial Gaps Review's decision_making category, but that
+  // category is already claimed by "Being Certain Isn't the Same as Being
+  // Right" (article, the first published piece) and reassigning it wasn't
+  // part of this instruction — flagged for Tom rather than decided here.
+  // Idempotent: guarded on the page not existing yet.
+  {
+    const { rows: existingArticle14 } = await db.query(
+      'SELECT slug FROM pages WHERE slug = $1',
+      [THIRTEENTH_PUBLISHED_ARTICLE.slug]
+    );
+    if (existingArticle14.length === 0) {
+      const a14 = THIRTEENTH_PUBLISHED_ARTICLE.instanceId;
+      const bodyParagraphs14 = [
+          'We used to make the dry joke in the taxi office that we should ban ingenuity.',
+          'It sounds ridiculous, but if you have ever run a business where people need to make decisions without you, you just might understand why.',
+          'We had two accidents about two weeks apart that were almost identical. A drunk driver had ploughed into one of our cars in the early hours. Both were dealt with by different operators in the office. Both operators knew the procedure, but boy, what happened next could not have been more different.',
+          'The first operator did everything you would want her to do, as she always did. She contacted the police, got the driver to take photographs and record what had happened, took the passengers’ details and apologised to them. Then she went further than the procedure required and sent another car to take the passengers home for free, while again contacting them to make sure they weren’t hurt.',
+          'Textbook. To be honest, way better than textbook.',
+          'Then, literally two weeks later, we had another accident. This time the operator forgot to tell the driver to take photographs. The police weren’t contacted, despite our driver suspecting the other driver had been drinking. The passengers were left to fend for themselves and walk home, which obviously, and rightly so, led to a one-star Google review.',
+          'The results weren’t just different on the night. The first accident eventually resulted in the other driver being prosecuted and our insurance claim being settled as non-fault. Our driver even received loss of earnings for the night and the following week.',
+          'The second went 50/50, and we picked up the negative Google review from the passengers as well. Because no photographs had been taken and the police hadn’t been contacted, we simply had less contemporaneous evidence available when liability was being worked out.',
+          'That difference wasn’t just academic. When the insurance came up for renewal, the claims history cost me thousands of pounds.',
+          'The obvious conclusion would be that we needed better procedures. But in reality, we didn’t. The procedure already existed. It was written down and had been briefed in the office. People knew what they were supposed to do.',
+          'Afterwards I tightened things further and made every member of staff, including the operators, sign to confirm that they understood their responsibilities. Previously the operators hadn’t been included in that. It helped with accountability, but it didn’t solve the real problem.',
+          'No procedure is foolproof, which takes me back to our joke about banning ingenuity. Maybe we only wanted to ban it when it was wrong.',
+          'We ran a business 24 hours a day, 365 days a year. I did that for two decades. In that environment, exceptional situations are not particularly exceptional. Eventually something happens that isn’t quite covered by the rulebook and somebody has to make a judgement call.',
+          'And a judgement call is just that. Some people are exceptionally good at them. Others aren’t.',
+          'That creates an uncomfortable problem when two people have exactly the same job. You might trust one operator to make a decision outside the normal remit of their role because you know how they think under pressure. Another person might be loyal, hardworking and useful to the business in plenty of other ways, but you wouldn’t want them making the same call.',
+          'Of course I treated them differently — the alternative was pretending a job title made their judgement identical.',
+          'Businesses often try to solve that problem with more rules. Put another procedure in place, add another approval, make everybody ask a manager before doing something. Eventually you can create an enormous structure simply because admitting that you trust one person’s judgement more than another person’s feels wrong. But where is the line between management and hierarchy when two people are technically doing the same role?',
+          'And in business and in life, you pull at one string to solve a problem and create another. Put too many controls around people and decisions start travelling back up the hierarchy until eventually everyone comes to the owner.',
+          'I don’t think the answer is simply telling people to use their initiative either. That is easy advice to give when it isn’t your insurance renewal, customer or reputation sitting on the other side of somebody else’s decision.',
+          'You can train people, and of course you should. If somebody makes a poor decision because you haven’t trained them properly, blaming them afterwards is bollocks. That’s a management failure. But you cannot train for every eventuality.',
+          'You can teach procedures, talk through previous decisions and try to develop broader commercial judgement. What is much harder is pressure-testing somebody for a situation neither of you has encountered yet. Even the people I trusted most occasionally made bad calls. They were human. Personal life, emotion, tiredness or pressure can affect anybody, and somebody who has made fifty good decisions can still get number fifty-one wrong.',
+          'That is the bit I think gets missed when people talk about owner dependency and delegation as though the answer is simply giving more decisions away. Owners often struggle to do that because they have paid, sometimes quite literally, for somebody else’s bad judgement before.',
+          'But making every decision yourself isn’t the answer either. You cannot run a 24-hour business that way without eventually becoming the thing everything depends on.',
+          'You can reduce that risk. You can’t write it out of the business.'
+      ].map((p) => `<p>${p}</p>`).join('');
+
+      const indexSummary14 = 'Two nearly identical accidents in the same taxi office, handled by two different people, with two very different outcomes. On why blaming someone for a bad decision is not the same as holding them properly accountable, and why training people well still cannot remove the need for judgement.';
+
+      const a14Rows = [
+        [`${a14}.label`, 'USEFUL THINKING'],
+        [`${a14}.heading`, THIRTEENTH_PUBLISHED_ARTICLE.title],
+        [`${a14}.index_summary`, indexSummary14],
+        [`${a14}.body`, bodyParagraphs14],
+        [`${a14}.related_text`, ''],
+        [`${a14}.related_link`, ''],
+        [`${a14}.image`, '']
+      ];
+      for (const [key, value] of a14Rows) {
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [key, value]
+        );
+      }
+
+      const { rows: maxSortRows14 } = await db.query('SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM pages');
+      await db.query(
+        `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav, meta_description)
+         VALUES ($1, $2, $3, $4::jsonb, '[]'::jsonb, '[]'::jsonb, false, $5)
+         ON CONFLICT (slug) DO NOTHING`,
+        [THIRTEENTH_PUBLISHED_ARTICLE.slug, THIRTEENTH_PUBLISHED_ARTICLE.title, maxSortRows14[0].max_sort + 1, JSON.stringify([a14]), indexSummary14]
+      );
+
+      console.log(`Useful Thinking: 13th article published (${a14}, ${THIRTEENTH_PUBLISHED_ARTICLE.slug}).`);
     }
   }
 
