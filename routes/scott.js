@@ -340,11 +340,21 @@ router.post('/api/scott/messages', noindexHeader, requireScottApiAccess, scottCh
       // (see the schema header comment in db/schema.sql for why), and never
       // anything resembling a write to the real Scott Drive brain.
       if (wr.writeback) {
+        // Prefer the conversation's own scope (started from a job/enquiry
+        // detail page); fall back to whatever job this exact turn's
+        // entity extraction matched (e.g. a SAKS-1047 mention on the
+        // general dashboard chat), so an approved writeback actually shows
+        // up in that record's own activity feed instead of only the
+        // approvals queue.
+        const relatedJobId = conversation.related_job_id || (turn.entities && turn.entities.job ? turn.entities.job.id : null);
+        const relatedEnquiryId = conversation.related_enquiry_id || null;
         await repo.createWriteback({
           conversationId,
           proposingWorkerId: wr.workerId,
           intentType: wr.writeback.record,
           summary: wr.writeback.summary,
+          relatedJobId,
+          relatedEnquiryId,
           requiresApproval: !!wr.escalation
         });
       }
