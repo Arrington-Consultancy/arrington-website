@@ -23,6 +23,8 @@ const {
 const { ARTICLES: UT_ARTICLES } = require('../lib/usefulThinkingArticles');
 const { generateUniqueShortReference } = require('../lib/shortReference');
 const { resolveWaiSeedMode, waiSeedWrites: waiWritesAllowed } = require('../lib/waiSeedMode');
+const { SCOTT_PAGE_SLUG } = require('../lib/scott/access');
+const { seedScottData } = require('../lib/scott/data/seedData');
 
 const BCRYPT_ROUNDS = 12;
 
@@ -4699,6 +4701,29 @@ async function seed() {
       );
     }
     console.log('Buyer-language standfirst test: 2 article standfirst(s) seeded (article__9, article__2).');
+  }
+
+  // Scott AI Demonstration — access-grant anchor + fictional dataset
+  // (28/08/2026). See lib/scott/access.js for why this page row exists: it
+  // is never rendered as a real page (the Scott routes are registered ahead
+  // of the generic /:slug catch-all and never fall through to it), it only
+  // exists so the site's EXISTING page_access table/admin UI can gate
+  // invited demo viewers, exactly like every other restricted page. hidden,
+  // not in nav, noindex and an empty section_order all reinforce that this
+  // row is never meant to render — belt-and-braces alongside the routing
+  // order, not a substitute for it.
+  {
+    const { rowCount } = await db.query(
+      `INSERT INTO pages (slug, title, sort_order, hidden, show_in_nav, noindex, section_order)
+       VALUES ($1, 'Scott AI Demonstration (private)', 9999, true, false, true, '[]'::jsonb)
+       ON CONFLICT (slug) DO NOTHING`,
+      [SCOTT_PAGE_SLUG]
+    );
+    if (rowCount > 0) console.log('Scott AI Demonstration: access-grant page row created.');
+  }
+  {
+    const result = await seedScottData(db);
+    console.log(result.seeded ? 'Scott AI Demonstration: fictional dataset seeded.' : 'Scott AI Demonstration: fictional dataset already present, skipped.');
   }
 
   console.log('Seed complete.');

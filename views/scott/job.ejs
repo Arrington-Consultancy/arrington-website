@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= job.ref %> | Scott's Armchair &amp; Knitting Service</title>
+  <meta name="robots" content="noindex, nofollow">
+  <%- include('partials/styles') %>
+</head>
+<body class="scott-body">
+  <div class="sc-shell">
+    <%- include('partials/sidebar', { active: 'jobs' }) %>
+    <main class="sc-main">
+      <div class="sc-page-header">
+        <div>
+          <p style="margin: 0 0 4px;"><a href="/scott/jobs" style="color: var(--sc-text-muted); font-size: 13px;">&larr; All jobs</a></p>
+          <h1 class="sc-h"><%= job.ref %></h1>
+          <p><%= job.customer_name || 'Unknown customer' %><% if (job.customer_location) { %> &middot; <%= job.customer_location %><% } %></p>
+        </div>
+        <span class="sc-pill sc-pill-status" style="font-size: 13px;"><%= job.status.replace('_', ' ') %></span>
+      </div>
+
+      <div class="sc-detail-grid">
+        <div>
+          <% if (job.at_risk) { %>
+            <div class="sc-risk-banner"><strong>At risk:</strong> <%= job.risk_note %></div>
+          <% } %>
+
+          <div class="sc-card sc-detail-card">
+            <h2 class="sc-section-title">Job details</h2>
+            <dl class="sc-kv">
+              <dt>Kind</dt><dd><%= job.kind %></dd>
+              <dt>Description</dt><dd><%= job.description %></dd>
+              <dt>Price</dt><dd><%= job.price_pence != null ? ('£' + (job.price_pence / 100).toFixed(2)) : 'Not yet quoted' %></dd>
+              <dt>Promised date</dt><dd><%= job.promised_date ? new Date(job.promised_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'None set' %></dd>
+              <dt>Collection date</dt><dd><%= job.collection_date ? new Date(job.collection_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'None set' %></dd>
+            </dl>
+          </div>
+
+          <% if (job.customer_notes) { %>
+          <div class="sc-card sc-detail-card">
+            <h2 class="sc-section-title">Customer notes</h2>
+            <p style="margin: 0; font-size: 14px;"><%= job.customer_notes %></p>
+          </div>
+          <% } %>
+
+          <div class="sc-card sc-detail-card">
+            <h2 class="sc-section-title">Activity on this job</h2>
+            <% if (!activity.length) { %>
+              <div class="sc-empty">No recorded activity yet.</div>
+            <% } else { %>
+              <ul class="sc-activity-list">
+                <% activity.forEach(function (a) { %>
+                  <li class="sc-activity-item">
+                    <span class="sc-activity-dot" style="background: <%= (workersById[a.actor] && workersById[a.actor].accent) || '#8a5a3b' %>;"></span>
+                    <div>
+                      <div><%= a.summary %></div>
+                      <div class="sc-activity-meta"><%= (workersById[a.actor] && workersById[a.actor].characterName) || a.actor %> &middot; <%= new Date(a.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) %></div>
+                    </div>
+                  </li>
+                <% }); %>
+              </ul>
+            <% } %>
+          </div>
+        </div>
+        <div>
+          <%- include('partials/chat-widget', { workersById: workersById, csrfToken: csrfToken, aiEnabled: aiEnabled, suggestions: false }) %>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

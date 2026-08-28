@@ -21,6 +21,7 @@ const marketReadyTest = require('./routes/marketReadyTest');
 const commercialGapsReview = require('./routes/commercialGapsReview');
 const whereToStart = require('./routes/whereToStart');
 const productGuide = require('./routes/productGuide');
+const scott = require('./routes/scott');
 const { publishedArticles, findBySlug: findUsefulThinkingArticle } = require('./lib/usefulThinkingArticles');
 const { getSiteShellData } = require('./lib/navShell');
 const { SITE_KEY: TURNSTILE_SITE_KEY } = require('./lib/turnstile');
@@ -609,6 +610,19 @@ app.use(whereToStart.router);
 // behind the global CSRF middleware like every other public form.
 productGuide.mountPageRoute(app, generateCsrfToken);
 app.use(productGuide.router);
+
+// Scott AI Demonstration — private, invited-access-only fictional-company
+// demo (see routes/scott.js, lib/scott/**). Same registration pattern as
+// the tools above: GET page routes registered directly, ahead of the
+// generic /:slug catch-all further down, so this area is never reachable
+// through the CMS page-render pipeline; POST/API routes go through the
+// router, behind the global CSRF middleware like every other authenticated
+// write on the site. Every route (bar the login page itself) is gated by
+// requireScottPageAccess/requireScottApiAccess, reusing the existing
+// page_access table against one synthetic hidden page row — no second
+// permission system, no second admin screen.
+scott.mountPageRoute(app, generateCsrfToken);
+app.use(scott.router);
 
 // /v1.html — retired from public serving (15/08/2026). The original V1
 // single-page site was kept served as a reference copy, with a relaxed

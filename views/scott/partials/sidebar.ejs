@@ -1,0 +1,22 @@
+<aside class="sc-sidebar">
+  <div class="sc-brand">
+    <div class="sc-brand-mark">SA</div>
+    <div class="sc-brand-text">
+      <strong>Scott's</strong>
+      <span>Armchair &amp; Knitting Co.</span>
+    </div>
+  </div>
+  <ul class="sc-nav">
+    <li><a href="/scott" class="<%= active === 'dashboard' ? 'active' : '' %>">Dashboard</a></li>
+    <li><a href="/scott/jobs" class="<%= active === 'jobs' ? 'active' : '' %>">Jobs &amp; Orders</a></li>
+    <li><a href="/scott/enquiries" class="<%= active === 'enquiries' ? 'active' : '' %>">Enquiries<% if (typeof navCounts !== 'undefined' && navCounts.newEnquiries) { %><span class="sc-badge"><%= navCounts.newEnquiries %></span><% } %></a></li>
+    <li><a href="/scott/approvals" class="<%= active === 'approvals' ? 'active' : '' %>">Approvals<% if (typeof navCounts !== 'undefined' && navCounts.pendingApprovals) { %><span class="sc-badge"><%= navCounts.pendingApprovals %></span><% } %></a></li>
+  </ul>
+  <div class="sc-sidebar-footer">
+    <div class="sc-user-row">Signed in as <strong>&nbsp;<%= user.username %></strong></div>
+    <form action="/logout" method="POST">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <button type="submit" class="sc-logout" style="width:100%;border:none;cursor:pointer;">Log out</button>
+    </form>
+  </div>
+</aside>

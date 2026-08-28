@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard | Scott's Armchair &amp; Knitting Service</title>
+  <meta name="robots" content="noindex, nofollow">
+  <%- include('partials/styles') %>
+</head>
+<body class="scott-body">
+  <div class="sc-shell">
+    <%- include('partials/sidebar', { active: 'dashboard' }) %>
+    <main class="sc-main">
+      <div class="sc-page-header">
+        <div>
+          <h1 class="sc-h">Good morning, <%= user.username.charAt(0).toUpperCase() + user.username.slice(1) %></h1>
+          <p>Here's what's happening at the workshop today.</p>
+        </div>
+      </div>
+
+      <div class="sc-stat-grid">
+        <div class="sc-card sc-stat"><div class="sc-stat-label">Open jobs</div><div class="sc-stat-value"><%= summary.openJobs %></div></div>
+        <a href="/scott/jobs?at_risk=1" class="sc-card sc-stat sc-card-link"><div class="sc-stat-label">At risk</div><div class="sc-stat-value <%= summary.atRiskJobs ? 'warn' : '' %>"><%= summary.atRiskJobs %></div></a>
+        <a href="/scott/enquiries?status=new" class="sc-card sc-stat sc-card-link"><div class="sc-stat-label">New enquiries</div><div class="sc-stat-value"><%= summary.newEnquiries %></div></a>
+        <a href="/scott/approvals" class="sc-card sc-stat sc-card-link"><div class="sc-stat-label">Awaiting approval</div><div class="sc-stat-value <%= summary.pendingApprovals ? 'warn' : '' %>"><%= summary.pendingApprovals %></div></a>
+        <div class="sc-card sc-stat"><div class="sc-stat-label">Due within 7 days</div><div class="sc-stat-value"><%= summary.dueThisWeek %></div></div>
+      </div>
+
+      <h2 class="sc-section-title">Meet the team</h2>
+      <div class="sc-colleagues">
+        <% workers.forEach(function (w) { %>
+          <div class="sc-card sc-colleague">
+            <div class="sc-colleague-head">
+              <div class="sc-avatar" style="background: <%= w.accent %>;"><%= w.initials %></div>
+              <div>
+                <div class="sc-colleague-name"><%= w.characterName %></div>
+                <div class="sc-colleague-role"><%= w.displayRole %></div>
+              </div>
+            </div>
+            <p class="sc-colleague-tagline"><%= w.tagline %></p>
+          </div>
+        <% }); %>
+      </div>
+
+      <div class="sc-detail-grid">
+        <div>
+          <h2 class="sc-section-title">Recent activity</h2>
+          <div class="sc-card" style="padding: 16px 18px;">
+            <% if (!activity.length) { %>
+              <div class="sc-empty">Nothing recorded yet &mdash; ask Ruth a question to get started.</div>
+            <% } else { %>
+              <ul class="sc-activity-list">
+                <% activity.forEach(function (a) { %>
+                  <li class="sc-activity-item">
+                    <span class="sc-activity-dot" style="background: <%= (workersById[a.actor] && workersById[a.actor].accent) || '#8a5a3b' %>;"></span>
+                    <div>
+                      <div><%= a.summary %></div>
+                      <div class="sc-activity-meta">
+                        <%= (workersById[a.actor] && workersById[a.actor].characterName) || a.actor %>
+                        <% if (a.related_job_ref) { %> &middot; <a href="/scott/jobs/<%= a.related_job_ref %>"><%= a.related_job_ref %></a><% } %>
+                        &middot; <%= new Date(a.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) %>
+                      </div>
+                    </div>
+                  </li>
+                <% }); %>
+              </ul>
+            <% } %>
+          </div>
+
+          <h2 class="sc-section-title" style="margin-top: 22px;">Business snapshot</h2>
+          <p style="font-size: 12.5px; color: var(--sc-text-muted); margin: -6px 0 12px;"><%= snapshotLabel %></p>
+          <div class="sc-stat-grid">
+            <% snapshotCards.forEach(function (c) { %>
+              <div class="sc-card sc-stat">
+                <div class="sc-stat-label"><%= c.label %></div>
+                <div class="sc-stat-value" style="font-size: 20px;"><%= c.value %></div>
+                <div class="sc-stat-sub"><%= c.detail %></div>
+              </div>
+            <% }); %>
+          </div>
+        </div>
+        <div>
+          <h2 class="sc-section-title">Ask the team</h2>
+          <%- include('partials/chat-widget', { workersById: workersById, csrfToken: csrfToken, aiEnabled: aiEnabled }) %>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

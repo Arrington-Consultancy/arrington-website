@@ -1,0 +1,154 @@
+<div class="sc-chat-panel" id="scChatPanel">
+  <div class="sc-chat-head">
+    <div class="sc-msg-avatar" style="background: <%= workersById.receptionist.accent %>;"><%= workersById.receptionist.initials %></div>
+    <div class="sc-chat-head-text">
+      <strong>Ask Ruth</strong>
+      <span>Ruth routes every question to the right person on the team</span>
+    </div>
+  </div>
+  <div class="sc-chat-messages" id="scChatMessages">
+    <div class="sc-msg">
+      <div class="sc-msg-avatar" style="background: <%= workersById.receptionist.accent %>;"><%= workersById.receptionist.initials %></div>
+      <div class="sc-msg-body">
+        <div class="sc-msg-name">Ruth Bailey · Receptionist</div>
+        Morning! Ask me anything about the workshop and I'll get it to the right person &mdash; try one of the questions below, or type your own.
+      </div>
+    </div>
+  </div>
+  <% if (typeof suggestions === 'undefined' || suggestions !== false) { %>
+  <div class="sc-chat-suggestions" id="scChatSuggestions">
+    <button type="button" data-q="What needs my attention today?">What needs my attention today?</button>
+    <button type="button" data-q="Which jobs are at risk this week?">Which jobs are at risk this week?</button>
+    <button type="button" data-q="Summarise everything before I call Mrs Jenkins">Summarise before I call Mrs Jenkins</button>
+  </div>
+  <% } %>
+  <% if (!aiEnabled) { %>
+    <div class="sc-chat-disabled-note">Live AI is not enabled in this environment yet — the team can't reply until Tom sets it up.</div>
+  <% } %>
+  <form class="sc-chat-input-row" id="scChatForm">
+    <input type="text" id="scChatInput" placeholder="Ask Ruth anything..." autocomplete="off" <%= aiEnabled ? '' : 'disabled' %>>
+    <button type="submit" class="sc-chat-send" id="scChatSend" <%= aiEnabled ? '' : 'disabled' %>>Send</button>
+  </form>
+</div>
+<script nonce="<%= nonce %>">
+(function () {
+  var WORKERS = <%- JSON.stringify(workersById) %>;
+  var conversationId = <%- typeof initialConversationId !== 'undefined' && initialConversationId ? initialConversationId : 'null' %>;
+  var messagesEl = document.getElementById('scChatMessages');
+  var form = document.getElementById('scChatForm');
+  var input = document.getElementById('scChatInput');
+  var sendBtn = document.getElementById('scChatSend');
+  var suggestionsEl = document.getElementById('scChatSuggestions');
+  var csrfToken = <%- JSON.stringify(csrfToken) %>;
+  var busy = false;
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function scrollToBottom() {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function addUserMessage(text) {
+    var div = document.createElement('div');
+    div.className = 'sc-msg sc-msg-user';
+    div.innerHTML = '<div class="sc-msg-avatar" style="background:#5c6b62;">You</div><div class="sc-msg-body">' + escapeHtml(text) + '</div>';
+    messagesEl.appendChild(div);
+    scrollToBottom();
+  }
+
+  function addTypingIndicator(name, accent, initials) {
+    var div = document.createElement('div');
+    div.className = 'sc-msg sc-typing';
+    div.innerHTML = '<div class="sc-msg-avatar" style="background:' + accent + ';">' + initials + '</div><div class="sc-typing-dots"><span></span><span></span><span></span></div>';
+    messagesEl.appendChild(div);
+    scrollToBottom();
+    return div;
+  }
+
+  function addWorkerMessage(opts) {
+    var div = document.createElement('div');
+    div.className = 'sc-msg';
+    var tags = '';
+    if (opts.writeback) tags += '<span class="sc-msg-tag sc-msg-tag-writeback" title="' + escapeHtml(opts.writeback.summary) + '">Recorded in demo audit trail</span>';
+    if (opts.escalation) tags += '<span class="sc-msg-tag sc-msg-tag-escalation" title="' + escapeHtml(opts.escalation.reason) + '">Needs ' + (opts.escalation.to === 'scott_mercer' ? 'Scott Mercer' : 'Tom Arrington') + ' approval</span>';
+    if (opts.technicalFailure) tags += '<span class="sc-msg-tag sc-msg-tag-fail">Technical problem</span>';
+    div.innerHTML =
+      '<div class="sc-msg-avatar" style="background:' + opts.accent + ';">' + opts.initials + '</div>' +
+      '<div class="sc-msg-body"><div class="sc-msg-name">' + escapeHtml(opts.name) + ' &middot; ' + escapeHtml(opts.role) + '</div>' +
+      escapeHtml(opts.text) +
+      (tags ? '<div class="sc-msg-meta-row">' + tags + '</div>' : '') +
+      '</div>';
+    messagesEl.appendChild(div);
+    scrollToBottom();
+  }
+
+  function delay(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+  async function revealSequentially(turn) {
+    if (turn.receptionist && turn.receptionist.note) {
+      var t1 = addTypingIndicator('Ruth Bailey', WORKERS.receptionist.accent, WORKERS.receptionist.initials);
+      await delay(500 + Math.random() * 300);
+      t1.remove();
+      addWorkerMessage({
+        name: 'Ruth Bailey', role: 'Receptionist', accent: WORKERS.receptionist.accent, initials: WORKERS.receptionist.initials,
+        text: turn.receptionist.note, technicalFailure: turn.receptionist.technicalFailure
+      });
+    }
+    for (var i = 0; i < turn.workerReplies.length; i++) {
+      var wr = turn.workerReplies[i];
+      var t2 = addTypingIndicator(wr.characterName, wr.accent, wr.initials);
+      await delay(600 + Math.random() * 500);
+      t2.remove();
+      addWorkerMessage({
+        name: wr.characterName, role: wr.displayRole, accent: wr.accent, initials: wr.initials,
+        text: wr.reply, writeback: wr.writeback, escalation: wr.escalation, technicalFailure: wr.technicalFailure
+      });
+    }
+  }
+
+  async function sendMessage(text) {
+    if (!text || busy) return;
+    busy = true;
+    sendBtn.disabled = true;
+    if (suggestionsEl) suggestionsEl.style.display = 'none';
+    addUserMessage(text);
+    input.value = '';
+
+    try {
+      var res = await fetch('/api/scott/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
+        body: JSON.stringify({ message: text, conversationId: conversationId })
+      });
+      var data = await res.json();
+      if (!res.ok) {
+        addWorkerMessage({ name: 'System', role: 'Notice', accent: '#b85e3c', initials: '!', text: data.error || 'Something went wrong.' });
+        return;
+      }
+      conversationId = data.conversationId;
+      await revealSequentially(data);
+    } catch (err) {
+      addWorkerMessage({ name: 'System', role: 'Notice', accent: '#b85e3c', initials: '!', text: 'Could not reach the server. Please try again.' });
+    } finally {
+      busy = false;
+      sendBtn.disabled = false;
+      input.focus();
+    }
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    sendMessage(input.value.trim());
+  });
+
+  if (suggestionsEl) {
+    suggestionsEl.querySelectorAll('button').forEach(function (btn) {
+      btn.addEventListener('click', function () { sendMessage(btn.getAttribute('data-q')); });
+    });
+  }
+})();
+</script>
