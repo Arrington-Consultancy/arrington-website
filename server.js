@@ -51,7 +51,20 @@ app.set('views', path.join(__dirname, 'views'));
 // https://www...<path> in one hop rather than two separate redirects. Only
 // the bare apex is rewritten to www — any other host (e.g. Railway's own
 // default domain) is left alone, it just gets the HTTPS check.
-const CANONICAL_HOST = 'www.arringtonconsultancy.com';
+// Overridable so the app can be deployed to a non-production host and still
+// be browsable. Until 28/08/2026 this was hardcoded, which meant any Railway
+// environment other than production redirected every request to the live site
+// and was therefore impossible to click through: the rule below is gated on
+// isProd, and RAILWAY_ENVIRONMENT is set in every Railway environment, not
+// just production.
+//
+// Production sets nothing and is byte-for-byte unchanged. A staging service
+// sets CANONICAL_HOST to its own hostname, which keeps the whole rule intact
+// (one canonical host, everything else 301s to it, HTTPS still forced) and
+// simply points it at that environment's host instead of the live one.
+const CANONICAL_HOST = (process.env.CANONICAL_HOST || 'www.arringtonconsultancy.com')
+  .trim()
+  .toLowerCase();
 
 // Extended 15/08/2026 from "rewrite the .com apex only" to "rewrite every
 // non-canonical hostname". Five hostnames are bound to this service: the two
