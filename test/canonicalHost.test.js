@@ -119,12 +119,77 @@ describe('canonical host redirect', () => {
     });
   });
 
+  describe('non-public deploys must never be indexable', () => {
+    // Pointing CANONICAL_HOST at a staging host stops that host redirecting
+    // to the live site, which is the point. The cost is that it then serves a
+    // complete, crawlable copy of every page: exactly the duplicate-indexing
+    // problem the redirect rule was built to prevent. Tom spotted the staging
+    // service serving the full Arrington homepage and asked, reasonably,
+    // whether the live site had been changed. It had not, but the copy was
+    // real and was one crawl away from being indexed.
+    const isPublicSite = (canonicalHost) => canonicalHost === LIVE;
+
+    test('overriding the canonical host marks the deploy as not the public site', () => {
+      assert.equal(isPublicSite('scott-demo-staging.up.railway.app'), false);
+      assert.equal(isPublicSite('some-preview.up.railway.app'), false);
+    });
+
+    test('production, with no override, is still the public site', () => {
+      assert.equal(isPublicSite(LIVE), true);
+    });
+
+    test('server.js derives the flag from CANONICAL_HOST rather than a second variable', () => {
+      // A separate opt-in variable would be forgotten exactly once, on the
+      // deploy that mattered. Deriving it means overriding the host cannot
+      // silently leave indexing on.
+      assert.match(
+        SERVER_SRC,
+        /const IS_PUBLIC_SITE = CANONICAL_HOST === LIVE_PUBLIC_HOST;/,
+        'IS_PUBLIC_SITE must be derived from CANONICAL_HOST'
+      );
+    });
+
+    test('a non-public deploy sends X-Robots-Tag: noindex, nofollow', () => {
+      assert.match(
+        SERVER_SRC,
+        /if \(!IS_PUBLIC_SITE\) res\.set\('X-Robots-Tag', 'noindex, nofollow'\);/,
+        'every response on a non-public deploy must carry a noindex header'
+      );
+    });
+
+    test('a non-public deploy serves a blanket Disallow and no sitemap', () => {
+      const robots = SERVER_SRC.slice(
+        SERVER_SRC.indexOf("app.get('/robots.txt'"),
+        SERVER_SRC.indexOf("app.get('/sitemap.xml'")
+      );
+      assert.ok(
+        robots.includes('if (!IS_PUBLIC_SITE)'),
+        'robots.txt must branch on whether this is the public site'
+      );
+      assert.match(
+        robots,
+        /User-agent: \*\\nDisallow: \/\\n/,
+        'a non-public deploy must disallow all crawling'
+      );
+      // The blanket-disallow branch must return before the sitemap line.
+      const guardAt = robots.indexOf('if (!IS_PUBLIC_SITE)');
+      const sitemapAt = robots.indexOf('Sitemap:');
+      assert.ok(guardAt !== -1 && sitemapAt !== -1 && guardAt < sitemapAt,
+        'the disallow-all branch must return before advertising a sitemap');
+    });
+  });
+
   describe('the real server.js wiring', () => {
     test('CANONICAL_HOST reads from the environment and defaults to the live domain', () => {
       assert.match(
         SERVER_SRC,
-        /const CANONICAL_HOST = \(process\.env\.CANONICAL_HOST \|\| 'www\.arringtonconsultancy\.com'\)/,
-        'server.js must keep the live domain as the default when the env var is unset'
+        /const LIVE_PUBLIC_HOST = 'www\.arringtonconsultancy\.com';/,
+        'the live domain must stay pinned as a literal'
+      );
+      assert.match(
+        SERVER_SRC,
+        /const CANONICAL_HOST = \(process\.env\.CANONICAL_HOST \|\| LIVE_PUBLIC_HOST\)/,
+        'server.js must fall back to the live domain when the env var is unset'
       );
     });
 
