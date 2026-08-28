@@ -19,7 +19,8 @@
 
 const express = require('express');
 const bcrypt = require('bcrypt');
-const { rateLimit } = require('express-rate-limit');
+const sanitizeHtml = require('sanitize-html');
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const db = require('../db/pool');
 const repo = require('../lib/scott/data/repository');
 const { WORKERS, WORKER_IDS, ROUTABLE_WORKER_IDS, getWorker } = require('../lib/scott/workers');
@@ -72,6 +73,22 @@ const scottChatLimiter = rateLimit({
 });
 
 const DUMMY_HASH = bcrypt.hashSync('scott-timing-equaliser-not-a-real-password', 12);
+
+// Public, unauthenticated form — same shape as the real site's
+// publicFormLimiter (routes/leads.js): generous for a real visitor,
+// stingy for a spam script. Separate limiter from everything else here
+// since this is the one Scott route reachable with no invitation at all.
+const scottLeadLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => ipKeyGenerator(req),
+  message: { error: 'Too many requests. Please try again later.' }
+});
+
+const plainText = (s, max) => sanitizeHtml(String(s || ''), { allowedTags: [], allowedAttributes: {} }).trim().slice(0, max || 4000);
+const isValidEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s) && s.length <= 255;
 
 // Gives a returning visitor continuity: the most recent conversation for
 // this exact context (general dashboard chat, or scoped to one job/
@@ -222,11 +239,28 @@ function mountPageRoute(app, generateCsrfToken) {
   app.get('/scott/approvals', noindexHeader, requireScottPageAccess, async (req, res, next) => {
     try {
       const approvals = await repo.getPendingApprovals();
+      // "Review quote" support: for a customer-facing draft, pull in every
+      // other worker's reply from the same conversation (e.g. Commercial's
+      // actual price statement) so the reviewer sees what the draft is
+      // based on, not just the drafted wording in isolation.
+      for (const a of approvals) {
+        a.context = a.intent_type === 'customer_reply_draft'
+          ? (await repo.getConversationContextForWriteback(a)).filter((m) => m.worker_id !== a.proposing_worker_id)
+          : [];
+      }
       const navCounts = await repo.getDashboardSummary();
-      res.render('scott/approvals', { user: req.session.user, approvals, workers: WORKERS, navCounts, csrfToken: generateCsrfToken(req, res) });
+      res.render('scott/approvals', { user: req.session.user, approvals, workers: WORKERS, workersById: WORKERS_BY_ID_JSON, navCounts, csrfToken: generateCsrfToken(req, res) });
     } catch (err) {
       next(err);
     }
+  });
+
+  // Public — no requireScottPageAccess. A prospective (fictional) customer
+  // filling this in has no invitation and no account; this is the one
+  // Scott route deliberately reachable by anyone with the link, same
+  // reasoning as the real site's own public lead form (routes/leads.js).
+  app.get('/scott/lead', noindexHeader, (req, res) => {
+    res.render('scott/lead', { csrfToken: generateCsrfToken(req, res), sent: false, error: null });
   });
 }
 
@@ -281,6 +315,161 @@ router.post('/scott/login', noindexHeader, scottLoginLimiter, async (req, res) =
   }
 });
 
+// Shared by the live chat endpoint below and the lead-intake auto-draft /
+// redraft flows: runs one turn, persists every message, and applies the
+// writeback/governance rules consistently regardless of what triggered it.
+//
+// GOVERNANCE ENFORCEMENT (structural, not merely prompted): whenever
+// Customers & Marketing is routed on an enquiry-scoped conversation and
+// doesn't refuse, its ENTIRE reply is treated as a customer-facing draft
+// requiring human approval — always, regardless of whether the model
+// remembered to set its own optional `writeback`/`escalation` fields. The
+// Master Rulebook already requires Tom's real approval for any external
+// send from this worker; this makes that a server-side gate rather than
+// something resting on the model's own self-reporting, exactly the
+// "structural, not merely prompted" isolation this whole build is for.
+async function runScottTurnAndPersist({ conversation, conversationId, userMessage }) {
+  const history = await repo.getMessages(conversationId);
+  await repo.addMessage({ conversationId, sender: 'user', content: userMessage });
+
+  const turn = await runTurn({ userMessage, history });
+
+  if (turn.receptionist.note) {
+    await repo.addMessage({ conversationId, sender: 'worker', workerId: 'receptionist', content: turn.receptionist.note, technicalFailure: turn.receptionist.technicalFailure });
+  }
+
+  // Deterministic bookkeeping, not an AI-driven write: if this
+  // conversation is scoped to an enquiry that's still sitting in 'new',
+  // Ruth having genuinely routed it to a worker this turn is exactly the
+  // "Ruth routes it" moment from the workflow brief — reflect that on the
+  // enquiry record itself so the enquiries list shows real state.
+  if (conversation.related_enquiry_id && turn.workerReplies.length > 0) {
+    await repo.assignEnquiryIfNew(conversation.related_enquiry_id, turn.workerReplies[0].workerId);
+  }
+
+  for (const wr of turn.workerReplies) {
+    await repo.addMessage({
+      conversationId,
+      sender: 'worker',
+      workerId: wr.workerId,
+      content: wr.reply,
+      certainty: wr.certainty,
+      technicalFailure: wr.technicalFailure
+    });
+
+    // Prefer the conversation's own scope (started from a job/enquiry
+    // detail page or a lead); fall back to whatever job this turn's
+    // entity extraction matched, so an approved writeback actually shows
+    // up in that record's own activity feed, not only the approvals queue.
+    const relatedJobId = conversation.related_job_id || (turn.entities && turn.entities.job ? turn.entities.job.id : null);
+    const relatedEnquiryId = conversation.related_enquiry_id || null;
+    const isCustomerFacingDraft = wr.workerId === 'customers_marketing' && relatedEnquiryId && !wr.refused && !wr.technicalFailure;
+
+    if (isCustomerFacingDraft) {
+      await repo.createWriteback({
+        conversationId,
+        proposingWorkerId: wr.workerId,
+        intentType: 'customer_reply_draft',
+        summary: wr.reply,
+        relatedJobId,
+        relatedEnquiryId,
+        requiresApproval: true
+      });
+    } else if (wr.writeback) {
+      // A worker's own honest escalation flag decides whether this
+      // (non-customer-facing) proposed change needs a human decision
+      // before it counts as part of the demonstration's own record, or
+      // can be appended immediately. Either way this only ever appends a
+      // note to scott_writebacks/scott_activity — never a direct mutation
+      // of a job/enquiry's structured columns (see the schema header
+      // comment in db/schema.sql for why), and never anything resembling
+      // a write to the real Scott Drive brain.
+      await repo.createWriteback({
+        conversationId,
+        proposingWorkerId: wr.workerId,
+        intentType: wr.writeback.record,
+        summary: wr.writeback.summary,
+        relatedJobId,
+        relatedEnquiryId,
+        requiresApproval: !!wr.escalation
+      });
+    }
+  }
+
+  return turn;
+}
+
+function serializeTurn(conversationId, turn) {
+  return {
+    conversationId,
+    receptionist: { note: turn.receptionist.note, technicalFailure: turn.receptionist.technicalFailure },
+    workerReplies: turn.workerReplies.map((wr) => ({
+      workerId: wr.workerId,
+      characterName: wr.worker.characterName,
+      displayRole: wr.worker.displayRole,
+      accent: wr.worker.accent,
+      initials: wr.worker.initials,
+      reply: wr.reply,
+      certainty: wr.certainty,
+      escalation: wr.escalation,
+      writeback: wr.writeback,
+      technicalFailure: wr.technicalFailure
+    }))
+  };
+}
+
+// Public — no requireScottApiAccess, same reasoning as GET /scott/lead
+// above. Honeypot field ('website') left blank by real visitors; a
+// filled-in value means a bot, so this pretends success without writing
+// anything, same pattern as the real site's POST /api/leads.
+router.post('/api/scott/lead', noindexHeader, scottLeadLimiter, async (req, res) => {
+  try {
+    const body = req.body || {};
+    if (plainText(body.website)) {
+      return res.json({ ok: true });
+    }
+
+    const name = plainText(body.name, 200);
+    const email = plainText(body.email, 255);
+    const message = plainText(body.message, 2000);
+
+    if (!name || !email || !message) {
+      return res.status(400).json({ error: 'Name, email and message are all required.' });
+    }
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ error: 'Please enter a valid email address.' });
+    }
+
+    const enquiry = await repo.createLeadEnquiry({ name, email, message });
+    await repo.addActivity({
+      actor: 'system',
+      eventType: 'lead_received',
+      summary: `New enquiry received via the website form from ${name}.`,
+      relatedEnquiryId: enquiry.id
+    });
+
+    // Respond immediately — a real visitor should never sit waiting on a
+    // multi-worker AI turn just to get a "thanks, we'll be in touch".
+    // Drafting continues after the response, same fire-and-forget shape
+    // as the real site's own lead-notification emails (routes/leads.js).
+    res.json({ ok: true });
+
+    if (isScottAIEnabled()) {
+      (async () => {
+        try {
+          const conversation = await repo.createConversation(null, `Lead: ${name}`, { enquiryId: enquiry.id });
+          await runScottTurnAndPersist({ conversation, conversationId: conversation.id, userMessage: message });
+        } catch (err) {
+          console.error('Scott lead auto-draft failed:', err.message);
+        }
+      })();
+    }
+  } catch (err) {
+    console.error('Scott lead submission error:', err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
+  }
+});
+
 router.post('/api/scott/messages', noindexHeader, requireScottApiAccess, scottChatLimiter, async (req, res) => {
   try {
     const message = String(req.body?.message || '').trim().slice(0, 4000);
@@ -305,78 +494,8 @@ router.post('/api/scott/messages', noindexHeader, requireScottApiAccess, scottCh
       conversationId = conversation.id;
     }
 
-    const history = await repo.getMessages(conversationId);
-    await repo.addMessage({ conversationId, sender: 'user', content: message });
-
-    const turn = await runTurn({ userMessage: message, history });
-
-    if (turn.receptionist.note) {
-      await repo.addMessage({ conversationId, sender: 'worker', workerId: 'receptionist', content: turn.receptionist.note, technicalFailure: turn.receptionist.technicalFailure });
-    }
-
-    // Deterministic bookkeeping, not an AI-driven write: if this
-    // conversation is scoped to an enquiry that's still sitting in 'new',
-    // Ruth having genuinely routed it to a worker this turn is exactly the
-    // "Ruth routes it" moment from the workflow brief — reflect that on
-    // the enquiry record itself so the enquiries list shows real state.
-    if (conversation.related_enquiry_id && turn.workerReplies.length > 0) {
-      await repo.assignEnquiryIfNew(conversation.related_enquiry_id, turn.workerReplies[0].workerId);
-    }
-
-    for (const wr of turn.workerReplies) {
-      await repo.addMessage({
-        conversationId,
-        sender: 'worker',
-        workerId: wr.workerId,
-        content: wr.reply,
-        certainty: wr.certainty,
-        technicalFailure: wr.technicalFailure
-      });
-
-      // A worker's own honest escalation flag decides whether its proposed
-      // writeback needs a human decision before it counts as part of the
-      // demonstration's own record, or can be appended immediately. Either
-      // way this only ever appends a note to scott_writebacks/scott_activity
-      // — never a direct mutation of a job/enquiry's structured columns
-      // (see the schema header comment in db/schema.sql for why), and never
-      // anything resembling a write to the real Scott Drive brain.
-      if (wr.writeback) {
-        // Prefer the conversation's own scope (started from a job/enquiry
-        // detail page); fall back to whatever job this exact turn's
-        // entity extraction matched (e.g. a SAKS-1047 mention on the
-        // general dashboard chat), so an approved writeback actually shows
-        // up in that record's own activity feed instead of only the
-        // approvals queue.
-        const relatedJobId = conversation.related_job_id || (turn.entities && turn.entities.job ? turn.entities.job.id : null);
-        const relatedEnquiryId = conversation.related_enquiry_id || null;
-        await repo.createWriteback({
-          conversationId,
-          proposingWorkerId: wr.workerId,
-          intentType: wr.writeback.record,
-          summary: wr.writeback.summary,
-          relatedJobId,
-          relatedEnquiryId,
-          requiresApproval: !!wr.escalation
-        });
-      }
-    }
-
-    res.json({
-      conversationId,
-      receptionist: { note: turn.receptionist.note, technicalFailure: turn.receptionist.technicalFailure },
-      workerReplies: turn.workerReplies.map((wr) => ({
-        workerId: wr.workerId,
-        characterName: wr.worker.characterName,
-        displayRole: wr.worker.displayRole,
-        accent: wr.worker.accent,
-        initials: wr.worker.initials,
-        reply: wr.reply,
-        certainty: wr.certainty,
-        escalation: wr.escalation,
-        writeback: wr.writeback,
-        technicalFailure: wr.technicalFailure
-      }))
-    });
+    const turn = await runScottTurnAndPersist({ conversation, conversationId, userMessage: message });
+    res.json(serializeTurn(conversationId, turn));
   } catch (err) {
     console.error('Scott chat error:', err);
     res.status(500).json({ error: 'Something went wrong. Please try again.' });
@@ -396,16 +515,56 @@ router.get('/api/scott/conversations/:id/messages', noindexHeader, requireScottA
   }
 });
 
+// decision: 'approve' (Agree, or Modify & Agree when `text` is given) or
+// 'reject'. `text`, when present on an approve, is the human-edited
+// version of the draft — this is the "Modify" action: a human editing an
+// AI's proposed wording before agreeing to it, never the AI editing its
+// own output.
 router.post('/api/scott/approvals/:id/decide', noindexHeader, requireScottApiAccess, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const decision = req.body?.decision === 'approve' ? 'approve' : (req.body?.decision === 'reject' ? 'reject' : null);
+    const editedText = typeof req.body?.text === 'string' ? plainText(req.body.text, 4000) : null;
     if (!Number.isInteger(id) || !decision) return res.status(400).json({ error: 'Invalid request.' });
-    const writeback = await repo.decideWriteback(id, decision, req.session.user.id);
+    const writeback = await repo.decideWriteback(id, decision, req.session.user.id, editedText);
     if (!writeback) return res.status(404).json({ error: 'Not found or already decided.' });
     res.json({ ok: true, writeback });
   } catch (err) {
     console.error('Scott approval decide error:', err);
+    res.status(500).json({ error: 'Something went wrong.' });
+  }
+});
+
+// "Redraft": supersede the current pending draft (not reject — the human
+// isn't saying no, just asking the team to try again) and run a fresh AI
+// turn on the same enquiry-scoped conversation, asking explicitly for a
+// different attempt so the model doesn't just repeat itself.
+router.post('/api/scott/approvals/:id/redraft', noindexHeader, requireScottApiAccess, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid request.' });
+    if (!isScottAIEnabled()) return res.status(503).json({ error: 'Live AI is not enabled in this environment yet.' });
+
+    const existing = await repo.getWritebackById(id);
+    if (!existing || existing.status !== 'pending_approval') return res.status(404).json({ error: 'Not found or already decided.' });
+    if (existing.intent_type !== 'customer_reply_draft' || !existing.conversation_id) {
+      return res.status(400).json({ error: 'Only a customer reply draft can be redrafted.' });
+    }
+
+    const superseded = await repo.supersedeWriteback(id, req.session.user.id);
+    if (!superseded) return res.status(404).json({ error: 'Not found or already decided.' });
+
+    const conversation = await repo.getConversation(existing.conversation_id, req.session.user.id);
+    if (!conversation) return res.status(404).json({ error: 'Conversation not found.' });
+
+    const turn = await runScottTurnAndPersist({
+      conversation,
+      conversationId: existing.conversation_id,
+      userMessage: '(Internal note from the team: the previous draft reply needs another attempt — please draft a fresh reply to the customer\'s original message.)'
+    });
+    res.json(serializeTurn(existing.conversation_id, turn));
+  } catch (err) {
+    console.error('Scott redraft error:', err);
     res.status(500).json({ error: 'Something went wrong.' });
   }
 });
@@ -471,4 +630,4 @@ router.post('/api/scott/jobs/:ref/status', noindexHeader, requireScottApiAccess,
   }
 });
 
-module.exports = { router, mountPageRoute };
+module.exports = { router, mountPageRoute, runScottTurnAndPersist };

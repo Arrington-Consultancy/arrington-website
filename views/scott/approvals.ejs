@@ -23,21 +23,55 @@
           <div class="sc-card sc-empty">Nothing waiting for a decision right now.</div>
         <% } %>
         <% approvals.forEach(function (w) { %>
-          <div class="sc-card sc-approval-card" data-approval-id="<%= w.id %>">
-            <div class="sc-approval-row">
-              <div>
-                <div class="sc-row-sub sc-approval-meta">
-                  Proposed by <strong><%= workers[w.proposing_worker_id] ? workers[w.proposing_worker_id].characterName : w.proposing_worker_id %></strong>
-                  <% if (w.related_job_ref) { %> &middot; <a href="/scott/jobs/<%= w.related_job_ref %>"><%= w.related_job_ref %></a><% } %>
-                </div>
-                <div class="sc-approval-summary"><%= w.summary %></div>
+          <% if (w.intent_type === 'customer_reply_draft') { %>
+            <div class="sc-card sc-approval-card" data-approval-id="<%= w.id %>">
+              <div class="sc-row-sub sc-approval-meta">
+                Customer reply drafted by <strong><%= workers[w.proposing_worker_id] ? workers[w.proposing_worker_id].characterName : w.proposing_worker_id %></strong>
+                <% if (w.related_enquiry_subject) { %> &middot; <a href="/scott/enquiries/<%= w.related_enquiry_id %>"><%= w.related_enquiry_subject %></a><% } %>
+                <% if (w.related_job_ref) { %> &middot; <a href="/scott/jobs/<%= w.related_job_ref %>"><%= w.related_job_ref %></a><% } %>
               </div>
-              <div class="sc-approval-actions">
-                <button type="button" class="sc-btn sc-btn-approve" data-decision="approve" data-id="<%= w.id %>">Approve</button>
-                <button type="button" class="sc-btn sc-btn-reject" data-decision="reject" data-id="<%= w.id %>">Reject</button>
+
+              <% if (w.context && w.context.length) { %>
+                <div class="sc-quote-context">
+                  <div class="sc-quote-context-label">Review before agreeing</div>
+                  <% w.context.forEach(function (m) { %>
+                    <div class="sc-quote-context-item">
+                      <span class="sc-msg-avatar sc-avatar-<%= workersById[m.worker_id] ? m.worker_id : 'system' %> sc-quote-avatar"><%= workersById[m.worker_id] ? workersById[m.worker_id].initials : '?' %></span>
+                      <div>
+                        <div class="sc-quote-context-name"><%= workersById[m.worker_id] ? workersById[m.worker_id].characterName + ' · ' + workersById[m.worker_id].displayRole : m.worker_id %></div>
+                        <div><%= m.content %></div>
+                      </div>
+                    </div>
+                  <% }); %>
+                </div>
+              <% } %>
+
+              <textarea class="sc-textarea sc-draft-textarea" data-draft-id="<%= w.id %>"><%= w.summary %></textarea>
+
+              <div class="sc-approval-actions sc-draft-actions">
+                <button type="button" class="sc-btn sc-btn-approve" data-action="agree" data-id="<%= w.id %>">Agree</button>
+                <button type="button" class="sc-btn sc-btn-outline" data-action="modify" data-id="<%= w.id %>">Modify &amp; agree</button>
+                <button type="button" class="sc-btn sc-btn-outline" data-action="redraft" data-id="<%= w.id %>">Redraft</button>
+                <button type="button" class="sc-btn sc-btn-reject" data-action="reject" data-id="<%= w.id %>">Reject</button>
               </div>
             </div>
-          </div>
+          <% } else { %>
+            <div class="sc-card sc-approval-card" data-approval-id="<%= w.id %>">
+              <div class="sc-approval-row">
+                <div>
+                  <div class="sc-row-sub sc-approval-meta">
+                    Proposed by <strong><%= workers[w.proposing_worker_id] ? workers[w.proposing_worker_id].characterName : w.proposing_worker_id %></strong>
+                    <% if (w.related_job_ref) { %> &middot; <a href="/scott/jobs/<%= w.related_job_ref %>"><%= w.related_job_ref %></a><% } %>
+                  </div>
+                  <div class="sc-approval-summary"><%= w.summary %></div>
+                </div>
+                <div class="sc-approval-actions">
+                  <button type="button" class="sc-btn sc-btn-approve" data-action="agree" data-id="<%= w.id %>">Approve</button>
+                  <button type="button" class="sc-btn sc-btn-reject" data-action="reject" data-id="<%= w.id %>">Reject</button>
+                </div>
+              </div>
+            </div>
+          <% } %>
         <% }); %>
       </div>
     </main>
@@ -45,20 +79,55 @@
   <script nonce="<%= nonce %>">
     (function () {
       var csrfToken = <%- JSON.stringify(csrfToken) %>;
-      document.getElementById('scApprovalsList').addEventListener('click', function (e) {
-        var btn = e.target.closest('button[data-decision]');
-        if (!btn) return;
-        btn.disabled = true;
-        var card = btn.closest('[data-approval-id]');
-        fetch('/api/scott/approvals/' + btn.getAttribute('data-id') + '/decide', {
+      var list = document.getElementById('scApprovalsList');
+
+      function removeCard(card) {
+        card.style.transition = 'opacity 200ms ease';
+        card.style.opacity = '0';
+        setTimeout(function () { card.remove(); }, 200);
+      }
+
+      function decide(id, decision, text) {
+        var body = { decision: decision };
+        if (text != null) body.text = text;
+        return fetch('/api/scott/approvals/' + id + '/decide', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
-          body: JSON.stringify({ decision: btn.getAttribute('data-decision') })
-        }).then(function (r) { return r.json(); }).then(function () {
-          card.style.transition = 'opacity 200ms ease';
-          card.style.opacity = '0';
-          setTimeout(function () { card.remove(); }, 200);
-        }).catch(function () { btn.disabled = false; });
+          body: JSON.stringify(body)
+        }).then(function (r) { return r.json(); });
+      }
+
+      list.addEventListener('click', function (e) {
+        var btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        var id = btn.getAttribute('data-id');
+        var action = btn.getAttribute('data-action');
+        var card = btn.closest('[data-approval-id]');
+        var textarea = card.querySelector('.sc-draft-textarea');
+
+        card.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+
+        if (action === 'agree') {
+          decide(id, 'approve').then(function () { removeCard(card); }).catch(function () { card.querySelectorAll('button').forEach(function (b) { b.disabled = false; }); });
+        } else if (action === 'modify') {
+          decide(id, 'approve', textarea ? textarea.value : undefined).then(function () { removeCard(card); }).catch(function () { card.querySelectorAll('button').forEach(function (b) { b.disabled = false; }); });
+        } else if (action === 'reject') {
+          decide(id, 'reject').then(function () { removeCard(card); }).catch(function () { card.querySelectorAll('button').forEach(function (b) { b.disabled = false; }); });
+        } else if (action === 'redraft') {
+          fetch('/api/scott/approvals/' + id + '/redraft', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken }
+          }).then(function (r) { return r.json(); }).then(function (data) {
+            if (data.error) {
+              card.querySelectorAll('button').forEach(function (b) { b.disabled = false; });
+              return;
+            }
+            // A fresh writeback was created server-side; simplest correct
+            // refresh is to reload the list rather than try to reconcile
+            // this card in place against a brand new pending item.
+            window.location.reload();
+          }).catch(function () { card.querySelectorAll('button').forEach(function (b) { b.disabled = false; }); });
+        }
       });
     })();
   </script>

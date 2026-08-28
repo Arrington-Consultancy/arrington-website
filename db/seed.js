@@ -4726,6 +4726,23 @@ async function seed() {
     console.log(result.seeded ? 'Scott AI Demonstration: fictional dataset seeded.' : 'Scott AI Demonstration: fictional dataset already present, skipped.');
   }
 
+  // Scott AI Demonstration — lead capture columns (28/08/2026). Adds the
+  // public lead-form intake path: customer_email on scott_enquiries, and
+  // the 'superseded' writeback status (used by "Redraft" — the old draft is
+  // superseded, not rejected, when a human asks the team to try again) plus
+  // edited_by_human (set when a "Modify" edit is saved before approval).
+  // No-op on a brand new database, since CREATE TABLE already includes
+  // these — only matters for a database that had the Scott tables from
+  // before this migration existed.
+  {
+    await db.query(`ALTER TABLE scott_enquiries ADD COLUMN IF NOT EXISTS customer_email VARCHAR(255) NOT NULL DEFAULT ''`);
+    await db.query(`ALTER TABLE scott_writebacks ADD COLUMN IF NOT EXISTS edited_by_human BOOLEAN NOT NULL DEFAULT false`);
+    await db.query(`ALTER TABLE scott_writebacks DROP CONSTRAINT IF EXISTS scott_writebacks_status_check`);
+    await db.query(`ALTER TABLE scott_writebacks ADD CONSTRAINT scott_writebacks_status_check CHECK (status IN ('auto_applied', 'pending_approval', 'approved', 'rejected', 'superseded'))`);
+    await db.query(`ALTER TABLE scott_conversations ALTER COLUMN user_id DROP NOT NULL`);
+    console.log('Scott AI Demonstration: lead capture columns verified.');
+  }
+
   console.log('Seed complete.');
 }
 

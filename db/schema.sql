@@ -321,6 +321,7 @@ CREATE TABLE IF NOT EXISTS scott_enquiries (
     id SERIAL PRIMARY KEY,
     customer_id INTEGER REFERENCES scott_customers(id) ON DELETE SET NULL,
     customer_name VARCHAR(200) NOT NULL DEFAULT '',
+    customer_email VARCHAR(255) NOT NULL DEFAULT '',
     channel VARCHAR(30) NOT NULL DEFAULT 'phone',
     subject VARCHAR(255) NOT NULL DEFAULT '',
     message TEXT NOT NULL DEFAULT '',
@@ -366,16 +367,21 @@ CREATE TABLE IF NOT EXISTS scott_writebacks (
     related_job_id INTEGER REFERENCES scott_jobs(id) ON DELETE SET NULL,
     related_enquiry_id INTEGER REFERENCES scott_enquiries(id) ON DELETE SET NULL,
     requires_approval BOOLEAN NOT NULL DEFAULT false,
-    status VARCHAR(20) NOT NULL DEFAULT 'auto_applied' CHECK (status IN ('auto_applied', 'pending_approval', 'approved', 'rejected')),
+    status VARCHAR(20) NOT NULL DEFAULT 'auto_applied' CHECK (status IN ('auto_applied', 'pending_approval', 'approved', 'rejected', 'superseded')),
     decided_by_user_id INTEGER REFERENCES users(id),
     decided_at TIMESTAMPTZ,
+    edited_by_human BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_scott_writebacks_status ON scott_writebacks (status);
 
 CREATE TABLE IF NOT EXISTS scott_conversations (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    -- Nullable: a conversation auto-started by a public lead submission has
+    -- no logged-in staff member behind it — it's the team's shared record
+    -- of handling that enquiry, not any one person's private chat. Only a
+    -- general (job/enquiry-unscoped) conversation is ever truly personal.
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL DEFAULT 'New conversation',
     related_job_id INTEGER REFERENCES scott_jobs(id) ON DELETE SET NULL,
     related_enquiry_id INTEGER REFERENCES scott_enquiries(id) ON DELETE SET NULL,
