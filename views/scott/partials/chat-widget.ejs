@@ -18,7 +18,13 @@
             <div class="sc-msg-body">
               <div class="sc-msg-name"><%= m.characterName %><%= m.displayRole ? ' · ' + m.displayRole : '' %></div>
               <%= m.content %>
-              <% if (m.technicalFailure) { %><div class="sc-msg-meta-row"><span class="sc-msg-tag sc-msg-tag-fail">Technical problem</span></div><% } %>
+              <% if (m.certainty === 'LIKELY' || m.certainty === 'UNPROVEN' || m.technicalFailure) { %>
+              <div class="sc-msg-meta-row">
+                <% if (m.certainty === 'LIKELY') { %><span class="sc-msg-tag sc-msg-tag-certainty">Likely, not certain</span><% } %>
+                <% if (m.certainty === 'UNPROVEN') { %><span class="sc-msg-tag sc-msg-tag-certainty">Unproven — insufficient evidence</span><% } %>
+                <% if (m.technicalFailure) { %><span class="sc-msg-tag sc-msg-tag-fail">Technical problem</span><% } %>
+              </div>
+              <% } %>
             </div>
           </div>
         <% } %>
@@ -94,6 +100,8 @@
     var div = document.createElement('div');
     div.className = 'sc-msg';
     var tags = '';
+    if (opts.certainty === 'LIKELY') tags += '<span class="sc-msg-tag sc-msg-tag-certainty">Likely, not certain</span>';
+    if (opts.certainty === 'UNPROVEN') tags += '<span class="sc-msg-tag sc-msg-tag-certainty">Unproven — insufficient evidence</span>';
     if (opts.writeback) tags += '<span class="sc-msg-tag sc-msg-tag-writeback" title="' + escapeHtml(opts.writeback.summary) + '">Recorded in demo audit trail</span>';
     if (opts.escalation) tags += '<span class="sc-msg-tag sc-msg-tag-escalation" title="' + escapeHtml(opts.escalation.reason) + '">Needs ' + (opts.escalation.to === 'scott_mercer' ? 'Scott Mercer' : 'Tom Arrington') + ' approval</span>';
     if (opts.technicalFailure) tags += '<span class="sc-msg-tag sc-msg-tag-fail">Technical problem</span>';
@@ -126,7 +134,7 @@
       t2.remove();
       addWorkerMessage({
         name: wr.characterName, role: wr.displayRole, accent: wr.accent, initials: wr.initials,
-        text: wr.reply, writeback: wr.writeback, escalation: wr.escalation, technicalFailure: wr.technicalFailure
+        text: wr.reply, certainty: wr.certainty, writeback: wr.writeback, escalation: wr.escalation, technicalFailure: wr.technicalFailure
       });
     }
   }

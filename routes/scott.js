@@ -92,6 +92,7 @@ async function loadChatBootstrap(userId, { jobId, enquiryId } = {}) {
       accent: w ? w.accent : '#5c6b62',
       initials: w ? w.initials : '?',
       content: m.content,
+      certainty: m.certainty,
       technicalFailure: m.technical_failure
     };
   });
