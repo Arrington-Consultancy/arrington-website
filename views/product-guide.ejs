@@ -618,7 +618,7 @@
                 var link = document.getElementById('pg-rec-link');
                 if (result.recommendation.pricePence) {
                     link.href = result.recommendation.path;
-                    link.textContent = 'Continue to ' + result.recommendation.name + ' — ' + formatPrice(result.recommendation.pricePence);
+                    link.textContent = 'Continue to ' + result.recommendation.name + ' (' + formatPrice(result.recommendation.pricePence) + ')';
                 } else {
                     link.href = '#conversation';
                     link.textContent = 'Start the conversation';
@@ -632,7 +632,7 @@
                         var li = document.createElement('li');
                         var a = document.createElement('a');
                         a.href = route.path;
-                        a.textContent = route.name + (route.pricePence ? ' — ' + formatPrice(route.pricePence) : '');
+                        a.textContent = route.name + (route.pricePence ? ' (' + formatPrice(route.pricePence) + ')' : '');
                         li.appendChild(a);
                         laterList.appendChild(li);
                     });
