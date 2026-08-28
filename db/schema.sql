@@ -267,4 +267,131 @@ CREATE TABLE IF NOT EXISTS product_guide_submissions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     contacted_at TIMESTAMPTZ
 );
+
+-- ============================================================
+-- Scott AI Demonstration (private, invited-access only)
+--
+-- A fully isolated fictional dataset for "Scott's Armchair & Knitting
+-- Service" — see lib/scott/config.js for the Drive snapshot this was built
+-- from. Nothing in this section is ever read by, or written to, any real
+-- Arrington Consultancy table, and no real Arrington business data is ever
+-- read into it. Access is gated through the existing page_access mechanism
+-- against a synthetic hidden `pages` row (see db/seed.js) — no second auth
+-- system, reusing the site's own session/bcrypt/Postgres login as-is.
+--
+-- Every scott_* table is prefixed so it is trivially greppable as isolated,
+-- and every row it inserts is fictional. Structured fields on scott_jobs /
+-- scott_enquiries / scott_customers are only ever changed by explicit,
+-- code-driven actions a logged-in human takes in the UI (assign, mark
+-- resolved, approve) — never directly by free-text JSON coming back from an
+-- AI worker call. A worker's proposed material change is instead recorded
+-- as an append-only row in scott_writebacks / scott_activity, which is the
+-- demonstration's own private audit trail, explicitly never a write to the
+-- real Drive brain (see lib/scott/governance.js).
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS scott_customers (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    kind VARCHAR(20) NOT NULL DEFAULT 'householder' CHECK (kind IN ('householder', 'business')),
+    location VARCHAR(200) NOT NULL DEFAULT '',
+    notes TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS scott_jobs (
+    id SERIAL PRIMARY KEY,
+    ref VARCHAR(20) UNIQUE NOT NULL,
+    customer_id INTEGER REFERENCES scott_customers(id) ON DELETE SET NULL,
+    kind VARCHAR(20) NOT NULL CHECK (kind IN ('repair', 'knitting', 'combined')),
+    description TEXT NOT NULL DEFAULT '',
+    status VARCHAR(20) NOT NULL DEFAULT 'enquiry' CHECK (status IN ('enquiry', 'quoted', 'scheduled', 'in_progress', 'awaiting_parts', 'on_hold', 'completed', 'delivered')),
+    price_pence INTEGER,
+    promised_date DATE,
+    collection_date DATE,
+    at_risk BOOLEAN NOT NULL DEFAULT false,
+    risk_note TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_scott_jobs_status ON scott_jobs (status);
+CREATE INDEX IF NOT EXISTS idx_scott_jobs_customer ON scott_jobs (customer_id);
+
+CREATE TABLE IF NOT EXISTS scott_enquiries (
+    id SERIAL PRIMARY KEY,
+    customer_id INTEGER REFERENCES scott_customers(id) ON DELETE SET NULL,
+    customer_name VARCHAR(200) NOT NULL DEFAULT '',
+    channel VARCHAR(30) NOT NULL DEFAULT 'phone',
+    subject VARCHAR(255) NOT NULL DEFAULT '',
+    message TEXT NOT NULL DEFAULT '',
+    status VARCHAR(20) NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'routed', 'responded', 'closed')),
+    assigned_worker_id VARCHAR(30),
+    related_job_id INTEGER REFERENCES scott_jobs(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_scott_enquiries_status ON scott_enquiries (status);
+
+-- Append-only. Feeds the "recent activity" feed on the hub — every row here
+-- reflects something that actually happened in the demonstration (a real
+-- routed request, a real approval, a real draft), never invented filler.
+CREATE TABLE IF NOT EXISTS scott_activity (
+    id SERIAL PRIMARY KEY,
+    actor VARCHAR(30) NOT NULL,
+    event_type VARCHAR(40) NOT NULL,
+    summary TEXT NOT NULL,
+    related_job_id INTEGER REFERENCES scott_jobs(id) ON DELETE SET NULL,
+    related_enquiry_id INTEGER REFERENCES scott_enquiries(id) ON DELETE SET NULL,
+    conversation_id INTEGER,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_scott_activity_created ON scott_activity (created_at DESC);
+
+-- A worker's proposed material write-back. Append-only by design (see the
+-- header note above) — approving one never rewrites a structured column on
+-- scott_jobs/scott_enquiries directly, it only allows the note to stand as
+-- part of the record and appear in scott_activity. requires_approval is set
+-- whenever the proposing worker's own specification says the underlying
+-- decision needs Scott Mercer or Tom Arrington approval (e.g. a discount
+-- above 10%); Company Brain & Records is the only worker whose own
+-- record-keeping writebacks apply without a further approval step, matching
+-- the real Permission Map.
+CREATE TABLE IF NOT EXISTS scott_writebacks (
+    id SERIAL PRIMARY KEY,
+    conversation_id INTEGER,
+    message_id INTEGER,
+    proposing_worker_id VARCHAR(30) NOT NULL,
+    intent_type VARCHAR(40) NOT NULL,
+    summary TEXT NOT NULL,
+    related_job_id INTEGER REFERENCES scott_jobs(id) ON DELETE SET NULL,
+    related_enquiry_id INTEGER REFERENCES scott_enquiries(id) ON DELETE SET NULL,
+    requires_approval BOOLEAN NOT NULL DEFAULT false,
+    status VARCHAR(20) NOT NULL DEFAULT 'auto_applied' CHECK (status IN ('auto_applied', 'pending_approval', 'approved', 'rejected')),
+    decided_by_user_id INTEGER REFERENCES users(id),
+    decided_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_scott_writebacks_status ON scott_writebacks (status);
+
+CREATE TABLE IF NOT EXISTS scott_conversations (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL DEFAULT 'New conversation',
+    related_job_id INTEGER REFERENCES scott_jobs(id) ON DELETE SET NULL,
+    related_enquiry_id INTEGER REFERENCES scott_enquiries(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS scott_messages (
+    id SERIAL PRIMARY KEY,
+    conversation_id INTEGER NOT NULL REFERENCES scott_conversations(id) ON DELETE CASCADE,
+    sender VARCHAR(20) NOT NULL CHECK (sender IN ('user', 'worker', 'system')),
+    worker_id VARCHAR(30),
+    content TEXT NOT NULL,
+    certainty VARCHAR(10),
+    technical_failure BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_scott_messages_conversation ON scott_messages (conversation_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_product_guide_created_at ON product_guide_submissions (created_at DESC);
