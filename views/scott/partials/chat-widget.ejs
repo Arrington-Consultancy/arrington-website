@@ -21,7 +21,7 @@
               <% if (m.certainty === 'LIKELY' || m.certainty === 'UNPROVEN' || m.technicalFailure) { %>
               <div class="sc-msg-meta-row">
                 <% if (m.certainty === 'LIKELY') { %><span class="sc-msg-tag sc-msg-tag-certainty">Likely, not certain</span><% } %>
-                <% if (m.certainty === 'UNPROVEN') { %><span class="sc-msg-tag sc-msg-tag-certainty">Unproven — insufficient evidence</span><% } %>
+                <% if (m.certainty === 'UNPROVEN') { %><span class="sc-msg-tag sc-msg-tag-certainty">Unproven, insufficient evidence</span><% } %>
                 <% if (m.technicalFailure) { %><span class="sc-msg-tag sc-msg-tag-fail">Technical problem</span><% } %>
               </div>
               <% } %>
@@ -34,7 +34,7 @@
         <div class="sc-msg-avatar sc-avatar-receptionist"><%= workersById.receptionist.initials %></div>
         <div class="sc-msg-body">
           <div class="sc-msg-name">Ruth Bailey · Receptionist</div>
-          Morning! Ask me anything about the workshop and I'll get it to the right person &mdash; try one of the questions below, or type your own.
+          Morning! Ask me anything about the workshop and I'll get it to the right person, or try one of the questions below.
         </div>
       </div>
     <% } %>
@@ -47,7 +47,7 @@
   </div>
   <% } %>
   <% if (!aiEnabled) { %>
-    <div class="sc-chat-disabled-note">Live AI is not enabled in this environment yet — the team can't reply until Tom sets it up.</div>
+    <div class="sc-chat-disabled-note">Live AI is not enabled in this environment yet, so the team can't reply until Tom sets it up.</div>
   <% } %>
   <form class="sc-chat-input-row" id="scChatForm">
     <input type="text" id="scChatInput" placeholder="Ask Ruth anything..." autocomplete="off" <%= aiEnabled ? '' : 'disabled' %>>
@@ -111,7 +111,7 @@
     div.className = 'sc-msg';
     var tags = '';
     if (opts.certainty === 'LIKELY') tags += '<span class="sc-msg-tag sc-msg-tag-certainty">Likely, not certain</span>';
-    if (opts.certainty === 'UNPROVEN') tags += '<span class="sc-msg-tag sc-msg-tag-certainty">Unproven — insufficient evidence</span>';
+    if (opts.certainty === 'UNPROVEN') tags += '<span class="sc-msg-tag sc-msg-tag-certainty">Unproven, insufficient evidence</span>';
     if (opts.writeback) tags += '<span class="sc-msg-tag sc-msg-tag-writeback" title="' + escapeHtml(opts.writeback.summary) + '">Recorded in demo audit trail</span>';
     if (opts.escalation) tags += '<span class="sc-msg-tag sc-msg-tag-escalation" title="' + escapeHtml(opts.escalation.reason) + '">Needs ' + (opts.escalation.to === 'scott_mercer' ? 'Scott Mercer' : 'Tom Arrington') + ' approval</span>';
     if (opts.technicalFailure) tags += '<span class="sc-msg-tag sc-msg-tag-fail">Technical problem</span>';
