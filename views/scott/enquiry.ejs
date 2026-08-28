@@ -13,27 +13,27 @@
     <main class="sc-main">
       <div class="sc-page-header">
         <div>
-          <p style="margin: 0 0 4px;"><a href="/scott/enquiries" style="color: var(--sc-text-muted); font-size: 13px;">&larr; All enquiries</a></p>
+          <p class="sc-back-link-wrap"><a href="/scott/enquiries" class="sc-back-link">&larr; All enquiries</a></p>
           <h1 class="sc-h"><%= enquiry.subject %></h1>
           <p><%= enquiry.customer_name %> &middot; via <%= enquiry.channel %> &middot; <%= new Date(enquiry.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) %></p>
         </div>
-        <form id="scAssignForm" style="display:flex; gap:8px; align-items:center;">
-          <select id="scAssignSelect" style="padding:7px 10px; border-radius:6px; border:1px solid var(--sc-border); font-size:13px; font-family:inherit;">
+        <form id="scAssignForm" class="sc-row-actions">
+          <select id="scAssignSelect" class="sc-select">
             <option value="">Unassigned</option>
             <% Object.keys(workers).filter(function (id) { return id !== 'receptionist'; }).forEach(function (id) { %>
               <option value="<%= id %>" <%= enquiry.assigned_worker_id === id ? 'selected' : '' %>><%= workers[id].characterName %> (<%= workers[id].displayRole %>)</option>
             <% }); %>
           </select>
-          <button type="submit" class="sc-btn sc-btn-outline" id="scAssignSave" style="padding: 7px 14px;">Assign</button>
+          <button type="submit" class="sc-btn sc-btn-outline" id="scAssignSave">Assign</button>
         </form>
       </div>
-      <div id="scAssignNote" style="display:none; margin: -12px 0 16px; font-size: 12.5px; color: var(--sc-sage);">Assignment updated.</div>
+      <div id="scAssignNote" class="sc-inline-note" hidden>Assignment updated.</div>
 
       <div class="sc-detail-grid">
         <div>
           <div class="sc-card sc-detail-card">
             <h2 class="sc-section-title">Message</h2>
-            <p style="margin: 0; font-size: 14.5px; line-height: 1.6;"><%= enquiry.message %></p>
+            <p class="sc-detail-text"><%= enquiry.message %></p>
           </div>
           <% if (enquiry.related_job_ref) { %>
           <div class="sc-card sc-detail-card">
@@ -64,8 +64,8 @@
           body: JSON.stringify({ workerId: select.value })
         }).then(function (r) { return r.json(); }).then(function (data) {
           if (data.ok) {
-            note.style.display = 'block';
-            setTimeout(function () { note.style.display = 'none'; }, 2500);
+            note.hidden = false;
+            setTimeout(function () { note.hidden = true; }, 2500);
           }
         }).finally(function () { btn.disabled = false; });
       });

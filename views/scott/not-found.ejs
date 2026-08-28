@@ -8,11 +8,11 @@
   <%- include('partials/styles') %>
 </head>
 <body class="scott-body">
-  <div class="sc-login-wrap" style="background: var(--sc-cream);">
-    <div class="sc-card" style="max-width: 420px; padding: 34px; text-align: center;">
-      <h1 class="sc-h" style="font-size: 22px;">That <%= kind %> doesn't exist</h1>
-      <p style="color: var(--sc-text-muted); font-size: 14px;">It may have been removed, or the link is wrong.</p>
-      <a href="/scott" class="sc-btn sc-btn-primary" style="margin-top: 12px;">Back to dashboard</a>
+  <div class="sc-login-wrap sc-notfound-wrap">
+    <div class="sc-card sc-notfound-card">
+      <h1 class="sc-h sc-notfound-title">That <%= kind %> doesn't exist</h1>
+      <p class="sc-notfound-sub">It may have been removed, or the link is wrong.</p>
+      <a href="/scott" class="sc-btn sc-btn-primary sc-notfound-btn">Back to dashboard</a>
     </div>
   </div>
 </body>

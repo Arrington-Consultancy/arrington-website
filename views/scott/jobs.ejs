@@ -37,7 +37,7 @@
               <div class="sc-row-title"><%= j.ref %> &middot; <%= j.customer_name || 'Unknown customer' %></div>
               <div class="sc-row-sub"><%= j.description %></div>
             </div>
-            <div style="display:flex; gap:8px; align-items:center;">
+            <div class="sc-row-actions">
               <% if (j.at_risk) { %><span class="sc-pill sc-pill-risk">At risk</span><% } %>
               <span class="sc-pill sc-pill-status"><%= j.status.replace('_', ' ') %></span>
             </div>

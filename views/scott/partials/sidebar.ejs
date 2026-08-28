@@ -20,7 +20,7 @@
     <div class="sc-user-row">Signed in as <strong>&nbsp;<%= user.username %></strong></div>
     <form action="/logout" method="POST">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-      <button type="submit" class="sc-logout" style="width:100%;border:none;cursor:pointer;">Log out</button>
+      <button type="submit" class="sc-logout">Log out</button>
     </form>
   </div>
 </aside>

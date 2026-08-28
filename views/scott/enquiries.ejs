@@ -35,7 +35,7 @@
               <div class="sc-row-title"><%= e.subject %></div>
               <div class="sc-row-sub"><%= e.customer_name %> &middot; via <%= e.channel %><% if (e.related_job_ref) { %> &middot; <%= e.related_job_ref %><% } %></div>
             </div>
-            <div style="display:flex; gap:8px; align-items:center;">
+            <div class="sc-row-actions">
               <% if (e.status === 'new') { %><span class="sc-pill sc-pill-new">New</span><% } %>
               <% if (e.assigned_worker_id && workers[e.assigned_worker_id]) { %>
                 <span class="sc-pill sc-pill-status">→ <%= workers[e.assigned_worker_id].characterName %></span>
