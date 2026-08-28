@@ -17,10 +17,17 @@
           <h1 class="sc-h"><%= enquiry.subject %></h1>
           <p><%= enquiry.customer_name %> &middot; via <%= enquiry.channel %> &middot; <%= new Date(enquiry.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) %></p>
         </div>
-        <% if (enquiry.assigned_worker_id && workers[enquiry.assigned_worker_id]) { %>
-          <span class="sc-pill sc-pill-status" style="font-size: 13px;">Routed to <%= workers[enquiry.assigned_worker_id].characterName %></span>
-        <% } %>
+        <form id="scAssignForm" style="display:flex; gap:8px; align-items:center;">
+          <select id="scAssignSelect" style="padding:7px 10px; border-radius:6px; border:1px solid var(--sc-border); font-size:13px; font-family:inherit;">
+            <option value="">Unassigned</option>
+            <% Object.keys(workers).filter(function (id) { return id !== 'receptionist'; }).forEach(function (id) { %>
+              <option value="<%= id %>" <%= enquiry.assigned_worker_id === id ? 'selected' : '' %>><%= workers[id].characterName %> (<%= workers[id].displayRole %>)</option>
+            <% }); %>
+          </select>
+          <button type="submit" class="sc-btn sc-btn-outline" id="scAssignSave" style="padding: 7px 14px;">Assign</button>
+        </form>
       </div>
+      <div id="scAssignNote" style="display:none; margin: -12px 0 16px; font-size: 12.5px; color: var(--sc-sage);">Assignment updated.</div>
 
       <div class="sc-detail-grid">
         <div>
@@ -36,10 +43,33 @@
           <% } %>
         </div>
         <div>
-          <%- include('partials/chat-widget', { workersById: workersById, csrfToken: csrfToken, aiEnabled: aiEnabled, suggestions: false }) %>
+          <%- include('partials/chat-widget', { workersById: workersById, csrfToken: csrfToken, aiEnabled: aiEnabled, suggestions: false, relatedEnquiryId: enquiry.id, initialConversationId: initialConversationId, initialMessages: initialMessages }) %>
         </div>
       </div>
     </main>
   </div>
+  <script nonce="<%= nonce %>">
+    (function () {
+      var csrfToken = <%- JSON.stringify(csrfToken) %>;
+      var enquiryId = <%- JSON.stringify(enquiry.id) %>;
+      document.getElementById('scAssignForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var select = document.getElementById('scAssignSelect');
+        var btn = document.getElementById('scAssignSave');
+        var note = document.getElementById('scAssignNote');
+        btn.disabled = true;
+        fetch('/api/scott/enquiries/' + enquiryId + '/assign', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
+          body: JSON.stringify({ workerId: select.value })
+        }).then(function (r) { return r.json(); }).then(function (data) {
+          if (data.ok) {
+            note.style.display = 'block';
+            setTimeout(function () { note.style.display = 'none'; }, 2500);
+          }
+        }).finally(function () { btn.disabled = false; });
+      });
+    })();
+  </script>
 </body>
 </html>

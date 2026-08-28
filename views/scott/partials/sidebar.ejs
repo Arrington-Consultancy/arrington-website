@@ -6,6 +6,10 @@
       <span>Armchair &amp; Knitting Co.</span>
     </div>
   </div>
+  <div class="sc-search-wrap">
+    <input type="text" id="scSearchInput" class="sc-search-input" placeholder="Search jobs, enquiries, customers..." autocomplete="off">
+    <div id="scSearchResults" class="sc-search-results" hidden></div>
+  </div>
   <ul class="sc-nav">
     <li><a href="/scott" class="<%= active === 'dashboard' ? 'active' : '' %>">Dashboard</a></li>
     <li><a href="/scott/jobs" class="<%= active === 'jobs' ? 'active' : '' %>">Jobs &amp; Orders</a></li>
@@ -20,3 +24,51 @@
     </form>
   </div>
 </aside>
+<script nonce="<%= nonce %>">
+(function () {
+  var input = document.getElementById('scSearchInput');
+  var results = document.getElementById('scSearchResults');
+  var debounceTimer = null;
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function render(data) {
+    var rows = [];
+    (data.jobs || []).forEach(function (j) {
+      rows.push('<a href="/scott/jobs/' + encodeURIComponent(j.ref) + '">' + escapeHtml(j.ref) + ' &middot; ' + escapeHtml(j.customer_name || '') + '</a>');
+    });
+    (data.enquiries || []).forEach(function (e) {
+      rows.push('<a href="/scott/enquiries/' + e.id + '">' + escapeHtml(e.subject) + '</a>');
+    });
+    (data.customers || []).forEach(function (c) {
+      rows.push('<span class="sc-search-customer">' + escapeHtml(c.name) + '</span>');
+    });
+    if (!rows.length) {
+      results.innerHTML = '<div class="sc-search-empty">No matches</div>';
+    } else {
+      results.innerHTML = rows.join('');
+    }
+    results.hidden = false;
+  }
+
+  input.addEventListener('input', function () {
+    var q = input.value.trim();
+    clearTimeout(debounceTimer);
+    if (q.length < 2) { results.hidden = true; return; }
+    debounceTimer = setTimeout(function () {
+      fetch('/api/scott/search?q=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(render)
+        .catch(function () { results.hidden = true; });
+    }, 200);
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!results.contains(e.target) && e.target !== input) results.hidden = true;
+  });
+})();
+</script>

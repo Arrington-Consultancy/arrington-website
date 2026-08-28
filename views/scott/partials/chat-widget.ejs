@@ -6,16 +6,34 @@
       <span>Ruth routes every question to the right person on the team</span>
     </div>
   </div>
+  <% var hasHistory = typeof initialMessages !== 'undefined' && initialMessages && initialMessages.length; %>
   <div class="sc-chat-messages" id="scChatMessages">
-    <div class="sc-msg">
-      <div class="sc-msg-avatar" style="background: <%= workersById.receptionist.accent %>;"><%= workersById.receptionist.initials %></div>
-      <div class="sc-msg-body">
-        <div class="sc-msg-name">Ruth Bailey · Receptionist</div>
-        Morning! Ask me anything about the workshop and I'll get it to the right person &mdash; try one of the questions below, or type your own.
+    <% if (hasHistory) { %>
+      <% initialMessages.forEach(function (m) { %>
+        <% if (m.sender === 'user') { %>
+          <div class="sc-msg sc-msg-user"><div class="sc-msg-avatar" style="background:#5c6b62;">You</div><div class="sc-msg-body"><%= m.content %></div></div>
+        <% } else { %>
+          <div class="sc-msg">
+            <div class="sc-msg-avatar" style="background: <%= m.accent %>;"><%= m.initials %></div>
+            <div class="sc-msg-body">
+              <div class="sc-msg-name"><%= m.characterName %><%= m.displayRole ? ' · ' + m.displayRole : '' %></div>
+              <%= m.content %>
+              <% if (m.technicalFailure) { %><div class="sc-msg-meta-row"><span class="sc-msg-tag sc-msg-tag-fail">Technical problem</span></div><% } %>
+            </div>
+          </div>
+        <% } %>
+      <% }); %>
+    <% } else { %>
+      <div class="sc-msg">
+        <div class="sc-msg-avatar" style="background: <%= workersById.receptionist.accent %>;"><%= workersById.receptionist.initials %></div>
+        <div class="sc-msg-body">
+          <div class="sc-msg-name">Ruth Bailey · Receptionist</div>
+          Morning! Ask me anything about the workshop and I'll get it to the right person &mdash; try one of the questions below, or type your own.
+        </div>
       </div>
-    </div>
+    <% } %>
   </div>
-  <% if (typeof suggestions === 'undefined' || suggestions !== false) { %>
+  <% if ((typeof suggestions === 'undefined' || suggestions !== false) && !hasHistory) { %>
   <div class="sc-chat-suggestions" id="scChatSuggestions">
     <button type="button" data-q="What needs my attention today?">What needs my attention today?</button>
     <button type="button" data-q="Which jobs are at risk this week?">Which jobs are at risk this week?</button>
@@ -34,7 +52,10 @@
 (function () {
   var WORKERS = <%- JSON.stringify(workersById) %>;
   var conversationId = <%- typeof initialConversationId !== 'undefined' && initialConversationId ? initialConversationId : 'null' %>;
+  var relatedJobId = <%- typeof relatedJobId !== 'undefined' && relatedJobId ? relatedJobId : 'null' %>;
+  var relatedEnquiryId = <%- typeof relatedEnquiryId !== 'undefined' && relatedEnquiryId ? relatedEnquiryId : 'null' %>;
   var messagesEl = document.getElementById('scChatMessages');
+  messagesEl.scrollTop = messagesEl.scrollHeight;
   var form = document.getElementById('scChatForm');
   var input = document.getElementById('scChatInput');
   var sendBtn = document.getElementById('scChatSend');
@@ -122,7 +143,7 @@
       var res = await fetch('/api/scott/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
-        body: JSON.stringify({ message: text, conversationId: conversationId })
+        body: JSON.stringify({ message: text, conversationId: conversationId, relatedJobId: relatedJobId, relatedEnquiryId: relatedEnquiryId })
       });
       var data = await res.json();
       if (!res.ok) {

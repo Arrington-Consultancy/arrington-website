@@ -22,7 +22,7 @@ const bcrypt = require('bcrypt');
 const { rateLimit } = require('express-rate-limit');
 const db = require('../db/pool');
 const repo = require('../lib/scott/data/repository');
-const { WORKERS, WORKER_IDS, getWorker } = require('../lib/scott/workers');
+const { WORKERS, WORKER_IDS, ROUTABLE_WORKER_IDS, getWorker } = require('../lib/scott/workers');
 const { OPERATING_SNAPSHOT_CARDS } = require('../lib/scott/businessFacts');
 const { SNAPSHOT_LABEL } = require('../lib/scott/config');
 const { requireScottPageAccess, requireScottApiAccess, hasScottAccess } = require('../lib/scott/access');
@@ -73,6 +73,31 @@ const scottChatLimiter = rateLimit({
 
 const DUMMY_HASH = bcrypt.hashSync('scott-timing-equaliser-not-a-real-password', 12);
 
+// Gives a returning visitor continuity: the most recent conversation for
+// this exact context (general dashboard chat, or scoped to one job/
+// enquiry) is loaded and handed to the chat widget instead of starting a
+// blank thread on every reload.
+async function loadChatBootstrap(userId, { jobId, enquiryId } = {}) {
+  const conversation = await repo.getLatestConversation(userId, { jobId, enquiryId });
+  if (!conversation) return { initialConversationId: null, initialMessages: [] };
+  const rawMessages = await repo.getMessages(conversation.id);
+  const initialMessages = rawMessages.map((m) => {
+    if (m.sender === 'user') return { sender: 'user', content: m.content };
+    const w = getWorker(m.worker_id);
+    return {
+      sender: 'worker',
+      workerId: m.worker_id,
+      characterName: w ? w.characterName : (m.worker_id || 'Worker'),
+      displayRole: w ? w.displayRole : '',
+      accent: w ? w.accent : '#5c6b62',
+      initials: w ? w.initials : '?',
+      content: m.content,
+      technicalFailure: m.technical_failure
+    };
+  });
+  return { initialConversationId: conversation.id, initialMessages };
+}
+
 function safeNextPath(next) {
   // Only ever allow a same-origin path back into /scott/*, never an
   // external redirect target — the same discipline as any open-redirect
@@ -84,12 +109,18 @@ function safeNextPath(next) {
 function mountPageRoute(app, generateCsrfToken) {
   app.get('/scott/login', noindexHeader, async (req, res, next) => {
     try {
+      let error = null;
       if (req.session.user) {
         const allowed = await hasScottAccess(req.session.user);
         if (allowed) return res.redirect(safeNextPath(req.query.next));
+        // Logged in (to the main site) but not invited to this demo — say
+        // so plainly rather than silently re-showing a blank login form,
+        // which would otherwise look like the previous submission was
+        // simply ignored.
+        error = `You're signed in as ${req.session.user.username}, but that account has not been invited to the Scott demonstration. Ask Tom to grant access via Page access, or sign in as a different account below.`;
       }
       res.render('scott/login', {
-        error: null,
+        error,
         csrfToken: generateCsrfToken(req, res),
         nextPath: safeNextPath(req.query.next)
       });
@@ -100,10 +131,11 @@ function mountPageRoute(app, generateCsrfToken) {
 
   app.get('/scott', noindexHeader, requireScottPageAccess, async (req, res, next) => {
     try {
-      const [summary, activity, approvals] = await Promise.all([
+      const [summary, activity, approvals, chatBootstrap] = await Promise.all([
         repo.getDashboardSummary(),
         repo.getRecentActivity(10),
-        repo.getPendingApprovals()
+        repo.getPendingApprovals(),
+        loadChatBootstrap(req.session.user.id)
       ]);
       res.render('scott/dashboard', {
         user: req.session.user,
@@ -116,6 +148,8 @@ function mountPageRoute(app, generateCsrfToken) {
         aiEnabled: isScottAIEnabled(),
         workersById: WORKERS_BY_ID_JSON,
         navCounts: { newEnquiries: summary.newEnquiries, pendingApprovals: summary.pendingApprovals },
+        initialConversationId: chatBootstrap.initialConversationId,
+        initialMessages: chatBootstrap.initialMessages,
         csrfToken: generateCsrfToken(req, res)
       });
     } catch (err) {
@@ -125,7 +159,7 @@ function mountPageRoute(app, generateCsrfToken) {
 
   app.get('/scott/jobs', noindexHeader, requireScottPageAccess, async (req, res, next) => {
     try {
-      const status = ['enquiry', 'quoted', 'scheduled', 'in_progress', 'awaiting_parts', 'on_hold', 'completed', 'delivered'].includes(req.query.status) ? req.query.status : null;
+      const status = repo.JOB_STATUSES.includes(req.query.status) ? req.query.status : null;
       const jobs = await repo.getJobs({ status, atRiskOnly: req.query.at_risk === '1' });
       const navCounts = await repo.getDashboardSummary();
       res.render('scott/jobs', { user: req.session.user, jobs, status, navCounts, csrfToken: generateCsrfToken(req, res) });
@@ -140,7 +174,15 @@ function mountPageRoute(app, generateCsrfToken) {
       if (!job) return res.status(404).render('scott/not-found', { user: req.session.user, kind: 'job' });
       const activity = (await repo.getRecentActivity(200)).filter((a) => a.related_job_id === job.id);
       const navCounts = await repo.getDashboardSummary();
-      res.render('scott/job', { user: req.session.user, job, activity, navCounts, workersById: WORKERS_BY_ID_JSON, aiEnabled: isScottAIEnabled(), csrfToken: generateCsrfToken(req, res) });
+      const chatBootstrap = await loadChatBootstrap(req.session.user.id, { jobId: job.id });
+      res.render('scott/job', {
+        user: req.session.user, job, activity, navCounts,
+        workersById: WORKERS_BY_ID_JSON, workers: WORKERS, jobStatuses: repo.JOB_STATUSES,
+        aiEnabled: isScottAIEnabled(),
+        initialConversationId: chatBootstrap.initialConversationId,
+        initialMessages: chatBootstrap.initialMessages,
+        csrfToken: generateCsrfToken(req, res)
+      });
     } catch (err) {
       next(err);
     }
@@ -148,7 +190,7 @@ function mountPageRoute(app, generateCsrfToken) {
 
   app.get('/scott/enquiries', noindexHeader, requireScottPageAccess, async (req, res, next) => {
     try {
-      const status = ['new', 'routed', 'responded', 'closed'].includes(req.query.status) ? req.query.status : null;
+      const status = repo.ENQUIRY_STATUSES.includes(req.query.status) ? req.query.status : null;
       const enquiries = await repo.getEnquiries({ status });
       const navCounts = await repo.getDashboardSummary();
       res.render('scott/enquiries', { user: req.session.user, enquiries, status, workers: WORKERS, navCounts, csrfToken: generateCsrfToken(req, res) });
@@ -163,7 +205,14 @@ function mountPageRoute(app, generateCsrfToken) {
       const enquiry = Number.isInteger(id) ? await repo.getEnquiryById(id) : null;
       if (!enquiry) return res.status(404).render('scott/not-found', { user: req.session.user, kind: 'enquiry' });
       const navCounts = await repo.getDashboardSummary();
-      res.render('scott/enquiry', { user: req.session.user, enquiry, workers: WORKERS, navCounts, workersById: WORKERS_BY_ID_JSON, aiEnabled: isScottAIEnabled(), csrfToken: generateCsrfToken(req, res) });
+      const chatBootstrap = await loadChatBootstrap(req.session.user.id, { enquiryId: enquiry.id });
+      res.render('scott/enquiry', {
+        user: req.session.user, enquiry, workers: WORKERS, navCounts,
+        workersById: WORKERS_BY_ID_JSON, aiEnabled: isScottAIEnabled(),
+        initialConversationId: chatBootstrap.initialConversationId,
+        initialMessages: chatBootstrap.initialMessages,
+        csrfToken: generateCsrfToken(req, res)
+      });
     } catch (err) {
       next(err);
     }
@@ -245,7 +294,13 @@ router.post('/api/scott/messages', noindexHeader, requireScottApiAccess, scottCh
       conversation = await repo.getConversation(conversationId, req.session.user.id);
       if (!conversation) return res.status(404).json({ error: 'Conversation not found.' });
     } else {
-      conversation = await repo.createConversation(req.session.user.id, message.slice(0, 80));
+      // A message sent from a job or enquiry detail page carries that
+      // record's id so the new conversation is scoped to it (see
+      // loadChatBootstrap in mountPageRoute, which looks a scoped
+      // conversation back up on the next page load).
+      const relatedJobId = Number.isInteger(parseInt(req.body?.relatedJobId, 10)) ? parseInt(req.body.relatedJobId, 10) : null;
+      const relatedEnquiryId = Number.isInteger(parseInt(req.body?.relatedEnquiryId, 10)) ? parseInt(req.body.relatedEnquiryId, 10) : null;
+      conversation = await repo.createConversation(req.session.user.id, message.slice(0, 80), { jobId: relatedJobId, enquiryId: relatedEnquiryId });
       conversationId = conversation.id;
     }
 
@@ -256,6 +311,15 @@ router.post('/api/scott/messages', noindexHeader, requireScottApiAccess, scottCh
 
     if (turn.receptionist.note) {
       await repo.addMessage({ conversationId, sender: 'worker', workerId: 'receptionist', content: turn.receptionist.note, technicalFailure: turn.receptionist.technicalFailure });
+    }
+
+    // Deterministic bookkeeping, not an AI-driven write: if this
+    // conversation is scoped to an enquiry that's still sitting in 'new',
+    // Ruth having genuinely routed it to a worker this turn is exactly the
+    // "Ruth routes it" moment from the workflow brief — reflect that on
+    // the enquiry record itself so the enquiries list shows real state.
+    if (conversation.related_enquiry_id && turn.workerReplies.length > 0) {
+      await repo.assignEnquiryIfNew(conversation.related_enquiry_id, turn.workerReplies[0].workerId);
     }
 
     for (const wr of turn.workerReplies) {
@@ -341,6 +405,57 @@ router.get('/api/scott/search', noindexHeader, requireScottApiAccess, async (req
     res.json(results);
   } catch (err) {
     console.error('Scott search error:', err);
+    res.status(500).json({ error: 'Something went wrong.' });
+  }
+});
+
+// Direct human action — an explicit "Assign to..." control on the enquiry
+// detail page. workerId '' (unassign) is allowed; anything else must be a
+// real routable worker id. Never triggered by an AI reply's JSON.
+router.post('/api/scott/enquiries/:id/assign', noindexHeader, requireScottApiAccess, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const workerId = req.body?.workerId ? String(req.body.workerId) : null;
+    if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid request.' });
+    if (workerId && !ROUTABLE_WORKER_IDS.includes(workerId)) return res.status(400).json({ error: 'Unknown worker.' });
+    const enquiry = await repo.setEnquiryAssignment(id, workerId, workerId ? 'routed' : 'new');
+    if (!enquiry) return res.status(404).json({ error: 'Enquiry not found.' });
+    await repo.addActivity({
+      actor: 'user',
+      eventType: 'enquiry_assigned',
+      summary: workerId
+        ? `${req.session.user.username} assigned this enquiry to ${WORKERS[workerId].characterName}.`
+        : `${req.session.user.username} unassigned this enquiry.`,
+      relatedEnquiryId: id
+    });
+    res.json({ ok: true, enquiry });
+  } catch (err) {
+    console.error('Scott enquiry assign error:', err);
+    res.status(500).json({ error: 'Something went wrong.' });
+  }
+});
+
+// Direct human action — an explicit "Update status" control on the job
+// detail page. Never triggered by an AI reply's JSON (see the schema
+// header comment in db/schema.sql for why structured-column writes stay
+// code-driven only).
+router.post('/api/scott/jobs/:ref/status', noindexHeader, requireScottApiAccess, async (req, res) => {
+  try {
+    const ref = String(req.params.ref || '').toUpperCase();
+    const status = String(req.body?.status || '');
+    if (!repo.JOB_STATUSES.includes(status)) return res.status(400).json({ error: 'Invalid status.' });
+    const job = await repo.getJobByRef(ref);
+    if (!job) return res.status(404).json({ error: 'Job not found.' });
+    const updated = await repo.setJobStatus(job.id, status);
+    await repo.addActivity({
+      actor: 'user',
+      eventType: 'job_status_changed',
+      summary: `${req.session.user.username} changed ${ref}'s status from ${job.status.replace('_', ' ')} to ${status.replace('_', ' ')}.`,
+      relatedJobId: job.id
+    });
+    res.json({ ok: true, job: updated });
+  } catch (err) {
+    console.error('Scott job status update error:', err);
     res.status(500).json({ error: 'Something went wrong.' });
   }
 });
