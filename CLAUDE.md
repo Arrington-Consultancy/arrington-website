@@ -974,11 +974,18 @@ difference between those two answers is itself the leak.
 
 ### Drive records transcribed
 
-`lib/scott/deepBusinessFacts.js` holds 218 domain-tagged records from
-07A, 07B, 07C, 07D, 07E, 07F, 07G, 07H, 07I, 07L, 07N, 07S, 07T, 07U and
-07V. Still untranscribed: 07J (policies/terms/payments), 07K
-(safety/compliance/privacy/insurance), 07M (supplier resilience), 07O
-(continuity), 07P (marketing asset and consent register), 07R (premises).
+`lib/scott/deepBusinessFacts.js` holds 246 domain-tagged records from
+07A, 07B, 07C, 07D, 07E, 07F, 07G, 07H, 07I, 07L, 07M, 07N, 07S, 07T,
+07U and 07V. Still untranscribed: 07J (policies/terms/payments), 07K
+(safety/compliance/privacy/insurance), 07O (continuity), 07P (marketing
+asset and consent register), 07R (premises).
+
+Every persona now has a meaningful slice of the brain rather than a
+handful: Scott 246, Tony 201, Chloe 55, Leah 21, Ellie and Ravi 14 each,
+Mike 10, Jo 6. That spread came from tagging honestly rather than from
+widening anyone's clearance: 07M's material usage and waste ledger is
+`materials`, which the workshop operatives hold because they are the
+people drawing and cutting the stuff.
 
 07H's attention list is tagged per ITEM rather than as one dashboard
 block, so "what needs my attention today" resolves differently and

@@ -60,6 +60,78 @@
         <% } %>
       <% } %>
 
+      <% if (canSee('materials')) { %>
+        <h2 class="sc-section-title">Material usage and waste, August</h2>
+        <div class="sc-card sc-honesty-card">
+          <p class="sc-row-sub"><strong>How to read a variance.</strong> <%= facts.MATERIAL_VARIANCE_RULES.caution %></p>
+          <p class="sc-row-sub"><%= facts.MATERIAL_VARIANCE_RULES.watchpoints %></p>
+        </div>
+        <div class="sc-list">
+          <% facts.MATERIAL_USAGE_AUGUST.forEach(function (m) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title"><%= m.material %></div>
+                <div class="sc-row-sub">
+                  Planned <%= m.planned %> &middot; actual <%= m.actual %><br>
+                  <strong>Waste:</strong> <%= m.wastage %> against a planning assumption of <%= m.planningAssumption %>.
+                  <% if (m.note) { %><br><%= m.note %><% } %>
+                </div>
+              </div>
+              <div class="sc-row-actions">
+                <span class="sc-pill <%= m.status === 'AMBER' ? 'sc-pill-risk' : 'sc-pill-status' %>"><%= m.status %></span>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+      <% } %>
+
+      <% if (canSee('suppliers_ops')) { %>
+        <h2 class="sc-section-title">If a supplier fails</h2>
+        <div class="sc-card sc-honesty-card">
+          <p class="sc-row-sub"><strong><%= facts.SUPPLIER_RESILIENCE_PRINCIPLE.rule %></strong></p>
+          <p class="sc-row-sub"><%= facts.SUPPLIER_RESILIENCE_PRINCIPLE.notAutomatic %> <%= facts.SUPPLIER_RESILIENCE_PRINCIPLE.humanReview %></p>
+        </div>
+        <div class="sc-list">
+          <% facts.SUPPLIER_ALTERNATES.forEach(function (a) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title"><%= a.material %></div>
+                <div class="sc-row-sub">
+                  <strong>Primary:</strong> <%= a.primary %>.<br>
+                  <strong>Alternate:</strong> <%= a.alternate %>.
+                  <% if (a.note) { %><br><%= a.note %><% } %>
+                </div>
+              </div>
+              <div class="sc-row-actions">
+                <span class="sc-pill <%= /HIGH|RED/.test(a.risk) ? 'sc-pill-risk' : 'sc-pill-status' %>"><%= a.risk %></span>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+
+        <h2 class="sc-section-title">Supplier scorecard, rolling six months</h2>
+        <div class="sc-list">
+          <% facts.SUPPLIER_SCORECARD_6M.forEach(function (sc) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title"><%= sc.supplier %></div>
+                <div class="sc-row-sub">
+                  <% if (sc.onTimePct) { %>On time <%= sc.onTimePct %>% &middot; quality accepted <%= sc.qualityAcceptancePct %>% &middot; <% } %>responsiveness <%= sc.responsiveness %>
+                  <% if (sc.note) { %><br><%= sc.note %><% } %>
+                </div>
+              </div>
+              <div class="sc-row-actions">
+                <span class="sc-pill <%= /AMBER|RED/.test(sc.status) ? 'sc-pill-risk' : 'sc-pill-status' %>"><%= sc.status %></span>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+        <div class="sc-card">
+          <p class="sc-row-sub"><strong>Escalate when:</strong> <%= facts.SUPPLIER_ESCALATION_TRIGGERS.triggers %>.</p>
+          <p class="sc-row-sub"><%= facts.SUPPLIER_ESCALATION_TRIGGERS.thenWhat %></p>
+        </div>
+      <% } %>
+
     </main>
   </div>
 </body>
