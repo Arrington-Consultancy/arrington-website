@@ -263,6 +263,7 @@ const DATA_PAGES = [
   { path: '/scott/quality', view: 'scott/quality', nav: 'quality', label: 'Quality Control' },
   { path: '/scott/marketing', view: 'scott/marketing', nav: 'marketing', label: 'Marketing & Reviews' },
   { path: '/scott/assets', view: 'scott/assets', nav: 'assets', label: 'Assets & Maintenance' },
+  { path: '/scott/premises', view: 'scott/premises', nav: 'premises', label: 'Premises & Facilities' },
   { path: '/scott/opportunities', view: 'scott/opportunities', nav: 'opportunities', label: 'Where the Money Goes' },
   { path: '/scott/brain', view: 'scott/brain', nav: 'brain', label: 'Company Brain' }
 ];

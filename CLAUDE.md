@@ -970,7 +970,8 @@ nothing. Company Brain snippets are cut **after** redaction.
 Dashboard, Jobs & Orders, Enquiries, Approvals, then the company records:
 Pipeline & Quotes, Customers, Complaints, Stock & Supply, Purchase Orders,
 People, Finance, Quality Control, Marketing & Reviews, Assets &
-Maintenance, Where the Money Goes, Company Brain, Activity & Audit. Routes
+Maintenance, Premises & Facilities, Where the Money Goes, Company Brain,
+Activity & Audit. Routes
 are registered from `DATA_PAGES` in `routes/scott.js`; `NAV_PAGES` is what
 the sidebar links (Activity has its own route because it takes a filter).
 Two lists, so a page cannot be reachable but invisible, or listed and 404.
@@ -982,11 +983,11 @@ difference between those two answers is itself the leak.
 
 ### Drive records transcribed
 
-`lib/scott/deepBusinessFacts.js` holds 261 domain-tagged records from
-07A, 07B, 07C, 07D, 07E, 07F, 07G, 07H, 07I, 07K, 07L, 07M, 07N, 07S,
-07T, 07U and 07V. Still untranscribed: 07J (policies/terms/payments),
-07O (continuity), 07P (marketing asset and consent register), 07R
-(premises).
+`lib/scott/deepBusinessFacts.js` holds 284 domain-tagged records from
+07A, 07B, 07C, 07D, 07E, 07F, 07G, 07H, 07I, 07K, 07L, 07M, 07N, 07R,
+07S, 07T, 07U and 07V. Still untranscribed: 07J (policies, terms and
+payments), 07O (continuity), 07P (marketing asset and consent
+register).
 
 Every persona now has a meaningful slice of the brain rather than a
 handful: Scott 246, Tony 201, Chloe 55, Leah 21, Ellie and Ravi 14 each,
