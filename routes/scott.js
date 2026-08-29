@@ -262,6 +262,7 @@ const DATA_PAGES = [
   { path: '/scott/finance', view: 'scott/finance', nav: 'finance', label: 'Finance' },
   { path: '/scott/quality', view: 'scott/quality', nav: 'quality', label: 'Quality Control' },
   { path: '/scott/marketing', view: 'scott/marketing', nav: 'marketing', label: 'Marketing & Reviews' },
+  { path: '/scott/assets', view: 'scott/assets', nav: 'assets', label: 'Assets & Maintenance' },
   { path: '/scott/brain', view: 'scott/brain', nav: 'brain', label: 'Company Brain' }
 ];
 

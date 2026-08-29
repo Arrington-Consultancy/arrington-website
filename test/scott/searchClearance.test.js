@@ -31,8 +31,21 @@ test('Company Brain search respects clearance', async (t) => {
     // returned zero results for every persona including the owner.
     assert.ok(clearance.filterAndRedact('scott_mercer', null, all).length > 100,
       'the owner reading directly must see the whole brain');
-    assert.equal(clearance.filterAndRedact('mike_evans', null, all).length, 0,
-      'the narrowest persona must see none of it');
+
+    // Asserted as a RULE, not a count. This originally checked that Mike
+    // saw exactly zero records, which was true of the dataset at the time
+    // and became wrong the moment 07L gave the driver his own van record.
+    // A hardcoded zero is also a bad guard: it would keep passing if the
+    // filter broke and returned nothing to everybody. What actually has to
+    // hold is that every record he gets is one he is cleared for, and that
+    // he sees far less than the owner.
+    const mike = clearance.filterAndRedact('mike_evans', null, all);
+    mike.forEach((r) => {
+      assert.ok(clearance.personaCanSeeDomain('mike_evans', r.domain),
+        `the driver was handed a ${r.domain} record`);
+    });
+    assert.ok(mike.length < clearance.filterAndRedact('scott_mercer', null, all).length / 5,
+      'the narrowest persona must see a small fraction of what the owner sees');
   });
 
   await t.test('visibility is graduated, not all-or-nothing', () => {
@@ -75,7 +88,10 @@ test('search category and field gating', async (t) => {
   // the implementation it is meant to be checking.
   const CATEGORY_DOMAINS = { jobs: 'jobs_ops', enquiries: 'leads', customers: 'customers_contact' };
 
-  await t.test('the narrowest personas get no searchable category at all', () => {
+  await t.test('the narrowest personas get no searchable company-record category', () => {
+    // Jobs, enquiries and customers specifically. They may still hold a
+    // deep-brain domain of their own (Mike his van, Jo her yarn), which is
+    // the point of the model rather than an exception to it.
     ['mike_evans', 'jo_bell'].forEach((personaId) => {
       const visible = Object.values(CATEGORY_DOMAINS)
         .filter((d) => clearance.personaCanSeeDomain(personaId, d));
