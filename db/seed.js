@@ -136,6 +136,38 @@ async function seed() {
   }
   console.log('Role permissions seeded.');
 
+  // Explicit, narrow escape hatch for a non-production deploy whose nat/tom
+  // login was set up in a database this session has no record of (e.g. a
+  // staging database seeded months ago, or a fresh demo service pointed at
+  // an existing shared staging Postgres). Deliberately NOT something a
+  // stray/copied env var could trigger by accident: requires this exact
+  // variable, set to exactly 'true', plus both passwords below. Never set
+  // this on production.
+  //
+  // UPDATEs password_hash on the existing row rather than deleting and
+  // recreating it. A first attempt at this did DELETE, tested locally
+  // before ever touching Railway, and failed on a real foreign key: nat/tom
+  // are referenced from audit_log (every login/edit/backup/etc. writes a
+  // row keyed on user id), so any account with real history cannot be
+  // deleted without deleting that history too, which is not this flag's
+  // job. UPDATE has no such constraint and preserves the account's id and
+  // its audit trail, which is what you want for a password reset.
+  if (process.env.RESET_USER_PASSWORDS === 'true') {
+    const natPw = process.env.NAT_PASSWORD;
+    const tomPw = process.env.TOM_PASSWORD;
+    if (!natPw || !tomPw) {
+      throw new Error('RESET_USER_PASSWORDS=true requires NAT_PASSWORD and TOM_PASSWORD to also be set.');
+    }
+    for (const [username, password] of [['nat', natPw], ['tom', tomPw]]) {
+      const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+      const { rowCount } = await db.query(
+        'UPDATE users SET password_hash = $1 WHERE username = $2',
+        [hash, username]
+      );
+      console.log(`RESET_USER_PASSWORDS=true: ${username} password ${rowCount ? 'reset' : 'unchanged, no existing row to update'}.`);
+    }
+  }
+
   // Seed users (idempotent: ON CONFLICT DO NOTHING)
   // Passwords must come from env vars — never commit credentials.
   // If the users already exist we skip this step entirely so redeploys
