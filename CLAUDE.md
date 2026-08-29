@@ -882,6 +882,106 @@ Tom returned an agreed-changes brief (`arrington_copy_review_agreed_changes_20_j
 - `logo.avif` — original logo (now served from DB)
 - `oxford.png` — original Oxford badge (now served from DB)
 
+## Scott AI Demonstration (branch `feature/scott-ai-demonstration`, v0.2, 29/08/2026)
+
+**Not on main and not on the public site.** A self-contained demonstration
+of a multi-worker AI system running a fictional company, Scott's Armchair
+& Knitting Service, used to show prospective clients what the work looks
+like. It lives at `/scott/*` behind the existing `page_access` table (no
+second permission system) and is deployed to the **`scott-demo` service,
+`staging` environment** on Railway, never to production.
+
+- **Staging URL:** https://scott-demo-staging.up.railway.app
+- **Access:** `SCOTT_DEMO_SKIP_LOGIN=true` is set on staging, which
+  auto-signs in as the real `tom` account so there is no password
+  friction. That flag is refused outright when the deploy IS the public
+  site (`CANONICAL_HOST` unset or equal to the live domain), so copying
+  staging's variables to production cannot switch it on there.
+- **Fictional staff logins:** eight accounts in `scott_portal_users`
+  (`scott.mercer`, `tony.marsh`, `chloe.reed`, `leah.morgan`,
+  `ellie.park`, `ravi.singh`, `jo.bell`, `mike.evans`), password from
+  `SCOTT_DEMO_STAFF_PASSWORD`. Deliberately a separate table from `users`
+  so a fictional persona can never inherit real CMS capability.
+  `RESET_SCOTT_STAFF_PASSWORDS=true` (plus that password) resets them in
+  place; the plain seed only writes them when the table is short, so
+  changing the password variable alone does nothing on an already-seeded
+  database.
+
+### The clearance model is the point of the demo
+
+`lib/scott/clearance.js` implements 07Q/05A: effective context = the
+logged-in human's clearance AND the worker's own permission AND task
+necessity, **narrowest wins**. Clearance is bound to the authenticated
+identity server-side. Only an admin/content site user (Tom) may
+impersonate a persona, and a fictional staff session can never impersonate
+anyone, enforced by a short-circuit in `setImpersonatedPersona` rather
+than by a route remembering to check. Anything unrecognised fails CLOSED
+to the narrowest persona, not the owner view.
+
+**Per-field clearance.** A record carries one `domain`, but a field on it
+can carry a fact from a narrower one (a stock line naming its purchase
+order; an enquiry explaining the customer is overdue). Such fields declare
+`fieldDomains`, and `canSeeField` / `redactRecord` / `filterAndRedact`
+enforce it. **`filterAndRedact` with a null `workerId` means a human
+reading a page directly** and gates on the persona alone; routing that
+through `filterByClearance` returns nothing at all, because
+`workerCanReadDomain(null, ...)` is false for every domain. That was a
+real bug, and it fails silently rather than loudly.
+
+**The same rule gates every retrieval path**, which is what 07Q actually
+requires: pages, the AI context builder, and `/api/scott/search`. Search
+gates whole categories, strips restricted fields from rows it does show,
+and computes counts after filtering so the size of a result set leaks
+nothing. Company Brain snippets are cut **after** redaction.
+
+### Portal screens
+
+Dashboard, Jobs & Orders, Enquiries, Approvals, then the company records:
+Pipeline & Quotes, Customers, Complaints, Stock & Supply, Purchase Orders,
+People, Finance, Quality Control, Company Brain, Activity & Audit. Routes
+are registered from `DATA_PAGES` in `routes/scott.js`; `NAV_PAGES` is what
+the sidebar links (Activity has its own route because it takes a filter).
+Two lists, so a page cannot be reachable but invisible, or listed and 404.
+
+Company Brain shows the whole record set filtered to the reader, names the
+areas held back **without counting or exampling them**, and renders "no
+matches" identically to "no matches you are cleared for", because the
+difference between those two answers is itself the leak.
+
+### Workers
+
+Six active (Ruth Bailey receptionist, Gareth Bell commercial, Maggie Trent
+operations, Bob Fletcher customers & marketing, Derek Haines company
+brain, Patricia Moss governance). Three built but **dormant**: Nigel
+Preece (Finance & Accounts), Sheila Kemp (People & HR), Nina Holt (Quality
+Control). They stay off because doc 24's independent governance review is
+formally prepared with **no verdict recorded** and Tom has not activated
+them. Ruth's prompt names them and the real reason, so a finance question
+gets the true answer instead of being absorbed by a worker who does not
+own it. That block is derived from `PROPOSED_WORKER_IDS`, so activating
+one moves it into the routing map in the same edit.
+
+### Live AI
+
+Gated on `ANTHROPIC_API_KEY` + `ENABLE_SCOTT_AI=true` (its own flag,
+separate from `ENABLE_LIVE_AI`). Model `claude-sonnet-5`.
+`describeScottAIStatus()` prints one line at boot reporting both gate
+conditions separately and the key's LENGTH only, never any part of its
+contents: that is enough to tell an empty Railway variable from a real
+one, which is exactly the failure that cost a whole session on the Market
+Ready Test.
+
+### Testing
+
+`node --test` covers it (`test/scott/*.test.js`). Beyond unit tests, the
+clearance work is verified by sweeping the **rendered** portal for canary
+strings taken from the dataset itself, as every persona: that is what
+found the per-field leak, which was invisible to reading the code because
+every record was tagged correctly. Playwright drives the real pages for
+CSP violations and JS errors. Note `test/scott/resetStaffPasswords.test.js`
+rewrites every staff password hash and restores them afterwards, because
+it runs against whatever `DATABASE_URL` points at.
+
 ## Related
 
 - **Generic template** extracted from this project for Nat's brother Ben: `github.com/natparnell/single-page-cms-template` (public, marked as GitHub template repo, scrubbed of Tom-specific content, ships with a `HANDOVER.md` written for a Claude Code agent). Not a fork and has no upstream link to this repo. Nat has an untracked local copy at `~/west-cms-template/` used as the source for the public template.
