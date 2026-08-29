@@ -48,6 +48,59 @@ WORKER_IDS.forEach((id) => {
   };
 });
 
+// One uniform shape for "who is looking at this page", covering both
+// identity kinds: a real site account (Tom/nat, possibly impersonating a
+// fictional clearance) and a fictional staff login from
+// scott_portal_users.
+//
+// realUserId is the load-bearing field. It is a users(id) foreign key and
+// MUST be null for a fictional staff session, because those accounts
+// deliberately have no users row. Passing a scott_portal_users id into
+// scott_conversations.user_id / scott_writebacks.decided_by_user_id would
+// either violate the FK or, worse, silently attribute a fictional staff
+// action to whichever real user happened to share that integer id.
+function viewer(req) {
+  const portal = clearance.getPortalUser(req);
+  if (portal) {
+    return {
+      kind: 'portal',
+      username: portal.username,
+      displayName: portal.displayName,
+      jobTitle: portal.jobTitle,
+      realUserId: null,
+      personaId: portal.personaId,
+      canImpersonate: false
+    };
+  }
+  const u = req.session.user;
+  return {
+    kind: 'site',
+    username: u ? u.username : 'unknown',
+    displayName: u ? u.username : 'unknown',
+    jobTitle: '',
+    realUserId: u ? u.id : null,
+    personaId: clearance.getEffectivePersonaId(req),
+    canImpersonate: clearance.canImpersonate(req)
+  };
+}
+
+// Everything a view needs to render the sidebar identity block, the
+// clearance banner and (for Tom only) the demonstration-mode control.
+function viewerViewModel(req) {
+  const v = viewer(req);
+  const personaId = clearance.getEffectivePersonaId(req);
+  return {
+    user: v,
+    personaId,
+    persona: clearance.getPersona(personaId),
+    personas: clearance.PERSONAS,
+    canImpersonate: v.canImpersonate,
+    isImpersonating: clearance.isImpersonating(req),
+    canSee: (domain) => clearance.personaCanSeeDomain(personaId, domain),
+    deniedNote: clearance.clearanceDeniedNote
+  };
+}
+
 function noindexHeader(req, res, next) {
   res.setHeader('X-Robots-Tag', 'noindex, nofollow');
   next();
@@ -155,10 +208,10 @@ function mountPageRoute(app, generateCsrfToken) {
         repo.getDashboardSummary(),
         repo.getRecentActivity(10),
         repo.getPendingApprovals(),
-        loadChatBootstrap(req.session.user.id)
+        loadChatBootstrap(viewer(req).realUserId)
       ]);
       res.render('scott/dashboard', {
-        user: req.session.user,
+        ...viewerViewModel(req),
         // Active team only — never includes the three proposed v0.2
         // workers (finance_accounts/people_hr/quality_control). Doc 24's
         // independent governance review has no verdict recorded, so
@@ -188,7 +241,7 @@ function mountPageRoute(app, generateCsrfToken) {
       const status = repo.JOB_STATUSES.includes(req.query.status) ? req.query.status : null;
       const jobs = await repo.getJobs({ status, atRiskOnly: req.query.at_risk === '1' });
       const navCounts = await repo.getDashboardSummary();
-      res.render('scott/jobs', { user: req.session.user, jobs, status, navCounts, csrfToken: generateCsrfToken(req, res) });
+      res.render('scott/jobs', { ...viewerViewModel(req), jobs, status, navCounts, csrfToken: generateCsrfToken(req, res) });
     } catch (err) {
       next(err);
     }
@@ -197,12 +250,12 @@ function mountPageRoute(app, generateCsrfToken) {
   app.get('/scott/jobs/:ref', noindexHeader, requireScottPageAccess, async (req, res, next) => {
     try {
       const job = await repo.getJobByRef(String(req.params.ref || '').toUpperCase());
-      if (!job) return res.status(404).render('scott/not-found', { user: req.session.user, kind: 'job' });
+      if (!job) return res.status(404).render('scott/not-found', { ...viewerViewModel(req), kind: 'job', navCounts: {}, csrfToken: generateCsrfToken(req, res) });
       const activity = (await repo.getRecentActivity(200)).filter((a) => a.related_job_id === job.id);
       const navCounts = await repo.getDashboardSummary();
-      const chatBootstrap = await loadChatBootstrap(req.session.user.id, { jobId: job.id });
+      const chatBootstrap = await loadChatBootstrap(viewer(req).realUserId, { jobId: job.id });
       res.render('scott/job', {
-        user: req.session.user, job, activity, navCounts,
+        ...viewerViewModel(req), job, activity, navCounts,
         workersById: WORKERS_BY_ID_JSON, workers: WORKERS, jobStatuses: repo.JOB_STATUSES,
         aiEnabled: isScottAIEnabled(),
         initialConversationId: chatBootstrap.initialConversationId,
@@ -219,7 +272,7 @@ function mountPageRoute(app, generateCsrfToken) {
       const status = repo.ENQUIRY_STATUSES.includes(req.query.status) ? req.query.status : null;
       const enquiries = await repo.getEnquiries({ status });
       const navCounts = await repo.getDashboardSummary();
-      res.render('scott/enquiries', { user: req.session.user, enquiries, status, workers: WORKERS, navCounts, csrfToken: generateCsrfToken(req, res) });
+      res.render('scott/enquiries', { ...viewerViewModel(req), enquiries, status, workers: WORKERS, navCounts, csrfToken: generateCsrfToken(req, res) });
     } catch (err) {
       next(err);
     }
@@ -229,11 +282,11 @@ function mountPageRoute(app, generateCsrfToken) {
     try {
       const id = parseInt(req.params.id, 10);
       const enquiry = Number.isInteger(id) ? await repo.getEnquiryById(id) : null;
-      if (!enquiry) return res.status(404).render('scott/not-found', { user: req.session.user, kind: 'enquiry' });
+      if (!enquiry) return res.status(404).render('scott/not-found', { ...viewerViewModel(req), kind: 'enquiry', navCounts: {}, csrfToken: generateCsrfToken(req, res) });
       const navCounts = await repo.getDashboardSummary();
-      const chatBootstrap = await loadChatBootstrap(req.session.user.id, { enquiryId: enquiry.id });
+      const chatBootstrap = await loadChatBootstrap(viewer(req).realUserId, { enquiryId: enquiry.id });
       res.render('scott/enquiry', {
-        user: req.session.user, enquiry, workers: WORKERS, navCounts,
+        ...viewerViewModel(req), enquiry, workers: WORKERS, navCounts,
         workersById: WORKERS_BY_ID_JSON, aiEnabled: isScottAIEnabled(),
         initialConversationId: chatBootstrap.initialConversationId,
         initialMessages: chatBootstrap.initialMessages,
@@ -257,7 +310,7 @@ function mountPageRoute(app, generateCsrfToken) {
           : [];
       }
       const navCounts = await repo.getDashboardSummary();
-      res.render('scott/approvals', { user: req.session.user, approvals, workers: WORKERS, workersById: WORKERS_BY_ID_JSON, navCounts, csrfToken: generateCsrfToken(req, res) });
+      res.render('scott/approvals', { ...viewerViewModel(req), approvals, workers: WORKERS, workersById: WORKERS_BY_ID_JSON, navCounts, csrfToken: generateCsrfToken(req, res) });
     } catch (err) {
       next(err);
     }
@@ -272,16 +325,10 @@ function mountPageRoute(app, generateCsrfToken) {
   // (isDomainVisible), which these two routes do not do.
   app.get('/scott/finance', noindexHeader, requireScottPageAccess, async (req, res, next) => {
     try {
-      const personaId = clearance.getSessionPersonaId(req);
       const navCounts = await repo.getDashboardSummary();
       res.render('scott/finance', {
-        user: req.session.user,
+        ...viewerViewModel(req),
         navCounts,
-        personaId,
-        persona: clearance.getPersona(personaId),
-        personas: clearance.PERSONAS,
-        canSee: (domain) => clearance.personaCanSeeDomain(personaId, domain),
-        deniedNote: clearance.clearanceDeniedNote,
         facts: deepFacts,
         csrfToken: generateCsrfToken(req, res)
       });
@@ -292,16 +339,10 @@ function mountPageRoute(app, generateCsrfToken) {
 
   app.get('/scott/quality', noindexHeader, requireScottPageAccess, async (req, res, next) => {
     try {
-      const personaId = clearance.getSessionPersonaId(req);
       const navCounts = await repo.getDashboardSummary();
       res.render('scott/quality', {
-        user: req.session.user,
+        ...viewerViewModel(req),
         navCounts,
-        personaId,
-        persona: clearance.getPersona(personaId),
-        personas: clearance.PERSONAS,
-        canSee: (domain) => clearance.personaCanSeeDomain(personaId, domain),
-        deniedNote: clearance.clearanceDeniedNote,
         facts: deepFacts,
         csrfToken: generateCsrfToken(req, res)
       });
@@ -332,9 +373,42 @@ router.post('/scott/login', noindexHeader, scottLoginLimiter, async (req, res) =
   }
 
   try {
+    const uname = String(username).toLowerCase().trim();
+
+    // Fictional staff accounts first (scott_portal_users). These are the
+    // demonstration logins: authenticating here binds this session to that
+    // person's clearance server-side, and they cannot change it or
+    // impersonate anyone (see lib/scott/clearance.js). Checked before the
+    // real users table because the two namespaces are disjoint (dotted
+    // fictional names vs real site usernames) and a fictional login must
+    // never fall through into real site auth.
+    const { rows: staffRows } = await db.query(
+      'SELECT id, username, password_hash, persona_id, display_name, job_title, active FROM scott_portal_users WHERE username = $1',
+      [uname]
+    );
+    if (staffRows.length > 0) {
+      const staff = staffRows[0];
+      const staffValid = await bcrypt.compare(password, staff.password_hash);
+      if (!staffValid || !staff.active) {
+        return res.render('scott/login', { error: 'Invalid credentials.', nextPath });
+      }
+      // Deliberately does NOT set req.session.user: a fictional staff
+      // member is not a real site user and must never acquire real site
+      // capability. requireScottPageAccess treats a portal-user session as
+      // its own valid identity (see lib/scott/access.js).
+      clearance.setPortalUser(req, {
+        id: staff.id,
+        username: staff.username,
+        personaId: staff.persona_id,
+        displayName: staff.display_name,
+        jobTitle: staff.job_title
+      });
+      return res.redirect(nextPath);
+    }
+
     const { rows } = await db.query(
       'SELECT id, username, password_hash, role FROM users WHERE username = $1',
-      [String(username).toLowerCase().trim()]
+      [uname]
     );
 
     if (rows.length === 0) {
@@ -536,7 +610,7 @@ router.post('/api/scott/messages', noindexHeader, requireScottApiAccess, scottCh
     let conversationId = parseInt(req.body?.conversationId, 10);
     let conversation;
     if (Number.isInteger(conversationId)) {
-      conversation = await repo.getConversation(conversationId, req.session.user.id);
+      conversation = await repo.getConversation(conversationId, viewer(req).realUserId);
       if (!conversation) return res.status(404).json({ error: 'Conversation not found.' });
     } else {
       // A message sent from a job or enquiry detail page carries that
@@ -545,7 +619,7 @@ router.post('/api/scott/messages', noindexHeader, requireScottApiAccess, scottCh
       // conversation back up on the next page load).
       const relatedJobId = Number.isInteger(parseInt(req.body?.relatedJobId, 10)) ? parseInt(req.body.relatedJobId, 10) : null;
       const relatedEnquiryId = Number.isInteger(parseInt(req.body?.relatedEnquiryId, 10)) ? parseInt(req.body.relatedEnquiryId, 10) : null;
-      conversation = await repo.createConversation(req.session.user.id, message.slice(0, 80), { jobId: relatedJobId, enquiryId: relatedEnquiryId });
+      conversation = await repo.createConversation(viewer(req).realUserId, message.slice(0, 80), { jobId: relatedJobId, enquiryId: relatedEnquiryId });
       conversationId = conversation.id;
     }
 
@@ -560,7 +634,7 @@ router.post('/api/scott/messages', noindexHeader, requireScottApiAccess, scottCh
 router.get('/api/scott/conversations/:id/messages', noindexHeader, requireScottApiAccess, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const conversation = Number.isInteger(id) ? await repo.getConversation(id, req.session.user.id) : null;
+    const conversation = Number.isInteger(id) ? await repo.getConversation(id, viewer(req).realUserId) : null;
     if (!conversation) return res.status(404).json({ error: 'Conversation not found.' });
     const messages = await repo.getMessages(id);
     res.json({ messages: messages.map((m) => ({ ...m, worker: m.worker_id ? { characterName: getWorker(m.worker_id)?.characterName, displayRole: getWorker(m.worker_id)?.displayRole, accent: getWorker(m.worker_id)?.accent, initials: getWorker(m.worker_id)?.initials } : null })) });
@@ -581,7 +655,7 @@ router.post('/api/scott/approvals/:id/decide', noindexHeader, requireScottApiAcc
     const decision = req.body?.decision === 'approve' ? 'approve' : (req.body?.decision === 'reject' ? 'reject' : null);
     const editedText = typeof req.body?.text === 'string' ? plainText(req.body.text, 4000) : null;
     if (!Number.isInteger(id) || !decision) return res.status(400).json({ error: 'Invalid request.' });
-    const writeback = await repo.decideWriteback(id, decision, req.session.user.id, editedText);
+    const writeback = await repo.decideWriteback(id, decision, viewer(req).realUserId, editedText);
     if (!writeback) return res.status(404).json({ error: 'Not found or already decided.' });
     res.json({ ok: true, writeback });
   } catch (err) {
@@ -606,10 +680,10 @@ router.post('/api/scott/approvals/:id/redraft', noindexHeader, requireScottApiAc
       return res.status(400).json({ error: 'Only a customer reply draft can be redrafted.' });
     }
 
-    const superseded = await repo.supersedeWriteback(id, req.session.user.id);
+    const superseded = await repo.supersedeWriteback(id, viewer(req).realUserId);
     if (!superseded) return res.status(404).json({ error: 'Not found or already decided.' });
 
-    const conversation = await repo.getConversation(existing.conversation_id, req.session.user.id);
+    const conversation = await repo.getConversation(existing.conversation_id, viewer(req).realUserId);
     if (!conversation) return res.status(404).json({ error: 'Conversation not found.' });
 
     const turn = await runScottTurnAndPersist({
@@ -625,14 +699,33 @@ router.post('/api/scott/approvals/:id/redraft', noindexHeader, requireScottApiAc
   }
 });
 
-// "View the demo as" — switches which fictional staff persona's clearance
-// this session sees the portal through (see clearance.js's block comment
-// on PERSONAS). Does not touch req.session.user (the real, authenticated
-// site login) at all — only an additional, inner view-selector value.
-router.post('/api/scott/persona', noindexHeader, requireScottApiAccess, async (req, res) => {
-  const ok = clearance.setSessionPersonaId(req, req.body && req.body.personaId);
-  if (!ok) return res.status(400).json({ error: 'Unknown persona.' });
-  res.json({ ok: true, personaId: clearance.getSessionPersonaId(req) });
+// Fictional staff logout. Separate from the site's /logout because a
+// portal-user session is not a site session: destroying the whole session
+// here would also log out a real site user who happens to share the
+// browser, and /logout would leave the portal identity behind.
+router.post('/scott/logout', noindexHeader, (req, res) => {
+  clearance.clearPortalUser(req);
+  clearance.setImpersonatedPersona(req, null);
+  res.redirect('/scott/login');
+});
+
+// Tom-only demonstration mode. Lets a real site admin/content user
+// experience the portal exactly as a given fictional staff member sees it,
+// including their restricted AI context.
+//
+// This is NOT the old "view as" selector: setImpersonatedPersona()
+// re-checks the caller's real site role itself and short-circuits for any
+// session that is a fictional staff login, so a logged-in Jo Bell posting
+// straight to this endpoint cannot acquire Scott Mercer's clearance. The
+// 403 below is the ordinary refusal; the security guarantee is in
+// clearance.js, not in this route remembering to check.
+router.post('/api/scott/impersonate', noindexHeader, requireScottApiAccess, async (req, res) => {
+  const requested = req.body && req.body.personaId;
+  const ok = clearance.setImpersonatedPersona(req, requested === undefined ? null : requested);
+  if (!ok) {
+    return res.status(403).json({ error: 'Not permitted. Demonstration mode is available to the demonstration owner only.' });
+  }
+  res.json({ ok: true, personaId: clearance.getEffectivePersonaId(req), impersonating: clearance.isImpersonating(req) });
 });
 
 router.get('/api/scott/search', noindexHeader, requireScottApiAccess, async (req, res) => {
@@ -660,8 +753,8 @@ router.post('/api/scott/enquiries/:id/assign', noindexHeader, requireScottApiAcc
       actor: 'user',
       eventType: 'enquiry_assigned',
       summary: workerId
-        ? `${req.session.user.username} assigned this enquiry to ${WORKERS[workerId].characterName}.`
-        : `${req.session.user.username} unassigned this enquiry.`,
+        ? `${viewer(req).displayName} assigned this enquiry to ${WORKERS[workerId].characterName}.`
+        : `${viewer(req).displayName} unassigned this enquiry.`,
       relatedEnquiryId: id
     });
     res.json({ ok: true, enquiry });
@@ -686,7 +779,7 @@ router.post('/api/scott/jobs/:ref/status', noindexHeader, requireScottApiAccess,
     await repo.addActivity({
       actor: 'user',
       eventType: 'job_status_changed',
-      summary: `${req.session.user.username} changed ${ref}'s status from ${job.status.replace('_', ' ')} to ${status.replace('_', ' ')}.`,
+      summary: `${viewer(req).displayName} changed ${ref}'s status from ${job.status.replace('_', ' ')} to ${status.replace('_', ' ')}.`,
       relatedJobId: job.id
     });
     res.json({ ok: true, job: updated });

@@ -11,9 +11,12 @@
   <div class="sc-shell">
     <%- include('partials/sidebar', { active: 'dashboard' }) %>
     <main class="sc-main">
+      <% if (typeof isImpersonating !== 'undefined' && isImpersonating) { %>
+        <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
+      <% } %>
       <div class="sc-page-header">
         <div>
-          <h1 class="sc-h">Good morning, <%= user.username.charAt(0).toUpperCase() + user.username.slice(1) %></h1>
+          <h1 class="sc-h">Good morning, <%= (user.displayName || user.username).split(' ')[0] %></h1>
           <p>Here's what's happening at the workshop today.</p>
         </div>
       </div>

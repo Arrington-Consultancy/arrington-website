@@ -155,37 +155,96 @@ describe('narrowest-wins is structural, not incidental', () => {
   });
 });
 
-describe('session persona ("view the demo as")', () => {
-  function fakeReq() {
-    return { session: {} };
-  }
+describe('identity-bound clearance (replaces the old "view as" selector)', () => {
+  // Rewritten 29/08/2026. The earlier implementation let any viewer pick
+  // their own clearance from a dropdown, which 07Q explicitly forbids
+  // ("attempting to bypass a restriction through Company Brain, search,
+  // another worker or prompt wording does not change clearance" — a
+  // selector anyone can move is exactly that bypass). Clearance is now a
+  // property of the authenticated identity. These tests pin the three
+  // identity cases and, more importantly, the escalation paths that must
+  // fail.
+  const portalReq = (personaId) => ({ session: { scottPortalUser: { id: 1, username: 'x', personaId, displayName: 'X' } } });
+  const siteReq = (role) => ({ session: { user: { id: 1, username: 'tom', role } } });
 
-  test('a fresh session defaults to Scott Mercer (full clearance), not an empty/unset state', () => {
-    const req = fakeReq();
-    assert.equal(clearance.getSessionPersonaId(req), clearance.DEFAULT_PERSONA);
+  test('a fictional staff session resolves to that account\'s own bound persona', () => {
+    assert.equal(clearance.getEffectivePersonaId(portalReq('jo_bell')), 'jo_bell');
+    assert.equal(clearance.getEffectivePersonaId(portalReq('mike_evans')), 'mike_evans');
   });
 
-  test('setSessionPersonaId succeeds for a real persona and getSessionPersonaId then reflects it', () => {
-    const req = fakeReq();
-    const ok = clearance.setSessionPersonaId(req, 'mike_evans');
-    assert.equal(ok, true);
-    assert.equal(clearance.getSessionPersonaId(req), 'mike_evans');
+  test('a real admin/content session with no impersonation is the owner view', () => {
+    assert.equal(clearance.getEffectivePersonaId(siteReq('admin')), 'scott_mercer');
+    assert.equal(clearance.getEffectivePersonaId(siteReq('content')), 'scott_mercer');
   });
 
-  test('setSessionPersonaId refuses a bogus id and leaves the session unchanged, verified via the read path', () => {
-    const req = fakeReq();
-    clearance.setSessionPersonaId(req, 'scott_mercer');
-    const ok = clearance.setSessionPersonaId(req, 'not_a_real_persona');
-    assert.equal(ok, false);
-    // The actual proof: the session still reads back the persona it had
-    // before the bad call, via the same getter every route uses — not an
-    // assumption about what the setter "should" have done internally.
-    assert.equal(clearance.getSessionPersonaId(req), 'scott_mercer');
+  test('a session with no identity at all fails CLOSED to the narrowest persona, not the owner view', () => {
+    const anon = { session: {} };
+    assert.equal(clearance.getEffectivePersonaId(anon), 'mike_evans');
+    // and that narrow persona genuinely cannot reach finance
+    assert.equal(clearance.isDomainVisible(clearance.getEffectivePersonaId(anon), 'finance_accounts', 'finance_full'), false);
   });
 
-  test('a tampered/garbage session value fails closed to the default rather than throwing or granting "*"', () => {
-    const req = { session: { scottPersonaId: '__proto__' } };
-    assert.equal(clearance.getSessionPersonaId(req), clearance.DEFAULT_PERSONA);
+  test('a client-role site user cannot impersonate (only admin/content may)', () => {
+    const req = siteReq('client');
+    assert.equal(clearance.canImpersonate(req), false);
+    assert.equal(clearance.setImpersonatedPersona(req, 'scott_mercer'), false);
+  });
+
+  test('ESCALATION: a fictional staff account can never impersonate, even calling the setter directly', () => {
+    const jo = portalReq('jo_bell');
+    assert.equal(clearance.setImpersonatedPersona(jo, 'scott_mercer'), false);
+    // The decisive assertion: her effective clearance is unchanged after
+    // the attempt, so even a caller that ignored the false return gains
+    // nothing.
+    assert.equal(clearance.getEffectivePersonaId(jo), 'jo_bell');
+    assert.equal(clearance.isDomainVisible(clearance.getEffectivePersonaId(jo), 'finance_accounts', 'director_position'), false);
+  });
+
+  test('ESCALATION: a forged impersonation value in a fictional staff session is ignored entirely', () => {
+    // Simulates a session store tampered with directly, not via the API.
+    const jo = { session: { scottPortalUser: { id: 1, username: 'jo.bell', personaId: 'jo_bell', displayName: 'Jo' }, scottImpersonatedPersonaId: 'scott_mercer' } };
+    // getPortalUser short-circuits before impersonation is ever consulted.
+    assert.equal(clearance.getEffectivePersonaId(jo), 'jo_bell');
+    assert.equal(clearance.isImpersonating(jo), false);
+  });
+
+  test('Tom (admin) CAN impersonate, and the effective persona genuinely changes', () => {
+    const tom = siteReq('admin');
+    assert.equal(clearance.setImpersonatedPersona(tom, 'jo_bell'), true);
+    assert.equal(clearance.getEffectivePersonaId(tom), 'jo_bell');
+    assert.equal(clearance.isImpersonating(tom), true);
+    // While impersonating Jo, Tom genuinely loses owner-only access.
+    assert.equal(clearance.isDomainVisible(clearance.getEffectivePersonaId(tom), 'finance_accounts', 'director_position'), false);
+  });
+
+  test('clearing impersonation restores the owner view', () => {
+    const tom = siteReq('admin');
+    clearance.setImpersonatedPersona(tom, 'jo_bell');
+    assert.equal(clearance.setImpersonatedPersona(tom, null), true);
+    assert.equal(clearance.getEffectivePersonaId(tom), 'scott_mercer');
+    assert.equal(clearance.isImpersonating(tom), false);
+  });
+
+  test('an invalid persona id is refused and leaves the prior impersonation intact', () => {
+    const tom = siteReq('admin');
+    clearance.setImpersonatedPersona(tom, 'jo_bell');
+    assert.equal(clearance.setImpersonatedPersona(tom, 'not_a_persona'), false);
+    assert.equal(clearance.getEffectivePersonaId(tom), 'jo_bell');
+  });
+
+  test('a tampered/garbage portal-user persona fails closed rather than granting access', () => {
+    const bad = { session: { scottPortalUser: { id: 1, username: 'x', personaId: '__proto__' } } };
+    // getPortalUser rejects an invalid persona, so this is treated as
+    // having no portal identity at all and falls to the narrowest persona.
+    assert.equal(clearance.getPortalUser(bad), null);
+    assert.equal(clearance.getEffectivePersonaId(bad), 'mike_evans');
+  });
+
+  test('setPortalUser clears any impersonation left over from an admin session in the same browser', () => {
+    const req = { session: { user: { id: 1, username: 'tom', role: 'admin' }, scottImpersonatedPersonaId: 'tony_marsh' } };
+    clearance.setPortalUser(req, { id: 9, username: 'jo.bell', personaId: 'jo_bell', displayName: 'Jo Bell' });
+    assert.equal(req.session.scottImpersonatedPersonaId, undefined);
+    assert.equal(clearance.getEffectivePersonaId(req), 'jo_bell');
   });
 });
 

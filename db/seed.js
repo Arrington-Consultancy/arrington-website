@@ -4775,6 +4775,68 @@ async function seed() {
     console.log('Scott AI Demonstration: lead capture columns verified.');
   }
 
+  // Scott AI Demonstration: fictional portal staff accounts.
+  //
+  // Eight genuine logins, one per fictional staff member in 07Q's
+  // clearance model, each bound server-side to their own clearance. These
+  // are demonstration accounts inside an already-access-controlled private
+  // area, not real site accounts, and they hold no real data.
+  //
+  // Password source, in order: SCOTT_DEMO_STAFF_PASSWORD if set, otherwise
+  // a per-deploy random value that is printed ONCE to the deploy log so
+  // whoever set the service up can retrieve it. There is deliberately no
+  // hardcoded default: a fixed password committed to a public-ish repo
+  // would be a real credential leak even for fictional accounts, and the
+  // Master Rulebook's own IT record (07Q) says demo passwords "belong in a
+  // secure implementation secret/user-management route and must not be
+  // placed in Drive, source code, prompts or screenshots."
+  {
+    await db.query(`CREATE TABLE IF NOT EXISTS scott_portal_users (
+      id SERIAL PRIMARY KEY,
+      username VARCHAR(60) UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      persona_id VARCHAR(40) NOT NULL,
+      display_name VARCHAR(120) NOT NULL,
+      job_title VARCHAR(160) NOT NULL DEFAULT '',
+      active BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_scott_portal_users_username ON scott_portal_users (username)`);
+
+    const staff = [
+      { username: 'scott.mercer', personaId: 'scott_mercer', displayName: 'Scott Mercer', jobTitle: 'Owner / Director (Clearance A)' },
+      { username: 'tony.marsh', personaId: 'tony_marsh', displayName: 'Tony Marsh', jobTitle: 'Workshop & Operations Manager (Clearance B)' },
+      { username: 'chloe.reed', personaId: 'chloe_reed', displayName: 'Chloe Reed', jobTitle: 'Office / Customer Admin (Clearance C)' },
+      { username: 'leah.morgan', personaId: 'leah_morgan', displayName: 'Leah Morgan', jobTitle: 'Knitting Team Lead (Clearance D)' },
+      { username: 'ellie.park', personaId: 'ellie_park', displayName: 'Ellie Park', jobTitle: 'Workshop / Skilled Operative (Clearance E)' },
+      { username: 'ravi.singh', personaId: 'ravi_singh', displayName: 'Ravi Singh', jobTitle: 'Workshop / Field Operative (Clearance E)' },
+      { username: 'jo.bell', personaId: 'jo_bell', displayName: 'Jo Bell', jobTitle: 'Knitting Operative (Clearance F)' },
+      { username: 'mike.evans', personaId: 'mike_evans', displayName: 'Mike Evans', jobTitle: 'Driver / Field Logistics (Clearance G)' }
+    ];
+
+    const { rows: existingStaff } = await db.query('SELECT username FROM scott_portal_users');
+    if (existingStaff.length < staff.length) {
+      const supplied = process.env.SCOTT_DEMO_STAFF_PASSWORD;
+      const staffPassword = supplied || crypto.randomBytes(9).toString('base64url');
+      const hash = await bcrypt.hash(staffPassword, BCRYPT_ROUNDS);
+      for (const s of staff) {
+        await db.query(
+          `INSERT INTO scott_portal_users (username, password_hash, persona_id, display_name, job_title)
+           VALUES ($1, $2, $3, $4, $5) ON CONFLICT (username) DO NOTHING`,
+          [s.username, hash, s.personaId, s.displayName, s.jobTitle]
+        );
+      }
+      if (supplied) {
+        console.log(`Scott AI Demonstration: ${staff.length} fictional staff logins seeded (password from SCOTT_DEMO_STAFF_PASSWORD).`);
+      } else {
+        console.log(`Scott AI Demonstration: ${staff.length} fictional staff logins seeded. Shared demo password for all eight: ${staffPassword}`);
+        console.log('Scott AI Demonstration: set SCOTT_DEMO_STAFF_PASSWORD to control this instead of a generated one.');
+      }
+    } else {
+      console.log('Scott AI Demonstration: fictional staff logins already present, skipping.');
+    }
+  }
+
   console.log('Seed complete.');
 }
 
