@@ -882,14 +882,35 @@ Tom returned an agreed-changes brief (`arrington_copy_review_agreed_changes_20_j
 - `logo.avif` — original logo (now served from DB)
 - `oxford.png` — original Oxford badge (now served from DB)
 
-## Scott AI Demonstration (branch `feature/scott-ai-demonstration`, v0.2, 29/08/2026)
+## Scott AI Demonstration (v0.2, released to the live site 29/08/2026)
 
-**Not on main and not on the public site.** A self-contained demonstration
-of a multi-worker AI system running a fictional company, Scott's Armchair
-& Knitting Service, used to show prospective clients what the work looks
-like. It lives at `/scott/*` behind the existing `page_access` table (no
-second permission system) and is deployed to the **`scott-demo` service,
-`staging` environment** on Railway, never to production.
+**RELEASED. On main and on the public site since 29/08/2026** (PR #112 on
+Tom's release decision, hotfix PR #113, following the Governance &
+Assurance release review at
+`review/scott-v0.2-release-review-2026-08-29.md`). A self-contained
+demonstration of a multi-worker AI system running a fictional company,
+Scott's Armchair & Knitting Service, used to show prospective clients
+what the work looks like. It lives at `/scott/*` behind the existing
+`page_access` table (no second permission system): on the public site it
+404s for anyone not granted access (Tom's admin/content logins are
+always allowed), live AI is armed on production (`ENABLE_SCOTT_AI=true`
+plus the existing key), and the fictional staff logins were seeded with
+a generated password printed once in the production deploy log of
+29/08/2026 (set `SCOTT_DEMO_STAFF_PASSWORD` plus one deploy with
+`RESET_SCOTT_STAFF_PASSWORDS=true` to choose your own).
+
+**Release incident, for the record:** the first release deploy CRASHED
+on production with `relation "scott_portal_users" does not exist` and
+served 5xx for roughly 14 minutes (16:55 to 17:09 UTC). Cause: the new
+FK columns on `scott_writebacks`/`scott_conversations` referenced a
+table created later in `schema.sql`; every previously-seeded database
+already had the table, so the ordering bug was invisible everywhere
+except the one place the schema ran from scratch, which was production.
+Fix: PR #113 reorders the schema; the lesson is that schema changes
+must be tested against a genuinely FRESH database, not only against dev
+and staging databases that carry history.
+
+The `scott-demo` staging service remains for pre-production testing.
 
 - **Staging URL:** https://scott-demo-staging.up.railway.app
 - **Access:** `SCOTT_DEMO_SKIP_LOGIN=true` is set on staging, which
