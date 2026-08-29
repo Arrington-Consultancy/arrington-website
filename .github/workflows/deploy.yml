@@ -14,38 +14,6 @@ jobs:
       - name: Install Railway CLI
         run: npm install -g @railway/cli
 
-      - name: Diagnose Railway target (no secret values printed)
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: |
-          echo "== railway --version =="
-          railway --version || true
-          echo "== railway whoami =="
-          railway whoami || true
-          echo "== railway status =="
-          railway status || true
-          echo "== railway status --json =="
-          railway status --json || true
-          echo "== railway service (list services in linked project) =="
-          railway service || true
-          echo "== railway environment (list environments) =="
-          railway environment || true
-          echo "== railway variables --service arrington-prototype --environment production --json (names/lengths/prefix only, no values) =="
-          railway variables --service arrington-prototype --environment production --json > /tmp/vars.json 2> /tmp/vars.err || true
-          cat /tmp/vars.err || true
-          node -e "
-            try {
-              const raw = require('fs').readFileSync('/tmp/vars.json', 'utf8');
-              const vars = JSON.parse(raw);
-              for (const [k, v] of Object.entries(vars)) {
-                const s = String(v ?? '');
-                console.log(k, '| length=' + s.length, '| prefix=' + (s.slice(0, 13) || '(empty)'));
-              }
-            } catch (e) {
-              console.log('Could not parse railway variables output:', e.message);
-            }
-          "
-
       - name: Deploy
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
