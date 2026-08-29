@@ -381,8 +381,6 @@ function mountPageRoute(app, generateCsrfToken) {
         // independent governance review has no verdict recorded, so
         // "Only active worker personas are presented as active staff"
         // means exactly this list, not WORKER_IDS.
-        workers: ACTIVE_WORKER_IDS.map((id) => WORKERS[id]),
-        proposedWorkers: PROPOSED_WORKER_IDS.map((id) => WORKERS[id]),
         summary,
         activity,
         approvals,
@@ -396,6 +394,24 @@ function mountPageRoute(app, generateCsrfToken) {
         navCounts: { newEnquiries: summary.newEnquiries, pendingApprovals: summary.pendingApprovals, openGaps: visibleGaps.length },
         initialConversationId: chatBootstrap.initialConversationId,
         initialMessages: chatBootstrap.initialMessages,
+        csrfToken: generateCsrfToken(req, res)
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // The machinery explained, plus the persona cards that used to open
+  // the dashboard. The dashboard is now the front door (the chat), and
+  // this page is the guided tour of the building for whoever wants it.
+  app.get('/scott/team', noindexHeader, requireScottPageAccess, async (req, res, next) => {
+    try {
+      const navCounts = await repo.getDashboardSummary();
+      res.render('scott/team', {
+        ...viewerViewModel(req),
+        workers: ACTIVE_WORKER_IDS.map((id) => WORKERS[id]),
+        proposedWorkers: PROPOSED_WORKER_IDS.map((id) => WORKERS[id]),
+        navCounts,
         csrfToken: generateCsrfToken(req, res)
       });
     } catch (err) {
