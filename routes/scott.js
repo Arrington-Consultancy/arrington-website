@@ -310,6 +310,7 @@ function mountPageRoute(app, generateCsrfToken) {
       ]);
       res.render('scott/dashboard', {
         ...viewerViewModel(req),
+        facts: deepFacts,
         // Active team only — never includes the three proposed v0.2
         // workers (finance_accounts/people_hr/quality_control). Doc 24's
         // independent governance review has no verdict recorded, so

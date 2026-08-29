@@ -974,11 +974,19 @@ difference between those two answers is itself the leak.
 
 ### Drive records transcribed
 
-`lib/scott/deepBusinessFacts.js` holds 193 domain-tagged records from
-07A, 07B, 07C, 07D, 07E, 07F, 07G, 07I, 07L, 07N, 07S, 07T, 07U and 07V.
-Still untranscribed: 07H (KPI pack), 07J (policies/terms/payments), 07K
+`lib/scott/deepBusinessFacts.js` holds 218 domain-tagged records from
+07A, 07B, 07C, 07D, 07E, 07F, 07G, 07H, 07I, 07L, 07N, 07S, 07T, 07U and
+07V. Still untranscribed: 07J (policies/terms/payments), 07K
 (safety/compliance/privacy/insurance), 07M (supplier resilience), 07O
-(continuity), 07P (marketing asset and consent register), 07R (premises). Adding one is a matter of tagging each record
+(continuity), 07P (marketing asset and consent register), 07R (premises).
+
+07H's attention list is tagged per ITEM rather than as one dashboard
+block, so "what needs my attention today" resolves differently and
+correctly for each person: Scott sees all ten, Tony seven, Chloe exactly
+the two debtors and the complaint, Jo the two yarn items that would stop
+her working. Four people see none, and the dashboard says so plainly
+rather than being padded, because a workshop operative's day comes from
+their assigned jobs and not from the management list. Adding one is a matter of tagging each record
 with a domain that some persona actually holds: `contextBuilders`
 derives its list from the module's exports, so nothing else needs
 updating, and `untaggedDeepFactExports` fails a test if a record arrives

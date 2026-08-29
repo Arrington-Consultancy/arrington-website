@@ -29,6 +29,28 @@
         <div class="sc-card sc-stat"><div class="sc-stat-label">Due within 7 days</div><div class="sc-stat-value"><%= summary.dueThisWeek %></div></div>
       </div>
 
+      <h2 class="sc-section-title">What needs your attention today</h2>
+      <% var mine = facts.ATTENTION_TODAY.filter(function (a) { return canSee(a.domain); }); %>
+      <% if (!mine.length) { %>
+        <div class="sc-card sc-empty">
+          Nothing on the management attention list is yours today. That is not an empty company: it is a
+          list of decisions above your clearance, and none of them are waiting on you. Your own work is
+          under Jobs &amp; Orders.
+        </div>
+      <% } else { %>
+        <div class="sc-list">
+          <% mine.forEach(function (a) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-sub"><%= a.item %><% if (a.action) { %><br><strong>What to do:</strong> <%= a.action %><% } %></div>
+              </div>
+              <div class="sc-row-actions"><span class="sc-pill sc-pill-status"><%= a.domain.replace(/_/g, ' ') %></span></div>
+            </div>
+          <% }); %>
+        </div>
+        <p class="sc-proposed-note"><%= facts.DASHBOARD_SOURCE_RULE.rule %></p>
+      <% } %>
+
       <h2 class="sc-section-title">Meet the team</h2>
       <div class="sc-colleagues">
         <% workers.forEach(function (w) { %>
