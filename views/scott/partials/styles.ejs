@@ -356,6 +356,21 @@
   .sc-row-card-muted { background: var(--sc-cream); }
   .sc-pill-muted { background: var(--sc-cream); color: var(--sc-text-muted); border: 1px solid var(--sc-border); }
 
+  /* ---------- activity / audit ---------- */
+  .sc-filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+  .sc-filter-chip {
+    display: inline-block; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--sc-border);
+    background: var(--sc-cream-panel); color: var(--sc-text-muted); text-decoration: none;
+    font-size: 13px; font-weight: 600;
+  }
+  .sc-filter-chip:hover { color: var(--sc-text); }
+  .sc-filter-chip.active { background: var(--sc-forest); border-color: var(--sc-forest); color: #fff; }
+  .sc-actor-tag {
+    display: inline-block; font-size: 9.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+    border: 1px solid var(--sc-border); border-radius: 3px; padding: 0 4px; vertical-align: middle; color: var(--sc-text-muted);
+  }
+  .sc-actor-tag-human { border-color: var(--sc-sage); color: var(--sc-sage); }
+
   /* ---------- responsive ---------- */
   @media (max-width: 860px) {
     .sc-shell { flex-direction: column; }

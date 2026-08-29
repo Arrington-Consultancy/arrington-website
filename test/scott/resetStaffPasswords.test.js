@@ -13,7 +13,7 @@
 // Same UPDATE-in-place shape as RESET_USER_PASSWORDS, and for the same
 // reason: a DELETE-and-reseed would change row ids, and rows referenced
 // elsewhere must not be recreated to change a password.
-const { test, describe } = require('node:test');
+const { test, describe, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { execFileSync, spawnSync } = require('node:child_process');
 const path = require('node:path');
@@ -28,6 +28,25 @@ function runSeed(extraEnv) {
 
 describe('RESET_SCOTT_STAFF_PASSWORDS (db/seed.js)', { skip: DB_AVAILABLE ? false : 'set DATABASE_URL to run' }, () => {
   const db = require('../../db/pool');
+
+  // These tests deliberately rewrite every staff password hash, and they
+  // run against whatever DATABASE_URL points at, which in local
+  // development is the same database used for manual testing. Without
+  // this, running the suite silently locked every fictional login out of
+  // the local portal, which is a confusing thing to hit ten minutes later
+  // while testing something unrelated.
+  let originalHashes = [];
+
+  before(async () => {
+    const { rows } = await db.query('SELECT id, password_hash FROM scott_portal_users ORDER BY id');
+    originalHashes = rows;
+  });
+
+  after(async () => {
+    for (const row of originalHashes) {
+      await db.query('UPDATE scott_portal_users SET password_hash = $1 WHERE id = $2', [row.password_hash, row.id]);
+    }
+  });
 
   test('reproduces the staging condition: rows present, so a new password is ignored', () => {
     const out = runSeed({ SCOTT_DEMO_STAFF_PASSWORD: 'ignored-because-rows-exist' });

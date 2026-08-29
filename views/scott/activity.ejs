@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Activity &amp; Audit | Scott's Armchair &amp; Knitting Service</title>
+  <meta name="robots" content="noindex, nofollow">
+  <%- include('partials/styles') %>
+</head>
+<body class="scott-body">
+  <div class="sc-shell">
+    <%- include('partials/sidebar', { active: 'activity', navCounts: navCounts }) %>
+    <main class="sc-main">
+      <% if (typeof isImpersonating !== 'undefined' && isImpersonating) { %>
+        <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
+      <% } %>
+      <div class="sc-page-header">
+        <div>
+          <h1 class="sc-h">Activity &amp; Audit</h1>
+          <p>Every recorded action, in order, with who did it. Viewing as <strong><%= persona.name %></strong> (<%= persona.role %>).</p>
+        </div>
+      </div>
+
+      <div class="sc-card sc-proposed-note">
+        <strong>What this is for.</strong> An AI that proposes changes is only trustworthy if you can see what it did and who let it. Every line below is a real recorded event, not a summary written afterwards. Where a worker proposed something material it is recorded as a proposal, and the approval that followed is its own separate line with a person's name on it. Nothing here is editable from inside the portal.
+      </div>
+
+      <div class="sc-stat-grid">
+        <div class="sc-card sc-stat"><div class="sc-stat-label">Events recorded</div><div class="sc-stat-value"><%= activityStats.total %></div></div>
+        <div class="sc-card sc-stat"><div class="sc-stat-label">By the AI team</div><div class="sc-stat-value"><%= activityStats.byWorkers %></div></div>
+        <div class="sc-card sc-stat"><div class="sc-stat-label">By a person</div><div class="sc-stat-value"><%= activityStats.byPeople %></div></div>
+        <div class="sc-card sc-stat"><div class="sc-stat-label">Awaiting a person</div><div class="sc-stat-value <%= navCounts.pendingApprovals ? 'warn' : '' %>"><%= navCounts.pendingApprovals || 0 %></div></div>
+      </div>
+
+      <div class="sc-filter-row">
+        <a href="/scott/activity" class="sc-filter-chip <%= !filter ? 'active' : '' %>">Everything</a>
+        <a href="/scott/activity?by=worker" class="sc-filter-chip <%= filter === 'worker' ? 'active' : '' %>">AI team only</a>
+        <a href="/scott/activity?by=human" class="sc-filter-chip <%= filter === 'human' ? 'active' : '' %>">People only</a>
+      </div>
+
+      <h2 class="sc-section-title">Recorded events</h2>
+      <% if (!activity.length) { %>
+        <div class="sc-card sc-empty">Nothing recorded yet under this filter.</div>
+      <% } else { %>
+        <div class="sc-card sc-activity-card">
+          <ul class="sc-activity-list">
+            <% activity.forEach(function (a) { %>
+              <li class="sc-activity-item">
+                <span class="sc-activity-dot sc-dot-<%= workersById[a.actor] ? a.actor : (a.actor === 'user' ? 'user' : 'system') %>"></span>
+                <div>
+                  <div><%= a.summary %></div>
+                  <div class="sc-activity-meta">
+                    <strong><%= (workersById[a.actor] && workersById[a.actor].characterName) || (a.actor === 'user' ? 'A person' : a.actor) %></strong>
+                    <% if (workersById[a.actor]) { %> <span class="sc-actor-tag">AI</span><% } else if (a.actor === 'user') { %> <span class="sc-actor-tag sc-actor-tag-human">person</span><% } %>
+                    &middot; <%= a.event_type.replace(/_/g, ' ') %>
+                    <% if (a.related_job_ref) { %> &middot; <a href="/scott/jobs/<%= a.related_job_ref %>"><%= a.related_job_ref %></a><% } %>
+                    <% if (a.related_enquiry_subject) { %> &middot; <%= a.related_enquiry_subject %><% } %>
+                    &middot; <%= new Date(a.created_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) %>
+                  </div>
+                </div>
+              </li>
+            <% }); %>
+          </ul>
+        </div>
+      <% } %>
+    </main>
+  </div>
+</body>
+</html>

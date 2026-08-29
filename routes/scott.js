@@ -106,7 +106,7 @@ function viewerViewModel(req) {
     // mediating the read.
     field: (record, name) => clearance.fieldValue(personaId, null, record, name),
     deniedNote: clearance.clearanceDeniedNote,
-    dataPages: DATA_PAGES
+    dataPages: NAV_PAGES
   };
 }
 
@@ -262,6 +262,16 @@ const DATA_PAGES = [
   { path: '/scott/finance', view: 'scott/finance', nav: 'finance', label: 'Finance' },
   { path: '/scott/quality', view: 'scott/quality', nav: 'quality', label: 'Quality Control' },
   { path: '/scott/brain', view: 'scott/brain', nav: 'brain', label: 'Company Brain' }
+];
+
+// What the sidebar lists. Activity has its own route (it takes a filter
+// and needs counts), so it is not in DATA_PAGES, but it still has to
+// appear in the nav: keeping one list for "registered generically" and a
+// separate one for "linked in the nav" is what stops a page being
+// reachable but invisible, or listed and 404.
+const NAV_PAGES = [
+  ...DATA_PAGES,
+  { path: '/scott/activity', nav: 'activity', label: 'Activity & Audit' }
 ];
 
 function mountPageRoute(app, generateCsrfToken) {
@@ -429,6 +439,31 @@ function mountPageRoute(app, generateCsrfToken) {
         next(err);
       }
     });
+  });
+
+  // Activity and audit. Its own route rather than a DATA_PAGES entry
+  // because it takes a filter and its totals are counted in SQL over the
+  // whole table, not over the page being displayed.
+  app.get('/scott/activity', noindexHeader, requireScottPageAccess, async (req, res, next) => {
+    try {
+      const by = ['worker', 'human'].includes(req.query.by) ? req.query.by : null;
+      const [navCounts, activity, activityStats] = await Promise.all([
+        repo.getDashboardSummary(),
+        repo.getActivityFeed({ by, workerIds: WORKER_IDS, limit: 200 }),
+        repo.getActivityStats(WORKER_IDS)
+      ]);
+      res.render('scott/activity', {
+        ...viewerViewModel(req),
+        navCounts,
+        activity,
+        activityStats,
+        filter: by,
+        workersById: WORKERS_BY_ID_JSON,
+        csrfToken: generateCsrfToken(req, res)
+      });
+    } catch (err) {
+      next(err);
+    }
   });
 
   // Public — no requireScottPageAccess. A prospective (fictional) customer
