@@ -14,13 +14,59 @@
       <% if (typeof isImpersonating !== 'undefined' && isImpersonating) { %>
         <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
       <% } %>
-      <div class="sc-page-header">
+      <%
+        // The front door. The chat IS the demonstration, so it comes
+        // first, full width, with the two sentences of orientation a
+        // first-time visitor needs and nothing else above it. Everything
+        // the old dashboard opened with still exists below.
+      %>
+      <p class="sc-orientation">Scott's Armchair &amp; Knitting Service is a fictional company run by a governed AI team, built by Arrington Consultancy as a working demonstration. Ask the team anything. What you can see, and what the team will agree to do, depends on who is signed in.</p>
+      <div class="sc-page-header sc-hero-header">
         <div>
-          <h1 class="sc-h">Good morning, <%= (user.displayName || user.username).split(' ')[0] %></h1>
-          <p>Here's what's happening at the workshop today.</p>
+          <h1 class="sc-h">What do you need help with?</h1>
         </div>
       </div>
+      <div class="sc-hero">
+        <div class="sc-hero-chat">
+          <%- include('partials/chat-widget', { workersById: workersById, csrfToken: csrfToken, aiEnabled: aiEnabled, heroFocus: true }) %>
+        </div>
+        <div class="sc-hero-side">
+          <% if (canImpersonate) { %>
+            <div class="sc-card sc-viewer-card">
+              <div class="sc-persona-label">Viewing as</div>
+              <div class="sc-viewer-name"><%= persona.name %></div>
+              <div class="sc-viewer-role">Clearance <%= persona.code %> &middot; <%= persona.role %></div>
+              <label for="scPersonaSelect" class="sc-persona-label sc-persona-label-spaced">Switch viewer</label>
+              <select id="scPersonaSelect">
+                <option value="">Owner view (no impersonation)</option>
+                <% Object.keys(personas).forEach(function (id) { %>
+                  <option value="<%= id %>" <%= (typeof isImpersonating !== 'undefined' && isImpersonating && id === personaId) ? 'selected' : '' %>><%= personas[id].name %> (<%= personas[id].code %>)</option>
+                <% }); %>
+              </select>
+              <p class="sc-persona-hint">Ask the same question as someone else and watch the answer change. Owner only.</p>
+            </div>
+          <% } else { %>
+            <div class="sc-card sc-viewer-card">
+              <div class="sc-persona-label">Signed in as</div>
+              <div class="sc-viewer-name"><%= persona.name %></div>
+              <div class="sc-viewer-role">Clearance <%= persona.code %> &middot; <%= persona.role %></div>
+              <p class="sc-persona-hint">The team answers with exactly the information this role is cleared to see, and no more. Someone else asking the same question can get a different answer.</p>
+            </div>
+          <% } %>
+          <div class="sc-card sc-viewer-card">
+            <div class="sc-persona-label">Behind this door</div>
+            <p class="sc-persona-hint">Six AI workers with their own jobs and limits, a receptionist who routes every question, records filtered by clearance, and decisions that stop and wait for a human. <a href="/scott/team">How this team works</a>.</p>
+          </div>
+        </div>
+      </div>
+      <%
+        // The switch handler for #scPersonaSelect lives in the sidebar
+        // partial (included on every page), which binds it wherever the
+        // select exists. No second script here, or the change event would
+        // fire twice.
+      %>
 
+      <h2 class="sc-section-title">Today at a glance</h2>
       <div class="sc-stat-grid">
         <div class="sc-card sc-stat"><div class="sc-stat-label">Open jobs</div><div class="sc-stat-value"><%= summary.openJobs %></div></div>
         <a href="/scott/jobs?at_risk=1" class="sc-card sc-stat sc-card-link"><div class="sc-stat-label">At risk</div><div class="sc-stat-value <%= summary.atRiskJobs ? 'warn' : '' %>"><%= summary.atRiskJobs %></div></a>
@@ -85,41 +131,6 @@
         <p class="sc-proposed-note"><%= facts.DASHBOARD_SOURCE_RULE.rule %></p>
       <% } %>
 
-      <h2 class="sc-section-title">Meet the team</h2>
-      <div class="sc-colleagues">
-        <% workers.forEach(function (w) { %>
-          <div class="sc-card sc-colleague">
-            <div class="sc-colleague-head">
-              <div class="sc-avatar sc-avatar-<%= w.id %>"><%= w.initials %></div>
-              <div>
-                <div class="sc-colleague-name"><%= w.characterName %></div>
-                <div class="sc-colleague-role"><%= w.displayRole %></div>
-              </div>
-            </div>
-            <p class="sc-colleague-tagline"><%= w.tagline %></p>
-          </div>
-        <% }); %>
-      </div>
-
-      <% if (typeof proposedWorkers !== 'undefined' && proposedWorkers.length) { %>
-      <h2 class="sc-section-title">Proposed team (not yet active)</h2>
-      <p class="sc-proposed-note">Built and ready, but not part of the live demonstration. These three specialists remain proposed until an independent governance review has passed and Tom Arrington has explicitly activated them. Ruth cannot route any question to them.</p>
-      <div class="sc-colleagues sc-colleagues-proposed">
-        <% proposedWorkers.forEach(function (w) { %>
-          <div class="sc-card sc-colleague sc-colleague-proposed">
-            <div class="sc-colleague-head">
-              <div class="sc-avatar sc-avatar-proposed"><%= w.initials %></div>
-              <div>
-                <div class="sc-colleague-name"><%= w.characterName %> <span class="sc-proposed-badge">PROPOSED</span></div>
-                <div class="sc-colleague-role"><%= w.displayRole %></div>
-              </div>
-            </div>
-            <p class="sc-colleague-tagline"><%= w.tagline %></p>
-          </div>
-        <% }); %>
-      </div>
-      <% } %>
-
       <div class="sc-detail-grid">
         <div>
           <h2 class="sc-section-title">Recent activity</h2>
@@ -145,9 +156,11 @@
             <% } %>
           </div>
 
-          <h2 class="sc-section-title sc-section-title-spaced">Business snapshot</h2>
+        </div>
+        <div>
+          <h2 class="sc-section-title">Business snapshot</h2>
           <p class="sc-snapshot-label"><%= snapshotLabel %></p>
-          <div class="sc-stat-grid">
+          <div class="sc-snapshot-stack">
             <% snapshotCards.forEach(function (c) { %>
               <div class="sc-card sc-stat">
                 <div class="sc-stat-label"><%= c.label %></div>
@@ -156,10 +169,6 @@
               </div>
             <% }); %>
           </div>
-        </div>
-        <div>
-          <h2 class="sc-section-title">Ask the team</h2>
-          <%- include('partials/chat-widget', { workersById: workersById, csrfToken: csrfToken, aiEnabled: aiEnabled }) %>
         </div>
       </div>
     </main>

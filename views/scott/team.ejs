@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How this team works | Scott's Armchair &amp; Knitting Service</title>
+  <meta name="robots" content="noindex, nofollow">
+  <%- include('partials/styles') %>
+</head>
+<body class="scott-body">
+  <div class="sc-shell">
+    <%- include('partials/sidebar', { active: 'team', navCounts: navCounts }) %>
+    <main class="sc-main">
+      <% if (typeof isImpersonating !== 'undefined' && isImpersonating) { %>
+        <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
+      <% } %>
+      <div class="sc-page-header">
+        <div>
+          <h1 class="sc-h">How this team works</h1>
+          <p>The machinery behind the chat, in plain terms. None of this needs understanding to use the demonstration; it is here for when you want to look.</p>
+        </div>
+      </div>
+
+      <div class="sc-card sc-honesty-card">
+        <p class="sc-row-sub"><strong>One question, one route.</strong> Every question goes to Ruth, the receptionist, who decides which specialists own it and in what order. A question about taking on a job at a price goes to Operations for capacity and Commercial for the number, and you see each reply separately, under its own name.</p>
+        <p class="sc-row-sub"><strong>Different people get different answers.</strong> Every record in the company carries a clearance. The team answers with what the signed-in person is allowed to see and nothing more, and the same applies to search, the records pages and the AI's own working notes. A knitting operative asking for the bank balance is refused; the owner is not.</p>
+        <p class="sc-row-sub"><strong>Some decisions stop and wait for a human.</strong> A discount above the team's authority, a customer-facing reply, a refund: the AI drafts, a person approves, edits or rejects on the <a href="/scott/approvals">Approvals</a> page. Nothing customer-facing goes out on the AI's own say-so.</p>
+        <p class="sc-row-sub"><strong>Bad records are flagged, never papered over.</strong> When the evidence itself is missing, stale or contradictory, the team raises it on <a href="/scott/gaps">Needs Human Input</a> and the responsible person is emailed. The AI is forbidden from filling a gap with a plausible guess, and only a person can close one.</p>
+        <p class="sc-row-sub"><strong>Uncertainty is labelled.</strong> Replies carry their own confidence: certain, likely, or unproven. An unproven answer says so instead of dressing up.</p>
+      </div>
+
+      <h2 class="sc-section-title">The team</h2>
+      <div class="sc-colleagues">
+        <% workers.forEach(function (w) { %>
+          <div class="sc-card sc-colleague">
+            <div class="sc-colleague-head">
+              <div class="sc-avatar sc-avatar-<%= w.id %>"><%= w.initials %></div>
+              <div>
+                <div class="sc-colleague-name"><%= w.characterName %></div>
+                <div class="sc-colleague-role"><%= w.displayRole %></div>
+              </div>
+            </div>
+            <p class="sc-colleague-tagline"><%= w.tagline %></p>
+          </div>
+        <% }); %>
+      </div>
+
+      <% if (typeof proposedWorkers !== 'undefined' && proposedWorkers.length) { %>
+      <h2 class="sc-section-title">Proposed team (not yet active)</h2>
+      <p class="sc-proposed-note">Built and ready, but not part of the live demonstration. These three specialists remain proposed until an independent governance review has passed and Tom Arrington has explicitly activated them. Ruth cannot route any question to them.</p>
+      <div class="sc-colleagues sc-colleagues-proposed">
+        <% proposedWorkers.forEach(function (w) { %>
+          <div class="sc-card sc-colleague sc-colleague-proposed">
+            <div class="sc-colleague-head">
+              <div class="sc-avatar sc-avatar-proposed"><%= w.initials %></div>
+              <div>
+                <div class="sc-colleague-name"><%= w.characterName %> <span class="sc-proposed-badge">PROPOSED</span></div>
+                <div class="sc-colleague-role"><%= w.displayRole %></div>
+              </div>
+            </div>
+            <p class="sc-colleague-tagline"><%= w.tagline %></p>
+          </div>
+        <% }); %>
+      </div>
+      <% } %>
+    </main>
+  </div>
+</body>
+</html>

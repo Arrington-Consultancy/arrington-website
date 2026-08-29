@@ -391,6 +391,9 @@
     .sc-nav { order: 2; flex-direction: row; flex-wrap: wrap; flex: 1 1 100%; }
     .sc-nav a { padding: 7px 10px; font-size: 13.5px; }
     .sc-nav-heading { display: none; }
+    /* ...except the records toggle, which must stay reachable or the
+       collapsed list has no way back open on a phone. */
+    .sc-nav-toggle { display: flex; flex: 1 1 100%; padding: 4px 10px; }
     .sc-sidebar-footer { order: 1; margin-top: 0; padding-top: 0; border-top: none; flex-shrink: 0; }
     .sc-user-row { display: none; }
     .sc-logout { padding: 7px 12px; }
@@ -398,6 +401,38 @@
     .sc-page-header h1 { font-size: 21px; }
     .sc-chat-panel { height: 440px; }
   }
+  /* The front door: full-width hero chat with the viewer card beside it.
+     The chat panel reuses every existing chat style; only its size and
+     position change here. */
+  .sc-orientation { max-width: 760px; color: var(--sc-text-muted); font-size: 14.5px; line-height: 1.55; margin: 0 0 14px; }
+  .sc-hero-header { margin-bottom: 14px; }
+  .sc-hero { display: grid; grid-template-columns: 1fr 280px; gap: 22px; align-items: start; margin-bottom: 28px; }
+  .sc-hero .sc-chat-panel { height: 520px; }
+  .sc-hero-side { display: flex; flex-direction: column; gap: 14px; }
+  .sc-viewer-card { padding: 16px; }
+  .sc-viewer-name { font-weight: 700; font-size: 16px; margin: 2px 0; }
+  .sc-viewer-role { font-size: 13px; color: var(--sc-text-muted); margin-bottom: 4px; }
+  .sc-viewer-card select { width: 100%; margin-top: 4px; padding: 7px 8px; border: 1px solid var(--sc-border); border-radius: var(--sc-radius-sm); font: inherit; font-size: 13px; background: #fff; }
+  .sc-snapshot-stack { display: flex; flex-direction: column; gap: 12px; }
+  @media (max-width: 900px) {
+    .sc-hero { grid-template-columns: 1fr; }
+    .sc-hero .sc-chat-panel { height: 440px; }
+  }
+
+  /* Collapsible records group in the sidebar. The heading becomes the
+     toggle so the closed state occupies exactly the space the heading
+     always did. */
+  .sc-nav-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; background: none; border: none; cursor: pointer; font: inherit; text-align: left; padding-right: 14px; }
+  /* .sc-nav declares display:flex, which outranks the UA's [hidden]
+     default; without this the collapsed list renders anyway. */
+  .sc-nav[hidden] { display: none; }
+  /* The label and hint classes were coloured for the dark sidebar; on
+     the white viewer cards they were white-on-white. */
+  .sc-viewer-card .sc-persona-label { color: var(--sc-text-muted); }
+  .sc-viewer-card .sc-persona-hint { color: var(--sc-text-muted); }
+  .sc-viewer-card .sc-persona-hint a { color: var(--sc-forest); }
+  .sc-nav-caret { font-size: 11px; opacity: 0.7; }
+
   /* Needs Human Input. A blocking gap gets the terracotta rail rather
      than a badge alone, because "work is stopped" is the one thing on
      this page that should be readable without reading. */

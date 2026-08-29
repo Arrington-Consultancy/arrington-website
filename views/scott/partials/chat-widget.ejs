@@ -40,17 +40,25 @@
     <% } %>
   </div>
   <% if ((typeof suggestions === 'undefined' || suggestions !== false) && !hasHistory) { %>
+  <%
+    // Four curated examples, each demonstrating one property of the
+    // system through use rather than explanation: ordinary use (whose
+    // answer also differs by login), multi-worker routing, a
+    // human-approval boundary the AI will not cross, and a clearance
+    // refusal for everyone except the owner.
+  %>
   <div class="sc-chat-suggestions" id="scChatSuggestions">
     <button type="button" data-q="What needs my attention today?">What needs my attention today?</button>
-    <button type="button" data-q="Which jobs are at risk this week?">Which jobs are at risk this week?</button>
-    <button type="button" data-q="Summarise everything before I call Mrs Jenkins">Summarise before I call Mrs Jenkins</button>
+    <button type="button" data-q="Could we take on a six-chair trade repair next week, and what would we charge?">Could we take a six-chair trade job next week, and at what price?</button>
+    <button type="button" data-q="Give Moorland Holiday Lets a 20 per cent goodwill discount on their next invoice.">Give Moorland a 20% goodwill discount</button>
+    <button type="button" data-q="What is the company's current bank balance?">What is the company's bank balance?</button>
   </div>
   <% } %>
   <% if (!aiEnabled) { %>
     <div class="sc-chat-disabled-note">Live AI is not enabled in this environment yet, so the team can't reply until Tom sets it up.</div>
   <% } %>
   <form class="sc-chat-input-row" id="scChatForm">
-    <input type="text" id="scChatInput" placeholder="Ask Ruth anything..." autocomplete="off" <%= aiEnabled ? '' : 'disabled' %>>
+    <input type="text" id="scChatInput" placeholder="Ask Ruth anything..." autocomplete="off" <%= aiEnabled ? '' : 'disabled' %><%- (typeof heroFocus !== 'undefined' && heroFocus && aiEnabled) ? ' autofocus' : '' %>>
     <button type="submit" class="sc-chat-send" id="scChatSend" <%= aiEnabled ? '' : 'disabled' %>>Send</button>
   </form>
 </div>

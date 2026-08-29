@@ -16,25 +16,42 @@
     <li><a href="/scott/enquiries" class="<%= active === 'enquiries' ? 'active' : '' %>">Enquiries<% if (typeof navCounts !== 'undefined' && navCounts.newEnquiries) { %><span class="sc-badge"><%= navCounts.newEnquiries %></span><% } %></a></li>
     <li><a href="/scott/approvals" class="<%= active === 'approvals' ? 'active' : '' %>">Approvals<% if (typeof navCounts !== 'undefined' && navCounts.pendingApprovals) { %><span class="sc-badge"><%= navCounts.pendingApprovals %></span><% } %></a></li>
   </ul>
-  <div class="sc-nav-heading">Company records</div>
   <ul class="sc-nav">
-    <% (typeof dataPages !== 'undefined' ? dataPages : []).forEach(function (p) { %>
+    <li><a href="/scott/team" class="<%= active === 'team' ? 'active' : '' %>">How this team works</a></li>
+  </ul>
+  <%
+    // The records are the building, not the doorway: fifteen links at
+    // first contact is what made the demo need explaining. Collapsed by
+    // default, auto-expanded when you are already inside one, and
+    // nothing is removed.
+    var recordsPages = (typeof dataPages !== 'undefined' ? dataPages : []);
+    var recordsOpen = recordsPages.some(function (p) { return p.nav === active; });
+  %>
+  <button type="button" class="sc-nav-heading sc-nav-toggle" id="scRecordsToggle" aria-expanded="<%= recordsOpen ? 'true' : 'false' %>">Company records <span class="sc-nav-caret"><%= recordsOpen ? '▾' : '▸' %></span></button>
+  <ul class="sc-nav" id="scRecordsList" <%= recordsOpen ? '' : 'hidden' %>>
+    <% recordsPages.forEach(function (p) { %>
       <li><a href="<%= p.path %>" class="<%= active === p.nav ? 'active' : '' %>"><%= p.label %><% if (p.nav === 'gaps' && typeof navCounts !== 'undefined' && navCounts.openGaps) { %><span class="sc-badge"><%= navCounts.openGaps %></span><% } %></a></li>
     <% }); %>
   </ul>
+  <script nonce="<%= nonce %>">
+  (function () {
+    var t = document.getElementById('scRecordsToggle');
+    var l = document.getElementById('scRecordsList');
+    if (!t || !l) return;
+    t.addEventListener('click', function () {
+      var open = l.hidden;
+      l.hidden = !open;
+      t.setAttribute('aria-expanded', open ? 'true' : 'false');
+      t.querySelector('.sc-nav-caret').textContent = open ? '\u25be' : '\u25b8';
+    });
+  })();
+  </script>
   <% if (typeof persona !== 'undefined') { %>
   <div class="sc-clearance-block">
     <div class="sc-persona-label">Clearance</div>
     <div class="sc-clearance-value"><%= persona.code %> &middot; <%= persona.role %></div>
     <% if (typeof canImpersonate !== 'undefined' && canImpersonate) { %>
-      <label for="scPersonaSelect" class="sc-persona-label sc-persona-label-spaced">Demonstration mode</label>
-      <select id="scPersonaSelect">
-        <option value="">Owner view (no impersonation)</option>
-        <% Object.keys(personas).forEach(function (id) { %>
-          <option value="<%= id %>" <%= (typeof isImpersonating !== 'undefined' && isImpersonating && id === personaId) ? 'selected' : '' %>><%= personas[id].name %> (<%= personas[id].code %>)</option>
-        <% }); %>
-      </select>
-      <p class="sc-persona-hint">Owner only. Experience the portal exactly as that staff member does, including their AI context.</p>
+      <p class="sc-persona-hint">The viewer switcher lives next to the chat on the <a href="/scott">dashboard</a>.</p>
     <% } %>
   </div>
   <% } %>
@@ -52,13 +69,16 @@
 <% if (typeof canImpersonate !== 'undefined' && canImpersonate) { %>
 <script nonce="<%= nonce %>">
 (function () {
-  var select = document.getElementById('scPersonaSelect');
-  if (!select) return;
-  select.addEventListener('change', function () {
+  // Delegated, not bound to the element: the select now lives in the
+  // page body (the dashboard hero), which is parsed AFTER this script
+  // runs. A direct getElementById here would find nothing and leave the
+  // switcher silently dead.
+  document.addEventListener('change', function (e) {
+    if (!e.target || e.target.id !== 'scPersonaSelect') return;
     fetch('/api/scott/impersonate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-csrf-token': <%- JSON.stringify(csrfToken) %> },
-      body: JSON.stringify({ personaId: select.value || null })
+      body: JSON.stringify({ personaId: e.target.value || null })
     }).then(function () { window.location.reload(); });
   });
 })();
