@@ -922,11 +922,23 @@ to the narrowest persona, not the owner view.
 can carry a fact from a narrower one (a stock line naming its purchase
 order; an enquiry explaining the customer is overdue). Such fields declare
 `fieldDomains`, and `canSeeField` / `redactRecord` / `filterAndRedact`
-enforce it. **`filterAndRedact` with a null `workerId` means a human
+enforce it. The clearest example is 07L: a machine is `assets_ops` (what
+it is, when it was serviced, who may use it) while its cost and book
+value are `finance_full` on the same row, so the register reads as a
+maintenance record to Tony and a fixed-asset schedule to Scott. **`filterAndRedact` with a null `workerId` means a human
 reading a page directly** and gates on the persona alone; routing that
 through `filterByClearance` returns nothing at all, because
 `workerCanReadDomain(null, ...)` is false for every domain. That was a
 real bug, and it fails silently rather than loudly.
+
+Two screens are the best demonstrations that this is not merely
+restriction. On **Marketing & Reviews**, Chloe gets the Google reviews,
+the complaint each links to and the rule for drafting a reply, and none
+of the ad spend, cost per lead or campaign results (`review_status` vs
+`marketing_performance`). On **Assets & Maintenance**, Mike Evans, the
+narrowest clearance in the company, gets his own van with its MOT,
+defects and service history, and no workshop register and no book values.
+Neither page is a stripped-down copy of the owner's.
 
 **The same rule gates every retrieval path**, which is what 07Q actually
 requires: pages, the AI context builder, and `/api/scott/search`. Search
@@ -938,7 +950,8 @@ nothing. Company Brain snippets are cut **after** redaction.
 
 Dashboard, Jobs & Orders, Enquiries, Approvals, then the company records:
 Pipeline & Quotes, Customers, Complaints, Stock & Supply, Purchase Orders,
-People, Finance, Quality Control, Company Brain, Activity & Audit. Routes
+People, Finance, Quality Control, Marketing & Reviews, Assets &
+Maintenance, Company Brain, Activity & Audit. Routes
 are registered from `DATA_PAGES` in `routes/scott.js`; `NAV_PAGES` is what
 the sidebar links (Activity has its own route because it takes a filter).
 Two lists, so a page cannot be reachable but invisible, or listed and 404.
@@ -947,6 +960,19 @@ Company Brain shows the whole record set filtered to the reader, names the
 areas held back **without counting or exampling them**, and renders "no
 matches" identically to "no matches you are cleared for", because the
 difference between those two answers is itself the leak.
+
+### Drive records transcribed
+
+`lib/scott/deepBusinessFacts.js` holds 173 domain-tagged records from
+07A, 07B, 07C, 07D, 07E, 07F, 07G, 07I, 07L, 07N, 07S, 07U and 07V.
+Still untranscribed: 07H (KPI pack), 07J (policies/terms/payments), 07K
+(safety/compliance/privacy/insurance), 07M (supplier resilience), 07O
+(continuity), 07P (marketing asset and consent register), 07R (premises),
+07T (commercial leakage). Adding one is a matter of tagging each record
+with a domain that some persona actually holds: `contextBuilders`
+derives its list from the module's exports, so nothing else needs
+updating, and `untaggedDeepFactExports` fails a test if a record arrives
+without a tag.
 
 ### Workers
 
