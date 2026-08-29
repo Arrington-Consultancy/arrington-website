@@ -25,6 +25,10 @@
     color: var(--sc-text);
     background: var(--sc-cream);
     -webkit-font-smoothing: antialiased;
+    /* Chromium's mobile text autosizing inflates short standalone lines
+       (the records toggle grew to headline size); pin it. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
   .sc-h { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; letter-spacing: -0.01em; }
   a { color: inherit; }
@@ -392,8 +396,12 @@
     .sc-nav a { padding: 7px 10px; font-size: 13.5px; }
     .sc-nav-heading { display: none; }
     /* ...except the records toggle, which must stay reachable or the
-       collapsed list has no way back open on a phone. */
-    .sc-nav-toggle { display: flex; flex: 1 1 100%; padding: 4px 10px; }
+       collapsed list has no way back open on a phone. The mobile sidebar
+       arranges children with CSS order; without one, the toggle and its
+       list jump above the primary links. */
+    .sc-nav-toggle { display: flex; flex: 1 1 100%; padding: 6px 10px 2px; order: 3; font-size: 11px; }
+    #scRecordsList { order: 4; }
+    .sc-clearance-block { order: 5; }
     .sc-sidebar-footer { order: 1; margin-top: 0; padding-top: 0; border-top: none; flex-shrink: 0; }
     .sc-user-row { display: none; }
     .sc-logout { padding: 7px 12px; }
@@ -401,22 +409,192 @@
     .sc-page-header h1 { font-size: 21px; }
     .sc-chat-panel { height: 440px; }
   }
-  /* The front door: full-width hero chat with the viewer card beside it.
-     The chat panel reuses every existing chat style; only its size and
-     position change here. */
-  .sc-orientation { max-width: 760px; color: var(--sc-text-muted); font-size: 14.5px; line-height: 1.55; margin: 0 0 14px; }
-  .sc-hero-header { margin-bottom: 14px; }
-  .sc-hero { display: grid; grid-template-columns: 1fr 280px; gap: 22px; align-items: start; margin-bottom: 28px; }
-  .sc-hero .sc-chat-panel { height: 520px; }
-  .sc-hero-side { display: flex; flex-direction: column; gap: 14px; }
-  .sc-viewer-card { padding: 16px; }
-  .sc-viewer-name { font-weight: 700; font-size: 16px; margin: 2px 0; }
-  .sc-viewer-role { font-size: 13px; color: var(--sc-text-muted); margin-bottom: 4px; }
-  .sc-viewer-card select { width: 100%; margin-top: 4px; padding: 7px 8px; border: 1px solid var(--sc-border); border-radius: var(--sc-radius-sm); font: inherit; font-size: 13px; background: #fff; }
-  .sc-snapshot-stack { display: flex; flex-direction: column; gap: 12px; }
-  @media (max-width: 900px) {
-    .sc-hero { grid-template-columns: 1fr; }
-    .sc-hero .sc-chat-panel { height: 440px; }
+  /* ---------- The stage. ----------
+     The front door is a dark, deep, deliberately expensive-looking panel:
+     Ruth lit from behind, one oversized input, the specialists in a row
+     beneath her, and the routing glow moving between them as work is
+     handed over. Everything here is presentation; the widget, API and
+     clearance model underneath are untouched. */
+  .sc-stage {
+    position: relative;
+    margin: -28px -34px 0;
+    padding: 26px 48px 40px;
+    background:
+      radial-gradient(620px 340px at 50% 118px, rgba(216,161,74,0.20), rgba(216,161,74,0) 70%),
+      linear-gradient(168deg, #202e3e 0%, #1b2836 34%, #16281f 100%);
+    color: #eef3ee;
+    overflow: hidden;
+  }
+  .sc-stage::after {
+    content: ""; position: absolute; inset: auto 0 0 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(216,161,74,0.45), transparent);
+  }
+  .sc-stage-topbar { display: flex; justify-content: space-between; align-items: center; gap: 18px; margin-bottom: 30px; }
+  .sc-stage-kicker { font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(238,243,238,0.5); }
+  .sc-stage-viewer { display: flex; align-items: center; gap: 8px; font-size: 12px; color: rgba(238,243,238,0.65); }
+  .sc-stage-viewer label { letter-spacing: 0.06em; text-transform: uppercase; font-size: 10.5px; }
+  .sc-stage-viewer select {
+    background: rgba(255,255,255,0.08); color: #eef3ee; border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 8px; padding: 7px 10px; font: inherit; font-size: 13px; cursor: pointer;
+    transition: border-color 160ms ease, background 160ms ease;
+  }
+  .sc-stage-viewer select:hover { border-color: rgba(216,161,74,0.6); background: rgba(255,255,255,0.12); }
+  .sc-stage-viewer-fixed { font-size: 13px; }
+
+  .sc-stage-ruth { display: flex; align-items: center; justify-content: center; gap: 18px; margin-bottom: 10px; }
+  .sc-stage-avatar {
+    width: 84px; height: 84px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(145deg, #d8a14a, #b85e3c);
+    padding: 3px;
+    box-shadow: 0 6px 30px rgba(216,161,74,0.35), 0 2px 8px rgba(0,0,0,0.4);
+    transition: box-shadow 400ms ease;
+  }
+  .sc-stage-avatar span {
+    display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;
+    border-radius: 50%; background: #1b2836;
+    font-family: 'Playfair Display', serif; font-weight: 700; font-size: 30px; color: #f0d9ac;
+    letter-spacing: 0.02em;
+  }
+  .sc-stage-thinking .sc-stage-avatar { animation: sc-breathe 1.6s ease-in-out infinite; }
+  @keyframes sc-breathe {
+    0%, 100% { box-shadow: 0 6px 30px rgba(216,161,74,0.35), 0 2px 8px rgba(0,0,0,0.4); }
+    50% { box-shadow: 0 6px 44px rgba(216,161,74,0.62), 0 2px 8px rgba(0,0,0,0.4); }
+  }
+  .sc-stage-ruth-id { text-align: left; }
+  .sc-stage-ruth-name { font-family: 'Playfair Display', serif; font-weight: 700; font-size: 22px; }
+  .sc-stage-ruth-role { font-size: 13.5px; color: rgba(238,243,238,0.66); max-width: 420px; line-height: 1.45; }
+
+  .sc-stage-h {
+    font-family: 'Playfair Display', serif; font-weight: 700; letter-spacing: -0.015em;
+    font-size: 44px; text-align: center; margin: 18px 0 26px; color: #f7f4ec;
+  }
+
+  .sc-stage-chat { max-width: 780px; margin: 0 auto; }
+  .sc-chat-hero { background: transparent; box-shadow: none; height: auto; border-radius: 0; overflow: visible; display: flex; flex-direction: column; }
+  /* Composition: conversation, then the input as the centrepiece, then
+     the example chips beneath it. The widget's DOM order serves the
+     boxed layout; the stage reorders it visually. */
+  .sc-chat-hero .sc-chat-messages { order: 1; }
+  .sc-chat-hero .sc-chat-input-row { order: 2; }
+  .sc-chat-hero .sc-chat-suggestions { order: 3; }
+  .sc-chat-hero .sc-chat-disabled-note { order: 4; }
+  .sc-chat-hero .sc-chat-messages {
+    max-height: 380px; min-height: 0; padding: 0 4px 14px;
+    background: transparent;
+  }
+  .sc-chat-hero .sc-chat-messages:empty { display: none; }
+  .sc-chat-hero .sc-chat-input-row { padding: 0; background: transparent; border-top: none; }
+  .sc-chat-hero .sc-chat-input-row input {
+    height: 62px; font-size: 17px; padding: 0 22px; border-radius: 16px;
+    background: rgba(255,255,255,0.97); color: var(--sc-text);
+    border: 1px solid rgba(255,255,255,0.2);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.9);
+    transition: box-shadow 220ms ease, transform 220ms ease;
+  }
+  .sc-chat-hero .sc-chat-input-row input:focus {
+    outline: none;
+    box-shadow: 0 10px 44px rgba(0,0,0,0.4), 0 0 0 3px rgba(216,161,74,0.55);
+  }
+  .sc-chat-hero .sc-chat-send {
+    height: 62px; padding: 0 28px; margin-left: 10px; border-radius: 16px; font-size: 15.5px; font-weight: 700;
+    background: linear-gradient(145deg, #d8a14a, #c08637); color: #1b2836; border: none; cursor: pointer;
+    box-shadow: 0 8px 26px rgba(216,161,74,0.35);
+    transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+  }
+  .sc-chat-hero .sc-chat-send:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.05); box-shadow: 0 10px 30px rgba(216,161,74,0.45); }
+  .sc-chat-hero .sc-chat-send:active:not(:disabled) { transform: translateY(0); }
+  .sc-chat-hero .sc-chat-suggestions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; padding: 16px 0 0; background: transparent; border-top: none; }
+  .sc-chat-hero .sc-chat-suggestions button {
+    background: rgba(255,255,255,0.07); color: rgba(238,243,238,0.88);
+    border: 1px solid rgba(255,255,255,0.16); border-radius: 999px;
+    padding: 9px 18px; font-size: 13.5px; cursor: pointer;
+    transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
+  }
+  .sc-chat-hero .sc-chat-suggestions button:hover { background: rgba(216,161,74,0.16); border-color: rgba(216,161,74,0.55); transform: translateY(-1px); }
+  .sc-chat-hero .sc-msg-body { background: rgba(255,255,255,0.94); }
+  .sc-chat-hero .sc-msg-user .sc-msg-body { background: rgba(216,161,74,0.2); color: #f4efe2; }
+  .sc-chat-hero .sc-chat-disabled-note { background: rgba(184,94,60,0.25); color: #f2d9cd; border-radius: 10px; margin-top: 12px; }
+
+  .sc-team-strip { margin-top: 30px; text-align: center; }
+  .sc-team-lead-in { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(238,243,238,0.45); margin-bottom: 14px; }
+  .sc-team-row { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; max-width: 760px; margin: 0 auto; }
+  .sc-team-chip {
+    display: flex; align-items: center; gap: 10px; text-align: left;
+    background: rgba(255,255,255,0.055); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px; padding: 10px 16px 10px 10px; min-width: 172px;
+    transition: background 240ms ease, border-color 240ms ease, transform 240ms ease, box-shadow 240ms ease;
+  }
+  .sc-team-chip .sc-team-avatar {
+    width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13.5px; font-weight: 700; color: #fff;
+    transition: box-shadow 240ms ease;
+  }
+  .sc-team-name { font-size: 14px; font-weight: 600; }
+  .sc-team-role { font-size: 11.5px; color: rgba(238,243,238,0.55); }
+  .sc-team-chip.is-routing {
+    background: rgba(216,161,74,0.14); border-color: rgba(216,161,74,0.65);
+    transform: translateY(-3px);
+    box-shadow: 0 10px 26px rgba(216,161,74,0.22);
+  }
+  .sc-team-chip.is-routing .sc-team-avatar { animation: sc-ring 1.1s ease-in-out infinite; }
+  @keyframes sc-ring {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(216,161,74,0.55); }
+    50% { box-shadow: 0 0 0 7px rgba(216,161,74,0); }
+  }
+  .sc-team-chip.is-answered { background: rgba(106,127,94,0.22); border-color: rgba(150,180,140,0.6); }
+  .sc-stage-footnote { margin-top: 24px; font-size: 12.5px; color: rgba(238,243,238,0.5); }
+  .sc-stage-footnote a { color: rgba(216,161,74,0.9); }
+
+  /* ---------- The pulse: four numbers, no boxes. ---------- */
+  .sc-pulse {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    max-width: 980px; margin: 44px auto 0; padding: 0 10px;
+  }
+  .sc-pulse-item {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 10px 12px 14px; text-decoration: none; border-radius: 14px;
+    border-left: 1px solid var(--sc-border);
+    transition: background 200ms ease, transform 200ms ease;
+  }
+  .sc-pulse-item:first-child { border-left: none; }
+  .sc-pulse-item:hover { background: rgba(255,255,255,0.85); transform: translateY(-2px); }
+  .sc-pulse-num { font-family: 'Playfair Display', serif; font-weight: 700; font-size: 46px; line-height: 1; color: var(--sc-text); }
+  .sc-pulse-num.warn { color: var(--sc-terracotta); }
+  .sc-pulse-label { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--sc-text-muted); }
+  .sc-pulse-sub { text-align: center; font-size: 13px; color: var(--sc-text-muted); margin: 12px 0 40px; }
+  .sc-pulse-sub a { color: var(--sc-forest); }
+
+  /* ---------- Mobile: designed, not shrunk. ----------
+     Ruth compact at the top left, the headline tighter, the input still
+     the biggest thing on screen, chips full-width tap targets, the team
+     a swipeable strip, the pulse a 2x2 grid. */
+  @media (max-width: 700px) {
+    .sc-stage { margin: -20px -16px 0; padding: 16px 16px 26px; }
+    .sc-stage-topbar { flex-direction: column; align-items: flex-start; gap: 10px; margin-bottom: 18px; }
+    .sc-stage-viewer { width: 100%; }
+    .sc-stage-viewer select { flex: 1; }
+    .sc-stage-ruth { justify-content: flex-start; gap: 12px; }
+    .sc-stage-avatar { width: 56px; height: 56px; }
+    .sc-stage-avatar span { font-size: 20px; }
+    .sc-stage-ruth-name { font-size: 18px; }
+    .sc-stage-ruth-role { font-size: 12.5px; }
+    .sc-stage-h { font-size: 29px; text-align: left; margin: 14px 0 18px; }
+    .sc-chat-hero .sc-chat-input-row input { height: 54px; font-size: 16px; border-radius: 14px; }
+    .sc-chat-hero .sc-chat-send { height: 54px; padding: 0 18px; border-radius: 14px; }
+    .sc-chat-hero .sc-chat-suggestions { flex-direction: column; align-items: stretch; }
+    .sc-chat-hero .sc-chat-suggestions button { text-align: left; padding: 12px 16px; font-size: 14px; }
+    .sc-team-strip { text-align: left; }
+    .sc-team-row {
+      flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto;
+      scroll-snap-type: x mandatory; padding-bottom: 6px; margin: 0 -16px; padding-left: 16px; padding-right: 16px;
+    }
+    .sc-team-chip { scroll-snap-align: start; flex-shrink: 0; min-width: 158px; }
+    .sc-pulse { grid-template-columns: 1fr 1fr; gap: 8px 0; margin-top: 26px; }
+    .sc-pulse-item { border-left: none; padding: 12px 8px; }
+    .sc-pulse-item:nth-child(even) { border-left: 1px solid var(--sc-border); }
+    .sc-pulse-num { font-size: 38px; }
+    .sc-pulse-label { font-size: 10.5px; }
   }
 
   /* Collapsible records group in the sidebar. The heading becomes the

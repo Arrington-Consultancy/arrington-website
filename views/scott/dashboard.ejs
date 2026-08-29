@@ -15,50 +15,128 @@
         <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
       <% } %>
       <%
-        // The front door. The chat IS the demonstration, so it comes
-        // first, full width, with the two sentences of orientation a
-        // first-time visitor needs and nothing else above it. Everything
-        // the old dashboard opened with still exists below.
+        // The front door, staged. Ruth is the centrepiece, the
+        // specialists are arrayed beneath her so 'one receptionist, many
+        // workers' reads at a glance, and the routing lights up live as
+        // she hands work over. Presentation only: same widget, same API,
+        // same clearance, same everything underneath.
       %>
-      <p class="sc-orientation">Scott's Armchair &amp; Knitting Service is a fictional company run by a governed AI team, built by Arrington Consultancy as a working demonstration. Ask the team anything. What you can see, and what the team will agree to do, depends on who is signed in.</p>
-      <div class="sc-page-header sc-hero-header">
-        <div>
-          <h1 class="sc-h">What do you need help with?</h1>
-        </div>
-      </div>
-      <div class="sc-hero">
-        <div class="sc-hero-chat">
-          <%- include('partials/chat-widget', { workersById: workersById, csrfToken: csrfToken, aiEnabled: aiEnabled, heroFocus: true }) %>
-        </div>
-        <div class="sc-hero-side">
-          <% if (canImpersonate) { %>
-            <div class="sc-card sc-viewer-card">
-              <div class="sc-persona-label">Viewing as</div>
-              <div class="sc-viewer-name"><%= persona.name %></div>
-              <div class="sc-viewer-role">Clearance <%= persona.code %> &middot; <%= persona.role %></div>
-              <label for="scPersonaSelect" class="sc-persona-label sc-persona-label-spaced">Switch viewer</label>
+      <section class="sc-stage">
+        <div class="sc-stage-topbar">
+          <span class="sc-stage-kicker">A fictional company run by a governed AI team &middot; a working demonstration by Arrington Consultancy</span>
+          <span class="sc-stage-viewer">
+            <% if (canImpersonate) { %>
+              <label for="scPersonaSelect">Viewing as</label>
               <select id="scPersonaSelect">
-                <option value="">Owner view (no impersonation)</option>
+                <option value="">Scott Mercer, owner view</option>
                 <% Object.keys(personas).forEach(function (id) { %>
                   <option value="<%= id %>" <%= (typeof isImpersonating !== 'undefined' && isImpersonating && id === personaId) ? 'selected' : '' %>><%= personas[id].name %> (<%= personas[id].code %>)</option>
                 <% }); %>
               </select>
-              <p class="sc-persona-hint">Ask the same question as someone else and watch the answer change. Owner only.</p>
-            </div>
-          <% } else { %>
-            <div class="sc-card sc-viewer-card">
-              <div class="sc-persona-label">Signed in as</div>
-              <div class="sc-viewer-name"><%= persona.name %></div>
-              <div class="sc-viewer-role">Clearance <%= persona.code %> &middot; <%= persona.role %></div>
-              <p class="sc-persona-hint">The team answers with exactly the information this role is cleared to see, and no more. Someone else asking the same question can get a different answer.</p>
-            </div>
-          <% } %>
-          <div class="sc-card sc-viewer-card">
-            <div class="sc-persona-label">Behind this door</div>
-            <p class="sc-persona-hint">Six AI workers with their own jobs and limits, a receptionist who routes every question, records filtered by clearance, and decisions that stop and wait for a human. <a href="/scott/team">How this team works</a>.</p>
+            <% } else { %>
+              <span class="sc-stage-viewer-fixed"><%= persona.name %> &middot; Clearance <%= persona.code %></span>
+            <% } %>
+          </span>
+        </div>
+
+        <div class="sc-stage-ruth">
+          <div class="sc-stage-avatar"><span><%= ruth.initials %></span></div>
+          <div class="sc-stage-ruth-id">
+            <div class="sc-stage-ruth-name"><%= ruth.characterName %></div>
+            <div class="sc-stage-ruth-role"><%= ruth.displayRole %> &middot; <%= ruth.tagline %></div>
           </div>
         </div>
-      </div>
+
+        <h1 class="sc-stage-h">What do you need help with?</h1>
+
+        <div class="sc-stage-chat">
+          <%- include('partials/chat-widget', { workersById: workersById, csrfToken: csrfToken, aiEnabled: aiEnabled, heroFocus: true, heroMode: true }) %>
+        </div>
+
+        <div class="sc-team-strip" aria-label="The specialists Ruth routes to">
+          <div class="sc-team-lead-in">Ruth routes your question to</div>
+          <div class="sc-team-row">
+            <% specialists.forEach(function (w) { %>
+              <div class="sc-team-chip" data-team-worker="<%= w.id %>">
+                <div class="sc-team-avatar sc-avatar-<%= w.id %>"><%= w.initials %></div>
+                <div class="sc-team-meta">
+                  <div class="sc-team-name"><%= w.characterName %></div>
+                  <div class="sc-team-role"><%= w.displayRole %></div>
+                </div>
+              </div>
+            <% }); %>
+          </div>
+          <div class="sc-stage-footnote">What you can see, and what the team will agree to do, depends on who is signed in. <a href="/scott/team">How this team works</a>.</div>
+        </div>
+      </section>
+
+      <script nonce="<%= nonce %>">
+      // Live routing lights. The chat widget calls window.scTeamPing as
+      // Ruth thinks and each specialist starts and finishes answering;
+      // this just moves the glow around the stage. Presentation only.
+      window.scTeamPing = (function () {
+        var stage = document.querySelector('.sc-stage');
+        function chip(id) { return document.querySelector('.sc-team-chip[data-team-worker="' + id + '"]'); }
+        return function (workerId, state) {
+          if (!stage) return;
+          if (state === 'idle') {
+            stage.classList.remove('sc-stage-thinking');
+            return;
+          }
+          if (workerId === 'receptionist') {
+            if (state === 'thinking') stage.classList.add('sc-stage-thinking');
+            return;
+          }
+          var c = chip(workerId);
+          if (!c) return;
+          if (state === 'thinking') {
+            c.classList.add('is-routing');
+          } else if (state === 'answered') {
+            c.classList.remove('is-routing');
+            c.classList.add('is-answered');
+            setTimeout(function () { c.classList.remove('is-answered'); }, 2600);
+          }
+        };
+      })();
+      </script>
+
+      <%
+        // The pulse: the four numbers an owner actually glances at, big
+        // and unboxed. The overdue-money figure is clearance-gated like
+        // everything else; below debtor clearance the fourth number is
+        // the week's due jobs instead.
+        var pulseMoney = null;
+        if (canSee('debtor_flag')) {
+          pulseMoney = (facts.CUSTOMERS || []).reduce(function (t, c) { return t + (c.overdueGbp || 0); }, 0);
+        }
+      %>
+      <section class="sc-pulse">
+        <a class="sc-pulse-item" href="/scott/jobs?at_risk=1">
+          <span class="sc-pulse-num <%= summary.atRiskJobs ? 'warn' : '' %>"><%= summary.atRiskJobs %></span>
+          <span class="sc-pulse-label">Jobs at risk</span>
+        </a>
+        <a class="sc-pulse-item" href="/scott/approvals">
+          <span class="sc-pulse-num <%= summary.pendingApprovals ? 'warn' : '' %>"><%= summary.pendingApprovals %></span>
+          <span class="sc-pulse-label">Awaiting your approval</span>
+        </a>
+        <a class="sc-pulse-item" href="/scott/enquiries?status=new">
+          <span class="sc-pulse-num"><%= summary.newEnquiries %></span>
+          <span class="sc-pulse-label">New enquiries</span>
+        </a>
+        <% if (pulseMoney !== null) { %>
+        <a class="sc-pulse-item" href="/scott/customers">
+          <span class="sc-pulse-num <%= pulseMoney ? 'warn' : '' %>">&pound;<%= pulseMoney.toLocaleString() %></span>
+          <span class="sc-pulse-label">Overdue money</span>
+        </a>
+        <% } else { %>
+        <a class="sc-pulse-item" href="/scott/jobs">
+          <span class="sc-pulse-num"><%= summary.dueThisWeek %></span>
+          <span class="sc-pulse-label">Due within 7 days</span>
+        </a>
+        <% } %>
+      </section>
+      <p class="sc-pulse-sub"><%= summary.openJobs %> open jobs &middot; <%= summary.dueThisWeek %> due within 7 days &middot; <a href="/scott/jobs">Jobs &amp; Orders</a></p>
+
       <%
         // The switch handler for #scPersonaSelect lives in the sidebar
         // partial (included on every page), which binds it wherever the
@@ -66,14 +144,6 @@
         // fire twice.
       %>
 
-      <h2 class="sc-section-title">Today at a glance</h2>
-      <div class="sc-stat-grid">
-        <div class="sc-card sc-stat"><div class="sc-stat-label">Open jobs</div><div class="sc-stat-value"><%= summary.openJobs %></div></div>
-        <a href="/scott/jobs?at_risk=1" class="sc-card sc-stat sc-card-link"><div class="sc-stat-label">At risk</div><div class="sc-stat-value <%= summary.atRiskJobs ? 'warn' : '' %>"><%= summary.atRiskJobs %></div></a>
-        <a href="/scott/enquiries?status=new" class="sc-card sc-stat sc-card-link"><div class="sc-stat-label">New enquiries</div><div class="sc-stat-value"><%= summary.newEnquiries %></div></a>
-        <a href="/scott/approvals" class="sc-card sc-stat sc-card-link"><div class="sc-stat-label">Awaiting approval</div><div class="sc-stat-value <%= summary.pendingApprovals ? 'warn' : '' %>"><%= summary.pendingApprovals %></div></a>
-        <div class="sc-card sc-stat"><div class="sc-stat-label">Due within 7 days</div><div class="sc-stat-value"><%= summary.dueThisWeek %></div></div>
-      </div>
 
       <%
         // Open material gaps, above the attention list on purpose: a
