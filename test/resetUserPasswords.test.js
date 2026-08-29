@@ -17,7 +17,7 @@
 // must survive an account with real audit history, and it must not be
 // reachable by anything short of the exact flag plus both passwords.
 
-const { test, describe } = require('node:test');
+const { test, describe, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const path = require('node:path');
@@ -35,6 +35,25 @@ function runSeed(extraEnv) {
 
 describe('RESET_USER_PASSWORDS (db/seed.js)', { skip: DB_AVAILABLE ? false : 'set DATABASE_URL to run' }, () => {
   const db = require('../db/pool');
+
+  // These tests rewrite nat's and tom's password hashes by design, against
+  // whatever DATABASE_URL points at, which locally is the same database
+  // used for manual testing. Without restoring them, running the suite
+  // silently locked both real accounts out of the local site, which is a
+  // confusing thing to hit later while debugging something unrelated. The
+  // Scott staff equivalent had the same problem and the same fix.
+  let originalHashes = [];
+
+  before(async () => {
+    const { rows } = await db.query(`SELECT id, password_hash FROM users WHERE username IN ('nat','tom')`);
+    originalHashes = rows;
+  });
+
+  after(async () => {
+    for (const row of originalHashes) {
+      await db.query('UPDATE users SET password_hash = $1 WHERE id = $2', [row.password_hash, row.id]);
+    }
+  });
 
   test('setup: seed normally first, so nat/tom exist with a known baseline', () => {
     const out = runSeed({ NAT_PASSWORD: 'baseline-nat-pw', TOM_PASSWORD: 'baseline-tom-pw' });
