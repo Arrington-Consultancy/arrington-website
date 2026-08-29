@@ -1,0 +1,42 @@
+<%
+  // One gap. The notification sentence is rendered from the STORED
+  // delivery result via describeNotification, never from anything a
+  // worker wrote: "Leah Morgan has been emailed" is only ever printed
+  // when email_status genuinely reads 'sent'.
+  var open = ['open','notified','awaiting_source'].indexOf(g.status) !== -1;
+%>
+<div class="sc-card sc-row-card sc-gap-card<%= g.work_can_continue ? '' : ' sc-gap-blocking' %>">
+  <div>
+    <div class="sc-row-title">
+      <%= g.missing_evidence %>
+      <span class="sc-pill <%= g.gap_type === 'conflicting' ? 'sc-pill-risk' : 'sc-pill-status' %>"><%= g.gap_type %></span>
+      <% if (!g.work_can_continue) { %><span class="sc-pill sc-pill-risk">work stopped</span><% } %>
+      <% if (!g.material) { %><span class="sc-pill sc-pill-status">not material</span><% } %>
+    </div>
+    <div class="sc-row-sub">
+      <strong>Why it matters:</strong> <%= g.why_it_matters %><br>
+      <strong>Source to correct or confirm:</strong> <%= g.expected_source || g.domain || 'not identified' %><br>
+      <strong>Responsible:</strong> <%= g.responsible_name || 'nobody recorded yet' %>
+      <% if (g.raised_by_worker_id) { %> &middot; raised by the <%= g.raised_by_worker_id.replace('_', ' ') %> worker<% } %><br>
+      <strong>Notification:</strong> <%= describeNotification(g) %>
+      <% if (g.email_attempts) { %> (<%= g.email_attempts %> send attempt<%= g.email_attempts === 1 ? '' : 's' %>)<% } %>
+      <% if (g.status === 'resolved') { %><br><strong>Resolved by <%= g.resolved_by_name || 'a person' %>:</strong> <%= g.resolution_note %><% } %>
+      <% if (g.status === 'dismissed') { %><br><strong>Dismissed by <%= g.resolved_by_name || 'a person' %>, source unchanged:</strong> <%= g.resolution_note %><% } %>
+    </div>
+    <% if (open && canResolve) { %>
+      <form class="sc-gap-form js-gap-resolve" data-gap="<%= g.id %>">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <label class="sc-gap-label" for="gapNote<%= g.id %>">What did you correct or confirm in the source?</label>
+        <textarea id="gapNote<%= g.id %>" name="note" rows="2" class="sc-gap-note" placeholder="e.g. Counted the cream yarn: 0 on hand, 24 balls still due 2 September. 07I updated."></textarea>
+        <div class="sc-gap-actions">
+          <button type="submit" class="sc-btn" data-corrected="true">Source corrected, close</button>
+          <button type="submit" class="sc-btn sc-btn-quiet" data-corrected="false">Not a real gap, dismiss</button>
+        </div>
+        <p class="sc-gap-hint">Closing does not change the record for you. Correct the source first, then say what you did.</p>
+      </form>
+    <% } %>
+  </div>
+  <div class="sc-row-actions">
+    <span class="sc-pill <%= g.status === 'resolved' ? 'sc-pill-status' : (open ? 'sc-pill-risk' : 'sc-pill-status') %>"><%= g.status %></span>
+  </div>
+</div>

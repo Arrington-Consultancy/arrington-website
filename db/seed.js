@@ -4899,6 +4899,52 @@ async function seed() {
     console.log('Scott AI Demonstration: conversation ownership and decision-identity columns verified.');
   }
 
+  // Brain Gap register. Created here as well as in schema.sql so a
+  // database seeded before this existed gets it on the next boot, same
+  // pattern as every other Scott migration in this file.
+  {
+    await db.query(`CREATE TABLE IF NOT EXISTS scott_brain_gaps (
+      id SERIAL PRIMARY KEY,
+      conversation_id INTEGER,
+      raised_by_worker_id VARCHAR(30) NOT NULL DEFAULT '',
+      domain VARCHAR(60) NOT NULL DEFAULT '',
+      gap_type VARCHAR(20) NOT NULL DEFAULT 'missing' CHECK (gap_type IN ('missing', 'stale', 'conflicting')),
+      missing_evidence TEXT NOT NULL,
+      why_it_matters TEXT NOT NULL,
+      expected_source TEXT NOT NULL DEFAULT '',
+      responsible_persona_id VARCHAR(40),
+      responsible_name VARCHAR(120) NOT NULL DEFAULT '',
+      work_can_continue BOOLEAN NOT NULL DEFAULT false,
+      material BOOLEAN NOT NULL DEFAULT false,
+      status VARCHAR(20) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'notified', 'awaiting_source', 'resolved', 'dismissed')),
+      notify_decision VARCHAR(40) NOT NULL DEFAULT 'not_material',
+      email_status VARCHAR(20) NOT NULL DEFAULT 'not_required' CHECK (email_status IN ('not_required', 'pending', 'sent', 'failed')),
+      email_to VARCHAR(255) NOT NULL DEFAULT '',
+      email_attempts SMALLINT NOT NULL DEFAULT 0,
+      email_error TEXT NOT NULL DEFAULT '',
+      emailed_at TIMESTAMPTZ,
+      related_job_id INTEGER REFERENCES scott_jobs(id) ON DELETE SET NULL,
+      related_enquiry_id INTEGER REFERENCES scott_enquiries(id) ON DELETE SET NULL,
+      resolved_by_user_id INTEGER REFERENCES users(id),
+      resolved_by_portal_user_id INTEGER REFERENCES scott_portal_users(id),
+      resolved_by_name VARCHAR(120) NOT NULL DEFAULT '',
+      source_corrected BOOLEAN NOT NULL DEFAULT false,
+      resolution_note TEXT NOT NULL DEFAULT '',
+      resolved_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_scott_brain_gaps_status ON scott_brain_gaps (status, created_at DESC)`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_scott_brain_gaps_responsible ON scott_brain_gaps (responsible_persona_id, status)`);
+    // Where a fictional staff member's gap notification is delivered.
+    // Left blank by default, which means the single demonstration inbox
+    // in gapNotifier.js. Nothing invents an @scotts-armchairs address:
+    // it would bounce, and a bouncing send makes the recorded delivery
+    // result worthless.
+    await db.query(`ALTER TABLE scott_portal_users
+      ADD COLUMN IF NOT EXISTS notify_email VARCHAR(255) NOT NULL DEFAULT ''`);
+    console.log('Scott AI Demonstration: Brain Gap register verified.');
+  }
+
   console.log('Seed complete.');
 }
 

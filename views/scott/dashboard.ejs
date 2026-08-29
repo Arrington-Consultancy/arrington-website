@@ -29,6 +29,40 @@
         <div class="sc-card sc-stat"><div class="sc-stat-label">Due within 7 days</div><div class="sc-stat-value"><%= summary.dueThisWeek %></div></div>
       </div>
 
+      <%
+        // Open material gaps, above the attention list on purpose: a
+        // record that is wrong makes everything below it unreliable, and
+        // 07H's own rule says the dashboard is a summary layer rather
+        // than the highest source of truth. Already clearance-filtered
+        // server-side, so this loop does no gating of its own.
+      %>
+      <% if (openGaps.length) { %>
+        <h2 class="sc-section-title">Needs human input</h2>
+        <div class="sc-card sc-honesty-card">
+          <p class="sc-row-sub"><strong><%= openGaps.length %> open <%= openGaps.length === 1 ? 'gap' : 'gaps' %> in the records</strong><% if (myGaps.length) { %>, <%= myGaps.length %> waiting on you<% } %>. These are not approvals. Something in a controlled record is missing, out of date or contradictory, and nothing downstream of it can be relied on until a person corrects the source.</p>
+        </div>
+        <div class="sc-list">
+          <% openGaps.slice(0, 5).forEach(function (g) { %>
+            <div class="sc-card sc-row-card<%= g.work_can_continue ? '' : ' sc-gap-blocking' %>">
+              <div>
+                <div class="sc-row-sub">
+                  <strong><%= g.missing_evidence %></strong><br>
+                  <%= g.why_it_matters %><br>
+                  <strong>Correct or confirm:</strong> <%= g.expected_source || g.domain %>
+                  &middot; <strong>Responsible:</strong> <%= g.responsible_name || 'nobody recorded yet' %><br>
+                  <%= describeNotification(g) %>
+                </div>
+              </div>
+              <div class="sc-row-actions">
+                <% if (!g.work_can_continue) { %><span class="sc-pill sc-pill-risk">work stopped</span><% } %>
+                <span class="sc-pill sc-pill-status"><%= g.gap_type %></span>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+        <p class="sc-proposed-note"><a href="/scott/gaps">Open the full register</a>. A gap only closes when a person has corrected or confirmed the source, never by an AI worker deciding it no longer matters.</p>
+      <% } %>
+
       <h2 class="sc-section-title">What needs your attention today</h2>
       <% var mine = facts.ATTENTION_TODAY.filter(function (a) { return canSee(a.domain); }); %>
       <% if (!mine.length) { %>

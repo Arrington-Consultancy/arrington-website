@@ -398,6 +398,21 @@
     .sc-page-header h1 { font-size: 21px; }
     .sc-chat-panel { height: 440px; }
   }
+  /* Needs Human Input. A blocking gap gets the terracotta rail rather
+     than a badge alone, because "work is stopped" is the one thing on
+     this page that should be readable without reading. */
+  .sc-gap-card { align-items: flex-start; }
+  .sc-gap-blocking { border-left: 3px solid var(--sc-terracotta); }
+  .sc-gap-form { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--sc-border); max-width: 620px; }
+  .sc-gap-label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .sc-gap-note { width: 100%; padding: 8px 10px; border: 1px solid var(--sc-border); border-radius: var(--sc-radius-sm); font: inherit; font-size: 14px; resize: vertical; }
+  .sc-gap-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .sc-gap-actions .sc-btn { background: var(--sc-forest); color: #fff; }
+  .sc-gap-actions .sc-btn-quiet { background: #fff; border-color: var(--sc-border); color: var(--sc-text-muted); }
+  .sc-gap-hint { font-size: 12px; color: var(--sc-text-muted); margin: 8px 0 0; }
+  .sc-gap-error { font-size: 13px; color: var(--sc-terracotta); margin: 8px 0 0; }
+  .sc-gap-done { font-size: 13px; color: var(--sc-forest); margin: 8px 0 0; font-weight: 600; }
+
   @media (max-width: 520px) {
     .sc-stat-grid { grid-template-columns: repeat(2, 1fr); }
     .sc-colleagues { grid-template-columns: 1fr 1fr; }

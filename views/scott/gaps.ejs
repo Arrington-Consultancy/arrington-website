@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Needs Human Input | Scott's Armchair &amp; Knitting Service</title>
+  <meta name="robots" content="noindex, nofollow">
+  <%- include('partials/styles') %>
+</head>
+<body class="scott-body">
+  <div class="sc-shell">
+    <%- include('partials/sidebar', { active: 'gaps', navCounts: navCounts }) %>
+    <main class="sc-main">
+      <% if (typeof isImpersonating !== 'undefined' && isImpersonating) { %>
+        <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
+      <% } %>
+      <div class="sc-page-header">
+        <div>
+          <h1 class="sc-h">Needs Human Input</h1>
+          <p>Where a worker was stopped by evidence that is missing, out of date or contradictory. Viewing as <strong><%= persona.name %></strong> (<%= persona.role %>).</p>
+        </div>
+      </div>
+
+      <div class="sc-card sc-honesty-card">
+        <p class="sc-row-sub"><strong>This is not the approvals queue.</strong> An approval is a decision somebody has the authority to make. A gap here is a record that is wrong, missing or says two different things, and no approval fixes that. Somebody has to go and correct the source.</p>
+        <p class="sc-row-sub">A gap closes when the underlying controlled record has actually been corrected or confirmed by a person. Nothing here is ever filled in by inference to clear the queue, and no worker can close one.</p>
+      </div>
+
+      <% if (mine.length) { %>
+        <h2 class="sc-section-title">Waiting on you</h2>
+        <div class="sc-list">
+          <% mine.forEach(function (g) { %>
+            <%- include('partials/gap-card', { g: g, canResolve: true, csrfToken: csrfToken, describeNotification: describeNotification }) %>
+          <% }); %>
+        </div>
+      <% } %>
+
+      <h2 class="sc-section-title">All gaps you can see</h2>
+      <% if (!gaps.length) { %>
+        <div class="sc-card sc-empty">No gaps recorded, or none in records you are cleared for. These two look the same here on purpose: the difference between them would itself say something about records you cannot read.</div>
+      <% } else { %>
+        <div class="sc-list">
+          <% gaps.forEach(function (g) { %>
+            <%- include('partials/gap-card', { g: g, canResolve: canSee(g.domain || 'finance_full') && ['open','notified','awaiting_source'].indexOf(g.status) !== -1, csrfToken: csrfToken, describeNotification: describeNotification }) %>
+          <% }); %>
+        </div>
+      <% } %>
+    </main>
+  </div>
+  <script nonce="<%= nonce %>">
+  (function () {
+    // Which button was pressed decides sourceCorrected, so "the source is
+    // now right" and "this was never a real gap" cannot be submitted as
+    // the same thing by accident.
+    var pressed = null;
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest('.sc-gap-actions button');
+      if (btn) pressed = btn.getAttribute('data-corrected') === 'true';
+    });
+    document.addEventListener('submit', function (e) {
+      var form = e.target.closest('.js-gap-resolve');
+      if (!form) return;
+      e.preventDefault();
+      var note = form.querySelector('.sc-gap-note').value.trim();
+      var out = form.querySelector('.sc-gap-error') || document.createElement('p');
+      out.className = 'sc-gap-error';
+      if (!form.contains(out)) form.appendChild(out);
+      out.textContent = '';
+      fetch('/api/scott/gaps/' + form.getAttribute('data-gap') + '/resolve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': form.querySelector('input[name=_csrf]').value },
+        body: JSON.stringify({ sourceCorrected: pressed === true, note: note })
+      }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+        .then(function (res) {
+          if (!res.ok) { out.textContent = res.d.error || 'Could not close this gap.'; return; }
+          out.className = 'sc-gap-done';
+          out.textContent = pressed ? 'Closed. The source is recorded as corrected.' : 'Dismissed. The source was not changed.';
+          form.querySelector('.sc-gap-actions').remove();
+        })
+        .catch(function () { out.textContent = 'Could not reach the server.'; });
+    });
+  })();
+  </script>
+</body>
+</html>

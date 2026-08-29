@@ -31,8 +31,14 @@ const { runTurn, isScottAIEnabled } = require('../lib/scott/orchestrator');
 const clearance = require('../lib/scott/clearance');
 const deepFacts = require('../lib/scott/deepBusinessFacts');
 const contextBuilders = require('../lib/scott/data/contextBuilders');
+const brainGaps = require('../lib/scott/brainGaps');
+const { sendGapNotification } = require('../lib/scott/gapNotifier');
 
 const router = express.Router();
+
+// Absolute, because it goes into an email. Overridable so a staging
+// deployment links a reader back to staging rather than to production.
+const SITE_ORIGIN = process.env.SCOTT_PORTAL_ORIGIN || 'https://www.arringtonconsultancy.com';
 
 // Small, JSON-safe projection of WORKERS used by the client-side chat
 // widget (views/scott/partials/chat-widget.ejs) — only the fields the
@@ -315,6 +321,10 @@ const DATA_PAGES = [
   { path: '/scott/brain', view: 'scott/brain', nav: 'brain', label: 'Company Brain' }
 ];
 
+// Needs Human Input has its own route rather than a DATA_PAGES entry
+// because it reads live rows and filters them by clearance, which the
+// generic deep-facts page renderer does not do.
+
 // What the sidebar lists. Activity has its own route (it takes a filter
 // and needs counts), so it is not in DATA_PAGES, but it still has to
 // appear in the nav: keeping one list for "registered generically" and a
@@ -322,6 +332,7 @@ const DATA_PAGES = [
 // reachable but invisible, or listed and 404.
 const NAV_PAGES = [
   ...DATA_PAGES,
+  { path: '/scott/gaps', nav: 'gaps', label: 'Needs Human Input' },
   { path: '/scott/activity', nav: 'activity', label: 'Activity & Audit' }
 ];
 
@@ -350,12 +361,18 @@ function mountPageRoute(app, generateCsrfToken) {
 
   app.get('/scott', noindexHeader, requireScottPageAccess, async (req, res, next) => {
     try {
-      const [summary, activity, approvals, chatBootstrap] = await Promise.all([
+      const [summary, activity, approvals, openGaps, chatBootstrap] = await Promise.all([
         repo.getDashboardSummary(),
         repo.getRecentActivity(10),
         repo.getPendingApprovals(),
+        repo.getOpenBrainGaps({ materialOnly: true, limit: 20 }),
         loadChatBootstrap(conversationIdentity(req))
       ]);
+      // Same clearance filter as everything else on this page. A gap is
+      // surfaced to the person who can actually do something about it,
+      // which for most gaps is a smaller group than "everyone logged in".
+      const personaId = clearance.getEffectivePersonaId(req);
+      const visibleGaps = clearance.filterAndRedact(personaId, null, openGaps);
       res.render('scott/dashboard', {
         ...viewerViewModel(req),
         facts: deepFacts,
@@ -369,13 +386,45 @@ function mountPageRoute(app, generateCsrfToken) {
         summary,
         activity,
         approvals,
+        openGaps: visibleGaps,
+        myGaps: visibleGaps.filter((g) => g.responsible_persona_id === personaId),
+        describeNotification: brainGaps.describeNotification,
         snapshotCards: OPERATING_SNAPSHOT_CARDS,
         snapshotLabel: SNAPSHOT_LABEL,
         aiEnabled: isScottAIEnabled(),
         workersById: WORKERS_BY_ID_JSON,
-        navCounts: { newEnquiries: summary.newEnquiries, pendingApprovals: summary.pendingApprovals },
+        navCounts: { newEnquiries: summary.newEnquiries, pendingApprovals: summary.pendingApprovals, openGaps: visibleGaps.length },
         initialConversationId: chatBootstrap.initialConversationId,
         initialMessages: chatBootstrap.initialMessages,
+        csrfToken: generateCsrfToken(req, res)
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // The gap register. Filtered by exactly the same clearance rule as the
+  // records the gaps are about: a gap description quotes the evidence
+  // that is missing, so an unfiltered list here would be a way round
+  // every other control in the system. That is why the rows go through
+  // filterAndRedact rather than being handed straight to the view.
+  app.get('/scott/gaps', noindexHeader, requireScottPageAccess, async (req, res, next) => {
+    try {
+      const personaId = clearance.getEffectivePersonaId(req);
+      const [rows, navCounts] = await Promise.all([
+        repo.getBrainGaps({ limit: 100 }),
+        repo.getDashboardSummary()
+      ]);
+      const visible = clearance.filterAndRedact(personaId, null, rows);
+      res.render('scott/gaps', {
+        ...viewerViewModel(req),
+        gaps: visible,
+        describeNotification: brainGaps.describeNotification,
+        // Their own queue, so the page answers "what is waiting on me"
+        // before it answers "what is open in the company".
+        mine: visible.filter((g) => g.responsible_persona_id === personaId
+          && ['open', 'notified', 'awaiting_source'].includes(g.status)),
+        navCounts,
         csrfToken: generateCsrfToken(req, res)
       });
     } catch (err) {
@@ -692,13 +741,98 @@ async function runScottTurnAndPersist({ conversation, conversationId, userMessag
     }
   }
 
+  // Evidence gaps, handled entirely separately from approvals above. A
+  // worker raising one has NOT been given any say in who hears about it:
+  // planGap decides materiality and ownership from controlled records,
+  // the send reports its own real result, and both are stored. The reply
+  // text the worker wrote is never the source of the "X has been emailed"
+  // sentence (see brainGaps.describeNotification and the prompt rule
+  // forbidding a worker from claiming it).
+  const gapRecords = [];
+  for (const wr of turn.workerReplies) {
+    if (!wr.gap || wr.technicalFailure) continue;
+    const plan = brainGaps.planGap(wr.gap, {
+      escalation: wr.escalation,
+      askerPersonaId: personaId || null,
+      raisedByWorkerId: wr.workerId,
+      relatedJobId: conversation.related_job_id || null,
+      relatedEnquiryId: conversation.related_enquiry_id || null
+    });
+    if (!plan) continue;
+
+    let record = await repo.createBrainGap({ ...plan, conversationId });
+    if (plan.shouldEmail) {
+      // Awaited on purpose, unlike the fire-and-forget lead notifications
+      // elsewhere in the codebase. The user is about to be told what
+      // happened, and "we have not finished trying yet" is not an answer
+      // that can be turned into an honest sentence.
+      const result = await sendGapNotification(plan, {
+        portalUrl: `${SITE_ORIGIN}/scott/gaps`,
+        recipientEmail: await lookupNotifyEmail(plan.responsiblePersonaId)
+      });
+      record = (await repo.recordGapDelivery(record.id, result)) || record;
+    }
+    await repo.addActivity({
+      actor: wr.workerId,
+      eventType: 'brain_gap_raised',
+      summary: `Needs human input (${record.gap_type}) in ${record.expected_source || record.domain}: ${record.missing_evidence}`,
+      relatedJobId: record.related_job_id,
+      relatedEnquiryId: record.related_enquiry_id,
+      conversationId
+    });
+    gapRecords.push(record);
+  }
+  turn.gapRecords = gapRecords;
+
   return turn;
+}
+
+// A fictional staff member's notification address. They have no real
+// mailbox, so this is a per-persona override on top of a single real
+// demonstration inbox rather than an invented address that would bounce
+// and make the recorded delivery result meaningless.
+async function lookupNotifyEmail(personaId) {
+  if (!personaId) return null;
+  try {
+    const { rows } = await db.query(
+      'SELECT notify_email FROM scott_portal_users WHERE persona_id = $1 AND notify_email <> $2 LIMIT 1',
+      [personaId, '']
+    );
+    return rows[0] ? rows[0].notify_email : null;
+  } catch (err) {
+    // A missing column on an un-migrated database must not stop the gap
+    // being raised, only stop it being individually addressed.
+    console.error('Scott gap notify address lookup failed:', err.message);
+    return null;
+  }
+}
+
+function serializeGapRecord(g) {
+  return {
+    id: g.id,
+    gapType: g.gap_type,
+    domain: g.domain,
+    missingEvidence: g.missing_evidence,
+    whyItMatters: g.why_it_matters,
+    expectedSource: g.expected_source,
+    responsibleName: g.responsible_name,
+    workCanContinue: g.work_can_continue,
+    material: g.material,
+    status: g.status,
+    emailStatus: g.email_status,
+    emailAttempts: g.email_attempts,
+    // The one sentence the interface is allowed to say about
+    // notification, built from the recorded result rather than from the
+    // intention to send.
+    notification: brainGaps.describeNotification(g)
+  };
 }
 
 function serializeTurn(conversationId, turn) {
   return {
     conversationId,
     receptionist: { note: turn.receptionist.note, technicalFailure: turn.receptionist.technicalFailure },
+    gaps: (turn.gapRecords || []).map(serializeGapRecord),
     workerReplies: turn.workerReplies.map((wr) => ({
       workerId: wr.workerId,
       characterName: wr.worker.characterName,
@@ -709,6 +843,7 @@ function serializeTurn(conversationId, turn) {
       certainty: wr.certainty,
       escalation: wr.escalation,
       writeback: wr.writeback,
+      gap: wr.gap || null,
       technicalFailure: wr.technicalFailure
     }))
   };
@@ -1050,6 +1185,73 @@ router.post('/api/scott/jobs/:ref/status', noindexHeader, requireScottApiAccess,
     res.json({ ok: true, job: updated });
   } catch (err) {
     console.error('Scott job status update error:', err);
+    res.status(500).json({ error: 'Something went wrong.' });
+  }
+});
+
+// ------------------------------------------------------------
+// Brain Gaps: closing one
+// ------------------------------------------------------------
+//
+// The only way a gap is ever closed. There is deliberately no AI path to
+// this route and no automatic ageing-out: a gap that nobody corrected is
+// a gap that is still open, however old and however inconvenient in a
+// queue. Closing requires a logged-in human, clearance for the gap's own
+// domain, and an explicit statement of what they did to the source.
+//
+// sourceCorrected is the difference between the two honest closes.
+// True means the controlled record has actually been put right or
+// confirmed, and the Company Brain may now use it. False records a
+// dismissal, which says the gap was not real or no longer matters and
+// leaves the source untouched. Presenting the second as the first is
+// exactly the "clear the queue" behaviour the whole mechanism exists to
+// prevent, so they are different statuses with different words on the
+// register rather than one "closed" flag.
+router.post('/api/scott/gaps/:id/resolve', noindexHeader, requireScottApiAccess, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid gap id.' });
+    const gap = await repo.getBrainGapById(id);
+    if (!gap) return res.status(404).json({ error: 'Gap not found.' });
+
+    const personaId = clearance.getEffectivePersonaId(req);
+    if (!clearance.personaCanResolveGap(personaId, gap)) {
+      return res.status(403).json({ error: clearance.actionDeniedNote('gap_resolve') });
+    }
+
+    const sourceCorrected = req.body?.sourceCorrected === true || req.body?.sourceCorrected === 'true';
+    const note = sanitizeHtml(String(req.body?.note || ''), { allowedTags: [], allowedAttributes: {} }).trim();
+    // A close with no explanation is not a record of anything. Requiring
+    // the note on both paths is deliberate: "corrected it" and "this was
+    // not real" both need to say what happened, or the register degrades
+    // into a list of things somebody clicked.
+    if (note.length < 10) {
+      return res.status(400).json({ error: 'Say what you corrected or confirmed in the source, or why this is not a real gap. At least a sentence.' });
+    }
+
+    const v = viewer(req);
+    const updated = await repo.resolveBrainGap(id, {
+      sourceCorrected,
+      note,
+      resolver: { realUserId: v.realUserId, portalUserId: v.portalUserId, displayName: v.displayName }
+    });
+    // Null means the row was no longer open. Reporting that honestly
+    // rather than as a success stops a second click reading as a second,
+    // different close.
+    if (!updated) return res.status(409).json({ error: 'That gap has already been closed.' });
+
+    await repo.addActivity({
+      actor: 'user',
+      eventType: sourceCorrected ? 'brain_gap_resolved' : 'brain_gap_dismissed',
+      summary: sourceCorrected
+        ? `${v.displayName} corrected or confirmed ${updated.expected_source || updated.domain} and closed the gap: ${note}`
+        : `${v.displayName} dismissed a gap in ${updated.expected_source || updated.domain} without changing the source: ${note}`,
+      relatedJobId: updated.related_job_id,
+      relatedEnquiryId: updated.related_enquiry_id
+    });
+    res.json({ ok: true, gap: serializeGapRecord(updated) });
+  } catch (err) {
+    console.error('Scott gap resolve error:', err);
     res.status(500).json({ error: 'Something went wrong.' });
   }
 });

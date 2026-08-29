@@ -19,7 +19,7 @@
   <div class="sc-nav-heading">Company records</div>
   <ul class="sc-nav">
     <% (typeof dataPages !== 'undefined' ? dataPages : []).forEach(function (p) { %>
-      <li><a href="<%= p.path %>" class="<%= active === p.nav ? 'active' : '' %>"><%= p.label %></a></li>
+      <li><a href="<%= p.path %>" class="<%= active === p.nav ? 'active' : '' %>"><%= p.label %><% if (p.nav === 'gaps' && typeof navCounts !== 'undefined' && navCounts.openGaps) { %><span class="sc-badge"><%= navCounts.openGaps %></span><% } %></a></li>
     <% }); %>
   </ul>
   <% if (typeof persona !== 'undefined') { %>

@@ -447,3 +447,77 @@ CREATE TABLE IF NOT EXISTS scott_portal_users (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_scott_portal_users_username ON scott_portal_users (username);
+
+-- Scott AI Demonstration: the Needs Human Input / Brain Gap register.
+--
+-- Added 29/08/2026. An AI worker blocked by MISSING, STALE or CONFLICTING
+-- evidence is in a different situation from one blocked by an approval it
+-- does not have, and only the second had a workflow (scott_writebacks).
+-- Collapsing the two is how an approvals queue fills with items nobody can
+-- approve because the underlying number is wrong, and how a model ends up
+-- filling a gap by inference to clear the queue.
+--
+-- Three properties of this table are the point of it:
+--
+-- 1. responsible_persona_id is a PERSONA, meaning Scott or one of his
+--    staff with a real login. An AI worker is not a person and is never
+--    the responsible party for correcting a controlled record. The
+--    raising worker is recorded separately in raised_by_worker_id, which
+--    is a different question.
+-- 2. The delivery result is recorded, not the intention. email_status
+--    only reads 'sent' after a genuine successful send, so the interface
+--    can say "[name] has been emailed" without that ever being a claim
+--    the code merely hoped was true. A failure records its actual error.
+-- 3. Closing requires a human. resolved_by_* is never written by any AI
+--    path, and source_corrected is an explicit statement by that human
+--    that the underlying controlled record has been corrected or
+--    confirmed. A gap cannot be cleared by deciding it does not matter
+--    any more.
+CREATE TABLE IF NOT EXISTS scott_brain_gaps (
+    id SERIAL PRIMARY KEY,
+    conversation_id INTEGER,
+    raised_by_worker_id VARCHAR(30) NOT NULL DEFAULT '',
+    -- The clearance domain of the evidence itself, so an open gap is
+    -- filtered on the dashboard by exactly the same rule as the record it
+    -- concerns. A gap description quotes the evidence, so an unfiltered
+    -- gap list would be a way round every other control.
+    domain VARCHAR(60) NOT NULL DEFAULT '',
+    gap_type VARCHAR(20) NOT NULL DEFAULT 'missing' CHECK (gap_type IN ('missing', 'stale', 'conflicting')),
+    missing_evidence TEXT NOT NULL,
+    why_it_matters TEXT NOT NULL,
+    expected_source TEXT NOT NULL DEFAULT '',
+    responsible_persona_id VARCHAR(40),
+    responsible_name VARCHAR(120) NOT NULL DEFAULT '',
+    work_can_continue BOOLEAN NOT NULL DEFAULT false,
+    material BOOLEAN NOT NULL DEFAULT false,
+    status VARCHAR(20) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'notified', 'awaiting_source', 'resolved', 'dismissed')),
+    notify_decision VARCHAR(40) NOT NULL DEFAULT 'not_material',
+    email_status VARCHAR(20) NOT NULL DEFAULT 'not_required' CHECK (email_status IN ('not_required', 'pending', 'sent', 'failed')),
+    email_to VARCHAR(255) NOT NULL DEFAULT '',
+    email_attempts SMALLINT NOT NULL DEFAULT 0,
+    email_error TEXT NOT NULL DEFAULT '',
+    emailed_at TIMESTAMPTZ,
+    related_job_id INTEGER REFERENCES scott_jobs(id) ON DELETE SET NULL,
+    related_enquiry_id INTEGER REFERENCES scott_enquiries(id) ON DELETE SET NULL,
+    resolved_by_user_id INTEGER REFERENCES users(id),
+    resolved_by_portal_user_id INTEGER REFERENCES scott_portal_users(id),
+    resolved_by_name VARCHAR(120) NOT NULL DEFAULT '',
+    -- Explicitly asserted by the human closing it: the controlled source
+    -- has been corrected or confirmed. Closing without this is a dismissal,
+    -- which is a different status and reads differently on the register.
+    source_corrected BOOLEAN NOT NULL DEFAULT false,
+    resolution_note TEXT NOT NULL DEFAULT '',
+    resolved_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_scott_brain_gaps_status ON scott_brain_gaps (status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_scott_brain_gaps_responsible ON scott_brain_gaps (responsible_persona_id, status);
+
+-- Where a fictional staff member's Brain Gap notification is actually
+-- delivered. They are fictional and have no mailbox, so inventing an
+-- address for them would make every send bounce and the "delivery result"
+-- meaningless. The send is real, over the same authorised Gmail path the
+-- rest of the site uses; it goes to a real demonstration inbox and says
+-- plainly in the body which fictional person it is addressed to.
+ALTER TABLE scott_portal_users ADD COLUMN IF NOT EXISTS notify_email VARCHAR(255) NOT NULL DEFAULT '';
+

@@ -178,3 +178,63 @@ describe('prompt isolation', () => {
     }
   });
 });
+
+// ------------------------------------------------------------
+// Evidence gaps in the worker contract
+// ------------------------------------------------------------
+// A gap and an approval escalation are different fields on purpose. If
+// the schema accepted a loose gap object, a worker could file a blocking
+// evidence problem as a shapeless note and the routing engine would have
+// nothing to act on.
+test('worker reply schema: evidence gaps', async (t) => {
+  const { validateWorkerReply } = require('../../lib/scott/orchestrator');
+  const base = { reply: 'ok', certainty: 'UNPROVEN', writeback: null, escalation: null, refused: false };
+  const goodGap = {
+    type: 'conflicting',
+    missing: 'the stock feed and the purchase order disagree',
+    whyItMatters: 'a customer is waiting on a date',
+    domain: 'yarn_stock',
+    workCanContinue: false
+  };
+
+  await t.test('a well-formed gap is accepted, and null is accepted', () => {
+    assert.equal(validateWorkerReply({ ...base, gap: goodGap }).valid, true);
+    assert.equal(validateWorkerReply({ ...base, gap: null }).valid, true);
+    assert.equal(validateWorkerReply(base).valid, true, 'omitting it entirely is still valid');
+  });
+
+  await t.test('a gap must name a type the register can act on', () => {
+    const r = validateWorkerReply({ ...base, gap: { ...goodGap, type: 'unclear' } });
+    assert.equal(r.valid, false);
+    assert.ok(r.errors.some((e) => /gap\.type/.test(e)));
+  });
+
+  await t.test('a gap must say what is missing AND why it matters', () => {
+    // Either one alone is unactionable: "something is wrong somewhere" or
+    // "this is important" with no subject.
+    assert.equal(validateWorkerReply({ ...base, gap: { ...goodGap, missing: '' } }).valid, false);
+    assert.equal(validateWorkerReply({ ...base, gap: { ...goodGap, whyItMatters: '' } }).valid, false);
+  });
+
+  await t.test('a gap must name the record area, because that is what decides who is told', () => {
+    const r = validateWorkerReply({ ...base, gap: { ...goodGap, domain: '' } });
+    assert.equal(r.valid, false);
+    assert.ok(r.errors.some((e) => /gap\.domain/.test(e)));
+  });
+
+  await t.test('workCanContinue must be stated, not left to be inferred', () => {
+    const r = validateWorkerReply({ ...base, gap: { ...goodGap, workCanContinue: undefined } });
+    assert.equal(r.valid, false);
+    assert.ok(r.errors.some((e) => /workCanContinue/.test(e)));
+  });
+
+  await t.test('the governance preamble tells workers the two are different things', () => {
+    const { GOVERNANCE_PREAMBLE } = require('../../lib/scott/governance');
+    assert.match(GOVERNANCE_PREAMBLE, /NEEDS HUMAN INPUT/);
+    assert.match(GOVERNANCE_PREAMBLE, /Never fill a gap by inference/);
+    // The specific dishonesty being designed out: a worker announcing a
+    // notification it has no way of knowing happened.
+    assert.match(GOVERNANCE_PREAMBLE, /never say that anyone has been contacted/);
+    assert.match(GOVERNANCE_PREAMBLE, /always a human/);
+  });
+});

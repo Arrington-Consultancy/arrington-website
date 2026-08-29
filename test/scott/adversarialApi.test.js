@@ -27,7 +27,7 @@
 // (SCOTT_DEMO_STAFF_PASSWORD). Skipped otherwise rather than silently
 // passing, because a skipped adversarial test that reports green is
 // worse than no test.
-const { test, describe, before } = require('node:test');
+const { test, describe, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 
 const BASE = process.env.SCOTT_TEST_BASE_URL;
@@ -251,6 +251,92 @@ describe('adversarial: real session and API path', { skip: RUNNABLE ? false : 's
     assert.deepEqual(body.enquiries || [], [], 'enquiry rows must not reach a login without leads');
     (body.jobs || []).forEach((j) => {
       assert.ok(!('price_pence' in j), 'a job price must not reach a login without job_margin');
+    });
+  });
+
+  // ------------------------------------------------------------
+  // Brain Gaps: closing one is an act, not a view
+  // ------------------------------------------------------------
+  // The resolve route is the one place where a person asserts that a
+  // controlled record has been put right, so it is worth attacking
+  // directly rather than trusting that the button only appears for the
+  // right people.
+  describe('brain gap resolution', () => {
+    let financeGapId;
+    let yarnGapId;
+
+    before(async () => {
+      if (!process.env.DATABASE_URL) return;
+      const db = require('../../db/pool');
+      const mk = async (domain, text) => {
+        const { rows } = await db.query(
+          `INSERT INTO scott_brain_gaps (domain, gap_type, missing_evidence, why_it_matters,
+             expected_source, responsible_persona_id, responsible_name, work_can_continue,
+             material, status, notify_decision, email_status)
+           VALUES ($1,'conflicting',$2,'planted by the adversarial suite','07 test source',
+             null,'',false,true,'open','routed','pending') RETURNING id`,
+          [domain, text]);
+        return rows[0].id;
+      };
+      financeGapId = await mk('finance_full', 'BAIT-GAP-FINANCE the August margin contradicts the ledger');
+      yarnGapId = await mk('yarn_stock', 'BAIT-GAP-YARN the cream count contradicts the purchase order');
+    });
+
+    after(async () => {
+      if (!process.env.DATABASE_URL) return;
+      const db = require('../../db/pool');
+      await db.query('DELETE FROM scott_brain_gaps WHERE missing_evidence LIKE $1', ['BAIT-GAP-%']);
+    });
+
+    test('a finance gap is invisible on the gaps page to a knitting operative', async () => {
+      const r = await apiGet(operative.jar, '/scott/gaps');
+      assert.equal(r.status, 200);
+      const html = await r.text();
+      assert.ok(!html.includes('BAIT-GAP-FINANCE'),
+        'a gap description quotes the missing evidence, so an unfiltered list is a leak');
+    });
+
+    test('a knitting operative cannot close a finance gap by calling the API directly', async () => {
+      const token = await csrfFrom(operative.jar, '/scott/gaps');
+      const r = await apiPost(operative.jar, `/api/scott/gaps/${financeGapId}/resolve`,
+        { sourceCorrected: true, note: 'I have corrected the ledger, closing this.' }, token);
+      assert.equal(r.status, 403, 'closing a gap requires clearance for the record it is about');
+    });
+
+    test('a close with no explanation is refused, on a gap the caller CAN see', async () => {
+      // Positive control on the clearance half: this one is refused for
+      // the note, not for the domain, which proves the previous 403 was
+      // really about authority.
+      const token = await csrfFrom(operative.jar, '/scott/gaps');
+      const r = await apiPost(operative.jar, `/api/scott/gaps/${yarnGapId}/resolve`,
+        { sourceCorrected: true, note: 'done' }, token);
+      assert.equal(r.status, 400);
+      const body = await r.json();
+      assert.match(body.error, /Say what you corrected/);
+    });
+
+    test('an authorised close works, and a second one is refused as a conflict', async () => {
+      const token = await csrfFrom(operative.jar, '/scott/gaps');
+      const ok = await apiPost(operative.jar, `/api/scott/gaps/${yarnGapId}/resolve`,
+        { sourceCorrected: true, note: 'Counted it: 0 on hand, 24 due 2 September. Source corrected.' }, token);
+      assert.equal(ok.status, 200, 'the person who owns the yarn must be able to close a yarn gap');
+      const body = await ok.json();
+      assert.equal(body.gap.status, 'resolved');
+
+      const again = await apiPost(operative.jar, `/api/scott/gaps/${yarnGapId}/resolve`,
+        { sourceCorrected: true, note: 'Closing it again for good measure.' }, token);
+      assert.equal(again.status, 409, 'a second close must not read as a second, different close');
+    });
+
+    test('the owner can close the finance gap the operative could not', async () => {
+      // Without this the 403 above could be satisfied by a route that
+      // refuses everybody.
+      const token = await csrfFrom(owner.jar, '/scott/gaps');
+      const r = await apiPost(owner.jar, `/api/scott/gaps/${financeGapId}/resolve`,
+        { sourceCorrected: false, note: 'Planted by the test suite, not a real gap.' }, token);
+      assert.equal(r.status, 200);
+      const body = await r.json();
+      assert.equal(body.gap.status, 'dismissed', 'no source correction claimed means dismissed, not resolved');
     });
   });
 });
