@@ -940,6 +940,17 @@ narrowest clearance in the company, gets his own van with its MOT,
 defects and service history, and no workshop register and no book values.
 Neither page is a stripped-down copy of the owner's.
 
+**Where the Money Goes** (07T) is the page to open in front of a
+prospective client. It is the commercial leakage register: eighteen
+evidenced opportunities with their source record, working range,
+dependency and confidence. It leads with 07T's own control principle,
+that potential saving is not actual saving, shows an opportunity
+envelope of GBP 12,825 to GBP 15,099 explicitly labelled as a range that
+must not be summed, and puts "Realised so far: GBP 0, nothing approved
+and measured yet" beside it. Three items carry an explicit warning
+against claiming them: sunk stock cost, an insurance premium gap pending
+a cover check, and a double-count already sitting in another line.
+
 **The same rule gates every retrieval path**, which is what 07Q actually
 requires: pages, the AI context builder, and `/api/scott/search`. Search
 gates whole categories, strips restricted fields from rows it does show,
@@ -951,7 +962,7 @@ nothing. Company Brain snippets are cut **after** redaction.
 Dashboard, Jobs & Orders, Enquiries, Approvals, then the company records:
 Pipeline & Quotes, Customers, Complaints, Stock & Supply, Purchase Orders,
 People, Finance, Quality Control, Marketing & Reviews, Assets &
-Maintenance, Company Brain, Activity & Audit. Routes
+Maintenance, Where the Money Goes, Company Brain, Activity & Audit. Routes
 are registered from `DATA_PAGES` in `routes/scott.js`; `NAV_PAGES` is what
 the sidebar links (Activity has its own route because it takes a filter).
 Two lists, so a page cannot be reachable but invisible, or listed and 404.
@@ -963,12 +974,11 @@ difference between those two answers is itself the leak.
 
 ### Drive records transcribed
 
-`lib/scott/deepBusinessFacts.js` holds 173 domain-tagged records from
-07A, 07B, 07C, 07D, 07E, 07F, 07G, 07I, 07L, 07N, 07S, 07U and 07V.
+`lib/scott/deepBusinessFacts.js` holds 193 domain-tagged records from
+07A, 07B, 07C, 07D, 07E, 07F, 07G, 07I, 07L, 07N, 07S, 07T, 07U and 07V.
 Still untranscribed: 07H (KPI pack), 07J (policies/terms/payments), 07K
 (safety/compliance/privacy/insurance), 07M (supplier resilience), 07O
-(continuity), 07P (marketing asset and consent register), 07R (premises),
-07T (commercial leakage). Adding one is a matter of tagging each record
+(continuity), 07P (marketing asset and consent register), 07R (premises). Adding one is a matter of tagging each record
 with a domain that some persona actually holds: `contextBuilders`
 derives its list from the module's exports, so nothing else needs
 updating, and `untaggedDeepFactExports` fails a test if a record arrives
