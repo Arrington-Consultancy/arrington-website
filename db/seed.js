@@ -4832,6 +4832,26 @@ async function seed() {
         console.log(`Scott AI Demonstration: ${staff.length} fictional staff logins seeded. Shared demo password for all eight: ${staffPassword}`);
         console.log('Scott AI Demonstration: set SCOTT_DEMO_STAFF_PASSWORD to control this instead of a generated one.');
       }
+    } else if (process.env.RESET_SCOTT_STAFF_PASSWORDS === 'true') {
+      // Escape hatch for the case that actually happened on staging: the
+      // eight rows were seeded by an earlier deploy with a random
+      // password, so a later SCOTT_DEMO_STAFF_PASSWORD was ignored by the
+      // insert path above and nobody could sign in as any of them. Same
+      // shape as RESET_USER_PASSWORDS: an UPDATE in place, never a DELETE,
+      // so no foreign key is involved and no row identity changes.
+      //
+      // Requires the exact string 'true' AND a password to set, so a
+      // stray or copied variable cannot trigger it, and it refuses loudly
+      // rather than silently doing nothing if the password is missing.
+      const supplied = process.env.SCOTT_DEMO_STAFF_PASSWORD;
+      if (!supplied) {
+        console.warn('RESET_SCOTT_STAFF_PASSWORDS=true but SCOTT_DEMO_STAFF_PASSWORD is not set, so there is nothing to reset the passwords to. No change made.');
+      } else {
+        const hash = await bcrypt.hash(supplied, BCRYPT_ROUNDS);
+        const { rowCount } = await db.query('UPDATE scott_portal_users SET password_hash = $1', [hash]);
+        console.log(`RESET_SCOTT_STAFF_PASSWORDS=true: ${rowCount} fictional staff password(s) reset from SCOTT_DEMO_STAFF_PASSWORD.`);
+        console.log('Scott AI Demonstration: remove RESET_SCOTT_STAFF_PASSWORDS once you have signed in successfully.');
+      }
     } else {
       console.log('Scott AI Demonstration: fictional staff logins already present, skipping.');
     }

@@ -1143,6 +1143,7 @@ setTimeout(() => {
 loadPermissions().then(() => {
   app.listen(PORT, () => {
     console.log(`[${isProd ? 'PROD' : 'DEV'}] Arrington CMS running on port ${PORT}`);
+    console.log(require('./lib/scott/orchestrator').describeScottAIStatus());
   });
 }).catch(err => {
   console.error('Failed to load permissions:', err);
