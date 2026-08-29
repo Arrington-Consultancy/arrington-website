@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quality Control | Scott's Armchair &amp; Knitting Service</title>
+  <meta name="robots" content="noindex, nofollow">
+  <%- include('partials/styles') %>
+</head>
+<body class="scott-body">
+  <div class="sc-shell">
+    <%- include('partials/sidebar', { active: 'quality', navCounts: navCounts }) %>
+    <main class="sc-main">
+      <div class="sc-page-header">
+        <div>
+          <h1 class="sc-h">Quality Control</h1>
+          <p>07N SCOTT'S QUALITY CONTROL, REWORK &amp; DEFECTS. Viewing as <strong><%= persona.name %></strong> (<%= persona.role %>).</p>
+        </div>
+      </div>
+
+      <div class="sc-card sc-proposed-note">
+        This screen exists ahead of worker activation, exactly as 31 SCOTT PORTAL FUNCTIONAL REQUIREMENTS specifies: the data is real, but Nina Holt (SCOTT'S QUALITY CONTROL) is a proposed worker, not yet active. No AI here claims to have physically inspected anything: every entry below is a recorded human check or its absence.
+      </div>
+
+      <% if (!canSee('quality_full') && !canSee('quality_ops') && !canSee('quality_checklists')) { %>
+        <div class="sc-card sc-empty"><%= deniedNote('quality_full') %></div>
+      <% } else { %>
+        <div class="sc-stats-row">
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Target rework rate</div><div class="sc-stat-value"><%= facts.QUALITY_KPIS.targetReworkRatePct %>%</div></div>
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Rolling 30-day rework rate</div><div class="sc-stat-value <%= facts.QUALITY_KPIS.rolling30DayReworkRatePct > facts.QUALITY_KPIS.targetReworkRatePct ? 'warn' : '' %>"><%= facts.QUALITY_KPIS.rolling30DayReworkRatePct %>%</div></div>
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Extra rework hours (90d)</div><div class="sc-stat-value"><%= facts.QUALITY_KPIS.rolling90DayExtraReworkHours %></div></div>
+        </div>
+
+        <h2 class="sc-section-title">Live queue</h2>
+        <div class="sc-list">
+          <% facts.QUALITY_QUEUE.forEach(function (q) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title">
+                  <%= q.ref %><% if (q.jobRef) { %> &middot; <a href="/scott/jobs/<%= q.jobRef %>"><%= q.jobRef %></a><% } %><% if (q.customer) { %> &middot; <%= q.customer %><% } %>
+                </div>
+                <div class="sc-row-sub"><%= q.detail %><% if (q.action) { %><br><strong>Required:</strong> <%= q.action %><% } %></div>
+              </div>
+              <div class="sc-row-actions">
+                <span class="sc-pill <%= q.severity === 'CRITICAL' ? 'sc-pill-risk' : 'sc-pill-status' %>"><%= q.severity %></span>
+                <span class="sc-pill sc-pill-status"><%= q.status %></span>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+      <% } %>
+
+      <h2 class="sc-section-title">Release gate rule</h2>
+      <div class="sc-card">
+        <p class="sc-row-sub">A CRITICAL or MAJOR failed check, a missing mandatory structural sign-off, or an unresolved quarantined-material issue blocks release until corrected and re-checked. There is no owner-discretion "approve anyway" control for a failed physical quality requirement, and customer-date pressure does not clear this gate. This is enforced as a rule here, not as a UI suggestion: the release-gate logic in this file never presents a bypass button for these severities.</p>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

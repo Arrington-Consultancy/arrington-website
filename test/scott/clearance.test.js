@@ -155,6 +155,40 @@ describe('narrowest-wins is structural, not incidental', () => {
   });
 });
 
+describe('session persona ("view the demo as")', () => {
+  function fakeReq() {
+    return { session: {} };
+  }
+
+  test('a fresh session defaults to Scott Mercer (full clearance), not an empty/unset state', () => {
+    const req = fakeReq();
+    assert.equal(clearance.getSessionPersonaId(req), clearance.DEFAULT_PERSONA);
+  });
+
+  test('setSessionPersonaId succeeds for a real persona and getSessionPersonaId then reflects it', () => {
+    const req = fakeReq();
+    const ok = clearance.setSessionPersonaId(req, 'mike_evans');
+    assert.equal(ok, true);
+    assert.equal(clearance.getSessionPersonaId(req), 'mike_evans');
+  });
+
+  test('setSessionPersonaId refuses a bogus id and leaves the session unchanged, verified via the read path', () => {
+    const req = fakeReq();
+    clearance.setSessionPersonaId(req, 'scott_mercer');
+    const ok = clearance.setSessionPersonaId(req, 'not_a_real_persona');
+    assert.equal(ok, false);
+    // The actual proof: the session still reads back the persona it had
+    // before the bad call, via the same getter every route uses — not an
+    // assumption about what the setter "should" have done internally.
+    assert.equal(clearance.getSessionPersonaId(req), 'scott_mercer');
+  });
+
+  test('a tampered/garbage session value fails closed to the default rather than throwing or granting "*"', () => {
+    const req = { session: { scottPersonaId: '__proto__' } };
+    assert.equal(clearance.getSessionPersonaId(req), clearance.DEFAULT_PERSONA);
+  });
+});
+
 describe('filterByClearance / clearanceDeniedNote', () => {
   test('filters a mixed record list down to only what the pair may see', () => {
     const records = [

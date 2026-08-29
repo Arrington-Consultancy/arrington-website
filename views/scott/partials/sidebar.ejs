@@ -15,7 +15,20 @@
     <li><a href="/scott/jobs" class="<%= active === 'jobs' ? 'active' : '' %>">Jobs &amp; Orders</a></li>
     <li><a href="/scott/enquiries" class="<%= active === 'enquiries' ? 'active' : '' %>">Enquiries<% if (typeof navCounts !== 'undefined' && navCounts.newEnquiries) { %><span class="sc-badge"><%= navCounts.newEnquiries %></span><% } %></a></li>
     <li><a href="/scott/approvals" class="<%= active === 'approvals' ? 'active' : '' %>">Approvals<% if (typeof navCounts !== 'undefined' && navCounts.pendingApprovals) { %><span class="sc-badge"><%= navCounts.pendingApprovals %></span><% } %></a></li>
+    <li><a href="/scott/finance" class="<%= active === 'finance' ? 'active' : '' %>">Finance</a></li>
+    <li><a href="/scott/quality" class="<%= active === 'quality' ? 'active' : '' %>">Quality Control</a></li>
   </ul>
+  <% if (typeof personas !== 'undefined') { %>
+  <div class="sc-persona-switcher">
+    <label for="scPersonaSelect" class="sc-persona-label">Viewing as</label>
+    <select id="scPersonaSelect">
+      <% Object.keys(personas).forEach(function (id) { %>
+        <option value="<%= id %>" <%= id === personaId ? 'selected' : '' %>><%= personas[id].name %> (<%= personas[id].role %>)</option>
+      <% }); %>
+    </select>
+    <p class="sc-persona-hint">Changes what this session's clearance can see, per 07Q. Does not change your real login.</p>
+  </div>
+  <% } %>
   <div class="sc-sidebar-footer">
     <div class="sc-user-row">Signed in as <strong>&nbsp;<%= user.username %></strong></div>
     <form action="/logout" method="POST">
@@ -24,6 +37,21 @@
     </form>
   </div>
 </aside>
+<% if (typeof personas !== 'undefined') { %>
+<script nonce="<%= nonce %>">
+(function () {
+  var select = document.getElementById('scPersonaSelect');
+  if (!select) return;
+  select.addEventListener('change', function () {
+    fetch('/api/scott/persona', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-csrf-token': <%- JSON.stringify(csrfToken) %> },
+      body: JSON.stringify({ personaId: select.value })
+    }).then(function () { window.location.reload(); });
+  });
+})();
+</script>
+<% } %>
 <script nonce="<%= nonce %>">
 (function () {
   var input = document.getElementById('scSearchInput');

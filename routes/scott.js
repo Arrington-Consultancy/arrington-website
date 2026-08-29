@@ -28,6 +28,8 @@ const { OPERATING_SNAPSHOT_CARDS } = require('../lib/scott/businessFacts');
 const { SNAPSHOT_LABEL } = require('../lib/scott/config');
 const { requireScottPageAccess, requireScottApiAccess, hasScottAccess } = require('../lib/scott/access');
 const { runTurn, isScottAIEnabled } = require('../lib/scott/orchestrator');
+const clearance = require('../lib/scott/clearance');
+const deepFacts = require('../lib/scott/deepBusinessFacts');
 
 const router = express.Router();
 
@@ -256,6 +258,53 @@ function mountPageRoute(app, generateCsrfToken) {
       }
       const navCounts = await repo.getDashboardSummary();
       res.render('scott/approvals', { user: req.session.user, approvals, workers: WORKERS, workersById: WORKERS_BY_ID_JSON, navCounts, csrfToken: generateCsrfToken(req, res) });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Finance and Quality Control are plain data pages (07A/07N), not AI
+  // conversations — read the block comment above clearance.js's
+  // getSessionPersonaId for why persona clearance gates a raw portal view
+  // by PERSONA alone (personaCanSeeDomain), with no worker permission in
+  // the intersection: there is no worker mediating "a human looked at a
+  // page". Worker permission only enters when an AI call assembles context
+  // (isDomainVisible), which these two routes do not do.
+  app.get('/scott/finance', noindexHeader, requireScottPageAccess, async (req, res, next) => {
+    try {
+      const personaId = clearance.getSessionPersonaId(req);
+      const navCounts = await repo.getDashboardSummary();
+      res.render('scott/finance', {
+        user: req.session.user,
+        navCounts,
+        personaId,
+        persona: clearance.getPersona(personaId),
+        personas: clearance.PERSONAS,
+        canSee: (domain) => clearance.personaCanSeeDomain(personaId, domain),
+        deniedNote: clearance.clearanceDeniedNote,
+        facts: deepFacts,
+        csrfToken: generateCsrfToken(req, res)
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.get('/scott/quality', noindexHeader, requireScottPageAccess, async (req, res, next) => {
+    try {
+      const personaId = clearance.getSessionPersonaId(req);
+      const navCounts = await repo.getDashboardSummary();
+      res.render('scott/quality', {
+        user: req.session.user,
+        navCounts,
+        personaId,
+        persona: clearance.getPersona(personaId),
+        personas: clearance.PERSONAS,
+        canSee: (domain) => clearance.personaCanSeeDomain(personaId, domain),
+        deniedNote: clearance.clearanceDeniedNote,
+        facts: deepFacts,
+        csrfToken: generateCsrfToken(req, res)
+      });
     } catch (err) {
       next(err);
     }
@@ -573,6 +622,16 @@ router.post('/api/scott/approvals/:id/redraft', noindexHeader, requireScottApiAc
     console.error('Scott redraft error:', err);
     res.status(500).json({ error: 'Something went wrong.' });
   }
+});
+
+// "View the demo as" — switches which fictional staff persona's clearance
+// this session sees the portal through (see clearance.js's block comment
+// on PERSONAS). Does not touch req.session.user (the real, authenticated
+// site login) at all — only an additional, inner view-selector value.
+router.post('/api/scott/persona', noindexHeader, requireScottApiAccess, async (req, res) => {
+  const ok = clearance.setSessionPersonaId(req, req.body && req.body.personaId);
+  if (!ok) return res.status(400).json({ error: 'Unknown persona.' });
+  res.json({ ok: true, personaId: clearance.getSessionPersonaId(req) });
 });
 
 router.get('/api/scott/search', noindexHeader, requireScottApiAccess, async (req, res) => {

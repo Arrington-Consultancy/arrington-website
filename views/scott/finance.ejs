@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finance | Scott's Armchair &amp; Knitting Service</title>
+  <meta name="robots" content="noindex, nofollow">
+  <%- include('partials/styles') %>
+</head>
+<body class="scott-body">
+  <div class="sc-shell">
+    <%- include('partials/sidebar', { active: 'finance', navCounts: navCounts }) %>
+    <main class="sc-main">
+      <div class="sc-page-header">
+        <div>
+          <h1 class="sc-h">Finance</h1>
+          <p>07A SCOTT'S FINANCE &amp; ACCOUNTS. Viewing as <strong><%= persona.name %></strong> (<%= persona.role %>).</p>
+        </div>
+      </div>
+
+      <% if (!canSee('finance_full')) { %>
+        <div class="sc-card sc-empty"><%= deniedNote('finance_full') %></div>
+      <% } else { %>
+        <div class="sc-stats-row">
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Bank balance</div><div class="sc-stat-value">£<%= facts.FINANCE_SUMMARY.cash.bankBalanceGbp.toLocaleString() %></div></div>
+          <div class="sc-card sc-stat"><div class="sc-stat-label">VAT reserve</div><div class="sc-stat-value">£<%= facts.FINANCE_SUMMARY.cash.vatReserveGbp.toLocaleString() %></div></div>
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Total debtors</div><div class="sc-stat-value <%= facts.FINANCE_SUMMARY.debtors.totalGbp > 25000 ? 'warn' : '' %>">£<%= facts.FINANCE_SUMMARY.debtors.totalGbp.toLocaleString() %></div></div>
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Total creditors</div><div class="sc-stat-value">£<%= facts.FINANCE_SUMMARY.creditors.totalGbp.toLocaleString() %></div></div>
+        </div>
+
+        <h2 class="sc-section-title">Monthly management accounts</h2>
+        <div class="sc-list">
+          <% facts.FINANCE_SUMMARY.monthlyManagementAccounts.forEach(function (m) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title"><%= m.month %><% if (m.forecast) { %> <span class="sc-pill sc-pill-status">forecast</span><% } %></div>
+                <div class="sc-row-sub">Revenue £<%= m.revenueGbp.toLocaleString() %> &middot; Gross profit £<%= m.grossProfitGbp.toLocaleString() %> &middot; Operating profit £<%= m.operatingProfitGbp.toLocaleString() %><% if (m.note) { %><br><%= m.note %><% } %></div>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+
+        <h2 class="sc-section-title">Debtors</h2>
+        <div class="sc-card">
+          <p class="sc-row-sub">Current £<%= facts.FINANCE_SUMMARY.debtors.currentGbp.toLocaleString() %> &middot; 1&ndash;30 days £<%= facts.FINANCE_SUMMARY.debtors.overdue1to30Gbp.toLocaleString() %> &middot; 31&ndash;60 days £<%= facts.FINANCE_SUMMARY.debtors.overdue31to60Gbp.toLocaleString() %> &middot; over 60 days £<%= facts.FINANCE_SUMMARY.debtors.overdueOver60Gbp.toLocaleString() %></p>
+          <p class="sc-row-sub">Largest overdue: <%= facts.FINANCE_SUMMARY.debtors.largest.customer %>, £<%= facts.FINANCE_SUMMARY.debtors.largest.amountGbp %>, <%= facts.FINANCE_SUMMARY.debtors.largest.daysOverdue %> days overdue.</p>
+        </div>
+      <% } %>
+
+      <% if (canSee('director_position')) { %>
+        <h2 class="sc-section-title">Director's Loan Account</h2>
+        <div class="sc-card">
+          <p class="sc-row-sub">Current balance: <strong>£<%= facts.DIRECTOR_POSITION.directorsLoanAccount.currentBalanceGbp.toLocaleString() %></strong> owed to Scott Mercer (as of <%= facts.DIRECTOR_POSITION.directorsLoanAccount.asOf %>).</p>
+        </div>
+        <div class="sc-list">
+          <% facts.DIRECTOR_POSITION.directorsLoanAccount.ledger.forEach(function (e) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title"><%= e.date %> &middot; <%= e.event %></div>
+                <div class="sc-row-sub">Movement <%= e.movementGbp >= 0 ? '+' : '' %>£<%= e.movementGbp.toLocaleString() %> &middot; Balance £<%= e.balanceGbp.toLocaleString() %></div>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+
+        <h2 class="sc-section-title">Dividends</h2>
+        <div class="sc-card">
+          <p class="sc-row-sub">2024/25: £<%= facts.DIRECTOR_POSITION.dividends.fy2425Gbp.toLocaleString() %> &middot; 2025/26: £<%= facts.DIRECTOR_POSITION.dividends.fy2526Gbp.toLocaleString() %> &middot; 2026/27 to date: £<%= facts.DIRECTOR_POSITION.dividends.fy2627PaidToDateGbp.toLocaleString() %></p>
+          <p class="sc-row-sub"><%= facts.DIRECTOR_POSITION.dividends.note %></p>
+        </div>
+      <% } else { %>
+        <div class="sc-card sc-empty"><%= deniedNote('director_position') %></div>
+      <% } %>
+
+      <% if (canSee('finance_summary_ops')) { %>
+        <h2 class="sc-section-title">Recurring-cost opportunities (identified, not realised savings)</h2>
+        <div class="sc-list">
+          <% facts.COST_OPPORTUNITIES.forEach(function (o) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title"><%= o.item %> <span class="sc-pill sc-pill-status"><%= o.status %></span></div>
+                <div class="sc-row-sub">£<%= o.currentMonthlyGbp %>/month &middot; potential saving £<%= o.potentialAnnualSavingGbp %>/year &middot; <%= o.detail %></div>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+        <p class="sc-proposed-note">Total gross identified opportunity: £<%= facts.COST_OPPORTUNITIES_TOTAL_ANNUAL_GBP.toLocaleString() %>/year. This is not a realised saving until each item is confirmed and approved.</p>
+      <% } %>
+    </main>
+  </div>
+</body>
+</html>
