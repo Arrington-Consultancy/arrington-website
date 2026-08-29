@@ -348,6 +348,36 @@ CREATE TABLE IF NOT EXISTS scott_activity (
 );
 CREATE INDEX IF NOT EXISTS idx_scott_activity_created ON scott_activity (created_at DESC);
 
+-- Scott AI Demonstration: genuine fictional portal staff accounts.
+--
+-- Added 29/08/2026. These are REAL separately-authenticated logins, not a
+-- "view as" selector: each fictional staff member (Scott Mercer, Tony
+-- Marsh, Chloe Reed, Leah Morgan, Ellie Park, Ravi Singh, Jo Bell, Mike
+-- Evans) gets their own username/password and their clearance is bound to
+-- the authenticated row here, server-side. A logged-in fictional user
+-- cannot change their own persona_id and cannot impersonate anyone else;
+-- 07Q's "individual accounts only, no shared staff login" and "attempting
+-- to bypass a restriction through Company Brain, search, another worker or
+-- prompt wording does not change clearance" are both enforced by that
+-- binding rather than by a UI control.
+--
+-- Deliberately a SEPARATE table from `users`: these are fictional
+-- demonstration personas inside one demo area, not real site accounts with
+-- CMS/admin capability. Keeping them out of `users` means a fictional
+-- staff login can never accidentally inherit a real site permission, and
+-- the real site's own auth/permissions code needs no awareness of them.
+CREATE TABLE IF NOT EXISTS scott_portal_users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(60) UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    persona_id VARCHAR(40) NOT NULL,
+    display_name VARCHAR(120) NOT NULL,
+    job_title VARCHAR(160) NOT NULL DEFAULT '',
+    active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_scott_portal_users_username ON scott_portal_users (username);
+
 -- A worker's proposed material write-back. Append-only by design (see the
 -- header note above) — approving one never rewrites a structured column on
 -- scott_jobs/scott_enquiries directly, it only allows the note to stand as
@@ -418,35 +448,6 @@ CREATE TABLE IF NOT EXISTS scott_messages (
 CREATE INDEX IF NOT EXISTS idx_scott_messages_conversation ON scott_messages (conversation_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_product_guide_created_at ON product_guide_submissions (created_at DESC);
 
--- Scott AI Demonstration: genuine fictional portal staff accounts.
---
--- Added 29/08/2026. These are REAL separately-authenticated logins, not a
--- "view as" selector: each fictional staff member (Scott Mercer, Tony
--- Marsh, Chloe Reed, Leah Morgan, Ellie Park, Ravi Singh, Jo Bell, Mike
--- Evans) gets their own username/password and their clearance is bound to
--- the authenticated row here, server-side. A logged-in fictional user
--- cannot change their own persona_id and cannot impersonate anyone else;
--- 07Q's "individual accounts only, no shared staff login" and "attempting
--- to bypass a restriction through Company Brain, search, another worker or
--- prompt wording does not change clearance" are both enforced by that
--- binding rather than by a UI control.
---
--- Deliberately a SEPARATE table from `users`: these are fictional
--- demonstration personas inside one demo area, not real site accounts with
--- CMS/admin capability. Keeping them out of `users` means a fictional
--- staff login can never accidentally inherit a real site permission, and
--- the real site's own auth/permissions code needs no awareness of them.
-CREATE TABLE IF NOT EXISTS scott_portal_users (
-    id SERIAL PRIMARY KEY,
-    username VARCHAR(60) UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    persona_id VARCHAR(40) NOT NULL,
-    display_name VARCHAR(120) NOT NULL,
-    job_title VARCHAR(160) NOT NULL DEFAULT '',
-    active BOOLEAN NOT NULL DEFAULT true,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-CREATE INDEX IF NOT EXISTS idx_scott_portal_users_username ON scott_portal_users (username);
 
 -- Scott AI Demonstration: the Needs Human Input / Brain Gap register.
 --
