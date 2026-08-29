@@ -376,6 +376,12 @@ function mountPageRoute(app, generateCsrfToken) {
       res.render('scott/dashboard', {
         ...viewerViewModel(req),
         facts: deepFacts,
+        // The hero stage: Ruth front and centre, the active specialists
+        // arrayed beneath her so 'one receptionist, many workers' reads
+        // without explanation. Full worker objects (taglines included),
+        // server-side only; the browser still gets the slim projection.
+        ruth: WORKERS.receptionist,
+        specialists: ACTIVE_WORKER_IDS.filter((id) => id !== 'receptionist').map((id) => WORKERS[id]),
         // Active team only — never includes the three proposed v0.2
         // workers (finance_accounts/people_hr/quality_control). Doc 24's
         // independent governance review has no verdict recorded, so

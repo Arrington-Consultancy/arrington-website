@@ -1,4 +1,6 @@
-<div class="sc-chat-panel" id="scChatPanel">
+<% var heroMode = typeof heroMode !== 'undefined' && heroMode; %>
+<div class="sc-chat-panel<%= heroMode ? ' sc-chat-hero' : '' %>" id="scChatPanel">
+  <% if (!heroMode) { %>
   <div class="sc-chat-head">
     <div class="sc-msg-avatar sc-avatar-receptionist"><%= workersById.receptionist.initials %></div>
     <div class="sc-chat-head-text">
@@ -6,6 +8,7 @@
       <span>Ruth routes every question to the right person on the team</span>
     </div>
   </div>
+  <% } %>
   <% var hasHistory = typeof initialMessages !== 'undefined' && initialMessages && initialMessages.length; %>
   <div class="sc-chat-messages" id="scChatMessages">
     <% if (hasHistory) { %>
@@ -29,7 +32,7 @@
           </div>
         <% } %>
       <% }); %>
-    <% } else { %>
+    <% } else if (!heroMode) { %>
       <div class="sc-msg">
         <div class="sc-msg-avatar sc-avatar-receptionist"><%= workersById.receptionist.initials %></div>
         <div class="sc-msg-body">
@@ -105,7 +108,12 @@
     scrollToBottom();
   }
 
+  function ping(workerId, state) {
+    if (window.scTeamPing) { try { window.scTeamPing(workerId, state); } catch (e) {} }
+  }
+
   function addTypingIndicator(name, workerId, initials) {
+    ping(workerId, 'thinking');
     var div = document.createElement('div');
     div.className = 'sc-msg sc-typing';
     div.innerHTML = '<div class="sc-msg-avatar ' + avatarClass(workerId) + '">' + initials + '</div><div class="sc-typing-dots"><span></span><span></span><span></span></div>';
@@ -131,6 +139,7 @@
       '</div>';
     messagesEl.appendChild(div);
     scrollToBottom();
+    ping(opts.workerId, 'answered');
   }
 
   function delay(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
@@ -160,6 +169,7 @@
   async function sendMessage(text) {
     if (!text || busy) return;
     busy = true;
+    ping('receptionist', 'thinking');
     sendBtn.disabled = true;
     if (suggestionsEl) suggestionsEl.hidden = true;
     addUserMessage(text);
@@ -182,6 +192,7 @@
       addWorkerMessage({ name: 'System', role: 'Notice', workerId: 'system', initials: '!', text: 'Could not reach the server. Please try again.' });
     } finally {
       busy = false;
+      ping(null, 'idle');
       sendBtn.disabled = false;
       input.focus();
     }
