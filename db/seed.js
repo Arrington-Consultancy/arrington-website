@@ -4945,11 +4945,19 @@ async function seed() {
     console.log('Scott AI Demonstration: Brain Gap register verified.');
   }
 
+  // One-shot Brain Gap acceptance check, gated on
+  // RUN_GAP_ACCEPTANCE_CHECK=true and its own already-ran marker. Proves
+  // the real notification chain in this environment; see the script's
+  // header for exactly what it does and does not claim.
+  await require('../scripts/scottGapAcceptance').runGapAcceptanceCheck(db);
+
   console.log('Seed complete.');
 }
 
 seed()
-  .then(() => process.exit(0))
+  // process.exitCode may have been set by the acceptance check; a plain
+  // exit(0) here would overwrite an honest failure with a green exit.
+  .then(() => process.exit(process.exitCode || 0))
   .catch(err => {
     console.error('Seed failed:', err);
     process.exit(1);

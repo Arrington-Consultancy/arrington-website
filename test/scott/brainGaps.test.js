@@ -222,7 +222,7 @@ test('"[name] has been emailed" is only ever said after a send succeeded', async
     assert.equal(r.emailStatus, 'failed');
     assert.match(r.error, /535 authentication rejected/);
 
-    const said = bg.describeNotification({ responsible_name: 'Leah Morgan', email_status: 'failed', email_error: r.error });
+    const said = bg.describeNotification({ responsible_name: 'Leah Morgan', email_status: 'failed', email_error: r.error, email_attempts: r.attempts });
     assert.match(said, /has NOT been emailed/);
     assert.match(said, /535 authentication rejected/, 'the actual failure must be reported, not paraphrased away');
     assert.match(said, /still open/);
@@ -234,6 +234,11 @@ test('"[name] has been emailed" is only ever said after a send succeeded', async
     assert.equal(r.emailStatus, 'failed');
     assert.equal(r.attempts, 0);
     assert.match(r.error, /not configured/);
+    // The sentence must not claim a retry either: zero attempts means
+    // "nothing was sent", not "the send failed after a retry".
+    const said = bg.describeNotification({ responsible_name: 'Leah Morgan', email_status: 'failed', email_error: r.error, email_attempts: 0 });
+    assert.match(said, /Nothing was sent/);
+    assert.doesNotMatch(said, /after a retry/);
   });
 
   await t.test('no state short of a genuine send produces the emailed sentence', () => {
