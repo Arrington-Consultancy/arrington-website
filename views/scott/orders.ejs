@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Purchase Orders | Scott's Armchair &amp; Knitting Service</title>
+  <meta name="robots" content="noindex, nofollow">
+  <%- include('partials/styles') %>
+</head>
+<body class="scott-body">
+  <div class="sc-shell">
+    <%- include('partials/sidebar', { active: 'orders', navCounts: navCounts }) %>
+    <main class="sc-main">
+      <% if (typeof isImpersonating !== 'undefined' && isImpersonating) { %>
+        <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
+      <% } %>
+      <div class="sc-page-header">
+        <div>
+          <h1 class="sc-h">Purchase Orders</h1>
+          <p>07U SCOTT'S PURCHASE ORDERS, GOODS RECEIPT &amp; SUPPLIER INVOICE LEDGER. Viewing as <strong><%= persona.name %></strong> (<%= persona.role %>).</p>
+        </div>
+      </div>
+
+      <% if (!canSee('po_status')) { %>
+        <div class="sc-card sc-empty"><%= deniedNote('po_status') %></div>
+      <% } else { %>
+        <div class="sc-card sc-proposed-note">
+          <strong>Control principle.</strong> A proposed order is not an order. An approved order is not physically received stock. A delivery note is not proof that material passed quality checks. A supplier invoice is not automatically correct merely because a PO exists.
+        </div>
+
+        <h2 class="sc-section-title">Open and recent orders</h2>
+        <div class="sc-list">
+          <% facts.OPEN_PURCHASE_ORDERS.forEach(function (p) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title">
+                  <%= p.ref %> &middot; <%= p.supplier %> &middot; £<%= p.netGbp.toLocaleString() %>
+                  <% if (p.jobRef) { %> &middot; <a href="/scott/jobs/<%= p.jobRef %>"><%= p.jobRef %></a><% } %>
+                </div>
+                <div class="sc-row-sub"><%= p.detail %><% if (p.financeApproval) { %><br><strong>Approved by:</strong> <%= p.financeApproval %><% } %></div>
+              </div>
+              <div class="sc-row-actions">
+                <span class="sc-pill <%= /LATE|QUALITY ISSUE/.test(p.status) ? 'sc-pill-risk' : 'sc-pill-status' %>"><%= p.status %></span>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+      <% } %>
+
+    </main>
+  </div>
+</body>
+</html>

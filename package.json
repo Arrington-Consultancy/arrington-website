@@ -9,7 +9,8 @@
     "start": "node db/seed.js && node server.js",
     "seed": "node db/seed.js",
     "dev": "node db/seed.js && npx nodemon server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "scott:pressure-test": "node scripts/runScottPressureTests.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",

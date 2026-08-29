@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard | Scott's Armchair &amp; Knitting Service</title>
+  <meta name="robots" content="noindex, nofollow">
+  <%- include('partials/styles') %>
+</head>
+<body class="scott-body">
+  <div class="sc-shell">
+    <%- include('partials/sidebar', { active: 'dashboard' }) %>
+    <main class="sc-main">
+      <% if (typeof isImpersonating !== 'undefined' && isImpersonating) { %>
+        <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
+      <% } %>
+      <div class="sc-page-header">
+        <div>
+          <h1 class="sc-h">Good morning, <%= (user.displayName || user.username).split(' ')[0] %></h1>
+          <p>Here's what's happening at the workshop today.</p>
+        </div>
+      </div>
+
+      <div class="sc-stat-grid">
+        <div class="sc-card sc-stat"><div class="sc-stat-label">Open jobs</div><div class="sc-stat-value"><%= summary.openJobs %></div></div>
+        <a href="/scott/jobs?at_risk=1" class="sc-card sc-stat sc-card-link"><div class="sc-stat-label">At risk</div><div class="sc-stat-value <%= summary.atRiskJobs ? 'warn' : '' %>"><%= summary.atRiskJobs %></div></a>
+        <a href="/scott/enquiries?status=new" class="sc-card sc-stat sc-card-link"><div class="sc-stat-label">New enquiries</div><div class="sc-stat-value"><%= summary.newEnquiries %></div></a>
+        <a href="/scott/approvals" class="sc-card sc-stat sc-card-link"><div class="sc-stat-label">Awaiting approval</div><div class="sc-stat-value <%= summary.pendingApprovals ? 'warn' : '' %>"><%= summary.pendingApprovals %></div></a>
+        <div class="sc-card sc-stat"><div class="sc-stat-label">Due within 7 days</div><div class="sc-stat-value"><%= summary.dueThisWeek %></div></div>
+      </div>
+
+      <%
+        // Open material gaps, above the attention list on purpose: a
+        // record that is wrong makes everything below it unreliable, and
+        // 07H's own rule says the dashboard is a summary layer rather
+        // than the highest source of truth. Already clearance-filtered
+        // server-side, so this loop does no gating of its own.
+      %>
+      <% if (openGaps.length) { %>
+        <h2 class="sc-section-title">Needs human input</h2>
+        <div class="sc-card sc-honesty-card">
+          <p class="sc-row-sub"><strong><%= openGaps.length %> open <%= openGaps.length === 1 ? 'gap' : 'gaps' %> in the records</strong><% if (myGaps.length) { %>, <%= myGaps.length %> waiting on you<% } %>. These are not approvals. Something in a controlled record is missing, out of date or contradictory, and nothing downstream of it can be relied on until a person corrects the source.</p>
+        </div>
+        <div class="sc-list">
+          <% openGaps.slice(0, 5).forEach(function (g) { %>
+            <div class="sc-card sc-row-card<%= g.work_can_continue ? '' : ' sc-gap-blocking' %>">
+              <div>
+                <div class="sc-row-sub">
+                  <strong><%= g.missing_evidence %></strong><br>
+                  <%= g.why_it_matters %><br>
+                  <strong>Correct or confirm:</strong> <%= g.expected_source || g.domain %>
+                  &middot; <strong>Responsible:</strong> <%= g.responsible_name || 'nobody recorded yet' %><br>
+                  <%= describeNotification(g) %>
+                </div>
+              </div>
+              <div class="sc-row-actions">
+                <% if (!g.work_can_continue) { %><span class="sc-pill sc-pill-risk">work stopped</span><% } %>
+                <span class="sc-pill sc-pill-status"><%= g.gap_type %></span>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+        <p class="sc-proposed-note"><a href="/scott/gaps">Open the full register</a>. A gap only closes when a person has corrected or confirmed the source, never by an AI worker deciding it no longer matters.</p>
+      <% } %>
+
+      <h2 class="sc-section-title">What needs your attention today</h2>
+      <% var mine = facts.ATTENTION_TODAY.filter(function (a) { return canSee(a.domain); }); %>
+      <% if (!mine.length) { %>
+        <div class="sc-card sc-empty">
+          Nothing on the management attention list is yours today. That is not an empty company: it is a
+          list of decisions above your clearance, and none of them are waiting on you. Your own work is
+          under Jobs &amp; Orders.
+        </div>
+      <% } else { %>
+        <div class="sc-list">
+          <% mine.forEach(function (a) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-sub"><%= a.item %><% if (a.action) { %><br><strong>What to do:</strong> <%= a.action %><% } %></div>
+              </div>
+              <div class="sc-row-actions"><span class="sc-pill sc-pill-status"><%= a.domain.replace(/_/g, ' ') %></span></div>
+            </div>
+          <% }); %>
+        </div>
+        <p class="sc-proposed-note"><%= facts.DASHBOARD_SOURCE_RULE.rule %></p>
+      <% } %>
+
+      <h2 class="sc-section-title">Meet the team</h2>
+      <div class="sc-colleagues">
+        <% workers.forEach(function (w) { %>
+          <div class="sc-card sc-colleague">
+            <div class="sc-colleague-head">
+              <div class="sc-avatar sc-avatar-<%= w.id %>"><%= w.initials %></div>
+              <div>
+                <div class="sc-colleague-name"><%= w.characterName %></div>
+                <div class="sc-colleague-role"><%= w.displayRole %></div>
+              </div>
+            </div>
+            <p class="sc-colleague-tagline"><%= w.tagline %></p>
+          </div>
+        <% }); %>
+      </div>
+
+      <% if (typeof proposedWorkers !== 'undefined' && proposedWorkers.length) { %>
+      <h2 class="sc-section-title">Proposed team (not yet active)</h2>
+      <p class="sc-proposed-note">Built and ready, but not part of the live demonstration. These three specialists remain proposed until an independent governance review has passed and Tom Arrington has explicitly activated them. Ruth cannot route any question to them.</p>
+      <div class="sc-colleagues sc-colleagues-proposed">
+        <% proposedWorkers.forEach(function (w) { %>
+          <div class="sc-card sc-colleague sc-colleague-proposed">
+            <div class="sc-colleague-head">
+              <div class="sc-avatar sc-avatar-proposed"><%= w.initials %></div>
+              <div>
+                <div class="sc-colleague-name"><%= w.characterName %> <span class="sc-proposed-badge">PROPOSED</span></div>
+                <div class="sc-colleague-role"><%= w.displayRole %></div>
+              </div>
+            </div>
+            <p class="sc-colleague-tagline"><%= w.tagline %></p>
+          </div>
+        <% }); %>
+      </div>
+      <% } %>
+
+      <div class="sc-detail-grid">
+        <div>
+          <h2 class="sc-section-title">Recent activity</h2>
+          <div class="sc-card sc-activity-card">
+            <% if (!activity.length) { %>
+              <div class="sc-empty">Nothing recorded yet. Ask Ruth a question to get started.</div>
+            <% } else { %>
+              <ul class="sc-activity-list">
+                <% activity.forEach(function (a) { %>
+                  <li class="sc-activity-item">
+                    <span class="sc-activity-dot sc-dot-<%= workersById[a.actor] ? a.actor : (a.actor === 'user' ? 'user' : 'system') %>"></span>
+                    <div>
+                      <div><%= a.summary %></div>
+                      <div class="sc-activity-meta">
+                        <%= (workersById[a.actor] && workersById[a.actor].characterName) || a.actor %>
+                        <% if (a.related_job_ref) { %> &middot; <a href="/scott/jobs/<%= a.related_job_ref %>"><%= a.related_job_ref %></a><% } %>
+                        &middot; <%= new Date(a.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) %>
+                      </div>
+                    </div>
+                  </li>
+                <% }); %>
+              </ul>
+            <% } %>
+          </div>
+
+          <h2 class="sc-section-title sc-section-title-spaced">Business snapshot</h2>
+          <p class="sc-snapshot-label"><%= snapshotLabel %></p>
+          <div class="sc-stat-grid">
+            <% snapshotCards.forEach(function (c) { %>
+              <div class="sc-card sc-stat">
+                <div class="sc-stat-label"><%= c.label %></div>
+                <div class="sc-stat-value sc-stat-value-sm"><%= c.value %></div>
+                <div class="sc-stat-sub"><%= c.detail %></div>
+              </div>
+            <% }); %>
+          </div>
+        </div>
+        <div>
+          <h2 class="sc-section-title">Ask the team</h2>
+          <%- include('partials/chat-widget', { workersById: workersById, csrfToken: csrfToken, aiEnabled: aiEnabled }) %>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

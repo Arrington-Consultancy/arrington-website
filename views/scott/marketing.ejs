@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Marketing &amp; Reviews | Scott's Armchair &amp; Knitting Service</title>
+  <meta name="robots" content="noindex, nofollow">
+  <%- include('partials/styles') %>
+</head>
+<body class="scott-body">
+  <div class="sc-shell">
+    <%- include('partials/sidebar', { active: 'marketing', navCounts: navCounts }) %>
+    <main class="sc-main">
+      <% if (typeof isImpersonating !== 'undefined' && isImpersonating) { %>
+        <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
+      <% } %>
+      <div class="sc-page-header">
+        <div>
+          <h1 class="sc-h">Marketing &amp; Reviews</h1>
+          <p>07E SCOTT'S MARKETING, ADVERTISING, SOCIAL &amp; REVIEWS. Viewing as <strong><%= persona.name %></strong> (<%= persona.role %>).</p>
+        </div>
+      </div>
+
+      <% if (!canSee('marketing_performance') && !canSee('review_status')) { %>
+        <div class="sc-card sc-empty"><%= deniedNote('marketing_performance') %></div>
+      <% } %>
+
+      <% if (canSee('marketing_performance')) { %>
+        <div class="sc-stat-grid">
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Ads spend, last 30 days</div><div class="sc-stat-value">£<%= facts.ADS_CURRENT_POSITION.last30Days.spendGbp.toLocaleString() %></div><div class="sc-stat-sub">budget £<%= facts.ADS_CURRENT_POSITION.monthlyBudgetGbp.toLocaleString() %>/month</div></div>
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Qualified leads</div><div class="sc-stat-value"><%= facts.ADS_CURRENT_POSITION.last30Days.qualifiedLeads %></div><div class="sc-stat-sub"><%= facts.ADS_CURRENT_POSITION.last30Days.acceptedJobs %> accepted, <%= facts.ADS_CURRENT_POSITION.last30Days.openQuoteDecisions %> still open</div></div>
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Cost per qualified lead</div><div class="sc-stat-value">£<%= facts.ADS_CURRENT_POSITION.last30Days.costPerQualifiedLeadGbp %></div></div>
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Identified waste, annualised</div><div class="sc-stat-value warn">£<%= facts.PAID_SEARCH_WASTE.annualisedGrossGbp.toLocaleString() %></div><div class="sc-stat-sub">potential, not recovered</div></div>
+        </div>
+
+        <h2 class="sc-section-title">Where the money is going wrong</h2>
+        <div class="sc-card">
+          <p class="sc-row-sub"><strong><%= facts.PAID_SEARCH_WASTE.finding %>.</strong></p>
+          <p class="sc-row-sub"><%= facts.PAID_SEARCH_WASTE.clicks30d %> clicks in 30 days, £<%= facts.PAID_SEARCH_WASTE.attributedSpendGbp %> attributed spend, <%= facts.PAID_SEARCH_WASTE.leads %> lead, <%= facts.PAID_SEARCH_WASTE.qualifiedLeads %> qualified, <%= facts.PAID_SEARCH_WASTE.bookedJobs %> booked jobs.</p>
+          <p class="sc-row-sub"><strong>Working range for review:</strong> <%= facts.PAID_SEARCH_WASTE.workingOpportunityRange %>.</p>
+          <p class="sc-row-sub sc-honesty"><%= facts.PAID_SEARCH_WASTE.honesty %></p>
+        </div>
+
+        <h2 class="sc-section-title">Channels, rolling 12 months</h2>
+        <div class="sc-list">
+          <% facts.MARKETING_CHANNELS_12M.forEach(function (c) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title"><%= c.channel %></div>
+                <div class="sc-row-sub">
+                  Spend £<%= c.spendGbp.toLocaleString() %><% if (c.qualified) { %> &middot; <%= c.qualified %> qualified &middot; <%= c.accepted %> accepted<% } %><% if (c.bookedRevenueGbp) { %> &middot; booked £<%= c.bookedRevenueGbp.toLocaleString() %><% } %><% if (c.costPerQualifiedGbp) { %> &middot; £<%= c.costPerQualifiedGbp %>/qualified lead<% } %>
+                  <% if (c.note) { %><br><%= c.note %><% } %>
+                </div>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+
+        <h2 class="sc-section-title">How to read the Ads numbers</h2>
+        <div class="sc-card sc-honesty-card">
+          <p class="sc-row-sub"><strong><%= facts.ADS_ATTRIBUTION_WARNING.rule %></strong></p>
+          <p class="sc-row-sub">A naive subtraction: <%= facts.ADS_ATTRIBUTION_WARNING.naiveCalculation %>.</p>
+          <p class="sc-row-sub"><strong>Why that is wrong:</strong> <%= facts.ADS_ATTRIBUTION_WARNING.whyThatIsWrong %></p>
+        </div>
+
+        <h2 class="sc-section-title">Campaigns, last 90 days</h2>
+        <div class="sc-list">
+          <% facts.ADS_CAMPAIGNS_90D.forEach(function (c) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title"><%= c.campaign %></div>
+                <div class="sc-row-sub">Spend £<%= c.spendGbp.toLocaleString() %> &middot; <%= c.qualified %> qualified &middot; <%= c.accepted %> accepted &middot; booked £<%= c.bookedRevenueGbp.toLocaleString() %> &middot; linked contribution £<%= c.linkedContributionGbp.toLocaleString() %></div>
+              </div>
+              <div class="sc-row-actions"><span class="sc-pill sc-pill-status"><%= c.verdict %></span></div>
+            </div>
+          <% }); %>
+        </div>
+
+        <h2 class="sc-section-title">Recent posts</h2>
+        <div class="sc-list">
+          <% facts.RECENT_SOCIAL_POSTS.forEach(function (p) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title"><%= p.post %></div>
+                <div class="sc-row-sub">
+                  <%= p.date %> &middot; <%= p.channel %><% if (p.reach) { %> &middot; reach <%= p.reach.toLocaleString() %> &middot; <%= p.enquiries %> enquiries, <%= p.qualified %> qualified<% } %>
+                  <% if (p.reason) { %><br><strong><%= p.status %>:</strong> <%= p.reason %><% } %>
+                </div>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+      <% } %>
+
+      <% if (canSee('review_status')) { %>
+        <h2 class="sc-section-title">Google reviews</h2>
+        <div class="sc-stat-grid">
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Rating</div><div class="sc-stat-value"><%= facts.GOOGLE_REVIEW_POSITION.rating %></div><div class="sc-stat-sub">from <%= facts.GOOGLE_REVIEW_POSITION.totalReviews %> reviews</div></div>
+          <div class="sc-card sc-stat"><div class="sc-stat-label">One and two star</div><div class="sc-stat-value <%= (facts.GOOGLE_REVIEW_POSITION.oneStar + facts.GOOGLE_REVIEW_POSITION.twoStar) ? 'warn' : '' %>"><%= facts.GOOGLE_REVIEW_POSITION.oneStar + facts.GOOGLE_REVIEW_POSITION.twoStar %></div></div>
+        </div>
+        <div class="sc-list">
+          <% facts.RECENT_REVIEWS.forEach(function (r) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title"><%= r.customer %> <span class="sc-pill <%= r.stars <= 3 ? 'sc-pill-risk' : 'sc-pill-status' %>"><%= r.stars %> star</span></div>
+                <div class="sc-row-sub">
+                  <%= r.date %> &middot; <%= r.detail %>
+                  <% if (r.supportingRecord) { %><br>Supporting record: <%= r.supportingRecord %><% } %>
+                  <% if (r.status) { %> &middot; <%= r.status %><% } %>
+                  <% if (field(r, 'draftingRule')) { %><br><strong>When drafting a reply:</strong> <%= field(r, 'draftingRule') %><% } %>
+                </div>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+        <div class="sc-card sc-honesty-card">
+          <p class="sc-row-sub"><strong>Response rules.</strong> <%= facts.GOOGLE_REVIEW_POSITION.rules %></p>
+          <p class="sc-row-sub"><%= facts.GOOGLE_REVIEW_POSITION.responseTarget %>.</p>
+        </div>
+      <% } %>
+
+      <% if (canSee('dept_budget')) { %>
+        <h2 class="sc-section-title">Marketing spend, August</h2>
+        <div class="sc-card">
+          <p class="sc-row-sub">Google Ads £<%= facts.MARKETING_SPEND_AUGUST.googleAdsGbp.toLocaleString() %> &middot; local print £<%= facts.MARKETING_SPEND_AUGUST.localPrintGbp %> &middot; photography and content £<%= facts.MARKETING_SPEND_AUGUST.photographyContentGbp %> &middot; boosted social £<%= facts.MARKETING_SPEND_AUGUST.boostedSocialGbp %>.</p>
+          <p class="sc-row-sub"><strong>Total £<%= facts.MARKETING_SPEND_AUGUST.totalGbp.toLocaleString() %>.</strong> <%= facts.MARKETING_SPEND_AUGUST.note %>.</p>
+        </div>
+      <% } %>
+
+      <% if (canSee('marketing_performance') || canSee('review_status')) { %>
+        <h2 class="sc-section-title">Watchpoints</h2>
+        <div class="sc-list">
+          <% facts.MARKETING_WATCHPOINTS.filter(function (w) { return canSee(w.domain); }).forEach(function (w) { %>
+            <div class="sc-card sc-row-card"><div><div class="sc-row-sub"><%= w.item %></div></div></div>
+          <% }); %>
+        </div>
+      <% } %>
+      <% if (canSee('marketing_consent')) { %>
+        <h2 class="sc-section-title">What we are allowed to publish</h2>
+        <div class="sc-card sc-honesty-card">
+          <p class="sc-row-sub"><strong><%= facts.CONSENT_RULE.rule %></strong></p>
+          <p class="sc-row-sub"><%= facts.CONSENT_RULE.notAutomatic %> <%= facts.CONSENT_RULE.testimonials %></p>
+          <p class="sc-row-sub"><%= facts.CONSENT_RULE.staff %></p>
+          <p class="sc-row-sub"><%= facts.CONSENT_RULE.withdrawal %></p>
+          <p class="sc-row-sub sc-honesty"><%= facts.CONSENT_RULE.scheduling %></p>
+        </div>
+        <div class="sc-stat-grid">
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Approved for external use</div><div class="sc-stat-value"><%= facts.CONSENT_COUNTS.approvedForExternalUse %></div><div class="sc-stat-sub"><%= facts.CONSENT_COUNTS.approvedAnonymisedOnly %> anonymised only</div></div>
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Evidence only or prohibited</div><div class="sc-stat-value warn"><%= facts.CONSENT_COUNTS.evidenceOnlyOrProhibited %></div></div>
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Pending permission</div><div class="sc-stat-value"><%= facts.CONSENT_COUNTS.pendingOrIncomplete %></div></div>
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Withdrawn</div><div class="sc-stat-value warn"><%= facts.CONSENT_COUNTS.withdrawn %></div></div>
+        </div>
+        <div class="sc-list">
+          <% facts.MARKETING_ASSETS.forEach(function (a) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title"><%= a.ref %> &middot; <%= a.subject %></div>
+                <div class="sc-row-sub">
+                  <%= a.asset %>
+                  <% if (a.channels) { %><br><strong>Channels:</strong> <%= a.channels %><% } %>
+                  <% if (a.permissionDate) { %> &middot; permission <%= a.permissionDate %><% } %>
+                  <% if (a.reviewDate) { %> &middot; review <%= a.reviewDate %><% } %>
+                  <% if (a.withdrawnDate) { %> &middot; <strong>withdrawn <%= a.withdrawnDate %></strong><% } %>
+                  <% if (a.restriction) { %><br><strong>Restriction:</strong> <%= a.restriction %><% } %>
+                  <% if (a.currentUse) { %><br>Currently: <%= a.currentUse %><% } %>
+                </div>
+              </div>
+              <div class="sc-row-actions">
+                <span class="sc-pill <%= /PROHIBITED|NOT |WITHDRAWN|HOLD|PENDING|ONLY/.test(a.status) ? 'sc-pill-risk' : 'sc-pill-status' %>"><%= a.status %></span>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+        <div class="sc-card sc-honesty-card">
+          <p class="sc-row-sub"><%= facts.CONSENT_COUNTS.watchpoints %></p>
+        </div>
+      <% } %>
+
+    </main>
+  </div>
+</body>
+</html>

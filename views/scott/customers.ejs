@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customers | Scott's Armchair &amp; Knitting Service</title>
+  <meta name="robots" content="noindex, nofollow">
+  <%- include('partials/styles') %>
+</head>
+<body class="scott-body">
+  <div class="sc-shell">
+    <%- include('partials/sidebar', { active: 'customers', navCounts: navCounts }) %>
+    <main class="sc-main">
+      <% if (typeof isImpersonating !== 'undefined' && isImpersonating) { %>
+        <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
+      <% } %>
+      <div class="sc-page-header">
+        <div>
+          <h1 class="sc-h">Customers</h1>
+          <p>07G SCOTT'S CUSTOMERS, JOB HISTORY &amp; TRADE ACCOUNTS. Viewing as <strong><%= persona.name %></strong> (<%= persona.role %>).</p>
+        </div>
+      </div>
+
+      <% if (!canSee('customers_contact')) { %>
+        <div class="sc-card sc-empty"><%= deniedNote('customers_contact') %></div>
+      <% } else { %>
+        <div class="sc-stat-grid">
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Detailed records</div><div class="sc-stat-value"><%= facts.CUSTOMER_MASTER_SUMMARY.namedDetailedRecords %></div><div class="sc-stat-sub">plus <%= facts.CUSTOMER_MASTER_SUMMARY.archivedAggregateHouseholdCustomers %> archived aggregate</div></div>
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Trade accounts</div><div class="sc-stat-value"><%= facts.CUSTOMER_MASTER_SUMMARY.tradeAccountDetailed %></div></div>
+          <% if (canSee('kpi_trend')) { %>
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Repeat / referral revenue</div><div class="sc-stat-value"><%= facts.CUSTOMER_VALUE_METRICS.repeatReferralShareOfRevenuePct %>%</div></div>
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Trade share</div><div class="sc-stat-value"><%= facts.CUSTOMER_VALUE_METRICS.tradeShareOfRevenuePct %>%</div></div>
+          <% } %>
+        </div>
+
+        <h2 class="sc-section-title">Customer records</h2>
+        <div class="sc-list">
+          <% facts.CUSTOMERS.forEach(function (c) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title"><%= c.name %> <span class="sc-pill sc-pill-status"><%= c.type %></span></div>
+                <div class="sc-row-sub">
+                  <%= c.ref %> &middot; <%= c.location %> &middot; customer since <%= c.since %>
+                  <% if (canSee('trade_terms') && c.lifetimeBilledGbp) { %> &middot; lifetime billed £<%= c.lifetimeBilledGbp.toLocaleString() %><% } %>
+                  <% if (c.avgPayDays) { %> &middot; average payment <%= c.avgPayDays %> days<% } %>
+                  <% if (c.note) { %><br><%= c.note %><% } %>
+                </div>
+              </div>
+              <div class="sc-row-actions">
+                <% if (c.openComplaints) { %><span class="sc-pill sc-pill-risk">complaint open</span><% } %>
+                <% if (canSee('debtor_flag') && c.overdueGbp) { %><span class="sc-pill sc-pill-risk">£<%= c.overdueGbp.toLocaleString() %> overdue<% if (c.overdueDays) { %> <%= c.overdueDays %>d<% } %></span><% } %>
+                <% if (c.creditRisk) { %><span class="sc-pill sc-pill-status"><%= c.creditRisk %></span><% } %>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+
+        <% if (canSee('trade_terms')) { %>
+          <h2 class="sc-section-title">Trade account rules</h2>
+          <div class="sc-card">
+            <p class="sc-row-sub">Standard terms: <%= facts.TRADE_ACCOUNT_RULES.standardTerms %>. Default credit limit £<%= facts.TRADE_ACCOUNT_RULES.defaultCreditLimitGbp.toLocaleString() %>.</p>
+            <p class="sc-row-sub">Over 45 days overdue: <%= facts.TRADE_ACCOUNT_RULES.over45DaysOverdue %>.</p>
+            <p class="sc-row-sub"><strong><%= facts.TRADE_ACCOUNT_RULES.principle %></strong></p>
+          </div>
+        <% } %>
+      <% } %>
+
+      <% if (canSee('customer_terms')) { %>
+        <h2 class="sc-section-title">What we can and cannot promise</h2>
+        <div class="sc-card">
+          <p class="sc-row-sub"><strong>Payment.</strong> <%= facts.PAYMENT_RULES.under300 %> <%= facts.PAYMENT_RULES.band300to750 %> <%= facts.PAYMENT_RULES.over750 %></p>
+          <p class="sc-row-sub"><%= facts.PAYMENT_RULES.knittedStandard %> <%= facts.PAYMENT_RULES.knittedCustom %> <%= facts.PAYMENT_RULES.trade %></p>
+          <p class="sc-row-sub"><strong>Methods:</strong> <%= facts.PAYMENT_RULES.methods %></p>
+          <p class="sc-row-sub sc-honesty"><%= facts.PAYMENT_RULES.hardRule %></p>
+        </div>
+        <div class="sc-card">
+          <p class="sc-row-sub"><strong>Cancelling.</strong> <%= facts.CANCELLATION_RULES.beforeCollection %> <%= facts.CANCELLATION_RULES.afterCollection %> <%= facts.CANCELLATION_RULES.afterStart %></p>
+          <p class="sc-row-sub"><%= facts.CANCELLATION_RULES.missedByCustomer %> <%= facts.CANCELLATION_RULES.causedByUs %></p>
+          <p class="sc-row-sub sc-honesty"><%= facts.CANCELLATION_RULES.hardRule %></p>
+        </div>
+        <div class="sc-card">
+          <p class="sc-row-sub"><strong>Warranty.</strong> <%= facts.WARRANTY.standard %></p>
+          <p class="sc-row-sub"><%= facts.WARRANTY.excluded %></p>
+          <p class="sc-row-sub"><%= facts.WARRANTY.rework %> <%= facts.WARRANTY.knitted %></p>
+          <p class="sc-row-sub sc-honesty"><%= facts.WARRANTY.hardRule %></p>
+        </div>
+        <div class="sc-card sc-honesty-card">
+          <p class="sc-row-sub"><strong>Refunds and goodwill.</strong> <%= facts.REFUND_AUTHORITY.rework %> <%= facts.REFUND_AUTHORITY.needsCommercial %></p>
+          <p class="sc-row-sub"><strong><%= facts.REFUND_AUTHORITY.needsOwner %></strong> <%= facts.REFUND_AUTHORITY.fullRefund %></p>
+        </div>
+        <div class="sc-card">
+          <p class="sc-row-sub"><strong>Talking to customers.</strong> <%= facts.COMMUNICATION_COMMITMENTS.atRisk %></p>
+          <p class="sc-row-sub"><%= facts.COMMUNICATION_COMMITMENTS.noPromises %> <%= facts.COMMUNICATION_COMMITMENTS.humanReview %></p>
+        </div>
+        <div class="sc-card">
+          <p class="sc-row-sub"><strong>Hours and area.</strong> Admin <%= facts.OPENING_HOURS.admin %>. Workshop visits <%= facts.OPENING_HOURS.workshopVisits %>. Saturday: <%= facts.OPENING_HOURS.saturday %>. Sunday <%= facts.OPENING_HOURS.sunday %>.</p>
+          <p class="sc-row-sub"><%= facts.SERVICE_AREA.standard %> <%= facts.SERVICE_AREA.outside %> <%= facts.SERVICE_AREA.limit %></p>
+          <p class="sc-row-sub sc-honesty"><%= facts.OPENING_HOURS.webForms %></p>
+        </div>
+      <% } %>
+
+      <% if (canSee('complaints_workflow')) { %>
+        <h2 class="sc-section-title">If a complaint is not resolved</h2>
+        <div class="sc-card sc-honesty-card">
+          <p class="sc-row-sub"><strong>Stage 1.</strong> <%= facts.COMPLAINT_ESCALATION.stage1 %></p>
+          <p class="sc-row-sub"><strong>Stage 2.</strong> <%= facts.COMPLAINT_ESCALATION.stage2 %></p>
+          <p class="sc-row-sub"><strong>Stage 3.</strong> <%= facts.COMPLAINT_ESCALATION.stage3 %></p>
+          <p class="sc-row-sub sc-honesty"><%= facts.COMPLAINT_ESCALATION.hardRule %></p>
+        </div>
+      <% } %>
+
+    </main>
+  </div>
+</body>
+</html>

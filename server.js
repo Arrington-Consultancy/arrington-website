@@ -21,6 +21,7 @@ const marketReadyTest = require('./routes/marketReadyTest');
 const commercialGapsReview = require('./routes/commercialGapsReview');
 const whereToStart = require('./routes/whereToStart');
 const productGuide = require('./routes/productGuide');
+const scott = require('./routes/scott');
 const { publishedArticles, findBySlug: findUsefulThinkingArticle } = require('./lib/usefulThinkingArticles');
 const { getSiteShellData } = require('./lib/navShell');
 const { SITE_KEY: TURNSTILE_SITE_KEY } = require('./lib/turnstile');
@@ -50,7 +51,28 @@ app.set('views', path.join(__dirname, 'views'));
 // https://www...<path> in one hop rather than two separate redirects. Only
 // the bare apex is rewritten to www — any other host (e.g. Railway's own
 // default domain) is left alone, it just gets the HTTPS check.
-const CANONICAL_HOST = 'www.arringtonconsultancy.com';
+// Overridable so the app can be deployed to a non-production host and still
+// be browsable. Until 28/08/2026 this was hardcoded, which meant any Railway
+// environment other than production redirected every request to the live site
+// and was therefore impossible to click through: the rule below is gated on
+// isProd, and RAILWAY_ENVIRONMENT is set in every Railway environment, not
+// just production.
+//
+// Production sets nothing and is byte-for-byte unchanged. A staging service
+// sets CANONICAL_HOST to its own hostname, which keeps the whole rule intact
+// (one canonical host, everything else 301s to it, HTTPS still forced) and
+// simply points it at that environment's host instead of the live one.
+const LIVE_PUBLIC_HOST = 'www.arringtonconsultancy.com';
+const CANONICAL_HOST = (process.env.CANONICAL_HOST || LIVE_PUBLIC_HOST)
+  .trim()
+  .toLowerCase();
+
+// A deploy that has overridden the canonical host is, by definition, not the
+// public site. It must never be indexed: it serves a full copy of every page,
+// which is the exact duplicate-content problem the redirect rule below exists
+// to prevent. Deriving this from CANONICAL_HOST rather than adding a second
+// variable means it cannot be forgotten when a staging service is created.
+const IS_PUBLIC_SITE = CANONICAL_HOST === LIVE_PUBLIC_HOST;
 
 // Extended 15/08/2026 from "rewrite the .com apex only" to "rewrite every
 // non-canonical hostname". Five hostnames are bound to this service: the two
@@ -79,6 +101,15 @@ const isInternalHost = (host) =>
   !host.includes('.') ||
   /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host) ||
   /^\d{1,3}(\.\d{1,3}){3}(:\d+)?$/.test(host);
+
+// Blanket noindex on any non-public deploy. Belt and braces alongside the
+// robots.txt below, because a header cannot be missed by a crawler that never
+// requests robots.txt, and because robots.txt only discourages crawling while
+// X-Robots-Tag actually forbids indexing.
+app.use((req, res, next) => {
+  if (!IS_PUBLIC_SITE) res.set('X-Robots-Tag', 'noindex, nofollow');
+  next();
+});
 
 app.use((req, res, next) => {
   if (!isProd) return next();
@@ -398,6 +429,12 @@ app.get('/owner-check', async (req, res, next) => {
 // of the index. Built from the request host so it works on every domain.
 app.get('/robots.txt', (req, res) => {
   const base = `${req.protocol}://${req.get('host')}`;
+  // A staging or preview deploy serves a complete copy of the site. Refuse
+  // all crawling outright rather than publishing a sitemap that would invite
+  // it to be indexed alongside the real thing.
+  if (!IS_PUBLIC_SITE) {
+    return res.type('text/plain').send('User-agent: *\nDisallow: /\n');
+  }
   res.type('text/plain').send(
     // /market-ready-test is still unpublished — see routes/marketReadyTest.js
     // — disallowed here as belt-and-braces on top of its own noindex/nofollow
@@ -609,6 +646,19 @@ app.use(whereToStart.router);
 // behind the global CSRF middleware like every other public form.
 productGuide.mountPageRoute(app, generateCsrfToken);
 app.use(productGuide.router);
+
+// Scott AI Demonstration — private, invited-access-only fictional-company
+// demo (see routes/scott.js, lib/scott/**). Same registration pattern as
+// the tools above: GET page routes registered directly, ahead of the
+// generic /:slug catch-all further down, so this area is never reachable
+// through the CMS page-render pipeline; POST/API routes go through the
+// router, behind the global CSRF middleware like every other authenticated
+// write on the site. Every route (bar the login page itself) is gated by
+// requireScottPageAccess/requireScottApiAccess, reusing the existing
+// page_access table against one synthetic hidden page row — no second
+// permission system, no second admin screen.
+scott.mountPageRoute(app, generateCsrfToken);
+app.use(scott.router);
 
 // /v1.html — retired from public serving (15/08/2026). The original V1
 // single-page site was kept served as a reference copy, with a relaxed
@@ -1093,6 +1143,11 @@ setTimeout(() => {
 loadPermissions().then(() => {
   app.listen(PORT, () => {
     console.log(`[${isProd ? 'PROD' : 'DEV'}] Arrington CMS running on port ${PORT}`);
+    console.log(require('./lib/scott/orchestrator').describeScottAIStatus());
+    // One-shot, marker-guarded, env-gated runner for the paid live-AI
+    // pressure suite. A no-op unless RUN_SCOTT_LIVE_PRESSURE=true; see
+    // the script header for the spend controls.
+    require('./scripts/scottLivePressureRunner').maybeRunLivePressureSuite(require('./db/pool'));
   });
 }).catch(err => {
   console.error('Failed to load permissions:', err);

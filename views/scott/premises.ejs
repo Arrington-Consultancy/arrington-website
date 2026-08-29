@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Premises &amp; Facilities | Scott's Armchair &amp; Knitting Service</title>
+  <meta name="robots" content="noindex, nofollow">
+  <%- include('partials/styles') %>
+</head>
+<body class="scott-body">
+  <div class="sc-shell">
+    <%- include('partials/sidebar', { active: 'premises', navCounts: navCounts }) %>
+    <main class="sc-main">
+      <% if (typeof isImpersonating !== 'undefined' && isImpersonating) { %>
+        <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
+      <% } %>
+      <div class="sc-page-header">
+        <div>
+          <h1 class="sc-h">Premises &amp; Facilities</h1>
+          <p>07R SCOTT'S PREMISES, FACILITIES &amp; UTILITIES. Viewing as <strong><%= persona.name %></strong> (<%= persona.role %>).</p>
+        </div>
+      </div>
+
+      <% if (canSee('safety_baseline')) { %>
+        <div class="sc-card sc-honesty-card">
+          <p class="sc-row-sub"><strong>If something goes wrong with the building.</strong> <%= facts.PREMISES_INCIDENT_RULE.rule %></p>
+          <p class="sc-row-sub sc-honesty"><%= facts.PREMISES_INCIDENT_RULE.aiLimit %></p>
+        </div>
+        <h2 class="sc-section-title">Opening and closing checks</h2>
+        <div class="sc-card">
+          <p class="sc-row-sub"><strong>Opening.</strong> <%= facts.PREMISES_OPENING_CHECKS.opening %></p>
+          <p class="sc-row-sub"><strong>Closing.</strong> <%= facts.PREMISES_OPENING_CHECKS.closing %></p>
+          <p class="sc-row-sub sc-honesty"><%= facts.PREMISES_OPENING_CHECKS.hardRule %></p>
+        </div>
+      <% } %>
+
+      <% if (!canSee('premises_ops')) { %>
+        <div class="sc-card sc-empty"><%= deniedNote('premises_ops') %></div>
+      <% } else { %>
+        <div class="sc-stat-grid">
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Chairs on site</div><div class="sc-stat-value"><%= facts.PREMISES_STORAGE.currentChairsOnSite %></div><div class="sc-stat-sub">comfortable ceiling <%= facts.PREMISES_STORAGE.comfortableCeiling %>, hard ceiling <%= facts.PREMISES_STORAGE.hardCeiling %></div></div>
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Storage status</div><div class="sc-stat-value"><%= facts.PREMISES_STORAGE.status %></div></div>
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Floor area</div><div class="sc-stat-value sc-stat-value-sm"><%= facts.PREMISES.totalFloorAreaSqFt.toLocaleString() %> sq ft</div></div>
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Lease break decision by</div><div class="sc-stat-value sc-stat-value-sm warn"><%= facts.PREMISES.breakDate %></div><div class="sc-stat-sub">notice decision by 30 Sept 2026</div></div>
+        </div>
+
+        <h2 class="sc-section-title">The building</h2>
+        <div class="sc-card">
+          <p class="sc-row-sub"><strong><%= facts.PREMISES.site %></strong></p>
+          <p class="sc-row-sub">Landlord <%= facts.PREMISES.landlord %>. Lease from <%= facts.PREMISES.leaseCommenced %> to <%= facts.PREMISES.leaseEnds %>, tenant break <%= facts.PREMISES.breakDate %> on <%= facts.PREMISES.breakNotice %>. Rent review <%= facts.PREMISES.rentReview %>.</p>
+          <p class="sc-row-sub"><strong>Decision timing:</strong> <%= facts.PREMISES.internalDecisionDeadline %>.</p>
+          <p class="sc-row-sub"><%= facts.PREMISES.areas %>.</p>
+          <p class="sc-row-sub"><%= facts.PREMISES.disputes %></p>
+        </div>
+
+        <% if (canSee('finance_full')) { %>
+          <div class="sc-card">
+            <p class="sc-row-sub">Base rent £<%= facts.PREMISES_LEASE_COSTS.baseRentMonthlyGbp.toLocaleString() %> plus rates £<%= facts.PREMISES_LEASE_COSTS.businessRatesMonthlyGbp %>, combined <strong>£<%= facts.PREMISES_LEASE_COSTS.combinedMonthlyGbp.toLocaleString() %> a month</strong>. Service charge: <%= facts.PREMISES_LEASE_COSTS.serviceCharge %></p>
+            <p class="sc-row-sub sc-honesty">Deposit £<%= facts.PREMISES_LEASE_COSTS.depositHeldGbp.toLocaleString() %>: <%= facts.PREMISES_LEASE_COSTS.depositNote %></p>
+          </div>
+        <% } %>
+
+        <h2 class="sc-section-title">Where things are</h2>
+        <div class="sc-card">
+          <p class="sc-row-sub"><%= facts.PREMISES_STORAGE.positions %></p>
+          <p class="sc-row-sub"><%= facts.PREMISES_STORAGE.materials %></p>
+          <p class="sc-row-sub"><strong>Loading:</strong> <%= facts.PREMISES_STORAGE.loadingRule %></p>
+          <p class="sc-row-sub"><strong>Capacity rule:</strong> <%= facts.PREMISES_STORAGE.rule %></p>
+        </div>
+
+        <h2 class="sc-section-title">Utilities</h2>
+        <div class="sc-card">
+          <p class="sc-row-sub"><%= facts.PREMISES_UTILITIES.electricity %><% if (field(facts.PREMISES_UTILITIES, 'electricitySpendGbp')) { %> Rolling spend £<%= field(facts.PREMISES_UTILITIES, 'electricitySpendGbp').toLocaleString() %>.<% } %></p>
+          <p class="sc-row-sub"><%= facts.PREMISES_UTILITIES.water %>. <%= facts.PREMISES_UTILITIES.broadband %>. <%= facts.PREMISES_UTILITIES.telephone %>.</p>
+          <p class="sc-row-sub"><%= facts.PREMISES_UTILITIES.status %></p>
+          <p class="sc-row-sub sc-honesty"><%= facts.PREMISES_UTILITIES.costFinding %></p>
+        </div>
+
+        <h2 class="sc-section-title">Open defects</h2>
+        <div class="sc-list">
+          <% facts.PREMISES_DEFECTS.forEach(function (d) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title"><%= d.item %></div>
+                <div class="sc-row-sub"><strong>Action:</strong> <%= d.action %>.<br><strong>Safety:</strong> <%= d.safetyImpact %></div>
+              </div>
+              <div class="sc-row-actions"><span class="sc-pill sc-pill-status"><%= d.severity %></span></div>
+            </div>
+          <% }); %>
+        </div>
+
+        <h2 class="sc-section-title">Service calendar</h2>
+        <div class="sc-list">
+          <% facts.PREMISES_SERVICE_CALENDAR.forEach(function (m) { %>
+            <div class="sc-card sc-row-card">
+              <div><div class="sc-row-sub"><%= m.item %></div></div>
+              <div class="sc-row-actions"><span class="sc-pill sc-pill-status"><%= m.date %></span></div>
+            </div>
+          <% }); %>
+        </div>
+
+        <h2 class="sc-section-title">Consumables</h2>
+        <div class="sc-list">
+          <% facts.FACILITIES_CONSUMABLES.forEach(function (c) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title"><%= c.item %></div>
+                <div class="sc-row-sub">
+                  <%= c.pack %> &middot; in stock <%= c.currentStock %> &middot; using <%= c.usage %>
+                  <% if (c.finding) { %><br><%= c.finding %><% } %>
+                  <% if (c.proposedReorderPoint) { %><br><strong>Proposed reorder point:</strong> <%= c.proposedReorderPoint %><% } %>
+                </div>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+      <% } %>
+
+      <% if (canSee('premises_access')) { %>
+        <h2 class="sc-section-title">Keys and access</h2>
+        <div class="sc-card sc-honesty-card">
+          <p class="sc-row-sub"><%= facts.PREMISES_ACCESS.keyholders %></p>
+          <p class="sc-row-sub"><%= facts.PREMISES_ACCESS.noKeys %></p>
+          <p class="sc-row-sub"><strong><%= facts.PREMISES_ACCESS.hardRule %></strong></p>
+          <p class="sc-row-sub"><%= facts.PREMISES_ACCESS.opening %></p>
+        </div>
+      <% } %>
+
+      <% if (canSee('finance_summary_ops')) { %>
+        <h2 class="sc-section-title">Facilities cost watch</h2>
+        <div class="sc-card sc-honesty-card">
+          <p class="sc-row-sub"><strong>Electricity.</strong> <%= facts.FACILITIES_COST_WATCH.electricity %></p>
+          <p class="sc-row-sub"><strong>Trade waste.</strong> <%= facts.FACILITIES_COST_WATCH.tradeWaste %></p>
+          <p class="sc-row-sub"><strong>Cleaning.</strong> <%= facts.FACILITIES_COST_WATCH.cleaning %></p>
+          <p class="sc-row-sub sc-honesty"><%= facts.FACILITIES_COST_WATCH.doNotDo %></p>
+        </div>
+      <% } %>
+      <% if (canSee('safety_baseline')) { %>
+        <h2 class="sc-section-title">If the business is disrupted</h2>
+        <div class="sc-card sc-honesty-card">
+          <p class="sc-row-sub"><strong><%= facts.CONTINUITY_PRINCIPLE.rule %></strong></p>
+          <p class="sc-row-sub sc-honesty"><%= facts.CONTINUITY_PRINCIPLE.neverDo %></p>
+        </div>
+      <% } %>
+
+      <% if (canSee('continuity')) { %>
+        <div class="sc-card">
+          <p class="sc-row-sub"><strong>Priority order.</strong> <%= facts.CONTINUITY_PRIORITY_ORDER.order %></p>
+          <p class="sc-row-sub sc-honesty"><%= facts.CONTINUITY_PRIORITY_ORDER.advertising %></p>
+        </div>
+        <div class="sc-list">
+          <% facts.CONTINUITY_SCENARIOS.forEach(function (sc) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title"><%= sc.scenario %></div>
+                <div class="sc-row-sub">
+                  <%= sc.response %>
+                  <% if (sc.planningAssumption) { %><br><strong>Planning assumption:</strong> <%= sc.planningAssumption %><% } %>
+                  <% if (sc.limit) { %><br><span class="sc-honesty"><%= sc.limit %></span><% } %>
+                </div>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+        <div class="sc-card">
+          <p class="sc-row-sub"><strong>Before declaring things normal again.</strong> <%= facts.RECOVERY_CHECKLIST.before %></p>
+        </div>
+      <% } %>
+
+      <% if (canSee('staffing_capacity')) { %>
+        <h2 class="sc-section-title">If someone is away</h2>
+        <div class="sc-list">
+          <% facts.KEY_PERSON_ABSENCE.forEach(function (k) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title"><%= k.person %></div>
+                <div class="sc-row-sub"><%= k.effect %><% if (k.limit) { %><br><strong><%= k.limit %></strong><% } %></div>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+      <% } %>
+
+    </main>
+  </div>
+</body>
+</html>

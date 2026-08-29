@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>People &amp; HR | Scott's Armchair &amp; Knitting Service</title>
+  <meta name="robots" content="noindex, nofollow">
+  <%- include('partials/styles') %>
+</head>
+<body class="scott-body">
+  <div class="sc-shell">
+    <%- include('partials/sidebar', { active: 'people', navCounts: navCounts }) %>
+    <main class="sc-main">
+      <% if (typeof isImpersonating !== 'undefined' && isImpersonating) { %>
+        <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
+      <% } %>
+      <div class="sc-page-header">
+        <div>
+          <h1 class="sc-h">People &amp; HR</h1>
+          <p>07B SCOTT'S PEOPLE &amp; HR. Viewing as <strong><%= persona.name %></strong> (<%= persona.role %>).</p>
+        </div>
+      </div>
+
+      <% if (!canSee('staffing_capacity')) { %>
+        <div class="sc-card sc-empty"><%= deniedNote('staffing_capacity') %></div>
+      <% } else { %>
+        <div class="sc-card sc-proposed-note">
+          <strong>Capacity effect.</strong> <%= facts.CAPACITY_NOTE.effect %>
+        </div>
+
+        <h2 class="sc-section-title">Team</h2>
+        <div class="sc-list">
+          <% facts.STAFF.forEach(function (s) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title"><%= s.name %></div>
+                <div class="sc-row-sub">
+                  <%= s.role %>
+                  <% if (canSee('leave_training') || canSee('training_supervised')) { %>
+                    <% if (s.training) { %><br>Training: <%= s.training %><% } %>
+                    <% if (field(s, 'trainingNote')) { %><br><%= field(s, 'trainingNote') %><% } %>
+                  <% } %>
+                </div>
+              </div>
+              <div class="sc-row-actions">
+                <% if (s.leave) { %><span class="sc-pill sc-pill-risk">leave <%= s.leave %></span><% } %>
+                <% if (s.probationReview) { %><span class="sc-pill sc-pill-status">probation <%= s.probationReview %></span><% } %>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+
+        <% if (canSee('hr_full')) { %>
+          <h2 class="sc-section-title">Current people issues</h2>
+          <div class="sc-list">
+            <% facts.HR_CURRENT_ISSUES.forEach(function (i) { %>
+              <div class="sc-card sc-row-card">
+                <div>
+                  <div class="sc-row-title"><%= i.person %> &middot; <%= i.issue %></div>
+                  <div class="sc-row-sub"><%= i.detail %></div>
+                </div>
+              </div>
+            <% }); %>
+          </div>
+        <% } else { %>
+          <div class="sc-card sc-empty"><%= deniedNote('hr_full') %></div>
+        <% } %>
+
+        <% if (canSee('staffing_capacity')) { %>
+          <h2 class="sc-section-title">Recruitment watch</h2>
+          <div class="sc-card"><p class="sc-row-sub"><%= facts.CAPACITY_NOTE.recruitmentWatch %></p></div>
+        <% } %>
+      <% } %>
+
+      <% if (canSee('safety_baseline')) { %>
+        <h2 class="sc-section-title">Safety, and what to do if something happens</h2>
+        <div class="sc-card sc-honesty-card">
+          <p class="sc-row-sub"><strong>Everyone sees this section.</strong> It is the one part of the company record that is not need-to-know, because a rule telling you to stop work when you believe there is a serious risk is no use if your clearance hides it from you.</p>
+        </div>
+        <div class="sc-card">
+          <p class="sc-row-sub"><strong>Stop-work rule.</strong> <%= facts.SAFETY_BASELINE.stopWork %></p>
+          <p class="sc-row-sub"><%= facts.SAFETY_BASELINE.equipment %> <%= facts.SAFETY_BASELINE.ppe %> <%= facts.SAFETY_BASELINE.handling %></p>
+          <p class="sc-row-sub"><%= facts.SAFETY_BASELINE.solvents %> <%= facts.SAFETY_BASELINE.access %> <%= facts.SAFETY_BASELINE.firstAid %></p>
+        </div>
+        <div class="sc-card">
+          <p class="sc-row-sub"><strong>If there is an accident or incident.</strong> <%= facts.INCIDENT_PROCEDURE.steps %></p>
+          <p class="sc-row-sub sc-honesty"><%= facts.INCIDENT_PROCEDURE.doNotInvent %></p>
+        </div>
+        <div class="sc-card">
+          <p class="sc-row-sub"><strong>Customer property.</strong> <%= facts.CUSTOMER_PROPERTY_RULES.photos %> <%= facts.CUSTOMER_PROPERTY_RULES.logging %></p>
+          <p class="sc-row-sub"><strong><%= facts.CUSTOMER_PROPERTY_RULES.evidence %></strong> <%= facts.CUSTOMER_PROPERTY_RULES.admissions %></p>
+        </div>
+      <% } %>
+
+      <% if (canSee('safety_incidents')) { %>
+        <h2 class="sc-section-title">Recorded incidents</h2>
+        <div class="sc-list">
+          <% facts.INCIDENT_LOG.forEach(function (i) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title"><%= i.ref %> &middot; <%= i.date %></div>
+                <div class="sc-row-sub"><%= i.detail %><br><strong>Cause:</strong> <%= i.cause %>. <strong>Action:</strong> <%= i.action %>.</div>
+              </div>
+              <div class="sc-row-actions"><span class="sc-pill sc-pill-status"><%= i.status %></span></div>
+            </div>
+          <% }); %>
+        </div>
+      <% } %>
+
+      <% if (canSee('compliance_privacy')) { %>
+        <h2 class="sc-section-title">Privacy, retention and data requests</h2>
+        <div class="sc-card">
+          <p class="sc-row-sub"><strong>Consent.</strong> <%= facts.PRIVACY_PRINCIPLES.consent %></p>
+          <p class="sc-row-sub"><%= facts.PRIVACY_PRINCIPLES.collection %> <%= facts.PRIVACY_PRINCIPLES.publicResponses %></p>
+        </div>
+        <div class="sc-card">
+          <p class="sc-row-sub"><strong>How long records are kept.</strong> Unconverted enquiries: <%= facts.RETENTION_RULES.unconvertedEnquiries %>. Transaction records: <%= facts.RETENTION_RULES.transactionRecords %>. Complaints and incidents: <%= facts.RETENTION_RULES.complaintsAndIncidents %>. Employee records: <%= facts.RETENTION_RULES.employeeRecords %>.</p>
+          <p class="sc-row-sub sc-honesty"><%= facts.RETENTION_RULES.caveat %></p>
+        </div>
+        <div class="sc-card sc-honesty-card">
+          <p class="sc-row-sub"><strong>A correction or deletion request.</strong> <%= facts.DATA_REQUEST_WORKFLOW.steps %></p>
+          <p class="sc-row-sub"><strong>If something is exposed.</strong> <%= facts.DATA_REQUEST_WORKFLOW.breach %></p>
+        </div>
+      <% } %>
+
+    </main>
+  </div>
+</body>
+</html>

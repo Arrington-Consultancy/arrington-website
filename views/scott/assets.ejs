@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assets &amp; Maintenance | Scott's Armchair &amp; Knitting Service</title>
+  <meta name="robots" content="noindex, nofollow">
+  <%- include('partials/styles') %>
+</head>
+<body class="scott-body">
+  <div class="sc-shell">
+    <%- include('partials/sidebar', { active: 'assets', navCounts: navCounts }) %>
+    <main class="sc-main">
+      <% if (typeof isImpersonating !== 'undefined' && isImpersonating) { %>
+        <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
+      <% } %>
+      <div class="sc-page-header">
+        <div>
+          <h1 class="sc-h">Assets &amp; Maintenance</h1>
+          <p>07L SCOTT'S ASSETS, VEHICLES &amp; MAINTENANCE. Viewing as <strong><%= persona.name %></strong> (<%= persona.role %>).</p>
+        </div>
+      </div>
+
+      <% if (!canSee('assets_ops') && !canSee('vehicle_status') && !canSee('equipment_authorised')) { %>
+        <div class="sc-card sc-empty"><%= deniedNote('assets_ops') %></div>
+      <% } %>
+
+      <% if (canSee('vehicle_status')) { %>
+        <h2 class="sc-section-title">The van</h2>
+        <div class="sc-stat-grid">
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Mileage</div><div class="sc-stat-value"><%= facts.VEHICLE.mileage.toLocaleString() %></div><div class="sc-stat-sub">as of <%= facts.VEHICLE.mileageAsOf %></div></div>
+          <div class="sc-card sc-stat"><div class="sc-stat-label">MOT due</div><div class="sc-stat-value sc-stat-value-sm"><%= facts.VEHICLE.motDue %></div></div>
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Open defects</div><div class="sc-stat-value sc-stat-value-sm"><%= facts.VEHICLE.openDefects %></div></div>
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Downtime risk</div><div class="sc-stat-value warn">AMBER</div><div class="sc-stat-sub">no spare vehicle</div></div>
+        </div>
+        <div class="sc-card">
+          <p class="sc-row-sub"><strong><%= facts.VEHICLE.vehicle %></strong>, <%= facts.VEHICLE.registration %>. <%= facts.VEHICLE.note %></p>
+          <p class="sc-row-sub">Primary driver <%= facts.VEHICLE.primaryDriver %>, also authorised: <%= facts.VEHICLE.otherAuthorisedDrivers %>.</p>
+          <p class="sc-row-sub">Service due <%= facts.VEHICLE.serviceDue %>. Tyres <%= facts.VEHICLE.tyres %>, next check <%= facts.VEHICLE.nextTyreCheck %>.</p>
+          <p class="sc-row-sub"><strong>Mileage watch:</strong> <%= facts.VEHICLE.mileageWatch %>.</p>
+          <% if (field(facts.VEHICLE, 'monthlyFixedCostGbp')) { %>
+            <p class="sc-row-sub">Fixed running cost £<%= field(facts.VEHICLE, 'monthlyFixedCostGbp').toLocaleString() %> a month before fuel.</p>
+          <% } %>
+          <p class="sc-row-sub sc-honesty"><%= facts.VEHICLE.payloadPlanning %></p>
+        </div>
+
+        <h2 class="sc-section-title">Van maintenance history</h2>
+        <div class="sc-list">
+          <% facts.VEHICLE_MAINTENANCE_HISTORY.forEach(function (m) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title"><%= m.date %></div>
+                <div class="sc-row-sub"><%= m.event %><% if (m.note) { %>. <%= m.note %><% } %></div>
+              </div>
+              <div class="sc-row-actions"><span class="sc-pill sc-pill-status"><%= m.costGbp ? '£' + m.costGbp : 'no cost' %></span></div>
+            </div>
+          <% }); %>
+        </div>
+      <% } %>
+
+      <% if (canSee('assets_ops')) { %>
+        <h2 class="sc-section-title">Workshop equipment</h2>
+        <div class="sc-list">
+          <% facts.EQUIPMENT_REGISTER.forEach(function (e) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title"><%= e.ref %> &middot; <%= e.name %></div>
+                <div class="sc-row-sub">
+                  <% if (e.model) { %><%= e.model %> &middot; <% } %>bought <%= e.purchased %>
+                  <% if (field(e, 'bookValueGbp') !== undefined) { %> &middot; cost £<%= field(e, 'costGbp').toLocaleString() %> &middot; <strong>book value £<%= field(e, 'bookValueGbp').toLocaleString() %></strong><% } %><br>
+                  <strong>Who may use it:</strong> <%= e.authorised %><br>
+                  <% if (e.lastService) { %>Last service <%= e.lastService %>. <% } %>
+                  <% if (e.nextService) { %>Next: <%= e.nextService %>. <% } %>
+                  <% if (e.lastBladeChange) { %>Last blade change <%= e.lastBladeChange %>. <% } %>
+                  <% if (e.nextInspection) { %><%= e.nextInspection %>. <% } %>
+                  <% if (e.lastCheck) { %>Last check <%= e.lastCheck %><% if (e.nextCheck) { %>, next <%= e.nextCheck %><% } %>. <% } %>
+                  <% if (e.faultHistory) { %><br><strong>Faults:</strong> <%= e.faultHistory %><% } %>
+                  <% if (e.replacementWatch) { %><br><strong>Replacement watch:</strong> <%= e.replacementWatch %><% } %>
+                  <% if (e.statusReason) { %><br><em><%= e.statusReason %></em><% } %>
+                </div>
+              </div>
+              <div class="sc-row-actions">
+                <span class="sc-pill <%= e.status === 'AMBER' ? 'sc-pill-risk' : 'sc-pill-status' %>"><%= e.status %></span>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+
+        <h2 class="sc-section-title">If something stops</h2>
+        <div class="sc-list">
+          <% facts.ASSET_CAPACITY_IMPACT.filter(function (i) { return canSee(i.domain); }).forEach(function (i) { %>
+            <div class="sc-card sc-row-card"><div><div class="sc-row-title"><%= i.asset %></div><div class="sc-row-sub"><%= i.impact %></div></div></div>
+          <% }); %>
+        </div>
+        <div class="sc-card sc-honesty-card">
+          <p class="sc-row-sub"><strong>Van contingency.</strong> <%= facts.VAN_HIRE_CONTINGENCY.provider %>, £<%= facts.VAN_HIRE_CONTINGENCY.dailyRateGbp %>/day, £<%= facts.VAN_HIRE_CONTINGENCY.twoDayBaseGbp %> for two days, <%= facts.VAN_HIRE_CONTINGENCY.note %></p>
+          <p class="sc-row-sub"><%= facts.VAN_HIRE_CONTINGENCY.rule %></p>
+        </div>
+      <% } %>
+
+      <% if (canSee('assets_ops') || canSee('vehicle_status')) { %>
+        <h2 class="sc-section-title">Maintenance calendar</h2>
+        <div class="sc-list">
+          <% facts.MAINTENANCE_CALENDAR.filter(function (m) { return canSee(m.domain); }).forEach(function (m) { %>
+            <div class="sc-card sc-row-card">
+              <div><div class="sc-row-sub"><%= m.item %></div></div>
+              <div class="sc-row-actions"><span class="sc-pill sc-pill-status"><%= m.date %></span></div>
+            </div>
+          <% }); %>
+        </div>
+      <% } %>
+
+      <% if (canSee('equipment_authorised')) { %>
+        <h2 class="sc-section-title">Who is authorised on what</h2>
+        <div class="sc-list">
+          <% facts.ASSET_AUTHORISATION.forEach(function (a) { %>
+            <div class="sc-card sc-row-card"><div><div class="sc-row-title"><%= a.person %></div><div class="sc-row-sub"><%= a.authorised %></div></div></div>
+          <% }); %>
+        </div>
+      <% } %>
+
+      <% if (canSee('assets_ops')) { %>
+        <div class="sc-card sc-honesty-card">
+          <p class="sc-row-sub"><strong>Rules.</strong> <%= facts.ASSET_MAINTENANCE_RULES.precedence %> <%= facts.ASSET_MAINTENANCE_RULES.outOfService %></p>
+          <p class="sc-row-sub"><%= facts.ASSET_MAINTENANCE_RULES.vehicleRule %> <%= facts.ASSET_MAINTENANCE_RULES.competenceRule %></p>
+        </div>
+      <% } %>
+
+      <% if (canSee('finance_full')) { %>
+        <h2 class="sc-section-title">Fixed asset reconciliation</h2>
+        <div class="sc-card">
+          <p class="sc-row-sub">Total net book value at <%= facts.FIXED_ASSET_RECONCILIATION.asOf %>: <strong>£<%= facts.FIXED_ASSET_RECONCILIATION.totalNetBookValueGbp.toLocaleString() %></strong></p>
+          <p class="sc-row-sub"><%= facts.FIXED_ASSET_RECONCILIATION.lines %>.</p>
+          <p class="sc-row-sub sc-honesty"><%= facts.FIXED_ASSET_RECONCILIATION.leaseNote %></p>
+          <p class="sc-row-sub"><%= facts.FIXED_ASSET_RECONCILIATION.note %></p>
+        </div>
+      <% } %>
+    </main>
+  </div>
+</body>
+</html>

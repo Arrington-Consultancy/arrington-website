@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leads &amp; Quotes | Scott's Armchair &amp; Knitting Service</title>
+  <meta name="robots" content="noindex, nofollow">
+  <%- include('partials/styles') %>
+</head>
+<body class="scott-body">
+  <div class="sc-shell">
+    <%- include('partials/sidebar', { active: 'pipeline', navCounts: navCounts }) %>
+    <main class="sc-main">
+      <% if (typeof isImpersonating !== 'undefined' && isImpersonating) { %>
+        <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
+      <% } %>
+      <div class="sc-page-header">
+        <div>
+          <h1 class="sc-h">Leads &amp; Quotes</h1>
+          <p>07C SCOTT'S LEADS, QUOTES &amp; CUSTOMER PIPELINE. Viewing as <strong><%= persona.name %></strong> (<%= persona.role %>).</p>
+        </div>
+      </div>
+
+      <% if (!canSee('leads')) { %>
+        <div class="sc-card sc-empty"><%= deniedNote('leads') %></div>
+      <% } else { %>
+        <div class="sc-stat-grid">
+          <div class="sc-card sc-stat"><div class="sc-stat-label">New enquiries (30d)</div><div class="sc-stat-value"><%= facts.PIPELINE_METRICS.newEnquiries %></div></div>
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Quotes issued</div><div class="sc-stat-value"><%= facts.PIPELINE_METRICS.quotesIssued %></div></div>
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Accepted</div><div class="sc-stat-value"><%= facts.PIPELINE_METRICS.quotesAccepted %></div></div>
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Acceptance rate</div><div class="sc-stat-value"><%= facts.PIPELINE_METRICS.quoteAcceptanceRatePct %>%</div></div>
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Avg accepted order</div><div class="sc-stat-value">£<%= facts.PIPELINE_METRICS.averageAcceptedOrderValueGbp %></div></div>
+        </div>
+
+        <h2 class="sc-section-title">Current enquiries</h2>
+        <div class="sc-list">
+          <% facts.PIPELINE_ENQUIRIES.forEach(function (e) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title"><%= e.ref %> &middot; <%= e.customer %></div>
+                <div class="sc-row-sub"><%= e.service %> &middot; <%= e.location %> &middot; via <%= e.source %><br><%= e.detail %><% if (field(e, 'detailRestricted')) { %> <%= field(e, 'detailRestricted') %><% } %></div>
+              </div>
+              <div class="sc-row-actions">
+                <span class="sc-pill <%= /COMPLAINT|CONSTRAINT/.test(e.status) ? 'sc-pill-risk' : 'sc-pill-status' %>"><%= e.status %></span>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+
+        <% if (canSee('quotes')) { %>
+          <h2 class="sc-section-title">Open quotes</h2>
+          <div class="sc-list">
+            <% facts.OPEN_QUOTES.forEach(function (q) { %>
+              <div class="sc-card sc-row-card">
+                <div>
+                  <div class="sc-row-title"><%= q.ref %> &middot; <%= q.customer %><% if (q.valueGbp) { %> &middot; £<%= q.valueGbp.toLocaleString() %><% } %></div>
+                  <div class="sc-row-sub"><%= q.detail %><% if (field(q, 'detailRestricted')) { %> <%= field(q, 'detailRestricted') %><% } %></div>
+                </div>
+                <div class="sc-row-actions"><span class="sc-pill sc-pill-status"><%= q.status %></span></div>
+              </div>
+            <% }); %>
+          </div>
+
+          <h2 class="sc-section-title">Why quotes were lost (rolling 90 days)</h2>
+          <div class="sc-card">
+            <p class="sc-row-sub">
+              Price or chose replacement <%= facts.QUOTE_DECLINE_REASONS_90D.priceOrChoseReplacement %> &middot;
+              No response <%= facts.QUOTE_DECLINE_REASONS_90D.noResponseAfterFollowUp %> &middot;
+              Timing <%= facts.QUOTE_DECLINE_REASONS_90D.timingNotSuitable %> &middot;
+              Scope <%= facts.QUOTE_DECLINE_REASONS_90D.scopeOutsideOffer %> &middot;
+              Competitor <%= facts.QUOTE_DECLINE_REASONS_90D.competitor %> &middot;
+              Plans changed <%= facts.QUOTE_DECLINE_REASONS_90D.customerPlansChanged %> &middot;
+              Unknown <%= facts.QUOTE_DECLINE_REASONS_90D.unknown %>
+            </p>
+            <p class="sc-row-sub"><strong><%= facts.QUOTE_DECLINE_REASONS_90D.note %></strong></p>
+          </div>
+        <% } %>
+      <% } %>
+
+    </main>
+  </div>
+</body>
+</html>

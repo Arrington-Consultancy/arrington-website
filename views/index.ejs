@@ -4286,7 +4286,7 @@
                 gtag('event', 'conversion', { 'send_to': 'AW-18129914078/h_2rCJeH8aYcEN6RgsVD' });
                 gtag('event', kind + '_click', { event_category: 'contact', page_path: location.pathname });
             } else {
-                console.warn('[Google Ads] gtag not loaded — conversion not sent');
+                console.warn('[Google Ads] gtag not loaded, conversion not sent');
             }
         });
     });
@@ -4303,7 +4303,7 @@
                     event_label: 'Book a 30 minute conversation'
                 });
             } else {
-                console.warn('[Tracking] gtag not loaded — calendar_booking_click not sent');
+                console.warn('[Tracking] gtag not loaded, calendar_booking_click not sent');
             }
         });
     });

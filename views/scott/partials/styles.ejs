@@ -1,0 +1,423 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style nonce="<%= nonce %>">
+  :root {
+    --sc-forest: #1f4d3a;
+    --sc-forest-dark: #163829;
+    --sc-sage: #6a7f5e;
+    --sc-cream: #f7f4ec;
+    --sc-cream-panel: #ffffff;
+    --sc-terracotta: #b85e3c;
+    --sc-mustard: #d8a14a;
+    --sc-navy: #1e2a38;
+    --sc-text: #24302a;
+    --sc-text-muted: #5c6b62;
+    --sc-border: #e1ddce;
+    --sc-radius: 10px;
+    --sc-radius-sm: 6px;
+    --sc-shadow: 0 1px 2px rgba(30, 42, 30, 0.06), 0 4px 16px rgba(30, 42, 30, 0.06);
+  }
+  * { box-sizing: border-box; }
+  body.scott-body {
+    margin: 0;
+    font-family: 'Source Sans 3', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--sc-text);
+    background: var(--sc-cream);
+    -webkit-font-smoothing: antialiased;
+  }
+  .sc-h { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; letter-spacing: -0.01em; }
+  a { color: inherit; }
+  button { font-family: inherit; }
+
+  /* ---------- shell layout (dashboard/jobs/enquiries/approvals) ---------- */
+  .sc-shell { display: flex; min-height: 100vh; }
+  .sc-sidebar {
+    width: 236px;
+    flex-shrink: 0;
+    background: var(--sc-forest);
+    color: #eef3ee;
+    display: flex;
+    flex-direction: column;
+    padding: 22px 16px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+  }
+  .sc-brand { display: flex; align-items: center; gap: 10px; padding: 0 6px 20px; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.12); }
+  .sc-brand-mark {
+    width: 34px; height: 34px; border-radius: 8px; background: var(--sc-mustard);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    font-family: 'Playfair Display', serif; font-weight: 700; color: var(--sc-forest-dark); font-size: 16px;
+  }
+  .sc-brand-text { line-height: 1.2; }
+  .sc-brand-text strong { display: block; font-family: 'Playfair Display', serif; font-size: 15px; }
+  .sc-brand-text span { font-size: 11px; opacity: 0.75; letter-spacing: 0.03em; text-transform: uppercase; }
+
+  .sc-search-wrap { position: relative; margin-bottom: 14px; }
+  .sc-search-input {
+    width: 100%; padding: 8px 10px; border-radius: var(--sc-radius-sm); border: 1px solid rgba(255,255,255,0.14);
+    background: rgba(255,255,255,0.07); color: #eef3ee; font-size: 13px; font-family: inherit;
+    transition: background 150ms ease, border-color 150ms ease;
+  }
+  .sc-search-input::placeholder { color: rgba(238,243,238,0.5); }
+  .sc-search-input:focus { outline: none; background: rgba(255,255,255,0.12); border-color: var(--sc-mustard); }
+  .sc-search-results {
+    position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: #fff; border-radius: var(--sc-radius-sm);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25); overflow: hidden; z-index: 20; max-height: 260px; overflow-y: auto;
+  }
+  .sc-search-results a, .sc-search-results .sc-search-customer, .sc-search-results .sc-search-empty {
+    display: block; padding: 9px 12px; font-size: 13px; color: var(--sc-text); text-decoration: none; border-bottom: 1px solid var(--sc-border);
+  }
+  .sc-search-results a:hover { background: #f3f1e6; }
+  .sc-search-results .sc-search-customer { color: var(--sc-text-muted); cursor: default; }
+  .sc-search-results .sc-search-brain {
+    display: block; padding: 8px 12px; border-bottom: 1px solid var(--sc-border); cursor: default; font-size: 13px;
+  }
+  .sc-search-domain {
+    display: inline-block; margin-left: 6px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.05em;
+    text-transform: uppercase; color: var(--sc-text-muted); border: 1px solid var(--sc-border);
+    border-radius: 3px; padding: 1px 5px; vertical-align: middle;
+  }
+  .sc-search-snippet { display: block; margin-top: 3px; color: var(--sc-text-muted); font-size: 12px; line-height: 1.4; }
+  .sc-search-results a:last-child, .sc-search-results .sc-search-customer:last-child { border-bottom: none; }
+
+  .sc-nav { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+  .sc-nav a {
+    display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: var(--sc-radius-sm);
+    text-decoration: none; color: rgba(238,243,238,0.82); font-size: 14.5px; font-weight: 500;
+    transition: background 150ms ease, color 150ms ease;
+  }
+  .sc-nav a:hover { background: rgba(255,255,255,0.08); color: #fff; }
+  .sc-nav a.active { background: rgba(255,255,255,0.14); color: #fff; }
+  .sc-nav .sc-badge {
+    margin-left: auto; background: var(--sc-terracotta); color: #fff; font-size: 11px; font-weight: 700;
+    padding: 1px 7px; border-radius: 999px; min-width: 18px; text-align: center;
+  }
+  .sc-nav-heading {
+    margin: 18px 0 6px; padding: 0 10px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.09em;
+    text-transform: uppercase; color: rgba(238,243,238,0.42);
+  }
+  .sc-clearance-block { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.12); }
+  .sc-clearance-value { font-size: 12.5px; color: #fff; font-weight: 600; margin-bottom: 2px; }
+  .sc-persona-label-spaced { margin-top: 12px; }
+  .sc-user-jobtitle { display: block; font-size: 10.5px; color: rgba(255,255,255,0.5); font-weight: 400; margin-top: 2px; }
+  .sc-impersonation-banner { background: #8A5A3B; color: #fff; padding: 8px 14px; font-size: 12.5px; font-weight: 600; border-radius: var(--sc-radius-sm); margin-bottom: 14px; }
+  .sc-persona-switcher { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.12); }
+  .sc-persona-label { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(255,255,255,0.55); margin-bottom: 5px; }
+  .sc-clearance-block select, .sc-persona-switcher select { width: 100%; padding: 7px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: #fff; font-size: 12.5px; }
+  .sc-persona-hint { font-size: 10.5px; color: rgba(255,255,255,0.45); margin: 6px 0 0; line-height: 1.4; }
+  .sc-sidebar-footer { margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.12); }
+  /* Column, not a flex row: the row layout squeezed "Signed in as" into a
+     two-line stub next to a wrapping name as soon as a job title appeared
+     beside it. Stacking is what this actually is, three lines of
+     decreasing importance. */
+  .sc-user-row { display: block; font-size: 13px; opacity: 0.85; padding: 0 6px 10px; line-height: 1.45; }
+  .sc-user-row strong { display: block; }
+  .sc-logout { display: block; width: 100%; text-align: center; padding: 8px; border: none; border-radius: var(--sc-radius-sm); background: rgba(255,255,255,0.08); font-size: 13px; text-decoration: none; color: #eef3ee; cursor: pointer; transition: background 150ms ease; }
+  .sc-logout:hover { background: rgba(255,255,255,0.16); }
+
+  .sc-main { flex: 1; min-width: 0; padding: 28px 34px 80px; max-width: 1180px; }
+  .sc-page-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+  .sc-page-header h1 { font-size: 26px; margin: 0 0 4px; }
+  .sc-page-header p { margin: 0; color: var(--sc-text-muted); font-size: 14.5px; }
+
+  /* ---------- cards / surfaces ---------- */
+  /* Padding belongs on the card itself, not only on its modifiers. It used
+     to live solely on .sc-stat / .sc-row-card / .sc-activity-card and the
+     rest, so a plain .sc-card rendered its text hard against the border.
+     Every modifier below sets its own padding and is declared after this
+     rule, so each still wins at equal specificity; this only reaches the
+     bare cards that previously had none. */
+  .sc-card {
+    background: var(--sc-cream-panel); border: 1px solid var(--sc-border); border-radius: var(--sc-radius);
+    box-shadow: var(--sc-shadow); transition: box-shadow 200ms ease, transform 200ms ease;
+    padding: 14px 16px;
+  }
+  .sc-card > :first-child { margin-top: 0; }
+  .sc-card > :last-child { margin-bottom: 0; }
+  .sc-card-link { display: block; text-decoration: none; color: inherit; }
+  .sc-card-link:hover { box-shadow: 0 2px 4px rgba(30,42,30,0.08), 0 10px 24px rgba(30,42,30,0.1); transform: translateY(-1px); }
+
+  .sc-stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 26px; }
+  .sc-stat { padding: 16px 18px; }
+  .sc-stat .sc-stat-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--sc-text-muted); font-weight: 600; margin-bottom: 6px; }
+  .sc-stat .sc-stat-value { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; color: var(--sc-forest); }
+  .sc-stat .sc-stat-value.warn { color: var(--sc-terracotta); }
+  .sc-stat .sc-stat-sub { font-size: 12.5px; color: var(--sc-text-muted); margin-top: 3px; }
+
+  .sc-section-title { font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: var(--sc-text-muted); margin: 0 0 12px; }
+  /* A heading that follows content needs air above it; the first one on a
+     page does not, hence the sibling selector rather than a flat
+     margin-top. Adjacent margins collapse, so a preceding block that
+     already carries a bottom margin (the stat grid, for one) does not
+     double up. */
+  * + .sc-section-title { margin-top: 26px; }
+
+  /* ---------- colleague grid ---------- */
+  .sc-colleagues { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin-bottom: 30px; }
+  .sc-colleague { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+  .sc-avatar {
+    width: 44px; height: 44px; border-radius: 999px; display: flex; align-items: center; justify-content: center;
+    font-family: 'Playfair Display', serif; font-weight: 700; font-size: 15px; color: #fff; flex-shrink: 0;
+  }
+  .sc-colleague-head { display: flex; align-items: center; gap: 10px; }
+  .sc-colleague-name { font-family: 'Playfair Display', serif; font-size: 15px; font-weight: 700; line-height: 1.15; }
+  .sc-colleague-role { font-size: 12px; color: var(--sc-text-muted); font-weight: 600; }
+  .sc-colleague-tagline { font-size: 13px; color: var(--sc-text-muted); line-height: 1.4; margin: 0; }
+
+  /* ---------- activity feed ---------- */
+  .sc-activity-list { list-style: none; margin: 0; padding: 0; }
+  .sc-activity-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--sc-border); font-size: 13.5px; }
+  .sc-activity-item:last-child { border-bottom: none; }
+  .sc-activity-dot { width: 8px; height: 8px; border-radius: 999px; margin-top: 5px; flex-shrink: 0; }
+  .sc-activity-meta { color: var(--sc-text-muted); font-size: 12px; }
+
+  /* ---------- tables / lists ---------- */
+  .sc-list { display: flex; flex-direction: column; gap: 10px; }
+  .sc-row-card { padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .sc-row-title { font-family: 'Playfair Display', serif; font-weight: 700; font-size: 15px; }
+  .sc-row-sub { font-size: 13px; color: var(--sc-text-muted); margin-top: 2px; }
+  .sc-pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+  .sc-pill-risk { background: #fbe9e3; color: var(--sc-terracotta); }
+  .sc-pill-status { background: #eef0e7; color: var(--sc-sage); }
+  .sc-pill-new { background: #fdf1de; color: var(--sc-mustard); }
+
+  .sc-filter-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .sc-filter-bar a { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--sc-border); font-size: 13px; text-decoration: none; color: var(--sc-text-muted); background: #fff; transition: all 150ms ease; }
+  .sc-filter-bar a.active, .sc-filter-bar a:hover { border-color: var(--sc-forest); color: var(--sc-forest); background: #eef3ee; }
+
+  .sc-empty { padding: 30px 20px; text-align: center; color: var(--sc-text-muted); font-size: 14px; }
+
+  /* ---------- buttons ---------- */
+  .sc-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 16px; border-radius: var(--sc-radius-sm); border: 1px solid transparent; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease; }
+  .sc-btn:active { transform: scale(0.98); }
+  .sc-btn-primary { background: var(--sc-forest); color: #fff; }
+  .sc-btn-primary:hover { background: var(--sc-forest-dark); }
+  .sc-btn-outline { background: #fff; border-color: var(--sc-border); color: var(--sc-text); }
+  .sc-btn-outline:hover { border-color: var(--sc-forest); color: var(--sc-forest); }
+  .sc-btn-approve { background: var(--sc-sage); color: #fff; }
+  .sc-btn-reject { background: #fff; border-color: var(--sc-terracotta); color: var(--sc-terracotta); }
+  .sc-btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+  /* ---------- job/enquiry detail ---------- */
+  .sc-detail-grid { display: grid; grid-template-columns: 1fr 280px; gap: 22px; align-items: start; }
+  @media (max-width: 900px) { .sc-detail-grid { grid-template-columns: 1fr; } }
+  .sc-detail-card { padding: 20px 22px; margin-bottom: 16px; }
+  .sc-kv { display: grid; grid-template-columns: 130px 1fr; gap: 6px 12px; font-size: 14px; }
+  .sc-kv dt { color: var(--sc-text-muted); font-weight: 600; }
+  .sc-kv dd { margin: 0; }
+  .sc-risk-banner { background: #fbe9e3; border: 1px solid #ecc2b1; color: #7a3a20; border-radius: var(--sc-radius-sm); padding: 12px 14px; font-size: 13.5px; margin-bottom: 16px; }
+
+  /* ---------- chat panel ---------- */
+  .sc-chat-panel { display: flex; flex-direction: column; background: var(--sc-navy); border-radius: var(--sc-radius); overflow: hidden; box-shadow: var(--sc-shadow); height: 560px; }
+  .sc-chat-head { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px; color: #fff; }
+  .sc-chat-head-text strong { font-family: 'Playfair Display', serif; font-size: 14.5px; display: block; }
+  .sc-chat-head-text span { font-size: 11.5px; opacity: 0.65; }
+  .sc-chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .sc-msg { display: flex; gap: 9px; max-width: 92%; animation: sc-rise 220ms ease both; }
+  @keyframes sc-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .sc-msg-user { align-self: flex-end; flex-direction: row-reverse; }
+  .sc-msg-avatar { width: 30px; height: 30px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-family: 'Playfair Display', serif; font-weight: 700; font-size: 12px; color: #fff; flex-shrink: 0; }
+  .sc-msg-body { background: #ffffff; border-radius: 12px; padding: 9px 12px; font-size: 13.5px; line-height: 1.45; box-shadow: 0 1px 2px rgba(0,0,0,0.12); }
+  .sc-msg-user .sc-msg-body { background: var(--sc-mustard); color: #2b2109; }
+  .sc-msg-name { font-size: 11px; font-weight: 700; margin-bottom: 2px; opacity: 0.7; }
+  .sc-msg-meta-row { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+  .sc-msg-tag { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; padding: 2px 7px; border-radius: 999px; }
+  .sc-msg-tag-writeback { background: #eef0e7; color: var(--sc-sage); }
+  .sc-msg-tag-escalation { background: #fdf1de; color: var(--sc-mustard); }
+  .sc-msg-tag-fail { background: #fbe9e3; color: var(--sc-terracotta); }
+  .sc-msg-tag-certainty { background: #f1ede0; color: #8a6a2f; }
+  .sc-typing { display: flex; gap: 9px; align-items: center; }
+  .sc-typing-dots { background: #fff; border-radius: 12px; padding: 10px 14px; display: flex; gap: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.12); }
+  .sc-typing-dots span { width: 6px; height: 6px; border-radius: 999px; background: #b7bdb8; animation: sc-bounce 1.1s infinite ease-in-out; }
+  .sc-typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+  .sc-typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes sc-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.5; } 30% { transform: translateY(-4px); opacity: 1; } }
+  .sc-chat-input-row { display: flex; gap: 8px; padding: 12px; border-top: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.03); }
+  .sc-chat-input-row input { flex: 1; border: none; border-radius: var(--sc-radius-sm); padding: 10px 12px; font-size: 13.5px; font-family: inherit; }
+  .sc-chat-input-row input:focus { outline: 2px solid var(--sc-mustard); outline-offset: 1px; }
+  .sc-chat-send { background: var(--sc-mustard); color: var(--sc-forest-dark); border: none; border-radius: var(--sc-radius-sm); padding: 0 16px; font-weight: 700; cursor: pointer; transition: transform 150ms ease; }
+  .sc-chat-send:hover { transform: translateY(-1px); }
+  .sc-chat-send[disabled] { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .sc-chat-disabled-note { padding: 14px 16px; color: #f4d9c8; font-size: 12.5px; background: rgba(184,94,60,0.18); border-top: 1px solid rgba(255,255,255,0.1); }
+  .sc-chat-suggestions { display: flex; flex-direction: column; gap: 6px; padding: 0 16px 12px; }
+  .sc-chat-suggestions button { text-align: left; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #eef3ee; border-radius: var(--sc-radius-sm); padding: 7px 10px; font-size: 12.5px; cursor: pointer; transition: background 150ms ease; }
+  .sc-chat-suggestions button:hover { background: rgba(255,255,255,0.12); }
+
+  /* ---------- login ---------- */
+  .sc-login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--sc-forest); padding: 24px; }
+  .sc-login-card { width: 100%; max-width: 380px; background: var(--sc-cream-panel); border-radius: var(--sc-radius); box-shadow: 0 20px 50px rgba(0,0,0,0.3); overflow: hidden; }
+  .sc-login-head { background: var(--sc-forest-dark); color: #fff; padding: 28px 30px 22px; text-align: center; }
+  .sc-login-head .sc-brand-mark { margin: 0 auto 12px; width: 44px; height: 44px; font-size: 19px; }
+  .sc-login-head h1 { margin: 0; font-size: 19px; }
+  .sc-login-head p { margin: 6px 0 0; font-size: 12.5px; opacity: 0.7; }
+  .sc-login-body { padding: 26px 30px 30px; }
+  .sc-field { margin-bottom: 14px; }
+  .sc-field label { display: block; font-size: 12.5px; font-weight: 600; color: var(--sc-text-muted); margin-bottom: 5px; }
+  .sc-field input { width: 100%; padding: 10px 12px; border: 1px solid var(--sc-border); border-radius: var(--sc-radius-sm); font-size: 14px; font-family: inherit; transition: border-color 150ms ease; }
+  .sc-field input:focus { outline: none; border-color: var(--sc-forest); }
+  .sc-login-error { background: #fbe9e3; color: #7a3a20; border-radius: var(--sc-radius-sm); padding: 9px 12px; font-size: 13px; margin-bottom: 14px; }
+  .sc-login-submit { width: 100%; margin-top: 4px; }
+  .sc-login-foot { text-align: center; margin-top: 16px; font-size: 11.5px; color: var(--sc-text-muted); }
+
+  /* ---------- skeleton loading ---------- */
+  .sc-skeleton { background: linear-gradient(90deg, #eee 25%, #f5f5f0 37%, #eee 63%); background-size: 400% 100%; animation: sc-shimmer 1.4s ease infinite; border-radius: 6px; }
+  @keyframes sc-shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+
+  /* ---------- per-worker accent classes ----------
+     Mirror lib/scott/workers.js's `accent` values. Duplicated here rather
+     than injected inline because the site's strict CSP has no
+     'unsafe-inline' for styles and nonces don't cover the style=""
+     attribute at all (verified: every inline style="" attribute in this
+     app is silently dropped by the browser, confirmed against a live
+     CSP-violation console log) — so a per-worker colour has to be a
+     static class, never a template-generated style attribute. Keep in
+     sync by hand if a worker's accent colour changes, same convention as
+     VALID_TEMPLATES being duplicated across the main site's files. */
+  .sc-avatar-receptionist, .sc-dot-receptionist { background: #8A5A3B; }
+  .sc-avatar-commercial, .sc-dot-commercial { background: #B85E3C; }
+  .sc-avatar-operations, .sc-dot-operations { background: #6A7F5E; }
+  .sc-avatar-customers_marketing, .sc-dot-customers_marketing { background: #8A6BAF; }
+  .sc-avatar-company_brain, .sc-dot-company_brain { background: #1E2A38; }
+  .sc-avatar-governance, .sc-dot-governance { background: #4A4A4A; }
+  .sc-avatar-user, .sc-dot-user { background: #5c6b62; }
+  .sc-avatar-system, .sc-dot-system { background: #B85E3C; }
+  .sc-avatar-finance_accounts, .sc-dot-finance_accounts { background: #2E6B4F; }
+  .sc-avatar-people_hr, .sc-dot-people_hr { background: #7A5C8E; }
+  .sc-avatar-quality_control, .sc-dot-quality_control { background: #B3541E; }
+  .sc-avatar-proposed { background: #8A8578; }
+
+  .sc-proposed-note { font-size: 13px; color: var(--sc-text-muted); max-width: 640px; margin: 0 0 12px; }
+  .sc-colleagues-proposed { opacity: 0.75; }
+  .sc-colleague-proposed { border-style: dashed; }
+  .sc-proposed-badge { font-family: 'Source Sans 3', sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 0.06em; background: var(--sc-cream); border: 1px solid var(--sc-border); color: var(--sc-text-muted); padding: 2px 6px; border-radius: 3px; vertical-align: middle; margin-left: 4px; }
+
+  /* ---------- layout utility classes (replace one-off style="" attributes, same CSP reason as above) ---------- */
+  .sc-approval-card { padding: 16px 18px; }
+  .sc-approval-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  .sc-approval-meta { margin-bottom: 4px; }
+  .sc-approval-summary { font-size: 14.5px; }
+  .sc-approval-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+  .sc-activity-card { padding: 16px 18px; }
+  .sc-section-title-spaced { margin-top: 22px; }
+  .sc-snapshot-label { font-size: 12.5px; color: var(--sc-text-muted); margin: -6px 0 12px; }
+  .sc-stat-value-sm { font-size: 20px; }
+
+  .sc-row-actions { display: flex; gap: 8px; align-items: center; }
+  .sc-row-actions-tight { display: flex; gap: 8px; }
+
+  .sc-back-link-wrap { margin: 0 0 4px; }
+  .sc-back-link { color: var(--sc-text-muted); font-size: 13px; }
+
+  .sc-select { padding: 7px 10px; border-radius: 6px; border: 1px solid var(--sc-border); font-size: 13px; font-family: inherit; }
+
+  .sc-inline-note { margin: -12px 0 16px; font-size: 12.5px; color: var(--sc-sage); }
+
+  .sc-detail-text { margin: 0; font-size: 14.5px; line-height: 1.6; }
+  .sc-detail-text-sm { margin: 0; font-size: 14px; }
+
+  .sc-notfound-wrap { background: var(--sc-cream); }
+  .sc-notfound-card { max-width: 420px; padding: 34px; text-align: center; }
+  .sc-notfound-title { font-size: 22px; }
+  .sc-notfound-sub { color: var(--sc-text-muted); font-size: 14px; }
+  .sc-notfound-btn { margin-top: 12px; }
+
+  .sc-honeypot { position: absolute; left: -9999px; }
+  .sc-textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--sc-border); border-radius: 6px; font-size: 14px; font-family: inherit; resize: vertical; }
+  .sc-textarea:focus { outline: none; border-color: var(--sc-forest); }
+  .sc-lead-card { max-width: 460px; }
+  .sc-lead-thanks { margin: 0 0 16px; font-size: 14px; }
+
+  .sc-quote-context { background: #f6f4ea; border: 1px solid var(--sc-border); border-radius: var(--sc-radius-sm); padding: 12px 14px; margin: 10px 0; display: flex; flex-direction: column; gap: 10px; }
+  .sc-quote-context-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; color: var(--sc-text-muted); }
+  .sc-quote-context-item { display: flex; gap: 8px; font-size: 13px; }
+  .sc-quote-context-name { font-size: 11.5px; font-weight: 700; color: var(--sc-text-muted); margin-bottom: 2px; }
+  .sc-quote-avatar { width: 24px; height: 24px; font-size: 10px; flex-shrink: 0; }
+  .sc-draft-textarea { min-height: 90px; margin: 10px 0; }
+  .sc-draft-actions { flex-wrap: wrap; }
+
+  /* ---------- company brain ---------- */
+  .sc-brain-input {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--sc-border); border-radius: var(--sc-radius-sm);
+    font-family: inherit; font-size: 14.5px; color: var(--sc-text); background: var(--sc-cream);
+  }
+  .sc-brain-input:focus { outline: 2px solid var(--sc-navy); outline-offset: 1px; }
+  .sc-brain-results:not(:empty) { margin-top: 12px; border-top: 1px solid var(--sc-border); }
+  .sc-brain-hit { padding: 10px 2px; border-bottom: 1px solid var(--sc-border); }
+  .sc-brain-hit:last-child { border-bottom: none; }
+  .sc-brain-hit-head { font-size: 14px; }
+  .sc-brain-empty { padding: 12px 2px; color: var(--sc-text-muted); font-size: 13.5px; }
+  /* Withheld areas are deliberately legible rather than greyed into
+     illegibility: the reader is meant to be able to read WHICH area they
+     are missing and who to ask, that being the point of telling them at
+     all. */
+  .sc-row-card-muted { background: var(--sc-cream); }
+  .sc-pill-muted { background: var(--sc-cream); color: var(--sc-text-muted); border: 1px solid var(--sc-border); }
+
+  /* ---------- activity / audit ---------- */
+  .sc-filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+  .sc-filter-chip {
+    display: inline-block; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--sc-border);
+    background: var(--sc-cream-panel); color: var(--sc-text-muted); text-decoration: none;
+    font-size: 13px; font-weight: 600;
+  }
+  .sc-filter-chip:hover { color: var(--sc-text); }
+  .sc-filter-chip.active { background: var(--sc-forest); border-color: var(--sc-forest); color: #fff; }
+  .sc-actor-tag {
+    display: inline-block; font-size: 9.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+    border: 1px solid var(--sc-border); border-radius: 3px; padding: 0 4px; vertical-align: middle; color: var(--sc-text-muted);
+  }
+  .sc-actor-tag-human { border-color: var(--sc-sage); color: var(--sc-sage); }
+
+  /* A visually distinct treatment for the places the record deliberately
+     warns you off a conclusion the numbers appear to support. These are
+     the most commercially valuable lines on the page and should not read
+     as small print. */
+  .sc-honesty-card { border-left: 3px solid var(--sc-mustard); }
+  .sc-honesty { color: var(--sc-text); font-style: italic; }
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 860px) {
+    .sc-shell { flex-direction: column; }
+    .sc-sidebar { width: 100%; height: auto; position: relative; flex-direction: row; flex-wrap: wrap; align-items: center; padding: 12px 16px; gap: 10px; }
+    .sc-brand { border-bottom: none; margin-bottom: 0; padding: 0; flex: 1; }
+    .sc-search-wrap { order: 3; width: 100%; margin-bottom: 0; }
+    /* Two stacked nav lists on desktop become two wrapping rows here. The
+       "Company records" heading is dropped rather than shrunk: on a phone
+       the grouping is obvious from the wrap, and a full-width label would
+       cost a line of screen for nothing. */
+    .sc-nav { order: 2; flex-direction: row; flex-wrap: wrap; flex: 1 1 100%; }
+    .sc-nav a { padding: 7px 10px; font-size: 13.5px; }
+    .sc-nav-heading { display: none; }
+    .sc-sidebar-footer { order: 1; margin-top: 0; padding-top: 0; border-top: none; flex-shrink: 0; }
+    .sc-user-row { display: none; }
+    .sc-logout { padding: 7px 12px; }
+    .sc-main { padding: 20px 16px 60px; }
+    .sc-page-header h1 { font-size: 21px; }
+    .sc-chat-panel { height: 440px; }
+  }
+  /* Needs Human Input. A blocking gap gets the terracotta rail rather
+     than a badge alone, because "work is stopped" is the one thing on
+     this page that should be readable without reading. */
+  .sc-gap-card { align-items: flex-start; }
+  .sc-gap-blocking { border-left: 3px solid var(--sc-terracotta); }
+  .sc-gap-form { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--sc-border); max-width: 620px; }
+  .sc-gap-label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .sc-gap-note { width: 100%; padding: 8px 10px; border: 1px solid var(--sc-border); border-radius: var(--sc-radius-sm); font: inherit; font-size: 14px; resize: vertical; }
+  .sc-gap-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .sc-gap-actions .sc-btn { background: var(--sc-forest); color: #fff; }
+  .sc-gap-actions .sc-btn-quiet { background: #fff; border-color: var(--sc-border); color: var(--sc-text-muted); }
+  .sc-gap-hint { font-size: 12px; color: var(--sc-text-muted); margin: 8px 0 0; }
+  .sc-gap-error { font-size: 13px; color: var(--sc-terracotta); margin: 8px 0 0; }
+  .sc-gap-done { font-size: 13px; color: var(--sc-forest); margin: 8px 0 0; font-weight: 600; }
+
+  @media (max-width: 520px) {
+    .sc-stat-grid { grid-template-columns: repeat(2, 1fr); }
+    .sc-colleagues { grid-template-columns: 1fr 1fr; }
+    .sc-nav a span.sc-badge { margin-left: 4px; }
+    .sc-row-card { flex-direction: column; align-items: flex-start; }
+    .sc-page-header { flex-direction: column; align-items: flex-start; }
+  }
+</style>

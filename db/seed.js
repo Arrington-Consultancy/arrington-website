@@ -23,6 +23,8 @@ const {
 const { ARTICLES: UT_ARTICLES } = require('../lib/usefulThinkingArticles');
 const { generateUniqueShortReference } = require('../lib/shortReference');
 const { resolveWaiSeedMode, waiSeedWrites: waiWritesAllowed } = require('../lib/waiSeedMode');
+const { SCOTT_PAGE_SLUG } = require('../lib/scott/access');
+const { seedScottData } = require('../lib/scott/data/seedData');
 
 const BCRYPT_ROUNDS = 12;
 
@@ -133,6 +135,38 @@ async function seed() {
     }
   }
   console.log('Role permissions seeded.');
+
+  // Explicit, narrow escape hatch for a non-production deploy whose nat/tom
+  // login was set up in a database this session has no record of (e.g. a
+  // staging database seeded months ago, or a fresh demo service pointed at
+  // an existing shared staging Postgres). Deliberately NOT something a
+  // stray/copied env var could trigger by accident: requires this exact
+  // variable, set to exactly 'true', plus both passwords below. Never set
+  // this on production.
+  //
+  // UPDATEs password_hash on the existing row rather than deleting and
+  // recreating it. A first attempt at this did DELETE, tested locally
+  // before ever touching Railway, and failed on a real foreign key: nat/tom
+  // are referenced from audit_log (every login/edit/backup/etc. writes a
+  // row keyed on user id), so any account with real history cannot be
+  // deleted without deleting that history too, which is not this flag's
+  // job. UPDATE has no such constraint and preserves the account's id and
+  // its audit trail, which is what you want for a password reset.
+  if (process.env.RESET_USER_PASSWORDS === 'true') {
+    const natPw = process.env.NAT_PASSWORD;
+    const tomPw = process.env.TOM_PASSWORD;
+    if (!natPw || !tomPw) {
+      throw new Error('RESET_USER_PASSWORDS=true requires NAT_PASSWORD and TOM_PASSWORD to also be set.');
+    }
+    for (const [username, password] of [['nat', natPw], ['tom', tomPw]]) {
+      const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+      const { rowCount } = await db.query(
+        'UPDATE users SET password_hash = $1 WHERE username = $2',
+        [hash, username]
+      );
+      console.log(`RESET_USER_PASSWORDS=true: ${username} password ${rowCount ? 'reset' : 'unchanged, no existing row to update'}.`);
+    }
+  }
 
   // Seed users (idempotent: ON CONFLICT DO NOTHING)
   // Passwords must come from env vars — never commit credentials.
@@ -501,7 +535,7 @@ async function seed() {
         }
         if (!keeperCta && allIntervention.length > 0) {
           keeperCta = allIntervention[allIntervention.length - 1];
-          console.warn(`Evidence merge: no intervention instance found with button text "Book a 30 minute conversation" — falling back to keeping ${keeperCta} as the shared closing CTA.`);
+          console.warn(`Evidence merge: no intervention instance found with button text "Book a 30 minute conversation", falling back to keeping ${keeperCta} as the shared closing CTA.`);
         }
 
         const withoutIntervention = (slug) => orderOf(slug).filter(iid => baseOf(iid) !== 'intervention');
@@ -4701,11 +4735,229 @@ async function seed() {
     console.log('Buyer-language standfirst test: 2 article standfirst(s) seeded (article__9, article__2).');
   }
 
+  // Scott AI Demonstration — access-grant anchor + fictional dataset
+  // (28/08/2026). See lib/scott/access.js for why this page row exists: it
+  // is never rendered as a real page (the Scott routes are registered ahead
+  // of the generic /:slug catch-all and never fall through to it), it only
+  // exists so the site's EXISTING page_access table/admin UI can gate
+  // invited demo viewers, exactly like every other restricted page. hidden,
+  // not in nav, noindex and an empty section_order all reinforce that this
+  // row is never meant to render — belt-and-braces alongside the routing
+  // order, not a substitute for it.
+  {
+    const { rowCount } = await db.query(
+      `INSERT INTO pages (slug, title, sort_order, hidden, show_in_nav, noindex, section_order)
+       VALUES ($1, 'Scott AI Demonstration (private)', 9999, true, false, true, '[]'::jsonb)
+       ON CONFLICT (slug) DO NOTHING`,
+      [SCOTT_PAGE_SLUG]
+    );
+    if (rowCount > 0) console.log('Scott AI Demonstration: access-grant page row created.');
+  }
+  {
+    const result = await seedScottData(db);
+    console.log(result.seeded ? 'Scott AI Demonstration: fictional dataset seeded.' : 'Scott AI Demonstration: fictional dataset already present, skipped.');
+  }
+
+  // Scott AI Demonstration — lead capture columns (28/08/2026). Adds the
+  // public lead-form intake path: customer_email on scott_enquiries, and
+  // the 'superseded' writeback status (used by "Redraft" — the old draft is
+  // superseded, not rejected, when a human asks the team to try again) plus
+  // edited_by_human (set when a "Modify" edit is saved before approval).
+  // No-op on a brand new database, since CREATE TABLE already includes
+  // these — only matters for a database that had the Scott tables from
+  // before this migration existed.
+  {
+    await db.query(`ALTER TABLE scott_enquiries ADD COLUMN IF NOT EXISTS customer_email VARCHAR(255) NOT NULL DEFAULT ''`);
+    await db.query(`ALTER TABLE scott_writebacks ADD COLUMN IF NOT EXISTS edited_by_human BOOLEAN NOT NULL DEFAULT false`);
+    await db.query(`ALTER TABLE scott_writebacks DROP CONSTRAINT IF EXISTS scott_writebacks_status_check`);
+    await db.query(`ALTER TABLE scott_writebacks ADD CONSTRAINT scott_writebacks_status_check CHECK (status IN ('auto_applied', 'pending_approval', 'approved', 'rejected', 'superseded'))`);
+    await db.query(`ALTER TABLE scott_conversations ALTER COLUMN user_id DROP NOT NULL`);
+    console.log('Scott AI Demonstration: lead capture columns verified.');
+  }
+
+  // Scott AI Demonstration: fictional portal staff accounts.
+  //
+  // Eight genuine logins, one per fictional staff member in 07Q's
+  // clearance model, each bound server-side to their own clearance. These
+  // are demonstration accounts inside an already-access-controlled private
+  // area, not real site accounts, and they hold no real data.
+  //
+  // Password source, in order: SCOTT_DEMO_STAFF_PASSWORD if set, otherwise
+  // a per-deploy random value that is printed ONCE to the deploy log so
+  // whoever set the service up can retrieve it. There is deliberately no
+  // hardcoded default: a fixed password committed to a public-ish repo
+  // would be a real credential leak even for fictional accounts, and the
+  // Master Rulebook's own IT record (07Q) says demo passwords "belong in a
+  // secure implementation secret/user-management route and must not be
+  // placed in Drive, source code, prompts or screenshots."
+  {
+    await db.query(`CREATE TABLE IF NOT EXISTS scott_portal_users (
+      id SERIAL PRIMARY KEY,
+      username VARCHAR(60) UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      persona_id VARCHAR(40) NOT NULL,
+      display_name VARCHAR(120) NOT NULL,
+      job_title VARCHAR(160) NOT NULL DEFAULT '',
+      active BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_scott_portal_users_username ON scott_portal_users (username)`);
+
+    const staff = [
+      { username: 'scott.mercer', personaId: 'scott_mercer', displayName: 'Scott Mercer', jobTitle: 'Owner / Director (Clearance A)' },
+      { username: 'tony.marsh', personaId: 'tony_marsh', displayName: 'Tony Marsh', jobTitle: 'Workshop & Operations Manager (Clearance B)' },
+      { username: 'chloe.reed', personaId: 'chloe_reed', displayName: 'Chloe Reed', jobTitle: 'Office / Customer Admin (Clearance C)' },
+      { username: 'leah.morgan', personaId: 'leah_morgan', displayName: 'Leah Morgan', jobTitle: 'Knitting Team Lead (Clearance D)' },
+      { username: 'ellie.park', personaId: 'ellie_park', displayName: 'Ellie Park', jobTitle: 'Workshop / Skilled Operative (Clearance E)' },
+      { username: 'ravi.singh', personaId: 'ravi_singh', displayName: 'Ravi Singh', jobTitle: 'Workshop / Field Operative (Clearance E)' },
+      { username: 'jo.bell', personaId: 'jo_bell', displayName: 'Jo Bell', jobTitle: 'Knitting Operative (Clearance F)' },
+      { username: 'mike.evans', personaId: 'mike_evans', displayName: 'Mike Evans', jobTitle: 'Driver / Field Logistics (Clearance G)' }
+    ];
+
+    const { rows: existingStaff } = await db.query('SELECT username FROM scott_portal_users');
+    if (existingStaff.length < staff.length) {
+      const supplied = process.env.SCOTT_DEMO_STAFF_PASSWORD;
+      const staffPassword = supplied || crypto.randomBytes(9).toString('base64url');
+      const hash = await bcrypt.hash(staffPassword, BCRYPT_ROUNDS);
+      for (const s of staff) {
+        await db.query(
+          `INSERT INTO scott_portal_users (username, password_hash, persona_id, display_name, job_title)
+           VALUES ($1, $2, $3, $4, $5) ON CONFLICT (username) DO NOTHING`,
+          [s.username, hash, s.personaId, s.displayName, s.jobTitle]
+        );
+      }
+      if (supplied) {
+        console.log(`Scott AI Demonstration: ${staff.length} fictional staff logins seeded (password from SCOTT_DEMO_STAFF_PASSWORD).`);
+      } else {
+        console.log(`Scott AI Demonstration: ${staff.length} fictional staff logins seeded. Shared demo password for all eight: ${staffPassword}`);
+        console.log('Scott AI Demonstration: set SCOTT_DEMO_STAFF_PASSWORD to control this instead of a generated one.');
+      }
+    } else if (process.env.RESET_SCOTT_STAFF_PASSWORDS === 'true') {
+      // Escape hatch for the case that actually happened on staging: the
+      // eight rows were seeded by an earlier deploy with a random
+      // password, so a later SCOTT_DEMO_STAFF_PASSWORD was ignored by the
+      // insert path above and nobody could sign in as any of them. Same
+      // shape as RESET_USER_PASSWORDS: an UPDATE in place, never a DELETE,
+      // so no foreign key is involved and no row identity changes.
+      //
+      // Requires the exact string 'true' AND a password to set, so a
+      // stray or copied variable cannot trigger it, and it refuses loudly
+      // rather than silently doing nothing if the password is missing.
+      const supplied = process.env.SCOTT_DEMO_STAFF_PASSWORD;
+      if (!supplied) {
+        console.warn('RESET_SCOTT_STAFF_PASSWORDS=true but SCOTT_DEMO_STAFF_PASSWORD is not set, so there is nothing to reset the passwords to. No change made.');
+      } else {
+        const hash = await bcrypt.hash(supplied, BCRYPT_ROUNDS);
+        const { rowCount } = await db.query('UPDATE scott_portal_users SET password_hash = $1', [hash]);
+        console.log(`RESET_SCOTT_STAFF_PASSWORDS=true: ${rowCount} fictional staff password(s) reset from SCOTT_DEMO_STAFF_PASSWORD.`);
+        console.log('Scott AI Demonstration: remove RESET_SCOTT_STAFF_PASSWORDS once you have signed in successfully.');
+      }
+    } else {
+      console.log('Scott AI Demonstration: fictional staff logins already present, skipping.');
+    }
+  }
+
+  // Em dashes are banned in anything user-visible across this project, and
+  // the ban applies to rows already sitting in a database, not only to the
+  // source that writes new ones. One seeded activity summary carried one
+  // before the source was corrected, and it kept rendering on the Activity
+  // page afterwards because nothing rewrites an existing row.
+  //
+  // The rewrite is done in JS rather than in a SQL regex on purpose. The
+  // first version passed the pattern through a JS template literal, where
+  // \s silently degrades to a literal "s" and \u2014 is converted to the
+  // dash itself before Postgres ever sees the string. It appeared to work
+  // (the dash did go) while actually matching nothing it was meant to,
+  // leaving "seeded ,  v0.1". Two layers of escaping in one line is not
+  // worth the cleverness for a handful of rows.
+  //
+  // Idempotent: a no-op once clean, which is every boot after the first.
+  {
+    const { rows } = await db.query(
+      `SELECT id, summary FROM scott_activity WHERE summary LIKE '%' || U&'\\2014' || '%' OR summary LIKE '%' || U&'\\2013' || '%'`
+    );
+    for (const row of rows) {
+      const fixed = row.summary.replace(/\s*[\u2014\u2013]\s*/g, ', ').replace(/\s+,/g, ',').replace(/\s{2,}/g, ' ');
+      await db.query('UPDATE scott_activity SET summary = $1 WHERE id = $2', [fixed, row.id]);
+    }
+    if (rows.length) console.log(`Scott AI Demonstration: rewrote ${rows.length} activity summary/summaries containing a banned dash.`);
+  }
+
+  // Conversation ownership and clearance columns. Idempotent
+  // ALTER ... IF NOT EXISTS for databases seeded before these existed.
+  {
+    await db.query(`ALTER TABLE scott_conversations
+      ADD COLUMN IF NOT EXISTS portal_user_id INTEGER REFERENCES scott_portal_users(id) ON DELETE CASCADE`);
+    await db.query(`ALTER TABLE scott_conversations
+      ADD COLUMN IF NOT EXISTS persona_id VARCHAR(40) NOT NULL DEFAULT 'scott_mercer'`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_scott_conversations_portal_user
+      ON scott_conversations (portal_user_id)`);
+    await db.query(`ALTER TABLE scott_writebacks
+      ADD COLUMN IF NOT EXISTS decided_by_portal_user_id INTEGER REFERENCES scott_portal_users(id)`);
+    await db.query(`ALTER TABLE scott_writebacks
+      ADD COLUMN IF NOT EXISTS decided_by_name VARCHAR(120) NOT NULL DEFAULT ''`);
+    console.log('Scott AI Demonstration: conversation ownership and decision-identity columns verified.');
+  }
+
+  // Brain Gap register. Created here as well as in schema.sql so a
+  // database seeded before this existed gets it on the next boot, same
+  // pattern as every other Scott migration in this file.
+  {
+    await db.query(`CREATE TABLE IF NOT EXISTS scott_brain_gaps (
+      id SERIAL PRIMARY KEY,
+      conversation_id INTEGER,
+      raised_by_worker_id VARCHAR(30) NOT NULL DEFAULT '',
+      domain VARCHAR(60) NOT NULL DEFAULT '',
+      gap_type VARCHAR(20) NOT NULL DEFAULT 'missing' CHECK (gap_type IN ('missing', 'stale', 'conflicting')),
+      missing_evidence TEXT NOT NULL,
+      why_it_matters TEXT NOT NULL,
+      expected_source TEXT NOT NULL DEFAULT '',
+      responsible_persona_id VARCHAR(40),
+      responsible_name VARCHAR(120) NOT NULL DEFAULT '',
+      work_can_continue BOOLEAN NOT NULL DEFAULT false,
+      material BOOLEAN NOT NULL DEFAULT false,
+      status VARCHAR(20) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'notified', 'awaiting_source', 'resolved', 'dismissed')),
+      notify_decision VARCHAR(40) NOT NULL DEFAULT 'not_material',
+      email_status VARCHAR(20) NOT NULL DEFAULT 'not_required' CHECK (email_status IN ('not_required', 'pending', 'sent', 'failed')),
+      email_to VARCHAR(255) NOT NULL DEFAULT '',
+      email_attempts SMALLINT NOT NULL DEFAULT 0,
+      email_error TEXT NOT NULL DEFAULT '',
+      emailed_at TIMESTAMPTZ,
+      related_job_id INTEGER REFERENCES scott_jobs(id) ON DELETE SET NULL,
+      related_enquiry_id INTEGER REFERENCES scott_enquiries(id) ON DELETE SET NULL,
+      resolved_by_user_id INTEGER REFERENCES users(id),
+      resolved_by_portal_user_id INTEGER REFERENCES scott_portal_users(id),
+      resolved_by_name VARCHAR(120) NOT NULL DEFAULT '',
+      source_corrected BOOLEAN NOT NULL DEFAULT false,
+      resolution_note TEXT NOT NULL DEFAULT '',
+      resolved_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_scott_brain_gaps_status ON scott_brain_gaps (status, created_at DESC)`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_scott_brain_gaps_responsible ON scott_brain_gaps (responsible_persona_id, status)`);
+    // Where a fictional staff member's gap notification is delivered.
+    // Left blank by default, which means the single demonstration inbox
+    // in gapNotifier.js. Nothing invents an @scotts-armchairs address:
+    // it would bounce, and a bouncing send makes the recorded delivery
+    // result worthless.
+    await db.query(`ALTER TABLE scott_portal_users
+      ADD COLUMN IF NOT EXISTS notify_email VARCHAR(255) NOT NULL DEFAULT ''`);
+    console.log('Scott AI Demonstration: Brain Gap register verified.');
+  }
+
+  // One-shot Brain Gap acceptance check, gated on
+  // RUN_GAP_ACCEPTANCE_CHECK=true and its own already-ran marker. Proves
+  // the real notification chain in this environment; see the script's
+  // header for exactly what it does and does not claim.
+  await require('../scripts/scottGapAcceptance').runGapAcceptanceCheck(db);
+
   console.log('Seed complete.');
 }
 
 seed()
-  .then(() => process.exit(0))
+  // process.exitCode may have been set by the acceptance check; a plain
+  // exit(0) here would overwrite an honest failure with a green exit.
+  .then(() => process.exit(process.exitCode || 0))
   .catch(err => {
     console.error('Seed failed:', err);
     process.exit(1);

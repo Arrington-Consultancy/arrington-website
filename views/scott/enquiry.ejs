@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= enquiry.subject %> | Scott's Armchair &amp; Knitting Service</title>
+  <meta name="robots" content="noindex, nofollow">
+  <%- include('partials/styles') %>
+</head>
+<body class="scott-body">
+  <div class="sc-shell">
+    <%- include('partials/sidebar', { active: 'enquiries' }) %>
+    <main class="sc-main">
+      <div class="sc-page-header">
+        <div>
+          <p class="sc-back-link-wrap"><a href="/scott/enquiries" class="sc-back-link">&larr; All enquiries</a></p>
+          <h1 class="sc-h"><%= enquiry.subject %></h1>
+          <p><%= enquiry.customer_name %> &middot; via <%= enquiry.channel %> &middot; <%= new Date(enquiry.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) %></p>
+        </div>
+        <form id="scAssignForm" class="sc-row-actions">
+          <select id="scAssignSelect" class="sc-select">
+            <option value="">Unassigned</option>
+            <% Object.keys(workers).filter(function (id) { return id !== 'receptionist'; }).forEach(function (id) { %>
+              <option value="<%= id %>" <%= enquiry.assigned_worker_id === id ? 'selected' : '' %>><%= workers[id].characterName %> (<%= workers[id].displayRole %>)</option>
+            <% }); %>
+          </select>
+          <button type="submit" class="sc-btn sc-btn-outline" id="scAssignSave">Assign</button>
+        </form>
+      </div>
+      <div id="scAssignNote" class="sc-inline-note" hidden>Assignment updated.</div>
+
+      <div class="sc-detail-grid">
+        <div>
+          <div class="sc-card sc-detail-card">
+            <h2 class="sc-section-title">Message</h2>
+            <p class="sc-detail-text"><%= enquiry.message %></p>
+          </div>
+          <% if (enquiry.related_job_ref) { %>
+          <div class="sc-card sc-detail-card">
+            <h2 class="sc-section-title">Related job</h2>
+            <a href="/scott/jobs/<%= enquiry.related_job_ref %>" class="sc-btn sc-btn-outline"><%= enquiry.related_job_ref %></a>
+          </div>
+          <% } %>
+        </div>
+        <div>
+          <%- include('partials/chat-widget', { workersById: workersById, csrfToken: csrfToken, aiEnabled: aiEnabled, suggestions: false, relatedEnquiryId: enquiry.id, initialConversationId: initialConversationId, initialMessages: initialMessages }) %>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script nonce="<%= nonce %>">
+    (function () {
+      var csrfToken = <%- JSON.stringify(csrfToken) %>;
+      var enquiryId = <%- JSON.stringify(enquiry.id) %>;
+      document.getElementById('scAssignForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var select = document.getElementById('scAssignSelect');
+        var btn = document.getElementById('scAssignSave');
+        var note = document.getElementById('scAssignNote');
+        btn.disabled = true;
+        fetch('/api/scott/enquiries/' + enquiryId + '/assign', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
+          body: JSON.stringify({ workerId: select.value })
+        }).then(function (r) { return r.json(); }).then(function (data) {
+          if (data.ok) {
+            note.hidden = false;
+            setTimeout(function () { note.hidden = true; }, 2500);
+          }
+        }).finally(function () { btn.disabled = false; });
+      });
+    })();
+  </script>
+</body>
+</html>

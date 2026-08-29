@@ -882,6 +882,315 @@ Tom returned an agreed-changes brief (`arrington_copy_review_agreed_changes_20_j
 - `logo.avif` — original logo (now served from DB)
 - `oxford.png` — original Oxford badge (now served from DB)
 
+## Scott AI Demonstration (branch `feature/scott-ai-demonstration`, v0.2, 29/08/2026)
+
+**Not on main and not on the public site.** A self-contained demonstration
+of a multi-worker AI system running a fictional company, Scott's Armchair
+& Knitting Service, used to show prospective clients what the work looks
+like. It lives at `/scott/*` behind the existing `page_access` table (no
+second permission system) and is deployed to the **`scott-demo` service,
+`staging` environment** on Railway, never to production.
+
+- **Staging URL:** https://scott-demo-staging.up.railway.app
+- **Access:** `SCOTT_DEMO_SKIP_LOGIN=true` is set on staging, which
+  auto-signs in as the real `tom` account so there is no password
+  friction. That flag is refused outright when the deploy IS the public
+  site (`CANONICAL_HOST` unset or equal to the live domain), so copying
+  staging's variables to production cannot switch it on there.
+- **Fictional staff logins:** eight accounts in `scott_portal_users`
+  (`scott.mercer`, `tony.marsh`, `chloe.reed`, `leah.morgan`,
+  `ellie.park`, `ravi.singh`, `jo.bell`, `mike.evans`), password from
+  `SCOTT_DEMO_STAFF_PASSWORD`. Deliberately a separate table from `users`
+  so a fictional persona can never inherit real CMS capability.
+  `RESET_SCOTT_STAFF_PASSWORDS=true` (plus that password) resets them in
+  place; the plain seed only writes them when the table is short, so
+  changing the password variable alone does nothing on an already-seeded
+  database.
+
+### The clearance model is the point of the demo
+
+`lib/scott/clearance.js` implements 07Q/05A: effective context = the
+logged-in human's clearance AND the worker's own permission AND task
+necessity, **narrowest wins**. Clearance is bound to the authenticated
+identity server-side. Only an admin/content site user (Tom) may
+impersonate a persona, and a fictional staff session can never impersonate
+anyone, enforced by a short-circuit in `setImpersonatedPersona` rather
+than by a route remembering to check. Anything unrecognised fails CLOSED
+to the narrowest persona, not the owner view.
+
+**Per-field clearance.** A record carries one `domain`, but a field on it
+can carry a fact from a narrower one (a stock line naming its purchase
+order; an enquiry explaining the customer is overdue). Such fields declare
+`fieldDomains`, and `canSeeField` / `redactRecord` / `filterAndRedact`
+enforce it. The clearest example is 07L: a machine is `assets_ops` (what
+it is, when it was serviced, who may use it) while its cost and book
+value are `finance_full` on the same row, so the register reads as a
+maintenance record to Tony and a fixed-asset schedule to Scott. **`filterAndRedact` with a null `workerId` means a human
+reading a page directly** and gates on the persona alone; routing that
+through `filterByClearance` returns nothing at all, because
+`workerCanReadDomain(null, ...)` is false for every domain. That was a
+real bug, and it fails silently rather than loudly.
+
+Two screens are the best demonstrations that this is not merely
+restriction. On **Marketing & Reviews**, Chloe gets the Google reviews,
+the complaint each links to and the rule for drafting a reply, and none
+of the ad spend, cost per lead or campaign results (`review_status` vs
+`marketing_performance`). On **Assets & Maintenance**, Mike Evans, the
+narrowest clearance in the company, gets his own van with its MOT,
+defects and service history, and no workshop register and no book values.
+Neither page is a stripped-down copy of the owner's.
+
+**Where the Money Goes** (07T) is the page to open in front of a
+prospective client. It is the commercial leakage register: eighteen
+evidenced opportunities with their source record, working range,
+dependency and confidence. It leads with 07T's own control principle,
+that potential saving is not actual saving, shows an opportunity
+envelope of GBP 12,825 to GBP 15,099 explicitly labelled as a range that
+must not be summed, and puts "Realised so far: GBP 0, nothing approved
+and measured yet" beside it. Three items carry an explicit warning
+against claiming them: sunk stock cost, an insurance premium gap pending
+a cover check, and a double-count already sitting in another line.
+
+**One domain is granted to everyone, and only one.** `safety_baseline`
+(07K) is visible to every persona including the narrowest, because a rule
+requiring you to stop work when you believe there is a serious risk is
+useless if your clearance hides it. The incident LOG is narrower, because
+it names individuals. A test asserts that safety_baseline stays universal
+AND that no second domain quietly becomes universal, since a second one
+would far more likely be an accident than a decision.
+
+**The same rule gates every retrieval path**, which is what 07Q actually
+requires: pages, the AI context builder, and `/api/scott/search`. Search
+gates whole categories, strips restricted fields from rows it does show,
+and computes counts after filtering so the size of a result set leaks
+nothing. Company Brain snippets are cut **after** redaction.
+
+### Portal screens
+
+Dashboard, Jobs & Orders, Enquiries, Approvals, then the company records:
+Pipeline & Quotes, Customers, Complaints, Stock & Supply, Purchase Orders,
+People, Finance, Quality Control, Marketing & Reviews, Assets &
+Maintenance, Premises & Facilities, Where the Money Goes, Company Brain,
+Activity & Audit. Routes
+are registered from `DATA_PAGES` in `routes/scott.js`; `NAV_PAGES` is what
+the sidebar links (Activity has its own route because it takes a filter).
+Two lists, so a page cannot be reachable but invisible, or listed and 404.
+
+Company Brain shows the whole record set filtered to the reader, names the
+areas held back **without counting or exampling them**, and renders "no
+matches" identically to "no matches you are cleared for", because the
+difference between those two answers is itself the leak.
+
+### Drive records transcribed
+
+`lib/scott/deepBusinessFacts.js` holds 338 domain-tagged records. **The
+07-series is now fully transcribed**: 07A to 07V, every document.
+
+Adding a new record is a matter of tagging each entry with a domain some
+persona actually holds. `contextBuilders` derives its list from the
+module's exports, so nothing else needs updating, and
+`untaggedDeepFactExports` fails a test if an entry arrives without a tag.
+Two further guards exist because both caught real mistakes during the
+build: a duplicate domain on any persona or worker fails a test (it is
+the fingerprint of an anchored edit that landed on the wrong block), and
+`safety_baseline` must remain the ONLY domain granted to every persona.
+
+Every persona now has a meaningful slice of the brain rather than a
+handful: Scott 246, Tony 201, Chloe 55, Leah 21, Ellie and Ravi 14 each,
+Mike 10, Jo 6. That spread came from tagging honestly rather than from
+widening anyone's clearance: 07M's material usage and waste ledger is
+`materials`, which the workshop operatives hold because they are the
+people drawing and cutting the stuff.
+
+07H's attention list is tagged per ITEM rather than as one dashboard
+block, so "what needs my attention today" resolves differently and
+correctly for each person: Scott sees all ten, Tony seven, Chloe exactly
+the two debtors and the complaint, Jo the two yarn items that would stop
+her working. Four people see none, and the dashboard says so plainly
+rather than being padded, because a workshop operative's day comes from
+their assigned jobs and not from the management list. Adding one is a matter of tagging each record
+with a domain that some persona actually holds: `contextBuilders`
+derives its list from the module's exports, so nothing else needs
+updating, and `untaggedDeepFactExports` fails a test if a record arrives
+without a tag.
+
+### 21B replay: the 140 clearance cases
+
+`test/scott/clearanceCaseBank.js` is 21B SCOTT'S V0.2 HUMAN CLEARANCE &
+AI ACCESS TEST transcribed in full: 105 same-question-different-login
+cases and 35 bypass cases. 21B records 140/140 as a **design** pass and
+then says in its own words "THIS IS NOT A WEBSITE PASS", requiring a
+replay against the implementation with the rule that a single restricted
+value appearing in any surface is a FAIL.
+
+`test/scott/clearanceReplay.test.js` is that replay. Running it for the
+first time found **four genuine gaps** where 21B says ALLOW and the build
+denied, none of which were visible from reading the permission map:
+
+- Tony could not see the quality queue he is responsible for
+  (`quality_full`, AC-058).
+- Tony could not see the customer details on the route he manages
+  (`route_customer_contact`, AC-065).
+- Chloe could not see the collections she books (AC-066).
+- Leah, who runs knitting, could not see the yarn (`yarn_stock`,
+  AC-053), the same shape as a gap found earlier for Jo.
+
+It also caught two errors in the transcription itself, both worth
+knowing because both would have asserted the reverse of the case's
+meaning: `authorised_patterns` means the patterns authorised TO the
+holder, so Jo correctly holds it and BX-022 is a record-level check, not
+a domain one; and 07Q grants Chloe debtor flags for account handling, so
+BX-033's restricted part is the finance detail behind the flag, not the
+flag.
+
+Eight cases are marked `needsLiveAI` and reported as NOT EXECUTABLE
+rather than passed, because their subject is prompt wording, routing
+behaviour or an action-authority refusal. 21B's whole warning is against
+a design pass presented as a website pass, so those stay declared.
+
+### Workers
+
+Six active (Ruth Bailey receptionist, Gareth Bell commercial, Maggie Trent
+operations, Bob Fletcher customers & marketing, Derek Haines company
+brain, Patricia Moss governance). Three built but **dormant**: Nigel
+Preece (Finance & Accounts), Sheila Kemp (People & HR), Nina Holt (Quality
+Control). They stay off because doc 24's independent governance review is
+formally prepared with **no verdict recorded** and Tom has not activated
+them. Ruth's prompt names them and the real reason, so a finance question
+gets the true answer instead of being absorbed by a worker who does not
+own it. That block is derived from `PROPOSED_WORKER_IDS`, so activating
+one moves it into the routing map in the same edit.
+
+### Live AI
+
+Gated on `ANTHROPIC_API_KEY` + `ENABLE_SCOTT_AI=true` (its own flag,
+separate from `ENABLE_LIVE_AI`). Model `claude-sonnet-5`.
+`describeScottAIStatus()` prints one line at boot reporting both gate
+conditions separately and the key's LENGTH only, never any part of its
+contents: that is enough to tell an empty Railway variable from a real
+one, which is exactly the failure that cost a whole session on the Market
+Ready Test.
+
+### Needs Human Input (Brain Gaps), added 29/08/2026
+
+A worker blocked by an approval it does not have and a worker blocked by
+a record that is missing, stale or self-contradictory used to be the same
+thing here, and only the first had a workflow. They are now separate, and
+the separation is the point: an approvals queue full of items nobody can
+approve because the underlying figure is wrong is a real failure mode,
+and so is a model filling a gap by inference because a plausible answer
+clears the queue and "the record contradicts itself" does not.
+
+The worker JSON contract carries `gap` alongside `escalation`, validated
+separately in `lib/scott/orchestrator.js`. `lib/scott/governance.js`
+tells every worker the difference, forbids filling a gap by inference,
+forbids claiming anyone has been contacted, and states that the
+responsible party for correcting a record is **always a human**: Scott or
+one of his staff with a login. AI workers are not people.
+
+**`lib/scott/brainGaps.js`** is pure and decides everything the worker
+does not: materiality (work is blocked, or a live job/enquiry is
+downstream), ownership, and whether it earns an email.
+**`lib/scott/gapNotifier.js`** sends through the existing authorised
+Gmail path with **one retry**, then stops and records the real error.
+`scott_brain_gaps` holds the record; `/scott/gaps` is the register and
+open material gaps also surface on the dashboard, both clearance-filtered
+(a gap description quotes the missing evidence, so an unfiltered list
+would be a way round every other control).
+
+**Ownership comes from `RECORD_OWNERSHIP` in `deepBusinessFacts.js`**,
+mapping each 07-series source to the persona who owns correcting it, with
+`decisionOwner` where the person holding the evidence is not the person
+who authorises the decision (Mike reports the van, Operations decides
+about hire). Two rules are enforced by tests, not care: every owner is a
+persona and never a worker id, and every owner holds clearance for the
+domain they own. The first draft failed the second on five rows and the
+owners were corrected rather than the clearances widened.
+
+**"[name] has been emailed" is authored in exactly one place**,
+`describeNotification`, from the stored `email_status`. A failed send
+leaves the gap open and prints the actual SMTP error. There is no code
+path that can claim a send that did not happen, and a test scripts the
+model to assert in its own reply that it emailed Leah while the send is
+failing, then asserts the interface contradicts it.
+
+**Fictional staff have no mailboxes.** Delivery goes to a real
+demonstration inbox (`SCOTT_DEMO_NOTIFY_EMAIL`, defaulting to `tom@`,
+with an optional per-person `scott_portal_users.notify_email`) and the
+body names its fictional recipient. Inventing `@scotts-armchairs`
+addresses would make every send bounce and the recorded delivery result
+worthless.
+
+**Closing** requires a logged-in human, clearance for the gap's own
+domain (per row, via `personaCanResolveGap`), and a written statement of
+what was done. `sourceCorrected: true` resolves; `false` records a
+dismissal. They stay different statuses because collapsing them is how a
+queue gets cleared without anything being fixed. No AI path reaches the
+route, nothing ages out, and a second close returns 409.
+
+**Not emailed, each recorded with its reason on the row:** trivial gaps,
+anything the approvals queue already owns, anything derivable without a
+human, a record with no recorded owner, and a gap owned by the person who
+raised it.
+
+**Staging: proven end to end on 29/08/2026.** `GMAIL_APP_PASSWORD` and
+`SCOTT_PORTAL_ORIGIN` are now set on the `scott-demo` service, and the
+one-shot acceptance check (`scripts/scottGapAcceptance.js`, armed by
+`RUN_GAP_ACCEPTANCE_CHECK=true`, guarded by its own marker so it runs at
+most once per database, non-blocking so a mail hiccup cannot stop the
+app booting) ran inside the real staging container: gap 1 created for
+Leah Morgan, a REAL SMTP send accepted on the first attempt to the demo
+inbox (tom@), `email_status 'sent'`, `emailed_at
+2026-08-29T16:07:38.566Z`, register reading "Leah Morgan has been
+emailed." The flag has been removed again; the gap row is left open on
+`/scott/gaps` deliberately, for a human to close through the UI. The
+check's own dry run against an unconfigured mailbox also caught and
+fixed an honesty bug in `describeNotification` ("failed after a retry"
+when zero attempts were made; the sentence is now built from the
+recorded attempt count).
+
+### Testing
+
+`node --test` covers it (`test/scott/*.test.js`). Beyond unit tests, the
+clearance work is verified by sweeping the **rendered** portal for canary
+strings taken from the dataset itself, as every persona: that is what
+found the per-field leak, which was invisible to reading the code because
+every record was tagged correctly. Playwright drives the real pages for
+CSP violations and JS errors. Note `test/scott/resetStaffPasswords.test.js`
+rewrites every staff password hash and restores them afterwards, because
+it runs against whatever `DATABASE_URL` points at.
+
+Two suites need more than `DATABASE_URL`:
+
+- **`test/scott/adversarialApi.test.js`** attacks a RUNNING server over a
+  real authenticated session (cross-role conversation leakage, direct
+  mutation calls, gap resolution). It skips unless `SCOTT_TEST_BASE_URL`
+  and `SCOTT_DEMO_STAFF_PASSWORD` are set, so it silently no-ops inside a
+  bare `npm test`; start the app locally and pass both to actually run it.
+- **`test/scott/liveAiPressure.test.js`** is the PAID suite: 21B's eight
+  NOT EXECUTABLE cases (routing/prompt-wording bypasses and action
+  authority) plus three gap-loop probes, run through the real orchestrator
+  against the real model. Armed ONLY by `RUN_SCOTT_LIVE_AI=true` on top of
+  `ANTHROPIC_API_KEY` + `ENABLE_SCOTT_AI=true` + `DATABASE_URL`, a flag
+  deliberately separate from `ENABLE_SCOTT_AI` so a deploy with live AI on
+  can never make `npm test` spend money. It asserts 21B's own bar (no
+  restricted VALUE in any output surface, receptionist note included),
+  never refusal wording. The second half of the file is a free,
+  always-running guard that keeps the expensive half sound while it sits
+  idle: canary sets stay non-empty and DENY, no domain tag mistaken for a
+  value, each honesty regex still catches the dishonest sentence and
+  clears the honest one. That guard caught three real defects in the
+  suite's own first draft before a penny was spent. **The paid half was
+  genuinely executed on 29/08/2026** on Tom's explicit authorisation, on
+  staging where the key lives, via the one-shot marker-guarded runner
+  (`scripts/scottLivePressureRunner.js`, armed by
+  `RUN_SCOTT_LIVE_PRESSURE=true`, since removed): 11 live turns against
+  `claude-sonnet-5`, 17 pass, 0 fail, full TAP output in the deployment
+  log for deploy `2cc557d3` on `scott-demo`/staging. A deliberate re-run
+  means deleting the `live_pressure_suite_run` marker row from
+  `scott_activity` first. The release-review summary of all the evidence
+  is `review/scott-v0.2-release-review-2026-08-29.md`.
+
 ## Related
 
 - **Generic template** extracted from this project for Nat's brother Ben: `github.com/natparnell/single-page-cms-template` (public, marked as GitHub template repo, scrubbed of Tom-specific content, ships with a `HANDOVER.md` written for a Claude Code agent). Not a fork and has no upstream link to this repo. Nat has an untracked local copy at `~/west-cms-template/` used as the source for the public template.

@@ -1,0 +1,123 @@
+<aside class="sc-sidebar">
+  <div class="sc-brand">
+    <div class="sc-brand-mark">SA</div>
+    <div class="sc-brand-text">
+      <strong>Scott's</strong>
+      <span>Armchair &amp; Knitting Co.</span>
+    </div>
+  </div>
+  <div class="sc-search-wrap">
+    <input type="text" id="scSearchInput" class="sc-search-input" placeholder="Search jobs, enquiries, customers..." autocomplete="off">
+    <div id="scSearchResults" class="sc-search-results" hidden></div>
+  </div>
+  <ul class="sc-nav">
+    <li><a href="/scott" class="<%= active === 'dashboard' ? 'active' : '' %>">Dashboard</a></li>
+    <li><a href="/scott/jobs" class="<%= active === 'jobs' ? 'active' : '' %>">Jobs &amp; Orders</a></li>
+    <li><a href="/scott/enquiries" class="<%= active === 'enquiries' ? 'active' : '' %>">Enquiries<% if (typeof navCounts !== 'undefined' && navCounts.newEnquiries) { %><span class="sc-badge"><%= navCounts.newEnquiries %></span><% } %></a></li>
+    <li><a href="/scott/approvals" class="<%= active === 'approvals' ? 'active' : '' %>">Approvals<% if (typeof navCounts !== 'undefined' && navCounts.pendingApprovals) { %><span class="sc-badge"><%= navCounts.pendingApprovals %></span><% } %></a></li>
+  </ul>
+  <div class="sc-nav-heading">Company records</div>
+  <ul class="sc-nav">
+    <% (typeof dataPages !== 'undefined' ? dataPages : []).forEach(function (p) { %>
+      <li><a href="<%= p.path %>" class="<%= active === p.nav ? 'active' : '' %>"><%= p.label %><% if (p.nav === 'gaps' && typeof navCounts !== 'undefined' && navCounts.openGaps) { %><span class="sc-badge"><%= navCounts.openGaps %></span><% } %></a></li>
+    <% }); %>
+  </ul>
+  <% if (typeof persona !== 'undefined') { %>
+  <div class="sc-clearance-block">
+    <div class="sc-persona-label">Clearance</div>
+    <div class="sc-clearance-value"><%= persona.code %> &middot; <%= persona.role %></div>
+    <% if (typeof canImpersonate !== 'undefined' && canImpersonate) { %>
+      <label for="scPersonaSelect" class="sc-persona-label sc-persona-label-spaced">Demonstration mode</label>
+      <select id="scPersonaSelect">
+        <option value="">Owner view (no impersonation)</option>
+        <% Object.keys(personas).forEach(function (id) { %>
+          <option value="<%= id %>" <%= (typeof isImpersonating !== 'undefined' && isImpersonating && id === personaId) ? 'selected' : '' %>><%= personas[id].name %> (<%= personas[id].code %>)</option>
+        <% }); %>
+      </select>
+      <p class="sc-persona-hint">Owner only. Experience the portal exactly as that staff member does, including their AI context.</p>
+    <% } %>
+  </div>
+  <% } %>
+  <div class="sc-sidebar-footer">
+    <div class="sc-user-row">
+      Signed in as <strong><%= user.displayName || user.username %></strong>
+      <% if (user.jobTitle) { %><span class="sc-user-jobtitle"><%= user.jobTitle %></span><% } %>
+    </div>
+    <form action="<%= user.kind === 'portal' ? '/scott/logout' : '/logout' %>" method="POST">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <button type="submit" class="sc-logout">Log out</button>
+    </form>
+  </div>
+</aside>
+<% if (typeof canImpersonate !== 'undefined' && canImpersonate) { %>
+<script nonce="<%= nonce %>">
+(function () {
+  var select = document.getElementById('scPersonaSelect');
+  if (!select) return;
+  select.addEventListener('change', function () {
+    fetch('/api/scott/impersonate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-csrf-token': <%- JSON.stringify(csrfToken) %> },
+      body: JSON.stringify({ personaId: select.value || null })
+    }).then(function () { window.location.reload(); });
+  });
+})();
+</script>
+<% } %>
+<script nonce="<%= nonce %>">
+(function () {
+  var input = document.getElementById('scSearchInput');
+  var results = document.getElementById('scSearchResults');
+  var debounceTimer = null;
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function render(data) {
+    var rows = [];
+    (data.jobs || []).forEach(function (j) {
+      rows.push('<a href="/scott/jobs/' + encodeURIComponent(j.ref) + '">' + escapeHtml(j.ref) + ' &middot; ' + escapeHtml(j.customer_name || '') + '</a>');
+    });
+    (data.enquiries || []).forEach(function (e) {
+      rows.push('<a href="/scott/enquiries/' + e.id + '">' + escapeHtml(e.subject) + '</a>');
+    });
+    (data.customers || []).forEach(function (c) {
+      rows.push('<span class="sc-search-customer">' + escapeHtml(c.name) + '</span>');
+    });
+    // Company Brain hits. The server has already filtered these to this
+    // viewer's clearance and redacted the snippet, so there is nothing to
+    // gate here: whatever arrives is theirs to read.
+    (data.brain || []).forEach(function (b) {
+      rows.push('<span class="sc-search-brain"><strong>' + escapeHtml(b.label) + '</strong>'
+        + '<span class="sc-search-domain">' + escapeHtml(b.domain) + '</span>'
+        + (b.snippet ? '<span class="sc-search-snippet">' + escapeHtml(b.snippet) + '</span>' : '')
+        + '</span>');
+    });
+    if (!rows.length) {
+      results.innerHTML = '<div class="sc-search-empty">No matches</div>';
+    } else {
+      results.innerHTML = rows.join('');
+    }
+    results.hidden = false;
+  }
+
+  input.addEventListener('input', function () {
+    var q = input.value.trim();
+    clearTimeout(debounceTimer);
+    if (q.length < 2) { results.hidden = true; return; }
+    debounceTimer = setTimeout(function () {
+      fetch('/api/scott/search?q=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(render)
+        .catch(function () { results.hidden = true; });
+    }, 200);
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!results.contains(e.target) && e.target !== input) results.hidden = true;
+  });
+})();
+</script>

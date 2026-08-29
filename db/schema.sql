@@ -267,4 +267,257 @@ CREATE TABLE IF NOT EXISTS product_guide_submissions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     contacted_at TIMESTAMPTZ
 );
+
+-- ============================================================
+-- Scott AI Demonstration (private, invited-access only)
+--
+-- A fully isolated fictional dataset for "Scott's Armchair & Knitting
+-- Service" — see lib/scott/config.js for the Drive snapshot this was built
+-- from. Nothing in this section is ever read by, or written to, any real
+-- Arrington Consultancy table, and no real Arrington business data is ever
+-- read into it. Access is gated through the existing page_access mechanism
+-- against a synthetic hidden `pages` row (see db/seed.js) — no second auth
+-- system, reusing the site's own session/bcrypt/Postgres login as-is.
+--
+-- Every scott_* table is prefixed so it is trivially greppable as isolated,
+-- and every row it inserts is fictional. Structured fields on scott_jobs /
+-- scott_enquiries / scott_customers are only ever changed by explicit,
+-- code-driven actions a logged-in human takes in the UI (assign, mark
+-- resolved, approve) — never directly by free-text JSON coming back from an
+-- AI worker call. A worker's proposed material change is instead recorded
+-- as an append-only row in scott_writebacks / scott_activity, which is the
+-- demonstration's own private audit trail, explicitly never a write to the
+-- real Drive brain (see lib/scott/governance.js).
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS scott_customers (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    kind VARCHAR(20) NOT NULL DEFAULT 'householder' CHECK (kind IN ('householder', 'business')),
+    location VARCHAR(200) NOT NULL DEFAULT '',
+    notes TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS scott_jobs (
+    id SERIAL PRIMARY KEY,
+    ref VARCHAR(20) UNIQUE NOT NULL,
+    customer_id INTEGER REFERENCES scott_customers(id) ON DELETE SET NULL,
+    kind VARCHAR(20) NOT NULL CHECK (kind IN ('repair', 'knitting', 'combined')),
+    description TEXT NOT NULL DEFAULT '',
+    status VARCHAR(20) NOT NULL DEFAULT 'enquiry' CHECK (status IN ('enquiry', 'quoted', 'scheduled', 'in_progress', 'awaiting_parts', 'on_hold', 'completed', 'delivered')),
+    price_pence INTEGER,
+    promised_date DATE,
+    collection_date DATE,
+    at_risk BOOLEAN NOT NULL DEFAULT false,
+    risk_note TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_scott_jobs_status ON scott_jobs (status);
+CREATE INDEX IF NOT EXISTS idx_scott_jobs_customer ON scott_jobs (customer_id);
+
+CREATE TABLE IF NOT EXISTS scott_enquiries (
+    id SERIAL PRIMARY KEY,
+    customer_id INTEGER REFERENCES scott_customers(id) ON DELETE SET NULL,
+    customer_name VARCHAR(200) NOT NULL DEFAULT '',
+    customer_email VARCHAR(255) NOT NULL DEFAULT '',
+    channel VARCHAR(30) NOT NULL DEFAULT 'phone',
+    subject VARCHAR(255) NOT NULL DEFAULT '',
+    message TEXT NOT NULL DEFAULT '',
+    status VARCHAR(20) NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'routed', 'responded', 'closed')),
+    assigned_worker_id VARCHAR(30),
+    related_job_id INTEGER REFERENCES scott_jobs(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_scott_enquiries_status ON scott_enquiries (status);
+
+-- Append-only. Feeds the "recent activity" feed on the hub — every row here
+-- reflects something that actually happened in the demonstration (a real
+-- routed request, a real approval, a real draft), never invented filler.
+CREATE TABLE IF NOT EXISTS scott_activity (
+    id SERIAL PRIMARY KEY,
+    actor VARCHAR(30) NOT NULL,
+    event_type VARCHAR(40) NOT NULL,
+    summary TEXT NOT NULL,
+    related_job_id INTEGER REFERENCES scott_jobs(id) ON DELETE SET NULL,
+    related_enquiry_id INTEGER REFERENCES scott_enquiries(id) ON DELETE SET NULL,
+    conversation_id INTEGER,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_scott_activity_created ON scott_activity (created_at DESC);
+
+-- A worker's proposed material write-back. Append-only by design (see the
+-- header note above) — approving one never rewrites a structured column on
+-- scott_jobs/scott_enquiries directly, it only allows the note to stand as
+-- part of the record and appear in scott_activity. requires_approval is set
+-- whenever the proposing worker's own specification says the underlying
+-- decision needs Scott Mercer or Tom Arrington approval (e.g. a discount
+-- above 10%); Company Brain & Records is the only worker whose own
+-- record-keeping writebacks apply without a further approval step, matching
+-- the real Permission Map.
+CREATE TABLE IF NOT EXISTS scott_writebacks (
+    id SERIAL PRIMARY KEY,
+    conversation_id INTEGER,
+    message_id INTEGER,
+    proposing_worker_id VARCHAR(30) NOT NULL,
+    intent_type VARCHAR(40) NOT NULL,
+    summary TEXT NOT NULL,
+    related_job_id INTEGER REFERENCES scott_jobs(id) ON DELETE SET NULL,
+    related_enquiry_id INTEGER REFERENCES scott_enquiries(id) ON DELETE SET NULL,
+    requires_approval BOOLEAN NOT NULL DEFAULT false,
+    status VARCHAR(20) NOT NULL DEFAULT 'auto_applied' CHECK (status IN ('auto_applied', 'pending_approval', 'approved', 'rejected', 'superseded')),
+    decided_by_user_id INTEGER REFERENCES users(id),
+    -- A fictional staff member has no users row, so their approval was
+    -- recorded as NULL: indistinguishable from an approval nobody made.
+    -- An audit trail whose most important column can be empty is not one.
+    decided_by_portal_user_id INTEGER REFERENCES scott_portal_users(id),
+    decided_by_name VARCHAR(120) NOT NULL DEFAULT '',
+    decided_at TIMESTAMPTZ,
+    edited_by_human BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_scott_writebacks_status ON scott_writebacks (status);
+
+CREATE TABLE IF NOT EXISTS scott_conversations (
+    id SERIAL PRIMARY KEY,
+    -- Nullable: a conversation auto-started by a public lead submission has
+    -- no logged-in staff member behind it — it's the team's shared record
+    -- of handling that enquiry, not any one person's private chat. Only a
+    -- general (job/enquiry-unscoped) conversation is ever truly personal.
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    -- A fictional staff member has no users row, so their ownership was
+    -- previously represented by user_id being NULL, which is not an
+    -- identity: every portal user looked identical to every other and to
+    -- the public lead form. Ownership is now explicit on whichever of the
+    -- two identity kinds actually started the conversation.
+    portal_user_id INTEGER REFERENCES scott_portal_users(id) ON DELETE CASCADE,
+    -- The clearance the conversation was conducted under. Replaying its
+    -- history to a lower-clearance reader would hand them AI output
+    -- generated from evidence they cannot see, so this is recorded at
+    -- creation and checked on every read.
+    persona_id VARCHAR(40) NOT NULL DEFAULT 'scott_mercer',
+    title VARCHAR(255) NOT NULL DEFAULT 'New conversation',
+    related_job_id INTEGER REFERENCES scott_jobs(id) ON DELETE SET NULL,
+    related_enquiry_id INTEGER REFERENCES scott_enquiries(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS scott_messages (
+    id SERIAL PRIMARY KEY,
+    conversation_id INTEGER NOT NULL REFERENCES scott_conversations(id) ON DELETE CASCADE,
+    sender VARCHAR(20) NOT NULL CHECK (sender IN ('user', 'worker', 'system')),
+    worker_id VARCHAR(30),
+    content TEXT NOT NULL,
+    certainty VARCHAR(10),
+    technical_failure BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_scott_messages_conversation ON scott_messages (conversation_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_product_guide_created_at ON product_guide_submissions (created_at DESC);
+
+-- Scott AI Demonstration: genuine fictional portal staff accounts.
+--
+-- Added 29/08/2026. These are REAL separately-authenticated logins, not a
+-- "view as" selector: each fictional staff member (Scott Mercer, Tony
+-- Marsh, Chloe Reed, Leah Morgan, Ellie Park, Ravi Singh, Jo Bell, Mike
+-- Evans) gets their own username/password and their clearance is bound to
+-- the authenticated row here, server-side. A logged-in fictional user
+-- cannot change their own persona_id and cannot impersonate anyone else;
+-- 07Q's "individual accounts only, no shared staff login" and "attempting
+-- to bypass a restriction through Company Brain, search, another worker or
+-- prompt wording does not change clearance" are both enforced by that
+-- binding rather than by a UI control.
+--
+-- Deliberately a SEPARATE table from `users`: these are fictional
+-- demonstration personas inside one demo area, not real site accounts with
+-- CMS/admin capability. Keeping them out of `users` means a fictional
+-- staff login can never accidentally inherit a real site permission, and
+-- the real site's own auth/permissions code needs no awareness of them.
+CREATE TABLE IF NOT EXISTS scott_portal_users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(60) UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    persona_id VARCHAR(40) NOT NULL,
+    display_name VARCHAR(120) NOT NULL,
+    job_title VARCHAR(160) NOT NULL DEFAULT '',
+    active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_scott_portal_users_username ON scott_portal_users (username);
+
+-- Scott AI Demonstration: the Needs Human Input / Brain Gap register.
+--
+-- Added 29/08/2026. An AI worker blocked by MISSING, STALE or CONFLICTING
+-- evidence is in a different situation from one blocked by an approval it
+-- does not have, and only the second had a workflow (scott_writebacks).
+-- Collapsing the two is how an approvals queue fills with items nobody can
+-- approve because the underlying number is wrong, and how a model ends up
+-- filling a gap by inference to clear the queue.
+--
+-- Three properties of this table are the point of it:
+--
+-- 1. responsible_persona_id is a PERSONA, meaning Scott or one of his
+--    staff with a real login. An AI worker is not a person and is never
+--    the responsible party for correcting a controlled record. The
+--    raising worker is recorded separately in raised_by_worker_id, which
+--    is a different question.
+-- 2. The delivery result is recorded, not the intention. email_status
+--    only reads 'sent' after a genuine successful send, so the interface
+--    can say "[name] has been emailed" without that ever being a claim
+--    the code merely hoped was true. A failure records its actual error.
+-- 3. Closing requires a human. resolved_by_* is never written by any AI
+--    path, and source_corrected is an explicit statement by that human
+--    that the underlying controlled record has been corrected or
+--    confirmed. A gap cannot be cleared by deciding it does not matter
+--    any more.
+CREATE TABLE IF NOT EXISTS scott_brain_gaps (
+    id SERIAL PRIMARY KEY,
+    conversation_id INTEGER,
+    raised_by_worker_id VARCHAR(30) NOT NULL DEFAULT '',
+    -- The clearance domain of the evidence itself, so an open gap is
+    -- filtered on the dashboard by exactly the same rule as the record it
+    -- concerns. A gap description quotes the evidence, so an unfiltered
+    -- gap list would be a way round every other control.
+    domain VARCHAR(60) NOT NULL DEFAULT '',
+    gap_type VARCHAR(20) NOT NULL DEFAULT 'missing' CHECK (gap_type IN ('missing', 'stale', 'conflicting')),
+    missing_evidence TEXT NOT NULL,
+    why_it_matters TEXT NOT NULL,
+    expected_source TEXT NOT NULL DEFAULT '',
+    responsible_persona_id VARCHAR(40),
+    responsible_name VARCHAR(120) NOT NULL DEFAULT '',
+    work_can_continue BOOLEAN NOT NULL DEFAULT false,
+    material BOOLEAN NOT NULL DEFAULT false,
+    status VARCHAR(20) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'notified', 'awaiting_source', 'resolved', 'dismissed')),
+    notify_decision VARCHAR(40) NOT NULL DEFAULT 'not_material',
+    email_status VARCHAR(20) NOT NULL DEFAULT 'not_required' CHECK (email_status IN ('not_required', 'pending', 'sent', 'failed')),
+    email_to VARCHAR(255) NOT NULL DEFAULT '',
+    email_attempts SMALLINT NOT NULL DEFAULT 0,
+    email_error TEXT NOT NULL DEFAULT '',
+    emailed_at TIMESTAMPTZ,
+    related_job_id INTEGER REFERENCES scott_jobs(id) ON DELETE SET NULL,
+    related_enquiry_id INTEGER REFERENCES scott_enquiries(id) ON DELETE SET NULL,
+    resolved_by_user_id INTEGER REFERENCES users(id),
+    resolved_by_portal_user_id INTEGER REFERENCES scott_portal_users(id),
+    resolved_by_name VARCHAR(120) NOT NULL DEFAULT '',
+    -- Explicitly asserted by the human closing it: the controlled source
+    -- has been corrected or confirmed. Closing without this is a dismissal,
+    -- which is a different status and reads differently on the register.
+    source_corrected BOOLEAN NOT NULL DEFAULT false,
+    resolution_note TEXT NOT NULL DEFAULT '',
+    resolved_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_scott_brain_gaps_status ON scott_brain_gaps (status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_scott_brain_gaps_responsible ON scott_brain_gaps (responsible_persona_id, status);
+
+-- Where a fictional staff member's Brain Gap notification is actually
+-- delivered. They are fictional and have no mailbox, so inventing an
+-- address for them would make every send bounce and the "delivery result"
+-- meaningless. The send is real, over the same authorised Gmail path the
+-- rest of the site uses; it goes to a real demonstration inbox and says
+-- plainly in the body which fictional person it is addressed to.
+ALTER TABLE scott_portal_users ADD COLUMN IF NOT EXISTS notify_email VARCHAR(255) NOT NULL DEFAULT '';
+
