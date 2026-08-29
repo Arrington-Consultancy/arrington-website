@@ -623,6 +623,7 @@ Active theme stored in DB, applied via CSS variables. Affects main site and logi
 - **DB transport:** the Postgres pool connects over Railway's private network (`postgres.railway.internal`); `rejectUnauthorized: false` is intentional there (self-signed internal cert, no public-internet path) — do not flip it without testing, it will break connectivity.
 - **CSP violations panel** (gated on `view_csp` capability, admin by default) — captures `securitypolicyviolation` events fired from page load onwards via a nonced inline script in `<head>`, surfaced in the admin menu's System section. Use this to diagnose any CSP issue without opening browser devtools.
 - **Security reviews** logged under `~/.claude/securityharden/reports/` (latest: `2026-06-09-full.md`, verdict LOW). Rerun via `/securityharden`.
+- **npm audit clean as of 29/08/2026** (PRs #115/#116): five findings cleared with in-range lockfile updates (body-parser 2.3.0, ip-address 10.7.0, postcss 8.5.26, nanoid 3.3.18, sanitize-html 2.17.5). **`sanitize-html` is pinned EXACTLY at 2.17.5, deliberately**: 2.17.6+ moved to htmlparser2 v12, which ships no CJS build, and production's Node cannot `require()` an ES module — the 2.17.7 bump crashlooped a production deploy with `ERR_REQUIRE_ESM` (no visitor downtime; Railway kept the old deployment serving). 2.17.5 fixes the advisory (GHSA-vccv-cmxp-4j9h, vulnerable <=2.17.4) while keeping htmlparser2 at the v10 dual build production has always run. **Do not float this pin, and do not trust a green local test run to prove a dependency loads on production**: the dev sandbox runs Node 22, where require-of-ESM works. Lift the pin only together with a deliberate Node upgrade, tested on the production Node major.
 
 ## Voice and tone
 
@@ -669,7 +670,7 @@ npm run dev
 - **Trust proxy:** enabled (required for rate limiting, secure cookies, and HTTPS redirect behind Railway's reverse proxy)
 - **Start command:** `node db/seed.js && node server.js` (seed is idempotent; skips user creation after first run)
 - **Deploy:** `railway up` from project root. Auto-deploy on push to `main` is configured but unreliable — always run `railway up` after pushing to ensure the deploy goes out
-- **GitHub Action (`.github/workflows/deploy.yml`, added 25/07/2026):** runs `railway up --service arrington-prototype --environment production --detach` via the Railway CLI on every push to `main`, as a more reliable alternative to Railway's built-in GitHub auto-deploy, plus a preceding diagnostic step (`railway whoami`/`status`/`variables --json`) that prints project/environment/service identity and variable names/lengths/prefixes — never values — into the Action's own logs, useful for verifying exactly what the live deploy target sees without needing dashboard access. Requires a `RAILWAY_TOKEN` secret in the repo's GitHub Actions settings — must be a **project token** (Railway dashboard → the service → Settings → Tokens → create a token scoped to that service/environment), not a personal account token, so `railway up` needs no `railway link` step and can't accidentally target the wrong project. Manual `railway up` from a local checkout is still fine as a fallback/for out-of-band deploys.
+- **GitHub Action (`.github/workflows/deploy.yml`, added 25/07/2026):** runs `railway up --service arrington-prototype --environment production --detach` via the Railway CLI on every push to `main`, as a more reliable alternative to Railway's built-in GitHub auto-deploy. (A diagnostic step that printed variable names/lengths/prefixes into the Action log, added for the 25/07/2026 Railway variable incident, was removed 29/08/2026 by PR #115: the incident is closed, and a 13-character prefix of long-prefixed keys is a few real secret characters logged on every deploy.) Requires a `RAILWAY_TOKEN` secret in the repo's GitHub Actions settings — must be a **project token** (Railway dashboard → the service → Settings → Tokens → create a token scoped to that service/environment), not a personal account token, so `railway up` needs no `railway link` step and can't accidentally target the wrong project. Manual `railway up` from a local checkout is still fine as a fallback/for out-of-band deploys.
 - **GitHub:** `github.com/natparnell/arrington-prototype` (private)
 
 ## Payments / Where to Start (14/08/2026)
@@ -913,11 +914,12 @@ and staging databases that carry history.
 The `scott-demo` staging service remains for pre-production testing.
 
 - **Staging URL:** https://scott-demo-staging.up.railway.app
-- **Access:** `SCOTT_DEMO_SKIP_LOGIN=true` is set on staging, which
-  auto-signs in as the real `tom` account so there is no password
-  friction. That flag is refused outright when the deploy IS the public
-  site (`CANONICAL_HOST` unset or equal to the live domain), so copying
-  staging's variables to production cannot switch it on there.
+- **Access:** the real Scott login. `SCOTT_DEMO_SKIP_LOGIN` and
+  `RESET_SCOTT_STAFF_PASSWORDS` were removed from the staging service on
+  29/08/2026 as part of the post-release security follow-up (PR #115);
+  the skip-login code path remains in `lib/scott/access.js`, still
+  refused outright on the public site, for any future non-public deploy
+  that needs it.
 - **Fictional staff logins:** eight accounts in `scott_portal_users`
   (`scott.mercer`, `tony.marsh`, `chloe.reed`, `leah.morgan`,
   `ellie.park`, `ravi.singh`, `jo.bell`, `mike.evans`), password from
