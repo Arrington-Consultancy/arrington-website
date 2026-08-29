@@ -1144,6 +1144,10 @@ loadPermissions().then(() => {
   app.listen(PORT, () => {
     console.log(`[${isProd ? 'PROD' : 'DEV'}] Arrington CMS running on port ${PORT}`);
     console.log(require('./lib/scott/orchestrator').describeScottAIStatus());
+    // One-shot, marker-guarded, env-gated runner for the paid live-AI
+    // pressure suite. A no-op unless RUN_SCOTT_LIVE_PRESSURE=true; see
+    // the script header for the spend controls.
+    require('./scripts/scottLivePressureRunner').maybeRunLivePressureSuite(require('./db/pool'));
   });
 }).catch(err => {
   console.error('Failed to load permissions:', err);
