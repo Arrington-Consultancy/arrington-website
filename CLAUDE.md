@@ -1152,6 +1152,31 @@ CSP violations and JS errors. Note `test/scott/resetStaffPasswords.test.js`
 rewrites every staff password hash and restores them afterwards, because
 it runs against whatever `DATABASE_URL` points at.
 
+Two suites need more than `DATABASE_URL`:
+
+- **`test/scott/adversarialApi.test.js`** attacks a RUNNING server over a
+  real authenticated session (cross-role conversation leakage, direct
+  mutation calls, gap resolution). It skips unless `SCOTT_TEST_BASE_URL`
+  and `SCOTT_DEMO_STAFF_PASSWORD` are set, so it silently no-ops inside a
+  bare `npm test`; start the app locally and pass both to actually run it.
+- **`test/scott/liveAiPressure.test.js`** is the PAID suite: 21B's eight
+  NOT EXECUTABLE cases (routing/prompt-wording bypasses and action
+  authority) plus three gap-loop probes, run through the real orchestrator
+  against the real model. Armed ONLY by `RUN_SCOTT_LIVE_AI=true` on top of
+  `ANTHROPIC_API_KEY` + `ENABLE_SCOTT_AI=true` + `DATABASE_URL`, a flag
+  deliberately separate from `ENABLE_SCOTT_AI` so a deploy with live AI on
+  can never make `npm test` spend money. It asserts 21B's own bar (no
+  restricted VALUE in any output surface, receptionist note included),
+  never refusal wording. The second half of the file is a free,
+  always-running guard that keeps the expensive half sound while it sits
+  idle: canary sets stay non-empty and DENY, no domain tag mistaken for a
+  value, each honesty regex still catches the dishonest sentence and
+  clears the honest one. That guard caught three real defects in the
+  suite's own first draft before a penny was spent. **As of 29/08/2026 the
+  paid half has NEVER been executed** (no API key was available in the
+  build sandbox, and Tom's key was deliberately not pulled from Railway);
+  a genuine run is still outstanding and nothing should claim otherwise.
+
 ## Related
 
 - **Generic template** extracted from this project for Nat's brother Ben: `github.com/natparnell/single-page-cms-template` (public, marked as GitHub template repo, scrubbed of Tom-specific content, ships with a `HANDOVER.md` written for a Claude Code agent). Not a fork and has no upstream link to this repo. Nat has an untracked local copy at `~/west-cms-template/` used as the source for the public template.
