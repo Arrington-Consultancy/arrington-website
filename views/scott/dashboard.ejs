@@ -42,6 +42,25 @@
         <% }); %>
       </div>
 
+      <% if (typeof proposedWorkers !== 'undefined' && proposedWorkers.length) { %>
+      <h2 class="sc-section-title">Proposed team (not yet active)</h2>
+      <p class="sc-proposed-note">Built and ready, but not part of the live demonstration. These three specialists remain proposed until an independent governance review has passed and Tom Arrington has explicitly activated them. Ruth cannot route any question to them.</p>
+      <div class="sc-colleagues sc-colleagues-proposed">
+        <% proposedWorkers.forEach(function (w) { %>
+          <div class="sc-card sc-colleague sc-colleague-proposed">
+            <div class="sc-colleague-head">
+              <div class="sc-avatar sc-avatar-proposed"><%= w.initials %></div>
+              <div>
+                <div class="sc-colleague-name"><%= w.characterName %> <span class="sc-proposed-badge">PROPOSED</span></div>
+                <div class="sc-colleague-role"><%= w.displayRole %></div>
+              </div>
+            </div>
+            <p class="sc-colleague-tagline"><%= w.tagline %></p>
+          </div>
+        <% }); %>
+      </div>
+      <% } %>
+
       <div class="sc-detail-grid">
         <div>
           <h2 class="sc-section-title">Recent activity</h2>

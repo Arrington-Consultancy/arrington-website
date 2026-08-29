@@ -23,7 +23,7 @@ const sanitizeHtml = require('sanitize-html');
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const db = require('../db/pool');
 const repo = require('../lib/scott/data/repository');
-const { WORKERS, WORKER_IDS, ROUTABLE_WORKER_IDS, getWorker } = require('../lib/scott/workers');
+const { WORKERS, WORKER_IDS, ACTIVE_WORKER_IDS, ROUTABLE_WORKER_IDS, PROPOSED_WORKER_IDS, getWorker } = require('../lib/scott/workers');
 const { OPERATING_SNAPSHOT_CARDS } = require('../lib/scott/businessFacts');
 const { SNAPSHOT_LABEL } = require('../lib/scott/config');
 const { requireScottPageAccess, requireScottApiAccess, hasScottAccess } = require('../lib/scott/access');
@@ -157,7 +157,13 @@ function mountPageRoute(app, generateCsrfToken) {
       ]);
       res.render('scott/dashboard', {
         user: req.session.user,
-        workers: WORKER_IDS.map((id) => WORKERS[id]),
+        // Active team only — never includes the three proposed v0.2
+        // workers (finance_accounts/people_hr/quality_control). Doc 24's
+        // independent governance review has no verdict recorded, so
+        // "Only active worker personas are presented as active staff"
+        // means exactly this list, not WORKER_IDS.
+        workers: ACTIVE_WORKER_IDS.map((id) => WORKERS[id]),
+        proposedWorkers: PROPOSED_WORKER_IDS.map((id) => WORKERS[id]),
         summary,
         activity,
         approvals,

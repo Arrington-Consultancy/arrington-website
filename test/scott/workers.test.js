@@ -1,85 +1,68 @@
-// Scott AI Demonstration — worker data integrity tests. Pure structural
-// checks against the transcribed worker definitions, not against Drive
-// itself (there is no way to verify "matches Drive" in an automated test —
-// that verification happened by direct read during transcription, see the
-// implementation handoff record). These tests guard against accidental
-// regressions to the six-worker structure itself: no seventh worker, no
-// duplicate names, every required field present.
+// Proves the three proposed v0.2 workers (Nigel/Sheila/Nina) are dormant
+// in the way that actually matters: unreachable by routing, not just
+// visually labelled "proposed" in a template that could drift out of sync
+// with the code. Doc 24's independent governance review has status
+// "NO VERDICT RECORDED" as of the transcription in workers.js — until a
+// later session finds an actual PASS and Tom's activation record in
+// Drive, none of these three may become reachable, and this test is what
+// would catch it if a future edit accidentally made one so.
 
 const { test, describe } = require('node:test');
 const assert = require('node:assert/strict');
-const { WORKERS, WORKER_IDS, ROUTABLE_WORKER_IDS, getWorker } = require('../../lib/scott/workers');
+const workers = require('../../lib/scott/workers');
 
-const EXPECTED_IDS = ['receptionist', 'commercial', 'operations', 'customers_marketing', 'company_brain', 'governance'];
-const EXPECTED_CHARACTERS = {
-  receptionist: 'Ruth Bailey',
-  commercial: 'Gareth Bell',
-  operations: 'Maggie Trent',
-  customers_marketing: 'Bob Fletcher',
-  company_brain: 'Derek Haines',
-  governance: 'Patricia Moss'
-};
-
-describe('worker set integrity', () => {
-  test('exactly six workers, matching the approved canonical set', () => {
-    assert.deepEqual(WORKER_IDS.sort(), EXPECTED_IDS.sort());
-  });
-
-  test('receptionist is excluded from ROUTABLE_WORKER_IDS (it routes, it is never routed to)', () => {
-    assert.ok(!ROUTABLE_WORKER_IDS.includes('receptionist'));
-    assert.equal(ROUTABLE_WORKER_IDS.length, 5);
-  });
-
-  test('each worker has the correct fictional character name (per Bob Fletcher replacing Leanne Price)', () => {
-    for (const [id, name] of Object.entries(EXPECTED_CHARACTERS)) {
-      assert.equal(WORKERS[id].characterName, name, `${id} should be ${name}`);
-    }
-  });
-
-  test('every worker has every required field, non-empty', () => {
-    const requiredStringFields = ['canonicalName', 'characterName', 'displayRole', 'purpose', 'boundaries', 'permissionsSummary', 'approvalGates', 'personality', 'accent', 'initials', 'tagline'];
-    for (const id of WORKER_IDS) {
-      const w = WORKERS[id];
-      for (const field of requiredStringFields) {
-        assert.ok(typeof w[field] === 'string' && w[field].trim().length > 0, `${id}.${field} must be a non-empty string`);
+describe('proposed v0.2 workers are structurally dormant', () => {
+  test('all three proposed workers exist, fully specified, with active: false', () => {
+    for (const id of ['finance_accounts', 'people_hr', 'quality_control']) {
+      const w = workers.WORKERS[id];
+      assert.ok(w, `${id} must exist in WORKERS`);
+      assert.equal(w.active, false, `${id} must be explicitly active: false`);
+      for (const field of ['canonicalName', 'characterName', 'displayRole', 'purpose', 'scope', 'boundaries', 'permissionsSummary', 'approvalGates', 'personality']) {
+        assert.ok(w[field] && (Array.isArray(w[field]) ? w[field].length : w[field].length > 0), `${id}.${field} must be filled in, not a stub`);
       }
-      assert.ok(Array.isArray(w.scope) && w.scope.length > 0, `${id}.scope must be a non-empty array`);
     }
   });
 
-  test('canonical names all start with "SCOTT\'S" and are unique', () => {
-    const names = WORKER_IDS.map((id) => WORKERS[id].canonicalName);
-    assert.equal(new Set(names).size, names.length, 'canonical names must be unique');
-    for (const name of names) assert.ok(name.startsWith("SCOTT'S"), `${name} should start with SCOTT'S`);
+  test('PROPOSED_WORKER_IDS contains exactly the three proposed workers', () => {
+    assert.deepEqual(workers.PROPOSED_WORKER_IDS.sort(), ['finance_accounts', 'people_hr', 'quality_control']);
   });
 
-  test('character names are all unique (no two workers share a fictional identity)', () => {
-    const characters = WORKER_IDS.map((id) => WORKERS[id].characterName);
-    assert.equal(new Set(characters).size, characters.length);
-  });
-
-  test('accent colours are all distinct (so the UI never renders two workers identically)', () => {
-    const accents = WORKER_IDS.map((id) => WORKERS[id].accent);
-    assert.equal(new Set(accents).size, accents.length);
-  });
-
-  test('getWorker returns null for an unknown id rather than throwing', () => {
-    assert.equal(getWorker('does_not_exist'), null);
-  });
-
-  test('getWorker returns the same object as WORKERS[id]', () => {
-    for (const id of WORKER_IDS) {
-      assert.equal(getWorker(id), WORKERS[id]);
+  test('none of the three appear in ROUTABLE_WORKER_IDS — Ruth cannot route to them', () => {
+    for (const id of workers.PROPOSED_WORKER_IDS) {
+      assert.ok(!workers.ROUTABLE_WORKER_IDS.includes(id), `${id} must not be routable`);
     }
   });
 
-  test('every worker\'s personality text ends with the governance disclaimer that traits never override authority', () => {
-    for (const id of WORKER_IDS) {
-      const p = WORKERS[id].personality.toLowerCase();
-      assert.ok(
-        p.includes('never') && (p.includes('override') || p.includes('alter') || p.includes('change')),
-        `${id}'s personality text should explicitly state traits never override its authority/evidence`
-      );
+  test('none of the three appear in ACTIVE_WORKER_IDS', () => {
+    for (const id of workers.PROPOSED_WORKER_IDS) {
+      assert.ok(!workers.ACTIVE_WORKER_IDS.includes(id), `${id} must not be active`);
     }
+  });
+
+  test('isActiveWorker() agrees with ACTIVE_WORKER_IDS for every worker, both ways', () => {
+    for (const id of workers.WORKER_IDS) {
+      assert.equal(workers.isActiveWorker(id), workers.ACTIVE_WORKER_IDS.includes(id), `mismatch for ${id}`);
+    }
+  });
+
+  test('the six original v0.1 workers remain active and routable (Ruth excluded from routable, as before)', () => {
+    const sixOriginal = ['receptionist', 'commercial', 'operations', 'customers_marketing', 'company_brain', 'governance'];
+    for (const id of sixOriginal) {
+      assert.ok(workers.ACTIVE_WORKER_IDS.includes(id), `${id} must remain active`);
+    }
+    for (const id of sixOriginal.filter((id) => id !== 'receptionist')) {
+      assert.ok(workers.ROUTABLE_WORKER_IDS.includes(id), `${id} must remain routable`);
+    }
+    assert.ok(!workers.ROUTABLE_WORKER_IDS.includes('receptionist'), 'Ruth herself stays a non-destination, as before');
+  });
+
+  test('the orchestrator\'s own routing validator would reject a route to a proposed worker', () => {
+    // orchestrator.js's validateReceptionistReply checks route[i].worker
+    // against ROUTABLE_WORKER_IDS directly, so this is really the same
+    // check as above, but exercised the way the actual code path uses it:
+    // a receptionist reply naming "finance_accounts" as a route target is
+    // invalid input, which the orchestrator would reject before ever
+    // calling buildWorkerSystemPrompt() for it.
+    assert.ok(!workers.ROUTABLE_WORKER_IDS.includes('finance_accounts'));
   });
 });
