@@ -254,6 +254,24 @@ test('gap resolution authority', async (t) => {
     assert.ok(clearance.personaCanResolveGap('scott_mercer', { domain: 'finance_full' }));
   });
 
+  await t.test('an unclassified gap is visible only to full clearance, not to everyone', () => {
+    // A gap whose domain never resolved is the one row in the register
+    // that could plausibly fail OPEN, since the filter is asked about an
+    // empty string. It must fail closed, and it must fail closed the
+    // same way personaCanResolveGap does, or the register would show a
+    // gap to someone who then cannot close it (or worse, the reverse).
+    const unclassified = [{ domain: '', missing: 'X' }, { domain: null, missing: 'Y' }, { missing: 'Z' }];
+    const canSee = Object.keys(clearance.PERSONAS)
+      .filter((p) => clearance.filterAndRedact(p, null, unclassified).length > 0);
+    assert.deepEqual(canSee, ['scott_mercer'],
+      'an unclassified gap must not be readable by every login');
+    // The two rules agree: whoever can see it is whoever can close it.
+    const canClose = Object.keys(clearance.PERSONAS)
+      .filter((p) => clearance.personaCanResolveGap(p, { domain: '' }));
+    assert.deepEqual(canClose, canSee,
+      'visibility and closability of an unclassified gap must not diverge');
+  });
+
   await t.test('an unclassified gap is the hardest to close, not the easiest', () => {
     // Failing open on a missing domain would make an unclassified gap
     // the one thing in the system anybody could clear.
