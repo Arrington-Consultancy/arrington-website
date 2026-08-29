@@ -535,7 +535,7 @@ async function seed() {
         }
         if (!keeperCta && allIntervention.length > 0) {
           keeperCta = allIntervention[allIntervention.length - 1];
-          console.warn(`Evidence merge: no intervention instance found with button text "Book a 30 minute conversation" — falling back to keeping ${keeperCta} as the shared closing CTA.`);
+          console.warn(`Evidence merge: no intervention instance found with button text "Book a 30 minute conversation", falling back to keeping ${keeperCta} as the shared closing CTA.`);
         }
 
         const withoutIntervention = (slug) => orderOf(slug).filter(iid => baseOf(iid) !== 'intervention');
@@ -4855,6 +4855,32 @@ async function seed() {
     } else {
       console.log('Scott AI Demonstration: fictional staff logins already present, skipping.');
     }
+  }
+
+  // Em dashes are banned in anything user-visible across this project, and
+  // the ban applies to rows already sitting in a database, not only to the
+  // source that writes new ones. One seeded activity summary carried one
+  // before the source was corrected, and it kept rendering on the Activity
+  // page afterwards because nothing rewrites an existing row.
+  //
+  // The rewrite is done in JS rather than in a SQL regex on purpose. The
+  // first version passed the pattern through a JS template literal, where
+  // \s silently degrades to a literal "s" and \u2014 is converted to the
+  // dash itself before Postgres ever sees the string. It appeared to work
+  // (the dash did go) while actually matching nothing it was meant to,
+  // leaving "seeded ,  v0.1". Two layers of escaping in one line is not
+  // worth the cleverness for a handful of rows.
+  //
+  // Idempotent: a no-op once clean, which is every boot after the first.
+  {
+    const { rows } = await db.query(
+      `SELECT id, summary FROM scott_activity WHERE summary LIKE '%' || U&'\\2014' || '%' OR summary LIKE '%' || U&'\\2013' || '%'`
+    );
+    for (const row of rows) {
+      const fixed = row.summary.replace(/\s*[\u2014\u2013]\s*/g, ', ').replace(/\s+,/g, ',').replace(/\s{2,}/g, ' ');
+      await db.query('UPDATE scott_activity SET summary = $1 WHERE id = $2', [fixed, row.id]);
+    }
+    if (rows.length) console.log(`Scott AI Demonstration: rewrote ${rows.length} activity summary/summaries containing a banned dash.`);
   }
 
   console.log('Seed complete.');

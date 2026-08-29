@@ -40,6 +40,16 @@ const EM_DASH = /—|&mdash;|&#8212;|&#x2014;/;
 // start exempting an innocent one.
 const AWAITING_TOM = [
   {
+    file: 'db/seed.js',
+    contains: 'the alternative was pretending a job title made their judgement identical',
+    reason:
+      'A sentence inside a published Useful Thinking article, written by Tom, already ' +
+      'live on the public site. Editing it would be a change to public Arrington copy ' +
+      'made from a demonstration branch, which is exactly what this work is ring-fenced ' +
+      'from. The dash genuinely should go, so it is raised with Tom rather than removed ' +
+      'quietly: it is his sentence and his site.'
+  },
+  {
     file: 'views/index.ejs',
     contains: 'intervention-quote-attribution',
     reason:
@@ -120,6 +130,31 @@ describe('GLOBAL WRITING RULE: no em dashes in anything a reader sees', () => {
       [],
       `Em dash in Scott prompt or UI text. The governance preamble tells every worker never ` +
         `to use one, so the prompts themselves must not:\n${hits.join('\n')}`
+    );
+  });
+
+  test('no seeded database content contains an em dash', () => {
+    // This one exists because the rule was broken in a place none of the
+    // tests above look: db/seed.js writes rows INTO the database, and a
+    // seeded activity summary carried an em dash that then rendered on the
+    // Activity page for months. The source string was later corrected, but
+    // nothing rewrote the row, so the dash was still on screen while every
+    // test here passed. Scanning the seeding source catches the next one at
+    // the point it is written rather than after it has been displayed.
+    const seedFiles = [
+      path.join(ROOT, 'db', 'seed.js'),
+      path.join(ROOT, 'db', 'defaults.js'),
+      path.join(ROOT, 'db', 'lorem.js')
+    ].filter((f) => fs.existsSync(f));
+    assert.ok(seedFiles.length >= 2, 'expected to actually find the seed sources');
+
+    const hits = seedFiles.flatMap(offendingLines);
+    assert.deepEqual(
+      hits,
+      [],
+      `Em dash in seeded database content. A row written with one keeps ` +
+        `rendering long after the source is fixed, because nothing rewrites ` +
+        `an existing row:\n${hits.join('\n')}`
     );
   });
 
