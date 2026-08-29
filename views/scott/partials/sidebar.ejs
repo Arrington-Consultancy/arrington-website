@@ -15,8 +15,12 @@
     <li><a href="/scott/jobs" class="<%= active === 'jobs' ? 'active' : '' %>">Jobs &amp; Orders</a></li>
     <li><a href="/scott/enquiries" class="<%= active === 'enquiries' ? 'active' : '' %>">Enquiries<% if (typeof navCounts !== 'undefined' && navCounts.newEnquiries) { %><span class="sc-badge"><%= navCounts.newEnquiries %></span><% } %></a></li>
     <li><a href="/scott/approvals" class="<%= active === 'approvals' ? 'active' : '' %>">Approvals<% if (typeof navCounts !== 'undefined' && navCounts.pendingApprovals) { %><span class="sc-badge"><%= navCounts.pendingApprovals %></span><% } %></a></li>
-    <li><a href="/scott/finance" class="<%= active === 'finance' ? 'active' : '' %>">Finance</a></li>
-    <li><a href="/scott/quality" class="<%= active === 'quality' ? 'active' : '' %>">Quality Control</a></li>
+  </ul>
+  <div class="sc-nav-heading">Company records</div>
+  <ul class="sc-nav">
+    <% (typeof dataPages !== 'undefined' ? dataPages : []).forEach(function (p) { %>
+      <li><a href="<%= p.path %>" class="<%= active === p.nav ? 'active' : '' %>"><%= p.label %></a></li>
+    <% }); %>
   </ul>
   <% if (typeof persona !== 'undefined') { %>
   <div class="sc-clearance-block">
@@ -36,7 +40,7 @@
   <% } %>
   <div class="sc-sidebar-footer">
     <div class="sc-user-row">
-      Signed in as <strong>&nbsp;<%= user.displayName || user.username %></strong>
+      Signed in as <strong><%= user.displayName || user.username %></strong>
       <% if (user.jobTitle) { %><span class="sc-user-jobtitle"><%= user.jobTitle %></span><% } %>
     </div>
     <form action="<%= user.kind === 'portal' ? '/scott/logout' : '/logout' %>" method="POST">

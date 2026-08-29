@@ -97,7 +97,15 @@ function viewerViewModel(req) {
     canImpersonate: v.canImpersonate,
     isImpersonating: clearance.isImpersonating(req),
     canSee: (domain) => clearance.personaCanSeeDomain(personaId, domain),
-    deniedNote: clearance.clearanceDeniedNote
+    // Per-field gate. A view must read any field that carries a fact from
+    // another domain through this rather than off the record directly:
+    // `field(rec, 'poRef')` returns undefined when this viewer is not
+    // cleared for what that field actually contains. workerId is null
+    // because a portal page is a human reading a screen, with no worker
+    // mediating the read.
+    field: (record, name) => clearance.fieldValue(personaId, null, record, name),
+    deniedNote: clearance.clearanceDeniedNote,
+    dataPages: DATA_PAGES
   };
 }
 
@@ -110,10 +118,26 @@ function noindexHeader(req, res, next) {
 // (routes/auth.js), applied separately here so a brute-force attempt
 // against Scott's login can't also exhaust the main site's login budget,
 // or vice versa.
+// Keyed by IP AND username rather than IP alone. The thing worth
+// rate-limiting is guessing at one account's password, and that is still
+// capped at five tries per quarter hour. Keying on IP alone additionally
+// punished something legitimate and specific to this demonstration:
+// several people signing in as different fictional staff from one office
+// network, which is exactly how the clearance model gets shown. The sixth
+// person through the door was being locked out by the first five, for no
+// security gain.
+//
+// Deliberately separate from the main site's login limiter in
+// routes/auth.js, which is unchanged: a brute-force attempt against Scott
+// must not exhaust the real site's budget, or vice versa.
 const scottLoginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
-  message: 'Too many login attempts. Please try again in 15 minutes.',
+  keyGenerator: (req) => {
+    const username = String((req.body && req.body.username) || '').toLowerCase().slice(0, 64);
+    return `${ipKeyGenerator(req)}|${username}`;
+  },
+  message: 'Too many login attempts for that account. Please try again in 15 minutes.',
   standardHeaders: true,
   legacyHeaders: false
 });
@@ -178,6 +202,27 @@ function safeNextPath(next) {
   if (typeof next === 'string' && /^\/scott(\/|$)/.test(next)) return next;
   return '/scott';
 }
+
+// The portal's plain data screens (07A/07E/07G/07I/07K/07N/07S and the
+// rest): each reads the deep company record and renders it, with the view
+// gating every block on the viewer's own clearance. No AI call happens on
+// any of them, which is why they gate by persona alone — see the comment
+// above the registration loop below.
+//
+// `nav` is the sidebar's active-link key and must match the `active` value
+// the view passes to partials/sidebar; the sidebar link list is built from
+// this same table so a page can never be routed but unreachable, or
+// listed in the nav but 404.
+const DATA_PAGES = [
+  { path: '/scott/pipeline', view: 'scott/pipeline', nav: 'pipeline', label: 'Pipeline & Quotes' },
+  { path: '/scott/customers', view: 'scott/customers', nav: 'customers', label: 'Customers' },
+  { path: '/scott/complaints', view: 'scott/complaints', nav: 'complaints', label: 'Complaints' },
+  { path: '/scott/stock', view: 'scott/stock', nav: 'stock', label: 'Stock & Supply' },
+  { path: '/scott/orders', view: 'scott/orders', nav: 'orders', label: 'Purchase Orders' },
+  { path: '/scott/people', view: 'scott/people', nav: 'people', label: 'People' },
+  { path: '/scott/finance', view: 'scott/finance', nav: 'finance', label: 'Finance' },
+  { path: '/scott/quality', view: 'scott/quality', nav: 'quality', label: 'Quality Control' }
+];
 
 function mountPageRoute(app, generateCsrfToken) {
   app.get('/scott/login', noindexHeader, async (req, res, next) => {
@@ -323,32 +368,26 @@ function mountPageRoute(app, generateCsrfToken) {
   // the intersection: there is no worker mediating "a human looked at a
   // page". Worker permission only enters when an AI call assembles context
   // (isDomainVisible), which these two routes do not do.
-  app.get('/scott/finance', noindexHeader, requireScottPageAccess, async (req, res, next) => {
-    try {
-      const navCounts = await repo.getDashboardSummary();
-      res.render('scott/finance', {
-        ...viewerViewModel(req),
-        navCounts,
-        facts: deepFacts,
-        csrfToken: generateCsrfToken(req, res)
-      });
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  app.get('/scott/quality', noindexHeader, requireScottPageAccess, async (req, res, next) => {
-    try {
-      const navCounts = await repo.getDashboardSummary();
-      res.render('scott/quality', {
-        ...viewerViewModel(req),
-        navCounts,
-        facts: deepFacts,
-        csrfToken: generateCsrfToken(req, res)
-      });
-    } catch (err) {
-      next(err);
-    }
+  // One registration for all of them rather than eight near-identical
+  // handlers: every one of these pages is the same shape (read the deep
+  // company record, hand it to a view, let the view's own canSee() calls
+  // decide what appears). Registering them from a list means a new data
+  // page cannot accidentally ship without noindexHeader or the access
+  // guard, which is the failure worth designing against here.
+  DATA_PAGES.forEach(({ path, view }) => {
+    app.get(path, noindexHeader, requireScottPageAccess, async (req, res, next) => {
+      try {
+        const navCounts = await repo.getDashboardSummary();
+        res.render(view, {
+          ...viewerViewModel(req),
+          navCounts,
+          facts: deepFacts,
+          csrfToken: generateCsrfToken(req, res)
+        });
+      } catch (err) {
+        next(err);
+      }
+    });
   });
 
   // Public — no requireScottPageAccess. A prospective (fictional) customer

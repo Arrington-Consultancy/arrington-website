@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stock &amp; Supply | Scott's Armchair &amp; Knitting Service</title>
+  <meta name="robots" content="noindex, nofollow">
+  <%- include('partials/styles') %>
+</head>
+<body class="scott-body">
+  <div class="sc-shell">
+    <%- include('partials/sidebar', { active: 'stock', navCounts: navCounts }) %>
+    <main class="sc-main">
+      <% if (typeof isImpersonating !== 'undefined' && isImpersonating) { %>
+        <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
+      <% } %>
+      <div class="sc-page-header">
+        <div>
+          <h1 class="sc-h">Stock &amp; Supply</h1>
+          <p>07I SCOTT'S STOCK &amp; SUPPLY LIVE FEED. Viewing as <strong><%= persona.name %></strong> (<%= persona.role %>).</p>
+        </div>
+      </div>
+
+      <% var stockVisible = canSee('yarn_stock') || canSee('stock_ops') || canSee('stock_qty'); %>
+      <% if (!stockVisible) { %>
+        <div class="sc-card sc-empty"><%= deniedNote('yarn_stock') %></div>
+      <% } else { %>
+        <h2 class="sc-section-title">Live stock position</h2>
+        <div class="sc-list">
+          <% facts.STOCK_SNAPSHOT.forEach(function (m) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title"><%= m.material %> <span class="sc-pill sc-pill-status"><%= m.sku %></span></div>
+                <div class="sc-row-sub">
+                  On hand <%= m.onHand %> &middot; allocated <%= m.allocated %> &middot; free <%= m.free %> &middot; on order <%= m.onOrder %>
+                  <% if (field(m, 'onOrderRef')) { %> (<%= field(m, 'onOrderRef') %>, expected <%= field(m, 'expectedDelivery') %>)<% } %><br>
+                  Reorder point <%= m.reorderPoint %> &middot; lead time <%= m.leadTime %> &middot; supplier <%= m.supplier %><br>
+                  <strong>Action:</strong> <%= m.action %>
+                </div>
+              </div>
+              <div class="sc-row-actions">
+                <span class="sc-pill <%= m.risk === 'RED' ? 'sc-pill-risk' : 'sc-pill-status' %>"><%= m.risk %></span>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+
+        <% if (canSee('suppliers_ops')) { %>
+          <h2 class="sc-section-title">Suppliers</h2>
+          <div class="sc-list">
+            <% facts.SUPPLIER_DIRECTORY.forEach(function (s) { %>
+              <div class="sc-card sc-row-card">
+                <div>
+                  <div class="sc-row-title"><%= s.name %></div>
+                  <div class="sc-row-sub"><%= s.supplies %> &middot; <%= s.terms %> &middot; lead time <%= s.leadTime %><% if (s.settlementDiscount) { %> &middot; <%= s.settlementDiscount %><% } %><% if (s.note) { %><br><%= s.note %><% } %></div>
+                </div>
+              </div>
+            <% }); %>
+          </div>
+        <% } %>
+      <% } %>
+
+    </main>
+  </div>
+</body>
+</html>

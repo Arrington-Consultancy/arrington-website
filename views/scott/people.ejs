@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>People &amp; HR | Scott's Armchair &amp; Knitting Service</title>
+  <meta name="robots" content="noindex, nofollow">
+  <%- include('partials/styles') %>
+</head>
+<body class="scott-body">
+  <div class="sc-shell">
+    <%- include('partials/sidebar', { active: 'people', navCounts: navCounts }) %>
+    <main class="sc-main">
+      <% if (typeof isImpersonating !== 'undefined' && isImpersonating) { %>
+        <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
+      <% } %>
+      <div class="sc-page-header">
+        <div>
+          <h1 class="sc-h">People &amp; HR</h1>
+          <p>07B SCOTT'S PEOPLE &amp; HR. Viewing as <strong><%= persona.name %></strong> (<%= persona.role %>).</p>
+        </div>
+      </div>
+
+      <% if (!canSee('staffing_capacity')) { %>
+        <div class="sc-card sc-empty"><%= deniedNote('staffing_capacity') %></div>
+      <% } else { %>
+        <div class="sc-card sc-proposed-note">
+          <strong>Capacity effect.</strong> <%= facts.CAPACITY_NOTE.effect %>
+        </div>
+
+        <h2 class="sc-section-title">Team</h2>
+        <div class="sc-list">
+          <% facts.STAFF.forEach(function (s) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title"><%= s.name %></div>
+                <div class="sc-row-sub">
+                  <%= s.role %>
+                  <% if (canSee('leave_training') || canSee('training_supervised')) { %>
+                    <% if (s.training) { %><br>Training: <%= s.training %><% } %>
+                    <% if (field(s, 'trainingNote')) { %><br><%= field(s, 'trainingNote') %><% } %>
+                  <% } %>
+                </div>
+              </div>
+              <div class="sc-row-actions">
+                <% if (s.leave) { %><span class="sc-pill sc-pill-risk">leave <%= s.leave %></span><% } %>
+                <% if (s.probationReview) { %><span class="sc-pill sc-pill-status">probation <%= s.probationReview %></span><% } %>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+
+        <% if (canSee('hr_full')) { %>
+          <h2 class="sc-section-title">Current people issues</h2>
+          <div class="sc-list">
+            <% facts.HR_CURRENT_ISSUES.forEach(function (i) { %>
+              <div class="sc-card sc-row-card">
+                <div>
+                  <div class="sc-row-title"><%= i.person %> &middot; <%= i.issue %></div>
+                  <div class="sc-row-sub"><%= i.detail %></div>
+                </div>
+              </div>
+            <% }); %>
+          </div>
+        <% } else { %>
+          <div class="sc-card sc-empty"><%= deniedNote('hr_full') %></div>
+        <% } %>
+
+        <% if (canSee('staffing_capacity')) { %>
+          <h2 class="sc-section-title">Recruitment watch</h2>
+          <div class="sc-card"><p class="sc-row-sub"><%= facts.CAPACITY_NOTE.recruitmentWatch %></p></div>
+        <% } %>
+      <% } %>
+
+    </main>
+  </div>
+</body>
+</html>
