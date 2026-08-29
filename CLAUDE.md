@@ -1071,6 +1071,76 @@ contents: that is enough to tell an empty Railway variable from a real
 one, which is exactly the failure that cost a whole session on the Market
 Ready Test.
 
+### Needs Human Input (Brain Gaps), added 29/08/2026
+
+A worker blocked by an approval it does not have and a worker blocked by
+a record that is missing, stale or self-contradictory used to be the same
+thing here, and only the first had a workflow. They are now separate, and
+the separation is the point: an approvals queue full of items nobody can
+approve because the underlying figure is wrong is a real failure mode,
+and so is a model filling a gap by inference because a plausible answer
+clears the queue and "the record contradicts itself" does not.
+
+The worker JSON contract carries `gap` alongside `escalation`, validated
+separately in `lib/scott/orchestrator.js`. `lib/scott/governance.js`
+tells every worker the difference, forbids filling a gap by inference,
+forbids claiming anyone has been contacted, and states that the
+responsible party for correcting a record is **always a human**: Scott or
+one of his staff with a login. AI workers are not people.
+
+**`lib/scott/brainGaps.js`** is pure and decides everything the worker
+does not: materiality (work is blocked, or a live job/enquiry is
+downstream), ownership, and whether it earns an email.
+**`lib/scott/gapNotifier.js`** sends through the existing authorised
+Gmail path with **one retry**, then stops and records the real error.
+`scott_brain_gaps` holds the record; `/scott/gaps` is the register and
+open material gaps also surface on the dashboard, both clearance-filtered
+(a gap description quotes the missing evidence, so an unfiltered list
+would be a way round every other control).
+
+**Ownership comes from `RECORD_OWNERSHIP` in `deepBusinessFacts.js`**,
+mapping each 07-series source to the persona who owns correcting it, with
+`decisionOwner` where the person holding the evidence is not the person
+who authorises the decision (Mike reports the van, Operations decides
+about hire). Two rules are enforced by tests, not care: every owner is a
+persona and never a worker id, and every owner holds clearance for the
+domain they own. The first draft failed the second on five rows and the
+owners were corrected rather than the clearances widened.
+
+**"[name] has been emailed" is authored in exactly one place**,
+`describeNotification`, from the stored `email_status`. A failed send
+leaves the gap open and prints the actual SMTP error. There is no code
+path that can claim a send that did not happen, and a test scripts the
+model to assert in its own reply that it emailed Leah while the send is
+failing, then asserts the interface contradicts it.
+
+**Fictional staff have no mailboxes.** Delivery goes to a real
+demonstration inbox (`SCOTT_DEMO_NOTIFY_EMAIL`, defaulting to `tom@`,
+with an optional per-person `scott_portal_users.notify_email`) and the
+body names its fictional recipient. Inventing `@scotts-armchairs`
+addresses would make every send bounce and the recorded delivery result
+worthless.
+
+**Closing** requires a logged-in human, clearance for the gap's own
+domain (per row, via `personaCanResolveGap`), and a written statement of
+what was done. `sourceCorrected: true` resolves; `false` records a
+dismissal. They stay different statuses because collapsing them is how a
+queue gets cleared without anything being fixed. No AI path reaches the
+route, nothing ages out, and a second close returns 409.
+
+**Not emailed, each recorded with its reason on the row:** trivial gaps,
+anything the approvals queue already owns, anything derivable without a
+human, a record with no recorded owner, and a gap owned by the person who
+raised it.
+
+**Staging note:** `GMAIL_APP_PASSWORD` is not currently set on the
+`scott-demo` service, so a routed gap there records `failed` with "email
+is not configured in this environment" and the interface says plainly
+that nobody was emailed. That is the designed honest behaviour, but the
+send is not demonstrable on staging until the variable is added.
+`SCOTT_PORTAL_ORIGIN` should also be set there so the link in the email
+points at staging rather than production.
+
 ### Testing
 
 `node --test` covers it (`test/scott/*.test.js`). Beyond unit tests, the
