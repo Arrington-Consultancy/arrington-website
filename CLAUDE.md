@@ -951,6 +951,14 @@ and measured yet" beside it. Three items carry an explicit warning
 against claiming them: sunk stock cost, an insurance premium gap pending
 a cover check, and a double-count already sitting in another line.
 
+**One domain is granted to everyone, and only one.** `safety_baseline`
+(07K) is visible to every persona including the narrowest, because a rule
+requiring you to stop work when you believe there is a serious risk is
+useless if your clearance hides it. The incident LOG is narrower, because
+it names individuals. A test asserts that safety_baseline stays universal
+AND that no second domain quietly becomes universal, since a second one
+would far more likely be an accident than a decision.
+
 **The same rule gates every retrieval path**, which is what 07Q actually
 requires: pages, the AI context builder, and `/api/scott/search`. Search
 gates whole categories, strips restricted fields from rows it does show,
@@ -974,11 +982,11 @@ difference between those two answers is itself the leak.
 
 ### Drive records transcribed
 
-`lib/scott/deepBusinessFacts.js` holds 246 domain-tagged records from
-07A, 07B, 07C, 07D, 07E, 07F, 07G, 07H, 07I, 07L, 07M, 07N, 07S, 07T,
-07U and 07V. Still untranscribed: 07J (policies/terms/payments), 07K
-(safety/compliance/privacy/insurance), 07O (continuity), 07P (marketing
-asset and consent register), 07R (premises).
+`lib/scott/deepBusinessFacts.js` holds 261 domain-tagged records from
+07A, 07B, 07C, 07D, 07E, 07F, 07G, 07H, 07I, 07K, 07L, 07M, 07N, 07S,
+07T, 07U and 07V. Still untranscribed: 07J (policies/terms/payments),
+07O (continuity), 07P (marketing asset and consent register), 07R
+(premises).
 
 Every persona now has a meaningful slice of the brain rather than a
 handful: Scott 246, Tony 201, Chloe 55, Leah 21, Ellie and Ravi 14 each,

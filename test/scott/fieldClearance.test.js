@@ -111,3 +111,39 @@ test('deep company brain reaches the workers', async (t) => {
       'tagging metadata must never be serialised into a prompt');
   });
 });
+
+test('safety is the one thing nobody is excluded from', async (t) => {
+  // 07K requires any staff member who believes there is an immediate
+  // serious safety risk to stop and escalate. That is not a rule someone
+  // can follow if their clearance hides it, so safety_baseline is granted
+  // to every persona. It is the single universal grant in this model and
+  // an accidental narrowing of it would be silent, hence this test.
+  await t.test('every persona can read the safety baseline', () => {
+    const all = Object.keys(clearance.PERSONAS);
+    const withIt = all.filter((p) => clearance.personaCanSeeDomain(p, 'safety_baseline'));
+    assert.deepEqual(withIt.sort(), all.sort(),
+      'safety_baseline must be visible to every persona, including the narrowest');
+  });
+
+  await t.test('the incident log is NOT universal, because it names people', () => {
+    const all = Object.keys(clearance.PERSONAS);
+    const withIt = all.filter((p) => clearance.personaCanSeeDomain(p, 'safety_incidents'));
+    assert.ok(withIt.length < all.length,
+      'the incident log names individuals and must be narrower than the rules');
+    assert.ok(withIt.includes('scott_mercer') && withIt.includes('tony_marsh'));
+    assert.ok(!withIt.includes('jo_bell'), 'a knitting operative must not read incident records about colleagues');
+  });
+
+  await t.test('no other domain is granted to everyone by accident', () => {
+    // A universal grant should be a deliberate, rare decision. If a second
+    // one appears, it is far more likely to be a mistake than a choice, so
+    // this fails and asks for the reasoning to be written down.
+    const all = Object.keys(clearance.PERSONAS);
+    const everyDomain = new Set();
+    Object.values(clearance.PERSONA_DOMAINS).forEach((ds) => ds.forEach((d) => everyDomain.add(d)));
+    const universal = [...everyDomain].filter((d) =>
+      d !== '*' && all.every((p) => clearance.personaCanSeeDomain(p, d)));
+    assert.deepEqual(universal, ['safety_baseline'],
+      `expected safety_baseline to be the only universal grant, found: ${universal.join(', ')}`);
+  });
+});

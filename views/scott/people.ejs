@@ -72,6 +72,57 @@
         <% } %>
       <% } %>
 
+      <% if (canSee('safety_baseline')) { %>
+        <h2 class="sc-section-title">Safety, and what to do if something happens</h2>
+        <div class="sc-card sc-honesty-card">
+          <p class="sc-row-sub"><strong>Everyone sees this section.</strong> It is the one part of the company record that is not need-to-know, because a rule telling you to stop work when you believe there is a serious risk is no use if your clearance hides it from you.</p>
+        </div>
+        <div class="sc-card">
+          <p class="sc-row-sub"><strong>Stop-work rule.</strong> <%= facts.SAFETY_BASELINE.stopWork %></p>
+          <p class="sc-row-sub"><%= facts.SAFETY_BASELINE.equipment %> <%= facts.SAFETY_BASELINE.ppe %> <%= facts.SAFETY_BASELINE.handling %></p>
+          <p class="sc-row-sub"><%= facts.SAFETY_BASELINE.solvents %> <%= facts.SAFETY_BASELINE.access %> <%= facts.SAFETY_BASELINE.firstAid %></p>
+        </div>
+        <div class="sc-card">
+          <p class="sc-row-sub"><strong>If there is an accident or incident.</strong> <%= facts.INCIDENT_PROCEDURE.steps %></p>
+          <p class="sc-row-sub sc-honesty"><%= facts.INCIDENT_PROCEDURE.doNotInvent %></p>
+        </div>
+        <div class="sc-card">
+          <p class="sc-row-sub"><strong>Customer property.</strong> <%= facts.CUSTOMER_PROPERTY_RULES.photos %> <%= facts.CUSTOMER_PROPERTY_RULES.logging %></p>
+          <p class="sc-row-sub"><strong><%= facts.CUSTOMER_PROPERTY_RULES.evidence %></strong> <%= facts.CUSTOMER_PROPERTY_RULES.admissions %></p>
+        </div>
+      <% } %>
+
+      <% if (canSee('safety_incidents')) { %>
+        <h2 class="sc-section-title">Recorded incidents</h2>
+        <div class="sc-list">
+          <% facts.INCIDENT_LOG.forEach(function (i) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title"><%= i.ref %> &middot; <%= i.date %></div>
+                <div class="sc-row-sub"><%= i.detail %><br><strong>Cause:</strong> <%= i.cause %>. <strong>Action:</strong> <%= i.action %>.</div>
+              </div>
+              <div class="sc-row-actions"><span class="sc-pill sc-pill-status"><%= i.status %></span></div>
+            </div>
+          <% }); %>
+        </div>
+      <% } %>
+
+      <% if (canSee('compliance_privacy')) { %>
+        <h2 class="sc-section-title">Privacy, retention and data requests</h2>
+        <div class="sc-card">
+          <p class="sc-row-sub"><strong>Consent.</strong> <%= facts.PRIVACY_PRINCIPLES.consent %></p>
+          <p class="sc-row-sub"><%= facts.PRIVACY_PRINCIPLES.collection %> <%= facts.PRIVACY_PRINCIPLES.publicResponses %></p>
+        </div>
+        <div class="sc-card">
+          <p class="sc-row-sub"><strong>How long records are kept.</strong> Unconverted enquiries: <%= facts.RETENTION_RULES.unconvertedEnquiries %>. Transaction records: <%= facts.RETENTION_RULES.transactionRecords %>. Complaints and incidents: <%= facts.RETENTION_RULES.complaintsAndIncidents %>. Employee records: <%= facts.RETENTION_RULES.employeeRecords %>.</p>
+          <p class="sc-row-sub sc-honesty"><%= facts.RETENTION_RULES.caveat %></p>
+        </div>
+        <div class="sc-card sc-honesty-card">
+          <p class="sc-row-sub"><strong>A correction or deletion request.</strong> <%= facts.DATA_REQUEST_WORKFLOW.steps %></p>
+          <p class="sc-row-sub"><strong>If something is exposed.</strong> <%= facts.DATA_REQUEST_WORKFLOW.breach %></p>
+        </div>
+      <% } %>
+
     </main>
   </div>
 </body>
