@@ -135,6 +135,47 @@
           <% }); %>
         </div>
       <% } %>
+      <% if (canSee('marketing_consent')) { %>
+        <h2 class="sc-section-title">What we are allowed to publish</h2>
+        <div class="sc-card sc-honesty-card">
+          <p class="sc-row-sub"><strong><%= facts.CONSENT_RULE.rule %></strong></p>
+          <p class="sc-row-sub"><%= facts.CONSENT_RULE.notAutomatic %> <%= facts.CONSENT_RULE.testimonials %></p>
+          <p class="sc-row-sub"><%= facts.CONSENT_RULE.staff %></p>
+          <p class="sc-row-sub"><%= facts.CONSENT_RULE.withdrawal %></p>
+          <p class="sc-row-sub sc-honesty"><%= facts.CONSENT_RULE.scheduling %></p>
+        </div>
+        <div class="sc-stat-grid">
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Approved for external use</div><div class="sc-stat-value"><%= facts.CONSENT_COUNTS.approvedForExternalUse %></div><div class="sc-stat-sub"><%= facts.CONSENT_COUNTS.approvedAnonymisedOnly %> anonymised only</div></div>
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Evidence only or prohibited</div><div class="sc-stat-value warn"><%= facts.CONSENT_COUNTS.evidenceOnlyOrProhibited %></div></div>
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Pending permission</div><div class="sc-stat-value"><%= facts.CONSENT_COUNTS.pendingOrIncomplete %></div></div>
+          <div class="sc-card sc-stat"><div class="sc-stat-label">Withdrawn</div><div class="sc-stat-value warn"><%= facts.CONSENT_COUNTS.withdrawn %></div></div>
+        </div>
+        <div class="sc-list">
+          <% facts.MARKETING_ASSETS.forEach(function (a) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title"><%= a.ref %> &middot; <%= a.subject %></div>
+                <div class="sc-row-sub">
+                  <%= a.asset %>
+                  <% if (a.channels) { %><br><strong>Channels:</strong> <%= a.channels %><% } %>
+                  <% if (a.permissionDate) { %> &middot; permission <%= a.permissionDate %><% } %>
+                  <% if (a.reviewDate) { %> &middot; review <%= a.reviewDate %><% } %>
+                  <% if (a.withdrawnDate) { %> &middot; <strong>withdrawn <%= a.withdrawnDate %></strong><% } %>
+                  <% if (a.restriction) { %><br><strong>Restriction:</strong> <%= a.restriction %><% } %>
+                  <% if (a.currentUse) { %><br>Currently: <%= a.currentUse %><% } %>
+                </div>
+              </div>
+              <div class="sc-row-actions">
+                <span class="sc-pill <%= /PROHIBITED|NOT |WITHDRAWN|HOLD|PENDING|ONLY/.test(a.status) ? 'sc-pill-risk' : 'sc-pill-status' %>"><%= a.status %></span>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+        <div class="sc-card sc-honesty-card">
+          <p class="sc-row-sub"><%= facts.CONSENT_COUNTS.watchpoints %></p>
+        </div>
+      <% } %>
+
     </main>
   </div>
 </body>

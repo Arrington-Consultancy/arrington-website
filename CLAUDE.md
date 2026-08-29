@@ -983,9 +983,17 @@ difference between those two answers is itself the leak.
 
 ### Drive records transcribed
 
-`lib/scott/deepBusinessFacts.js` holds 293 domain-tagged records from
-07A to 07N plus 07R, 07S, 07T, 07U and 07V. Still untranscribed: 07O
-(continuity) and 07P (marketing asset and consent register).
+`lib/scott/deepBusinessFacts.js` holds 338 domain-tagged records. **The
+07-series is now fully transcribed**: 07A to 07V, every document.
+
+Adding a new record is a matter of tagging each entry with a domain some
+persona actually holds. `contextBuilders` derives its list from the
+module's exports, so nothing else needs updating, and
+`untaggedDeepFactExports` fails a test if an entry arrives without a tag.
+Two further guards exist because both caught real mistakes during the
+build: a duplicate domain on any persona or worker fails a test (it is
+the fingerprint of an anchored edit that landed on the wrong block), and
+`safety_baseline` must remain the ONLY domain granted to every persona.
 
 Every persona now has a meaningful slice of the brain rather than a
 handful: Scott 246, Tony 201, Chloe 55, Leah 21, Ellie and Ravi 14 each,

@@ -135,6 +135,52 @@
           <p class="sc-row-sub sc-honesty"><%= facts.FACILITIES_COST_WATCH.doNotDo %></p>
         </div>
       <% } %>
+      <% if (canSee('safety_baseline')) { %>
+        <h2 class="sc-section-title">If the business is disrupted</h2>
+        <div class="sc-card sc-honesty-card">
+          <p class="sc-row-sub"><strong><%= facts.CONTINUITY_PRINCIPLE.rule %></strong></p>
+          <p class="sc-row-sub sc-honesty"><%= facts.CONTINUITY_PRINCIPLE.neverDo %></p>
+        </div>
+      <% } %>
+
+      <% if (canSee('continuity')) { %>
+        <div class="sc-card">
+          <p class="sc-row-sub"><strong>Priority order.</strong> <%= facts.CONTINUITY_PRIORITY_ORDER.order %></p>
+          <p class="sc-row-sub sc-honesty"><%= facts.CONTINUITY_PRIORITY_ORDER.advertising %></p>
+        </div>
+        <div class="sc-list">
+          <% facts.CONTINUITY_SCENARIOS.forEach(function (sc) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title"><%= sc.scenario %></div>
+                <div class="sc-row-sub">
+                  <%= sc.response %>
+                  <% if (sc.planningAssumption) { %><br><strong>Planning assumption:</strong> <%= sc.planningAssumption %><% } %>
+                  <% if (sc.limit) { %><br><span class="sc-honesty"><%= sc.limit %></span><% } %>
+                </div>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+        <div class="sc-card">
+          <p class="sc-row-sub"><strong>Before declaring things normal again.</strong> <%= facts.RECOVERY_CHECKLIST.before %></p>
+        </div>
+      <% } %>
+
+      <% if (canSee('staffing_capacity')) { %>
+        <h2 class="sc-section-title">If someone is away</h2>
+        <div class="sc-list">
+          <% facts.KEY_PERSON_ABSENCE.forEach(function (k) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title"><%= k.person %></div>
+                <div class="sc-row-sub"><%= k.effect %><% if (k.limit) { %><br><strong><%= k.limit %></strong><% } %></div>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+      <% } %>
+
     </main>
   </div>
 </body>
