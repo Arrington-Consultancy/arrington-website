@@ -65,6 +65,50 @@
         <% } %>
       <% } %>
 
+      <% if (canSee('customer_terms')) { %>
+        <h2 class="sc-section-title">What we can and cannot promise</h2>
+        <div class="sc-card">
+          <p class="sc-row-sub"><strong>Payment.</strong> <%= facts.PAYMENT_RULES.under300 %> <%= facts.PAYMENT_RULES.band300to750 %> <%= facts.PAYMENT_RULES.over750 %></p>
+          <p class="sc-row-sub"><%= facts.PAYMENT_RULES.knittedStandard %> <%= facts.PAYMENT_RULES.knittedCustom %> <%= facts.PAYMENT_RULES.trade %></p>
+          <p class="sc-row-sub"><strong>Methods:</strong> <%= facts.PAYMENT_RULES.methods %></p>
+          <p class="sc-row-sub sc-honesty"><%= facts.PAYMENT_RULES.hardRule %></p>
+        </div>
+        <div class="sc-card">
+          <p class="sc-row-sub"><strong>Cancelling.</strong> <%= facts.CANCELLATION_RULES.beforeCollection %> <%= facts.CANCELLATION_RULES.afterCollection %> <%= facts.CANCELLATION_RULES.afterStart %></p>
+          <p class="sc-row-sub"><%= facts.CANCELLATION_RULES.missedByCustomer %> <%= facts.CANCELLATION_RULES.causedByUs %></p>
+          <p class="sc-row-sub sc-honesty"><%= facts.CANCELLATION_RULES.hardRule %></p>
+        </div>
+        <div class="sc-card">
+          <p class="sc-row-sub"><strong>Warranty.</strong> <%= facts.WARRANTY.standard %></p>
+          <p class="sc-row-sub"><%= facts.WARRANTY.excluded %></p>
+          <p class="sc-row-sub"><%= facts.WARRANTY.rework %> <%= facts.WARRANTY.knitted %></p>
+          <p class="sc-row-sub sc-honesty"><%= facts.WARRANTY.hardRule %></p>
+        </div>
+        <div class="sc-card sc-honesty-card">
+          <p class="sc-row-sub"><strong>Refunds and goodwill.</strong> <%= facts.REFUND_AUTHORITY.rework %> <%= facts.REFUND_AUTHORITY.needsCommercial %></p>
+          <p class="sc-row-sub"><strong><%= facts.REFUND_AUTHORITY.needsOwner %></strong> <%= facts.REFUND_AUTHORITY.fullRefund %></p>
+        </div>
+        <div class="sc-card">
+          <p class="sc-row-sub"><strong>Talking to customers.</strong> <%= facts.COMMUNICATION_COMMITMENTS.atRisk %></p>
+          <p class="sc-row-sub"><%= facts.COMMUNICATION_COMMITMENTS.noPromises %> <%= facts.COMMUNICATION_COMMITMENTS.humanReview %></p>
+        </div>
+        <div class="sc-card">
+          <p class="sc-row-sub"><strong>Hours and area.</strong> Admin <%= facts.OPENING_HOURS.admin %>. Workshop visits <%= facts.OPENING_HOURS.workshopVisits %>. Saturday: <%= facts.OPENING_HOURS.saturday %>. Sunday <%= facts.OPENING_HOURS.sunday %>.</p>
+          <p class="sc-row-sub"><%= facts.SERVICE_AREA.standard %> <%= facts.SERVICE_AREA.outside %> <%= facts.SERVICE_AREA.limit %></p>
+          <p class="sc-row-sub sc-honesty"><%= facts.OPENING_HOURS.webForms %></p>
+        </div>
+      <% } %>
+
+      <% if (canSee('complaints_workflow')) { %>
+        <h2 class="sc-section-title">If a complaint is not resolved</h2>
+        <div class="sc-card sc-honesty-card">
+          <p class="sc-row-sub"><strong>Stage 1.</strong> <%= facts.COMPLAINT_ESCALATION.stage1 %></p>
+          <p class="sc-row-sub"><strong>Stage 2.</strong> <%= facts.COMPLAINT_ESCALATION.stage2 %></p>
+          <p class="sc-row-sub"><strong>Stage 3.</strong> <%= facts.COMPLAINT_ESCALATION.stage3 %></p>
+          <p class="sc-row-sub sc-honesty"><%= facts.COMPLAINT_ESCALATION.hardRule %></p>
+        </div>
+      <% } %>
+
     </main>
   </div>
 </body>

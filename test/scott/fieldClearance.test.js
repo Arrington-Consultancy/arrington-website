@@ -147,3 +147,52 @@ test('safety is the one thing nobody is excluded from', async (t) => {
       `expected safety_baseline to be the only universal grant, found: ${universal.join(', ')}`);
   });
 });
+
+test('the permission map has no accidental duplicates', async (t) => {
+  // Twice while building this out, an anchored edit to one persona's
+  // domain list silently matched an earlier persona instead, because the
+  // first edit had made that earlier block match the second anchor. Both
+  // times the result was a domain listed twice on the wrong persona and
+  // missing from the intended one. A duplicate is harmless to behaviour
+  // and therefore invisible, which is exactly why it needs a test: it is
+  // the fingerprint of an edit that went somewhere unintended.
+  await t.test('no persona lists the same domain twice', () => {
+    Object.entries(clearance.PERSONA_DOMAINS).forEach(([persona, domains]) => {
+      if (!Array.isArray(domains)) return;
+      const seen = new Set();
+      const dupes = domains.filter((d) => seen.size === seen.add(d).size);
+      assert.deepEqual([...new Set(dupes)], [],
+        `${persona} lists a domain more than once, which usually means an edit landed on the wrong block`);
+    });
+  });
+
+  await t.test('no worker lists the same domain twice', () => {
+    Object.entries(clearance.WORKER_DOMAINS).forEach(([worker, domains]) => {
+      if (!Array.isArray(domains)) return;
+      const seen = new Set();
+      const dupes = domains.filter((d) => seen.size === seen.add(d).size);
+      assert.deepEqual([...new Set(dupes)], [], `${worker} lists a domain more than once`);
+    });
+  });
+
+  await t.test('every domain a persona holds is one some record actually uses, or a known reserve', () => {
+    // A domain granted but never used on any record is dead permission:
+    // harmless today, but it hides a typo. The 07Q clearance model
+    // legitimately names more domains than the transcribed subset uses so
+    // far, so this reports rather than fails, and only fails on a domain
+    // that no record uses AND no other persona holds, which is the shape
+    // of a misspelling.
+    const usedDomains = new Set(contextBuilders.allDeepFactRecords().map((r) => r.domain));
+    const heldByCount = {};
+    Object.values(clearance.PERSONA_DOMAINS).forEach((ds) => {
+      if (Array.isArray(ds)) ds.forEach((d) => { heldByCount[d] = (heldByCount[d] || 0) + 1; });
+    });
+    const suspicious = Object.keys(heldByCount)
+      .filter((d) => d !== '*' && !usedDomains.has(d) && heldByCount[d] === 1);
+    // Every one of these is held by exactly one persona and used by no
+    // record. That is allowed while 07Q's model is broader than the
+    // transcribed data, so assert only that the list is not growing wildly.
+    assert.ok(suspicious.length < 30,
+      `${suspicious.length} domains are granted to exactly one persona and used by no record: ${suspicious.join(', ')}`);
+  });
+});

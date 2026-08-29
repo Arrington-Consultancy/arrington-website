@@ -983,11 +983,9 @@ difference between those two answers is itself the leak.
 
 ### Drive records transcribed
 
-`lib/scott/deepBusinessFacts.js` holds 284 domain-tagged records from
-07A, 07B, 07C, 07D, 07E, 07F, 07G, 07H, 07I, 07K, 07L, 07M, 07N, 07R,
-07S, 07T, 07U and 07V. Still untranscribed: 07J (policies, terms and
-payments), 07O (continuity), 07P (marketing asset and consent
-register).
+`lib/scott/deepBusinessFacts.js` holds 293 domain-tagged records from
+07A to 07N plus 07R, 07S, 07T, 07U and 07V. Still untranscribed: 07O
+(continuity) and 07P (marketing asset and consent register).
 
 Every persona now has a meaningful slice of the brain rather than a
 handful: Scott 246, Tony 201, Chloe 55, Leah 21, Ellie and Ravi 14 each,
