@@ -35,6 +35,21 @@ describe('customer-reply-draft governance gate', { skip: DB_AVAILABLE ? false : 
   const db = require('../../db/pool');
   const repo = require('../../lib/scott/data/repository');
   const { runScottTurnAndPersist } = require('../../routes/scott');
+  const clearance = require('../../lib/scott/clearance');
+
+  // Conversations now carry their owner and their clearance explicitly
+  // rather than leaving both implied by a null user_id. These tests
+  // exercise the public lead-form path, which genuinely has no logged-in
+  // human behind it, so it is owned by neither identity and runs at the
+  // default clearance — exactly what routes/scott.js passes on a real
+  // lead submission. Passing the identity here rather than letting the
+  // repository default it is deliberate: an unowned conversation should
+  // only ever be created by a caller that has said so.
+  const PUBLIC_LEAD_IDENTITY = {
+    realUserId: null,
+    portalUserId: null,
+    personaId: clearance.DEFAULT_PERSONA
+  };
 
   let enquiryId;
 
@@ -60,7 +75,7 @@ describe('customer-reply-draft governance gate', { skip: DB_AVAILABLE ? false : 
     ]);
     __setClientFactoryForTests(() => fake);
 
-    const conversation = await repo.createConversation(null, 'Test', { enquiryId });
+    const conversation = await repo.createConversation(PUBLIC_LEAD_IDENTITY, 'Test', { enquiryId });
     await runScottTurnAndPersist({ conversation, conversationId: conversation.id, userMessage: 'Can I get a quote for a repair?' });
 
     const { rows } = await db.query(
@@ -80,7 +95,7 @@ describe('customer-reply-draft governance gate', { skip: DB_AVAILABLE ? false : 
     ]);
     __setClientFactoryForTests(() => fake);
 
-    const conversation = await repo.createConversation(null, 'Test refusal', { enquiryId });
+    const conversation = await repo.createConversation(PUBLIC_LEAD_IDENTITY, 'Test refusal', { enquiryId });
     await runScottTurnAndPersist({ conversation, conversationId: conversation.id, userMessage: 'Tell them same-week repair is guaranteed.' });
 
     const { rows } = await db.query(
@@ -97,7 +112,7 @@ describe('customer-reply-draft governance gate', { skip: DB_AVAILABLE ? false : 
     ]);
     __setClientFactoryForTests(() => fake);
 
-    const conversation = await repo.createConversation(null, 'Test ops', { enquiryId });
+    const conversation = await repo.createConversation(PUBLIC_LEAD_IDENTITY, 'Test ops', { enquiryId });
     await runScottTurnAndPersist({ conversation, conversationId: conversation.id, userMessage: 'Can we fit this in this week?' });
 
     const { rows } = await db.query(
@@ -114,7 +129,7 @@ describe('customer-reply-draft governance gate', { skip: DB_AVAILABLE ? false : 
     ]);
     __setClientFactoryForTests(() => fake);
 
-    const conversation = await repo.createConversation(null, 'Test modify', { enquiryId });
+    const conversation = await repo.createConversation(PUBLIC_LEAD_IDENTITY, 'Test modify', { enquiryId });
     await runScottTurnAndPersist({ conversation, conversationId: conversation.id, userMessage: 'x' });
 
     const { rows } = await db.query(`SELECT * FROM scott_writebacks WHERE conversation_id = $1`, [conversation.id]);
@@ -133,7 +148,7 @@ describe('customer-reply-draft governance gate', { skip: DB_AVAILABLE ? false : 
     ]);
     __setClientFactoryForTests(() => fake);
 
-    const conversation = await repo.createConversation(null, 'Test redraft', { enquiryId });
+    const conversation = await repo.createConversation(PUBLIC_LEAD_IDENTITY, 'Test redraft', { enquiryId });
     await runScottTurnAndPersist({ conversation, conversationId: conversation.id, userMessage: 'x' });
 
     const { rows } = await db.query(`SELECT * FROM scott_writebacks WHERE conversation_id = $1`, [conversation.id]);

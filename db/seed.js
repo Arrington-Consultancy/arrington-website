@@ -4883,6 +4883,22 @@ async function seed() {
     if (rows.length) console.log(`Scott AI Demonstration: rewrote ${rows.length} activity summary/summaries containing a banned dash.`);
   }
 
+  // Conversation ownership and clearance columns. Idempotent
+  // ALTER ... IF NOT EXISTS for databases seeded before these existed.
+  {
+    await db.query(`ALTER TABLE scott_conversations
+      ADD COLUMN IF NOT EXISTS portal_user_id INTEGER REFERENCES scott_portal_users(id) ON DELETE CASCADE`);
+    await db.query(`ALTER TABLE scott_conversations
+      ADD COLUMN IF NOT EXISTS persona_id VARCHAR(40) NOT NULL DEFAULT 'scott_mercer'`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_scott_conversations_portal_user
+      ON scott_conversations (portal_user_id)`);
+    await db.query(`ALTER TABLE scott_writebacks
+      ADD COLUMN IF NOT EXISTS decided_by_portal_user_id INTEGER REFERENCES scott_portal_users(id)`);
+    await db.query(`ALTER TABLE scott_writebacks
+      ADD COLUMN IF NOT EXISTS decided_by_name VARCHAR(120) NOT NULL DEFAULT ''`);
+    console.log('Scott AI Demonstration: conversation ownership and decision-identity columns verified.');
+  }
+
   console.log('Seed complete.');
 }
 

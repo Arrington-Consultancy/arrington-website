@@ -69,6 +69,12 @@ function viewer(req) {
       displayName: portal.displayName,
       jobTitle: portal.jobTitle,
       realUserId: null,
+      // The fictional staff member's OWN id, in scott_portal_users.
+      // realUserId stays null because it is a users(id) foreign key they
+      // genuinely have no row in, but a null is not an identity: every
+      // portal user used to look identical to every other one and to the
+      // public lead form. Ownership is this field.
+      portalUserId: portal.id,
       personaId: portal.personaId,
       canImpersonate: false
     };
@@ -80,6 +86,7 @@ function viewer(req) {
     displayName: u ? u.username : 'unknown',
     jobTitle: '',
     realUserId: u ? u.id : null,
+    portalUserId: null,
     personaId: clearance.getEffectivePersonaId(req),
     canImpersonate: clearance.canImpersonate(req)
   };
@@ -107,6 +114,33 @@ function viewerViewModel(req) {
     field: (record, name) => clearance.fieldValue(personaId, null, record, name),
     deniedNote: clearance.clearanceDeniedNote,
     dataPages: NAV_PAGES
+  };
+}
+
+// Server-side action authority. Every mutating Scott endpoint goes
+// through this, because until now they went through nothing: they were
+// gated only on "is this person invited to the demo", and the difference
+// between a knitting operative and the owner was that one of them had the
+// button on screen. Hiding a control is not access control.
+//
+// The domain each action requires lives in clearance.js, derived from the
+// rule that acting on a record requires the clearance to see it.
+// Who decided a writeback. decided_by_user_id is a users(id) foreign
+// key that a fictional staff member has no row in, so their decision used
+// to be recorded as NULL, indistinguishable from a decision nobody made.
+// Both identities are now recorded explicitly.
+function decidedByIdentity(req) {
+  const v = viewer(req);
+  return { realUserId: v.realUserId, portalUserId: v.portalUserId, displayName: v.displayName };
+}
+
+function requireAction(action) {
+  return (req, res, next) => {
+    const personaId = clearance.getEffectivePersonaId(req);
+    if (!clearance.personaCanAct(personaId, action)) {
+      return res.status(403).json({ error: clearance.actionDeniedNote(action) });
+    }
+    next();
   };
 }
 
@@ -174,8 +208,21 @@ const isValidEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s) && s.length <= 
 // this exact context (general dashboard chat, or scoped to one job/
 // enquiry) is loaded and handed to the chat widget instead of starting a
 // blank thread on every reload.
-async function loadChatBootstrap(userId, { jobId, enquiryId } = {}) {
-  const conversation = await repo.getLatestConversation(userId, { jobId, enquiryId });
+// The identity a conversation is owned by and conducted at. Exactly one
+// of realUserId / portalUserId is set; personaId is the clearance, and is
+// what stops a lower-clearance reader inheriting a higher-clearance
+// thread.
+function conversationIdentity(req) {
+  const v = viewer(req);
+  return {
+    realUserId: v.realUserId,
+    portalUserId: v.portalUserId,
+    personaId: clearance.getEffectivePersonaId(req)
+  };
+}
+
+async function loadChatBootstrap(identity, { jobId, enquiryId } = {}) {
+  const conversation = await repo.getLatestConversation(identity, { jobId, enquiryId });
   if (!conversation) return { initialConversationId: null, initialMessages: [] };
   const rawMessages = await repo.getMessages(conversation.id);
   const initialMessages = rawMessages.map((m) => {
@@ -307,7 +354,7 @@ function mountPageRoute(app, generateCsrfToken) {
         repo.getDashboardSummary(),
         repo.getRecentActivity(10),
         repo.getPendingApprovals(),
-        loadChatBootstrap(viewer(req).realUserId)
+        loadChatBootstrap(conversationIdentity(req))
       ]);
       res.render('scott/dashboard', {
         ...viewerViewModel(req),
@@ -353,7 +400,7 @@ function mountPageRoute(app, generateCsrfToken) {
       if (!job) return res.status(404).render('scott/not-found', { ...viewerViewModel(req), kind: 'job', navCounts: {}, csrfToken: generateCsrfToken(req, res) });
       const activity = (await repo.getRecentActivity(200)).filter((a) => a.related_job_id === job.id);
       const navCounts = await repo.getDashboardSummary();
-      const chatBootstrap = await loadChatBootstrap(viewer(req).realUserId, { jobId: job.id });
+      const chatBootstrap = await loadChatBootstrap(conversationIdentity(req), { jobId: job.id });
       res.render('scott/job', {
         ...viewerViewModel(req), job, activity, navCounts,
         workersById: WORKERS_BY_ID_JSON, workers: WORKERS, jobStatuses: repo.JOB_STATUSES,
@@ -384,7 +431,7 @@ function mountPageRoute(app, generateCsrfToken) {
       const enquiry = Number.isInteger(id) ? await repo.getEnquiryById(id) : null;
       if (!enquiry) return res.status(404).render('scott/not-found', { ...viewerViewModel(req), kind: 'enquiry', navCounts: {}, csrfToken: generateCsrfToken(req, res) });
       const navCounts = await repo.getDashboardSummary();
-      const chatBootstrap = await loadChatBootstrap(viewer(req).realUserId, { enquiryId: enquiry.id });
+      const chatBootstrap = await loadChatBootstrap(conversationIdentity(req), { enquiryId: enquiry.id });
       res.render('scott/enquiry', {
         ...viewerViewModel(req), enquiry, workers: WORKERS, navCounts,
         workersById: WORKERS_BY_ID_JSON, aiEnabled: isScottAIEnabled(),
@@ -706,7 +753,12 @@ router.post('/api/scott/lead', noindexHeader, scottLeadLimiter, async (req, res)
     if (isScottAIEnabled()) {
       (async () => {
         try {
-          const conversation = await repo.createConversation(null, `Lead: ${name}`, { enquiryId: enquiry.id });
+          // No logged-in human at all: a public lead form submission. Owned by
+          // neither identity, and conducted at the default clearance so the
+          // draft it produces is not readable as though a person held it.
+          const conversation = await repo.createConversation(
+            { realUserId: null, portalUserId: null, personaId: clearance.DEFAULT_PERSONA },
+            `Lead: ${name}`, { enquiryId: enquiry.id });
           await runScottTurnAndPersist({ conversation, conversationId: conversation.id, userMessage: message });
         } catch (err) {
           console.error('Scott lead auto-draft failed:', err.message);
@@ -730,7 +782,7 @@ router.post('/api/scott/messages', noindexHeader, requireScottApiAccess, scottCh
     let conversationId = parseInt(req.body?.conversationId, 10);
     let conversation;
     if (Number.isInteger(conversationId)) {
-      conversation = await repo.getConversation(conversationId, viewer(req).realUserId);
+      conversation = await repo.getConversation(conversationId, conversationIdentity(req));
       if (!conversation) return res.status(404).json({ error: 'Conversation not found.' });
     } else {
       // A message sent from a job or enquiry detail page carries that
@@ -739,7 +791,7 @@ router.post('/api/scott/messages', noindexHeader, requireScottApiAccess, scottCh
       // conversation back up on the next page load).
       const relatedJobId = Number.isInteger(parseInt(req.body?.relatedJobId, 10)) ? parseInt(req.body.relatedJobId, 10) : null;
       const relatedEnquiryId = Number.isInteger(parseInt(req.body?.relatedEnquiryId, 10)) ? parseInt(req.body.relatedEnquiryId, 10) : null;
-      conversation = await repo.createConversation(viewer(req).realUserId, message.slice(0, 80), { jobId: relatedJobId, enquiryId: relatedEnquiryId });
+      conversation = await repo.createConversation(conversationIdentity(req), message.slice(0, 80), { jobId: relatedJobId, enquiryId: relatedEnquiryId });
       conversationId = conversation.id;
     }
 
@@ -754,7 +806,7 @@ router.post('/api/scott/messages', noindexHeader, requireScottApiAccess, scottCh
 router.get('/api/scott/conversations/:id/messages', noindexHeader, requireScottApiAccess, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const conversation = Number.isInteger(id) ? await repo.getConversation(id, viewer(req).realUserId) : null;
+    const conversation = Number.isInteger(id) ? await repo.getConversation(id, conversationIdentity(req)) : null;
     if (!conversation) return res.status(404).json({ error: 'Conversation not found.' });
     const messages = await repo.getMessages(id);
     res.json({ messages: messages.map((m) => ({ ...m, worker: m.worker_id ? { characterName: getWorker(m.worker_id)?.characterName, displayRole: getWorker(m.worker_id)?.displayRole, accent: getWorker(m.worker_id)?.accent, initials: getWorker(m.worker_id)?.initials } : null })) });
@@ -775,7 +827,19 @@ router.post('/api/scott/approvals/:id/decide', noindexHeader, requireScottApiAcc
     const decision = req.body?.decision === 'approve' ? 'approve' : (req.body?.decision === 'reject' ? 'reject' : null);
     const editedText = typeof req.body?.text === 'string' ? plainText(req.body.text, 4000) : null;
     if (!Number.isInteger(id) || !decision) return res.status(400).json({ error: 'Invalid request.' });
-    const writeback = await repo.decideWriteback(id, decision, viewer(req).realUserId, editedText);
+
+    // The required clearance depends on what the writeback is about, so
+    // it is checked here rather than in middleware: a customer reply
+    // draft needs lead clearance, anything else is a management decision.
+    const existing = await repo.getWritebackById(id);
+    if (!existing || existing.status !== 'pending_approval') return res.status(404).json({ error: 'Not found or already decided.' });
+    const action = existing.intent_type === 'customer_reply_draft' ? 'writeback_customer_reply' : 'writeback_other';
+    if (!clearance.personaCanAct(clearance.getEffectivePersonaId(req), action)) {
+      return res.status(403).json({ error: clearance.actionDeniedNote(action) });
+    }
+
+    const decider = decidedByIdentity(req);
+    const writeback = await repo.decideWriteback(id, decision, decider, editedText);
     if (!writeback) return res.status(404).json({ error: 'Not found or already decided.' });
     res.json({ ok: true, writeback });
   } catch (err) {
@@ -799,11 +863,16 @@ router.post('/api/scott/approvals/:id/redraft', noindexHeader, requireScottApiAc
     if (existing.intent_type !== 'customer_reply_draft' || !existing.conversation_id) {
       return res.status(400).json({ error: 'Only a customer reply draft can be redrafted.' });
     }
+    // A redraft supersedes a pending decision and spends a model call, so
+    // it needs the same authority as deciding one.
+    if (!clearance.personaCanAct(clearance.getEffectivePersonaId(req), 'writeback_customer_reply')) {
+      return res.status(403).json({ error: clearance.actionDeniedNote('writeback_customer_reply') });
+    }
 
-    const superseded = await repo.supersedeWriteback(id, viewer(req).realUserId);
+    const superseded = await repo.supersedeWriteback(id, decidedByIdentity(req));
     if (!superseded) return res.status(404).json({ error: 'Not found or already decided.' });
 
-    const conversation = await repo.getConversation(existing.conversation_id, viewer(req).realUserId);
+    const conversation = await repo.getConversation(existing.conversation_id, conversationIdentity(req));
     if (!conversation) return res.status(404).json({ error: 'Conversation not found.' });
 
     const turn = await runScottTurnAndPersist({
@@ -937,7 +1006,7 @@ router.get('/api/scott/search', noindexHeader, requireScottApiAccess, async (req
 // Direct human action — an explicit "Assign to..." control on the enquiry
 // detail page. workerId '' (unassign) is allowed; anything else must be a
 // real routable worker id. Never triggered by an AI reply's JSON.
-router.post('/api/scott/enquiries/:id/assign', noindexHeader, requireScottApiAccess, async (req, res) => {
+router.post('/api/scott/enquiries/:id/assign', noindexHeader, requireScottApiAccess, requireAction('enquiry_assign'), async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const workerId = req.body?.workerId ? String(req.body.workerId) : null;
@@ -964,7 +1033,7 @@ router.post('/api/scott/enquiries/:id/assign', noindexHeader, requireScottApiAcc
 // detail page. Never triggered by an AI reply's JSON (see the schema
 // header comment in db/schema.sql for why structured-column writes stay
 // code-driven only).
-router.post('/api/scott/jobs/:ref/status', noindexHeader, requireScottApiAccess, async (req, res) => {
+router.post('/api/scott/jobs/:ref/status', noindexHeader, requireScottApiAccess, requireAction('job_status'), async (req, res) => {
   try {
     const ref = String(req.params.ref || '').toUpperCase();
     const status = String(req.body?.status || '');

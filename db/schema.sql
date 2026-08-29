@@ -369,6 +369,11 @@ CREATE TABLE IF NOT EXISTS scott_writebacks (
     requires_approval BOOLEAN NOT NULL DEFAULT false,
     status VARCHAR(20) NOT NULL DEFAULT 'auto_applied' CHECK (status IN ('auto_applied', 'pending_approval', 'approved', 'rejected', 'superseded')),
     decided_by_user_id INTEGER REFERENCES users(id),
+    -- A fictional staff member has no users row, so their approval was
+    -- recorded as NULL: indistinguishable from an approval nobody made.
+    -- An audit trail whose most important column can be empty is not one.
+    decided_by_portal_user_id INTEGER REFERENCES scott_portal_users(id),
+    decided_by_name VARCHAR(120) NOT NULL DEFAULT '',
     decided_at TIMESTAMPTZ,
     edited_by_human BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -382,6 +387,17 @@ CREATE TABLE IF NOT EXISTS scott_conversations (
     -- of handling that enquiry, not any one person's private chat. Only a
     -- general (job/enquiry-unscoped) conversation is ever truly personal.
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    -- A fictional staff member has no users row, so their ownership was
+    -- previously represented by user_id being NULL, which is not an
+    -- identity: every portal user looked identical to every other and to
+    -- the public lead form. Ownership is now explicit on whichever of the
+    -- two identity kinds actually started the conversation.
+    portal_user_id INTEGER REFERENCES scott_portal_users(id) ON DELETE CASCADE,
+    -- The clearance the conversation was conducted under. Replaying its
+    -- history to a lower-clearance reader would hand them AI output
+    -- generated from evidence they cannot see, so this is recorded at
+    -- creation and checked on every read.
+    persona_id VARCHAR(40) NOT NULL DEFAULT 'scott_mercer',
     title VARCHAR(255) NOT NULL DEFAULT 'New conversation',
     related_job_id INTEGER REFERENCES scott_jobs(id) ON DELETE SET NULL,
     related_enquiry_id INTEGER REFERENCES scott_enquiries(id) ON DELETE SET NULL,
