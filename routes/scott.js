@@ -261,6 +261,7 @@ const DATA_PAGES = [
   { path: '/scott/people', view: 'scott/people', nav: 'people', label: 'People' },
   { path: '/scott/finance', view: 'scott/finance', nav: 'finance', label: 'Finance' },
   { path: '/scott/quality', view: 'scott/quality', nav: 'quality', label: 'Quality Control' },
+  { path: '/scott/marketing', view: 'scott/marketing', nav: 'marketing', label: 'Marketing & Reviews' },
   { path: '/scott/brain', view: 'scott/brain', nav: 'brain', label: 'Company Brain' }
 ];
 
