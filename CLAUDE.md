@@ -1014,6 +1014,40 @@ derives its list from the module's exports, so nothing else needs
 updating, and `untaggedDeepFactExports` fails a test if a record arrives
 without a tag.
 
+### 21B replay: the 140 clearance cases
+
+`test/scott/clearanceCaseBank.js` is 21B SCOTT'S V0.2 HUMAN CLEARANCE &
+AI ACCESS TEST transcribed in full: 105 same-question-different-login
+cases and 35 bypass cases. 21B records 140/140 as a **design** pass and
+then says in its own words "THIS IS NOT A WEBSITE PASS", requiring a
+replay against the implementation with the rule that a single restricted
+value appearing in any surface is a FAIL.
+
+`test/scott/clearanceReplay.test.js` is that replay. Running it for the
+first time found **four genuine gaps** where 21B says ALLOW and the build
+denied, none of which were visible from reading the permission map:
+
+- Tony could not see the quality queue he is responsible for
+  (`quality_full`, AC-058).
+- Tony could not see the customer details on the route he manages
+  (`route_customer_contact`, AC-065).
+- Chloe could not see the collections she books (AC-066).
+- Leah, who runs knitting, could not see the yarn (`yarn_stock`,
+  AC-053), the same shape as a gap found earlier for Jo.
+
+It also caught two errors in the transcription itself, both worth
+knowing because both would have asserted the reverse of the case's
+meaning: `authorised_patterns` means the patterns authorised TO the
+holder, so Jo correctly holds it and BX-022 is a record-level check, not
+a domain one; and 07Q grants Chloe debtor flags for account handling, so
+BX-033's restricted part is the finance detail behind the flag, not the
+flag.
+
+Eight cases are marked `needsLiveAI` and reported as NOT EXECUTABLE
+rather than passed, because their subject is prompt wording, routing
+behaviour or an action-authority refusal. 21B's whole warning is against
+a design pass presented as a website pass, so those stay declared.
+
 ### Workers
 
 Six active (Ruth Bailey receptionist, Gareth Bell commercial, Maggie Trent
