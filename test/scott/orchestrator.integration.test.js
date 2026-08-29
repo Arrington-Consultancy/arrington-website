@@ -212,4 +212,55 @@ describe('orchestrator integration (fake client)', { skip: DB_AVAILABLE ? false 
     assert.ok(turn.workerReplies[0].escalation);
     assert.equal(turn.workerReplies[0].escalation.to, 'scott_mercer');
   });
+
+  // Proves the v0.2 clearance wiring added 29/08/2026 (lib/scott/clearance.js
+  // + lib/scott/data/contextBuilders.js's formatDeepFactsBlock) actually
+  // reaches a real AI worker call through the real orchestrator code path,
+  // not just the isolated unit tests in clearance.test.js and
+  // deepBusinessFacts.test.js. This is the strongest proof available
+  // without a live ANTHROPIC_API_KEY: inspect the exact user-content string
+  // the fake client received, the same object a real Claude call would get.
+  test('personaId actually changes what a worker\'s own AI call receives — Scott sees the DLA figure, Mike does not', async () => {
+    const script = [
+      () => ({ note: 'ok', route: [{ worker: 'operations', reason: 'ops question' }], refused: false }),
+      (system, userContent) => ({ reply: `seen: ${userContent.includes('9850') ? 'yes' : 'no'}`, certainty: 'CERTAIN', writeback: null, escalation: null, refused: false })
+    ];
+
+    const fakeScott = makeFakeClient([...script]);
+    __setClientFactoryForTests(() => fakeScott.client);
+    await runTurn({ userMessage: 'General question', history: [], personaId: 'scott_mercer' });
+    const scottUserContent = fakeScott.calls[1].userContent;
+
+    __resetClientFactoryForTests();
+
+    const fakeMike = makeFakeClient([...script]);
+    __setClientFactoryForTests(() => fakeMike.client);
+    await runTurn({ userMessage: 'General question', history: [], personaId: 'mike_evans' });
+    const mikeUserContent = fakeMike.calls[1].userContent;
+
+    // Scott's persona grants director_position (finance_accounts worker
+    // domain), but Operations doesn't hold that domain either — so even
+    // Scott, asking through Operations, should NOT see the DLA figure here.
+    // This is the "narrowest wins" guarantee showing up in a live prompt,
+    // not just in the standalone clearance.test.js assertions.
+    assert.ok(!scottUserContent.includes('9850'), "Operations' own worker permission doesn't include director_position, so even Scott's full clearance shouldn't surface the DLA figure through this worker");
+    assert.ok(!mikeUserContent.includes('9850'), "Mike's persona clearance excludes director_position regardless of worker");
+
+    // But something Operations DOES hold and both personas' own domains
+    // differ on (yarn_stock: granted to Scott's '*' and to Tony, NOT
+    // granted to Mike) should diverge between the two calls.
+    assert.ok(scottUserContent.includes('Y-NAVY-01'), "Scott's '*' clearance should surface yarn stock through Operations, which holds yarn_stock");
+    assert.ok(!mikeUserContent.includes('Y-NAVY-01'), "Mike's persona domains don't include yarn_stock, so this must not appear in his call");
+  });
+
+  test('omitting personaId entirely defaults to full (Scott Mercer) clearance, preserving pre-v0.2 behaviour for any caller that predates this parameter', async () => {
+    const fake = makeFakeClient([
+      () => ({ note: 'ok', route: [{ worker: 'operations', reason: 'ops question' }], refused: false }),
+      (system, userContent) => ({ reply: `seen: ${userContent.includes('Y-NAVY-01') ? 'yes' : 'no'}`, certainty: 'CERTAIN', writeback: null, escalation: null, refused: false })
+    ]);
+    __setClientFactoryForTests(() => fake.client);
+
+    await runTurn({ userMessage: 'General question', history: [] }); // no personaId at all
+    assert.ok(fake.calls[1].userContent.includes('Y-NAVY-01'));
+  });
 });

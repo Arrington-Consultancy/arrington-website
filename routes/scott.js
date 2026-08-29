@@ -383,11 +383,11 @@ router.post('/scott/login', noindexHeader, scottLoginLimiter, async (req, res) =
 // send from this worker; this makes that a server-side gate rather than
 // something resting on the model's own self-reporting, exactly the
 // "structural, not merely prompted" isolation this whole build is for.
-async function runScottTurnAndPersist({ conversation, conversationId, userMessage }) {
+async function runScottTurnAndPersist({ conversation, conversationId, userMessage, personaId }) {
   const history = await repo.getMessages(conversationId);
   await repo.addMessage({ conversationId, sender: 'user', content: userMessage });
 
-  const turn = await runTurn({ userMessage, history });
+  const turn = await runTurn({ userMessage, history, personaId });
 
   if (turn.receptionist.note) {
     await repo.addMessage({ conversationId, sender: 'worker', workerId: 'receptionist', content: turn.receptionist.note, technicalFailure: turn.receptionist.technicalFailure });
@@ -549,7 +549,7 @@ router.post('/api/scott/messages', noindexHeader, requireScottApiAccess, scottCh
       conversationId = conversation.id;
     }
 
-    const turn = await runScottTurnAndPersist({ conversation, conversationId, userMessage: message });
+    const turn = await runScottTurnAndPersist({ conversation, conversationId, userMessage: message, personaId: clearance.getSessionPersonaId(req) });
     res.json(serializeTurn(conversationId, turn));
   } catch (err) {
     console.error('Scott chat error:', err);
@@ -615,7 +615,8 @@ router.post('/api/scott/approvals/:id/redraft', noindexHeader, requireScottApiAc
     const turn = await runScottTurnAndPersist({
       conversation,
       conversationId: existing.conversation_id,
-      userMessage: '(Internal note from the team: the previous draft reply needs another attempt — please draft a fresh reply to the customer\'s original message.)'
+      userMessage: '(Internal note from the team: the previous draft reply needs another attempt — please draft a fresh reply to the customer\'s original message.)',
+      personaId: clearance.getSessionPersonaId(req)
     });
     res.json(serializeTurn(existing.conversation_id, turn));
   } catch (err) {
