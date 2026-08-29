@@ -1133,13 +1133,21 @@ anything the approvals queue already owns, anything derivable without a
 human, a record with no recorded owner, and a gap owned by the person who
 raised it.
 
-**Staging note:** `GMAIL_APP_PASSWORD` is not currently set on the
-`scott-demo` service, so a routed gap there records `failed` with "email
-is not configured in this environment" and the interface says plainly
-that nobody was emailed. That is the designed honest behaviour, but the
-send is not demonstrable on staging until the variable is added.
-`SCOTT_PORTAL_ORIGIN` should also be set there so the link in the email
-points at staging rather than production.
+**Staging: proven end to end on 29/08/2026.** `GMAIL_APP_PASSWORD` and
+`SCOTT_PORTAL_ORIGIN` are now set on the `scott-demo` service, and the
+one-shot acceptance check (`scripts/scottGapAcceptance.js`, armed by
+`RUN_GAP_ACCEPTANCE_CHECK=true`, guarded by its own marker so it runs at
+most once per database, non-blocking so a mail hiccup cannot stop the
+app booting) ran inside the real staging container: gap 1 created for
+Leah Morgan, a REAL SMTP send accepted on the first attempt to the demo
+inbox (tom@), `email_status 'sent'`, `emailed_at
+2026-08-29T16:07:38.566Z`, register reading "Leah Morgan has been
+emailed." The flag has been removed again; the gap row is left open on
+`/scott/gaps` deliberately, for a human to close through the UI. The
+check's own dry run against an unconfigured mailbox also caught and
+fixed an honesty bug in `describeNotification` ("failed after a retry"
+when zero attempts were made; the sentence is now built from the
+recorded attempt count).
 
 ### Testing
 
