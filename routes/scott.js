@@ -30,6 +30,7 @@ const { requireScottPageAccess, requireScottApiAccess, hasScottAccess } = requir
 const { runTurn, isScottAIEnabled } = require('../lib/scott/orchestrator');
 const clearance = require('../lib/scott/clearance');
 const deepFacts = require('../lib/scott/deepBusinessFacts');
+const contextBuilders = require('../lib/scott/data/contextBuilders');
 
 const router = express.Router();
 
@@ -203,6 +204,44 @@ function safeNextPath(next) {
   return '/scott';
 }
 
+// Company Brain view model: what this reader can see of the whole record
+// set, and what is being kept from them.
+//
+// Both halves are counted from the SAME filtered pass, so the visible
+// counts are counts of visible records and nothing on the page is derived
+// from a number the reader is not entitled to. The withheld list names
+// the AREA only, never a count and never an example: "there are complaints
+// you cannot read" is a fair thing to tell someone, "there are eleven of
+// them" starts leaking the shape of what is hidden, which 07Q's
+// no-bypass rule is about as much as the content itself.
+function buildBrainViewModel(personaId) {
+  const all = contextBuilders.allDeepFactRecords();
+  const visible = clearance.filterAndRedact(personaId, null, all);
+
+  const visibleCounts = new Map();
+  visible.forEach((r) => visibleCounts.set(r.domain, (visibleCounts.get(r.domain) || 0) + 1));
+
+  // An example drawn from a record this reader can already see, so the
+  // preview line cannot itself become the leak.
+  const exampleFor = (domain) => {
+    const rec = visible.find((r) => r.domain === domain);
+    if (!rec) return '';
+    return String(rec.ref || rec.name || rec.sku || rec.person || rec.role || Object.values(rec)[1] || '').slice(0, 90);
+  };
+
+  const allDomains = [...new Set(all.map((r) => r.domain))];
+  return {
+    visibleCount: visible.length,
+    visibleDomains: [...visibleCounts.keys()]
+      .map((d) => ({ domain: d, label: clearance.domainLabel(d), count: visibleCounts.get(d), example: exampleFor(d) }))
+      .sort((a, b) => b.count - a.count),
+    withheldDomains: allDomains
+      .filter((d) => !visibleCounts.has(d))
+      .map((d) => ({ domain: d, label: clearance.domainLabel(d) }))
+      .sort((a, b) => a.label.localeCompare(b.label))
+  };
+}
+
 // The portal's plain data screens (07A/07E/07G/07I/07K/07N/07S and the
 // rest): each reads the deep company record and renders it, with the view
 // gating every block on the viewer's own clearance. No AI call happens on
@@ -221,7 +260,8 @@ const DATA_PAGES = [
   { path: '/scott/orders', view: 'scott/orders', nav: 'orders', label: 'Purchase Orders' },
   { path: '/scott/people', view: 'scott/people', nav: 'people', label: 'People' },
   { path: '/scott/finance', view: 'scott/finance', nav: 'finance', label: 'Finance' },
-  { path: '/scott/quality', view: 'scott/quality', nav: 'quality', label: 'Quality Control' }
+  { path: '/scott/quality', view: 'scott/quality', nav: 'quality', label: 'Quality Control' },
+  { path: '/scott/brain', view: 'scott/brain', nav: 'brain', label: 'Company Brain' }
 ];
 
 function mountPageRoute(app, generateCsrfToken) {
@@ -382,6 +422,7 @@ function mountPageRoute(app, generateCsrfToken) {
           ...viewerViewModel(req),
           navCounts,
           facts: deepFacts,
+          brain: buildBrainViewModel(clearance.getEffectivePersonaId(req)),
           csrfToken: generateCsrfToken(req, res)
         });
       } catch (err) {
@@ -767,9 +808,85 @@ router.post('/api/scott/impersonate', noindexHeader, requireScottApiAccess, asyn
   res.json({ ok: true, personaId: clearance.getEffectivePersonaId(req), impersonating: clearance.isImpersonating(req) });
 });
 
+// Search is a retrieval path, so the clearance rule applies to it exactly
+// as it applies to a page or an AI answer. 07Q is explicit that
+// "attempting to bypass a restriction through Company Brain, search,
+// another worker or prompt wording does not change clearance", and an
+// unfiltered search is the easiest of those four to actually do: type a
+// customer name and read the result.
+//
+// Three things are gated here, not one:
+//   1. Whole categories a persona cannot see are absent, not empty-listed.
+//   2. Restricted fields are stripped from the rows that DO come back
+//      (a job is jobs_ops, but its price is job_margin).
+//   3. Counts and totals are computed AFTER filtering, so the size of the
+//      result set cannot be used to infer what was removed. This is the
+//      "no leaks via snippets, counts or derived calcs" requirement, and
+//      it is why the response carries no unfiltered total anywhere.
+const SEARCH_CATEGORY_DOMAINS = { jobs: 'jobs_ops', enquiries: 'leads', customers: 'customers_contact' };
+// Fields on an otherwise-visible row that belong to a narrower domain.
+const SEARCH_FIELD_DOMAINS = {
+  jobs: { price_pence: 'job_margin', risk_note: 'jobs_ops' },
+  enquiries: { message: 'leads' },
+  customers: { notes: 'customers_contact' }
+};
+
+function stripRestrictedFields(personaId, category, row) {
+  const map = SEARCH_FIELD_DOMAINS[category] || {};
+  const out = {};
+  Object.keys(row).forEach((k) => {
+    const needed = map[k];
+    if (needed && !clearance.personaCanSeeDomain(personaId, needed)) return;
+    out[k] = row[k];
+  });
+  return out;
+}
+
+// The deep company brain, searched under the same rule. Without this the
+// Company Brain is only as deep as the four demo tables; with it, a
+// cleared reader can find the real record and an uncleared one gets
+// nothing at all rather than a redacted hint that it exists.
+function searchDeepBrain(personaId, q) {
+  const needle = q.toLowerCase();
+  return clearance
+    .filterAndRedact(personaId, null, contextBuilders.allDeepFactRecords())
+    .map((record) => {
+      const label = record.ref || record.name || record.sku || record.item || record.person || '';
+      const hit = Object.entries(record).find(([k, v]) =>
+        k !== 'domain' && typeof v === 'string' && v.toLowerCase().includes(needle));
+      // Match on the label too, so searching a reference number finds it
+      // even when no prose field mentions it.
+      if (!hit && !String(label).toLowerCase().includes(needle)) return null;
+      return {
+        domain: record.domain,
+        label: String(label) || record.domain,
+        // The snippet is built from a field this reader is already cleared
+        // for, because redaction ran first. A snippet taken before
+        // redaction would quote the restricted text back verbatim, which
+        // is the classic version of this leak.
+        snippet: hit ? String(hit[1]).slice(0, 160) : ''
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 8);
+}
+
 router.get('/api/scott/search', noindexHeader, requireScottApiAccess, async (req, res) => {
   try {
-    const results = await repo.searchAll(String(req.query.q || ''));
+    const q = String(req.query.q || '').trim();
+    const personaId = clearance.getEffectivePersonaId(req);
+    const raw = await repo.searchAll(q);
+
+    const results = {};
+    Object.keys(SEARCH_CATEGORY_DOMAINS).forEach((category) => {
+      if (!clearance.personaCanSeeDomain(personaId, SEARCH_CATEGORY_DOMAINS[category])) {
+        results[category] = [];
+        return;
+      }
+      results[category] = (raw[category] || []).map((row) => stripRestrictedFields(personaId, category, row));
+    });
+    results.brain = q.length >= 2 ? searchDeepBrain(personaId, q) : [];
+
     res.json(results);
   } catch (err) {
     console.error('Scott search error:', err);

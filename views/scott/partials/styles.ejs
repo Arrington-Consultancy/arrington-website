@@ -71,6 +71,15 @@
   }
   .sc-search-results a:hover { background: #f3f1e6; }
   .sc-search-results .sc-search-customer { color: var(--sc-text-muted); cursor: default; }
+  .sc-search-results .sc-search-brain {
+    display: block; padding: 8px 12px; border-bottom: 1px solid var(--sc-border); cursor: default; font-size: 13px;
+  }
+  .sc-search-domain {
+    display: inline-block; margin-left: 6px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.05em;
+    text-transform: uppercase; color: var(--sc-text-muted); border: 1px solid var(--sc-border);
+    border-radius: 3px; padding: 1px 5px; vertical-align: middle;
+  }
+  .sc-search-snippet { display: block; margin-top: 3px; color: var(--sc-text-muted); font-size: 12px; line-height: 1.4; }
   .sc-search-results a:last-child, .sc-search-results .sc-search-customer:last-child { border-bottom: none; }
 
   .sc-nav { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
@@ -328,6 +337,24 @@
   .sc-quote-avatar { width: 24px; height: 24px; font-size: 10px; flex-shrink: 0; }
   .sc-draft-textarea { min-height: 90px; margin: 10px 0; }
   .sc-draft-actions { flex-wrap: wrap; }
+
+  /* ---------- company brain ---------- */
+  .sc-brain-input {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--sc-border); border-radius: var(--sc-radius-sm);
+    font-family: inherit; font-size: 14.5px; color: var(--sc-text); background: var(--sc-cream);
+  }
+  .sc-brain-input:focus { outline: 2px solid var(--sc-navy); outline-offset: 1px; }
+  .sc-brain-results:not(:empty) { margin-top: 12px; border-top: 1px solid var(--sc-border); }
+  .sc-brain-hit { padding: 10px 2px; border-bottom: 1px solid var(--sc-border); }
+  .sc-brain-hit:last-child { border-bottom: none; }
+  .sc-brain-hit-head { font-size: 14px; }
+  .sc-brain-empty { padding: 12px 2px; color: var(--sc-text-muted); font-size: 13.5px; }
+  /* Withheld areas are deliberately legible rather than greyed into
+     illegibility: the reader is meant to be able to read WHICH area they
+     are missing and who to ask, that being the point of telling them at
+     all. */
+  .sc-row-card-muted { background: var(--sc-cream); }
+  .sc-pill-muted { background: var(--sc-cream); color: var(--sc-text-muted); border: 1px solid var(--sc-border); }
 
   /* ---------- responsive ---------- */
   @media (max-width: 860px) {

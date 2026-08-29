@@ -87,6 +87,15 @@
     (data.customers || []).forEach(function (c) {
       rows.push('<span class="sc-search-customer">' + escapeHtml(c.name) + '</span>');
     });
+    // Company Brain hits. The server has already filtered these to this
+    // viewer's clearance and redacted the snippet, so there is nothing to
+    // gate here: whatever arrives is theirs to read.
+    (data.brain || []).forEach(function (b) {
+      rows.push('<span class="sc-search-brain"><strong>' + escapeHtml(b.label) + '</strong>'
+        + '<span class="sc-search-domain">' + escapeHtml(b.domain) + '</span>'
+        + (b.snippet ? '<span class="sc-search-snippet">' + escapeHtml(b.snippet) + '</span>' : '')
+        + '</span>');
+    });
     if (!rows.length) {
       results.innerHTML = '<div class="sc-search-empty">No matches</div>';
     } else {

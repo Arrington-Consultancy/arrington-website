@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Company Brain | Scott's Armchair &amp; Knitting Service</title>
+  <meta name="robots" content="noindex, nofollow">
+  <%- include('partials/styles') %>
+</head>
+<body class="scott-body">
+  <div class="sc-shell">
+    <%- include('partials/sidebar', { active: 'brain', navCounts: navCounts }) %>
+    <main class="sc-main">
+      <% if (typeof isImpersonating !== 'undefined' && isImpersonating) { %>
+        <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
+      <% } %>
+      <div class="sc-page-header">
+        <div>
+          <h1 class="sc-h">Company Brain</h1>
+          <p>Everything the company holds, in one place. Viewing as <strong><%= persona.name %></strong> (<%= persona.role %>), Clearance <%= persona.code %>.</p>
+        </div>
+      </div>
+
+      <div class="sc-card sc-proposed-note">
+        <strong>What you are seeing.</strong> This page is the whole record set filtered to your own clearance, not a summary of it. The counts below are counted after filtering, so they tell you how much you can see, not how much exists. Where something is held back you are told that it exists and who to ask, rather than being shown an empty section that implies the company has no record of it.
+      </div>
+
+      <div class="sc-stat-grid">
+        <div class="sc-card sc-stat"><div class="sc-stat-label">Records you can read</div><div class="sc-stat-value"><%= brain.visibleCount %></div></div>
+        <div class="sc-card sc-stat"><div class="sc-stat-label">Areas you can read</div><div class="sc-stat-value"><%= brain.visibleDomains.length %></div></div>
+        <div class="sc-card sc-stat"><div class="sc-stat-label">Areas held back</div><div class="sc-stat-value <%= brain.withheldDomains.length ? 'warn' : '' %>"><%= brain.withheldDomains.length %></div></div>
+      </div>
+
+      <h2 class="sc-section-title">Search the record</h2>
+      <div class="sc-card">
+        <input type="text" id="scBrainSearch" class="sc-brain-input" placeholder="Search jobs, customers, stock, suppliers, people..." autocomplete="off">
+        <div id="scBrainResults" class="sc-brain-results"></div>
+      </div>
+
+      <% if (!brain.visibleDomains.length) { %>
+        <h2 class="sc-section-title">Your record areas</h2>
+        <div class="sc-card sc-empty"><%= deniedNote('company_brain') %></div>
+      <% } else { %>
+        <h2 class="sc-section-title">Your record areas</h2>
+        <div class="sc-list">
+          <% brain.visibleDomains.forEach(function (d) { %>
+            <div class="sc-card sc-row-card">
+              <div>
+                <div class="sc-row-title"><%= d.label %></div>
+                <div class="sc-row-sub"><%= d.example %></div>
+              </div>
+              <div class="sc-row-actions">
+                <span class="sc-pill sc-pill-status"><%= d.count %> record<%= d.count === 1 ? '' : 's' %></span>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+      <% } %>
+
+      <% if (brain.withheldDomains.length) { %>
+        <h2 class="sc-section-title">Held back from you</h2>
+        <div class="sc-card sc-proposed-note">
+          These areas exist in the company's records. You are not cleared to read them, so nothing from them appears anywhere in this portal for you, including in search results, in counts, and in anything the AI team says. Ask an appropriately cleared colleague or Scott Mercer if you need something from one of them.
+        </div>
+        <div class="sc-list">
+          <% brain.withheldDomains.forEach(function (d) { %>
+            <div class="sc-card sc-row-card sc-row-card-muted">
+              <div>
+                <div class="sc-row-title"><%= d.label %></div>
+                <div class="sc-row-sub">Exists, not visible at Clearance <%= persona.code %>.</div>
+              </div>
+              <div class="sc-row-actions"><span class="sc-pill sc-pill-muted">withheld</span></div>
+            </div>
+          <% }); %>
+        </div>
+      <% } %>
+    </main>
+  </div>
+  <script nonce="<%= nonce %>">
+  (function () {
+    var input = document.getElementById('scBrainSearch');
+    var out = document.getElementById('scBrainResults');
+    var timer = null;
+
+    function escapeHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+
+    function render(data) {
+      var rows = [];
+      (data.brain || []).forEach(function (b) {
+        rows.push('<div class="sc-brain-hit"><div class="sc-brain-hit-head"><strong>' + escapeHtml(b.label) + '</strong>'
+          + '<span class="sc-search-domain">' + escapeHtml(b.domain) + '</span></div>'
+          + (b.snippet ? '<div class="sc-search-snippet">' + escapeHtml(b.snippet) + '</div>' : '') + '</div>');
+      });
+      (data.jobs || []).forEach(function (j) {
+        rows.push('<div class="sc-brain-hit"><div class="sc-brain-hit-head"><a href="/scott/jobs/' + encodeURIComponent(j.ref) + '">'
+          + escapeHtml(j.ref) + '</a><span class="sc-search-domain">job</span></div>'
+          + '<div class="sc-search-snippet">' + escapeHtml(j.customer_name || '') + ' ' + escapeHtml(j.description || '') + '</div></div>');
+      });
+      (data.customers || []).forEach(function (c) {
+        rows.push('<div class="sc-brain-hit"><div class="sc-brain-hit-head"><strong>' + escapeHtml(c.name)
+          + '</strong><span class="sc-search-domain">customer</span></div></div>');
+      });
+      // Nothing found is stated plainly. It deliberately does NOT say
+      // whether something was filtered out: "no results" and "results you
+      // are not cleared for" must look identical from here, or the
+      // difference between them becomes the leak.
+      out.innerHTML = rows.length ? rows.join('') : '<div class="sc-brain-empty">No matches you can read.</div>';
+    }
+
+    input.addEventListener('input', function () {
+      var q = input.value.trim();
+      clearTimeout(timer);
+      if (q.length < 2) { out.innerHTML = ''; return; }
+      timer = setTimeout(function () {
+        fetch('/api/scott/search?q=' + encodeURIComponent(q))
+          .then(function (r) { return r.json(); })
+          .then(render)
+          .catch(function () { out.innerHTML = '<div class="sc-brain-empty">Search is unavailable right now.</div>'; });
+      }, 200);
+    });
+  })();
+  </script>
+</body>
+</html>
