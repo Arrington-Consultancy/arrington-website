@@ -1249,13 +1249,17 @@ Two suites need more than `DATABASE_URL`:
   suite's own first draft before a penny was spent. **The paid half was
   genuinely executed on 29/08/2026** on Tom's explicit authorisation, on
   staging where the key lives, via the one-shot marker-guarded runner
-  (`scripts/scottLivePressureRunner.js`, armed by
-  `RUN_SCOTT_LIVE_PRESSURE=true`, since removed): 11 live turns against
-  `claude-sonnet-5`, 17 pass, 0 fail, full TAP output in the deployment
-  log for deploy `2cc557d3` on `scott-demo`/staging. A deliberate re-run
-  means deleting the `live_pressure_suite_run` marker row from
-  `scott_activity` first. The release-review summary of all the evidence
-  is `review/scott-v0.2-release-review-2026-08-29.md`.
+  (`scripts/scottLivePressureRunner.js`): first run 29/08/2026, 11 live
+  turns against `claude-sonnet-5`, 17 pass, 0 fail, full TAP output in
+  the deployment log for deploy `2cc557d3` on `scott-demo`/staging.
+  Since 30/08/2026 the runner takes a RUN LABEL: the
+  `RUN_SCOTT_LIVE_PRESSURE` value names the run (`true` is the legacy
+  spelling of the first run), each label spends at most once via the
+  `live_pressure_suite_run` marker rows in `scott_activity`, and a
+  deliberate re-run after a material change (such as a roster
+  activation) is armed with a fresh label rather than manual SQL. The
+  release-review summary of the 29/08 evidence is
+  `review/scott-v0.2-release-review-2026-08-29.md`.
 
 ## Related
 
