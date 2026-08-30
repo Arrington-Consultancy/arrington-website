@@ -9,41 +9,92 @@
 </head>
 <body class="scott-body">
   <div class="sc-shell">
-    <%- include('partials/sidebar', { active: 'jobs' }) %>
+    <%- include('partials/sidebar', { active: 'jobs', navCounts: navCounts }) %>
     <main class="sc-main">
-      <div class="sc-page-header">
+      <% if (typeof isImpersonating !== 'undefined' && isImpersonating) { %>
+        <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
+      <% } %>
+      <%
+        // Helpers for the board. The promised date is the operational
+        // heartbeat of a job, so it gets urgency colouring; money renders
+        // only for job_margin clearance, the same per-field rule the
+        // search API and the AI context already enforce.
+        var showMoney = canSee('job_margin');
+        var now = new Date(); now.setHours(0,0,0,0);
+        function dueInfo(d) {
+          if (!d) return null;
+          var dt = new Date(d); dt.setHours(0,0,0,0);
+          var days = Math.round((dt - now) / 86400000);
+          var label = dt.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+          if (days < 0) return { label: label, sub: (-days) + 'd overdue', tone: 'late' };
+          if (days === 0) return { label: label, sub: 'today', tone: 'soon' };
+          if (days <= 3) return { label: label, sub: 'in ' + days + 'd', tone: 'soon' };
+          return { label: label, sub: 'in ' + days + 'd', tone: 'ok' };
+        }
+        var atRiskCount = jobs.filter(function (j) { return j.at_risk; }).length;
+        var STATUS_LABELS = { enquiry: 'Enquiry', quoted: 'Quoted', scheduled: 'Scheduled', awaiting_parts: 'Awaiting parts', in_progress: 'In progress', completed: 'Completed', delivered: 'Delivered' };
+      %>
+      <div class="sc-page-header sc-board-header">
         <div>
           <h1 class="sc-h">Jobs &amp; Orders</h1>
-          <p><%= jobs.length %> job<%= jobs.length === 1 ? '' : 's' %> shown</p>
+          <p><%= jobs.length %> job<%= jobs.length === 1 ? '' : 's' %> shown<% if (atRiskCount) { %> &middot; <span class="sc-board-risk-note"><%= atRiskCount %> at risk</span><% } %> &middot; Maggie Trent keeps this board</p>
+        </div>
+        <div class="sc-filter-bar sc-board-filters">
+          <a href="/scott/jobs" class="<%= !status ? 'active' : '' %>">All</a>
+          <a href="/scott/jobs?at_risk=1">At risk</a>
+          <a href="/scott/jobs?status=in_progress" class="<%= status === 'in_progress' ? 'active' : '' %>">In progress</a>
+          <a href="/scott/jobs?status=quoted" class="<%= status === 'quoted' ? 'active' : '' %>">Quoted</a>
+          <a href="/scott/jobs?status=scheduled" class="<%= status === 'scheduled' ? 'active' : '' %>">Scheduled</a>
+          <a href="/scott/jobs?status=delivered" class="<%= status === 'delivered' ? 'active' : '' %>">Delivered</a>
         </div>
       </div>
 
-      <div class="sc-filter-bar">
-        <a href="/scott/jobs" class="<%= !status ? 'active' : '' %>">All</a>
-        <a href="/scott/jobs?at_risk=1">At risk</a>
-        <a href="/scott/jobs?status=in_progress" class="<%= status === 'in_progress' ? 'active' : '' %>">In progress</a>
-        <a href="/scott/jobs?status=quoted" class="<%= status === 'quoted' ? 'active' : '' %>">Quoted</a>
-        <a href="/scott/jobs?status=scheduled" class="<%= status === 'scheduled' ? 'active' : '' %>">Scheduled</a>
-        <a href="/scott/jobs?status=delivered" class="<%= status === 'delivered' ? 'active' : '' %>">Delivered</a>
-      </div>
-
-      <div class="sc-list">
+      <div class="sc-board">
         <% if (!jobs.length) { %>
           <div class="sc-card sc-empty">No jobs match this filter.</div>
         <% } %>
         <% jobs.forEach(function (j) { %>
-          <a href="/scott/jobs/<%= j.ref %>" class="sc-card sc-card-link sc-row-card">
-            <div>
-              <div class="sc-row-title"><%= j.ref %> &middot; <%= j.customer_name || 'Unknown customer' %></div>
-              <div class="sc-row-sub"><%= j.description %></div>
+          <% var due = dueInfo(j.promised_date); %>
+          <a href="/scott/jobs/<%= j.ref %>" class="sc-job-row<%= j.at_risk ? ' is-risk' : '' %> sc-status-<%= j.status %>">
+            <div class="sc-job-main">
+              <div class="sc-job-top">
+                <span class="sc-job-ref"><%= j.ref %></span>
+                <span class="sc-job-customer"><%= j.customer_name || 'Unknown customer' %></span>
+              </div>
+              <div class="sc-job-desc"><%= j.description %></div>
+              <% if (j.at_risk && j.risk_note) { %>
+                <div class="sc-job-constraint"><span>In the way:</span> <%= j.risk_note %></div>
+              <% } %>
             </div>
-            <div class="sc-row-actions">
-              <% if (j.at_risk) { %><span class="sc-pill sc-pill-risk">At risk</span><% } %>
-              <span class="sc-pill sc-pill-status"><%= j.status.replace('_', ' ') %></span>
+            <div class="sc-job-meta">
+              <% if (showMoney) { %>
+                <div class="sc-job-cell sc-job-money">
+                  <% if (j.price_pence != null) { %>
+                    <span class="sc-job-num">&pound;<%= Math.round(j.price_pence / 100).toLocaleString() %></span>
+                  <% } else { %>
+                    <span class="sc-job-num sc-job-num-muted">&middot;</span>
+                  <% } %>
+                  <span class="sc-job-cell-label"><%= j.price_pence != null ? 'value' : 'not quoted' %></span>
+                </div>
+              <% } %>
+              <div class="sc-job-cell sc-job-due <%= due ? 'is-' + due.tone : '' %>">
+                <% if (due) { %>
+                  <span class="sc-job-num"><%= due.label %></span>
+                  <span class="sc-job-cell-label"><%= due.sub %></span>
+                <% } else { %>
+                  <span class="sc-job-num sc-job-num-muted">&middot;</span>
+                  <span class="sc-job-cell-label">no date</span>
+                <% } %>
+              </div>
+              <div class="sc-job-cell sc-job-state">
+                <% if (j.at_risk) { %><span class="sc-pill sc-pill-risk">At risk</span><% } %>
+                <span class="sc-status-chip sc-status-chip-<%= j.status %>"><%= STATUS_LABELS[j.status] || j.status.replace('_', ' ') %></span>
+              </div>
             </div>
           </a>
         <% }); %>
       </div>
+      <p class="sc-board-foot">Open a job to see its full record, activity and to ask the team about it. Status changes and money stay inside each person's clearance.</p>
     </main>
   </div>
 </body>
