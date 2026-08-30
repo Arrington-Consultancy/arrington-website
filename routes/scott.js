@@ -29,6 +29,7 @@ const { SNAPSHOT_LABEL } = require('../lib/scott/config');
 const { requireScottPageAccess, requireScottApiAccess, hasScottAccess } = require('../lib/scott/access');
 const { runTurn, isScottAIEnabled } = require('../lib/scott/orchestrator');
 const clearance = require('../lib/scott/clearance');
+const { checkReleaseGate } = require('../lib/scott/qualityGate');
 const deepFacts = require('../lib/scott/deepBusinessFacts');
 const contextBuilders = require('../lib/scott/data/contextBuilders');
 const brainGaps = require('../lib/scott/brainGaps');
@@ -1197,6 +1198,19 @@ router.post('/api/scott/jobs/:ref/status', noindexHeader, requireScottApiAccess,
     if (!repo.JOB_STATUSES.includes(status)) return res.status(400).json({ error: 'Invalid status.' });
     const job = await repo.getJobByRef(ref);
     if (!job) return res.status(404).json({ error: 'Job not found.' });
+    // Doc 31 release gate: a release state needs the quality evidence to
+    // say PASS, and the refusal names the missing evidence. There is no
+    // override parameter on purpose (16A: date pressure does not clear it).
+    const gate = checkReleaseGate(job.ref, job.status, status);
+    if (!gate.allowed) {
+      await repo.addActivity({
+        actor: 'user',
+        eventType: 'job_release_blocked',
+        summary: `${viewer(req).displayName} tried to set ${ref} to ${status.replace(/_/g, ' ')}; refused by the quality release gate.`,
+        relatedJobId: job.id
+      });
+      return res.status(409).json({ error: gate.reason });
+    }
     const updated = await repo.setJobStatus(job.id, status);
     await repo.addActivity({
       actor: 'user',

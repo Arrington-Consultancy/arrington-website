@@ -32,7 +32,7 @@
           return { label: label, sub: 'in ' + days + 'd', tone: 'ok' };
         }
         var atRiskCount = jobs.filter(function (j) { return j.at_risk; }).length;
-        var STATUS_LABELS = { enquiry: 'Enquiry', quoted: 'Quoted', scheduled: 'Scheduled', awaiting_parts: 'Awaiting parts', in_progress: 'In progress', completed: 'Completed', delivered: 'Delivered' };
+        var STATUS_LABELS = { enquiry: 'Enquiry', quoted: 'Quoted', scheduled: 'Scheduled', awaiting_parts: 'Awaiting parts', in_progress: 'In progress', quality_check: 'Quality check', rework: 'Rework', ready_for_return: 'Ready for return', on_hold: 'On hold', completed: 'Completed', delivered: 'Delivered' };
       %>
       <div class="sc-page-header sc-board-header">
         <div>

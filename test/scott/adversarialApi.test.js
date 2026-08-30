@@ -213,6 +213,23 @@ describe('adversarial: real session and API path', { skip: RUNNABLE ? false : 's
     assert.equal(r.status, 200, `owner must be able to act, got ${r.status}`);
   });
 
+  test('even the owner cannot release a job past an open quality record (doc 31 release gate)', async () => {
+    // SAKS-1045 is seeded in quality_check with the BLOCKING record
+    // QC-260828-02 open. Full clearance is not a bypass: the refusal must
+    // name the missing evidence, and the job must be left untouched.
+    const token = await csrfFrom(owner.jar, '/scott');
+    for (const status of ['ready_for_return', 'completed', 'delivered']) {
+      const r = await apiPost(owner.jar, '/api/scott/jobs/SAKS-1045/status', { status }, token);
+      assert.equal(r.status, 409, `owner setting SAKS-1045 to ${status} must be refused, got ${r.status}`);
+      const body = await r.json();
+      assert.match(String(body.error), /QC-260828-02/, 'the refusal must name the missing evidence');
+    }
+    const rework = await apiPost(owner.jar, '/api/scott/jobs/SAKS-1045/status', { status: 'rework' }, token);
+    assert.equal(rework.status, 200, 'a non-release transition must still work');
+    const back = await apiPost(owner.jar, '/api/scott/jobs/SAKS-1045/status', { status: 'quality_check' }, token);
+    assert.equal(back.status, 200);
+  });
+
   // ---------------------------------------------------------------
   // 3. Privilege escalation
   // ---------------------------------------------------------------
