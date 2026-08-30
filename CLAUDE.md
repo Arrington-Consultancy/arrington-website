@@ -18,7 +18,10 @@ authorities, in this order:
 1. **AI GOVERNANCE CONSTITUTION - UNIVERSAL MASTER**
 2. **AI BRAIN & WORKER CREATION STANDARD - UNIVERSAL MASTER**, including the current Universal AI Operating Standard
 3. **START HERE. ARRINGTON CONSULTANCY BRAIN INDEX**
-4. The relevant Arrington project, worker or handoff records for the task
+4. The relevant Arrington project, worker or handoff records for the task.
+   For Scott demonstration work that means the Scott controlled sources:
+   the Master AI Rulebook, worker map, permission map, worker
+   specifications and current handoffs.
 
 How they relate: universal governance is the reusable baseline;
 Arrington-specific controlled rules govern Arrington work wherever they
@@ -951,10 +954,14 @@ The `scott-demo` staging service remains for pre-production testing.
 - **Staging URL:** https://scott-demo-staging.up.railway.app
 - **Access:** the real Scott login. `SCOTT_DEMO_SKIP_LOGIN` and
   `RESET_SCOTT_STAFF_PASSWORDS` were removed from the staging service on
-  29/08/2026 as part of the post-release security follow-up (PR #115);
-  the skip-login code path remains in `lib/scott/access.js`, still
-  refused outright on the public site, for any future non-public deploy
-  that needs it.
+  29/08/2026 as part of the post-release security follow-up (PR #115).
+  Skip-login was temporarily re-enabled on 30/08/2026 at Tom's request
+  for solo testing and removed again the same day on his "lock it"
+  instruction (doc 24 finding F3, closed; boot log verified free of the
+  bypass warning). The skip-login code path remains in
+  `lib/scott/access.js`, still refused outright on the public site, for
+  any future non-public deploy that needs it, and any use of it is a
+  deliberate, temporary, Tom-approved state.
 - **Fictional staff logins:** eight accounts in `scott_portal_users`
   (`scott.mercer`, `tony.marsh`, `chloe.reed`, `leah.morgan`,
   `ellie.park`, `ravi.singh`, `jo.bell`, `mike.evans`), password from
@@ -1098,9 +1105,9 @@ purpose. SAKS-1045 is seeded onto the board in `quality_check` with its
 open BLOCKING record so the gate is demonstrable. Covered by
 `test/scott/qualityGate.test.js` (pure) and an owner-cannot-release case
 in the adversarial suite; browser-verified as Scott Mercer. With F2
-corrected and the bounded recheck green, Nina Holt's activation block is
-lifted; the remaining open finding is staging's temporary passwordless
-state, which closes when Tom says lock it.
+corrected and the bounded recheck green, Nina Holt's activation block
+was lifted. F3 (staging temporarily passwordless) closed the same day on
+Tom's "lock it" instruction; every doc 24 finding is now corrected.
 
 ### 21B replay: the 140 clearance cases
 
