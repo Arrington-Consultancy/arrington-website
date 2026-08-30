@@ -25,6 +25,7 @@ const { askWorkspace, isWorkspaceAIEnabled, routeToLane } = require('../lib/work
 const socialRepo = require('../lib/workspace/social/repo');
 const socialActions = require('../lib/workspace/social/actions');
 const crm = require('../lib/crm/contacts');
+const erasure = require('../lib/crm/erasure');
 
 const router = express.Router();
 
@@ -161,10 +162,14 @@ function mountPageRoute(app, generateCsrfToken) {
     let detail = null;
     const id = parseInt(req.query.id, 10);
     if (permitted && Number.isInteger(id)) detail = await crm.contactWithHistory(id);
+    // What erasing this person would remove, and what it would keep,
+    // shown before anyone confirms rather than after.
+    const erasurePreview = detail ? await erasure.previewErasure(detail.email) : null;
+    const erasures = permitted ? await erasure.listErasures(25) : [];
     res.render('workspace/contacts', {
       ...viewer(req),
       counts: await navCounts(clearanceId),
-      permitted, contacts, stats, detail, q,
+      permitted, contacts, stats, detail, q, erasurePreview, erasures,
       csrfToken: generateCsrfToken(req, res)
     });
   });
@@ -382,6 +387,41 @@ router.post('/api/workspace/contacts/sync', workspaceNoindex, requireWorkspaceAp
       actor: req.session.user.username,
       eventType: 'contacts_synced',
       summary: `Contacts rebuilt from ${result.leadsScanned} lead row(s); ${result.eventsAdded} new interaction(s).`
+    });
+    res.json({ ok: true, ...result });
+  } catch (err) { next(err); }
+});
+
+// Erasing a contact. Permanent, so it is gated four ways: workspace
+// access, commercial clearance, the confirming human typing the address
+// back exactly, and a written reason. There is no bulk version and no
+// query parameter that widens it beyond one person.
+router.post('/api/workspace/contacts/:id/erase', workspaceNoindex, requireWorkspaceApiAccess, async (req, res, next) => {
+  try {
+    if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'commercial')) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id)) return res.status(400).json({ error: 'Bad contact id.' });
+    const contact = await crm.contactWithHistory(id);
+    if (!contact) return res.status(404).json({ error: 'That contact no longer exists.' });
+
+    const result = await erasure.eraseContact({
+      email: contact.email,
+      confirmEmail: req.body && req.body.confirmEmail,
+      requestedBy: req.session.user.username,
+      reason: req.body && req.body.reason
+    });
+    if (!result.ok) return res.status(400).json({ error: result.error });
+
+    // The audit line carries the redacted address, never the address
+    // itself: an audit trail that reprinted what was just erased would
+    // undo the erasure it is evidencing.
+    const removedTotal = Object.values(result.removed).reduce((n, r) => n + r.count, 0);
+    await repo.addActivity({
+      actor: req.session.user.username,
+      eventType: 'contact_erased',
+      summary: `Erased contact ${result.redacted}: ${removedTotal} record(s) removed across ${Object.keys(result.removed).length} table(s). Reason: ${String(req.body.reason).slice(0, 300)}`
     });
     res.json({ ok: true, ...result });
   } catch (err) { next(err); }

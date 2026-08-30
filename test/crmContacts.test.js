@@ -81,12 +81,15 @@ test('the Google source is recorded per interaction, not smeared across the cont
 });
 
 test('a lead with an unusable email is skipped rather than guessed at', async () => {
-  const before = await crm.summary();
-  await db.query(`INSERT INTO leads (kind, name, email, message) VALUES ('contact', 'Broken', 'not-an-email', 'x')`);
+  // Scoped to this suite's own namespace: the whole test run shares one
+  // database and other suites create and erase contacts concurrently, so
+  // a global count would measure them rather than this behaviour.
+  const bad = `not-an-email-${NS}`;
+  await db.query(`INSERT INTO leads (kind, name, email, message) VALUES ('contact', 'Broken', $1, 'x')`, [bad]);
   await crm.syncFromLeads();
-  const after = await crm.summary();
-  assert.equal(after.contacts, before.contacts, 'no contact is invented from an unusable address');
-  await db.query(`DELETE FROM leads WHERE email = 'not-an-email'`);
+  const { rows } = await db.query('SELECT COUNT(*)::int AS n FROM crm_contacts WHERE email LIKE $1', [`%${bad}%`]);
+  assert.equal(rows[0].n, 0, 'no contact is invented from an unusable address');
+  await db.query('DELETE FROM leads WHERE email = $1', [bad]);
 });
 
 test('search finds a contact by email, name or company', async () => {

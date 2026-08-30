@@ -70,6 +70,57 @@
 </div>
 <% } %>
 
+<% if (detail && erasurePreview) { %>
+<div class="ws-card ws-danger-card">
+  <h2>Erase this contact</h2>
+  <p class="ws-body-text">Permanent. It removes this person's details from the contact record and from the enquiries and submissions the record is built from, so they do not reappear on the next rebuild. There is no undo.</p>
+
+  <div class="ws-item">
+    <span class="ws-item-title">What this removes</span>
+    <% Object.keys(erasurePreview.removed).forEach(function (t) { %>
+      <div class="ws-meta"><%= erasurePreview.removed[t].label %>: <%= erasurePreview.removed[t].count %> record(s)</div>
+    <% }) %>
+  </div>
+
+  <div class="ws-item">
+    <span class="ws-item-title">What this keeps, and why</span>
+    <% Object.keys(erasurePreview.retained).forEach(function (t) { %>
+      <div class="ws-meta"><%= erasurePreview.retained[t].label %>: <%= erasurePreview.retained[t].count %> record(s). <%= erasurePreview.retained[t].reason %></div>
+    <% }) %>
+  </div>
+
+  <div class="ws-item">
+    <span class="ws-item-title">Confirm</span>
+    <p class="ws-meta">Type the address back exactly, and say why. Both are required, and the reason is kept as the record of the decision.</p>
+    <form id="wsEraseForm" data-id="<%= detail.id %>" data-email="<%= detail.email %>">
+      <div class="ws-form-row">
+        <input class="ws-input" type="text" name="confirmEmail" placeholder="<%= detail.email %>" autocomplete="off" required>
+      </div>
+      <div class="ws-form-row">
+        <input class="ws-input" type="text" name="reason" placeholder="Reason (for example: erasure requested by the person on 30 August)" maxlength="2000" required>
+      </div>
+      <button class="ws-btn ws-btn-danger" type="submit">Erase permanently</button>
+      <p class="ws-note-error" id="wsEraseError" hidden></p>
+      <p class="ws-meta" id="wsEraseDone" hidden></p>
+    </form>
+  </div>
+</div>
+<% } %>
+
+<% if (erasures && erasures.length) { %>
+<div class="ws-card">
+  <h2>Erasure register</h2>
+  <p class="ws-meta">Evidence that a request was carried out. Addresses are stored one-way and shown redacted, so this register cannot itself be used to rebuild a contact list.</p>
+  <% erasures.forEach(function (e) { %>
+    <div class="ws-item">
+      <span class="ws-item-title"><%= e.email_redacted %></span>
+      <div class="ws-meta">Erased by <%= e.requested_by %> on <%= new Date(e.erased_at).toUTCString() %></div>
+      <div class="ws-body-text"><%= e.reason %></div>
+    </div>
+  <% }) %>
+</div>
+<% } %>
+
 <script nonce="<%= nonce %>">
   (function () {
     var btn = document.getElementById('wsSyncContacts');
@@ -92,6 +143,40 @@
         note.textContent = 'Network problem: ' + ex.message;
       } finally {
         btn.disabled = false;
+      }
+    });
+  })();
+
+  (function () {
+    var form = document.getElementById('wsEraseForm');
+    if (!form) return;
+    var err = document.getElementById('wsEraseError');
+    var done = document.getElementById('wsEraseDone');
+    var csrf = document.querySelector('meta[name="csrf-token"]').content;
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      err.hidden = true;
+      // A second, deliberate step in the browser as well as the server's
+      // own exact-match requirement. Erasure is irreversible.
+      if (!window.confirm('Erase ' + form.dataset.email + ' permanently? This cannot be undone.')) return;
+      try {
+        var r = await fetch('/api/workspace/contacts/' + form.dataset.id + '/erase', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf },
+          body: JSON.stringify({
+            confirmEmail: form.confirmEmail.value,
+            reason: form.reason.value
+          })
+        });
+        var data = await r.json();
+        if (!r.ok) { err.textContent = data.error || 'That did not work.'; err.hidden = false; return; }
+        var total = Object.keys(data.removed).reduce(function (n, k) { return n + data.removed[k].count; }, 0);
+        done.textContent = 'Erased ' + data.redacted + ': ' + total + ' record(s) removed.';
+        done.hidden = false;
+        window.setTimeout(function () { window.location.href = '/workspace/contacts'; }, 1500);
+      } catch (ex) {
+        err.textContent = 'Network problem: ' + ex.message;
+        err.hidden = false;
       }
     });
   })();

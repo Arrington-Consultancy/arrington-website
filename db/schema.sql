@@ -805,3 +805,28 @@ ALTER TABLE leads ADD COLUMN IF NOT EXISTS signup_source VARCHAR(20) NOT NULL DE
 -- finishes, in a code path with no request in scope, so the source of
 -- the visitor's details is carried on the review row from the start.
 ALTER TABLE commercial_gaps_reviews ADD COLUMN IF NOT EXISTS signup_source VARCHAR(20) NOT NULL DEFAULT '';
+
+-- Erasure register (30/08/2026).
+--
+-- Evidence that a specific erasure request was carried out, designed so
+-- the register does not itself defeat the erasure: it stores a one-way
+-- hash of the address plus a redacted form for a human to recognise,
+-- never the address itself. That is enough to answer "did you action my
+-- request" when someone quotes their own email, and not enough to
+-- rebuild a contact list from the register.
+--
+-- removed/retained record what actually happened per table. Retention
+-- is stated rather than hidden: a purchase is a financial record with
+-- its own statutory retention period, so it is NOT deleted with the
+-- contact, and the register says so.
+CREATE TABLE IF NOT EXISTS crm_erasures (
+    id SERIAL PRIMARY KEY,
+    email_hash CHAR(64) NOT NULL,
+    email_redacted VARCHAR(120) NOT NULL DEFAULT '',
+    requested_by VARCHAR(100) NOT NULL,
+    reason TEXT NOT NULL,
+    removed JSONB NOT NULL DEFAULT '{}',
+    retained JSONB NOT NULL DEFAULT '{}',
+    erased_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_crm_erasures_hash ON crm_erasures (email_hash);
