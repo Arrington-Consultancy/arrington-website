@@ -522,3 +522,67 @@ CREATE INDEX IF NOT EXISTS idx_scott_brain_gaps_responsible ON scott_brain_gaps 
 -- plainly in the body which fictional person it is addressed to.
 ALTER TABLE scott_portal_users ADD COLUMN IF NOT EXISTS notify_email VARCHAR(255) NOT NULL DEFAULT '';
 
+
+-- ------------------------------------------------------------
+-- Contacts (CRM), added 30/08/2026
+--
+-- Every public interaction on this site already funnels through the
+-- `leads` table: the four checks, the footer contact form, gated PDF
+-- requests and quiz results. That makes one contact record per person
+-- a projection over history rather than something that has to start
+-- empty on the day it is switched on.
+--
+-- Two rules the shape enforces:
+--
+-- 1. A person is identified by their email, normalised (trimmed and
+--    lowercased), so the same person arriving through three different
+--    checks is one contact rather than three.
+-- 2. Every interaction keeps its own row with its own source, so
+--    "signed up with Google" is a recorded fact about a specific
+--    submission and not an assumption applied to the whole contact.
+-- ------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS crm_contacts (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    name VARCHAR(200) NOT NULL DEFAULT '',
+    phone VARCHAR(60) NOT NULL DEFAULT '',
+    company VARCHAR(200) NOT NULL DEFAULT '',
+    first_seen_at TIMESTAMPTZ,
+    last_seen_at TIMESTAMPTZ,
+    interaction_count INTEGER NOT NULL DEFAULT 0,
+    -- How this person first arrived, and whether they have ever used the
+    -- Google prefill. Both are facts about recorded submissions.
+    first_source VARCHAR(40) NOT NULL DEFAULT '',
+    used_google_prefill BOOLEAN NOT NULL DEFAULT false,
+    -- Set by a human in the workspace, never by any automated path.
+    notes TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_crm_contacts_last_seen ON crm_contacts (last_seen_at DESC NULLS LAST);
+
+CREATE TABLE IF NOT EXISTS crm_contact_events (
+    id SERIAL PRIMARY KEY,
+    contact_id INTEGER NOT NULL REFERENCES crm_contacts(id) ON DELETE CASCADE,
+    kind VARCHAR(40) NOT NULL,
+    summary TEXT NOT NULL DEFAULT '',
+    signup_source VARCHAR(20) NOT NULL DEFAULT '',
+    occurred_at TIMESTAMPTZ NOT NULL,
+    -- The row this event was derived from, so a rebuild is idempotent
+    -- rather than duplicating every event each time it runs.
+    source_table VARCHAR(40) NOT NULL DEFAULT 'leads',
+    source_id INTEGER,
+    UNIQUE (source_table, source_id)
+);
+CREATE INDEX IF NOT EXISTS idx_crm_contact_events_contact ON crm_contact_events (contact_id, occurred_at DESC);
+
+-- Where the visitor's details came from on a given submission: '' for
+-- typed, 'google' for the Continue with Google prefill. Recorded so
+-- "signed up using Google" is a fact rather than a guess.
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS signup_source VARCHAR(20) NOT NULL DEFAULT '';
+
+-- The Commercial Gaps Review writes its lead row after the interview
+-- finishes, in a code path with no request in scope, so the source of
+-- the visitor's details is carried on the review row from the start.
+ALTER TABLE commercial_gaps_reviews ADD COLUMN IF NOT EXISTS signup_source VARCHAR(20) NOT NULL DEFAULT '';
