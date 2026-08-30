@@ -29,6 +29,16 @@ are stricter or more specific; and a future universal change must not
 silently alter Arrington permissions, authority, brand rules, production
 gates or worker scope.
 
+Scott: the Scott AI Demonstration is a separate fictional governed
+demonstration, not part of the real Arrington business brain. Material
+Scott work begins with **START HERE - SCOTT'S AI BRAIN INDEX** in Drive;
+Scott-specific controlled rules govern Scott within the universal
+governance ceiling. Real Arrington business facts, confidential records
+and real worker context must never be imported into Scott. Scott worker
+authority, permissions, activation state and production gates must not
+be changed from memory or stale repository notes; only the current
+controlled Scott records and Tom's explicit approvals change them.
+
 Working discipline: inspect the current Drive source rather than relying
 on memory, old chats or stale notes in this file. Never claim to have
 checked, tested, updated, deployed or verified anything unless the
