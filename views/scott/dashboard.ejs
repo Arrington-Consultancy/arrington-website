@@ -39,7 +39,7 @@
               <select id="scPersonaSelect">
                 <option value="">Scott Mercer, owner view</option>
                 <% Object.keys(personas).forEach(function (id) { %>
-                  <option value="<%= id %>" <%= (typeof isImpersonating !== 'undefined' && isImpersonating && id === personaId) ? 'selected' : '' %>><%= personas[id].name %> &mdash; <%= personas[id].role %> &mdash; Clearance <%= personas[id].code %></option>
+                  <option value="<%= id %>" <%= (typeof isImpersonating !== 'undefined' && isImpersonating && id === personaId) ? 'selected' : '' %>><%= personas[id].name %> &middot; <%= personas[id].role %> &middot; Clearance <%= personas[id].code %></option>
                 <% }); %>
               </select>
             <% } else { %>
