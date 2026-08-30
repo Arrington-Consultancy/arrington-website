@@ -649,3 +649,96 @@ CREATE TABLE IF NOT EXISTS workspace_sync_runs (
     records_written INTEGER NOT NULL DEFAULT 0,
     detail TEXT NOT NULL DEFAULT ''
 );
+
+-- ------------------------------------------------------------
+-- Arrington AI Workspace: social media control area (30/08/2026)
+--
+-- Four platforms (Facebook, Instagram, LinkedIn, X) presented as ONE
+-- control area rather than four unrelated integrations, so every table
+-- here is keyed by platform rather than duplicated per network.
+--
+-- The load-bearing distinction is between a credential and a
+-- retrieval. workspace_social_accounts records both separately:
+-- whether a connector is configured, and when it last actually
+-- returned data. An interface may only claim the second on the
+-- strength of last_sync_outcome, never on the strength of a token
+-- existing.
+-- ------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS workspace_social_accounts (
+    id SERIAL PRIMARY KEY,
+    platform VARCHAR(20) UNIQUE NOT NULL CHECK (platform IN ('facebook', 'instagram', 'linkedin', 'x')),
+    -- 'not_configured' is the honest default: no credential has ever
+    -- been supplied. 'configured' means a credential exists and nothing
+    -- more. Only a real retrieval moves last_sync_outcome to 'ok'.
+    status VARCHAR(20) NOT NULL DEFAULT 'not_configured' CHECK (status IN ('not_configured', 'configured', 'revoked', 'error')),
+    account_ref VARCHAR(200) NOT NULL DEFAULT '',
+    display_name VARCHAR(200) NOT NULL DEFAULT '',
+    granted_scopes TEXT NOT NULL DEFAULT '',
+    connected_at TIMESTAMPTZ,
+    last_sync_at TIMESTAMPTZ,
+    last_sync_outcome VARCHAR(20) NOT NULL DEFAULT 'never' CHECK (last_sync_outcome IN ('never', 'ok', 'partial', 'failed')),
+    last_error TEXT NOT NULL DEFAULT '',
+    stale_after_hours INTEGER NOT NULL DEFAULT 24,
+    followers INTEGER,
+    followers_change INTEGER,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Retrieved content. kind separates what was published from what is
+-- only proposed, so a draft can never be mistaken for something that
+-- actually went out. 'proposed' rows are written by the drafting lane
+-- and are inert until a human publishes them by hand.
+CREATE TABLE IF NOT EXISTS workspace_social_posts (
+    id SERIAL PRIMARY KEY,
+    platform VARCHAR(20) NOT NULL,
+    external_id VARCHAR(200) NOT NULL DEFAULT '',
+    kind VARCHAR(20) NOT NULL DEFAULT 'published' CHECK (kind IN ('published', 'scheduled', 'draft', 'proposed')),
+    body TEXT NOT NULL DEFAULT '',
+    permalink TEXT NOT NULL DEFAULT '',
+    posted_at TIMESTAMPTZ,
+    impressions INTEGER,
+    engagements INTEGER,
+    comments_count INTEGER,
+    drafted_by VARCHAR(60) NOT NULL DEFAULT '',
+    retrieved_at TIMESTAMPTZ,
+    UNIQUE (platform, external_id)
+);
+CREATE INDEX IF NOT EXISTS idx_workspace_social_posts_platform ON workspace_social_posts (platform, posted_at DESC);
+
+-- Comments, mentions and messages needing a human reply. needs_reply
+-- plus replied_at is the outstanding-replies list; nothing here is ever
+-- answered by the workspace itself.
+CREATE TABLE IF NOT EXISTS workspace_social_engagement (
+    id SERIAL PRIMARY KEY,
+    platform VARCHAR(20) NOT NULL,
+    external_id VARCHAR(200) NOT NULL DEFAULT '',
+    kind VARCHAR(20) NOT NULL DEFAULT 'comment' CHECK (kind IN ('comment', 'mention', 'message', 'review')),
+    author VARCHAR(200) NOT NULL DEFAULT '',
+    body TEXT NOT NULL DEFAULT '',
+    permalink TEXT NOT NULL DEFAULT '',
+    occurred_at TIMESTAMPTZ,
+    needs_reply BOOLEAN NOT NULL DEFAULT false,
+    -- Set by a human recording that they replied on the platform. The
+    -- workspace cannot reply, so it cannot set this on its own.
+    replied_at TIMESTAMPTZ,
+    replied_by VARCHAR(100) NOT NULL DEFAULT '',
+    suggested_reply TEXT NOT NULL DEFAULT '',
+    retrieved_at TIMESTAMPTZ,
+    UNIQUE (platform, external_id)
+);
+CREATE INDEX IF NOT EXISTS idx_workspace_social_engagement_open ON workspace_social_engagement (needs_reply, occurred_at DESC);
+
+-- One row per retrieval attempt per platform, successful or not, so the
+-- control area can show what actually happened rather than what was
+-- intended.
+CREATE TABLE IF NOT EXISTS workspace_social_sync_runs (
+    id SERIAL PRIMARY KEY,
+    platform VARCHAR(20) NOT NULL,
+    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    finished_at TIMESTAMPTZ,
+    outcome VARCHAR(20) NOT NULL DEFAULT 'failed' CHECK (outcome IN ('ok', 'partial', 'failed', 'skipped_not_configured')),
+    items_written INTEGER NOT NULL DEFAULT 0,
+    detail TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_workspace_social_sync_runs_platform ON workspace_social_sync_runs (platform, id DESC);

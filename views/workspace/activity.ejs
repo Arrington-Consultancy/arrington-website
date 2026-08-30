@@ -6,6 +6,7 @@
 <div class="ws-card">
   <% if (activity.length === 0) { %><p class="ws-empty">Nothing recorded yet.</p><% } %>
   <% if (activity.length > 0) { %>
+  <div class="ws-table-wrap">
   <table class="ws-table">
     <tr><th>When</th><th>Actor</th><th>Event</th><th>Summary</th></tr>
     <% activity.forEach(function (ev) { %>
@@ -17,6 +18,7 @@
       </tr>
     <% }) %>
   </table>
+  </div>
   <% } %>
 </div>
 

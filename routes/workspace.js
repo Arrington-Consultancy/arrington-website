@@ -22,6 +22,8 @@ const { filterRecordsForClearance, clearanceCanSeeRecord, clearanceCanSeeSensiti
 const { LANES, SOURCE_CLASSES, laneById } = require('../lib/workspace/lanes');
 const { requireWorkspacePageAccess, requireWorkspaceApiAccess, workspaceNoindex } = require('../lib/workspace/access');
 const { askWorkspace, isWorkspaceAIEnabled, routeToLane } = require('../lib/workspace/orchestrator');
+const socialRepo = require('../lib/workspace/social/repo');
+const socialActions = require('../lib/workspace/social/actions');
 
 const router = express.Router();
 
@@ -123,6 +125,26 @@ function mountPageRoute(app, generateCsrfToken) {
   });
   classPage('/workspace/opportunities', 'opportunity', 'workspace/records', 'Opportunities & pipeline');
   classPage('/workspace/projects', 'project', 'workspace/records', 'Clients & projects');
+
+  // The consolidated social control area: four platforms, one page. It
+  // renders every platform whether or not it is configured, because
+  // "not connected" is information the owner needs, and an unconfigured
+  // connector showing an empty timeline would read as "no activity".
+  page('/workspace/social', async (req, res) => {
+    const [accounts, posts, outstanding] = await Promise.all([
+      socialRepo.accountStates(),
+      socialRepo.listPosts({ limit: 40 }),
+      socialRepo.listEngagement({ needsReply: true, limit: 40 })
+    ]);
+    res.render('workspace/social', {
+      ...viewer(req),
+      counts: await navCounts(req.workspaceClearance),
+      accounts,
+      posts,
+      outstanding,
+      csrfToken: generateCsrfToken(req, res)
+    });
+  });
 
   page('/workspace/workforce', async (req, res) => {
     res.render('workspace/workforce', {
@@ -291,6 +313,39 @@ router.post('/api/workspace/gaps/:id/resolve', workspaceNoindex, requireWorkspac
       summary: `Gap #${id} ${sourceCorrected ? 'resolved (source corrected)' : 'dismissed'}.`
     });
     res.json({ ok: true, gap: row });
+  } catch (err) { next(err); }
+});
+
+// Recording that a PERSON replied on the platform. There is no route
+// here that sends a reply, publishes, deletes or spends: those are
+// consequential external actions, and lib/workspace/social/actions.js
+// refuses them by construction. The most this API can do with one is
+// put it in the human approval queue as a record.
+router.post('/api/workspace/social/engagement/:id/replied', workspaceNoindex, requireWorkspaceApiAccess, async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id)) return res.status(400).json({ error: 'Bad id.' });
+    const row = await socialRepo.recordHumanReply(id, req.session.user.username);
+    if (!row) return res.status(409).json({ error: 'That item is not outstanding. A recorded reply stays recorded.' });
+    await repo.addActivity({ actor: req.session.user.username, eventType: 'social_reply_recorded', summary: `Recorded a human reply on ${row.platform} to ${row.author}.` });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+router.post('/api/workspace/social/request-action', workspaceNoindex, requireWorkspaceApiAccess, async (req, res, next) => {
+  try {
+    const { platform, action, summary, detail } = req.body || {};
+    if (!platform || !action || !summary) return res.status(400).json({ error: 'platform, action and summary are required.' });
+    if (!socialActions.isConsequential(action)) {
+      return res.status(400).json({ error: 'That is an ordinary connector capability and does not need a human decision.' });
+    }
+    const approval = await socialActions.requestHumanAction({
+      platform, action,
+      summary: String(summary).slice(0, 200),
+      detail: String(detail || '').slice(0, 2000),
+      requestedBy: req.session.user.username
+    });
+    res.json({ ok: true, approvalId: approval.id, note: 'Queued as a record for a human decision. Nothing has been sent or published.' });
   } catch (err) { next(err); }
 });
 

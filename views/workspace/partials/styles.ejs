@@ -58,7 +58,10 @@
   .ws-badge-plain { background: var(--ws-panel-2); color: var(--ws-muted); }
   .ws-badge-material { background: rgba(184,94,60,0.2); color: var(--ws-red); }
   .ws-empty { color: var(--ws-muted); font-size: 0.9rem; padding: 0.4rem 0; }
-  .ws-body-text { white-space: pre-wrap; font-size: 0.9rem; color: var(--ws-text); margin-top: 0.35rem; }
+  /* Long unbroken strings (URLs, record keys, tokens in an error) must
+     wrap rather than force the page wider than the screen. */
+  .ws-body-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.9rem; color: var(--ws-text); margin-top: 0.35rem; }
+  .ws-meta, .ws-item-title { overflow-wrap: anywhere; }
   .ws-form-row { display: flex; gap: 0.6rem; margin: 0.6rem 0; flex-wrap: wrap; }
   input.ws-input, textarea.ws-input, select.ws-input {
     background: var(--ws-panel-2); color: var(--ws-text); border: 1px solid var(--ws-border);
@@ -78,7 +81,11 @@
   .ws-msg-assistant { background: var(--ws-panel); border: 1px solid var(--ws-border); align-self: flex-start; }
   .ws-msg .ws-meta { margin-top: 0.35rem; }
   .ws-prov { font-size: 0.75rem; color: var(--ws-muted); }
+  /* Wide content scrolls inside its own box; the page body never
+     scrolls sideways. */
+  .ws-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   table.ws-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  .ws-table-wrap table.ws-table { min-width: 520px; }
   table.ws-table th, table.ws-table td { text-align: left; padding: 0.45rem 0.6rem; border-top: 1px solid var(--ws-border); vertical-align: top; }
   table.ws-table th { border-top: 0; color: var(--ws-muted); text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.07em; }
   @media (max-width: 800px) {
