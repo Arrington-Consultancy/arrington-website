@@ -931,6 +931,193 @@ Tom returned an agreed-changes brief (`arrington_copy_review_agreed_changes_20_j
 - `logo.avif` — original logo (now served from DB)
 - `oxford.png` — original Oxford badge (now served from DB)
 
+## Arrington AI Workspace v0.1 (staging, added 30/08/2026)
+
+The real internal workspace, at `/workspace`. **On its branch, not on
+main, and OFF in production.** Branch `feature/arrington-ai-workspace-v0-1`,
+head `451d47d` at time of writing. Staging service
+`arrington-ai-workspace` (staging environment only, it has no production
+instance), URL `arrington-ai-workspace-staging.up.railway.app`, first
+deploy `94280d0c` SUCCESS. Tom confirmed staging works on 30/08/2026.
+Independent Governance and Assurance review of the release candidate
+was commissioned the same day and is the gate before any production
+decision; the builder must not award itself that PASS.
+
+**Two gates, both failing closed** (`lib/workspace/access.js`):
+`ENABLE_ARRINGTON_AI_WORKSPACE` must be exactly `'true'`, and the
+authenticated username must hold a clearance in
+`lib/workspace/clearance.js` AND a real CMS role. Real access is Tom
+only. Anyone else, INCLUDING a site admin, gets a 404 rather than a 403,
+because the area's existence is itself operating information. The flag
+is why this code can sit on main harmlessly: merging is inert, and
+switching it on is a separate deliberate act.
+
+**Entirely separate from Scott.** No Scott table, identity, prompt or
+fictional fact is reachable from the workspace, or the reverse. Tests
+enforce it in both directions.
+
+**Screens:** Today, Ask the workspace, Company Brain, Opportunities,
+Clients & projects, Contacts, Social media, AI workforce, Decisions &
+approvals, Brain gaps, Activity.
+
+**Nine lanes, no new worker** (`lib/workspace/lanes.js`). The canonical
+Arrington workers appear as routing lanes with read-only source classes
+and sensitivity ceilings taken from their published remits. The router
+is faceless plumbing, never a tenth identity, per the completion
+mandate. Only Governance & Assurance reads every source class, and a
+test fails if a second lane ever does.
+
+**Permission legs.** Human clearance AND lane permission AND task
+necessity, narrowest wins. Filtering happens BEFORE the prompt is built,
+never as post-generation redaction, and counts are computed after
+filtering so a result size leaks nothing.
+
+**Brain snapshot.** `data/workspace-snapshot.enc` is AES-256-GCM
+ciphertext of 30 controlled records; only the ciphertext is committed,
+`.gitignore` refuses the plaintext, and `WORKSPACE_SNAPSHOT_KEY` is
+never logged or printed. No key means no ingest, reported honestly as an
+unseeded brain rather than an empty one. Rebuild with
+`scripts/encryptWorkspaceSnapshot.js`.
+
+**Workspace AI** is gated on its own flag (`ENABLE_WORKSPACE_AI`) plus
+`ANTHROPIC_API_KEY`, separate from every other AI switch on the site.
+Currently OFF in staging.
+
+### Social media control area (30/08/2026)
+
+Facebook, Instagram, LinkedIn and X as ONE area, per Tom's SOCIAL MEDIA
+CONNECTOR REQUIREMENT. **Connected to nothing yet**: with no
+credentials the page shows no posts and no followers and says why,
+rather than an empty timeline that would read as "no activity".
+
+Two rules are structural, not conventional. Publishing, deleting,
+replying publicly, sending messages, changing account settings and
+advertising spend are refused by construction: the permission question
+is answered in one place, the guard THROWS rather than returning false,
+and no connector declares a write scope, so the token cannot do what the
+code refuses. The authorised route is the human approval queue, where
+such an action lands as a record that executes nothing. And a credential
+is never presented as a retrieval: states are not connected, connected
+but never retrieved, sync failed, partial, stale, fresh, and a failed
+attempt outranks the date of the last good one.
+
+Setup still needed from Tom: a Meta app with App Review (Facebook plus
+an Instagram Business account linked to the Page), a LinkedIn app with
+organisation product access, and for X a PAID API tier, since free
+access cannot read posts or metrics at all.
+
+Scott's equivalent is `lib/scott/social/fictionalSocial.js` under Bob
+Fletcher, with Ruth routing to him. It reads no credential, has no
+network path, and never imports the workspace;
+`test/scott/socialFirewall.test.js` enforces that. It reuses the
+existing 07E domains rather than inventing one, which is what makes
+Chloe seeing the comments but not the paid performance a real
+demonstration.
+
+**Governance note:** the approved v0.1 source map explicitly excluded
+social, email, banking, Ads, Calendar, accounting, analytics and CRM
+systems. Tom's instruction of 30/08/2026 approves the social
+connectors, which is a genuine expansion of the approved source set. It
+is built staging-first and credential-gated, and the expansion is being
+routed to Governance and Assurance as a controlled change rather than
+treated as self-approved.
+
+## Contacts (CRM) and signup source (live, 30/08/2026)
+
+**On main and live**, merged as `45bb922`. First production run built
+**20 contact records from 20 lead rows**, so it populated from existing
+history rather than starting empty (deployment `1a07fd62`).
+
+`lib/crm/contacts.js` builds one contact per person as a projection over
+the existing `leads` table rather than a second capture path, so a
+contact cannot silently disagree with the enquiry it came from. Identity
+is the normalised email, so one person arriving through three tools is
+one contact. Each interaction keeps its own source. A later submission
+that omits a name never erases a name already held. The sync runs at
+boot and is idempotent (each interaction carries its lead row id under a
+unique constraint).
+
+**Signup source.** The Google prefill button sets a flag once it has
+actually filled the fields; each check carries it and it is stored on
+the lead row as `signup_source`. Only the literal `'google'` is
+accepted. Notification emails name it when true. The Commercial Gaps
+Review carries the flag on its review row, because its lead is written
+after the interview in a path with no request in scope.
+
+### Controlled erasure (`lib/crm/erasure.js`)
+
+Removes a person from the contact record AND the enquiry/submission rows
+it is built from, in one transaction across six tables, so they cannot
+reappear. Requires workspace access, commercial clearance, the address
+typed back exactly, a written reason, and a browser confirmation. No
+bulk version.
+
+**Purchases are NOT deleted**: a purchase is a financial record with a
+statutory retention period, and the confirmation screen and register
+both say so with the reason rather than leaving data quietly behind.
+
+The register stores a one-way hash plus a redacted address, never the
+address itself: enough to answer "did you action my request" when
+someone quotes their own email, not enough to rebuild a contact list.
+The audit line carries the same redacted form.
+
+**Two real races were found and fixed while testing this**, both worth
+knowing: a rebuild running during an erasure could resurrect the person
+(the rebuild works from a snapshot taken before the erasure committed),
+now guarded by skipping erased addresses during the rebuild AND a
+closing sweep on a fresh read of the register; and the same race could
+throw a foreign-key error, which now drops the orphaned interaction
+rather than recreating someone who asked to be removed. Erasure is
+scoped in time, not a lifetime blacklist: a new enquiry afterwards is
+honoured.
+
+The privacy page (`views/privacy.ejs`) describes the contact record
+accurately. Keep it that way when this area changes.
+
+**Tests:** full suite 455 pass, 0 fail (30/08/2026), including
+`test/crmContacts.test.js`, `test/crmErasure.test.js`,
+`test/workspace/*.test.js`. `test/workspace/adversarialApi.test.js`
+attacks a RUNNING server (anonymous and as a non-Tom admin) and skips
+unless `WORKSPACE_TEST_BASE_URL` and `WORKSPACE_TEST_TOM_PASSWORD` are
+set; it was executed against a local server, 5 checks, all passing.
+
+**Known limit for future sessions:** this sandbox cannot reach
+`railway.app` or the live domain, so staging and production are verified
+through Railway logs and deployment records, never by fetching a URL.
+Ask Tom to click a page when live-browser confirmation is genuinely
+needed.
+
+## Google prefill: four fixes on 30/08/2026
+
+Worth recording because each looked like a different problem and only
+one was Google's:
+
+1. **Wrong client type.** The original OAuth client was not a Web
+   application, so it had no JavaScript origins field at all and
+   returned `invalid_client`. A client's type cannot be changed after
+   creation; it needs recreating. Current client is
+   `272021241226-6c5pbkgd...`, project `directed-mender-507119-f9`.
+2. **COOP severed the popup** (`server.js`). helmet's default
+   `Cross-Origin-Opener-Policy: same-origin` cuts `window.opener`, which
+   is exactly the channel the Google popup uses to hand the account
+   back: the popup completed, went white and never returned. Relaxed to
+   `same-origin-allow-popups` on the four prefill pages ONLY, gated on
+   the client ID, and registered AFTER helmet or helmet overwrites it.
+3. **The CSP nonce never reached Google's script.** The library takes
+   the nonce for its injected `<style>` from its own script element; the
+   loader created that element in JS without one, so the button rendered
+   unstyled (an oversized G and its hidden label showing as duplicated
+   text). Fixed by setting `s.nonce` (the property; browsers hide the
+   attribute from script).
+4. **Size bounds and graceful removal.** The slot is bounded so a
+   collapsed Google layout cannot fill the page, and the whole block
+   removes itself if Google cannot serve it, rather than leaving a
+   button that opens an error page.
+
+There is NO client secret anywhere and none is needed: this is in-browser
+prefill, not a server login flow. A secret must never be put in this
+codebase.
+
 ## Scott AI Demonstration (v0.2, released to the live site 29/08/2026)
 
 **RELEASED. On main and on the public site since 29/08/2026** (PR #112 on
