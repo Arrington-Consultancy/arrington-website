@@ -27,14 +27,23 @@
           <span class="sc-stage-viewer">
             <% if (canImpersonate) { %>
               <label for="scPersonaSelect">Viewing as</label>
+              <%
+                // Seniority is shown beside every name so the point of the
+                // demonstration reads without explanation: these are eight
+                // different jobs at different levels, and what each one can
+                // see differs because of that. The role strings come from
+                // PERSONAS in lib/scott/clearance.js (07Q's own wording) —
+                // not restated here, so a role can never drift between the
+                // dropdown, the banners and the clearance rules themselves.
+              %>
               <select id="scPersonaSelect">
                 <option value="">Scott Mercer, owner view</option>
                 <% Object.keys(personas).forEach(function (id) { %>
-                  <option value="<%= id %>" <%= (typeof isImpersonating !== 'undefined' && isImpersonating && id === personaId) ? 'selected' : '' %>><%= personas[id].name %> (<%= personas[id].code %>)</option>
+                  <option value="<%= id %>" <%= (typeof isImpersonating !== 'undefined' && isImpersonating && id === personaId) ? 'selected' : '' %>><%= personas[id].name %> &middot; <%= personas[id].role %> &middot; Clearance <%= personas[id].code %></option>
                 <% }); %>
               </select>
             <% } else { %>
-              <span class="sc-stage-viewer-fixed"><%= persona.name %> &middot; Clearance <%= persona.code %></span>
+              <span class="sc-stage-viewer-fixed"><%= persona.name %> &middot; <%= persona.role %> &middot; Clearance <%= persona.code %></span>
             <% } %>
           </span>
         </div>
