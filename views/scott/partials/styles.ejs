@@ -513,7 +513,13 @@
     transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
   }
   .sc-chat-hero .sc-chat-suggestions button:hover { background: rgba(216,161,74,0.16); border-color: rgba(216,161,74,0.55); transform: translateY(-1px); }
-  .sc-chat-hero .sc-msg-body { background: rgba(255,255,255,0.94); }
+  /* The stage sets near-white text on everything inside it, and the
+     base bubble rule sets background only, so a worker's reply on the
+     stage inherited white-on-white and vanished. Found by Tom on a
+     phone mid-conversation; every bubble colour here is now explicit. */
+  .sc-chat-hero .sc-msg-body { background: rgba(255,255,255,0.96); color: var(--sc-text); }
+  .sc-chat-hero .sc-msg-body .sc-msg-name { color: var(--sc-forest-dark); opacity: 1; }
+  .sc-chat-hero .sc-typing-dots span { background: rgba(238,243,238,0.85); }
   .sc-chat-hero .sc-msg-user .sc-msg-body { background: rgba(216,161,74,0.2); color: #f4efe2; }
   .sc-chat-hero .sc-chat-disabled-note { background: rgba(184,94,60,0.25); color: #f2d9cd; border-radius: 10px; margin-top: 12px; }
 
