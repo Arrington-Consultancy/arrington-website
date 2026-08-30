@@ -52,6 +52,14 @@ async function notify({ subject, text, replyTo }) {
   }
 }
 
+// Where the visitor's details came from on this submission. Only one
+// value is accepted, so a request cannot write arbitrary text into the
+// record, and anything unrecognised reads as typed entry rather than as
+// a claim we cannot support.
+const signupSource = (body) => (body && body.prefillSource === 'google' ? 'google' : '');
+// One line for Tom's notification, present only when it is true.
+const sourceLine = (src) => (src === 'google' ? 'Signed up using Continue with Google.' : '');
+
 const plainText = (s) => sanitizeHtml(String(s || ''), { allowedTags: [], allowedAttributes: {} }).trim();
 const isValidEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s) && s.length <= 255;
 const isValidDocName = (s) => /^[a-z0-9][a-z0-9_-]*\.pdf$/i.test(s || '');
@@ -129,9 +137,9 @@ router.post('/api/leads', publicFormLimiter, async (req, res) => {
     }
 
     await db.query(
-      `INSERT INTO leads (kind, name, email, phone, message, preferred_time)
-       VALUES ('contact', $1, $2, $3, $4, $5)`,
-      [name, email, phone, message, preferredTime]
+      `INSERT INTO leads (kind, name, email, phone, message, preferred_time, signup_source)
+       VALUES ('contact', $1, $2, $3, $4, $5, $6)`,
+      [name, email, phone, message, preferredTime, signupSource(req.body)]
     );
 
     res.json({ ok: true });
@@ -143,6 +151,7 @@ router.post('/api/leads', publicFormLimiter, async (req, res) => {
         `Email: ${email}`,
         phone && `Phone: ${phone}`,
         preferredTime && `Preferred time: ${preferredTime}`,
+        sourceLine(signupSource(req.body)),
         message && `Message:\n${message}`
       ].filter(Boolean).join('\n\n'),
       replyTo: email
@@ -174,15 +183,15 @@ router.post('/api/documents/request', publicFormLimiter, async (req, res) => {
     }
 
     await db.query(
-      `INSERT INTO leads (kind, email, document) VALUES ('pdf_download', $1, $2)`,
-      [email, doc]
+      `INSERT INTO leads (kind, email, document, signup_source) VALUES ('pdf_download', $1, $2, $3)`,
+      [email, doc, signupSource(req.body)]
     );
 
     res.json({ ok: true, url: makeDownloadUrl(doc) });
 
     notify({
       subject: `PDF download request: ${doc}`,
-      text: `Email: ${email}\nDocument: ${doc}`,
+      text: [`Email: ${email}`, `Document: ${doc}`, sourceLine(signupSource(req.body))].filter(Boolean).join('\n'),
       replyTo: email
     });
   } catch (err) {
@@ -313,8 +322,8 @@ router.post('/api/quiz/email-results', publicFormLimiter, async (req, res) => {
     }
 
     await db.query(
-      `INSERT INTO leads (kind, email, message) VALUES ('quiz_results', $1, $2)`,
-      [email, resultsText]
+      `INSERT INTO leads (kind, email, message, signup_source) VALUES ('quiz_results', $1, $2, $3)`,
+      [email, resultsText, signupSource(req.body)]
     );
 
     res.json({ ok: true });

@@ -36,6 +36,10 @@
       el.dispatchEvent(new Event('input', { bubbles: true }));
       el.dispatchEvent(new Event('change', { bubbles: true }));
     }
+    // Recorded so a submission that used the button can be told apart
+    // from a typed one. It is set only after fields are actually
+    // filled, so it never claims a prefill that did not happen.
+    window.__gPrefillSource = '';
     window.__gPrefillCredential = function (resp) {
       try {
         var part = resp.credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
@@ -44,6 +48,7 @@
         fill(targets.firstName, p.given_name);
         fill(targets.lastName, p.family_name);
         fill(targets.email, p.email);
+        window.__gPrefillSource = 'google';
       } catch (e) { /* fall back silently to typed entry */ }
     };
     // If Google cannot serve the button, the whole block removes itself
