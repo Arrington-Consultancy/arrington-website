@@ -105,3 +105,11 @@ Blocks activation: no. Blocks website: no (production unaffected).
 4. If and only if Tom activates a worker, the website work follows 16A's checklist: roster, Ruth routing, website snapshot, then the relevant tests rerun, including the live pressure suite.
 
 Nothing was activated by this review.
+
+## Recheck record (30 August 2026, same day)
+
+Finding F2 was corrected by PR #124: the mutable job lifecycle gained quality check, rework and ready-for-return, and `lib/scott/qualityGate.js` refuses any transition into a release state while a linked quality record is not PASS, or while a job in a quality stage has no recorded PASS. The refusal names the exact missing evidence, reaches the user on the job page, is audited as `job_release_blocked`, and has no override parameter. SAKS-1045 was seeded onto the board in quality check with its open BLOCKING record so the gate is demonstrable.
+
+Bounded recheck, all on the corrected head: full suite 369 pass 0 fail (includes the 140-case clearance replay); adversarial API 18 pass 0 fail against the running server, including a new case proving the owner's full clearance is not a bypass; 12,180-check denied-canary sweep, zero leaks; browser verification as Scott Mercer showing the refusal text and the job left untouched.
+
+With F2 corrected and rechecked, the activation block on SCOTT'S QUALITY CONTROL is lifted. F3 (staging temporarily passwordless) remains open until Tom locks staging. The verdict remains AMBER until F3 closes; no finding any longer blocks any activation. Activation stays Tom's explicit decision.
