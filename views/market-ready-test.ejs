@@ -293,6 +293,7 @@
             <p class="mrt-label">YOUR DETAILS</p>
             <h2>Where should we send your result?</h2>
             <form id="mrt-contact-form">
+                <%- include('partials/google-prefill', { gpTargets: { firstName: '#mrt-firstName', lastName: '#mrt-lastName', email: '#mrt-email' } }) %>
                 <div class="mrt-row-2">
                     <div class="mrt-field">
                         <label for="mrt-firstName">First name</label>

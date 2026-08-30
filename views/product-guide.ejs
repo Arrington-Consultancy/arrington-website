@@ -439,6 +439,7 @@
                 <h3>Want this sent to you?</h3>
                 <p class="pg-contact-note">Optional. We will send you a copy of this recommendation, and get in touch only if you ask us to.</p>
 
+                <%- include('partials/google-prefill', { gpTargets: { fullName: '#pg-name', email: '#pg-email' } }) %>
                 <form id="pg-contact-form">
                     <div class="pg-field">
                         <label for="pg-name">Your name</label>

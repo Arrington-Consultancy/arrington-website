@@ -481,6 +481,7 @@
             <div class="odr-email-capture">
                 <h2>Send me a copy of my result</h2>
                 <p>Enter your email and we'll send you your score and the areas highlighted in your quiz.</p>
+                <%- include('partials/google-prefill', { gpTargets: { email: '#odr-email-input' } }) %>
                 <form id="odr-email-form" class="odr-email-form">
                     <div class="lead-hp" aria-hidden="true">
                         <label>Leave this field blank<input type="text" name="website" id="odr-email-hp" tabindex="-1" autocomplete="off"></label>
