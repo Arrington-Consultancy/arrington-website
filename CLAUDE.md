@@ -441,6 +441,16 @@ A "WhatsApp us" link opens a WhatsApp chat (rather than just showing a number) i
 - **Validation:** all four render paths gate the link on the regex `^https://(wa\.me|api\.whatsapp\.com)/` (defence-in-depth, same approach as the SEO URL fields), so a malformed or `javascript:`/`data:` value simply produces no button. There is no save-time validation; the render-time guard is the protection. A consequence: if the field holds anything that isn't a `wa.me`/`api.whatsapp.com` https URL, the button silently hides.
 - **Labels:** `admin.js` `fieldLabels` carries `contact.whatsapp` and `hero.whatsapp` (the latter resolves duplicates like `hero__3.whatsapp` via `normalizeKey`). WhatsApp green is `#25D366` (hover `#1da851`), hard-coded rather than themed so the button is recognisable across all five palettes. The keys live in the content table so they are included in backups/restore automatically.
 
+## Continue with Google prefill (added 30/08/2026)
+
+An optional one-tap "Continue with Google" button on the four public checks (Product Guide, Market Ready Test, Owner Dependency Quiz, Commercial Gaps Review) that fills the visitor's name/email fields from their Google account. **It is autofill, not authentication**: the Google Identity Services button hands the browser an ID token, a nonced inline script decodes it locally and fills the inputs, and the form submits through the exact same validated endpoint as typed entry. No session, no server verification, no new trust claimed for the data, no client secret anywhere.
+
+- **Gated entirely on `GOOGLE_SIGNIN_CLIENT_ID`** (a public OAuth client ID, not a secret). Unset: the partial renders nothing and the CSP carries zero Google Identity hosts, verified both ways against the running server. The CSP additions (`accounts.google.com/gsi/client` in scriptSrc, `/gsi/` in connectSrc and frameSrc, `/gsi/style` in styleSrc) are spread conditionally on the same variable in `server.js`.
+- **Files:** `views/partials/google-prefill.ejs` (the partial; takes `gpTargets`, a per-page map of selectors for fullName or firstName/lastName plus email), included in the four check views; `test/googlePrefill.test.js` (renders the partial both ways, pins the per-page targets, and pins the never-overwrite-typed-input guard).
+- **Setup (Tom, one-off):** console.cloud.google.com → create/reuse a project → OAuth consent screen (External, app name Arrington Consultancy) → Credentials → Create OAuth client ID → Web application → Authorised JavaScript origins `https://www.arringtonconsultancy.com` → copy the client ID → set `GOOGLE_SIGNIN_CLIENT_ID` on the Railway service. No redirect URI and no client secret are needed for this flow.
+- The footer contact form deliberately does NOT carry the button (decision pending with Tom): it is sitewide, so the Google script would load on every page, and a contact form that suggests signing in adds friction for people who just want to type.
+- The Privacy page (`views/privacy.ejs`) carries an accurate description of what the button does and does not do.
+
 ## Mobile navigation (hamburger)
 
 At ≤900px the desktop nav CTA and the separate `.page-menu` bar are both hidden. In their place:

@@ -30,6 +30,14 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const isProd = !!process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 'production';
 
+// "Continue with Google" prefill on the public checks. Purely optional:
+// unset means the button (and its CSP allowances below) do not exist and
+// every form is typed-entry only. The value is a public OAuth client ID,
+// not a secret; there is no client secret anywhere because this is an
+// in-browser prefill, not a server login flow.
+const googleSigninClientId = (process.env.GOOGLE_SIGNIN_CLIENT_ID || '').trim();
+app.locals.googleSigninClientId = googleSigninClientId;
+
 // Fail fast if SESSION_SECRET is missing in production — we never want to
 // fall back to a hardcoded dev secret on the real domain.
 if (isProd && !process.env.SESSION_SECRET) {
@@ -149,7 +157,11 @@ app.use(helmet({
       styleSrc: [
         "'self'",
         (req, res) => `'nonce-${res.locals.nonce}'`,
-        'https://fonts.googleapis.com'
+        'https://fonts.googleapis.com',
+        // Google Identity Services (the Continue with Google prefill).
+        // All four gsi allowances are gated on the same env var as the
+        // button itself, so an unconfigured deploy carries no extra CSP.
+        ...(googleSigninClientId ? ['https://accounts.google.com/gsi/style'] : [])
       ],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       scriptSrc: [
@@ -157,7 +169,8 @@ app.use(helmet({
         (req, res) => `'nonce-${res.locals.nonce}'`,
         'https://www.googletagmanager.com',
         'https://www.googleadservices.com',
-        'https://challenges.cloudflare.com'
+        'https://challenges.cloudflare.com',
+        ...(googleSigninClientId ? ['https://accounts.google.com/gsi/client'] : [])
       ],
       // Google Ads conversion and remarketing endpoints are sent as pixels or
       // beacons, so they need img-src/connect-src and nothing else. These hosts
@@ -183,9 +196,15 @@ app.use(helmet({
         'https://www.googleadservices.com',
         'https://googleads.g.doubleclick.net',
         'https://www.google.com',
-        'https://ad.doubleclick.net'
+        'https://ad.doubleclick.net',
+        ...(googleSigninClientId ? ['https://accounts.google.com/gsi/'] : [])
       ],
-      frameSrc: ["'self'", 'https://td.doubleclick.net', 'https://challenges.cloudflare.com'],
+      frameSrc: [
+        "'self'",
+        'https://td.doubleclick.net',
+        'https://challenges.cloudflare.com',
+        ...(googleSigninClientId ? ['https://accounts.google.com/gsi/'] : [])
+      ],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       frameAncestors: ["'self'"]

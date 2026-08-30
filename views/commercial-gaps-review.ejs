@@ -133,6 +133,7 @@
             <p class="cgr-label">YOUR DETAILS</p>
             <h2>Before we begin</h2>
             <p class="cgr-meta">We need these to create and send your personalised review.</p>
+            <%- include('partials/google-prefill', { gpTargets: { fullName: '#cgr-name', email: '#cgr-email' } }) %>
             <form id="cgr-intake-form">
                 <div class="cgr-field">
                     <label for="cgr-name">Your name</label>
