@@ -32,7 +32,11 @@ Environment: local Postgres 16, fresh database, `node db/seed.js` from empty, th
 
 **Fresh-database boot.** The seed ran to completion on a database created from nothing, with no errors. This matters because the Scott v0.2 release crashed production on exactly this case, where every other environment already carried the schema. The workspace schema and the CRM schema both build clean from scratch.
 
-**Regression suite.** `npm test` against a real database: 456 tests, 455 pass, 0 fail, 1 skipped, 53 suites, 155 seconds. The single skip is the Scott live-AI paid suite. Four further suites report as passing while skipping internally for want of environment: the Scott adversarial suite, the Websites and AI two-pass seed test, the Scott live pressure suite, and, importantly, `test/workspace/adversarialApi.test.js`. The headline number therefore does not by itself prove the workspace surface. I armed that suite and ran it against the running server: 6 pass, 0 fail. I note that one of its five checks, the erasure confirmation check, returns early when there is no contact in the database, so it can pass without asserting anything; in my run I created contacts first, and I also tested erasure separately and by hand.
+**Regression suite.** `npm test` against a real database: 456 tests, 455 pass, 0 fail, 1 skipped, 53 suites, 155 seconds, reproduced identically on a second run.
+
+The skip accounting is worth stating exactly, because the headline figure flatters the suite. Four top-level entries carry a `# SKIP` directive in the TAP output, all for want of environment: the Scott adversarial suite, the Scott live-AI paid suite, the Websites and AI two-pass seed test, and `test/workspace/adversarialApi.test.js`. The summary counts only one of the four as skipped and the other three among the 455 passes, because three are declared as `describe(..., { skip })` and only the workspace one as `test(..., { skip })`. So the single skipped test the summary reports is the workspace adversarial suite itself. Run alone, `test/scott/adversarialApi.test.js` reports 0 tests, 0 passes, contributing nothing to the total at all.
+
+The consequence: a green `npm test` does not exercise the workspace surface. I armed that suite and ran it against the running server: 6 pass, 0 fail. I note that one of its five checks, the erasure confirmation check, returns early when there is no contact in the database, so it can pass without asserting anything; in my run I created contacts first, and I also tested erasure separately and by hand.
 
 **Both gates fail closed.** With `ENABLE_ARRINGTON_AI_WORKSPACE` unset, every workspace page returned 404 to Tom's own authenticated session and to an anonymous visitor, and both APIs returned 404 to Tom. Only the exact string `true` enables it. With the flag on, a logged-in site admin who is not Tom (`nat`, role admin) received 404 on all eleven pages and 404 on all six APIs, with no workspace content and no counts in any denial body. Anonymous POSTs with a valid CSRF token returned 401. Tom reached all eleven pages, every one carrying both the `X-Robots-Tag: noindex, nofollow` header and the meta tag. `/sitemap.xml` contains no workspace path and no view links to one.
 
@@ -48,11 +52,11 @@ Environment: local Postgres 16, fresh database, `node db/seed.js` from empty, th
 
 **Honesty of state.** On an unseeded environment the dashboard says "No sync run has ever been recorded. The brain is unseeded", the Company Brain says "No records. The brain has not been seeded in this environment yet", and the AI panel says "Workspace AI is not enabled in this environment". The social area lists all four platforms as "not connected", says "No credential in this environment. Nothing is retrieved and nothing is shown", and states that with no connector configured "every figure on this page would be invented". None of these render as an empty but healthy state.
 
-**Secrets.** No credential, key or plaintext snapshot is committed. `data/workspace-snapshot.enc` is the only file ever added under `data/` in the branch history, it carries the AES-GCM format marker and no readable structure, and `.gitignore` refuses `data/*.json`. No code path prints a key's contents; the boot line reports presence and length only. No 64-character hex literal exists in tracked source.
+**Secrets.** No credential, key or plaintext snapshot is committed. `data/workspace-snapshot.enc` is the only file ever added under `data/` in the branch history, it carries the AES-GCM format marker and no readable structure, and `.gitignore` refuses `data/*.json`. No code path prints a key's contents; the boot line reports presence and length only. Across all tracked files, not only JavaScript, the sole 64-character hex runs outside the lockfile and the test fixtures are hex-encoded image data in the handover SQL export.
 
 **Cross-contamination.** `lib/workspace/**` requires nothing from `lib/scott/**` and the reverse holds. The Scott social module reads no environment variable at all.
 
-**Other checks.** Workspace views contain no unescaped EJS output and build the DOM with `textContent` only; inline style and script blocks carry the CSP nonce and the strict site CSP applies unchanged; the new `safeNextPath` in `routes/auth.js` rejects protocol-relative and absolute targets, so the login redirect is not an open redirect; the activity log has no update or delete path anywhere in the codebase; navigation counts are computed after clearance filtering. There is no open pull request for this branch.
+**Other checks.** Workspace views contain no unescaped EJS output and build the DOM with `textContent` only; inline style and script blocks carry the CSP nonce and the strict site CSP applies unchanged; the new `safeNextPath` in `routes/auth.js` was extracted and exercised directly, and returns `/` for `//evil.example`, `https://evil.example`, `/\evil.example`, `javascript:alert(1)`, a CRLF header-injection attempt and an empty value, so the login redirect is not an open redirect; the activity log has no update or delete path anywhere in the codebase; navigation counts are computed after clearance filtering. There is no open pull request for this branch.
 
 ## What I accepted as reported, and from whom
 
@@ -81,6 +85,8 @@ This may be an acceptable risk, because the only admin is Nat, who is an org own
 `lib/workspace/access.js` states that a denial is a 404 rather than a 403 "because the workspace's existence is itself operating information". For a logged-in user that holds. For an anonymous one it does not: `requireWorkspacePageAccess` redirects to `/login?next=...` when there is no session.
 
 Observed with the flag on: `/workspace`, `/workspace/contacts`, `/workspace/brain` and `/workspace/social` each returned 302 to `/login?next=%2Fworkspace...`, while `/workspace/nonsense` and any non-existent site path returned 404. An unauthenticated scanner can therefore confirm the area exists and enumerate its page names by the response code alone, and the redirect target echoes the path back. The APIs behave the same way, returning 401 "Not signed in" rather than 404, which likewise confirms each endpoint exists.
+
+The API contrast is observed, not inferred: with a valid CSRF token and no session, `/api/workspace/ask` and `/api/workspace/contacts/sync` returned 401 JSON, while `/api/definitely-not-an-endpoint` and `/api/workspace/not-a-real-route` returned the site's 404 HTML page.
 
 `test/workspace/adversarialApi.test.js` asserts `[302, 404].includes(res.status)` for the anonymous case, so the suite encodes this behaviour as acceptable rather than catching it.
 
@@ -111,6 +117,8 @@ Fix: HMAC the normalised address with a server-side secret (`SESSION_SECRET` or 
 ### F5. One declared social scope is a write permission. Severity: MEDIUM, and cheapest to fix now
 
 `lib/workspace/social/registry.js` states as a structural rule that "no connector declares a publishing scope, because publishing is not authorised, and an unused write scope on a live token is exactly the thing that turns a mistake into a public post". The Instagram connector then declares `instagram_manage_comments`, which is a Meta permission conferring comment moderation, including replying to and deleting comments. `read_insights`, `pages_read_engagement`, `pages_read_user_content`, `r_organization_social`, `r_organization_admin`, `tweet.read` and `users.read` are all genuinely read-only.
+
+I checked this against public documentation rather than asserting it from memory, and the check narrowed the finding rather than widening it. `instagram_manage_comments` does carry comment moderation: reply, delete, hide and unhide. The Facebook scopes are genuinely read-only, because deleting a Page comment additionally requires `pages_manage_engagement`, which this registry does not declare. So the finding is one scope, not several. Meta's own developer site is blocked by this environment's egress proxy, so this rests on secondary sources and should be confirmed against `developers.facebook.com/docs/permissions` when the app is created.
 
 Nothing is connected, so nothing is exposed today. The code would still refuse to use the capability. But the whole argument of the rule is that the token should not carry a power the code refuses, and this one would. This is the moment to fix it, because the scope list is what Tom will request when he creates the Meta app, and a granted permission is harder to withdraw than an unrequested one.
 
@@ -154,3 +162,14 @@ Only `/api/workspace/ask` carries a limiter. The site's `authedWriteLimiter` is 
 7. **Do not treat the "455 pass" figure as covering the workspace surface.** It does not, on its own: the adversarial suite skips silently in a bare `npm test`. Either arm it in CI against a running instance, or record that it must be run by hand before each release decision.
 
 Nothing in this review was merged, deployed, connected or changed. The only writes I made were to a local throwaway database.
+
+## Amendment, same day: quality-control pass on this review
+
+This document was re-checked against its own evidence after issue, on Tom's instruction. Every claim that had been asserted from reading rather than from an observed result was either executed or softened. Four things changed and one finding survived a challenge:
+
+1. **Corrected, and it was wrong.** The first issue said "the single skip is the Scott live-AI paid suite". It is not. Four suites carry a SKIP directive, the summary counts only one of them, and the one it counts is the workspace adversarial suite itself. The corrected paragraph is above. The error mattered in the direction that flatters the candidate, which is the direction an assurance document must not err in, and it was found by re-running the suite and reading the TAP rather than by rereading the sentence.
+2. **F2 strengthened from inference to observation.** The claim that the APIs also disclose their own existence was reasoning about response codes; it is now an observed contrast between a real workspace endpoint (401) and a non-existent one (404).
+3. **F5 narrowed after checking.** My instinct on review was that the Facebook scopes carried a delete capability too. They do not. The finding is one Instagram scope, and it is now sourced.
+4. **Two assertions executed.** `safeNextPath` was run against six hostile inputs rather than reasoned about from its regular expression, and the committed-secret sweep was widened from JavaScript files to every tracked file.
+
+Nothing in the verdict changes. AMBER stands, the ten findings stand unaltered in substance, and F1 and F2 remain the two that gate an enable decision.
