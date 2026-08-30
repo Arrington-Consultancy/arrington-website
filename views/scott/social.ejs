@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Media | Scott's Armchair &amp; Knitting Service</title>
+  <meta name="robots" content="noindex, nofollow">
+  <%- include('partials/styles') %>
+</head>
+<body class="scott-body">
+  <div class="sc-shell">
+    <%- include('partials/sidebar', { active: 'social', navCounts: navCounts }) %>
+    <main class="sc-main">
+      <% if (typeof isImpersonating !== 'undefined' && isImpersonating) { %>
+        <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
+      <% } %>
+      <div class="sc-page-header">
+        <div>
+          <h1 class="sc-h">Social Media</h1>
+          <p>Facebook, Instagram, LinkedIn and X in one place. Owned by Bob Fletcher, Customers &amp; Marketing. Viewing as <strong><%= persona.name %></strong> (<%= persona.role %>).</p>
+        </div>
+      </div>
+
+      <% if (!canSee('marketing_performance') && !canSee('review_status')) { %>
+        <div class="sc-card sc-empty"><%= deniedNote('marketing_performance') %></div>
+      <% } %>
+
+      <% if (canSee('marketing_performance')) { %>
+        <div class="sc-card">
+          <h2 class="sc-h2">Connected accounts</h2>
+          <table class="sc-table">
+            <tr><th>Platform</th><th>Account</th><th>State</th><th>Followers</th><th>Last retrieval</th></tr>
+            <% facts.SOCIAL_ACCOUNTS.forEach(function (a) { %>
+              <tr>
+                <td><strong><%= a.platform %></strong></td>
+                <td><%= a.handle %></td>
+                <td><span class="sc-pill <%= a.status === 'CONNECTED' ? 'sc-pill-ok' : 'sc-pill-muted' %>"><%= a.status %></span></td>
+                <td><%= a.followers === null ? 'unknown' : a.followers.toLocaleString() %><% if (a.followersChange30d) { %> <span class="sc-muted">(+<%= a.followersChange30d %>)</span><% } %></td>
+                <td class="sc-muted"><%= a.lastRetrieval || 'never' %><% if (a.lastOutcome) { %> · <%= a.lastOutcome %><% } %></td>
+              </tr>
+            <% }) %>
+          </table>
+          <p class="sc-muted">A connected account is not proof that a retrieval succeeded: the state and the last retrieval are recorded separately. Publishing, deleting, replying publicly and changing settings stay with a person; this system reads, analyses and drafts.</p>
+        </div>
+      <% } %>
+
+      <% if (canSee('review_status')) { %>
+        <div class="sc-card">
+          <h2 class="sc-h2">Comments and messages needing a reply</h2>
+          <% facts.SOCIAL_ENGAGEMENT_OPEN.filter(function (e) { return e.needsReply; }).forEach(function (e) { %>
+            <div class="sc-row">
+              <div><span class="sc-pill sc-pill-muted"><%= e.platform %></span> <strong><%= e.author %></strong> <span class="sc-muted"><%= e.kind %>, <%= e.received %></span></div>
+              <div><%= e.body %></div>
+              <div class="sc-muted"><%= e.suggested %></div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+
+      <% if (canSee('marketing_consent')) { %>
+        <div class="sc-card">
+          <h2 class="sc-h2">Photography and consent</h2>
+          <% facts.SOCIAL_CONSENT_NOTES.forEach(function (c) { %>
+            <div class="sc-row">
+              <div><strong><%= c.subject %></strong> <span class="sc-pill <%= c.position.indexOf('NO ') === 0 ? 'sc-pill-warn' : 'sc-pill-muted' %>"><%= c.position %></span></div>
+              <div class="sc-muted"><%= c.detail %></div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+
+      <% if (canSee('marketing_performance')) { %>
+        <div class="sc-card">
+          <h2 class="sc-h2">Recent and proposed content</h2>
+          <% facts.SOCIAL_POSTS_30D.forEach(function (p) { %>
+            <div class="sc-row">
+              <div>
+                <span class="sc-pill sc-pill-muted"><%= p.platform %></span>
+                <span class="sc-pill <%= p.kind === 'PUBLISHED' ? 'sc-pill-ok' : 'sc-pill-warn' %>"><%= p.kind %></span>
+                <span class="sc-muted"><%= p.posted || 'not published' %></span>
+              </div>
+              <div><%= p.body %></div>
+              <div class="sc-muted">
+                <% if (p.reach !== null) { %><%= p.reach.toLocaleString() %> reach · <%= p.engagements %> engagements · <%= p.comments %> comments<% } %>
+                <% if (p.note) { %><%= p.reach !== null ? ' · ' : '' %><%= p.note %><% } %>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+
+        <div class="sc-card">
+          <h2 class="sc-h2">Channel outcome, 90 days</h2>
+          <table class="sc-table">
+            <tr><th>Channel</th><th>Enquiries</th><th>Qualified</th><th>Accepted</th><th>Booked</th><th>Spend</th></tr>
+            <% facts.SOCIAL_PERFORMANCE_90D.forEach(function (c) { %>
+              <tr>
+                <td><%= c.channel %><div class="sc-muted"><%= c.verdict %></div></td>
+                <td><%= c.enquiries %></td><td><%= c.qualified %></td><td><%= c.accepted %></td>
+                <td>£<%= c.bookedRevenueGbp.toLocaleString() %></td><td>£<%= c.spendGbp.toLocaleString() %></td>
+              </tr>
+            <% }) %>
+          </table>
+        </div>
+      <% } %>
+    </main>
+  </div>
+</body>
+</html>

@@ -316,6 +316,7 @@ const DATA_PAGES = [
   { path: '/scott/finance', view: 'scott/finance', nav: 'finance', label: 'Finance' },
   { path: '/scott/quality', view: 'scott/quality', nav: 'quality', label: 'Quality Control' },
   { path: '/scott/marketing', view: 'scott/marketing', nav: 'marketing', label: 'Marketing & Reviews' },
+  { path: '/scott/social', view: 'scott/social', nav: 'social', label: 'Social Media' },
   { path: '/scott/assets', view: 'scott/assets', nav: 'assets', label: 'Assets & Maintenance' },
   { path: '/scott/premises', view: 'scott/premises', nav: 'premises', label: 'Premises & Facilities' },
   { path: '/scott/opportunities', view: 'scott/opportunities', nav: 'opportunities', label: 'Where the Money Goes' },
