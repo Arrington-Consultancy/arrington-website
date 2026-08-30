@@ -558,6 +558,11 @@ function mountPageRoute(app, generateCsrfToken) {
           navCounts,
           facts: deepFacts,
           brain: buildBrainViewModel(clearance.getEffectivePersonaId(req)),
+          // Passed to every data page so any of them can host the chat
+          // widget. Social does: Bob Fletcher owns that record, and the
+          // page is where the questions about it get asked.
+          workersById: WORKERS_BY_ID_JSON,
+          aiEnabled: isScottAIEnabled(),
           csrfToken: generateCsrfToken(req, res)
         });
       } catch (err) {

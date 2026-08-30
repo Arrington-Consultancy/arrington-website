@@ -4,6 +4,22 @@
 <p class="ws-sub">Facebook, Instagram, LinkedIn and X in one place: connector state, recent posts, performance, engagement and planned content. The workspace reads, analyses and drafts. Publishing, deleting, replying publicly, changing account settings and spending money stay with a person.</p>
 
 <div class="ws-card">
+  <h2>Ask the social lane</h2>
+  <p class="ws-body-text"><strong>ARRINGTON SOCIAL CONTENT BUILDER</strong> is the lane that holds this: what was posted, what it cost, which listings renew and what any of it produced. Ask it here and the question is routed to that lane only, with nothing from outside its remit.</p>
+  <% if (!aiEnabled) { %>
+    <p class="ws-empty">Workspace AI is not enabled in this environment, so a question would be refused rather than answered from memory. Everything below still works.</p>
+  <% } %>
+  <div class="ws-chat-thread" id="wsSocialThread"></div>
+  <form id="wsSocialAsk">
+    <div class="ws-form-row">
+      <input class="ws-input" type="text" name="question" maxlength="1000" placeholder="What did we spend on directories last year, and what did it bring?">
+      <button class="ws-btn" type="submit">Ask</button>
+    </div>
+    <p class="ws-note-error" id="wsSocialError" hidden></p>
+  </form>
+</div>
+
+<div class="ws-card">
   <h2>Connectors</h2>
   <div class="ws-table-wrap">
   <table class="ws-table">
@@ -88,5 +104,79 @@
     </div>
   <% }) %>
 </div>
+
+<div class="ws-card">
+  <h2>Social memory</h2>
+  <p class="ws-body-text">The record a business normally never gets back from an agency: every post, every penny, every directory renewal, how each performed, and which of it is worth doing again. The structure is here and the lane can answer from it. The history itself has not been supplied yet.</p>
+  <div class="ws-item">
+    <span class="ws-item-title">Post history</span>
+    <div class="ws-meta">Not supplied. Needs an export from each platform, or the dates and subjects of what was posted.</div>
+  </div>
+  <div class="ws-item">
+    <span class="ws-item-title">Spend ledger</span>
+    <div class="ws-meta">Not supplied. Boosted posts, photography and content costs, by year.</div>
+  </div>
+  <div class="ws-item">
+    <span class="ws-item-title">Directory and listing entries</span>
+    <div class="ws-meta">Not supplied. Yell, Google Business Profile, trade directories, local print: cost, renewal date and what each produced. These renew quietly and are the spend least often reviewed.</div>
+  </div>
+  <div class="ws-item">
+    <span class="ws-item-title">Repeat recommendations</span>
+    <div class="ws-meta">Cannot be produced until the history above exists. A recommendation to repeat a post is only worth having when the evidence for it is real.</div>
+  </div>
+  <p class="ws-meta">Stated as missing rather than shown as empty: an empty table here would read as "nothing was ever posted", which is a different claim entirely.</p>
+</div>
+
+<script nonce="<%= nonce %>">
+  (function () {
+    var form = document.getElementById('wsSocialAsk');
+    if (!form) return;
+    var thread = document.getElementById('wsSocialThread');
+    var err = document.getElementById('wsSocialError');
+    var csrf = document.querySelector('meta[name="csrf-token"]').content;
+    var conversationId = null;
+    function bubble(role, text, meta) {
+      var d = document.createElement('div');
+      d.className = 'ws-msg ws-msg-' + role;
+      var body = document.createElement('div');
+      body.textContent = text;
+      d.appendChild(body);
+      if (meta) {
+        var m = document.createElement('div');
+        m.className = 'ws-prov';
+        m.textContent = meta;
+        d.appendChild(m);
+      }
+      thread.appendChild(d);
+    }
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var q = form.question.value.trim();
+      if (!q) return;
+      err.hidden = true;
+      bubble('user', q);
+      form.question.value = '';
+      try {
+        var r = await fetch('/api/workspace/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf },
+          // Pinned to the social lane: this page asks social questions,
+          // so the answer must come from that remit rather than from
+          // whatever the router would have guessed.
+          body: JSON.stringify({ question: q, laneId: 'social_content_builder', conversationId: conversationId })
+        });
+        var data = await r.json();
+        if (!r.ok) { err.textContent = data.error || 'That did not work.'; err.hidden = false; return; }
+        conversationId = data.conversationId;
+        bubble('assistant', data.answer, data.provenance.length
+          ? 'Records supplied: ' + data.provenance.join(', ')
+          : 'No records were available for this question.');
+      } catch (ex) {
+        err.textContent = 'Network problem: ' + ex.message;
+        err.hidden = false;
+      }
+    });
+  })();
+</script>
 
 <%- include('partials/shell-bottom') %>

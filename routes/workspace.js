@@ -144,6 +144,7 @@ function mountPageRoute(app, generateCsrfToken) {
       accounts,
       posts,
       outstanding,
+      aiEnabled: isWorkspaceAIEnabled(),
       csrfToken: generateCsrfToken(req, res)
     });
   });

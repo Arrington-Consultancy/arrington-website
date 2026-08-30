@@ -21,6 +21,17 @@
         </div>
       </div>
 
+      <div class="sc-card sc-social-bob">
+        <div class="sc-chat-head">
+          <div class="sc-msg-avatar sc-avatar-customers_marketing"><%= workersById.customers_marketing.initials %></div>
+          <div class="sc-chat-head-text">
+            <strong>Bob Fletcher holds the social record</strong>
+            <span>Six years of posts, spend, directory renewals and what each one actually produced. Ask Ruth anything about social and she routes it to Bob.</span>
+          </div>
+        </div>
+        <%- include('partials/chat-widget', { workersById: workersById, csrfToken: csrfToken, aiEnabled: aiEnabled, suggestions: true }) %>
+      </div>
+
       <% if (!canSee('marketing_performance') && !canSee('review_status')) { %>
         <div class="sc-card sc-empty"><%= deniedNote('marketing_performance') %></div>
       <% } %>
@@ -28,18 +39,16 @@
       <% if (canSee('marketing_performance')) { %>
         <div class="sc-card">
           <h2 class="sc-h2">Connected accounts</h2>
-          <table class="sc-table">
-            <tr><th>Platform</th><th>Account</th><th>State</th><th>Followers</th><th>Last retrieval</th></tr>
-            <% facts.SOCIAL_ACCOUNTS.forEach(function (a) { %>
-              <tr>
-                <td><strong><%= a.platform %></strong></td>
-                <td><%= a.handle %></td>
-                <td><span class="sc-pill <%= a.status === 'CONNECTED' ? 'sc-pill-ok' : 'sc-pill-muted' %>"><%= a.status %></span></td>
-                <td><%= a.followers === null ? 'unknown' : a.followers.toLocaleString() %><% if (a.followersChange30d) { %> <span class="sc-muted">(+<%= a.followersChange30d %>)</span><% } %></td>
-                <td class="sc-muted"><%= a.lastRetrieval || 'never' %><% if (a.lastOutcome) { %> · <%= a.lastOutcome %><% } %></td>
-              </tr>
-            <% }) %>
-          </table>
+          <% facts.SOCIAL_ACCOUNTS.forEach(function (a) { %>
+            <div class="sc-card sc-row-card">
+              <div class="sc-row-title"><%= a.platform %> <span class="sc-pill <%= a.status === 'CONNECTED' ? 'sc-pill-ok' : 'sc-pill-muted' %>"><%= a.status %></span></div>
+              <div class="sc-row-sub"><%= a.handle %><% if (a.note) { %> · <%= a.note %><% } %></div>
+              <div class="sc-row-sub sc-muted">
+                <%= a.followers === null ? 'Followers unknown' : a.followers.toLocaleString() + ' followers' %><% if (a.followersChange30d) { %> (+<%= a.followersChange30d %> in 30 days)<% } %>
+                · last retrieval <%= a.lastRetrieval || 'never' %><% if (a.lastOutcome) { %>, <%= a.lastOutcome %><% } %>
+              </div>
+            </div>
+          <% }) %>
           <p class="sc-muted">A connected account is not proof that a retrieval succeeded: the state and the last retrieval are recorded separately. Publishing, deleting, replying publicly and changing settings stay with a person; this system reads, analyses and drafts.</p>
         </div>
       <% } %>
@@ -48,7 +57,7 @@
         <div class="sc-card">
           <h2 class="sc-h2">Comments and messages needing a reply</h2>
           <% facts.SOCIAL_ENGAGEMENT_OPEN.filter(function (e) { return e.needsReply; }).forEach(function (e) { %>
-            <div class="sc-row">
+            <div class="sc-card sc-row-card">
               <div><span class="sc-pill sc-pill-muted"><%= e.platform %></span> <strong><%= e.author %></strong> <span class="sc-muted"><%= e.kind %>, <%= e.received %></span></div>
               <div><%= e.body %></div>
               <div class="sc-muted"><%= e.suggested %></div>
@@ -61,7 +70,7 @@
         <div class="sc-card">
           <h2 class="sc-h2">Photography and consent</h2>
           <% facts.SOCIAL_CONSENT_NOTES.forEach(function (c) { %>
-            <div class="sc-row">
+            <div class="sc-card sc-row-card">
               <div><strong><%= c.subject %></strong> <span class="sc-pill <%= c.position.indexOf('NO ') === 0 ? 'sc-pill-warn' : 'sc-pill-muted' %>"><%= c.position %></span></div>
               <div class="sc-muted"><%= c.detail %></div>
             </div>
@@ -73,7 +82,7 @@
         <div class="sc-card">
           <h2 class="sc-h2">Recent and proposed content</h2>
           <% facts.SOCIAL_POSTS_30D.forEach(function (p) { %>
-            <div class="sc-row">
+            <div class="sc-card sc-row-card">
               <div>
                 <span class="sc-pill sc-pill-muted"><%= p.platform %></span>
                 <span class="sc-pill <%= p.kind === 'PUBLISHED' ? 'sc-pill-ok' : 'sc-pill-warn' %>"><%= p.kind %></span>
@@ -90,16 +99,70 @@
 
         <div class="sc-card">
           <h2 class="sc-h2">Channel outcome, 90 days</h2>
-          <table class="sc-table">
-            <tr><th>Channel</th><th>Enquiries</th><th>Qualified</th><th>Accepted</th><th>Booked</th><th>Spend</th></tr>
-            <% facts.SOCIAL_PERFORMANCE_90D.forEach(function (c) { %>
-              <tr>
-                <td><%= c.channel %><div class="sc-muted"><%= c.verdict %></div></td>
-                <td><%= c.enquiries %></td><td><%= c.qualified %></td><td><%= c.accepted %></td>
-                <td>£<%= c.bookedRevenueGbp.toLocaleString() %></td><td>£<%= c.spendGbp.toLocaleString() %></td>
-              </tr>
-            <% }) %>
-          </table>
+          <% facts.SOCIAL_PERFORMANCE_90D.forEach(function (c) { %>
+            <div class="sc-card sc-row-card">
+              <div class="sc-row-title"><%= c.channel %></div>
+              <div class="sc-row-sub"><%= c.enquiries %> enquiries · <%= c.qualified %> qualified · <%= c.accepted %> accepted · £<%= c.bookedRevenueGbp.toLocaleString() %> booked · £<%= c.spendGbp.toLocaleString() %> spend</div>
+              <div class="sc-row-sub sc-muted"><%= c.verdict %></div>
+            </div>
+          <% }) %>
+        </div>
+        <div class="sc-card">
+          <h2 class="sc-h2">What to repeat, and when</h2>
+          <% facts.REPEAT_RECOMMENDATIONS.forEach(function (r) { %>
+            <div class="sc-card sc-row-card">
+              <div><strong><%= r.post %></strong> <span class="sc-pill <%= r.confidence.indexOf('against') !== -1 ? 'sc-pill-warn' : 'sc-pill-ok' %>"><%= r.confidence %></span></div>
+              <div class="sc-muted">Due <%= r.due %> · first run <%= r.firstRun %> · run <%= r.timesRun %> time(s)</div>
+              <div><%= r.evidence %></div>
+            </div>
+          <% }) %>
+        </div>
+
+        <div class="sc-card">
+          <h2 class="sc-h2">Directory and listing entries</h2>
+          <% facts.DIRECTORY_LISTINGS.forEach(function (d) { %>
+            <div class="sc-card sc-row-card">
+              <div class="sc-row-title"><%= d.name %> <span class="sc-pill <%= d.status === 'ACTIVE' ? 'sc-pill-ok' : 'sc-pill-muted' %>"><%= d.status %></span></div>
+              <div class="sc-row-sub">£<%= d.annualCostGbp %> a year · <%= d.enquiriesLastFullYear %> enquiries<% if (d.acceptedLastFullYear !== undefined) { %>, <%= d.acceptedLastFullYear %> accepted<% } %><% if (d.renewalDate) { %> · renews <%= d.renewalDate %><% } %></div>
+              <div class="sc-row-sub sc-muted"><%= d.note %></div>
+            </div>
+          <% }) %>
+        </div>
+
+        <div class="sc-card">
+          <h2 class="sc-h2">Every penny, by year</h2>
+          <% facts.SOCIAL_SPEND_LEDGER.slice().reverse().forEach(function (y) { %>
+            <div class="sc-card sc-row-card">
+              <div class="sc-row-title"><%= y.year %> · £<%= y.totalGbp.toLocaleString() %> total</div>
+              <div class="sc-row-sub">Boosted £<%= y.boostedSocialGbp.toLocaleString() %> · directories £<%= y.directoriesGbp.toLocaleString() %> · photography £<%= y.photographyGbp.toLocaleString() %> · <%= y.enquiriesAttributed %> enquiries attributed</div>
+              <% if (y.note) { %><div class="sc-row-sub sc-muted"><%= y.note %></div><% } %>
+            </div>
+          <% }) %>
+        </div>
+
+        <div class="sc-card">
+          <h2 class="sc-h2">Six years of posts</h2>
+          <% facts.SOCIAL_POST_HISTORY.slice().reverse().forEach(function (p) { %>
+            <div class="sc-card sc-row-card">
+              <div class="sc-row-title">
+                <%= p.title %>
+                <% if (p.repeatable) { %><span class="sc-pill sc-pill-ok">REPEATABLE</span><% } %>
+                <% if (p.spendGbp) { %><span class="sc-pill sc-pill-warn">£<%= p.spendGbp %> SPEND</span><% } %>
+              </div>
+              <div class="sc-row-sub"><%= p.month %> <%= p.year %> · <%= p.platform %> · <%= p.format %> · <%= p.reach.toLocaleString() %> reach, <%= p.engagements %> engagements, <%= p.enquiries %> enquiries</div>
+              <% if (p.note) { %><div class="sc-row-sub sc-muted"><%= p.note %></div><% } %>
+            </div>
+          <% }) %>
+        </div>
+
+        <div class="sc-card">
+          <h2 class="sc-h2">What the record cannot tell you</h2>
+          <% facts.SOCIAL_MEMORY_LIMITS.forEach(function (l) { %>
+            <div class="sc-card sc-row-card">
+              <div><strong><%= l.item %></strong> <span class="sc-pill sc-pill-warn"><%= l.position %></span></div>
+              <div class="sc-muted"><%= l.detail %></div>
+            </div>
+          <% }) %>
         </div>
       <% } %>
     </main>
