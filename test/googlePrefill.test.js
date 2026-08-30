@@ -121,3 +121,22 @@ test('the button slot is bounded, so a collapsed Google layout cannot take over 
 test('the bounds leave a correctly rendered button alone', () => {
   assert.match(prefillSource, /width:\s*280/, 'the requested button width and the slot width must agree');
 });
+
+// The CSP nonce must reach Google's own script element.
+//
+// Live, 30/08/2026: the button rendered unstyled, showing an oversized
+// logo and its visually-hidden label as duplicated text ("Continue with
+// GoogleContinue with"). Cause: the site's strict CSP accepts styles
+// only with the request nonce, Google's library injects a <style> block
+// for the button, and it copies the nonce for that block from its own
+// script element. The loader created that element in JS without one, so
+// the style was dropped.
+test('the GSI script element carries the request nonce, so Google can nonce its injected styles', () => {
+  const html = render({
+    nonce: 'NONCE-UNDER-TEST',
+    googleSigninClientId: 'client.apps.googleusercontent.com',
+    gpTargets: { email: '#e' }
+  });
+  assert.match(html, /s\.nonce = "NONCE-UNDER-TEST"/, 'the nonce property must be set (the attribute alone is hidden from script)');
+  assert.match(html, /setAttribute\('nonce', "NONCE-UNDER-TEST"\)/, 'and the attribute, for libraries that read it that way');
+});

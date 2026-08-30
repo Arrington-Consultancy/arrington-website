@@ -58,6 +58,17 @@
     var s = document.createElement('script');
     s.src = 'https://accounts.google.com/gsi/client';
     s.async = true;
+    // The site runs a strict CSP: styles are accepted only with this
+    // request's nonce, and there is no 'unsafe-inline'. Google's library
+    // injects its own <style> block for the button, and it takes the
+    // nonce to put on that block from ITS OWN script element. Created in
+    // JS like this, the element had no nonce, so the injected style was
+    // dropped and the button rendered raw: an oversized logo and its
+    // visually-hidden label showing as duplicated text. Setting the
+    // property (not the attribute, which browsers hide from script) is
+    // what actually propagates it.
+    s.nonce = <%- JSON.stringify(nonce) %>;
+    s.setAttribute('nonce', <%- JSON.stringify(nonce) %>);
     s.onerror = giveUpQuietly;
     s.onload = function () {
       if (!window.google || !google.accounts || !google.accounts.id) return giveUpQuietly();
