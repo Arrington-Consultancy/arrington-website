@@ -29,7 +29,15 @@ const MARKER_EVENT = 'live_pressure_suite_run';
 const KILL_AFTER_MS = 15 * 60 * 1000;
 
 async function maybeRunLivePressureSuite(db) {
-  if (process.env.RUN_SCOTT_LIVE_PRESSURE !== 'true') return;
+  const armed = process.env.RUN_SCOTT_LIVE_PRESSURE;
+  if (!armed || armed === 'false') return;
+
+  // The variable's value names the run. 'true' is the original 29/08/2026
+  // run's legacy spelling; any other value is a distinct one-shot label
+  // (e.g. 'activation-20260830'), so a deliberate re-run after a roster
+  // change arms with a fresh label instead of manual SQL against the old
+  // marker row. Each label still spends at most once, same guarantee.
+  const runLabel = armed === 'true' ? 'v1' : armed;
 
   // If live AI is not genuinely enabled here, the suite would SKIP and
   // exit 0, and exit 0 must never be reported as a pass for a run that
@@ -41,18 +49,22 @@ async function maybeRunLivePressureSuite(db) {
   }
 
   try {
+    // The 'v1' legacy label matches any marker row (the original run's
+    // marker carries no label); a named label matches only its own rows.
     const { rows } = await db.query(
-      'SELECT id, created_at, summary FROM scott_activity WHERE event_type = $1 ORDER BY id DESC LIMIT 1',
-      [MARKER_EVENT]
+      runLabel === 'v1'
+        ? 'SELECT id, created_at, summary FROM scott_activity WHERE event_type = $1 ORDER BY id DESC LIMIT 1'
+        : 'SELECT id, created_at, summary FROM scott_activity WHERE event_type = $1 AND summary LIKE $2 ORDER BY id DESC LIMIT 1',
+      runLabel === 'v1' ? [MARKER_EVENT] : [MARKER_EVENT, `%[run ${runLabel}]%`]
     );
     if (rows.length) {
-      console.log(`Live pressure runner: already ran (${rows[0].created_at.toISOString()}: ${rows[0].summary}). Remove RUN_SCOTT_LIVE_PRESSURE; a deliberate re-run means deleting the marker row first.`);
+      console.log(`Live pressure runner: run "${runLabel}" already spent (${rows[0].created_at.toISOString()}: ${rows[0].summary}). Remove RUN_SCOTT_LIVE_PRESSURE; a deliberate re-run means arming with a fresh label.`);
       return;
     }
 
     await db.query(
       'INSERT INTO scott_activity (actor, event_type, summary) VALUES ($1, $2, $3)',
-      ['system', MARKER_EVENT, 'Paid live-AI pressure suite launched by RUN_SCOTT_LIVE_PRESSURE=true. Marker written before spend so a container restart cannot pay twice.']
+      ['system', MARKER_EVENT, `Paid live-AI pressure suite launched [run ${runLabel}]. Marker written before spend so a container restart cannot pay twice.`]
     );
   } catch (err) {
     console.error('Live pressure runner: could not check or write the spend marker, so NOTHING was launched:', err.message);
@@ -89,7 +101,7 @@ async function maybeRunLivePressureSuite(db) {
     try {
       await db.query(
         'INSERT INTO scott_activity (actor, event_type, summary) VALUES ($1, $2, $3)',
-        ['system', `${MARKER_EVENT}_result`, `Paid live-AI pressure suite ${verdict}. Full per-case TAP output is in the deployment log for this boot.`]
+        ['system', `${MARKER_EVENT}_result`, `Paid live-AI pressure suite ${verdict} [run ${runLabel}]. Full per-case TAP output is in the deployment log for this boot.`]
       );
     } catch (err) {
       console.error('Live pressure runner: result row failed to write (the log above still holds the truth):', err.message);
