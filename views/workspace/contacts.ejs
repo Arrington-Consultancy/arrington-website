@@ -1,0 +1,101 @@
+<%- include('partials/shell-top', { pageTitle: 'Contacts', active: 'contacts' }) %>
+
+<h1 class="ws-h">Contacts</h1>
+<p class="ws-sub">One record per person, matched on email, built from every enquiry, check, quiz and download this site has ever captured. Nothing here is bought in or enriched from elsewhere.</p>
+
+<% if (!permitted) { %>
+  <div class="ws-card"><p class="ws-empty">This area holds people's contact details, which your clearance does not cover.</p></div>
+<% } else { %>
+
+<div class="ws-card">
+  <h2>Summary</h2>
+  <div class="ws-item"><span class="ws-item-title"><%= stats.contacts %></span> contact(s) on record.</div>
+  <div class="ws-item"><span class="ws-item-title"><%= stats.via_google %></span> have used Continue with Google at least once.</div>
+  <div class="ws-item"><span class="ws-item-title"><%= stats.active_30d %></span> have been in touch in the last 30 days.</div>
+  <div class="ws-item">
+    <button class="ws-btn ws-btn-quiet" id="wsSyncContacts" type="button">Rebuild from enquiry history</button>
+    <span class="ws-meta" id="wsSyncNote">Runs automatically on every deploy. Rebuilding is safe to repeat: it adds nothing it already has.</span>
+  </div>
+</div>
+
+<div class="ws-card">
+  <form method="GET" action="/workspace/contacts" class="ws-form-row">
+    <input class="ws-input" type="text" name="q" value="<%= q %>" placeholder="Search name, email or company" maxlength="120">
+    <button class="ws-btn" type="submit">Search</button>
+    <% if (q) { %><a class="ws-btn ws-btn-quiet" href="/workspace/contacts">Clear</a><% } %>
+  </form>
+  <% if (contacts.length === 0) { %>
+    <p class="ws-empty"><%= q ? 'No contact matches that.' : 'No contacts yet. They appear as people use the forms and checks.' %></p>
+  <% } else { %>
+  <div class="ws-table-wrap">
+  <table class="ws-table">
+    <tr><th>Name</th><th>Email</th><th>Interactions</th><th>First seen</th><th>Last seen</th><th>Arrived via</th></tr>
+    <% contacts.forEach(function (c) { %>
+      <tr>
+        <td><a href="/workspace/contacts?id=<%= c.id %>"><%= c.name || '(no name given)' %></a></td>
+        <td class="ws-meta"><%= c.email %></td>
+        <td><%= c.interaction_count %></td>
+        <td class="ws-meta"><%= c.first_seen_at ? new Date(c.first_seen_at).toISOString().slice(0, 10) : '' %></td>
+        <td class="ws-meta"><%= c.last_seen_at ? new Date(c.last_seen_at).toISOString().slice(0, 10) : '' %></td>
+        <td>
+          <span class="ws-badge ws-badge-plain"><%= (c.first_source || 'unknown').replace(/_/g, ' ') %></span>
+          <% if (c.used_google_prefill) { %><span class="ws-badge ws-badge-fresh">google</span><% } %>
+        </td>
+      </tr>
+    <% }) %>
+  </table>
+  </div>
+  <% } %>
+</div>
+
+<% if (detail) { %>
+<div class="ws-card">
+  <h2>History: <%= detail.name || detail.email %></h2>
+  <div class="ws-item">
+    <span class="ws-item-title"><%= detail.email %></span>
+    <div class="ws-meta">
+      <%= detail.phone ? detail.phone + ' · ' : '' %><%= detail.company ? detail.company + ' · ' : '' %>
+      <%= detail.interaction_count %> interaction(s)
+      <%= detail.used_google_prefill ? ' · has used Continue with Google' : ' · always typed their details' %>
+    </div>
+  </div>
+  <% detail.events.forEach(function (e) { %>
+    <div class="ws-item">
+      <span class="ws-badge ws-badge-plain"><%= e.kind.replace(/_/g, ' ') %></span>
+      <% if (e.signup_source === 'google') { %><span class="ws-badge ws-badge-fresh">via google</span><% } %>
+      <span class="ws-meta"><%= new Date(e.occurred_at).toUTCString() %></span>
+      <div class="ws-body-text"><%= e.summary %></div>
+    </div>
+  <% }) %>
+</div>
+<% } %>
+
+<script nonce="<%= nonce %>">
+  (function () {
+    var btn = document.getElementById('wsSyncContacts');
+    if (!btn) return;
+    var note = document.getElementById('wsSyncNote');
+    var csrf = document.querySelector('meta[name="csrf-token"]').content;
+    btn.addEventListener('click', async function () {
+      btn.disabled = true;
+      note.textContent = 'Rebuilding...';
+      try {
+        var r = await fetch('/api/workspace/contacts/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf }
+        });
+        var data = await r.json();
+        if (!r.ok) { note.textContent = data.error || 'That did not work.'; return; }
+        note.textContent = data.leadsScanned + ' enquiry row(s) scanned, ' + data.eventsAdded + ' new interaction(s).';
+        if (data.eventsAdded > 0) window.location.reload();
+      } catch (ex) {
+        note.textContent = 'Network problem: ' + ex.message;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  })();
+</script>
+
+<% } %>
+<%- include('partials/shell-bottom') %>

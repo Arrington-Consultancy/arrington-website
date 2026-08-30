@@ -24,6 +24,7 @@ const { requireWorkspacePageAccess, requireWorkspaceApiAccess, workspaceNoindex 
 const { askWorkspace, isWorkspaceAIEnabled, routeToLane } = require('../lib/workspace/orchestrator');
 const socialRepo = require('../lib/workspace/social/repo');
 const socialActions = require('../lib/workspace/social/actions');
+const crm = require('../lib/crm/contacts');
 
 const router = express.Router();
 
@@ -142,6 +143,28 @@ function mountPageRoute(app, generateCsrfToken) {
       accounts,
       posts,
       outstanding,
+      csrfToken: generateCsrfToken(req, res)
+    });
+  });
+
+  // Contacts. Real people's details, so the area sits at the commercial
+  // sensitivity level: a clearance that cannot see commercial records
+  // gets the page's own refusal, not an empty list that would imply
+  // there is nothing here.
+  page('/workspace/contacts', async (req, res) => {
+    const clearanceId = req.workspaceClearance;
+    const permitted = clearanceCanSeeSensitivity(clearanceId, 'commercial');
+    const q = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 120) : '';
+    const [contacts, stats] = permitted
+      ? await Promise.all([crm.listContacts({ q }), crm.summary()])
+      : [[], { contacts: 0, via_google: 0, active_30d: 0 }];
+    let detail = null;
+    const id = parseInt(req.query.id, 10);
+    if (permitted && Number.isInteger(id)) detail = await crm.contactWithHistory(id);
+    res.render('workspace/contacts', {
+      ...viewer(req),
+      counts: await navCounts(clearanceId),
+      permitted, contacts, stats, detail, q,
       csrfToken: generateCsrfToken(req, res)
     });
   });
@@ -346,6 +369,21 @@ router.post('/api/workspace/social/request-action', workspaceNoindex, requireWor
       requestedBy: req.session.user.username
     });
     res.json({ ok: true, approvalId: approval.id, note: 'Queued as a record for a human decision. Nothing has been sent or published.' });
+  } catch (err) { next(err); }
+});
+
+router.post('/api/workspace/contacts/sync', workspaceNoindex, requireWorkspaceApiAccess, async (req, res, next) => {
+  try {
+    if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'commercial')) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    const result = await crm.syncFromLeads();
+    await repo.addActivity({
+      actor: req.session.user.username,
+      eventType: 'contacts_synced',
+      summary: `Contacts rebuilt from ${result.leadsScanned} lead row(s); ${result.eventsAdded} new interaction(s).`
+    });
+    res.json({ ok: true, ...result });
   } catch (err) { next(err); }
 });
 
