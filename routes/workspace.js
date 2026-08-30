@@ -20,7 +20,7 @@ const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const repo = require('../lib/workspace/repo');
 const { filterRecordsForClearance, clearanceCanSeeRecord, clearanceCanSeeSensitivity, CLEARANCES } = require('../lib/workspace/clearance');
 const { LANES, SOURCE_CLASSES, laneById } = require('../lib/workspace/lanes');
-const { requireWorkspacePageAccess, requireWorkspaceApiAccess } = require('../lib/workspace/access');
+const { requireWorkspacePageAccess, requireWorkspaceApiAccess, workspaceNoindex } = require('../lib/workspace/access');
 const { askWorkspace, isWorkspaceAIEnabled, routeToLane } = require('../lib/workspace/orchestrator');
 
 const router = express.Router();
@@ -60,7 +60,7 @@ function withFreshness(records) {
 
 function mountPageRoute(app, generateCsrfToken) {
   const page = (path, handler) => {
-    app.get(path, requireWorkspacePageAccess, async (req, res, next) => {
+    app.get(path, workspaceNoindex, requireWorkspacePageAccess, async (req, res, next) => {
       try { await handler(req, res); } catch (err) { next(err); }
     });
   };
@@ -189,7 +189,7 @@ function mountPageRoute(app, generateCsrfToken) {
 
 // --- APIs (behind global CSRF) -----------------------------------------
 
-router.post('/api/workspace/ask', requireWorkspaceApiAccess, askLimiter, async (req, res, next) => {
+router.post('/api/workspace/ask', workspaceNoindex, requireWorkspaceApiAccess, askLimiter, async (req, res, next) => {
   try {
     const username = req.session.user.username;
     const clearanceId = req.workspaceClearance;
@@ -263,7 +263,7 @@ async function recordForGap(gap) {
   return repo.getRecordByKey(m[1]);
 }
 
-router.post('/api/workspace/approvals/:id/decide', requireWorkspaceApiAccess, async (req, res, next) => {
+router.post('/api/workspace/approvals/:id/decide', workspaceNoindex, requireWorkspaceApiAccess, async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
     const decision = req.body.decision === 'approved' ? 'approved' : req.body.decision === 'declined' ? 'declined' : null;
@@ -276,7 +276,7 @@ router.post('/api/workspace/approvals/:id/decide', requireWorkspaceApiAccess, as
   } catch (err) { next(err); }
 });
 
-router.post('/api/workspace/gaps/:id/resolve', requireWorkspaceApiAccess, async (req, res, next) => {
+router.post('/api/workspace/gaps/:id/resolve', workspaceNoindex, requireWorkspaceApiAccess, async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
     const note = typeof req.body.note === 'string' ? req.body.note.trim().slice(0, 2000) : '';

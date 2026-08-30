@@ -11,3 +11,7 @@ npm-debug.log*
 # (it carries /goodnight, see WORKING-METHOD.md)
 .claude/*
 !.claude/skills/
+
+# Workspace snapshot: only the encrypted file is committed. Any plaintext
+# extract of the controlled Drive records stays outside the repository.
+data/*.json
