@@ -4943,6 +4943,37 @@ async function seed() {
     await db.query(`ALTER TABLE scott_portal_users
       ADD COLUMN IF NOT EXISTS notify_email VARCHAR(255) NOT NULL DEFAULT ''`);
     console.log('Scott AI Demonstration: Brain Gap register verified.');
+
+    // Quality release gate (doc 24 review, finding F2). The mutable job
+    // lifecycle gained quality_check / rework / ready_for_return, so the
+    // status CHECK constraint must be rebuilt on databases created before
+    // that change. Drop-and-re-add is idempotent in effect and cheap.
+    await db.query('ALTER TABLE scott_jobs DROP CONSTRAINT IF EXISTS scott_jobs_status_check');
+    await db.query(`ALTER TABLE scott_jobs ADD CONSTRAINT scott_jobs_status_check
+      CHECK (status IN ('enquiry', 'quoted', 'scheduled', 'in_progress', 'awaiting_parts', 'quality_check', 'rework', 'ready_for_return', 'on_hold', 'completed', 'delivered'))`);
+
+    // SAKS-1045 exists in the controlled dataset with an open BLOCKING
+    // quality record (QC-260828-02), so seeding it onto the mutable board
+    // in quality_check makes the release gate demonstrable: trying to mark
+    // it delivered is refused, naming the missing evidence. Guarded on the
+    // ref so it never fights later demo edits, and only added once the
+    // base dataset exists (a fresh seed reaches here after seedScottData).
+    const { rows: gateJob } = await db.query(`SELECT 1 FROM scott_jobs WHERE ref = 'SAKS-1045'`);
+    const { rows: haveCustomers } = await db.query('SELECT COUNT(*)::int AS n FROM scott_customers');
+    if (gateJob.length === 0 && haveCustomers[0].n > 0) {
+      const { rows: existingCust } = await db.query(`SELECT id FROM scott_customers WHERE name = 'Elaine Rogers' LIMIT 1`);
+      const custId = existingCust.length ? existingCust[0].id : (await db.query(
+        `INSERT INTO scott_customers (name, kind, location, notes)
+         VALUES ('Elaine Rogers', 'householder', 'Newton Abbot', 'Structural frame repair; adhesive cure completing, awaiting final QC sign-off.')
+         RETURNING id`)).rows[0].id;
+      await db.query(
+        `INSERT INTO scott_jobs (ref, customer_id, kind, description, status, price_pence, promised_date, collection_date, at_risk, risk_note)
+         VALUES ('SAKS-1045', $1, 'repair', 'Structural frame repair. Adhesive cure completes 30 August; independent stability sign-off (QC-260828-02) required before release.', 'quality_check', 38500, NULL, NULL, true, 'quality evidence outstanding (QC-260828-02), not a known failure')
+         ON CONFLICT (ref) DO NOTHING`,
+        [custId]);
+      console.log('Scott AI Demonstration: quality-gated job SAKS-1045 seeded.');
+    }
+    console.log('Scott AI Demonstration: job lifecycle quality stages verified.');
   }
 
   // One-shot Brain Gap acceptance check, gated on

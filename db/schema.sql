@@ -305,7 +305,7 @@ CREATE TABLE IF NOT EXISTS scott_jobs (
     customer_id INTEGER REFERENCES scott_customers(id) ON DELETE SET NULL,
     kind VARCHAR(20) NOT NULL CHECK (kind IN ('repair', 'knitting', 'combined')),
     description TEXT NOT NULL DEFAULT '',
-    status VARCHAR(20) NOT NULL DEFAULT 'enquiry' CHECK (status IN ('enquiry', 'quoted', 'scheduled', 'in_progress', 'awaiting_parts', 'on_hold', 'completed', 'delivered')),
+    status VARCHAR(20) NOT NULL DEFAULT 'enquiry' CHECK (status IN ('enquiry', 'quoted', 'scheduled', 'in_progress', 'awaiting_parts', 'quality_check', 'rework', 'ready_for_return', 'on_hold', 'completed', 'delivered')),
     price_pence INTEGER,
     promised_date DATE,
     collection_date DATE,

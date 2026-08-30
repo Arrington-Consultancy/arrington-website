@@ -29,7 +29,7 @@
         <form id="scStatusForm" class="sc-jobhead-action">
           <select id="scStatusSelect" class="sc-select">
             <% jobStatuses.forEach(function (s) { %>
-              <option value="<%= s %>" <%= s === job.status ? 'selected' : '' %>><%= s.replace('_', ' ') %></option>
+              <option value="<%= s %>" <%= s === job.status ? 'selected' : '' %>><%= s.replace(/_/g, ' ') %></option>
             <% }); %>
           </select>
           <button type="submit" class="sc-btn sc-btn-gold" id="scStatusSave">Update status</button>
@@ -127,8 +127,16 @@
           body: JSON.stringify({ status: select.value })
         }).then(function (r) { return r.json(); }).then(function (data) {
           if (data.ok) {
+            note.textContent = 'Status updated.';
+            note.classList.remove('sc-inline-note-error');
             note.hidden = false;
             setTimeout(function () { note.hidden = true; }, 2500);
+          } else if (data.error) {
+            // The quality release gate's refusal names the exact missing
+            // evidence (doc 31), so it must reach the person, not vanish.
+            note.textContent = data.error;
+            note.classList.add('sc-inline-note-error');
+            note.hidden = false;
           }
         }).finally(function () { btn.disabled = false; });
       });

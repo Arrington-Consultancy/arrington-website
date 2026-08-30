@@ -1037,6 +1037,36 @@ derives its list from the module's exports, so nothing else needs
 updating, and `untaggedDeepFactExports` fails a test if a record arrives
 without a tag.
 
+### Doc 24 governance review and the quality release gate (30/08/2026)
+
+The independent v0.2 Governance & Assurance review defined in Drive doc 24
+was executed on 30/08/2026 on Tom's direct instruction (the
+Builder-independence limitation is disclosed inside the verdict itself).
+**Verdict: AMBER.** Recorded in the repo at
+`review/scott-v0.2-doc24-governance-review-2026-08-30.md` (merged via PR
+#123) and in Drive as "24A SCOTT'S V0.2 GOVERNANCE & ASSURANCE REVIEW -
+VERDICT" in the Scott governance folder. Nobody was activated; Nigel
+Preece, Sheila Kemp and Nina Holt stay `active: false` until Tom's
+explicit decision.
+
+Finding F2 (the one that blocked anything) was corrected the same day:
+the mutable jobs board previously let a human with job-status authority
+mark a job delivered while its quality record was BLOCKING, against doc
+31's RELEASE GATE. The fix: `JOB_STATUSES` gained `quality_check`,
+`rework` and `ready_for_return` (schema CHECK rebuilt by an idempotent
+seed migration), and `lib/scott/qualityGate.js` refuses any transition
+into a release state while a linked quality record is not PASS, or while
+a job in a quality stage has no PASS at all. The refusal names the exact
+missing evidence (doc 31 requires that), reaches the user in the UI, is
+audited as `job_release_blocked`, and has no override parameter on
+purpose. SAKS-1045 is seeded onto the board in `quality_check` with its
+open BLOCKING record so the gate is demonstrable. Covered by
+`test/scott/qualityGate.test.js` (pure) and an owner-cannot-release case
+in the adversarial suite; browser-verified as Scott Mercer. With F2
+corrected and the bounded recheck green, Nina Holt's activation block is
+lifted; the remaining open finding is staging's temporary passwordless
+state, which closes when Tom says lock it.
+
 ### 21B replay: the 140 clearance cases
 
 `test/scott/clearanceCaseBank.js` is 21B SCOTT'S V0.2 HUMAN CLEARANCE &
