@@ -37,7 +37,7 @@
         <div class="sc-msg-avatar sc-avatar-receptionist"><%= workersById.receptionist.initials %></div>
         <div class="sc-msg-body">
           <div class="sc-msg-name">Ruth Bailey · Receptionist</div>
-          Morning! Ask me anything about the workshop and I'll get it to the right person, or try one of the questions below.
+          <% if (typeof suggestions !== 'undefined' && suggestions === false) { %>Morning! Ask me anything about this and I'll get it to the right person.<% } else { %>Morning! Ask me anything about the workshop and I'll get it to the right person, or try one of the questions below.<% } %>
         </div>
       </div>
     <% } %>
