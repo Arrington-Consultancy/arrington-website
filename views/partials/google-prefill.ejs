@@ -46,18 +46,38 @@
         fill(targets.email, p.email);
       } catch (e) { /* fall back silently to typed entry */ }
     };
+    // If Google cannot serve the button, the whole block removes itself
+    // and the visitor simply types their details. A button that opens a
+    // Google error page is worse than no button: it reads as the site
+    // being broken, and the form underneath works perfectly well. This
+    // covers the script being blocked, the client ID not being
+    // configured for this origin (Google's "no registered origin" /
+    // invalid_client), and the button never rendering.
+    var wrap = document.querySelector('.g-prefill');
+    function giveUpQuietly() { if (wrap) wrap.remove(); }
     var s = document.createElement('script');
     s.src = 'https://accounts.google.com/gsi/client';
     s.async = true;
+    s.onerror = giveUpQuietly;
     s.onload = function () {
-      if (!window.google || !google.accounts || !google.accounts.id) return;
-      google.accounts.id.initialize({
-        client_id: <%- JSON.stringify(googleSigninClientId) %>,
-        callback: window.__gPrefillCredential
-      });
-      google.accounts.id.renderButton(document.getElementById('g-prefill-btn'), {
-        theme: 'outline', size: 'large', text: 'continue_with', shape: 'pill', width: 280
-      });
+      if (!window.google || !google.accounts || !google.accounts.id) return giveUpQuietly();
+      var slot = document.getElementById('g-prefill-btn');
+      if (!slot) return giveUpQuietly();
+      try {
+        google.accounts.id.initialize({
+          client_id: <%- JSON.stringify(googleSigninClientId) %>,
+          callback: window.__gPrefillCredential
+        });
+        google.accounts.id.renderButton(slot, {
+          theme: 'outline', size: 'large', text: 'continue_with', shape: 'pill', width: 280
+        });
+      } catch (e) { return giveUpQuietly(); }
+      // Google renders into the slot asynchronously. If nothing appears,
+      // the client ID is not usable from this origin, so remove the
+      // block rather than leaving an empty space or a dead button.
+      setTimeout(function () {
+        if (!slot.querySelector('iframe') && !slot.querySelector('div[role=button]')) giveUpQuietly();
+      }, 2500);
     };
     document.head.appendChild(s);
   })();
