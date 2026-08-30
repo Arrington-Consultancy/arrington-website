@@ -1047,6 +1047,7 @@
                 body: JSON.stringify({
                     email: email,
                     website: hp,
+                    prefillSource: window.__gPrefillSource || '',
                     score: lastResult.total,
                     band: lastResult.band.label,
                     resultsText: lastResult.fullResultsText

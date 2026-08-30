@@ -10,6 +10,12 @@ const { verifyTurnstileToken, SITE_KEY: TURNSTILE_SITE_KEY } = require('../lib/t
 const { QUESTIONS, validateAnswers, buildResult, computeRecommendation } = require('../lib/productGuide');
 const { summarizeForTom } = require('../lib/productGuideAI');
 
+// Where the visitor's details came from on this submission ('' typed,
+// 'google' the Continue with Google prefill). Only one value is
+// accepted, so a request cannot write arbitrary text into the record.
+const signupSource = (body) => (body && body.prefillSource === 'google' ? 'google' : '');
+const sourceLine = (src) => (src === 'google' ? 'Signed up using Continue with Google.' : '');
+
 const router = express.Router();
 
 // ============================================================
@@ -255,9 +261,9 @@ async function finalizeContact(submission, { name, email, wantsContact, token })
     : submission.recommendation_id;
 
   db.query(
-    `INSERT INTO leads (kind, name, email, message)
-     VALUES ('product_guide', $1, $2, $3)`,
-    [name, email, `Product Guide completed. Recommended: ${recommendationLabel}. Contact requested: ${wantsContact ? 'Yes' : 'No'}.`]
+    `INSERT INTO leads (kind, name, email, message, signup_source)
+     VALUES ('product_guide', $1, $2, $3, $4)`,
+    [name, email, `Product Guide completed. Recommended: ${recommendationLabel}. Contact requested: ${wantsContact ? 'Yes' : 'No'}.`, signupSource(req.body)]
   ).catch((err) => console.error('Product Guide lead insert failed:', err.message));
 
   if (!transporter) {

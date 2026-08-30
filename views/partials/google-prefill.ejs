@@ -36,6 +36,10 @@
       el.dispatchEvent(new Event('input', { bubbles: true }));
       el.dispatchEvent(new Event('change', { bubbles: true }));
     }
+    // Recorded so a submission that used the button can be told apart
+    // from a typed one. It is set only after fields are actually
+    // filled, so it never claims a prefill that did not happen.
+    window.__gPrefillSource = '';
     window.__gPrefillCredential = function (resp) {
       try {
         var part = resp.credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
@@ -44,6 +48,7 @@
         fill(targets.firstName, p.given_name);
         fill(targets.lastName, p.family_name);
         fill(targets.email, p.email);
+        window.__gPrefillSource = 'google';
       } catch (e) { /* fall back silently to typed entry */ }
     };
     // If Google cannot serve the button, the whole block removes itself
@@ -58,6 +63,17 @@
     var s = document.createElement('script');
     s.src = 'https://accounts.google.com/gsi/client';
     s.async = true;
+    // The site runs a strict CSP: styles are accepted only with this
+    // request's nonce, and there is no 'unsafe-inline'. Google's library
+    // injects its own <style> block for the button, and it takes the
+    // nonce to put on that block from ITS OWN script element. Created in
+    // JS like this, the element had no nonce, so the injected style was
+    // dropped and the button rendered raw: an oversized logo and its
+    // visually-hidden label showing as duplicated text. Setting the
+    // property (not the attribute, which browsers hide from script) is
+    // what actually propagates it.
+    s.nonce = <%- JSON.stringify(nonce) %>;
+    s.setAttribute('nonce', <%- JSON.stringify(nonce) %>);
     s.onerror = giveUpQuietly;
     s.onload = function () {
       if (!window.google || !google.accounts || !google.accounts.id) return giveUpQuietly();
@@ -83,7 +99,19 @@
   })();
 </script>
 <style nonce="<%= nonce %>">
-  .g-prefill { margin: 0 0 1.4rem; }
+  /* The button's markup is rendered by Google, inside our slot, so its
+     size is not fully ours to set: renderButton is asked for 280px, but
+     if Google's own stylesheet is slow, blocked or changes shape, the
+     logo inside it has nothing constraining it and scales to the width
+     of whatever contains it. On a wide form column that produces a
+     Google G the size of the page, which is what happened live on
+     30/08/2026. These bounds are the backstop: a correctly rendered
+     280px button is untouched by them, and a broken one can no longer
+     take over the page. */
+  .g-prefill { margin: 0 0 1.4rem; max-width: 320px; }
+  #g-prefill-btn { width: 280px; max-width: 100%; max-height: 60px; overflow: hidden; }
+  #g-prefill-btn svg, #g-prefill-btn img { max-height: 24px; width: auto; }
+  #g-prefill-btn iframe { max-width: 100%; max-height: 60px; }
   .g-prefill-note { font-size: 0.85rem; color: var(--text-muted, #888); margin: 0.6rem 0 0; }
 </style>
 <% } %>

@@ -4988,6 +4988,16 @@ async function seed() {
   // and the boot continues, because a brain that cannot refresh must say
   // so rather than take the website down.
   await require('../lib/workspace/ingest').ingestWorkspaceSnapshot(require('../lib/workspace/repo'));
+  // Contacts (CRM): rebuild from the lead history. Idempotent, and it
+  // populates from everything already captured rather than starting
+  // empty on the day it was switched on. Never fatal: a contact index
+  // that cannot rebuild must not stop the website booting.
+  try {
+    const crmResult = await require('../lib/crm/contacts').syncFromLeads();
+    console.log(`Contacts: ${crmResult.contactsTouched} contact record(s) from ${crmResult.leadsScanned} lead row(s), ${crmResult.eventsAdded} new interaction(s).`);
+  } catch (err) {
+    console.error('Contacts sync failed (boot continues):', err.message);
+  }
 
   console.log('Seed complete.');
 }

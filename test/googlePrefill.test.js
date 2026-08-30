@@ -61,3 +61,82 @@ test('never fills a field the visitor already typed into', () => {
   const src = fs.readFileSync(partial, 'utf8');
   assert.match(src, /if \(!el \|\| el\.value\) return;/);
 });
+
+// Cross-Origin-Opener-Policy on the prefill pages.
+//
+// Live failure, 30/08/2026: the button rendered, Google offered the
+// account, and then the popup landed on accounts.google.com/gsi/transform,
+// went white and never returned. Cause: helmet's default COOP of
+// same-origin severs window.opener, which is the channel the Google popup
+// uses to hand the chosen account back to the page. Nothing in the site's
+// own code was wrong, and no error appeared anywhere, which is what made
+// it hard to see.
+//
+// These tests pin the fix and its scope: the relaxation exists on exactly
+// the four pages that carry the button, and nowhere else.
+const serverSource = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+
+test('the four prefill pages, and only those, are listed for the COOP relaxation', () => {
+  const block = serverSource.match(/const GOOGLE_PREFILL_PATHS = new Set\(\[([\s\S]*?)\]\)/);
+  assert.ok(block, 'the prefill path list must exist');
+  const paths = [...block[1].matchAll(/'([^']+)'/g)].map((m) => m[1]).sort();
+  assert.deepEqual(paths, ['/commercial-gaps-review', '/market-ready-test', '/owner-dependency-quiz', '/product-guide']);
+});
+
+test('the relaxation is same-origin-allow-popups, never a blanket removal of COOP', () => {
+  assert.match(serverSource, /setHeader\('Cross-Origin-Opener-Policy', 'same-origin-allow-popups'\)/);
+  assert.doesNotMatch(serverSource, /crossOriginOpenerPolicy:\s*false/,
+    'COOP must never be switched off across the whole site to fix one button');
+});
+
+test('the relaxation is gated on the client ID, so switching the prefill off restores the strict default', () => {
+  const guard = serverSource.match(/if \(googleSigninClientId && GOOGLE_PREFILL_PATHS\.has\(req\.path\)\)/);
+  assert.ok(guard, 'the header must be conditional on the prefill actually being enabled');
+});
+
+test('the COOP middleware runs after helmet, or helmet would overwrite it', () => {
+  // This ordering was the first attempt at the fix and it silently did
+  // nothing: helmet sets its own COOP, so anything set before it is
+  // replaced. Verified live before and after moving it.
+  assert.ok(serverSource.indexOf('app.use(helmet({') < serverSource.indexOf('GOOGLE_PREFILL_PATHS'),
+    'the prefill COOP override must be registered after helmet');
+});
+
+// Size bounds on the Google-rendered button.
+//
+// Live, 30/08/2026: with the popup handshake fixed and the prefill
+// working, the button's own layout collapsed and the Google G scaled to
+// the width of the form column, filling the page. The markup inside the
+// slot is rendered by Google, so the defence has to be a bound on our
+// side rather than a fix to theirs.
+const prefillSource = fs.readFileSync(path.join(__dirname, '..', 'views', 'partials', 'google-prefill.ejs'), 'utf8');
+
+test('the button slot is bounded, so a collapsed Google layout cannot take over the page', () => {
+  assert.match(prefillSource, /#g-prefill-btn\s*\{[^}]*max-height/, 'the slot needs a height bound');
+  assert.match(prefillSource, /#g-prefill-btn\s*\{[^}]*overflow:\s*hidden/, 'the slot must clip anything oversized');
+  assert.match(prefillSource, /#g-prefill-btn svg[^{]*\{[^}]*max-height/, 'the logo itself needs a bound');
+  assert.match(prefillSource, /\.g-prefill\s*\{[^}]*max-width/, 'the block needs a width bound');
+});
+
+test('the bounds leave a correctly rendered button alone', () => {
+  assert.match(prefillSource, /width:\s*280/, 'the requested button width and the slot width must agree');
+});
+
+// The CSP nonce must reach Google's own script element.
+//
+// Live, 30/08/2026: the button rendered unstyled, showing an oversized
+// logo and its visually-hidden label as duplicated text ("Continue with
+// GoogleContinue with"). Cause: the site's strict CSP accepts styles
+// only with the request nonce, Google's library injects a <style> block
+// for the button, and it copies the nonce for that block from its own
+// script element. The loader created that element in JS without one, so
+// the style was dropped.
+test('the GSI script element carries the request nonce, so Google can nonce its injected styles', () => {
+  const html = render({
+    nonce: 'NONCE-UNDER-TEST',
+    googleSigninClientId: 'client.apps.googleusercontent.com',
+    gpTargets: { email: '#e' }
+  });
+  assert.match(html, /s\.nonce = "NONCE-UNDER-TEST"/, 'the nonce property must be set (the attribute alone is hidden from script)');
+  assert.match(html, /setAttribute\('nonce', "NONCE-UNDER-TEST"\)/, 'and the attribute, for libraries that read it that way');
+});

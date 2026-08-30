@@ -218,6 +218,37 @@ app.use(helmet({
   } : false
 }));
 
+// Cross-Origin-Opener-Policy, relaxed on the four pages that carry the
+// "Continue with Google" prefill button, and ONLY those.
+//
+// helmet's default is COOP: same-origin, which severs window.opener
+// between the page and any popup it opens. Google's Identity Services
+// popup returns the visitor's chosen account to the page through that
+// link, so under the strict default the popup completes, lands on
+// accounts.google.com/gsi/transform, goes white and can never hand the
+// result back: the fields stay empty and the window hangs open. Google
+// documents same-origin-allow-popups as the requirement for this flow.
+//
+// Deliberately scoped to these four paths rather than set globally.
+// same-origin-allow-popups keeps the protection that matters (another
+// origin still cannot get a handle on our window) while letting a popup
+// WE opened talk back to us, and everywhere else on the site keeps the
+// stricter default. Gated on the client ID as well, so with the prefill
+// switched off the site is byte-for-byte as it was.
+const GOOGLE_PREFILL_PATHS = new Set([
+  '/product-guide',
+  '/market-ready-test',
+  '/owner-dependency-quiz',
+  '/commercial-gaps-review'
+]);
+app.use((req, res, next) => {
+  if (googleSigninClientId && GOOGLE_PREFILL_PATHS.has(req.path)) {
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  }
+  next();
+});
+
+
 // Permissions-Policy: disable browser features this site never uses. The
 // only feature actually used anywhere (the Market Ready Test and Owner
 // Dependency Quiz result pages' "copy link" buttons) is navigator.clipboard,

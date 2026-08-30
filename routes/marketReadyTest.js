@@ -8,6 +8,12 @@ const themes = require('../db/themes');
 const { getSiteShellData } = require('../lib/navShell');
 const { verifyTurnstileToken, SITE_KEY: TURNSTILE_SITE_KEY } = require('../lib/turnstile');
 
+// Where the visitor's details came from on this submission ('' typed,
+// 'google' the Continue with Google prefill). Only one value is
+// accepted, so a request cannot write arbitrary text into the record.
+const signupSource = (body) => (body && body.prefillSource === 'google' ? 'google' : '');
+const sourceLine = (src) => (src === 'google' ? 'Signed up using Continue with Google.' : '');
+
 const router = express.Router();
 
 // ============================================================
@@ -565,9 +571,9 @@ router.post('/api/market-ready-test/submit', assessmentLimiter, async (req, res)
     // type) so it surfaces in the existing admin "Leads & bookings" panel,
     // in addition to the full record in market_ready_submissions.
     db.query(
-      `INSERT INTO leads (kind, name, email, phone, message)
-       VALUES ('market_ready_test', $1, $2, $3, $4)`,
-      [`${firstName} ${lastName}`.trim(), email, phone, `${businessName} — New Owner Ready Score ${report.overall_score}/100 (${report.rating})${consentTomReview ? ' — requested Tom\'s review' : ''}`]
+      `INSERT INTO leads (kind, name, email, phone, message, signup_source)
+       VALUES ('market_ready_test', $1, $2, $3, $4, $5)`,
+      [`${firstName} ${lastName}`.trim(), email, phone, `${businessName} — New Owner Ready Score ${report.overall_score}/100 (${report.rating})${consentTomReview ? ' — requested Tom\'s review' : ''}`, signupSource(req.body)]
     ).catch(err => console.error('Market Ready Test lead insert failed:', err.message));
 
     // Owner notification — full detail, always sent regardless of consent
