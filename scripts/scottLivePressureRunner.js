@@ -26,48 +26,80 @@ const { spawn } = require('node:child_process');
 const path = require('node:path');
 
 const MARKER_EVENT = 'live_pressure_suite_run';
+const AUTH_EVENT = 'live_pressure_authorised';
+const AUTH_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const KILL_AFTER_MS = 15 * 60 * 1000;
+
+// The launch decision, pure so the guard can be tested without a database
+// or any spend. A labelled run launches only when ALL of these hold:
+//
+//   1. the environment variable names a run label (not 'true'/'false');
+//   2. that label has never been spent (no marker row);
+//   3. a matching authorisation row exists in scott_activity, written
+//      deliberately by scripts/armScottLivePressure.js within the last
+//      24 hours.
+//
+// Requirement 3 was added on 30/08/2026 after two sessions operating the
+// same staging service surprised each other: a fresh label plus a single
+// variable change was enough to launch a paid run. Arming is now a
+// two-step act (a database row AND the variable), so no variable change
+// alone, by any session or deploy, can ever start a spend. The legacy
+// 'true' spelling no longer launches anything; its run is spent history.
+function decideLaunch({ armed, spentRows, authRows, aiEnabled, now }) {
+  if (!armed || armed === 'false') return { launch: false, quiet: true };
+  if (armed === 'true') {
+    return { launch: false, reason: "the legacy 'true' spelling no longer launches anything; arm with scripts/armScottLivePressure.js and a fresh label" };
+  }
+  if (!aiEnabled) {
+    return { launch: false, reason: 'live AI is not enabled in this environment, so the suite would skip rather than run' };
+  }
+  if (spentRows.length) {
+    const r = spentRows[0];
+    return { launch: false, reason: `run "${armed}" already spent (${new Date(r.created_at).toISOString()}: ${r.summary})` };
+  }
+  if (!authRows.length) {
+    return { launch: false, reason: `run "${armed}" has no authorisation row; write one with scripts/armScottLivePressure.js before setting the variable` };
+  }
+  const freshAuth = authRows.find((r) => now - new Date(r.created_at).getTime() <= AUTH_MAX_AGE_MS);
+  if (!freshAuth) {
+    return { launch: false, reason: `run "${armed}" has an authorisation row but it is older than 24 hours; re-arm deliberately` };
+  }
+  return { launch: true, auth: freshAuth };
+}
 
 async function maybeRunLivePressureSuite(db) {
   const armed = process.env.RUN_SCOTT_LIVE_PRESSURE;
   if (!armed || armed === 'false') return;
-
-  // The variable's value names the run. 'true' is the original 29/08/2026
-  // run's legacy spelling; any other value is a distinct one-shot label
-  // (e.g. 'activation-20260830'), so a deliberate re-run after a roster
-  // change arms with a fresh label instead of manual SQL against the old
-  // marker row. Each label still spends at most once, same guarantee.
-  const runLabel = armed === 'true' ? 'v1' : armed;
-
-  // If live AI is not genuinely enabled here, the suite would SKIP and
-  // exit 0, and exit 0 must never be reported as a pass for a run that
-  // never happened. Refuse before touching the marker, so the one-shot
-  // is not spent on a misconfigured boot.
-  if (!require('../lib/scott/orchestrator').isScottAIEnabled()) {
-    console.error('Live pressure runner: live AI is not enabled in this environment, so the suite would skip rather than run. NOTHING was launched and the one-shot marker was not spent.');
-    return;
-  }
+  const runLabel = armed;
 
   try {
-    // The 'v1' legacy label matches any marker row (the original run's
-    // marker carries no label); a named label matches only its own rows.
-    const { rows } = await db.query(
-      runLabel === 'v1'
-        ? 'SELECT id, created_at, summary FROM scott_activity WHERE event_type = $1 ORDER BY id DESC LIMIT 1'
-        : 'SELECT id, created_at, summary FROM scott_activity WHERE event_type = $1 AND summary LIKE $2 ORDER BY id DESC LIMIT 1',
-      runLabel === 'v1' ? [MARKER_EVENT] : [MARKER_EVENT, `%[run ${runLabel}]%`]
+    const { rows: spentRows } = await db.query(
+      'SELECT id, created_at, summary FROM scott_activity WHERE event_type = $1 AND summary LIKE $2 ORDER BY id DESC LIMIT 1',
+      [MARKER_EVENT, `%[run ${runLabel}]%`]
     );
-    if (rows.length) {
-      console.log(`Live pressure runner: run "${runLabel}" already spent (${rows[0].created_at.toISOString()}: ${rows[0].summary}). Remove RUN_SCOTT_LIVE_PRESSURE; a deliberate re-run means arming with a fresh label.`);
+    const { rows: authRows } = await db.query(
+      'SELECT id, created_at, summary FROM scott_activity WHERE event_type = $1 AND summary LIKE $2 ORDER BY id DESC LIMIT 5',
+      [AUTH_EVENT, `%[run ${runLabel}]%`]
+    );
+    const decision = decideLaunch({
+      armed,
+      spentRows,
+      authRows,
+      aiEnabled: require('../lib/scott/orchestrator').isScottAIEnabled(),
+      now: Date.now()
+    });
+    if (!decision.launch) {
+      if (!decision.quiet) console.error(`Live pressure runner: NOT launching: ${decision.reason}. Remove RUN_SCOTT_LIVE_PRESSURE.`);
       return;
     }
+    console.log(`Live pressure runner: run "${runLabel}" is authorised (${decision.auth.summary}).`);
 
     await db.query(
       'INSERT INTO scott_activity (actor, event_type, summary) VALUES ($1, $2, $3)',
       ['system', MARKER_EVENT, `Paid live-AI pressure suite launched [run ${runLabel}]. Marker written before spend so a container restart cannot pay twice.`]
     );
   } catch (err) {
-    console.error('Live pressure runner: could not check or write the spend marker, so NOTHING was launched:', err.message);
+    console.error('Live pressure runner: could not check the guard rows, so NOTHING was launched:', err.message);
     return;
   }
 
@@ -109,4 +141,4 @@ async function maybeRunLivePressureSuite(db) {
   });
 }
 
-module.exports = { maybeRunLivePressureSuite, MARKER_EVENT };
+module.exports = { maybeRunLivePressureSuite, decideLaunch, MARKER_EVENT, AUTH_EVENT, AUTH_MAX_AGE_MS };
