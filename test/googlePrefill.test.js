@@ -101,3 +101,23 @@ test('the COOP middleware runs after helmet, or helmet would overwrite it', () =
   assert.ok(serverSource.indexOf('app.use(helmet({') < serverSource.indexOf('GOOGLE_PREFILL_PATHS'),
     'the prefill COOP override must be registered after helmet');
 });
+
+// Size bounds on the Google-rendered button.
+//
+// Live, 30/08/2026: with the popup handshake fixed and the prefill
+// working, the button's own layout collapsed and the Google G scaled to
+// the width of the form column, filling the page. The markup inside the
+// slot is rendered by Google, so the defence has to be a bound on our
+// side rather than a fix to theirs.
+const prefillSource = fs.readFileSync(path.join(__dirname, '..', 'views', 'partials', 'google-prefill.ejs'), 'utf8');
+
+test('the button slot is bounded, so a collapsed Google layout cannot take over the page', () => {
+  assert.match(prefillSource, /#g-prefill-btn\s*\{[^}]*max-height/, 'the slot needs a height bound');
+  assert.match(prefillSource, /#g-prefill-btn\s*\{[^}]*overflow:\s*hidden/, 'the slot must clip anything oversized');
+  assert.match(prefillSource, /#g-prefill-btn svg[^{]*\{[^}]*max-height/, 'the logo itself needs a bound');
+  assert.match(prefillSource, /\.g-prefill\s*\{[^}]*max-width/, 'the block needs a width bound');
+});
+
+test('the bounds leave a correctly rendered button alone', () => {
+  assert.match(prefillSource, /width:\s*280/, 'the requested button width and the slot width must agree');
+});
