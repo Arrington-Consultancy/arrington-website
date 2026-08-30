@@ -1,11 +1,13 @@
-// Ruth must explain the dormant specialists honestly.
+// Ruth's routing prompt after the 30/08/2026 v0.2 activation.
 //
-// The brief asks for this specifically, because the two failure modes are
-// both dishonest and neither looks like a bug: a finance question either
-// gets quietly absorbed by a worker who does not own finance, or gets
-// answered as though the company keeps no financial records at all. Ruth
-// had no idea the three proposed workers existed, so she could not have
-// said the true thing even if asked directly.
+// Before activation this file asserted that Ruth explained the three
+// dormant specialists honestly (named, never routable, real reason
+// given). All three are now active on Tom's explicit instruction, so the
+// honest prompt is the opposite one: they are ordinary routing targets,
+// and no text is left describing anyone as held back. The
+// dormant-explanation machinery stays in the code, derived from
+// PROPOSED_WORKER_IDS, so deactivating a worker restores the honest
+// explanation in the same one-line edit; the last test pins that.
 const test = require('node:test');
 const assert = require('node:assert');
 
@@ -15,56 +17,28 @@ const { WORKERS, PROPOSED_WORKER_IDS, ROUTABLE_WORKER_IDS } = require('../../lib
 test("Ruth's routing prompt", async (t) => {
   const prompt = orchestrator.buildReceptionistSystemPrompt();
 
-  await t.test('names all three dormant specialists', () => {
-    assert.ok(PROPOSED_WORKER_IDS.length === 3, 'expected exactly three proposed workers');
-    PROPOSED_WORKER_IDS.forEach((id) => {
-      assert.ok(prompt.includes(WORKERS[id].characterName),
-        `${WORKERS[id].characterName} must be named so Ruth can explain their status`);
-    });
-  });
-
-  await t.test('does not offer them as routing targets', () => {
-    // The routing map lists ids in quotes. A dormant worker's id must
-    // never appear in that form, or the model may emit it as a route and
-    // the turn will reference a worker that cannot answer.
-    PROPOSED_WORKER_IDS.forEach((id) => {
-      assert.ok(!prompt.includes(`"${id}"`),
-        `${id} must not appear as a routable id`);
-    });
-  });
-
-  await t.test('every active worker IS offered as a routing target', () => {
+  await t.test('offers every active worker, the three v0.2 workers included, as routing targets', () => {
+    assert.equal(PROPOSED_WORKER_IDS.length, 0, 'nothing should be left proposed after the activation');
+    for (const id of ['finance_accounts', 'people_hr', 'quality_control']) {
+      assert.ok(ROUTABLE_WORKER_IDS.includes(id), `${id} must be routable`);
+    }
     ROUTABLE_WORKER_IDS.forEach((id) => {
-      assert.ok(prompt.includes(`"${id}"`), `${id} must be routable`);
+      assert.ok(prompt.includes(`"${id}"`), `${id} must appear as a routable id`);
+      assert.ok(prompt.includes(WORKERS[id].characterName), `${WORKERS[id].characterName} must be named`);
     });
   });
 
-  await t.test('gives the real reason rather than a vague one', () => {
-    // Doc 24's status is "FORMALLY PREPARED FOR INDEPENDENT REVIEW - NO
-    // VERDICT RECORDED". That is why they are off, and it is a better
-    // answer than "not available".
-    assert.ok(/governance/i.test(prompt), 'the governance review must be named as the reason');
-    assert.ok(/no verdict|not activated|has not activated/i.test(prompt),
-      'the prompt must state that no verdict exists / they are not activated');
+  await t.test('carries no leftover dormant-specialist section', () => {
+    assert.ok(!prompt.includes('SPECIALISTS THAT EXIST BUT ARE NOT ACTIVE'),
+      'the dormant section must drop out when nothing is proposed');
+    assert.ok(!/not switched on yet/i.test(prompt), 'no specialist is described as switched off any more');
   });
 
-  await t.test('forbids implying a dormant worker has done anything', () => {
-    assert.ok(/[Nn]ever state or imply that one of the three has reviewed, checked or approved/.test(prompt),
-      'Ruth must be told not to credit a dormant worker with work');
-  });
-
-  await t.test('forbids pretending the area is unowned', () => {
-    assert.ok(/do not pretend the area is unowned/i.test(prompt));
-    assert.ok(/do not imply the company holds no such records/i.test(prompt));
-  });
-
-  await t.test('the block is derived, so activating a worker removes it', () => {
-    // If this were hand-written prose, setting active: true in workers.js
-    // would add the worker to the routing map while leaving text here
-    // still describing them as dormant, and both would be in the same
-    // prompt at once.
+  await t.test('the dormant explanation stays derived, so a deactivation restores it in the same edit', () => {
     const src = require('fs').readFileSync(require.resolve('../../lib/scott/orchestrator'), 'utf8');
     assert.ok(/proposedBlock = PROPOSED_WORKER_IDS\.map/.test(src),
-      'the dormant list must be derived from PROPOSED_WORKER_IDS, not typed out');
+      'the dormant list must remain derived from PROPOSED_WORKER_IDS, not typed out');
+    assert.ok(/PROPOSED_WORKER_IDS\.length === 0 \? ''/.test(src),
+      'the section must be conditional on the list being non-empty');
   });
 });

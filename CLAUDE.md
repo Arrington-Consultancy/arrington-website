@@ -1055,9 +1055,9 @@ Builder-independence limitation is disclosed inside the verdict itself).
 **Verdict: AMBER.** Recorded in the repo at
 `review/scott-v0.2-doc24-governance-review-2026-08-30.md` (merged via PR
 #123) and in Drive as "24A SCOTT'S V0.2 GOVERNANCE & ASSURANCE REVIEW -
-VERDICT" in the Scott governance folder. Nobody was activated; Nigel
-Preece, Sheila Kemp and Nina Holt stay `active: false` until Tom's
-explicit decision.
+VERDICT" in the Scott governance folder. Nobody was activated by the
+review itself; later the same day Tom gave the explicit decision
+("Activate all") and all three went live (see Workers below).
 
 Finding F2 (the one that blocked anything) was corrected the same day:
 the mutable jobs board previously let a human with job-status authority
@@ -1113,16 +1113,19 @@ a design pass presented as a website pass, so those stay declared.
 
 ### Workers
 
-Six active (Ruth Bailey receptionist, Gareth Bell commercial, Maggie Trent
-operations, Bob Fletcher customers & marketing, Derek Haines company
-brain, Patricia Moss governance). Three built but **dormant**: Nigel
-Preece (Finance & Accounts), Sheila Kemp (People & HR), Nina Holt (Quality
-Control). They stay off because doc 24's independent governance review is
-formally prepared with **no verdict recorded** and Tom has not activated
-them. Ruth's prompt names them and the real reason, so a finance question
-gets the true answer instead of being absorbed by a worker who does not
-own it. That block is derived from `PROPOSED_WORKER_IDS`, so activating
-one moves it into the routing map in the same edit.
+**Nine active as of 30/08/2026**: Ruth Bailey receptionist, Gareth Bell
+commercial, Maggie Trent operations, Bob Fletcher customers & marketing,
+Derek Haines company brain, Patricia Moss governance, plus the three v0.2
+workers Tom explicitly activated on 30/08/2026 after the doc 24 review
+and the F2 recheck: Nigel Preece (Finance & Accounts), Sheila Kemp
+(People & HR), Nina Holt (Quality Control). `PROPOSED_WORKER_IDS` is now
+empty; Ruth's dormant-specialists prompt block is conditional on that
+list and has dropped out, but the machinery stays derived, so flipping a
+worker back to `active: false` in `lib/scott/workers.js` restores the
+honest explanation, the routing exclusion and the PROPOSED badges in the
+same one-line edit. Activation provenance is in the comment above
+`finance_accounts` in that file, in 24A/24B in Drive, and in
+`review/scott-v0.2-doc24-governance-review-2026-08-30.md`.
 
 ### Live AI
 
