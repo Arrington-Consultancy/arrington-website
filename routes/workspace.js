@@ -24,6 +24,7 @@ const { requireWorkspacePageAccess, requireWorkspaceApiAccess, workspaceNoindex 
 const { askWorkspace, isWorkspaceAIEnabled, routeToLane } = require('../lib/workspace/orchestrator');
 const socialRepo = require('../lib/workspace/social/repo');
 const socialActions = require('../lib/workspace/social/actions');
+const socialMemory = require('../lib/workspace/social/memory');
 const crm = require('../lib/crm/contacts');
 const erasure = require('../lib/crm/erasure');
 
@@ -144,6 +145,7 @@ function mountPageRoute(app, generateCsrfToken) {
       accounts,
       posts,
       outstanding,
+      memory: socialMemory,
       aiEnabled: isWorkspaceAIEnabled(),
       csrfToken: generateCsrfToken(req, res)
     });
