@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>AI Workforce | Arrington AI Workspace</title>
+  <%- include('partials/styles') %>
+</head>
+<body>
+  <div class="aw-shell">
+    <%- include('partials/sidebar', { active, navCounts }) %>
+    <main class="aw-main">
+      <p class="aw-topline">AI Workforce</p>
+      <h1>Routing is plumbing, not a new boss.</h1>
+      <p class="aw-lede">The workspace points work toward existing approved responsibilities. It does not create a general Arrington super-worker.</p>
+      <section class="aw-grid">
+        <% workers.forEach((worker) => { %>
+          <article class="aw-card">
+            <span class="aw-pill good"><%= worker.status %></span>
+            <h2><%= worker.name %></h2>
+            <p><%= worker.role %></p>
+            <p class="aw-muted">Source: <%= worker.sourceKey %></p>
+          </article>
+        <% }) %>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,13 @@
+<aside class="aw-sidebar">
+  <div class="aw-brand">
+    <strong>Arrington AI Workspace</strong>
+    <span>Private staging view. Tom-only real access. No public-site changes.</span>
+  </div>
+  <nav class="aw-nav" aria-label="Workspace">
+    <a href="/arrington-workspace" aria-current="<%= active === 'dashboard' ? 'page' : 'false' %>">Today</a>
+    <a href="/arrington-workspace/brain" aria-current="<%= active === 'brain' ? 'page' : 'false' %>">Company Brain</a>
+    <a href="/arrington-workspace/workers" aria-current="<%= active === 'workers' ? 'page' : 'false' %>">AI Workforce</a>
+    <a href="/arrington-workspace/gaps" aria-current="<%= active === 'gaps' ? 'page' : 'false' %>">Brain Gaps <%= navCounts.openGaps ? `(${navCounts.openGaps})` : '' %></a>
+    <a href="/arrington-workspace/activity" aria-current="<%= active === 'activity' ? 'page' : 'false' %>">Activity</a>
+  </nav>
+</aside>

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="csrf-token" content="<%= csrfToken %>">
+  <title>Arrington AI Workspace</title>
+  <%- include('partials/styles') %>
+</head>
+<body>
+  <div class="aw-shell">
+    <%- include('partials/sidebar', { active, navCounts }) %>
+    <main class="aw-main">
+      <p class="aw-topline">Private staging workspace</p>
+      <h1>What needs attention now?</h1>
+      <p class="aw-lede">This first workspace view is deliberately read-first. It shows controlled source evidence, freshness limits and open Brain Gaps before any wider action is allowed.</p>
+
+      <section class="aw-grid" aria-label="Workspace status">
+        <article class="aw-card">
+          <div class="aw-stat"><%= summary.sources %></div>
+          <h2>Controlled sources</h2>
+          <p>Seeded from inspected Drive, GitHub and Railway evidence for the v0.1 staging build.</p>
+        </article>
+        <article class="aw-card">
+          <div class="aw-stat"><%= summary.openGaps %></div>
+          <h2>Open Brain Gaps</h2>
+          <p>Gaps are shown instead of inventing confidence around missing or stale evidence.</p>
+        </article>
+        <article class="aw-card">
+          <div class="aw-stat"><%= summary.staleSources %></div>
+          <h2>Stale sources</h2>
+          <p>Any source beyond its freshness window is visible before it is used.</p>
+        </article>
+      </section>
+
+      <form class="aw-search" id="route-form">
+        <input name="question" type="search" placeholder="Ask which worker owns this" autocomplete="off">
+        <button class="aw-button" type="submit">Route question</button>
+      </form>
+      <div class="aw-results" id="route-result" aria-live="polite"></div>
+
+      <section class="aw-list" aria-label="Open gaps">
+        <% gaps.forEach((gap) => { %>
+          <article class="aw-row">
+            <header>
+              <h2><%= gap.subject %></h2>
+              <span class="aw-pill warn"><%= gap.status %></span>
+            </header>
+            <p><%= gap.reason %></p>
+            <p><%= gap.impact %></p>
+          </article>
+        <% }) %>
+      </section>
+    </main>
+  </div>
+  <script nonce="<%= nonce %>">
+    const form = document.getElementById('route-form');
+    const result = document.getElementById('route-result');
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const question = new FormData(form).get('question') || '';
+      const token = document.querySelector('meta[name="csrf-token"]').content;
+      const response = await fetch('/api/arrington-workspace/route', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-csrf-token': token },
+        body: JSON.stringify({ question })
+      });
+      const data = await response.json();
+      result.innerHTML = response.ok
+        ? `<article class="aw-row"><h3>${data.worker.name}</h3><p>${data.worker.role}</p></article>`
+        : '<article class="aw-row"><p>Unable to route that question.</p></article>';
+    });
+  </script>
+</body>
+</html>

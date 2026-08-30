@@ -48,6 +48,71 @@ or scope.
 This section sets the starting position only; the rest of this file
 stays the practical project manual.
 
+## Active Arrington AI Workspace branch (Codex handoff, 30/08/2026)
+
+Codex has started the Arrington AI Workspace v0.1 implementation on branch
+`feature/arrington-ai-workspace-v0-1`, from current main
+`a2e79cd02ccc49d77a3e56c99c20496ebde60a4e`.
+
+Fresh sources inspected before implementation:
+
+- GitHub main and open PRs. PR #97 and #98 are old unrelated Copilot work and
+  must not be repurposed.
+- Railway project `arrington-prototype`, production service
+  `arrington-prototype`, staging services `scott-demo` and
+  `arrington-ai-workspace`.
+- Drive: START HERE. ARRINGTON CONSULTANCY BRAIN INDEX, 01 ARRINGTON CURRENT
+  OPERATING POSITION, ARRINGTON AI WORKSPACE BUILDER - WORKER HANDOFF,
+  ARRINGTON & SCOTT AI SYSTEMS - FULL COMPLETION MANDATE FOR TECHNICAL
+  BUILDER, ARRINGTON AI WORKSPACE V0.1 - IMPLEMENTATION & ACCEPTANCE PLAN,
+  ARRINGTON AI WORKSPACE V0.1 - SOURCE, SYNCHRONISATION & FRESHNESS MAP, and
+  ARRINGTON AI WORKSPACE V0.1 - TECHNICAL IMPLEMENTATION BRIEF.
+
+What has been implemented in this first unit:
+
+- Private route family under `/arrington-workspace`.
+- Route disabled unless `ENABLE_ARRINGTON_AI_WORKSPACE=true`.
+- Tom-only real access for v0.1 via existing session login.
+- Hidden/noindex CMS page anchor `arrington-ai-workspace`.
+- Separate `arrington_workspace_*` tables for sources, Brain Gaps, activity
+  and conversations, deliberately not sharing Scott tables.
+- Seeded controlled source records from inspected Drive, GitHub and Railway
+  evidence.
+- Seeded open Brain Gaps for the still-placeholder Railway staging service
+  and the fact that live Drive sync is not implemented yet.
+- Read-first pages for Today, Company Brain, AI Workforce, Brain Gaps and
+  Activity.
+- Minimal route/search endpoints behind the same CSRF and session path as the
+  rest of the app.
+- Main login now safely honours a same-site `next` path so private workspace
+  login can return to `/arrington-workspace`.
+
+Validation already run:
+
+- `node --check` on `server.js`, `db/seed.js`, `routes/arringtonWorkspace.js`
+  and all new `lib/arringtonWorkspace/*.js` files: pass.
+- `node --test test/arringtonWorkspace/*.test.js`: 9 passed, 0 failed.
+- EJS compile check on new workspace templates: pass.
+- Full `npm test` currently has one local-environment failure in existing
+  Scott test `test/scott/orchestrator.test.js`: it tries to build context
+  against local Postgres and this machine has no `DATABASE_URL` or local
+  Postgres available, so it fails with `ECONNREFUSED ::1:5432`. The new
+  Arrington workspace tests pass.
+
+Next technical actions:
+
+1. Re-run the full suite against a real test database.
+2. Run `db/seed.js` twice against the same isolated test database and confirm
+   the second run creates no structural drift.
+3. Render `/arrington-workspace` locally with
+   `ENABLE_ARRINGTON_AI_WORKSPACE=true` and confirm it is noindex, Tom-gated,
+   responsive and has no horizontal scroll.
+4. Push the branch if not already pushed, then wire the existing Railway
+   `arrington-ai-workspace` staging service to this branch and its own staging
+   database only.
+5. Do not merge to production or deploy public Arrington without Tom's explicit
+   production approval.
+
 ## Brand, voice and strategy: Google Drive is the authority, not this file
 
 This repo governs the **code**. It does not govern brand, tone, positioning,

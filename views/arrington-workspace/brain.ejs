@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="csrf-token" content="<%= csrfToken %>">
+  <title>Company Brain | Arrington AI Workspace</title>
+  <%- include('partials/styles') %>
+</head>
+<body>
+  <div class="aw-shell">
+    <%- include('partials/sidebar', { active, navCounts }) %>
+    <main class="aw-main">
+      <p class="aw-topline">Company Brain</p>
+      <h1>Controlled sources, not memory.</h1>
+      <p class="aw-lede">Every source carries its system, authority class, sync state and freshness window. This page is the first indexed evidence layer, not a claim of live synchronisation.</p>
+
+      <form class="aw-search" id="search-form">
+        <input name="q" type="search" placeholder="Search controlled sources" autocomplete="off">
+        <button class="aw-button" type="submit">Search</button>
+      </form>
+      <div class="aw-results" id="search-results" aria-live="polite"></div>
+
+      <section class="aw-list">
+        <% sources.forEach((source) => { %>
+          <article class="aw-row">
+            <header>
+              <h2><%= source.title %></h2>
+              <span class="aw-pill <%= source.is_stale ? 'warn' : 'good' %>"><%= source.is_stale ? 'stale' : source.last_sync_status %></span>
+            </header>
+            <p><%= source.summary %></p>
+            <p class="aw-muted"><%= source.source_system %> | <%= source.authority_class %> | <%= source.status %></p>
+            <% if (source.source_url) { %><p><a href="<%= source.source_url %>">Open source</a></p><% } %>
+          </article>
+        <% }) %>
+      </section>
+    </main>
+  </div>
+  <script nonce="<%= nonce %>">
+    const form = document.getElementById('search-form');
+    const results = document.getElementById('search-results');
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const q = new FormData(form).get('q') || '';
+      const response = await fetch(`/api/arrington-workspace/search?q=${encodeURIComponent(q)}`);
+      const data = await response.json();
+      results.innerHTML = data.results.map((source) =>
+        `<article class="aw-row"><h3>${source.title}</h3><p>${source.summary}</p><p class="aw-muted">${source.source_system} | ${source.authority_class}</p></article>`
+      ).join('') || '<article class="aw-row"><p>No matching controlled source found.</p></article>';
+    });
+  </script>
+</body>
+</html>

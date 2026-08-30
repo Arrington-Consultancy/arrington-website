@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Brain Gaps | Arrington AI Workspace</title>
+  <%- include('partials/styles') %>
+</head>
+<body>
+  <div class="aw-shell">
+    <%- include('partials/sidebar', { active, navCounts }) %>
+    <main class="aw-main">
+      <p class="aw-topline">Brain Gaps</p>
+      <h1>Missing evidence stays visible.</h1>
+      <p class="aw-lede">A gap is not a failure to sound confident. It is the record of what must be checked before the workspace can act as if it knows.</p>
+      <section class="aw-list">
+        <% gaps.forEach((gap) => { %>
+          <article class="aw-row">
+            <header>
+              <h2><%= gap.subject %></h2>
+              <span class="aw-pill <%= gap.status === 'resolved' ? 'good' : 'warn' %>"><%= gap.status %></span>
+            </header>
+            <p><%= gap.reason %></p>
+            <p><%= gap.impact %></p>
+            <p class="aw-muted">Owner: <%= gap.responsible_human %><%= gap.source_title ? ` | Source: ${gap.source_title}` : '' %></p>
+          </article>
+        <% }) %>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

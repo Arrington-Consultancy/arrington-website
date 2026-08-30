@@ -22,6 +22,7 @@ const commercialGapsReview = require('./routes/commercialGapsReview');
 const whereToStart = require('./routes/whereToStart');
 const productGuide = require('./routes/productGuide');
 const scott = require('./routes/scott');
+const arringtonWorkspace = require('./routes/arringtonWorkspace');
 const { publishedArticles, findBySlug: findUsefulThinkingArticle } = require('./lib/usefulThinkingArticles');
 const { getSiteShellData } = require('./lib/navShell');
 const { SITE_KEY: TURNSTILE_SITE_KEY } = require('./lib/turnstile');
@@ -678,6 +679,13 @@ app.use(productGuide.router);
 // permission system, no second admin screen.
 scott.mountPageRoute(app, generateCsrfToken);
 app.use(scott.router);
+
+// Arrington AI Workspace v0.1 - private, staging-first internal workspace.
+// Kept separate from the public site and from Scott's fictional demo. The
+// route itself is also disabled unless ENABLE_ARRINGTON_AI_WORKSPACE=true, so
+// the code can exist safely on a branch without exposing a new public surface.
+arringtonWorkspace.mountPageRoute(app, generateCsrfToken);
+app.use(arringtonWorkspace.router);
 
 // /v1.html — retired from public serving (15/08/2026). The original V1
 // single-page site was kept served as a reference copy, with a relaxed

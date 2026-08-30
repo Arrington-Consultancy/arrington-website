@@ -514,6 +514,86 @@ CREATE TABLE IF NOT EXISTS scott_brain_gaps (
 CREATE INDEX IF NOT EXISTS idx_scott_brain_gaps_status ON scott_brain_gaps (status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_scott_brain_gaps_responsible ON scott_brain_gaps (responsible_persona_id, status);
 
+-- ============================================================
+-- Arrington AI Workspace v0.1 (private, staging-first)
+--
+-- Real Arrington internal workspace tables. Deliberately separate from
+-- Scott's fictional demonstration tables and prefixed with
+-- arrington_workspace_* so there is no accidental cross-read. The first
+-- release is read-first: controlled sources, provenance, freshness, gaps,
+-- audit and conversations. External writes, production deployment, email
+-- sends and wider connectors stay behind later approval gates.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS arrington_workspace_sources (
+    id SERIAL PRIMARY KEY,
+    source_key VARCHAR(120) UNIQUE NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    source_system VARCHAR(80) NOT NULL,
+    source_id TEXT NOT NULL DEFAULT '',
+    source_url TEXT NOT NULL DEFAULT '',
+    authority_class VARCHAR(60) NOT NULL DEFAULT 'supporting-evidence',
+    status VARCHAR(30) NOT NULL DEFAULT 'current' CHECK (status IN ('current', 'historic', 'superseded', 'proposed', 'unverified')),
+    sensitivity VARCHAR(40) NOT NULL DEFAULT 'internal' CHECK (sensitivity IN ('public', 'internal', 'restricted', 'secret')),
+    summary TEXT NOT NULL DEFAULT '',
+    source_modified_at TIMESTAMPTZ,
+    last_synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_sync_status VARCHAR(30) NOT NULL DEFAULT 'seeded' CHECK (last_sync_status IN ('seeded', 'verified_manual', 'synced', 'failed', 'partial')),
+    stale_after_days INTEGER NOT NULL DEFAULT 7,
+    metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_arrington_workspace_sources_status ON arrington_workspace_sources (status, last_synced_at DESC);
+
+CREATE TABLE IF NOT EXISTS arrington_workspace_brain_gaps (
+    id SERIAL PRIMARY KEY,
+    gap_key VARCHAR(160) UNIQUE NOT NULL,
+    gap_type VARCHAR(30) NOT NULL DEFAULT 'missing' CHECK (gap_type IN ('missing', 'stale', 'conflicting', 'insufficient_provenance', 'source_failure')),
+    subject TEXT NOT NULL,
+    source_key VARCHAR(120) REFERENCES arrington_workspace_sources(source_key) ON DELETE SET NULL,
+    sensitivity VARCHAR(40) NOT NULL DEFAULT 'internal' CHECK (sensitivity IN ('public', 'internal', 'restricted', 'secret')),
+    reason TEXT NOT NULL DEFAULT '',
+    impact TEXT NOT NULL DEFAULT '',
+    responsible_human VARCHAR(120) NOT NULL DEFAULT 'Tom Arrington',
+    status VARCHAR(30) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'waiting_for_source', 'resolved', 'dismissed')),
+    resolution_evidence TEXT NOT NULL DEFAULT '',
+    resolved_by_user_id INTEGER REFERENCES users(id),
+    resolved_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_arrington_workspace_gaps_status ON arrington_workspace_brain_gaps (status, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS arrington_workspace_activity (
+    id SERIAL PRIMARY KEY,
+    actor VARCHAR(120) NOT NULL DEFAULT 'system',
+    event_type VARCHAR(60) NOT NULL,
+    summary TEXT NOT NULL,
+    source_key VARCHAR(120),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_arrington_workspace_activity_created ON arrington_workspace_activity (created_at DESC);
+
+CREATE TABLE IF NOT EXISTS arrington_workspace_conversations (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL DEFAULT 'Workspace question',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS arrington_workspace_messages (
+    id SERIAL PRIMARY KEY,
+    conversation_id INTEGER NOT NULL REFERENCES arrington_workspace_conversations(id) ON DELETE CASCADE,
+    sender VARCHAR(20) NOT NULL CHECK (sender IN ('user', 'system', 'worker')),
+    worker_id VARCHAR(80),
+    content TEXT NOT NULL,
+    source_keys JSONB NOT NULL DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_arrington_workspace_messages_conversation ON arrington_workspace_messages (conversation_id, created_at);
+
 -- Where a fictional staff member's Brain Gap notification is actually
 -- delivered. They are fictional and have no mailbox, so inventing an
 -- address for them would make every send bounce and the "delivery result"
@@ -521,4 +601,3 @@ CREATE INDEX IF NOT EXISTS idx_scott_brain_gaps_responsible ON scott_brain_gaps 
 -- rest of the site uses; it goes to a real demonstration inbox and says
 -- plainly in the body which fictional person it is addressed to.
 ALTER TABLE scott_portal_users ADD COLUMN IF NOT EXISTS notify_email VARCHAR(255) NOT NULL DEFAULT '';
-

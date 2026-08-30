@@ -25,6 +25,11 @@ const { generateUniqueShortReference } = require('../lib/shortReference');
 const { resolveWaiSeedMode, waiSeedWrites: waiWritesAllowed } = require('../lib/waiSeedMode');
 const { SCOTT_PAGE_SLUG } = require('../lib/scott/access');
 const { seedScottData } = require('../lib/scott/data/seedData');
+const {
+  ARRINGTON_WORKSPACE_PAGE_SLUG,
+  ARRINGTON_WORKSPACE_SEED_SOURCES,
+  ARRINGTON_WORKSPACE_SEED_GAPS
+} = require('../lib/arringtonWorkspace/sources');
 
 const BCRYPT_ROUNDS = 12;
 
@@ -4752,6 +4757,103 @@ async function seed() {
       [SCOTT_PAGE_SLUG]
     );
     if (rowCount > 0) console.log('Scott AI Demonstration: access-grant page row created.');
+  }
+
+  // Arrington AI Workspace v0.1 - private staging source index.
+  //
+  // This creates the hidden/noindex route anchor and seeds the first
+  // approved source set recorded in the technical brief. Rows are guarded by
+  // source_key/gap_key and use ON CONFLICT DO UPDATE only for the controlled
+  // seeded fields, so a future sync can refresh these records deliberately
+  // without deleting history or touching public site content.
+  {
+    const { rowCount } = await db.query(
+      `INSERT INTO pages (slug, title, sort_order, hidden, show_in_nav, noindex, section_order)
+       VALUES ($1, 'Arrington AI Workspace (private)', 9998, true, false, true, '[]'::jsonb)
+       ON CONFLICT (slug) DO NOTHING`,
+      [ARRINGTON_WORKSPACE_PAGE_SLUG]
+    );
+    if (rowCount > 0) console.log('Arrington AI Workspace: private page row created.');
+
+    for (const source of ARRINGTON_WORKSPACE_SEED_SOURCES) {
+      await db.query(
+        `INSERT INTO arrington_workspace_sources (
+           source_key, title, source_system, source_id, source_url,
+           authority_class, status, sensitivity, summary, source_modified_at,
+           last_sync_status, stale_after_days, metadata, updated_at
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::jsonb, NOW())
+         ON CONFLICT (source_key) DO UPDATE SET
+           title = EXCLUDED.title,
+           source_system = EXCLUDED.source_system,
+           source_id = EXCLUDED.source_id,
+           source_url = EXCLUDED.source_url,
+           authority_class = EXCLUDED.authority_class,
+           status = EXCLUDED.status,
+           sensitivity = EXCLUDED.sensitivity,
+           summary = EXCLUDED.summary,
+           source_modified_at = EXCLUDED.source_modified_at,
+           last_sync_status = EXCLUDED.last_sync_status,
+           stale_after_days = EXCLUDED.stale_after_days,
+           metadata = EXCLUDED.metadata,
+           updated_at = NOW()`,
+        [
+          source.key,
+          source.title,
+          source.sourceSystem,
+          source.sourceId || '',
+          source.sourceUrl || '',
+          source.authorityClass,
+          source.status,
+          source.sensitivity,
+          source.summary,
+          source.sourceModifiedAt || null,
+          source.lastSyncStatus,
+          source.staleAfterDays,
+          JSON.stringify(source.metadata || {})
+        ]
+      );
+    }
+
+    for (const gap of ARRINGTON_WORKSPACE_SEED_GAPS) {
+      await db.query(
+        `INSERT INTO arrington_workspace_brain_gaps (
+           gap_key, gap_type, subject, source_key, sensitivity, reason,
+           impact, responsible_human, status, updated_at
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'open', NOW())
+         ON CONFLICT (gap_key) DO UPDATE SET
+           gap_type = EXCLUDED.gap_type,
+           subject = EXCLUDED.subject,
+           source_key = EXCLUDED.source_key,
+           sensitivity = EXCLUDED.sensitivity,
+           reason = EXCLUDED.reason,
+           impact = EXCLUDED.impact,
+           responsible_human = EXCLUDED.responsible_human,
+           updated_at = NOW()
+         WHERE arrington_workspace_brain_gaps.status <> 'resolved'`,
+        [
+          gap.key,
+          gap.type,
+          gap.subject,
+          gap.sourceKey || null,
+          gap.sensitivity,
+          gap.reason,
+          gap.impact,
+          gap.responsibleHuman
+        ]
+      );
+    }
+
+    await db.query(
+      `INSERT INTO arrington_workspace_activity (actor, event_type, summary, source_key)
+       SELECT 'system', 'seed_verified_sources', $1, 'tech-implementation-brief'
+       WHERE NOT EXISTS (
+         SELECT 1 FROM arrington_workspace_activity
+         WHERE event_type = 'seed_verified_sources'
+           AND source_key = 'tech-implementation-brief'
+       )`,
+      [`Seed verified ${ARRINGTON_WORKSPACE_SEED_SOURCES.length} controlled source records for the first private staging workspace.`]
+    );
+    console.log(`Arrington AI Workspace: ${ARRINGTON_WORKSPACE_SEED_SOURCES.length} source record(s) and ${ARRINGTON_WORKSPACE_SEED_GAPS.length} Brain Gap(s) verified.`);
   }
   {
     const result = await seedScottData(db);

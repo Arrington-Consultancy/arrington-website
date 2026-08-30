@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Activity | Arrington AI Workspace</title>
+  <%- include('partials/styles') %>
+</head>
+<body>
+  <div class="aw-shell">
+    <%- include('partials/sidebar', { active, navCounts }) %>
+    <main class="aw-main">
+      <p class="aw-topline">Activity</p>
+      <h1>Only record what happened.</h1>
+      <p class="aw-lede">This log is for real workspace events. A queued, guessed or intended action is not written here as a completed one.</p>
+      <section class="aw-list">
+        <% activity.forEach((event) => { %>
+          <article class="aw-row">
+            <header>
+              <h2><%= event.event_type %></h2>
+              <span class="aw-pill"><%= event.actor %></span>
+            </header>
+            <p><%= event.summary %></p>
+            <p class="aw-muted"><%= new Date(event.created_at).toISOString() %></p>
+          </article>
+        <% }) %>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
