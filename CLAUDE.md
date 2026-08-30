@@ -10,6 +10,31 @@ This site was handed over to Tom Arrington to self-manage. Read `HANDOVER.md` fi
 - ~~**Loose end:** the bare `arringtonconsultancy.co.uk` apex still needs adding as a custom domain in Railway.~~ **Resolved.** All four custom domains are bound in Railway with valid certificates. Since commit `00c2b91` (16/08/2026) both `.co.uk` hostnames permanently redirect to the canonical host rather than serving the site (see Custom domains).
 - On the same day the 19 agreed copy-review changes were applied to the live site (see Copy review below).
 
+## Governance: start from the current Drive authorities (added 30/08/2026)
+
+Before material Arrington work, read the current controlled Google Drive
+authorities, in this order:
+
+1. **AI GOVERNANCE CONSTITUTION - UNIVERSAL MASTER**
+2. **AI BRAIN & WORKER CREATION STANDARD - UNIVERSAL MASTER**, including the current Universal AI Operating Standard
+3. **START HERE. ARRINGTON CONSULTANCY BRAIN INDEX**
+4. The relevant Arrington project, worker or handoff records for the task
+
+How they relate: universal governance is the reusable baseline;
+Arrington-specific controlled rules govern Arrington work wherever they
+are stricter or more specific; and a future universal change must not
+silently alter Arrington permissions, authority, brand rules, production
+gates or worker scope.
+
+Working discipline: inspect the current Drive source rather than relying
+on memory, old chats or stale notes in this file. Never claim to have
+checked, tested, updated, deployed or verified anything unless the
+action actually happened. No hidden expansion of authority, permissions
+or scope.
+
+This section sets the starting position only; the rest of this file
+stays the practical project manual.
+
 ## Brand, voice and strategy: Google Drive is the authority, not this file
 
 This repo governs the **code**. It does not govern brand, tone, positioning,
