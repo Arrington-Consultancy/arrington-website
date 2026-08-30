@@ -1259,7 +1259,15 @@ Two suites need more than `DATABASE_URL`:
   deliberate re-run after a material change (such as a roster
   activation) is armed with a fresh label rather than manual SQL. The
   release-review summary of the 29/08 evidence is
-  `review/scott-v0.2-release-review-2026-08-29.md`.
+  `review/scott-v0.2-release-review-2026-08-29.md`. **Rerun after the
+  30/08 activation of all nine workers: PASSED**, 11 live turns, 19
+  assertions, 0 failures (label `activation-20260830-b`, staging deploy
+  `fa960bae`, recorded in Drive as 16C). A first attempt failed two
+  cases, both diagnosed as suite defects rather than leaks: a canary
+  false positive on figures duplicated into a debtor_flag record Chloe
+  legitimately holds (fixed with a permitted-corpus canary filter,
+  pinned by free tests), and an undiagnosable contradiction probe (now
+  prints the reply on failure).
 
 ## Related
 
