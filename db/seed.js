@@ -4982,6 +4982,13 @@ async function seed() {
   // header for exactly what it does and does not claim.
   await require('../scripts/scottGapAcceptance').runGapAcceptanceCheck(db);
 
+  // Arrington AI Workspace: ingest the encrypted snapshot into
+  // workspace_records. A no-op when WORKSPACE_SNAPSHOT_KEY is unset, and
+  // never fatal: an ingest failure records itself as a failed sync run
+  // and the boot continues, because a brain that cannot refresh must say
+  // so rather than take the website down.
+  await require('../lib/workspace/ingest').ingestWorkspaceSnapshot(require('../lib/workspace/repo'));
+
   console.log('Seed complete.');
 }
 

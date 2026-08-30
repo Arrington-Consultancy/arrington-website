@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= pageTitle %> | Arrington AI Workspace</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="csrf-token" content="<%= csrfToken %>">
+  <%- include('styles') %>
+</head>
+<body class="ws-body">
+  <div class="ws-shell">
+    <aside class="ws-side">
+      <p class="ws-brand">Arrington AI Workspace<small>internal, v0.1</small></p>
+      <nav class="ws-nav">
+        <a href="/workspace" class="<%= active === 'today' ? 'ws-active' : '' %>">Today</a>
+        <a href="/workspace/chat" class="<%= active === 'chat' ? 'ws-active' : '' %>">Ask the workspace</a>
+        <a href="/workspace/brain" class="<%= active === 'brain' ? 'ws-active' : '' %>">Company Brain</a>
+        <a href="/workspace/opportunities" class="<%= active === 'opportunities' ? 'ws-active' : '' %>">Opportunities</a>
+        <a href="/workspace/projects" class="<%= active === 'projects' ? 'ws-active' : '' %>">Clients &amp; projects</a>
+        <a href="/workspace/workforce" class="<%= active === 'workforce' ? 'ws-active' : '' %>">AI workforce</a>
+        <a href="/workspace/approvals" class="<%= active === 'approvals' ? 'ws-active' : '' %>">Decisions &amp; approvals
+          <% if (counts.openApprovals > 0) { %><span class="ws-count"><%= counts.openApprovals %></span><% } %></a>
+        <a href="/workspace/gaps" class="<%= active === 'gaps' ? 'ws-active' : '' %>">Brain gaps
+          <% if (counts.openGaps > 0) { %><span class="ws-count"><%= counts.openGaps %></span><% } %></a>
+        <a href="/workspace/activity" class="<%= active === 'activity' ? 'ws-active' : '' %>">Activity</a>
+      </nav>
+      <div class="ws-me">
+        <strong><%= username %></strong>
+        <%= clearanceLabel %>
+        <div><a href="/">Back to the website</a></div>
+      </div>
+    </aside>
+    <main class="ws-main">

@@ -1,0 +1,42 @@
+<%- include('partials/shell-top', { pageTitle: 'Company Brain', active: 'brain' }) %>
+
+<h1 class="ws-h">Company Brain</h1>
+<p class="ws-sub">Controlled extracts from the approved source set. Every record names its source and carries its freshness; the source document stays the authority.</p>
+
+<div class="ws-card">
+  <form method="GET" action="/workspace/brain" class="ws-form-row">
+    <input class="ws-input" type="text" name="q" value="<%= q %>" placeholder="Search titles and content" maxlength="200">
+    <button class="ws-btn" type="submit">Search</button>
+    <% if (q) { %><a class="ws-btn ws-btn-quiet" href="/workspace/brain">Clear</a><% } %>
+  </form>
+  <% if (q) { %><p class="ws-meta"><%= records.length %> matching record(s) you are cleared to see.</p><% } %>
+</div>
+
+<% if (records.length === 0) { %>
+  <div class="ws-card"><p class="ws-empty"><%= q ? 'No matches.' : 'No records. The brain has not been seeded in this environment yet.' %></p></div>
+<% } %>
+
+<%
+  const byClass = {};
+  records.forEach(function (r) { (byClass[r.source_class] = byClass[r.source_class] || []).push(r); });
+%>
+<% Object.keys(byClass).forEach(function (cls) { %>
+  <div class="ws-card">
+    <h2><%= cls.replace(/_/g, ' ') %><span class="ws-meta"> · <%= sourceClasses[cls] || '' %></span></h2>
+    <% byClass[cls].forEach(function (r) { %>
+      <div class="ws-item">
+        <span class="ws-item-title"><%= r.title %></span>
+        <span class="ws-badge ws-badge-<%= r.freshness.state %>"><%= r.freshness.state.replace('_', ' ') %></span>
+        <% if (r.doc_status !== 'current') { %><span class="ws-badge ws-badge-plain"><%= r.doc_status %></span><% } %>
+        <div class="ws-meta">
+          <%= r.record_key %> · <%= r.source_ref || 'source unrecorded' %>
+          <% if (r.as_of) { %> · as of <%= new Date(r.as_of).toISOString().slice(0, 10) %><% } %>
+          <% if (r.freshness.ageDays !== null) { %> · synced <%= r.freshness.ageDays %> day(s) ago<% } %>
+        </div>
+        <% if (r.body) { %><div class="ws-body-text"><%= r.body %></div><% } %>
+      </div>
+    <% }) %>
+  </div>
+<% }) %>
+
+<%- include('partials/shell-bottom') %>

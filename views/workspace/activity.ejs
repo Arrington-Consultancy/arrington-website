@@ -1,0 +1,23 @@
+<%- include('partials/shell-top', { pageTitle: 'Activity', active: 'activity' }) %>
+
+<h1 class="ws-h">Activity</h1>
+<p class="ws-sub">Append-only. Nothing here can be edited or deleted by any route, and no AI path writes to it except through the server's own audited helpers.</p>
+
+<div class="ws-card">
+  <% if (activity.length === 0) { %><p class="ws-empty">Nothing recorded yet.</p><% } %>
+  <% if (activity.length > 0) { %>
+  <table class="ws-table">
+    <tr><th>When</th><th>Actor</th><th>Event</th><th>Summary</th></tr>
+    <% activity.forEach(function (ev) { %>
+      <tr>
+        <td class="ws-meta"><%= new Date(ev.created_at).toUTCString() %></td>
+        <td><%= ev.actor %></td>
+        <td class="ws-meta"><%= ev.event_type %></td>
+        <td><%= ev.summary %></td>
+      </tr>
+    <% }) %>
+  </table>
+  <% } %>
+</div>
+
+<%- include('partials/shell-bottom') %>

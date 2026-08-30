@@ -22,6 +22,7 @@ const commercialGapsReview = require('./routes/commercialGapsReview');
 const whereToStart = require('./routes/whereToStart');
 const productGuide = require('./routes/productGuide');
 const scott = require('./routes/scott');
+const workspace = require('./routes/workspace');
 const { publishedArticles, findBySlug: findUsefulThinkingArticle } = require('./lib/usefulThinkingArticles');
 const { getSiteShellData } = require('./lib/navShell');
 const { SITE_KEY: TURNSTILE_SITE_KEY } = require('./lib/turnstile');
@@ -679,6 +680,16 @@ app.use(productGuide.router);
 scott.mountPageRoute(app, generateCsrfToken);
 app.use(scott.router);
 
+// Arrington AI Workspace — the real internal workspace (see
+// routes/workspace.js, lib/workspace/**). Same registration pattern as
+// the areas above. Entirely separate from the Scott demonstration: no
+// Scott table, identity, prompt or fictional fact is reachable from it,
+// and vice versa. Access is the site's own session auth plus the
+// workspace clearance map (real access is Tom only); anyone else gets a
+// 404 that does not admit the area exists.
+workspace.mountPageRoute(app, generateCsrfToken);
+app.use(workspace.router);
+
 // /v1.html — retired from public serving (15/08/2026). The original V1
 // single-page site was kept served as a reference copy, with a relaxed
 // per-route CSP because its inline <style>/<script> blocks predate the nonce
@@ -1163,6 +1174,7 @@ loadPermissions().then(() => {
   app.listen(PORT, () => {
     console.log(`[${isProd ? 'PROD' : 'DEV'}] Arrington CMS running on port ${PORT}`);
     console.log(require('./lib/scott/orchestrator').describeScottAIStatus());
+    console.log('Workspace AI: ' + require('./lib/workspace/orchestrator').describeWorkspaceAIStatus());
     // One-shot, marker-guarded, env-gated runner for the paid live-AI
     // pressure suite. A no-op unless RUN_SCOTT_LIVE_PRESSURE=true; see
     // the script header for the spend controls.

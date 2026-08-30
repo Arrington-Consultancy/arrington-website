@@ -1,0 +1,57 @@
+<%- include('partials/shell-top', { pageTitle: 'Today', active: 'today' }) %>
+
+<h1 class="ws-h">Today</h1>
+<p class="ws-sub">What needs attention, and how fresh the brain is. Nothing here acts on its own; every consequential decision stays human.</p>
+
+<div class="ws-card">
+  <h2>Needs attention</h2>
+  <% if (attention.length === 0) { %>
+    <p class="ws-empty">Nothing flagged. Freshness is within threshold, no material gaps are open.</p>
+  <% } %>
+  <% attention.forEach(function (a) { %>
+    <div class="ws-item">
+      <span class="ws-badge ws-badge-<%= a.kind === 'gap' ? 'material' : a.kind %>"><%= a.kind === 'gap' ? 'gap' : a.kind.replace('_', ' ') %></span>
+      <%= a.text %>
+    </div>
+  <% }) %>
+</div>
+
+<div class="ws-card">
+  <h2>Brain state</h2>
+  <div class="ws-item"><span class="ws-item-title"><%= recordCount %></span> record(s) visible to you in the Company Brain.</div>
+  <div class="ws-item">
+    <% if (syncRun) { %>
+      Last sync run: <span class="ws-badge ws-badge-<%= syncRun.outcome === 'ok' ? 'fresh' : (syncRun.outcome === 'partial' ? 'stale' : 'failed') %>"><%= syncRun.outcome %></span>
+      <span class="ws-meta"><%= syncRun.records_written %> record(s) written, <%= new Date(syncRun.started_at).toUTCString() %><%= syncRun.detail ? '. ' + syncRun.detail : '' %></span>
+    <% } else { %>
+      <span class="ws-meta">No sync run has ever been recorded. The brain is unseeded: ingest runs at boot when the snapshot key is configured.</span>
+    <% } %>
+  </div>
+  <div class="ws-item">
+    Workspace AI is <strong><%= aiEnabled ? 'enabled' : 'not enabled' %></strong> in this environment.
+    <% if (!aiEnabled) { %><span class="ws-meta">Pages and records work; Ask the workspace will refuse honestly.</span><% } %>
+  </div>
+</div>
+
+<div class="ws-card">
+  <h2>Open approvals (<%= openApprovals.length %>)</h2>
+  <% if (openApprovals.length === 0) { %><p class="ws-empty">None open.</p><% } %>
+  <% openApprovals.slice(0, 5).forEach(function (a) { %>
+    <div class="ws-item"><span class="ws-item-title"><%= a.title %></span>
+      <div class="ws-meta">Requested by <%= a.requested_by %>, action class <%= a.action_class %></div>
+    </div>
+  <% }) %>
+  <% if (openApprovals.length > 0) { %><p class="ws-meta"><a href="/workspace/approvals">Decide them</a></p><% } %>
+</div>
+
+<div class="ws-card">
+  <h2>Recent activity</h2>
+  <% if (activity.length === 0) { %><p class="ws-empty">Nothing yet.</p><% } %>
+  <% activity.forEach(function (ev) { %>
+    <div class="ws-item"><span class="ws-meta"><%= new Date(ev.created_at).toUTCString() %> · <%= ev.actor %> · <%= ev.event_type %></span>
+      <div><%= ev.summary %></div>
+    </div>
+  <% }) %>
+</div>
+
+<%- include('partials/shell-bottom') %>

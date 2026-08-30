@@ -522,3 +522,130 @@ CREATE INDEX IF NOT EXISTS idx_scott_brain_gaps_responsible ON scott_brain_gaps 
 -- plainly in the body which fictional person it is addressed to.
 ALTER TABLE scott_portal_users ADD COLUMN IF NOT EXISTS notify_email VARCHAR(255) NOT NULL DEFAULT '';
 
+
+-- ============================================================
+-- Arrington AI Workspace v0.1 (added 30/08/2026)
+--
+-- Entirely separate from the Scott demonstration tables above: no
+-- Scott table is referenced, no Scott identity is reused, and no
+-- workspace table is readable through any Scott route. The workspace
+-- holds REAL Arrington operating knowledge, so every read surface is
+-- filtered by lib/workspace/clearance.js (human leg) intersected with
+-- lib/workspace/lanes.js (lane leg). Real human access is Tom only.
+-- ============================================================
+
+-- The indexed brain. One row per controlled record extracted from the
+-- approved source set (controlled Drive records, verified website /
+-- GitHub / Railway state). Provenance is carried on the row itself:
+-- source_ref names where the fact came from, as_of dates the fact,
+-- synced_at dates the extraction, stale_after_days drives the freshness
+-- display, sync_outcome records honestly whether the last sync worked.
+CREATE TABLE IF NOT EXISTS workspace_records (
+    id SERIAL PRIMARY KEY,
+    record_key VARCHAR(120) UNIQUE NOT NULL,
+    source_class VARCHAR(40) NOT NULL,
+    authority_class VARCHAR(40) NOT NULL DEFAULT 'supporting' CHECK (authority_class IN ('master_authority', 'live_authority', 'handoff', 'evidence', 'supporting')),
+    doc_status VARCHAR(20) NOT NULL DEFAULT 'current' CHECK (doc_status IN ('current', 'historic', 'superseded', 'proposed', 'unverified')),
+    sensitivity VARCHAR(20) NOT NULL DEFAULT 'standard' CHECK (sensitivity IN ('standard', 'commercial', 'confidential')),
+    title VARCHAR(300) NOT NULL,
+    source_ref VARCHAR(500) NOT NULL DEFAULT '',
+    body TEXT NOT NULL DEFAULT '',
+    as_of DATE,
+    synced_at TIMESTAMPTZ,
+    stale_after_days INTEGER,
+    sync_outcome VARCHAR(20) NOT NULL DEFAULT 'ok' CHECK (sync_outcome IN ('ok', 'partial', 'failed')),
+    meta JSONB NOT NULL DEFAULT '{}',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_workspace_records_class ON workspace_records (source_class, doc_status);
+
+-- Conversations are owned by the authenticated human who started them,
+-- with the clearance they held at the time snapshotted onto the row, so
+-- history replay can never show more than the owner could see live.
+CREATE TABLE IF NOT EXISTS workspace_conversations (
+    id SERIAL PRIMARY KEY,
+    owner_username VARCHAR(100) NOT NULL,
+    clearance VARCHAR(40) NOT NULL,
+    lane_id VARCHAR(60) NOT NULL DEFAULT '',
+    title VARCHAR(300) NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_workspace_conversations_owner ON workspace_conversations (owner_username, updated_at DESC);
+
+-- provenance holds the record_keys the server actually supplied to the
+-- model for this turn: server-known fact, never a model claim.
+CREATE TABLE IF NOT EXISTS workspace_messages (
+    id SERIAL PRIMARY KEY,
+    conversation_id INTEGER NOT NULL REFERENCES workspace_conversations(id) ON DELETE CASCADE,
+    role VARCHAR(20) NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
+    content TEXT NOT NULL,
+    lane_id VARCHAR(60) NOT NULL DEFAULT '',
+    provenance JSONB NOT NULL DEFAULT '[]',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_workspace_messages_conv ON workspace_messages (conversation_id, id);
+
+-- Brain gaps, per ARRINGTON AI WORKSPACE V0.1 - BRAIN GAP & HUMAN
+-- NOTIFICATION STANDARD. Same honesty rules as scott_brain_gaps, which
+-- proved them: a gap carries the sensitivity of the evidence it quotes
+-- and is filtered like the record it concerns; resolving requires a
+-- human and a written statement; resolve and dismiss stay different.
+CREATE TABLE IF NOT EXISTS workspace_gaps (
+    id SERIAL PRIMARY KEY,
+    gap_type VARCHAR(20) NOT NULL DEFAULT 'missing' CHECK (gap_type IN ('missing', 'stale', 'conflicting', 'provenance', 'source_failure')),
+    description TEXT NOT NULL,
+    record_key VARCHAR(120) NOT NULL DEFAULT '',
+    sensitivity VARCHAR(20) NOT NULL DEFAULT 'standard' CHECK (sensitivity IN ('standard', 'commercial', 'confidential')),
+    material BOOLEAN NOT NULL DEFAULT false,
+    status VARCHAR(20) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'resolved', 'dismissed')),
+    raised_by VARCHAR(100) NOT NULL,
+    resolved_by VARCHAR(100) NOT NULL DEFAULT '',
+    source_corrected BOOLEAN NOT NULL DEFAULT false,
+    resolution_note TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    resolved_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_workspace_gaps_status ON workspace_gaps (status, created_at DESC);
+
+-- Human approval gates: a record-only queue. Approving a row records a
+-- decision; it executes nothing. Action classes follow the control
+-- pack; the workspace itself only ever performs class 3 (workspace
+-- record writes). Class 4+ actions are out of scope for v0.1.
+CREATE TABLE IF NOT EXISTS workspace_approvals (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(300) NOT NULL,
+    detail TEXT NOT NULL DEFAULT '',
+    action_class SMALLINT NOT NULL DEFAULT 3,
+    sensitivity VARCHAR(20) NOT NULL DEFAULT 'commercial' CHECK (sensitivity IN ('standard', 'commercial', 'confidential')),
+    requested_by VARCHAR(100) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'approved', 'declined')),
+    decided_by VARCHAR(100) NOT NULL DEFAULT '',
+    decision_note TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    decided_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_workspace_approvals_status ON workspace_approvals (status, created_at DESC);
+
+-- Append-only. No route updates or deletes rows here, and no AI path
+-- writes anything except through the server's own audited helpers.
+CREATE TABLE IF NOT EXISTS workspace_activity (
+    id SERIAL PRIMARY KEY,
+    actor VARCHAR(100) NOT NULL,
+    event_type VARCHAR(60) NOT NULL,
+    summary TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_workspace_activity_time ON workspace_activity (created_at DESC);
+
+-- One row per ingest attempt, successful or not, so freshness claims on
+-- the Today page rest on recorded runs rather than assumption.
+CREATE TABLE IF NOT EXISTS workspace_sync_runs (
+    id SERIAL PRIMARY KEY,
+    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    finished_at TIMESTAMPTZ,
+    outcome VARCHAR(20) NOT NULL DEFAULT 'failed' CHECK (outcome IN ('ok', 'partial', 'failed')),
+    records_written INTEGER NOT NULL DEFAULT 0,
+    detail TEXT NOT NULL DEFAULT ''
+);

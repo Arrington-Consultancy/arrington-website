@@ -1,0 +1,22 @@
+<%- include('partials/shell-top', { pageTitle: pageTitle, active: pageTitle === 'Opportunities & pipeline' ? 'opportunities' : 'projects' }) %>
+
+<h1 class="ws-h"><%= pageTitle %></h1>
+<p class="ws-sub">Records here exist only where evidence exists in the controlled sources; the workspace does not invent pipeline.</p>
+
+<% if (records.length === 0) { %>
+  <div class="ws-card"><p class="ws-empty">No records in this area yet.</p></div>
+<% } %>
+<% records.forEach(function (r) { %>
+  <div class="ws-card">
+    <span class="ws-item-title"><%= r.title %></span>
+    <span class="ws-badge ws-badge-<%= r.freshness.state %>"><%= r.freshness.state.replace('_', ' ') %></span>
+    <% if (r.doc_status !== 'current') { %><span class="ws-badge ws-badge-plain"><%= r.doc_status %></span><% } %>
+    <div class="ws-meta">
+      <%= r.record_key %> · <%= r.source_ref || 'source unrecorded' %>
+      <% if (r.as_of) { %> · as of <%= new Date(r.as_of).toISOString().slice(0, 10) %><% } %>
+    </div>
+    <% if (r.body) { %><div class="ws-body-text"><%= r.body %></div><% } %>
+  </div>
+<% }) %>
+
+<%- include('partials/shell-bottom') %>

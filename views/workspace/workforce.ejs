@@ -1,0 +1,18 @@
+<%- include('partials/shell-top', { pageTitle: 'AI workforce', active: 'workforce' }) %>
+
+<h1 class="ws-h">AI workforce</h1>
+<p class="ws-sub">The nine canonical Arrington workers, as registered in the Brain Index. Each is a routing lane here: a scoped context the workspace can consult, never a person and never a new identity. The register in Drive is the authority on names and remits.</p>
+
+<% lanes.forEach(function (lane) { %>
+  <div class="ws-card">
+    <span class="ws-item-title"><%= lane.name %></span>
+    <span class="ws-badge <%= lane.kind === 'project' ? 'ws-badge-stale' : 'ws-badge-fresh' %>"><%= lane.kind %></span>
+    <div class="ws-body-text"><%= lane.remit %></div>
+    <div class="ws-meta">Reads: <%= lane.sourceClasses.join(', ').replace(/_/g, ' ') %> · sensitivity ceiling: <%= lane.sensitivityCeiling %></div>
+    <% if (lane.kind === 'project') { %>
+      <div class="ws-meta">Project worker: reviewed for retirement or archive once its build, evidence and handover duties are complete, per the register's permanence control.</div>
+    <% } %>
+  </div>
+<% }) %>
+
+<%- include('partials/shell-bottom') %>
