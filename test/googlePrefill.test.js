@@ -61,3 +61,43 @@ test('never fills a field the visitor already typed into', () => {
   const src = fs.readFileSync(partial, 'utf8');
   assert.match(src, /if \(!el \|\| el\.value\) return;/);
 });
+
+// Cross-Origin-Opener-Policy on the prefill pages.
+//
+// Live failure, 30/08/2026: the button rendered, Google offered the
+// account, and then the popup landed on accounts.google.com/gsi/transform,
+// went white and never returned. Cause: helmet's default COOP of
+// same-origin severs window.opener, which is the channel the Google popup
+// uses to hand the chosen account back to the page. Nothing in the site's
+// own code was wrong, and no error appeared anywhere, which is what made
+// it hard to see.
+//
+// These tests pin the fix and its scope: the relaxation exists on exactly
+// the four pages that carry the button, and nowhere else.
+const serverSource = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+
+test('the four prefill pages, and only those, are listed for the COOP relaxation', () => {
+  const block = serverSource.match(/const GOOGLE_PREFILL_PATHS = new Set\(\[([\s\S]*?)\]\)/);
+  assert.ok(block, 'the prefill path list must exist');
+  const paths = [...block[1].matchAll(/'([^']+)'/g)].map((m) => m[1]).sort();
+  assert.deepEqual(paths, ['/commercial-gaps-review', '/market-ready-test', '/owner-dependency-quiz', '/product-guide']);
+});
+
+test('the relaxation is same-origin-allow-popups, never a blanket removal of COOP', () => {
+  assert.match(serverSource, /setHeader\('Cross-Origin-Opener-Policy', 'same-origin-allow-popups'\)/);
+  assert.doesNotMatch(serverSource, /crossOriginOpenerPolicy:\s*false/,
+    'COOP must never be switched off across the whole site to fix one button');
+});
+
+test('the relaxation is gated on the client ID, so switching the prefill off restores the strict default', () => {
+  const guard = serverSource.match(/if \(googleSigninClientId && GOOGLE_PREFILL_PATHS\.has\(req\.path\)\)/);
+  assert.ok(guard, 'the header must be conditional on the prefill actually being enabled');
+});
+
+test('the COOP middleware runs after helmet, or helmet would overwrite it', () => {
+  // This ordering was the first attempt at the fix and it silently did
+  // nothing: helmet sets its own COOP, so anything set before it is
+  // replaced. Verified live before and after moving it.
+  assert.ok(serverSource.indexOf('app.use(helmet({') < serverSource.indexOf('GOOGLE_PREFILL_PATHS'),
+    'the prefill COOP override must be registered after helmet');
+});
