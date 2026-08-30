@@ -238,3 +238,43 @@ test('worker reply schema: evidence gaps', async (t) => {
     assert.match(GOVERNANCE_PREAMBLE, /always a human/);
   });
 });
+
+describe('transient API failure handling', () => {
+  const { isTransientApiError, callWorker, __setClientFactoryForTests, __resetClientFactoryForTests } = require('../../lib/scott/orchestrator');
+
+  test('classifies rate limits, overloads and network drops as transient; parse failures as not', () => {
+    assert.equal(isTransientApiError({ status: 429, message: 'rate limited' }), true);
+    assert.equal(isTransientApiError({ status: 529, message: 'overloaded_error' }), true);
+    assert.equal(isTransientApiError({ message: 'fetch failed' }), true);
+    assert.equal(isTransientApiError({ message: 'Connection error: ETIMEDOUT' }), true);
+    assert.equal(isTransientApiError({ message: 'Unexpected token < in JSON at position 0' }), false);
+    assert.equal(isTransientApiError({ status: 400, message: 'invalid_request_error' }), false);
+  });
+
+  test('one transient blip does not become a customer-visible failure', async () => {
+    // First call dies like a rate limit; the retry succeeds with a valid
+    // reply. The visitor must see the answer, not the technical bubble.
+    let calls = 0;
+    __setClientFactoryForTests(() => ({
+      messages: {
+        create: async () => {
+          calls += 1;
+          if (calls === 1) {
+            const err = new Error('overloaded_error');
+            err.status = 529;
+            throw err;
+          }
+          return { content: [{ type: 'text', text: JSON.stringify({ reply: 'All fine here.', certainty: 'CERTAIN', writeback: null, escalation: null, gap: null, refused: false }) }] };
+        }
+      }
+    }));
+    try {
+      const result = await callWorker('operations', { userMessage: 'How is the schedule?', history: [], personaId: 'scott_mercer' });
+      assert.equal(result.technicalFailure, false, 'a single transient blip must be absorbed');
+      assert.equal(result.reply, 'All fine here.');
+      assert.equal(calls, 2, 'exactly one retry');
+    } finally {
+      __resetClientFactoryForTests();
+    }
+  });
+});
