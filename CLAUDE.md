@@ -932,7 +932,41 @@ Tom returned an agreed-changes brief (`arrington_copy_review_agreed_changes_20_j
 - `logo.avif` — original logo (now served from DB)
 - `oxford.png` — original Oxford badge (now served from DB)
 
-## Arrington AI Workspace v0.1 (staging, added 30/08/2026)
+## Arrington AI Workspace v0.1 (RELEASED TO PRODUCTION CODE, WORKSPACE ITSELF STILL DISABLED, 31/08/2026)
+
+**Merged to `main` and deployed to production on 31/08/2026, on Tom's
+explicit release approval, following the eighteenth independent
+Governance & Assurance review's PASS and fitness judgement.** This
+supersedes the paragraph below, kept as historical record of the
+candidate's pre-release state rather than corrected line by line.
+
+- Merge commit on `main`: `f82fa7f` (candidate head `bdc3d0d`, the exact
+  head the eighteenth review passed). Production deployment
+  `59c7a93a` SUCCESS, confirmed via Railway boot log and HTTP status
+  metrics (0 5xx across the release window on both general and Scott
+  traffic - see the full record).
+- **The workspace itself remains fail-closed.** Only
+  `ENABLE_ARRINGTON_AI_WORKSPACE=true` and `WORKSPACE_OWNER_USERNAME=tom`
+  are set on production so far, deliberately, to establish the real
+  `WORKSPACE_OWNER_USER_ID` (=2) from boot evidence without opening
+  anything - gates 2 and 3 both still fail, so nobody, Tom included, can
+  reach it yet. `WORKSPACE_ACCESS_PASSPHRASE` is Tom's to set directly in
+  Railway, never through chat or Drive; the fast rollback for any
+  workspace-specific concern is unsetting the flag, which returns to the
+  fully-inert state with no code change.
+- Y1 and Y2 (both LOW, from the eighteenth review) are unchanged, per
+  Tom's instruction not to chase a wording point after a
+  PASS-plus-fitness verdict. Neither is a security or access defect.
+- `feature/social-portal` and `fix/scott-clearance-fail-closed` are
+  deliberately NOT in this release - separate branches, each awaiting
+  its own confirmatory Governance pass.
+- The full release record, with exact deployment ids, boot log
+  transcripts, HTTP metrics evidence and the rollback point, is
+  "ARRINGTON AI WORKSPACE V0.1 - PRODUCTION RELEASE RECORD v3
+  (31 AUG 2026)" in the controlled Drive folder.
+
+The paragraph below describes the candidate's state before release and
+is left as written.
 
 The real internal workspace, at `/workspace`. **On its branch, not on
 main, and OFF in production.** Branch `feature/arrington-ai-workspace-v0-1`,
