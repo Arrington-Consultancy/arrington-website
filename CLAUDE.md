@@ -1038,9 +1038,10 @@ appears in it.
 What she may say is declared as a field list and anything else THROWS -
 the same structural discipline as the unlock alert after finding H7 -
 because a named component that talks to the owner is otherwise a
-disclosure channel with no gate on it. She is handed a lane id and three
-booleans, never a record or an answer, so she cannot repeat what a lane
-withheld.
+disclosure channel with no gate on it. She is handed a lane id, two booleans and a
+count, never a record and never the answer text (finding U2 corrected
+the earlier "three booleans", and the count is the one value she
+interpolates).
 
 **She is Arrington's, not Scott's.** Scott's demonstration has a
 receptionist too; nothing is imported in either direction. "Reuse
@@ -1115,6 +1116,81 @@ connectors, which is a genuine expansion of the approved source set. It
 is built staging-first and credential-gated, and the expansion is being
 routed to Governance and Assurance as a controlled change rather than
 treated as self-approved.
+
+### Twelfth review PASS, then two more after Ruth (31/08/2026)
+
+The **twelfth** pass (`review/workspace-v0.1-governance-review-12-2026-08-31.md`)
+returned **PASS** against head `d745a55`, the first green verdict in
+twelve, with two LOW findings (S1, S2) answered in the S remediation.
+That verdict covers the candidate **as it stood at that head**. Ruth was
+added afterwards on Tom's instruction, which is a material change, so the
+candidate went back for confirmatory passes rather than inheriting the
+green.
+
+**Thirteenth** (`...-13-...`, **AMBER**, T1-T6 against head `93d6afa`)
+and **fourteenth** (`...-14-...`, **AMBER**, U1 MEDIUM plus four LOW
+against head `eeb3a25`), answered in
+`review/workspace-v0.1-t-remediation-2026-08-31.md` and
+`review/workspace-v0.1-u-remediation-2026-08-31.md`. All eleven
+corrected. T1-T3 are recorded in the Ruth section above.
+
+**U1 is the sharpest finding in fourteen passes, because it is an honesty
+defect in the voice of the component added to be honest.** Ruth said
+**"I answered that one myself"**. She holds no clearance and reads no
+record, so she authors nothing. It is the same class of untruth thirteen
+reviews spent their time removing from the unlock alert: a component
+describing something that did not happen.
+
+Two things made it worse than a stray sentence, and both are the
+recurring pattern rather than new:
+
+- **A two-part finding fixed in one part and reported as fixed in both,
+  for the third cycle running.** T1 had two limbs, the controlled
+  statements and Ruth's own output. The T remediation corrected the
+  statements and said "all six corrected".
+- **It was the DEFAULT path, not an edge case.** Routing is nine keyword
+  regexes, so an unrouted question is the common case, and the T2
+  prototype fix then sent every invalid lane id down that same branch.
+  The reach of the false sentence grew inside the commit meant to correct
+  things.
+
+The no-lane turn now says what is true: no specialist matched, and the
+workspace answered from its general records. The test sweeps four lane
+ids by two answered states by two gap states by three record counts
+rather than the one combination that was wrong, and was watched red
+against `eeb3a25`.
+
+**U5** is the same shape: T3's `gapRaised` branch sat below the no-lane
+early return, so it was inert on the default path, and the test written
+for T3 used a lane id that never reaches that return. A gap is now
+reported on both paths and asserted on both.
+
+**U3 and U4 were both my own over- and under-correction of T5** in
+`test/gatedSuites.test.js`. `DB_ONLY_GATE` suppressed all three clauses
+instead of the one it is about, so any file containing the literal phrase
+"set DATABASE_URL" stopped being checked for registering nothing or
+returning early, silently, on ten real files. And the environment-name
+match required upper case, so a lower-case or mixed-case read and a
+computed bracket key both walked past a paragraph claiming to cover them.
+The computed rule is deliberately narrowed to a computed **read**: five
+real suites here set or delete env keys by computed name as part of a
+test, and flagging those would have made the check noise. Seven probes
+now run in both directions.
+
+**What the fourteenth reviewer re-established rather than inherited:**
+the full CMS-admin takeover stopping at the unlock screen with a positive
+control in the same run; 3,591 paired anonymous raw-socket requests per
+flag state, all identical; and Ruth probed across twenty
+clearance-by-lane combinations with the model stubbed to echo everything
+it could see, leaking nothing. They also hunted T2's prototype class
+across every dynamic lookup in `lib/`, `routes/`, `middleware/`,
+`server.js` and `db/` and found no second reachable instance.
+
+**One latent fail-open is carried to Tom rather than fixed here.**
+`lib/scott/clearance.js`'s `personaDomains` falls back to the owner
+persona for an unrecognised id. It is unreachable today and it is live in
+production, so changing it on the way to a workspace release would be
+exactly the scope drift these reviews exist to catch.
 
 ### Fourth governance review: AMBER, four findings, no HIGH (31/08/2026)
 

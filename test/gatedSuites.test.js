@@ -95,10 +95,26 @@ test('a gated suite cannot appear without being declared', () => {
     // nothing" passed it, because the source text does contain `test(`.
     // A suite cannot decide whether to register on configuration without
     // READING configuration, so this is the check that catches it.
+    // Finding U4: the name after process.env was required to be upper
+    // case, so a lower-case or mixed-case variable slipped through, and a
+    // computed bracket key was invisible. Both are ordinary JavaScript,
+    // and the paragraph above claimed to cover them.
     const referenced = new Set(
-      (src.match(/process\.env\.([A-Z0-9_]+)/g) || []).map((m) => m.split('.').pop())
-        .concat((src.match(/process\.env\[['"]([A-Z0-9_]+)['"]\]/g) || [])
-          .map((m) => m.replace(/.*['"]([A-Z0-9_]+)['"].*/, '$1')))
+      (src.match(/process\.env\.([A-Za-z0-9_]+)/g) || []).map((m) => m.split('.').pop())
+        .concat((src.match(/process\.env\[['"]([A-Za-z0-9_]+)['"]\]/g) || [])
+          .map((m) => m.replace(/.*['"]([A-Za-z0-9_]+)['"].*/, '$1')))
+        // A computed READ: process.env[whatever], where the name cannot
+        // be resolved statically, so it is treated as reading something
+        // unknown. Deliberately not a computed WRITE - five real suites
+        // here set or delete env keys by computed name as part of a
+        // test, and flagging those was a false positive that would have
+        // made this check noise.
+        .concat(
+          (src.match(/process\.env\[[^\]]+\]\s*(=[^=]|$)?/gm) || [])
+            .filter((m) => !/\]\s*=[^=]/.test(m))
+            .filter((m) => !new RegExp(`delete\\s+${m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`).test(src))
+            .length ? ['<computed>'] : []
+        )
         .concat((src.match(/\{([^{}]*)\}\s*=\s*process\.env/g) || [])
           .flatMap((m) => (m.match(/[A-Z0-9_]{2,}/g) || [])))
     );
@@ -113,7 +129,7 @@ test('a gated suite cannot appear without being declared', () => {
       ...(src.match(/(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*\{\s*\.\.\.\s*process\.env[^}]*\}/g) || [])
     ].map((m) => m.replace(/^(?:const|let|var)\s+([A-Za-z_$][\w$]*)[\s\S]*$/, '$1'));
     for (const alias of aliases) {
-      for (const r of src.match(new RegExp(`\\b${alias}\\.([A-Z0-9_]{2,})`, 'g')) || []) {
+      for (const r of src.match(new RegExp(`\\b${alias}\\.([A-Za-z0-9_]{2,})`, 'g')) || []) {
         referenced.add(r.split('.').pop());
       }
     }
@@ -130,7 +146,14 @@ test('a gated suite cannot appear without being declared', () => {
     // suppression made this report every database-only suite as an
     // undeclared gate. A developer without a database knows it, and
     // those are not the absences that have been mistaken for coverage.
-    const dbOnly = DB_ONLY_GATE.test(src) && !readsConfiguration.length;
+    // Finding U3: this suppression was applied to ALL THREE clauses, so
+    // any file containing the literal phrase "set DATABASE_URL" stopped
+    // being checked for registering nothing or returning early - ten real
+    // files, silently. It suppresses only the clause it is about: a
+    // database-only gate is not an absence anyone has mistaken for
+    // coverage, but a file that registers no tests is, whatever else it
+    // happens to say.
+    const dbOnlyEnvGate = DB_ONLY_GATE.test(src) && !readsConfiguration.length;
 
     // 2. A file that registers nothing at all.
     const registersSomething = /\b(?:test|describe|it)\s*\(/.test(src);
@@ -144,10 +167,10 @@ test('a gated suite cannot appear without being declared', () => {
     // configuration gate actually reads.
     const returnsEarlyOnEnv = /if\s*\([^)]*process\.env[^)]*\)\s*\{?\s*return\b/.test(src);
 
-    const why = dbOnly ? null
-      : readsConfiguration.length ? `reads ${readsConfiguration.sort().join(', ')}`
-      : (!registersSomething ? 'registers no tests'
-        : (returnsEarlyOnEnv ? 'returns early on configuration' : null));
+    const why = !registersSomething ? 'registers no tests'
+      : (!dbOnlyEnvGate && readsConfiguration.length) ? `reads ${readsConfiguration.sort().join(', ')}`
+        : (!dbOnlyEnvGate && returnsEarlyOnEnv) ? 'returns early on configuration'
+          : null;
 
     if (why && !declared.has(file)) undeclared.push(`${path.relative(TEST_ROOT, file)} (${why})`);
   }

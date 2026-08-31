@@ -60,27 +60,50 @@ test('she cannot invent a colleague, including one inherited from Object', () =>
     const note = receptionist.handoffNote({ laneId, answered: true, recordCount: 2 });
     assert.ok(!/Object|Function|\[native code\]/.test(note), `"${laneId}" produced a colleague from the prototype chain: ${note}`);
     assert.ok(!note.includes(laneId), `"${laneId}" was echoed back as if it were a person`);
-    assert.match(note, /could not tell who holds that|myself/);
+    assert.match(note, /could not tell who holds that|did not match one of the specialists/,
+      `"${laneId}" did not fall back to the honest no-lane sentence: ${note}`);
   }
 });
 
-test('a gap is reported even when an answer came back', () => {
-  // Finding T3, tested the way it actually fails. The caller passes
-  // `answered: !!result.answer`, which is true whenever the workspace
-  // replied at all, so `answered: false` is not a case production
-  // reaches. gapRaised was only consulted on the !answered branch, which
-  // made both honest gap sentences dead in practice while a
-  // hand-written case list still hit them.
+test('a gap is reported even when an answer came back, on BOTH paths', () => {
+  // Finding T3, and finding U5 which is the half T3's test could not
+  // see. The gap branch sat below the no-lane early return, so
+  // gapRaised was still fully inert on the commonest turn of all - and
+  // the test pinned it with laneId: 'google_ads', which never reaches
+  // that return.
   //
-  // So this pins the combination the route really produces: an answer
-  // came back AND a gap was raised. A gap is the most useful thing she
-  // can tell the owner - the records did not cover it and somebody wrote
-  // that down instead of guessing - and it must not be swallowed by the
-  // answer.
-  const withGap = receptionist.handoffNote({ laneId: 'google_ads', answered: true, recordCount: 2, gapRaised: true });
-  const withoutGap = receptionist.handoffNote({ laneId: 'google_ads', answered: true, recordCount: 2, gapRaised: false });
-  assert.match(withGap, /gap/i, 'a gap raised alongside an answer is never mentioned, so the flag changes nothing');
-  assert.notEqual(withGap, withoutGap, 'gapRaised makes no difference to what she says');
+  // Routing is nine keyword regexes, so "no lane matched" is the DEFAULT
+  // path. Any property of hers has to be asserted on it, not only on the
+  // routed one.
+  for (const laneId of ['google_ads', null]) {
+    const withGap = receptionist.handoffNote({ laneId, answered: true, recordCount: 2, gapRaised: true });
+    const withoutGap = receptionist.handoffNote({ laneId, answered: true, recordCount: 2, gapRaised: false });
+    assert.match(withGap, /gap/i, `lane=${laneId}: a gap raised alongside an answer is never mentioned`);
+    assert.notEqual(withGap, withoutGap, `lane=${laneId}: gapRaised makes no difference to what she says`);
+  }
+});
+
+test('she never claims to have written an answer', () => {
+  // Finding U1. She holds no clearance and reads no record, so she
+  // cannot author anything. A sentence claiming she did is the same
+  // class of untruth this codebase spent thirteen reviews removing from
+  // the alert: a component describing something that did not happen.
+  //
+  // Swept across every combination rather than the one that was wrong,
+  // because the previous sentence was reached by the DEFAULT path and
+  // nobody noticed for two cycles.
+  const claims = /\bI (?:answered|wrote|worked (?:it|that) out)\b/i;
+  for (const laneId of ['google_ads', null, 'constructor', 'not-a-lane']) {
+    for (const answered of [true, false]) {
+      for (const gapRaised of [true, false]) {
+        for (const recordCount of [0, 1, 5]) {
+          const note = receptionist.handoffNote({ laneId, answered, recordCount, gapRaised });
+          assert.ok(!claims.test(note),
+            `she claims authorship on lane=${laneId} answered=${answered} gap=${gapRaised}: "${note}"`);
+        }
+      }
+    }
+  }
 });
 
 test('her directory exposes names, never what any lane can read', () => {
