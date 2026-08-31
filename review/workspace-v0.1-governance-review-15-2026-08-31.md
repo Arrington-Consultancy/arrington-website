@@ -1001,3 +1001,23 @@ without this erratum, because a reviewed document is not the builder's to
 edit and I did not push to their branch. This branch,
 `governance/workspace-v01-review-15`, carries the as-delivered text plus
 this note. The two differ by this section and nothing else.
+
+---
+
+**Builder's note, added 31/08/2026 after governance finding X4. Nothing
+of the reviewer's text above is altered.**
+
+The paragraph immediately above was true when its author wrote it and is
+not true of the file you are reading. The erratum was carried onto the
+candidate branch on 31/08/2026, in commit `7a85d59`, so both copies now
+carry it and they no longer differ at all. A reader of the candidate was
+being told by the file itself that the copy in their hands lacked what
+they were reading.
+
+The carry was byte-identical and the as-delivered body can still be
+compared byte for byte: the diff adds the erratum at the end and changes
+nothing above it. This note is appended for the same reason the V and T
+remediations carry dated correction blocks rather than rewrites - a
+reviewed document is not the builder's to edit, and that principle is
+what produced the stale sentence rather than what should have prevented
+its correction.

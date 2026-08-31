@@ -1,0 +1,8 @@
+// X3, the other missed spelling: an early return read off an alias, on
+// an ambient name.
+const test = require('node:test');
+const env = process.env;
+test('a suite the runner calls PASSING because it returned early', () => {
+  if (!env.CI) return;
+  throw new Error('never reached');
+});

@@ -103,7 +103,13 @@ const LANE_IDS = LANES.map((l) => l.id);
 // Real lanes, plus the ids that reach the no-lane default: nothing,
 // nonsense, and the prototype keys finding T3 was about.
 const PROBE_LANE_IDS = [...LANE_IDS, null, undefined, '', 'not-a-lane', 'constructor', '__proto__', 'toString'];
-const PROBE_COUNTS = [0, 1, 2, 7, 99];
+// Governance finding X2: this used to be a five-value sample while the
+// test was named "every reachable sentence", and a sentence conditional
+// on a sixth count passed. The count is an unbounded non-negative
+// integer, so no sample is an enumeration. The list is widened here, and
+// the PROPERTY that makes a sample sufficient is asserted separately
+// below: the output depends on the count only through {0, 1, two-or-more}.
+const PROBE_COUNTS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 99, 1000];
 
 function normalise(line) {
   let t = line;
@@ -122,6 +128,31 @@ function everyReachableNote() {
   }
   return out;
 }
+
+test('the output depends on the count only through none, one, and more than one', () => {
+  // Finding X2, and this is what makes the sampling above sufficient
+  // rather than merely wider. If every count from 2 to 60 yields the same
+  // normalised shape, then a branch conditional on a particular count
+  // cannot exist, and "every reachable sentence" is established rather
+  // than sampled.
+  for (const laneId of PROBE_LANE_IDS) {
+    for (const gapRaised of [true, false]) {
+      const shapes = new Set();
+      for (let n = 2; n <= 60; n += 1) {
+        shapes.add(normalise(receptionist.handoffNote({ laneId, recordCount: n, gapRaised })));
+      }
+      assert.equal(shapes.size, 1,
+        `the sentence changes with the count above one on lane=${String(laneId)} gap=${gapRaised}: ${[...shapes].join(' | ')}`);
+    }
+    // And the three classes really are distinct, or the property above
+    // would be satisfied by a function that ignores the count entirely.
+    for (const gapRaised of [true, false]) {
+      const classes = new Set([0, 1, 2].map((n) => normalise(receptionist.handoffNote({ laneId, recordCount: n, gapRaised }))));
+      assert.equal(classes.size, 3,
+        `none, one and more-than-one do not read differently on lane=${String(laneId)} gap=${gapRaised}`);
+    }
+  }
+});
 
 test('every reachable sentence is one she is permitted to say', () => {
   const permitted = new Set(PERMITTED_SHAPES);

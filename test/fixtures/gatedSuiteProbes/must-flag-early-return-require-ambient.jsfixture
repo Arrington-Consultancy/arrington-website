@@ -1,0 +1,10 @@
+// Governance finding X3. An early return gated on an AMBIENT name, via
+// require('process') - W3's own probe B, in the one clause that was not
+// factored. Ambient is the point: the name-reading rule deliberately
+// stands down on CI, so the early-return rule is all that is left, and
+// two spellings of one gate classified differently.
+const test = require('node:test');
+test('a suite the runner calls PASSING because it returned early', () => {
+  if (!require('process').env.CI) return;
+  throw new Error('never reached');
+});

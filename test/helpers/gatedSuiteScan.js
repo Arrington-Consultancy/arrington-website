@@ -60,6 +60,39 @@ const NAME = '[A-Za-z0-9_]';
 // It is recorded as the next step rather than claimed as done.
 const ENV_EXPR = String.raw`(?:(?:globalThis\s*\.\s*)?process\s*(?:\.\s*env\b|\[\s*['"]env['"]\s*\])|require\(\s*['"]process['"]\s*\)\s*\.\s*env\b)`;
 
+// The identifiers bound to the environment object in this source. Shared
+// by the name-reading rule and the early-return rule, so that finding X3
+// cannot recur by one clause knowing about an alias the other does not.
+function envAliases(src) {
+  const aliasPatterns = [
+    // const e = process.env  /  const e = require('process').env
+    new RegExp(`(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*${ENV_EXPR}\\s*[;\\n]`, 'g'),
+    // const e = { ...process.env }
+    new RegExp(`(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*\\{\\s*\\.\\.\\.\\s*${ENV_EXPR}[^}]*\\}`, 'g'),
+    // const e = Object.assign({}, process.env)
+    new RegExp(`(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*Object\\.assign\\([^)]*${ENV_EXPR}[^)]*\\)`, 'g'),
+    // const { env } = process  /  const { env: e } = process
+    /(?:const|let|var)\s*\{\s*env\s*(?::\s*([A-Za-z_$][\w$]*))?\s*\}\s*=\s*(?:globalThis\s*\.\s*)?process\b/g
+  ];
+  const aliases = new Set();
+  for (const re of aliasPatterns) {
+    let m;
+    while ((m = re.exec(src)) !== null) {
+      // The bare `const { env } = process` form binds the name `env`.
+      aliases.add(m[1] || 'env');
+    }
+  }
+  return aliases;
+}
+
+// The alias names as a regex alternation, or a pattern that matches
+// nothing when there are none. Never empty, because an empty alternation
+// matches everywhere.
+function aliasAlternation(src) {
+  const names = [...envAliases(src)].map((a) => a.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  return names.length ? `(?:${names.join('|')})\\s*[.[]` : '(?!)';
+}
+
 function referencedEnvNames(src) {
   const referenced = new Set();
   const add = (n) => { if (n) referenced.add(n); };
@@ -93,26 +126,9 @@ function referencedEnvNames(src) {
   //    four more ways to hold the same object. Track what is read OFF an
   //    alias, not the alias itself, because two real suites here spread
   //    the environment into a child process or snapshot it for restore
-  //    and neither is a gate.
-  const aliasPatterns = [
-    // const e = process.env  /  const e = require('process').env
-    new RegExp(`(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*${ENV_EXPR}\\s*[;\\n]`, 'g'),
-    // const e = { ...process.env }
-    new RegExp(`(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*\\{\\s*\\.\\.\\.\\s*${ENV_EXPR}[^}]*\\}`, 'g'),
-    // const e = Object.assign({}, process.env)
-    new RegExp(`(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*Object\\.assign\\([^)]*${ENV_EXPR}[^)]*\\)`, 'g'),
-    // const { env } = process  /  const { env: e } = process
-    /(?:const|let|var)\s*\{\s*env\s*(?::\s*([A-Za-z_$][\w$]*))?\s*\}\s*=\s*(?:globalThis\s*\.\s*)?process\b/g
-  ];
-  const aliases = new Set();
-  for (const re of aliasPatterns) {
-    let m;
-    while ((m = re.exec(src)) !== null) {
-      // The bare `const { env } = process` form binds the name `env`.
-      aliases.add(m[1] || 'env');
-    }
-  }
-  for (const alias of aliases) {
+  //    and neither is a gate. The alias set is computed by envAliases so
+  //    the early-return rule below shares it (finding X3).
+  for (const alias of envAliases(src)) {
     for (const r of src.match(new RegExp(`\\b${alias}\\s*\\.\\s*(${NAME}{2,})`, 'g')) || []) {
       add(r.split('.').pop().trim());
     }
@@ -156,7 +172,19 @@ function classifySource(src) {
 
   // An early return guarded on configuration, which the runner reports as
   // a PASSING test rather than a skipped one.
-  const returnsEarlyOnEnv = /if\s*\([^)]*process\.env[^)]*\)\s*\{?\s*return\b/.test(src);
+  //
+  // Governance finding X3: this clause alone was NOT expressed in terms
+  // of ENV_EXPR while the file said every rule was. It matched the
+  // literal text `process.env`, which is the exact shape W3 found
+  // insufficient, and it missed W3's own probe B, `require('process')`.
+  // It was caught overall only because the name-reading rule saw the
+  // name - so the miss became observable precisely where that rule
+  // deliberately stands down, on an ambient name like CI or NODE_ENV,
+  // and two spellings of one gate then classified differently. That is
+  // the "half a fix in each direction" shape this file's U4 comment
+  // warns against, one clause along.
+  const earlyReturn = new RegExp(`if\\s*\\([^)]*(?:${ENV_EXPR}|${aliasAlternation(src)})[^)]*\\)\\s*\\{?\\s*return\\b`);
+  const returnsEarlyOnEnv = earlyReturn.test(src);
 
   if (!registersSomething) return 'registers no tests';
   if (!dbOnlyEnvGate && readsConfiguration.length) return `reads ${readsConfiguration.sort().join(', ')}`;

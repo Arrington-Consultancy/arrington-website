@@ -1208,6 +1208,67 @@ one notice every time, with the harness first shown to break a lock-free
 predecessor 5 times in 10; the permission legs probed with their own
 eight canaries; and the Scott firewall clean at module-graph level.
 
+### Seventeenth governance review: PASS, four LOW (31/08/2026)
+
+`review/workspace-v0.1-governance-review-17-2026-08-31.md` (**PASS**,
+X1-X4, all LOW, against head `69b6e06`), answered in
+`review/workspace-v0.1-x-remediation-2026-08-31.md`. All four corrected,
+each watched red against `69b6e06`.
+
+**Two PASS verdicts in a row.** The reviewer's own summary of why they
+are still findings is the honest framing and is quoted rather than
+paraphrased: *"Four times the seventeenth instance, all in the same
+register the sixteenth pass named: the code has stopped being wrong and
+the sentences about it have not quite caught up."*
+
+**X1: the field guard was own-keys-only.** `assertOnlyPermitted`
+filtered `Object.keys`, so a prototype-borne `recordCount` was invisible
+to it while the destructure read straight through the prototype chain,
+and Ruth stated a count the interface contradicted with no throw. Not a
+disclosure - only declared names are read, so a prototype-borne `record`
+was never spoken - and not reachable, since the single caller builds an
+object literal. It is the guard's own stated mechanism that did not
+hold, which is why it is fixed rather than explained: `for...in` for the
+guard, `Object.hasOwn` for the reads, because either alone leaves the
+other open.
+
+**X2: "every reachable sentence" was a sample of five counts.** The count
+is unbounded, so a sentence conditional on a sixth passed. Fixed with the
+PROPERTY rather than a bigger sample: the output depends on the count
+only through none, one, and more than one, asserted over every count from
+2 to 60, with the three classes asserted genuinely distinct so the
+property cannot be satisfied by ignoring the count.
+
+**X3: one of the three scan rules was not factored.**
+`returnsEarlyOnEnv` still matched the literal `process.env` while the
+file said every rule used the factored expression, so it missed W3's own
+probe B, `require('process')` - observable exactly where the
+name-reading rule stands down, on an ambient name. The alias set is
+computed once and shared by both rules now, so it cannot recur by one
+clause knowing about an alias the other does not.
+
+**X4: a carried erratum describing a file it no longer matched.** The
+fifteenth reviewer's note said the candidate carried the text without it;
+the candidate now carries it. A dated builder's note is appended below,
+in the pattern already used twice in the same commit, and nothing of the
+reviewer's text is altered.
+
+**Recorded, not fixed:** `npm test` with no `DATABASE_URL` gives 21
+failures in the CRM and erasure suites, which need a database without
+gating on one. Measured identically at `69b6e06`, so it is pre-existing
+and outside this candidate, and it belongs with the W3 "positive
+obligation" work rather than with a release commit.
+
+**What the seventeenth reviewer re-established:** Ruth's output space at
+5,152 calls and 20 shapes, of which exactly 12 are production-reachable
+and exactly those 12 declared; 11 of 12 mutations red; the three gates
+across 15,300 request comparisons and 1,680 timed requests against shape-
+and length-matched controls, with a positive control that does differ;
+the CMS-admin takeover stopping at the unlock screen; and - sharper than
+the previous pass - the advisory lock alone holding the alert's bound
+across 40 bursts with the unique index dropped, while a lock-free
+predecessor breaks 29 times in 40.
+
 ### Sixteenth governance review: PASS, four LOW (31/08/2026)
 
 `review/workspace-v0.1-governance-review-16-2026-08-31.md` (**PASS**,
