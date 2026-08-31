@@ -208,23 +208,161 @@ test('failed-unlock alerting, against a real database', { skip: dbReady ? false 
     assert.equal((await rowsOf(alert.ALERT_EVENT)).length, 1);
   });
 
-  // THE J1 CASE. This is the property the module states as Rule 2, tested
-  // the way it can actually fail: concurrently.
+  // THE J1 CASE, corrected after governance finding K2 (31/08/2026).
+  //
+  // The original version of this subtest called the real function,
+  // concurrently, against a real database - and still proved nothing,
+  // because it ran on the easy path and the easy path was invisible. In
+  // a fresh process it passed six times out of six. Issue eight ordinary
+  // queries first, which is less warm-up than a live server has in its
+  // first second, and it failed three times in six; looped so the pool
+  // stays warm, nineteen red in twenty-five.
+  //
+  // The mechanism: with a cold pool node-postgres must open a connection
+  // for each concurrent caller, and the cost of establishing them
+  // staggers the statements enough that they usually serialise by
+  // accident. A running server already has those connections. So the
+  // condition the property claims to hold under is a warm pool, and the
+  // test's condition was a process that had just started.
+  //
+  // Hence: warm first, and repeat, so one lucky interleaving cannot
+  // carry it.
   await t.test('a concurrent burst still produces exactly one notice', async () => {
+    // The warm-up IS the test setup. Without it this passes against code
+    // that does not hold the property.
+    await Promise.all(Array.from({ length: 8 }, () => db.query('SELECT 1')));
+
+    for (let round = 1; round <= 5; round += 1) {
+      await reset();
+      await seedFailures(10);
+      const sent = [];
+      // A delay in the transport widens the window further.
+      const send = async (m) => {
+        await new Promise((r) => setTimeout(r, 120));
+        sent.push(m);
+        return { sent: true };
+      };
+      await Promise.all(Array.from({ length: 8 }, () => alert.maybeAlertOnFailedUnlock(db, { username: SUBJECT, sendFn: send })));
+      assert.equal(sent.length, 1, `round ${round}: eight concurrent attempts delivered ${sent.length} messages; the stated bound is one`);
+      assert.equal((await rowsOf(alert.ALERT_EVENT)).length, 1, `round ${round}: more than one delivered row was written for one burst`);
+    }
+  });
+
+  // THE SECOND J1 CASE, found by racing processes rather than promises.
+  //
+  // The case above passes with or without the advisory lock, because
+  // eight calls in one event loop almost always serialise by accident.
+  // That is exactly how the false property survived a green test: the
+  // module asserted boundedness "no matter how many arrive at once", the
+  // in-process test agreed, and twelve separate processes won the claim
+  // 2 to 4 times a round.
+  //
+  // Concurrency inside one process is not the condition the property
+  // claims to hold under. This runs it under the real one.
+  await t.test('processes racing the same instant produce exactly one claim', async () => {
     await reset();
     await seedFailures(10);
-    const sent = [];
-    // A delay in the transport widens the window that the old code left
-    // open. Without the claim, every one of these reads "no recent
-    // alert" before any of them writes one.
-    const send = async (m) => {
-      await new Promise((r) => setTimeout(r, 120));
-      sent.push(m);
-      return { sent: true };
-    };
-    await Promise.all(Array.from({ length: 8 }, () => alert.maybeAlertOnFailedUnlock(db, { username: SUBJECT, sendFn: send })));
-    assert.equal(sent.length, 1, `eight concurrent attempts delivered ${sent.length} messages; the stated bound is one`);
-    assert.equal((await rowsOf(alert.ALERT_EVENT)).length, 1, 'more than one delivered row was written for one burst');
+
+    const { execFile } = require('node:child_process');
+    const workerPath = require('node:path').join(__dirname, '../../scripts/workspaceUnlockClaimWorker.js');
+    const WORKERS = 12;
+    const gun = Date.now() + 2500; // time enough for every process to boot and connect
+
+    const runs = Array.from({ length: WORKERS }, () => new Promise((resolve) => {
+      execFile(process.execPath, [workerPath, String(gun), SUBJECT], { env: process.env }, (err, stdout) => {
+        const line = String(stdout).trim().split('\n').filter((l) => l.startsWith('{')).pop();
+        resolve(line ? JSON.parse(line) : { id: null, err: err ? err.message : 'no output' });
+      });
+    }));
+    const results = await Promise.all(runs);
+
+    const failures = results.filter((r) => r.err);
+    assert.equal(failures.length, 0, `worker errors: ${JSON.stringify(failures.slice(0, 3))}`);
+
+    const winners = results.filter((r) => r.id !== null);
+    assert.equal(
+      winners.length, 1,
+      `${WORKERS} processes racing one instant won ${winners.length} claims; the stated bound is one, `
+      + 'so this many notices would have been emailed for a single burst'
+    );
+
+    const pending = await rowsOf(alert.ALERT_PENDING_EVENT);
+    assert.equal(pending.length, 1, `${pending.length} claim rows were written for one burst`);
+  });
+
+  // Every other case in this file injects sendFn, which means the wiring
+  // from the decision to the ACTUAL sender was never executed by any
+  // test: not that the resolved recipient reaches sendMail, not that the
+  // subject and body reach it intact, not that a transport that throws
+  // becomes { sent: false } rather than an exception, and not that a
+  // missing credential is reported rather than crashing. Those are the
+  // properties that decide whether Tom is warned, so they are tested
+  // against the real path with only the transport itself replaced.
+  await t.test('the real send path carries the alert to the transport', async () => {
+    await reset();
+    await seedFailures(alert.THRESHOLD);
+    const posted = [];
+    alert.__setTransportForTests({ sendMail: async (m) => { posted.push(m); return { accepted: [m.to] }; } });
+    try {
+      const res = await alert.maybeAlertOnFailedUnlock(db, { username: SUBJECT }); // no sendFn: the real one
+      assert.equal(res.sent, true, 'the real send path did not report a delivery');
+      assert.equal(posted.length, 1, `the transport received ${posted.length} messages`);
+      assert.equal(posted[0].to, alert.alertRecipient(), 'the message did not go to the resolved recipient');
+      // What is delivered must be exactly what buildAlert produced.
+      // Asserting equality rather than re-scanning the text for secrets
+      // is deliberate: the leak guarantee is established structurally
+      // above, on buildAlert's signature, and a second hand-written
+      // scan here would be weaker than the one it duplicates. A first
+      // draft of this line proved the point by matching the innocent
+      // words "passphrase is also required" and failing.
+      const expected = alert.buildAlert({
+        username: SUBJECT,
+        failures: alert.THRESHOLD,
+        windowMinutes: alert.WINDOW_MINUTES,
+        firstAt: new Date(0),
+        lastAt: new Date(0)
+      });
+      assert.equal(posted[0].subject, expected.subject, 'the delivered subject is not the one buildAlert produces');
+      const stripTimes = (t) => t.replace(/^(First recorded|Most recent):.*$/gm, '<timestamp>');
+      assert.equal(
+        stripTimes(posted[0].text), stripTimes(expected.body),
+        'the delivered body is not the one buildAlert produces, so its leak guarantee does not cover what was sent'
+      );
+      assert.equal((await rowsOf(alert.ALERT_EVENT)).length, 1);
+    } finally {
+      alert.__resetTransportForTests();
+    }
+  });
+
+  await t.test('a transport that throws is reported, not raised', async () => {
+    await reset();
+    await seedFailures(alert.THRESHOLD);
+    alert.__setTransportForTests({ sendMail: async () => { throw new Error('535 auth failed'); } });
+    try {
+      // This must not reject: the unlock route calls it fire-and-forget,
+      // and an unhandled rejection there is a crash on a security path.
+      const res = await alert.maybeAlertOnFailedUnlock(db, { username: SUBJECT });
+      assert.equal(res.sent, false);
+      assert.match(res.error, /535/);
+      assert.equal((await rowsOf(alert.ALERT_FAILED_EVENT)).length, 1, 'the failed delivery was not recorded as a failure');
+      assert.equal((await rowsOf(alert.ALERT_EVENT)).length, 0, 'a failed send wrote a delivered row');
+    } finally {
+      alert.__resetTransportForTests();
+    }
+  });
+
+  await t.test('an unconfigured mailbox is reported honestly rather than silently dropped', async () => {
+    await reset();
+    await seedFailures(alert.THRESHOLD);
+    alert.__setTransportForTests(null); // what getTransport returns with no GMAIL_APP_PASSWORD
+    try {
+      const res = await alert.maybeAlertOnFailedUnlock(db, { username: SUBJECT });
+      assert.equal(res.sent, false);
+      assert.match(res.error, /GMAIL_APP_PASSWORD/);
+      assert.equal((await rowsOf(alert.ALERT_FAILED_EVENT)).length, 1, 'an unsendable alert left no durable trace');
+    } finally {
+      alert.__resetTransportForTests();
+    }
   });
 
   await t.test('a failed send does not buy the hour, and the next attempt retries', async () => {

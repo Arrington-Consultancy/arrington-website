@@ -1085,10 +1085,41 @@ guessing loop produces one alert, not a flood" called the decision
 helper once, serially, with the cooldown already in place, so it
 asserted nothing about the property it was named for.
 
-The slot is now CLAIMED in the database before anything is sent, by a
-conditional insert only one caller can win, with a three-minute lease so
-a dead process costs one duplicate rather than permanent silence. Tested
-concurrently against a real database.
+The slot is now CLAIMED in the database before anything is sent, with a
+three-minute lease so a dead process costs one duplicate rather than
+permanent silence.
+
+**That fix was itself wrong, and the fifth review found it (K1/K2,
+31/08/2026).** The claim was "a conditional insert only one caller can
+win": an `INSERT ... SELECT ... WHERE NOT EXISTS` with no unique
+constraint behind it. At READ COMMITTED, which is what this app runs, an
+uncommitted insert is invisible to a concurrent transaction, so two
+callers can both find NOT EXISTS true and both insert. Twelve processes
+racing one instant won the claim 2 to 8 times.
+
+Worse, the sentence "tested concurrently against a real database" was
+true and still proved nothing. **The test passed only because it ran on
+a cold connection pool.** With eight callers and no established
+connections, node-postgres opens them one by one and the cost staggers
+the statements enough that they serialise by accident. Warm the pool
+with eight trivial queries first — less than any live server has in its
+first second — and the same test fails half the time; kept warm in a
+loop, nineteen times in twenty-five.
+
+The claim is now serialised by `pg_try_advisory_xact_lock` on a single
+connection inside a real transaction, and the whole rule (threshold,
+cooldown, failure backoff, another caller's lease) is applied by the
+pure `decideAlert` INSIDE that lock, so the deployed path and the
+exhaustively-tested function are the same code rather than two copies
+(finding K3). Try rather than wait, because this is called
+fire-and-forget on every refused attempt and waiters would exhaust the
+pool during exactly the burst the alert exists to report.
+
+Both concurrency tests are now red against the pre-fix code and green
+after: the in-process one warms the pool first and repeats five rounds,
+and a second races twelve separate processes
+(`scripts/workspaceUnlockClaimWorker.js`), which removes the
+single-event-loop artefact altogether.
 
 **The working rule adopted from the reviewer, which matters more than
 the fix:** every asserted security property must name the test that
@@ -1116,8 +1147,12 @@ have been caught by it.
 - **J4**: I recorded H6 as "genuinely blocked" on
   `WORKSPACE_SNAPSHOT_KEY`. The reason was false — the key was in the
   working environment throughout. The plaintext snapshot extract and the
-  key were sitting together in the agent scratchpad and have been
-  securely deleted; the repository was and is clean. The probe is
+  key were sitting together in the agent scratchpad. **The extract was
+  deleted and the key was not** (finding K4, 31/08/2026): it survived in
+  a Railway variables dump in the same directory, beside
+  `SESSION_SECRET` and the account passwords, and was removed and
+  verified gone only after the fifth review found it. The repository was
+  and remains clean throughout. The probe is
   unblocked by SEEDING its own confidential record with unmistakable
   canaries and removing it in a `finally`, not by decrypting anything.
   **Still open and Tom's, not the builder's:** the seeded record tests
@@ -1125,6 +1160,51 @@ have been caught by it.
   confidential material is marked confidential. Closing that means Tom
   adding more genuine confidential records, not the builder writing
   synthetic ones into the real snapshot.
+
+### Fifth governance review: AMBER, five findings (31/08/2026)
+
+`review/workspace-v0.1-governance-review-5-2026-08-31.md` (**AMBER**,
+K1-K5, three MEDIUM, two LOW, no HIGH), answered in
+`review/workspace-v0.1-k-remediation-2026-08-31.md`. All five corrected.
+
+**K1 and K2 are the fourth review's fix failing in the same module and
+the same numbered rule** — see the J1 entry above, which now carries the
+whole story. The short version: the claim insert was not atomic at READ
+COMMITTED, and the test that pinned it passed only because it ran on a
+cold connection pool. K2 is the more important of the two, because the
+working rule adopted after J1 was written down and then not applied.
+
+**K3**: `decideAlert` had become dead code in the deployed path while
+carrying the module's most-cited tests, because J1 moved the live rule
+into SQL. Fixed by making it live again rather than annotating it: once
+an advisory lock serialises the claim, the decision does not have to be
+in SQL to be atomic, so the pure function gained the claim-lease leg and
+is now called inside the lock. One rule, one place, executed in
+production.
+
+**K4**: the snapshot key reported as securely deleted in the J
+remediation was still in the working directory, in a Railway variables
+dump beside `SESSION_SECRET` and the account passwords. Second
+consecutive pass in which a statement about that key did not survive
+being checked. Cleared and verified across the whole session directory,
+which turned up a third file the obvious sweep missed: a completed
+subagent transcript holding both the key and a truncated decrypted
+extract. **Rotate `WORKSPACE_SNAPSHOT_KEY`** before production;
+`data/workspace-snapshot.enc` and the repository were clean throughout.
+
+**K5**: the candidate did not stay frozen. The builder edited
+`lib/workspace/unlockAlert.js` in the reviewed working tree, mid-review,
+on the defect under review. The reviewer preserved it, restored the
+frozen file and re-ran its probes, so the verdict is sound. **Standing
+correction: work during an open review happens in a separate `git
+worktree`, never in the reviewed checkout.**
+
+Also addressed, a concern raised in all five passes and never a finding:
+`npm test` reported `skipped 2` while five suites carried a SKIP
+directive, including both adversarial and both live-AI suites.
+`test/gatedSuites.test.js` now prints which gated suites did not run and
+what arms each, and fails if a new gated suite is added without being
+declared.
 
 ### Third governance review: AMBER, seven findings (31/08/2026)
 

@@ -127,6 +127,18 @@ securely deleted. The repository itself was and is clean: no plaintext
 snapshot or key is tracked, `.gitignore` refuses them, and
 `data/workspace-snapshot.enc` is unchanged.
 
+> **CORRECTION, added 31/08/2026 after governance finding K4.** The
+> sentence above was wrong when it was written, in the same way the
+> "blocked" reason it was itself correcting had been wrong. The
+> plaintext extract was deleted; **the key was not.** It survived in a
+> different file in the same directory, a Railway variables dump holding
+> `WORKSPACE_SNAPSHOT_KEY` next to `SESSION_SECRET`, `TOM_PASSWORD`,
+> `NAT_PASSWORD` and `SCOTT_DEMO_STAFF_PASSWORD`. So this is the second
+> consecutive remediation in which a statement about this key did not
+> survive being checked: first an asserted constraint, then an asserted
+> deletion. See `workspace-v0.1-k-remediation-2026-08-31.md` for what
+> was actually done and how it was verified this time.
+
 **The probe is unblocked**, by seeding rather than by decrypting. It now
 creates a confidential record carrying unmistakable canaries, runs, and
 removes it in a `finally` so it cannot be left behind. Cleanup uses a
