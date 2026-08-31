@@ -1117,8 +1117,25 @@ app.use((req, res) => render404(req, res));
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
-  const status = err.status || 500;
-  const body = { error: isProd ? 'Internal server error' : err.message };
+  const status = err.status || err.statusCode || 500;
+  // A genuine 5xx can carry a raw exception message (a DB driver string, a
+  // stack-adjacent detail) that must never reach a visitor in production —
+  // that is what this masking exists for. A 4xx thrown by a validation
+  // library (bad CSRF token, malformed input) is a different thing: it is
+  // never sensitive, and hiding it behind the same "Internal server error"
+  // text is actively misleading — a visitor whose session or page was
+  // simply stale sees a message that reads as a real server fault instead
+  // of "reload and try again". Found 31/08/2026: a genuine CSRF rejection
+  // (403, EBADCSRFTOKEN) rendered as bare "Internal server error" text with
+  // no styling, indistinguishable from a real crash.
+  const isClientError = status >= 400 && status < 500;
+  let message = err.message;
+  if (err.code === 'EBADCSRFTOKEN') {
+    message = 'Your session or this page has expired. Please reload the page and try again.';
+  } else if (isProd && !isClientError) {
+    message = 'Internal server error';
+  }
+  const body = { error: message };
   if (req.accepts('json') && !req.accepts('html')) {
     return res.status(status).json(body);
   }
