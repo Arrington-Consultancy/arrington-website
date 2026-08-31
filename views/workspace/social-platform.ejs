@@ -1,0 +1,122 @@
+<%- include('partials/shell-top', { pageTitle: platform.name + ' | Social media', active: 'social' }) %>
+
+<h1 class="ws-h"><%= platform.name %></h1>
+<p class="ws-sub"><a href="/workspace/social">All platforms</a>. The workspace reads, analyses and drafts. Publishing, deleting, replying publicly, changing account settings and spending money stay with a person.</p>
+
+<% if (!permitted) { %>
+  <div class="ws-card"><p class="ws-empty">This area holds account performance, spend and the people who have engaged with us, which your clearance does not cover.</p></div>
+<% } else { %>
+
+<div class="ws-card">
+  <h2>Ask the social lane</h2>
+  <p class="ws-body-text"><strong>ARRINGTON SOCIAL CONTENT BUILDER</strong> holds what was posted, what it cost and what it produced. Ask it about <%= platform.name %> and the question is routed to that lane only.</p>
+  <% if (!aiEnabled) { %>
+    <p class="ws-empty">Workspace AI is not enabled in this environment, so a question would be refused rather than answered from memory. Everything below still works.</p>
+  <% } %>
+  <div class="ws-chat-thread" id="wsSocialThread"></div>
+  <form id="wsSocialAsk">
+    <div class="ws-form-row">
+      <input class="ws-input" type="text" name="question" maxlength="1000" placeholder="What has worked on <%= platform.name %> this year?">
+      <button class="ws-btn" type="submit">Ask</button>
+    </div>
+    <p class="ws-note-error" id="wsSocialError" hidden></p>
+  </form>
+</div>
+
+<div class="ws-card">
+  <h2>Write a post</h2>
+  <p class="ws-body-text">Checked against the writing rules before it can be queued. A queued post goes to <a href="/workspace/approvals">Decisions &amp; approvals</a> as a record. Approving it records your decision; you publish it yourself on the platform. Nothing here publishes.</p>
+  <textarea id="wsPostText" class="ws-input ws-post-text" rows="5" placeholder="What is the post?" data-platform="<%= platform.id %>"></textarea>
+  <div class="ws-post-actions">
+    <button type="button" id="wsPostCheck" class="ws-btn ws-btn-quiet">Check the writing</button>
+    <button type="button" id="wsPostQueue" class="ws-btn">Send for approval</button>
+    <span id="wsPostCount" class="ws-note"></span>
+  </div>
+  <div id="wsPostResult" class="ws-post-result" hidden></div>
+</div>
+
+<div class="ws-card">
+  <h2>Connector</h2>
+  <div class="ws-table-wrap">
+    <table class="ws-table">
+      <tr><th>State</th><th>Last retrieval</th><th>Followers</th></tr>
+      <% accounts.forEach(function (a) { %>
+        <tr><td><%= a.state || a.status %></td><td><%= a.lastRetrieval || 'never' %></td><td><%= a.followers == null ? 'unknown' : a.followers %></td></tr>
+      <% }) %>
+      <% if (!accounts.length) { %><tr><td colspan="3">No connector record for <%= platform.name %>.</td></tr><% } %>
+    </table>
+  </div>
+</div>
+
+<div class="ws-card">
+  <h2>Posts</h2>
+  <% posts.forEach(function (p) { %>
+    <div class="ws-row"><strong><%= p.posted_at || p.posted || '' %></strong><div><%= p.body || p.summary || '' %></div></div>
+  <% }) %>
+  <% if (!posts.length) { %><p class="ws-empty">Nothing retrieved for <%= platform.name %>. That is the connector state above, not a claim that nothing was posted.</p><% } %>
+</div>
+
+<div class="ws-card">
+  <h2>Waiting on a reply</h2>
+  <% outstanding.forEach(function (e) { %>
+    <div class="ws-row"><strong><%= e.author || '' %></strong><div><%= e.body || '' %></div></div>
+  <% }) %>
+  <% if (!outstanding.length) { %><p class="ws-empty">Nothing outstanding for <%= platform.name %>.</p><% } %>
+</div>
+
+<script nonce="<%= nonce %>">
+(function () {
+  var text = document.getElementById('wsPostText');
+  var out = document.getElementById('wsPostResult');
+  var count = document.getElementById('wsPostCount');
+  var token = <%- JSON.stringify(csrfToken) %>;
+
+  function render(result, headline, tone) {
+    var html = '<div class="ws-gate-head ws-gate-' + tone + '">' + headline + '</div>';
+    if (result && result.findings && result.findings.length) {
+      html += '<ul class="ws-gate-list">';
+      result.findings.forEach(function (f) {
+        html += '<li class="ws-gate-' + f.severity + '"><span class="ws-gate-tag">'
+          + (f.severity === 'block' ? 'MUST FIX' : 'TELL') + '</span> <strong>' + f.rule + '</strong>: ' + f.why
+          + '<div class="ws-gate-fix">' + f.fix + '</div>'
+          + '<div class="ws-gate-excerpt">' + f.excerpt + '</div></li>';
+      });
+      html += '</ul>';
+    }
+    out.innerHTML = html;
+    out.hidden = false;
+  }
+
+  function post(url, body, done) {
+    fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-csrf-token': token }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (d) { return { status: r.status, d: d }; }); })
+      .then(done)
+      .catch(function () { render(null, 'The request could not be sent.', 'block'); });
+  }
+
+  text.addEventListener('input', function () { count.textContent = text.value.length + ' characters'; });
+
+  document.getElementById('wsPostCheck').addEventListener('click', function () {
+    post('/api/workspace/social/check', { text: text.value }, function (res) {
+      var r = res.d && res.d.result;
+      if (!r) return render(null, 'Could not check that.', 'block');
+      if (r.ok && !r.warnings) return render(r, 'Nothing flagged. This reads as written by a person.', 'ok');
+      if (r.ok) return render(r, r.warnings + ' thing(s) to look at. None of them stop you posting.', 'warn');
+      render(r, r.blocking + ' thing(s) must be fixed before this can be queued.', 'block');
+    });
+  });
+
+  document.getElementById('wsPostQueue').addEventListener('click', function () {
+    post('/api/workspace/social/queue', { platform: text.getAttribute('data-platform'), text: text.value }, function (res) {
+      if (res.status === 422) return render(res.d.result, res.d.error, 'block');
+      if (res.status !== 200) return render(null, (res.d && res.d.error) || 'That did not work.', 'block');
+      render(null, res.d.note + ' Approval #' + res.d.approvalId + '.', 'ok');
+      text.value = '';
+      count.textContent = '';
+    });
+  });
+})();
+</script>
+
+<% } %>
+<%- include('partials/shell-bottom') %>

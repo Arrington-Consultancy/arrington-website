@@ -30,6 +30,8 @@ const { askWorkspace, isWorkspaceAIEnabled, routeToLane } = require('../lib/work
 const socialRepo = require('../lib/workspace/social/repo');
 const socialActions = require('../lib/workspace/social/actions');
 const socialMemory = require('../lib/workspace/social/memory');
+const socialRegistry = require('../lib/workspace/social/registry');
+const copyGate = require('../lib/social/copyGate');
 const crm = require('../lib/crm/contacts');
 const erasure = require('../lib/crm/erasure');
 
@@ -229,6 +231,40 @@ function mountPageRoute(app, generateCsrfToken) {
       memory: socialMemory,
       aiEnabled: isWorkspaceAIEnabled(),
       csrfToken: generateCsrfToken(req, res)
+    });
+  });
+
+  // One portal per platform, reached from the social page. Same
+  // clearance test as the consolidated page, because it shows the same
+  // class of material for one platform instead of four.
+  page('/workspace/social/:platform', async (req, res) => {
+    const id = String(req.params.platform || '').toLowerCase();
+    if (!socialRegistry.PLATFORM_IDS.includes(id)) return render404(req, res);
+
+    const clearanceId = req.workspaceClearance;
+    const permitted = clearanceCanSeeSensitivity(clearanceId, 'commercial');
+    const platform = socialRegistry.getPlatform(id);
+    const base = {
+      ...viewer(req),
+      counts: await navCounts(clearanceId),
+      platform,
+      aiEnabled: isWorkspaceAIEnabled(),
+      csrfToken: generateCsrfToken(req, res)
+    };
+    if (!permitted) {
+      return res.render('workspace/social-platform', { ...base, permitted: false, accounts: [], posts: [], outstanding: [] });
+    }
+    const [accounts, posts, outstanding] = await Promise.all([
+      socialRepo.accountStates(),
+      socialRepo.listPosts({ platform: id, limit: 40 }),
+      socialRepo.listEngagement({ platform: id, needsReply: true, limit: 40 })
+    ]);
+    res.render('workspace/social-platform', {
+      ...base,
+      permitted: true,
+      accounts: accounts.filter((a) => String(a.platform).toLowerCase() === id),
+      posts,
+      outstanding
     });
   });
 
@@ -498,6 +534,52 @@ async function recordForGap(gap) {
   if (!m) return null;
   return repo.getRecordByKey(m[1]);
 }
+
+// Check a draft against the writing rules. Stores nothing, sends
+// nothing.
+router.post('/api/workspace/social/check', requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
+  try {
+    const text = typeof req.body?.text === 'string' ? req.body.text.slice(0, 8000) : '';
+    res.json({ ok: true, result: copyGate.checkCopy(text) });
+  } catch (err) { next(err); }
+});
+
+// Queue a post for a person to publish.
+//
+// This does NOT publish, and cannot: "publish" is in ACTION_CLASS_HUMAN,
+// so requestHumanAction is the only route it has, and that writes a
+// record which executes nothing even once approved. No connector
+// declares a write scope, so the token could not carry it out either.
+// Tom's approval of the social expansion excludes publishing in terms,
+// and this stays inside that.
+router.post('/api/workspace/social/queue', requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
+  try {
+    if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'commercial')) {
+      return res.status(403).json({ error: 'That is outside your clearance.' });
+    }
+    const id = String(req.body?.platform || '').toLowerCase();
+    if (!socialRegistry.PLATFORM_IDS.includes(id)) return res.status(400).json({ error: 'Unknown platform.' });
+
+    const text = typeof req.body?.text === 'string' ? req.body.text.trim() : '';
+    if (!text) return res.status(400).json({ error: 'Write the post first.' });
+    if (text.length > 5000) return res.status(400).json({ error: 'That is longer than any of these platforms accepts.' });
+
+    // Re-run the gate server-side. The browser's check is a courtesy.
+    const gate = copyGate.checkCopy(text);
+    if (!gate.ok) {
+      return res.status(422).json({ error: 'This breaks a writing rule the business has already decided.', result: gate });
+    }
+
+    const approval = await socialActions.requestHumanAction({
+      platform: id,
+      action: 'publish',
+      summary: text.slice(0, 120),
+      detail: text,
+      requestedBy: 'tom'
+    });
+    res.json({ ok: true, approvalId: approval.id, warnings: gate.warnings, note: 'Queued for approval. Nothing has been published.' });
+  } catch (err) { next(err); }
+});
 
 router.post('/api/workspace/approvals/:id/decide', requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
   try {

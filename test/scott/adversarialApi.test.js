@@ -185,6 +185,46 @@ describe('adversarial: real session and API path', { skip: RUNNABLE ? false : 's
     assert.equal(r.status, 403, `expected 403, got ${r.status}: ${(await r.text()).slice(0, 160)}`);
   });
 
+  test('an operative cannot queue a social post by posting directly', async () => {
+    // The composer is hidden from an operative, and hiding a control is
+    // not access control.
+    const token = await csrfFrom(operative.jar, '/scott');
+    const r = await apiPost(operative.jar, '/api/scott/social/queue',
+      { platform: 'facebook', text: 'Yarn delivery day. Three new colours in the knitting range.' }, token);
+    assert.equal(r.status, 403, `expected 403, got ${r.status}: ${(await r.text()).slice(0, 160)}`);
+  });
+
+  test('the writing gate holds against a direct POST that skips the browser', async () => {
+    // The page checks the copy before it lets you queue. That check is a
+    // courtesy: the control is the server re-running the same gate, and
+    // this is the request that proves it, because it never loaded the
+    // page at all.
+    const token = await csrfFrom(owner.jar, '/scott');
+    const r = await apiPost(owner.jar, '/api/scott/social/queue',
+      { platform: 'facebook', text: 'Our holistic solutions unlock a seamless journey \u2014 every time.' }, token);
+    assert.equal(r.status, 422, `banned copy was accepted with status ${r.status}`);
+    const body = await r.json();
+    assert.equal(body.result.ok, false);
+    const blocked = body.result.findings.filter((f) => f.severity === 'block').map((f) => f.rule);
+    assert.ok(blocked.includes('dash'), `the em dash was not blocked: ${JSON.stringify(blocked)}`);
+    assert.ok(blocked.includes('banned word'), `the banned words were not blocked: ${JSON.stringify(blocked)}`);
+  });
+
+  test('a queued post is a record, and publishes nothing', async () => {
+    const token = await csrfFrom(owner.jar, '/scott');
+    const r = await apiPost(owner.jar, '/api/scott/social/queue',
+      { platform: 'facebook', text: 'Half term workshop: how a frame is re-glued and clamped. Places are limited, so book ahead.' }, token);
+    // Read the body ONCE: composing the assertion message from r.text()
+    // and then calling r.json() consumes it twice, which fails for a
+    // reason that has nothing to do with what is being tested.
+    const raw = await r.text();
+    assert.equal(r.status, 200, `clean copy was refused: ${raw.slice(0, 200)}`);
+    const body = JSON.parse(raw);
+    assert.ok(body.writebackId, 'no approval record was created');
+    assert.match(body.note, /Nothing has been published/i,
+      'the response does not say plainly that nothing was published');
+  });
+
   test('an operative cannot assign an enquiry by posting directly', async () => {
     const token = await csrfFrom(operative.jar, '/scott');
     const r = await apiPost(operative.jar, '/api/scott/enquiries/1/assign', { workerId: 'commercial' }, token);

@@ -34,7 +34,7 @@
   <ul class="sc-social-links">
     <% platforms.forEach(function (p) { %>
       <li>
-        <a href="/scott/social#social-<%= p.id %>"
+        <a href="/scott/social/<%= p.id %>"
            class="sc-social-link sc-social-<%= p.id %><%= p.connected === false ? ' sc-social-off' : '' %>"
            title="<%= p.name %><%= p.connected === null ? '' : (p.connected ? ': connected' : ': not connected') %>">
           <span class="sc-social-glyph">

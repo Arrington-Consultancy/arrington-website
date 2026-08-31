@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= platform.name %> | Scott's Armchair &amp; Knitting Service</title>
+  <meta name="robots" content="noindex, nofollow">
+  <%- include('partials/styles') %>
+</head>
+<body class="scott-body">
+  <div class="sc-shell">
+    <%- include('partials/sidebar', { active: 'social', navCounts: navCounts }) %>
+    <main class="sc-main">
+      <% if (typeof isImpersonating !== 'undefined' && isImpersonating) { %>
+        <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
+      <% } %>
+
+      <div class="sc-page-header">
+        <div>
+          <h1 class="sc-h"><%= platform.name %></h1>
+          <p><a href="/scott/social">All platforms</a> &middot; owned by Bob Fletcher, Customers &amp; Marketing. Viewing as <strong><%= persona.name %></strong> (<%= persona.role %>).</p>
+        </div>
+      </div>
+
+      <!-- The chat sits at the top because it is the thing you talk to
+           first: an advertising head who knows this platform, and who
+           will not let generated-sounding copy through. -->
+      <div class="sc-card sc-social-bob">
+        <div class="sc-chat-head">
+          <div class="sc-msg-avatar sc-avatar-customers_marketing"><%= workersById.customers_marketing.initials %></div>
+          <div class="sc-chat-head-text">
+            <strong>Bob Fletcher, advertising</strong>
+            <span>Ask him what to post on <%= platform.name %> and why. He drafts, he does not publish: everything goes to a person to approve.</span>
+          </div>
+        </div>
+        <%- include('partials/chat-widget', { workersById: workersById, csrfToken: csrfToken, aiEnabled: aiEnabled, suggestions: true }) %>
+      </div>
+
+      <% if (canCompose) { %>
+      <div class="sc-card">
+        <h2 class="sc-h2">Write a post</h2>
+        <p class="sc-muted">Checked against the writing rules before it can be queued. Queued posts go to <a href="/scott/approvals">Approvals</a> for a person to decide. Nothing here publishes.</p>
+        <textarea id="scPostText" class="sc-post-text" rows="5" placeholder="What is the post?" data-platform="<%= platform.id %>"></textarea>
+        <div class="sc-post-actions">
+          <button type="button" id="scPostCheck" class="sc-btn-secondary">Check the writing</button>
+          <button type="button" id="scPostQueue" class="sc-btn-primary">Send for approval</button>
+          <span id="scPostCount" class="sc-muted sc-post-count"></span>
+        </div>
+        <div id="scPostResult" class="sc-post-result" hidden></div>
+      </div>
+      <% } else { %>
+        <div class="sc-card sc-empty">Writing posts is outside your clearance. The drafts and the record are still here to read.</div>
+      <% } %>
+
+      <% if (canSee('marketing_performance')) { %>
+        <% var acct = facts.SOCIAL_ACCOUNTS.filter(function (a) { return a.platform === platform.name; }); %>
+        <div class="sc-card" id="social-<%= platform.id %>">
+          <h2 class="sc-h2">The account</h2>
+          <% acct.forEach(function (a) { %>
+            <div class="sc-row-title"><%= a.handle %> <span class="sc-pill <%= a.status === 'CONNECTED' ? 'sc-pill-ok' : 'sc-pill-muted' %>"><%= a.status %></span></div>
+            <div class="sc-row-sub sc-muted">
+              <%= a.followers === null ? 'Followers unknown' : a.followers.toLocaleString() + ' followers' %><% if (a.followersChange30d) { %> (+<%= a.followersChange30d %> in 30 days)<% } %>
+              &middot; last retrieval <%= a.lastRetrieval || 'never' %><% if (a.lastOutcome) { %>, <%= a.lastOutcome %><% } %>
+            </div>
+            <% if (a.note) { %><div class="sc-row-sub"><%= a.note %></div><% } %>
+          <% }) %>
+          <% if (!acct.length) { %><p class="sc-muted">No account record for <%= platform.name %>.</p><% } %>
+        </div>
+
+        <% var posts = facts.SOCIAL_POSTS_30D.filter(function (p) { return p.platform === platform.name; }); %>
+        <div class="sc-card">
+          <h2 class="sc-h2">Posts</h2>
+          <% posts.forEach(function (p) { %>
+            <div class="sc-card sc-row-card">
+              <div class="sc-row-title"><%= p.kind %><% if (p.posted) { %> &middot; <%= p.posted %><% } %></div>
+              <div class="sc-row-sub"><%= p.body %></div>
+              <% if (p.reach !== null) { %><div class="sc-row-sub sc-muted"><%= p.reach.toLocaleString() %> reach &middot; <%= p.engagements %> engagements &middot; <%= p.comments %> comments</div><% } %>
+              <% if (p.note) { %><div class="sc-row-sub sc-muted"><%= p.note %></div><% } %>
+            </div>
+          <% }) %>
+          <% if (!posts.length) { %><p class="sc-muted">Nothing recorded for <%= platform.name %>.</p><% } %>
+        </div>
+      <% } %>
+
+      <% if (canSee('review_status')) { %>
+        <% var eng = facts.SOCIAL_ENGAGEMENT_OPEN.filter(function (e) { return e.platform === platform.name; }); %>
+        <div class="sc-card">
+          <h2 class="sc-h2">Comments and messages</h2>
+          <% eng.forEach(function (e) { %>
+            <div class="sc-card sc-row-card">
+              <div class="sc-row-title"><%= e.author %> &middot; <%= e.kind %><% if (e.needsReply) { %> <span class="sc-pill">NEEDS A REPLY</span><% } %></div>
+              <div class="sc-row-sub"><%= e.body %></div>
+              <div class="sc-row-sub sc-muted"><%= e.suggested %></div>
+            </div>
+          <% }) %>
+          <% if (!eng.length) { %><p class="sc-muted">Nothing open on <%= platform.name %>.</p><% } %>
+        </div>
+      <% } %>
+
+      <% if (!canSee('marketing_performance') && !canSee('review_status')) { %>
+        <div class="sc-card sc-empty"><%= deniedNote('marketing_performance') %></div>
+      <% } %>
+    </main>
+  </div>
+
+  <% if (canCompose) { %>
+  <script nonce="<%= nonce %>">
+  (function () {
+    var text = document.getElementById('scPostText');
+    var out = document.getElementById('scPostResult');
+    var count = document.getElementById('scPostCount');
+    var token = document.querySelector('meta[name="csrf-token"]');
+    token = token ? token.getAttribute('content') : '<%= csrfToken %>';
+
+    function render(result, headline, tone) {
+      var html = '<div class="sc-gate-head sc-gate-' + tone + '">' + headline + '</div>';
+      if (result && result.findings && result.findings.length) {
+        html += '<ul class="sc-gate-list">';
+        result.findings.forEach(function (f) {
+          html += '<li class="sc-gate-' + f.severity + '">'
+            + '<span class="sc-gate-tag">' + (f.severity === 'block' ? 'MUST FIX' : 'TELL') + '</span> '
+            + '<strong>' + f.rule + '</strong>: ' + f.why
+            + '<div class="sc-gate-fix">' + f.fix + '</div>'
+            + '<div class="sc-gate-excerpt">' + f.excerpt + '</div></li>';
+        });
+        html += '</ul>';
+      }
+      out.innerHTML = html;
+      out.hidden = false;
+    }
+
+    function post(url, body, done) {
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': token },
+        body: JSON.stringify(body)
+      }).then(function (r) { return r.json().then(function (d) { return { status: r.status, d: d }; }); })
+        .then(done)
+        .catch(function () { render(null, 'The request could not be sent.', 'block'); });
+    }
+
+    text.addEventListener('input', function () { count.textContent = text.value.length + ' characters'; });
+
+    document.getElementById('scPostCheck').addEventListener('click', function () {
+      post('/api/scott/social/check', { text: text.value }, function (res) {
+        var r = res.d.result;
+        if (!r) return render(null, 'Could not check that.', 'block');
+        if (r.ok && !r.warnings) return render(r, 'Nothing flagged. This reads as written by a person.', 'ok');
+        if (r.ok) return render(r, r.warnings + ' thing(s) to look at. None of them stop you posting.', 'warn');
+        render(r, r.blocking + ' thing(s) must be fixed before this can be queued.', 'block');
+      });
+    });
+
+    document.getElementById('scPostQueue').addEventListener('click', function () {
+      post('/api/scott/social/queue', { platform: text.getAttribute('data-platform'), text: text.value }, function (res) {
+        if (res.status === 422) return render(res.d.result, res.d.error, 'block');
+        if (res.status !== 200) return render(null, res.d.error || 'That did not work.', 'block');
+        render(null, res.d.note + ' Approval #' + res.d.writebackId + '.', 'ok');
+        text.value = '';
+        count.textContent = '';
+      });
+    });
+  })();
+  </script>
+  <% } %>
+</body>
+</html>

@@ -32,6 +32,7 @@ const clearance = require('../lib/scott/clearance');
 const { checkReleaseGate } = require('../lib/scott/qualityGate');
 const deepFacts = require('../lib/scott/deepBusinessFacts');
 const socialPlatforms = require('../lib/scott/social/platforms');
+const copyGate = require('../lib/social/copyGate');
 const contextBuilders = require('../lib/scott/data/contextBuilders');
 const brainGaps = require('../lib/scott/brainGaps');
 const { sendGapNotification } = require('../lib/scott/gapNotifier');
@@ -527,6 +528,35 @@ function mountPageRoute(app, generateCsrfToken) {
     }
   });
 
+  // One portal per platform. Reached from the sidebar logos, and the
+  // reason they are links rather than anchors: a platform is a place you
+  // work in, with its own accounts, its own posts, its own comments and
+  // its own composer, not a heading to scroll to.
+  app.get('/scott/social/:platform', noindexHeader, requireScottPageAccess, async (req, res, next) => {
+    try {
+      const id = String(req.params.platform || '').toLowerCase();
+      const platform = socialPlatforms.PLATFORMS.find((p) => p.id === id);
+      // An unknown platform is a page that does not exist, not an error
+      // page: the platform list is closed, and inventing one is how a
+      // fifth source would arrive without going through Governance.
+      if (!platform) return next();
+
+      const navCounts = await repo.getDashboardSummary();
+      const personaId = clearance.getEffectivePersonaId(req);
+      res.render('scott/social-platform', {
+        ...viewerViewModel(req),
+        platform,
+        canCompose: clearance.personaCanAct(personaId, 'social_post'),
+        aiEnabled: isScottAIEnabled(),
+        facts: deepFacts,
+        workers: WORKERS,
+        workersById: WORKERS_BY_ID_JSON,
+        navCounts,
+        csrfToken: generateCsrfToken(req, res)
+      });
+    } catch (err) { next(err); }
+  });
+
   app.get('/scott/approvals', noindexHeader, requireScottPageAccess, async (req, res, next) => {
     try {
       const approvals = await repo.getPendingApprovals();
@@ -995,6 +1025,76 @@ router.get('/api/scott/conversations/:id/messages', noindexHeader, requireScottA
 // version of the draft — this is the "Modify" action: a human editing an
 // AI's proposed wording before agreeing to it, never the AI editing its
 // own output.
+// Check a draft against the writing rules. Read-only: it stores nothing
+// and sends nothing, so it needs no action authority beyond being in the
+// demonstration at all. The same function runs again on the queue
+// endpoint, because a check the browser performs is a courtesy, not a
+// control.
+router.post('/api/scott/social/check', noindexHeader, requireScottApiAccess, async (req, res) => {
+  try {
+    const text = typeof req.body?.text === 'string' ? req.body.text.slice(0, 8000) : '';
+    res.json({ ok: true, result: copyGate.checkCopy(text) });
+  } catch (err) {
+    console.error('Scott social check error:', err);
+    res.status(500).json({ error: 'Something went wrong.' });
+  }
+});
+
+// Queue a draft for a human to approve. This is the ONLY thing the
+// composer does.
+//
+// It does not publish, and there is no code path here that could: the
+// connector layer declares no write scope, publishing is refused by
+// construction, and Tom's approval of the social expansion excludes
+// publishing in terms. What this writes is a pending_approval record,
+// which by the demonstration's own design executes nothing even once
+// approved.
+router.post('/api/scott/social/queue', noindexHeader, requireScottApiAccess, async (req, res) => {
+  try {
+    const personaId = clearance.getEffectivePersonaId(req);
+    if (!clearance.personaCanAct(personaId, 'social_post')) {
+      return res.status(403).json({ error: clearance.actionDeniedNote('social_post') });
+    }
+
+    const id = String(req.body?.platform || '').toLowerCase();
+    const platform = socialPlatforms.PLATFORMS.find((p) => p.id === id);
+    if (!platform) return res.status(400).json({ error: 'Unknown platform.' });
+
+    const text = typeof req.body?.text === 'string' ? req.body.text.trim() : '';
+    if (!text) return res.status(400).json({ error: 'Write the post first.' });
+    if (text.length > 5000) return res.status(400).json({ error: 'That is longer than any of these platforms accepts.' });
+
+    // Re-run the gate here. The browser already ran it, and that counts
+    // for nothing: a control enforced only in the page is a control any
+    // direct POST walks straight past.
+    const gate = copyGate.checkCopy(text);
+    if (!gate.ok) {
+      return res.status(422).json({
+        error: 'This breaks a writing rule the business has already decided.',
+        result: gate
+      });
+    }
+
+    const persona = clearance.getPersona(personaId);
+    const writeback = await repo.createWriteback({
+      proposingWorkerId: 'customers_marketing',
+      intentType: 'social_post',
+      summary: `${platform.name} post drafted by ${persona.name} and sent for approval. Nothing has been published.\n\n${text}`,
+      requiresApproval: true
+    });
+
+    res.json({
+      ok: true,
+      writebackId: writeback.id,
+      warnings: gate.warnings,
+      note: 'Queued for approval. Nothing has been published.'
+    });
+  } catch (err) {
+    console.error('Scott social queue error:', err);
+    res.status(500).json({ error: 'Something went wrong.' });
+  }
+});
+
 router.post('/api/scott/approvals/:id/decide', noindexHeader, requireScottApiAccess, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);

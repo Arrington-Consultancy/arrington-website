@@ -96,4 +96,21 @@
     .ws-side { width: 100%; border-right: 0; border-bottom: 1px solid var(--ws-border); }
     .ws-main { padding: 1.1rem 1rem 2.5rem; }
   }
+
+  /* Composer and writing gate. */
+  .ws-post-text { width: 100%; box-sizing: border-box; resize: vertical; font: inherit; font-size: 14px; }
+  .ws-post-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+  .ws-btn-quiet { background: transparent; border: 1px solid var(--ws-border, #d9d5c8); color: inherit; }
+  .ws-post-result { margin-top: 14px; }
+  .ws-gate-head { font-weight: 700; font-size: 13.5px; padding: 9px 12px; border-radius: 6px; }
+  .ws-gate-ok { background: #e8f2ea; color: #1f4d3a; }
+  .ws-gate-warn { background: #fbf1de; color: #7a5312; }
+  .ws-gate-block { background: #f7e4de; color: #8a3618; }
+  .ws-gate-list { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .ws-gate-list li { font-size: 13px; line-height: 1.5; padding: 9px 12px; border-radius: 6px; border: 1px solid var(--ws-border, #d9d5c8); }
+  .ws-gate-list li.ws-gate-block { border-left: 3px solid #b04a24; }
+  .ws-gate-list li.ws-gate-warn { border-left: 3px solid #d8a14a; }
+  .ws-gate-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.07em; padding: 1px 6px; border-radius: 3px; background: rgba(0,0,0,0.06); }
+  .ws-gate-fix { margin-top: 4px; opacity: 0.8; }
+  .ws-gate-excerpt { margin-top: 5px; font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; opacity: 0.75; overflow-wrap: anywhere; }
 </style>
