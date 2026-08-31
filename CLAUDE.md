@@ -1002,9 +1002,37 @@ secret; the passphrase never appears in any log, only its length.
 fictional fact is reachable from the workspace, or the reverse. Tests
 enforce it in both directions.
 
-**Screens:** Today, Ask the workspace, Company Brain, Opportunities,
+**Screens:** Today, Ask Ruth, Company Brain, Opportunities,
 Clients & projects, Contacts, Social media, AI workforce, Decisions &
 approvals, Brain gaps, Activity.
+
+**Ruth, the receptionist (31/08/2026).** Tom's instruction: "Make Ruth
+in Arrington as well." `lib/workspace/receptionist.js`.
+
+**She is not a tenth identity, and the distinction is the whole point.**
+A lane is a scoped READING CONTEXT: a set of source classes and a
+sensitivity ceiling. Ruth has neither, plus no clearance of her own. She
+cannot read a record, widen a lane's answer, or see anything a lane
+declined to show. The permission model still has exactly three legs
+(human clearance AND lane permission AND task necessity); she adds no
+fourth and no bypass. The mandate's concern was a super-worker with god
+access, and a receptionist who can read nothing is the opposite of that.
+The lane register is untouched at nine, and a test asserts she never
+appears in it.
+
+What she may say is declared as a field list and anything else THROWS -
+the same structural discipline as the unlock alert after finding H7 -
+because a named component that talks to the owner is otherwise a
+disclosure channel with no gate on it. She is handed a lane id and three
+booleans, never a record or an answer, so she cannot repeat what a lane
+withheld.
+
+**She is Arrington's, not Scott's.** Scott's demonstration has a
+receptionist too; nothing is imported in either direction. "Reuse
+principles, not fictional content" - the principle of one named person
+who takes the question and routes it is reused, the fictional identity,
+prompt and business facts are not, and a test asserts this module reaches
+no Scott code and names no Scott character.
 
 **Nine lanes, no new worker** (`lib/workspace/lanes.js`). The canonical
 Arrington workers appear as routing lanes with read-only source classes

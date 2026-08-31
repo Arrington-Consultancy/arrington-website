@@ -1,7 +1,20 @@
-<%- include('partials/shell-top', { pageTitle: 'Ask the workspace', active: 'chat' }) %>
+<%- include('partials/shell-top', { pageTitle: 'Ask Ruth', active: 'chat' }) %>
 
-<h1 class="ws-h">Ask the workspace</h1>
+<h1 class="ws-h">Ask <%= receptionist.RUTH.name %></h1>
 <p class="ws-sub">Answers come only from records you are cleared to see, routed to the relevant specialist lane. Every answer names the records it rests on. The workspace performs no actions.</p>
+
+<!-- Ruth is the way in, not an extra worker. She holds no clearance and
+     reads no record: she takes the question, says who it went to, and
+     shows you their answer. See lib/workspace/receptionist.js. -->
+<div class="ws-card ws-reception">
+  <div class="ws-reception-mark"><%= receptionist.RUTH.name.slice(0, 2).toUpperCase() %></div>
+  <div>
+    <strong><%= receptionist.RUTH.name %></strong>
+    <span class="ws-reception-role"><%= receptionist.RUTH.role %></span>
+    <p class="ws-reception-line"><%= receptionist.RUTH.line %></p>
+    <p class="ws-note">She routes to <%= receptionist.directory().length %> specialists. She holds no clearance of her own, so she can never show you more than they would.</p>
+  </div>
+</div>
 
 <% if (!aiEnabled) { %>
   <div class="ws-card"><p class="ws-empty">Workspace AI is not enabled in this environment, so questions will be refused rather than answered from memory. Everything else on this page still works.</p></div>
@@ -96,6 +109,7 @@
         if (!r.ok) { errEl.textContent = data.error || 'That did not work.'; errEl.hidden = false; return; }
         form.conversationId.value = data.conversationId;
         const bits = [];
+        if (data.receptionist) bits.push(data.receptionist);
         if (data.laneName) bits.push('Lane: ' + data.laneName);
         bits.push(data.provenance.length ? 'Records supplied: ' + data.provenance.join(', ') : 'No records were available for this answer.');
         if (data.gap) bits.push('Gap raised: ' + data.gap.gap_type);
