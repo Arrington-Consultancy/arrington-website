@@ -1068,6 +1068,64 @@ is built staging-first and credential-gated, and the expansion is being
 routed to Governance and Assurance as a controlled change rather than
 treated as self-approved.
 
+### Fourth governance review: AMBER, four findings, no HIGH (31/08/2026)
+
+`review/workspace-v0.1-governance-review-4-2026-08-31.md` (**AMBER**,
+J1-J4), answered in `review/workspace-v0.1-j-remediation-2026-08-31.md`.
+First pass in four with no HIGH finding. All four corrected.
+
+**J1 (MEDIUM) is the fourth instance of the pattern, and the most
+instructive.** `unlockAlert.js` stated "It is BOUNDED. One alert per
+cooldown window, no matter how many attempts arrive." It was not: the
+cooldown was an unsynchronised read-decide-send-then-write, called once
+per failed attempt without being awaited, so eight concurrent attempts
+delivered eight messages. **The serial path was correct throughout**,
+which is why reading the code never showed it — and the test named "a
+guessing loop produces one alert, not a flood" called the decision
+helper once, serially, with the cooldown already in place, so it
+asserted nothing about the property it was named for.
+
+The slot is now CLAIMED in the database before anything is sent, by a
+conditional insert only one caller can win, with a three-minute lease so
+a dead process costs one duplicate rather than permanent silence. Tested
+concurrently against a real database.
+
+**The working rule adopted from the reviewer, which matters more than
+the fix:** every asserted security property must name the test that
+establishes it, and that test must exercise the REAL function under the
+conditions the property claims to hold — not a pure helper beneath it,
+and not the easy path. Three of the four instances (F2, G1, J1) would
+have been caught by it.
+
+- **J2**: the per-account cooldown matched the username inside the
+  alert's own prose with `LIKE '%"tom"%'`, so rewording the message
+  would silently have removed the cooldown and a username containing a
+  LIKE wildcard would match another account's rows. It is now a
+  `subject` column on `workspace_activity`, matched exactly.
+  **The Scott release ordering trap recurred here and is worth knowing:**
+  the index was first placed in `schema.sql` beside the table. On an
+  existing database `CREATE TABLE IF NOT EXISTS` is skipped while the
+  index statements still run, so an index naming a not-yet-added column
+  failed the whole seed. It is created in `db/seed.js` after the ALTER,
+  with a comment saying why it is not where it looks like it belongs.
+  Verified on the existing database AND on a fresh one seeded twice.
+- **J3**: a failure BEFORE the send (a database error, or the H7 field
+  guard firing) was logged to console and written nowhere durable, so a
+  database problem would make the alarm silent with no trace on any
+  surface Tom can reach. Pre-send failures are now recorded.
+- **J4**: I recorded H6 as "genuinely blocked" on
+  `WORKSPACE_SNAPSHOT_KEY`. The reason was false — the key was in the
+  working environment throughout. The plaintext snapshot extract and the
+  key were sitting together in the agent scratchpad and have been
+  securely deleted; the repository was and is clean. The probe is
+  unblocked by SEEDING its own confidential record with unmistakable
+  canaries and removing it in a `finally`, not by decrypting anything.
+  **Still open and Tom's, not the builder's:** the seeded record tests
+  the FILTER; only real snapshot records test the TAGGING, that genuine
+  confidential material is marked confidential. Closing that means Tom
+  adding more genuine confidential records, not the builder writing
+  synthetic ones into the real snapshot.
+
 ### Third governance review: AMBER, seven findings (31/08/2026)
 
 `review/workspace-v0.1-governance-review-3-2026-08-31.md` (**AMBER**,

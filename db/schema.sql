@@ -635,9 +635,24 @@ CREATE TABLE IF NOT EXISTS workspace_activity (
     actor VARCHAR(100) NOT NULL,
     event_type VARCHAR(60) NOT NULL,
     summary TEXT NOT NULL,
+    -- Governance finding J2 (31/08/2026): the failed-unlock alert's
+    -- per-account cooldown was keyed by substring-matching the account
+    -- name inside `summary`, which is human-readable prose. Rewording
+    -- the message would silently remove the cooldown, and a username
+    -- containing a LIKE wildcard would match another account's rows.
+    -- The account a row is ABOUT now has its own column and is matched
+    -- exactly. Empty for rows that are not about a particular account.
+    subject VARCHAR(200) NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_workspace_activity_time ON workspace_activity (created_at DESC);
+-- The (event_type, subject) index is created in db/seed.js AFTER the
+-- ALTER that adds `subject`, deliberately, NOT here. On an existing
+-- database CREATE TABLE IF NOT EXISTS is skipped while the index
+-- statements still run, so an index naming a column that the ALTER has
+-- not yet added fails the whole seed. That is the same ordering trap
+-- that crashed production during the Scott v0.2 release: it is
+-- invisible in every environment whose schema already carries history.
 
 -- One row per ingest attempt, successful or not, so freshness claims on
 -- the Today page rest on recorded runs rather than assumption.

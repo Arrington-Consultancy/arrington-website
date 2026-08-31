@@ -382,7 +382,7 @@ router.post('/api/workspace/unlock', requireWorkspaceIdentity, unlockLimiter, as
       // Recorded every time. A run of these against a username is the
       // signature of exactly the attack this gate exists for, and it is
       // the only warning anyone would get.
-      await repo.addActivity({ actor: username, eventType: 'workspace_unlock_failed', summary: 'A workspace unlock attempt was refused: the passphrase did not match.' });
+      await repo.addActivity({ actor: username, eventType: 'workspace_unlock_failed', subject: username, summary: 'A workspace unlock attempt was refused: the passphrase did not match.' });
       // Governance finding G6 and Tom's instruction of 31/08/2026: the
       // warning must not live only behind the gate it protects. This
       // reads the burst from the database (so a container restart cannot

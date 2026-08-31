@@ -68,6 +68,20 @@ async function seed() {
   `);
   console.log('Market Ready Test context column verified.');
 
+  // Migration: governance finding J2 (31/08/2026). The failed-unlock
+  // alert's per-account cooldown was keyed by substring-matching the
+  // account name inside the human-readable summary, so rewording the
+  // message would have silently removed the cooldown and a username
+  // containing a LIKE wildcard would have matched another account's
+  // rows. The account a row is about now has its own column, matched
+  // exactly. Existing rows default to empty, which is correct: they are
+  // not about a particular account.
+  await db.query(`
+    ALTER TABLE workspace_activity ADD COLUMN IF NOT EXISTS subject VARCHAR(200) NOT NULL DEFAULT '';
+    CREATE INDEX IF NOT EXISTS idx_workspace_activity_subject ON workspace_activity (event_type, subject, created_at DESC);
+  `);
+  console.log('Workspace activity subject column verified.');
+
   // Migration: Commercial Gaps Review failure-recovery columns, added
   // 01/08/2026. This is schema setup only (idempotent, one-off structural
   // change) — the actual retention/deletion of stale rows deliberately
