@@ -40,9 +40,9 @@ test('she can speak about the routing and never about the content', () => {
   // throws. The same discipline as the unlock alert after finding H7,
   // for the same reason - an open-ended input on a component that talks
   // to the owner is a disclosure channel with no gate on it.
-  assert.deepEqual(receptionist.NOTE_FIELDS, ['laneId', 'answered', 'recordCount', 'gapRaised']);
+  assert.deepEqual(receptionist.NOTE_FIELDS, ['laneId', 'recordCount', 'gapRaised']);
   assert.throws(
-    () => receptionist.handoffNote({ laneId: 'google_ads', answered: true, record: 'a confidential value' }),
+    () => receptionist.handoffNote({ laneId: 'google_ads', recordCount: 1, record: 'a confidential value' }),
     /refusing unpermitted field/,
     'the receptionist accepted a field carrying record content'
   );
@@ -57,7 +57,7 @@ test('she cannot invent a colleague, including one inherited from Object', () =>
   // here with the ids that actually reach through a prototype.
   const ids = ['not-a-real-lane', 'constructor', '__proto__', 'toString', 'hasOwnProperty', 'valueOf'];
   for (const laneId of ids) {
-    const note = receptionist.handoffNote({ laneId, answered: true, recordCount: 2 });
+    const note = receptionist.handoffNote({ laneId, recordCount: 2 });
     assert.ok(!/Object|Function|\[native code\]/.test(note), `"${laneId}" produced a colleague from the prototype chain: ${note}`);
     assert.ok(!note.includes(laneId), `"${laneId}" was echoed back as if it were a person`);
     assert.match(note, /could not tell who holds that|did not match one of the specialists/,
@@ -65,117 +65,140 @@ test('she cannot invent a colleague, including one inherited from Object', () =>
   }
 });
 
-test('a gap is reported even when an answer came back, on BOTH paths', () => {
-  // Finding T2, and finding U5 which is the half T2's test could not
-  // see. The gap branch sat below the no-lane early return, so
-  // gapRaised was still fully inert on the commonest turn of all - and
-  // the test pinned it with laneId: 'google_ads', which never reaches
-  // that return.
-  //
-  // Routing is nine keyword regexes, so "no lane matched" is the DEFAULT
-  // path. Any property of hers has to be asserted on it, not only on the
-  // routed one.
-  for (const laneId of ['google_ads', null]) {
-    const withGap = receptionist.handoffNote({ laneId, answered: true, recordCount: 2, gapRaised: true });
-    const withoutGap = receptionist.handoffNote({ laneId, answered: true, recordCount: 2, gapRaised: false });
-    assert.match(withGap, /gap/i, `lane=${laneId}: a gap raised alongside an answer is never mentioned`);
-    assert.notEqual(withGap, withoutGap, `lane=${laneId}: gapRaised makes no difference to what she says`);
-  }
-});
+// THE PERMITTED OUTPUT SET.
+//
+// Governance finding W2. Her honesty was previously pinned by a denylist
+// of eight verbs, and the reviewer got a mutation past it in one line:
+// "I took that to X, and I checked the 3 records behind it myself before
+// passing it on" - an explicit claim to have read records she cannot
+// read, on a reachable branch, passing a suite named for exactly that
+// property. A denylist can only forbid the phrasings somebody already
+// thought of.
+//
+// Her output space is finite and small, so it is declared instead. Every
+// reachable string must be a member of this set once lane names and
+// counts are normalised. A new sentence therefore has to be added here
+// deliberately and read by whoever adds it, in the same spirit as
+// NOTE_FIELDS throwing on an undeclared field.
+//
+// Each of these was checked by hand against what actually happens:
+// she routes, and she reports; she never answers, writes, reads or
+// decides anything.
+const PERMITTED_SHAPES = [
+  'I took that to {LANE}, who answered from {N} record. The provenance is listed with the answer.',
+  'I took that to {LANE}, who answered from {N} records. The provenance is listed with the answer.',
+  'I took that to {LANE}. They answered from what they hold, with no record behind it. The gap has been written down rather than let pass.',
+  'I took that to {LANE}. They answered, but the record behind it does not fully cover the question. The gap has been written down rather than let pass.',
+  'I took that to {LANE}. They answered, but the {N} records behind it do not fully cover the question. The gap has been written down rather than let pass.',
+  'That did not match one of the specialists, and there was no record on file to answer it from.',
+  'That did not match one of the specialists, and there was no record on file to answer it from. The gap has been written down rather than let pass.',
+  'That did not match one of the specialists, so it was answered from {N} record in the general context.',
+  'That did not match one of the specialists, so it was answered from {N} record in the general context. The gap has been written down rather than let pass.',
+  'That did not match one of the specialists, so it was answered from {N} records in the general context.',
+  'That did not match one of the specialists, so it was answered from {N} records in the general context. The gap has been written down rather than let pass.',
+  '{LANE} answered from what they hold. No specific record is behind it, so treat it as their reading rather than as evidence.'
+];
 
-test('she never claims an act she did not perform', () => {
-  // Findings U1 and V2. She holds no clearance, no database handle and
-  // no write path, so she cannot author an answer and cannot write a
-  // gap: repo.createGap does that, from a field the model returned.
-  // A sentence claiming otherwise is the same class of untruth this
-  // codebase spent thirteen reviews removing from the alert.
-  //
-  // V2 is the regex, not the module. The previous version of this
-  // pattern was `\bI (?:answered|wrote|...)`, which matched the one
-  // string U1 had removed and walked straight past "I have written the
-  // gap down" on three other reachable sentences, because the word after
-  // "I" is "have". That is the K2/M1/N1/P1 shape again: a test asserting
-  // something adjacent to the property, staying green while the property
-  // is false. It now covers the auxiliary and the perfect forms.
-  //
-  // "I took that to X" is deliberately NOT forbidden. Routing is the one
-  // thing she actually does.
-  const claims = /\bI(?:'ve|’ve| have| had| already)?\s+(?:answered|wrote|written|recorded|logged|noted|raised|worked (?:it|that) out)\b/i;
-  for (const laneId of ['google_ads', null, 'constructor', 'not-a-lane']) {
-    for (const answered of [true, false]) {
-      for (const gapRaised of [true, false]) {
-        for (const recordCount of [0, 1, 5]) {
-          const note = receptionist.handoffNote({ laneId, answered, recordCount, gapRaised });
-          assert.ok(!claims.test(note),
-            `she claims an act she did not perform on lane=${laneId} answered=${answered} gap=${gapRaised} records=${recordCount}: "${note}"`);
-        }
+const LANE_IDS = LANES.map((l) => l.id);
+// Real lanes, plus the ids that reach the no-lane default: nothing,
+// nonsense, and the prototype keys finding T3 was about.
+const PROBE_LANE_IDS = [...LANE_IDS, null, undefined, '', 'not-a-lane', 'constructor', '__proto__', 'toString'];
+const PROBE_COUNTS = [0, 1, 2, 7, 99];
+
+function normalise(line) {
+  let t = line;
+  for (const l of LANES) t = t.split(l.name).join('{LANE}');
+  return t.replace(/\b\d+ records\b/g, '{N} records').replace(/\b\d+ record\b/g, '{N} record');
+}
+
+function everyReachableNote() {
+  const out = [];
+  for (const laneId of PROBE_LANE_IDS) {
+    for (const gapRaised of [true, false]) {
+      for (const recordCount of PROBE_COUNTS) {
+        out.push({ laneId, gapRaised, recordCount, note: receptionist.handoffNote({ laneId, recordCount, gapRaised }) });
       }
     }
   }
+  return out;
+}
+
+test('every reachable sentence is one she is permitted to say', () => {
+  const permitted = new Set(PERMITTED_SHAPES);
+  const seen = new Set();
+  for (const { laneId, gapRaised, recordCount, note } of everyReachableNote()) {
+    const shape = normalise(note);
+    seen.add(shape);
+    assert.ok(permitted.has(shape),
+      `undeclared sentence on lane=${String(laneId)} gap=${gapRaised} records=${recordCount}:\n  "${note}"\n  normalised: "${shape}"\n  If this is a deliberate new sentence, read it against what actually happens and add it to PERMITTED_SHAPES.`);
+  }
+  // The other direction: a shape declared here but no longer produced is
+  // dead wording, and dead wording is how a sentence nobody has read
+  // survives a rewrite.
+  const unreachable = PERMITTED_SHAPES.filter((sh) => !seen.has(sh));
+  assert.deepEqual(unreachable, [], `declared but unreachable: ${unreachable.join(' | ')}`);
+});
+
+test('the receptionist takes no inert parameter', () => {
+  // Finding W1. `answered` was passed on every turn and was always true,
+  // because parseReply refuses an empty answer and the route answers 503
+  // before Ruth is called. Three of her shapes were dead, and two of the
+  // dead ones carried a hard-coded record clause that contradicted the
+  // module's own rule 1. That is finding T2 recurring one parameter
+  // along, in the same function, three cycles later, so the parameter is
+  // gone rather than patched.
+  assert.deepEqual(receptionist.NOTE_FIELDS, ['laneId', 'recordCount', 'gapRaised']);
+  assert.throws(
+    () => receptionist.handoffNote({ laneId: 'google_ads', recordCount: 1, answered: true }),
+    /refusing unpermitted field/,
+    'a caller can still pass the inert parameter, which is how a branch nobody reasoned about gets reached'
+  );
 });
 
 test('she never claims a record when there was none, and says so when there was', () => {
-  // Finding V1, and it is the sharpest of the fifteen because it is the
-  // one thing the workspace exists to be trusted about: what an answer
-  // is actually based on.
-  //
-  // U1's fix said "it was answered from the general records" on the
-  // no-lane path unconditionally. With an unseeded brain, which is this
-  // candidate's real state, there were no general records, and the
-  // interface printed "No records were available for this answer" on the
-  // same rendered line. Three of the four zero-record turns asserted a
-  // basis that did not exist, because the one honest branch sat below
-  // two early returns.
+  // Finding V1, and W1 which closed the last two branches it did not
+  // reach. Every record clause is derived from the count now.
   //
   // Swept in BOTH directions, because a rule that only forbids can be
   // satisfied by saying nothing at all.
-  // Deliberately narrow: it matches an ASSERTION of a basis ("from the
-  // general records", "3 records"), not any use of the word. "with no
-  // record behind it" is the honest zero-record sentence and must pass.
   const claimsRecords = /(?:from\s+(?:the\s+)?(?:\d+\s+)?(?:general\s+)?records?\b)|(?:\b\d+\s+records?\b)/i;
-  for (const laneId of ['google_ads', null, 'constructor', 'not-a-lane']) {
-    for (const answered of [true, false]) {
-      for (const gapRaised of [true, false]) {
-        const where = `lane=${laneId} answered=${answered} gap=${gapRaised}`;
-
-        const none = receptionist.handoffNote({ laneId, answered, recordCount: 0, gapRaised });
-        assert.ok(!claimsRecords.test(none),
-          `she claims records that did not exist on ${where}: "${none}"`);
-
-        // The other direction. Only turns that actually answered from a
-        // lane or the general context can name a count, so the positive
-        // assertion is scoped to those.
-        if (answered) {
-          const some = receptionist.handoffNote({ laneId, answered, recordCount: 3, gapRaised });
-          assert.ok(claimsRecords.test(some),
-            `three records were behind this answer and she does not say so on ${where}: "${some}"`);
-        }
-      }
+  for (const laneId of PROBE_LANE_IDS) {
+    for (const gapRaised of [true, false]) {
+      const where = `lane=${String(laneId)} gap=${gapRaised}`;
+      const none = receptionist.handoffNote({ laneId, recordCount: 0, gapRaised });
+      assert.ok(!claimsRecords.test(none), `she claims records that did not exist on ${where}: "${none}"`);
+      const some = receptionist.handoffNote({ laneId, recordCount: 3, gapRaised });
+      assert.ok(claimsRecords.test(some),
+        `three records were behind this answer and she does not say so on ${where}: "${some}"`);
     }
   }
 });
 
 test('a singular count reads as a singular sentence', () => {
-  // Self-found while enumerating her whole reachable output space after
-  // the V cycle: "the 1 record behind it DO not fully cover the question"
-  // was on a real path (a lane answered, a gap was raised, exactly one
-  // record supplied).
-  //
-  // Not a correctness or honesty defect, and it is tested anyway, because
-  // this is owner-facing copy in the one product whose value is that its
-  // wording can be relied on. Swept rather than pinned to the one
-  // sentence that was wrong, which is the habit these fifteen passes
-  // taught.
+  // Self-found while enumerating her output space after the V cycle:
+  // "the 1 record behind it DO not fully cover the question" was on a
+  // real path. Not a correctness defect, and tested anyway, because this
+  // is owner-facing copy in the one product whose value is that its
+  // wording can be relied on.
   const disagreement = /\b1 records\b|\bthe 1 record[^.]*\bdo not\b|\b[2-9]\d* records?[^.]*\bdoes not\b/i;
-  for (const laneId of ['google_ads', null, 'constructor', 'not-a-lane']) {
-    for (const answered of [true, false]) {
-      for (const gapRaised of [true, false]) {
-        for (const recordCount of [0, 1, 2, 5]) {
-          const note = receptionist.handoffNote({ laneId, answered, recordCount, gapRaised });
-          assert.ok(!disagreement.test(note),
-            `count and verb disagree on lane=${laneId} answered=${answered} gap=${gapRaised} records=${recordCount}: "${note}"`);
-        }
-      }
+  for (const { laneId, gapRaised, recordCount, note } of everyReachableNote()) {
+    assert.ok(!disagreement.test(note),
+      `count and verb disagree on lane=${String(laneId)} gap=${gapRaised} records=${recordCount}: "${note}"`);
+  }
+});
+
+test('a gap is reported on every path, including the default one', () => {
+  // Findings T2 and U5. The gap sentence was first unreachable, then
+  // reachable only on the lane branch, and the test written for it used a
+  // lane id that never reaches the no-lane return.
+  for (const laneId of ['google_ads', null, 'not-a-lane']) {
+    for (const recordCount of [0, 3]) {
+      const withGap = receptionist.handoffNote({ laneId, recordCount, gapRaised: true });
+      const withoutGap = receptionist.handoffNote({ laneId, recordCount, gapRaised: false });
+      assert.match(withGap, /gap has been written down/i,
+        `no gap reported on lane=${String(laneId)} records=${recordCount}`);
+      assert.ok(!/gap has been written down/i.test(withoutGap),
+        `a gap is reported when none was raised on lane=${String(laneId)} records=${recordCount}`);
     }
   }
 });

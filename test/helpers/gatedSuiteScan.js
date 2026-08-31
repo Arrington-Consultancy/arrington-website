@@ -33,45 +33,91 @@ const DB_ONLY_GATE = /set DATABASE_URL/;
 // false positive is what gets a check loosened.
 const NAME = '[A-Za-z0-9_]';
 
+// EVERY WAY OF NAMING THE ENVIRONMENT OBJECT, IN ONE PLACE.
+//
+// Governance finding W3: the previous version matched the literal text
+// `process.env` and was walked past by five ordinary idioms - a
+// destructure of `env` off `process`, an inline `require('process').env`,
+// a bracket key `process['env']`, an alias built with `Object.assign`,
+// and an alias read with a bracket rather than a dot. That was the ninth
+// consecutive cycle in which this check was defeated.
+//
+// Chasing shapes one at a time is the arms race the reviewers have
+// called unwinnable, so the pattern is factored: name the ENVIRONMENT
+// EXPRESSION once, then express every rule in terms of it, and treat any
+// identifier bound to one as an alias whose reads count. That collapses
+// four of the five misses into the existing rules rather than adding
+// four more rules.
+//
+// WHAT THIS CHECK IS, STATED HONESTLY. It is a backstop, not a proof. It
+// reads source text, so a sufficiently indirect gate will always escape
+// it. The durable version, named by the sixteenth reviewer, is a
+// positive obligation measured by running the tree rather than reading
+// it: every suite must either register a test under a bare
+// DATABASE_URL-only environment or appear in GATED. That is deliberately
+// NOT built here, because it is a rewrite of the test harness on the way
+// to a release, which is the scope drift these reviews exist to catch.
+// It is recorded as the next step rather than claimed as done.
+const ENV_EXPR = String.raw`(?:(?:globalThis\s*\.\s*)?process\s*(?:\.\s*env\b|\[\s*['"]env['"]\s*\])|require\(\s*['"]process['"]\s*\)\s*\.\s*env\b)`;
+
 function referencedEnvNames(src) {
   const referenced = new Set();
+  const add = (n) => { if (n) referenced.add(n); };
 
-  // 1. process.env.FOO
-  for (const m of src.match(new RegExp(`process\\.env\\.(${NAME}+)`, 'g')) || []) {
-    referenced.add(m.split('.').pop());
+  // 1. A direct read by dot or by string key: process.env.FOO,
+  //    process.env['FOO'], require('process').env.FOO, and so on.
+  for (const m of src.match(new RegExp(`${ENV_EXPR}\\s*\\.\\s*(${NAME}+)`, 'g')) || []) {
+    add(m.split('.').pop().trim());
+  }
+  for (const m of src.match(new RegExp(`${ENV_EXPR}\\s*\\[\\s*['"](${NAME}+)['"]\\s*\\]`, 'g')) || []) {
+    add(m.replace(new RegExp(`.*['"](${NAME}+)['"].*`), '$1'));
   }
 
-  // 2. process.env['FOO']
-  for (const m of src.match(new RegExp(`process\\.env\\[['"](${NAME}+)['"]\\]`, 'g')) || []) {
-    referenced.add(m.replace(new RegExp(`.*['"](${NAME}+)['"].*`), '$1'));
-  }
-
-  // 3. A computed READ: process.env[whatever], where the name cannot be
-  //    resolved statically. Deliberately not a computed WRITE - five real
-  //    suites here set or delete env keys by computed name as part of a
-  //    test, and flagging those is a false positive that would make this
-  //    check noise.
-  const computed = (src.match(/process\.env\[[^\]]+\]\s*(=[^=]|$)?/gm) || [])
+  // 2. A computed READ: the name cannot be resolved statically, so it is
+  //    treated as reading something unknown. Deliberately not a computed
+  //    WRITE - five real suites here set or delete env keys by computed
+  //    name as part of a test, and flagging those is a false positive
+  //    that would make the check noise.
+  const computed = (src.match(new RegExp(`${ENV_EXPR}\\s*\\[[^\\]]+\\]\\s*(=[^=]|$)?`, 'gm')) || [])
     .filter((m) => !/\]\s*=[^=]/.test(m))
+    .filter((m) => !/\[\s*['"][A-Za-z0-9_]+['"]\s*\]/.test(m))
     .filter((m) => !new RegExp(`delete\\s+${m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`).test(src));
-  if (computed.length) referenced.add('<computed>');
+  if (computed.length) add('<computed>');
 
-  // 4. Destructuring: const { FOO } = process.env
-  for (const m of src.match(/\{([^{}]*)\}\s*=\s*process\.env/g) || []) {
-    for (const name of m.match(new RegExp(`${NAME}{2,}`, 'g')) || []) referenced.add(name);
+  // 3. Destructuring straight off the environment.
+  for (const m of src.match(new RegExp(`\\{([^{}]*)\\}\\s*=\\s*${ENV_EXPR}`, 'g')) || []) {
+    for (const name of m.match(new RegExp(`${NAME}{2,}`, 'g')) || []) add(name);
   }
 
-  // 5. Finding T5: an alias walks past all of the above. Track what is
-  //    read OFF the alias, not the alias itself, because two real suites
-  //    spread process.env into a child process or snapshot it for restore
+  // 4. ALIASES. Finding T5 covered `const env = process.env`; W3 added
+  //    four more ways to hold the same object. Track what is read OFF an
+  //    alias, not the alias itself, because two real suites here spread
+  //    the environment into a child process or snapshot it for restore
   //    and neither is a gate.
-  const aliases = [
-    ...(src.match(/(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*process\.env\s*[;\n]/g) || []),
-    ...(src.match(/(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*\{\s*\.\.\.\s*process\.env[^}]*\}/g) || [])
-  ].map((m) => m.replace(/^(?:const|let|var)\s+([A-Za-z_$][\w$]*)[\s\S]*$/, '$1'));
+  const aliasPatterns = [
+    // const e = process.env  /  const e = require('process').env
+    new RegExp(`(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*${ENV_EXPR}\\s*[;\\n]`, 'g'),
+    // const e = { ...process.env }
+    new RegExp(`(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*\\{\\s*\\.\\.\\.\\s*${ENV_EXPR}[^}]*\\}`, 'g'),
+    // const e = Object.assign({}, process.env)
+    new RegExp(`(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*Object\\.assign\\([^)]*${ENV_EXPR}[^)]*\\)`, 'g'),
+    // const { env } = process  /  const { env: e } = process
+    /(?:const|let|var)\s*\{\s*env\s*(?::\s*([A-Za-z_$][\w$]*))?\s*\}\s*=\s*(?:globalThis\s*\.\s*)?process\b/g
+  ];
+  const aliases = new Set();
+  for (const re of aliasPatterns) {
+    let m;
+    while ((m = re.exec(src)) !== null) {
+      // The bare `const { env } = process` form binds the name `env`.
+      aliases.add(m[1] || 'env');
+    }
+  }
   for (const alias of aliases) {
-    for (const r of src.match(new RegExp(`\\b${alias}\\.(${NAME}{2,})`, 'g')) || []) {
-      referenced.add(r.split('.').pop());
+    for (const r of src.match(new RegExp(`\\b${alias}\\s*\\.\\s*(${NAME}{2,})`, 'g')) || []) {
+      add(r.split('.').pop().trim());
+    }
+    for (const r of src.match(new RegExp(`\\b${alias}\\s*\\[\\s*['"](${NAME}{2,})['"]\\s*\\]`, 'g')) || []) {
+      add(r.replace(new RegExp(`.*['"](${NAME}{2,})['"].*`), '$1'));
     }
   }
 
@@ -82,11 +128,11 @@ function referencedEnvNames(src) {
 // test (setting the owner binding, clearing a mailbox), not gated on.
 function assignedEnvNames(src) {
   const assigned = new Set();
-  for (const m of src.match(new RegExp(`process\\.env\\.(${NAME}+)\\s*=`, 'g')) || []) {
-    assigned.add(m.replace(new RegExp(`process\\.env\\.(${NAME}+)\\s*=`), '$1'));
+  for (const m of src.match(new RegExp(`${ENV_EXPR}\\s*\\.\\s*(${NAME}+)\\s*=`, 'g')) || []) {
+    assigned.add(m.replace(/\s*=$/, '').split('.').pop().trim());
   }
-  for (const m of src.match(new RegExp(`delete\\s+process\\.env\\.(${NAME}+)`, 'g')) || []) {
-    assigned.add(m.split('.').pop());
+  for (const m of src.match(new RegExp(`delete\\s+${ENV_EXPR}\\s*\\.\\s*(${NAME}+)`, 'g')) || []) {
+    assigned.add(m.split('.').pop().trim());
   }
   return assigned;
 }

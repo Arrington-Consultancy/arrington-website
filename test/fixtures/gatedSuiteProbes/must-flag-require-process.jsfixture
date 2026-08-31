@@ -1,0 +1,5 @@
+// W3 probe B: require('process') inline.
+const test = require('node:test');
+if (require('process').env.RUN_LIVE_THING) {
+  test('costs money', () => {});
+}

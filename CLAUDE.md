@@ -1141,8 +1141,9 @@ claimed a basis that did not exist, and the one honest sentence was
 already in the file and unreachable, sitting below the early return U1
 added and the gap branch U5 added.
 
-The record clause is now derived from the count on every branch, so no
-path can mention records without records having existed. The test sweeps
+The record clause is derived from the count. That sentence was written
+as "on every branch" and was not true of two of them until finding W1
+deleted the parameter that reached them. The test sweeps
 both directions, because a rule that only forbids is satisfied by saying
 nothing at all.
 
@@ -1206,6 +1207,70 @@ same run; the alert's bound at 25 rounds of 12 racing processes, exactly
 one notice every time, with the harness first shown to break a lock-free
 predecessor 5 times in 10; the permission legs probed with their own
 eight canaries; and the Scott firewall clean at module-graph level.
+
+### Sixteenth governance review: PASS, four LOW (31/08/2026)
+
+`review/workspace-v0.1-governance-review-16-2026-08-31.md` (**PASS**,
+W1-W4, all LOW, no MEDIUM and no HIGH, against head `0f03a6a`), answered
+in `review/workspace-v0.1-w-remediation-2026-08-31.md`. All four
+corrected, each watched red against `0f03a6a`.
+
+**This is the second PASS in sixteen and the first on a candidate that
+includes Ruth.** It covers `0f03a6a` and nothing else: the corrections
+below change the head, so a seventeenth confirmatory pass was
+commissioned rather than the verdict being carried forward. That is the
+same rule applied when Ruth followed the twelfth pass.
+
+**W1: an inert parameter, and the stronger fix.** `answered` was passed
+on every turn and was always true, because `parseReply` refuses a reply
+whose answer is not a non-empty trimmed string and the route answers 503
+before Ruth is called. Three of her six shapes were dead, and two of the
+dead ones carried a hard-coded "there is nothing on file" that the count
+never touched, contradicting the module's own rule and the same sentence
+in this file. **That is finding T2 recurring one parameter along, in the
+same function, three cycles later.** The parameter is deleted rather than
+its strings patched, because an inert parameter invites a future caller
+to reach branches nobody reasoned about; the field guard now throws if
+anyone passes it again.
+
+**W2: a denylist one synonym from useless.** The V2 fix widened the
+auxiliary and left the verb list a denylist of eight. The reviewer walked
+a mutation past it in one line: "I took that to X, and I checked the 3
+records behind it myself" - a claim to have read records she cannot read,
+green against a suite named for that property. Fifth instance of the
+shape, inside the fix for the fourth. Her permitted output set is now
+**declared and asserted for membership**, in both directions, so a new
+sentence must be added deliberately and read.
+
+**W3: five more idioms, and a claim wider than the code.** All five were
+ways of naming the same object, so the environment expression is factored
+into one place rather than five patterns being added to an arms race nine
+cycles have shown unwinnable. The more important half is the sentence:
+the file claimed the scan "must at least catch the shapes the runner is
+blind to", and that is narrowed to what the code does, with the durable
+fix (a positive obligation measured by running the tree rather than
+reading it) recorded as the next step rather than as done.
+
+**W4 was self-found before the review returned, and it was mine.** Node's
+discovery includes every `.js` under a directory named `test`, so all
+twelve V3 fixtures were being executed while the comment said they never
+were - the sixteenth instance of this chain's defect class, in the commit
+that fixed the fifteenth, inside the fix for the check defeated every
+cycle. It also reintroduced V4's own class two commits after V4 closed.
+The fixtures carry `.jsfixture` now and **a test asserts it**, because a
+comment claiming the runner ignores a file is what this chain has learned
+not to trust.
+
+**What the sixteenth reviewer re-established rather than inherited:**
+Ruth's whole output space at 1,080 calls and 99 strings plus the real
+endpoint under three model stubs; all three gates across 12,654 request
+comparisons and 1,200 timed requests in both flag states, anonymous and
+as an uncleared CMS admin, against shape-matched controls on status, full
+headers and body hash, with zero real differences; the CMS-admin takeover
+stopping at the unlock screen; passphrase rotation invalidating an open
+unlock; the permission legs at 60 clearance-by-lane combinations plus a
+17-surface rendered sweep with a positive control that does show a leak;
+and the alert's bound over 115 bursts with a warmed pool.
 
 ### Twelfth review PASS, then two more after Ruth (31/08/2026)
 

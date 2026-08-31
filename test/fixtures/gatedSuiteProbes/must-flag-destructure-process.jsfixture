@@ -1,0 +1,7 @@
+// Governance finding W3, probe A: destructure env off process, then read
+// it. Neither half of the check saw this.
+const test = require('node:test');
+const { env } = process;
+if (env.RUN_LIVE_THING) {
+  test('costs money', () => {});
+}

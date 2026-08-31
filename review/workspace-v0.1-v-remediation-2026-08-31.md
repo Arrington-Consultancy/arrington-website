@@ -31,6 +31,16 @@ added.
 **The correction is structural rather than another string.** The record
 clause is now derived from the count on every branch, so there is no path
 on which a sentence can mention records without records having existed.
+
+> **CORRECTION, added 31/08/2026 after governance finding W1.** "On every
+> branch" was untrue of two of them. The `lane && !answered` pair carried
+> a hard-coded "there is nothing on file that answers it" that the count
+> never touched, so with records supplied it asserted their absence.
+> Unreachable, because `answered` was always true, which is the other
+> half of W1: an inert parameter, finding T2 recurring one parameter
+> along. The parameter is deleted in
+> `workspace-v0.1-w-remediation-2026-08-31.md` and the sentence is true
+> now.
 Zero-record turns say what happened instead: *"there was no record on
 file to answer it from"*, and on a lane, *"they answered from what they
 hold, with no record behind it"*.

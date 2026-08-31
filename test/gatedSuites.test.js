@@ -69,10 +69,31 @@ test('every declared gated suite still exists', () => {
 
 test('a gated suite cannot appear without being declared', () => {
   // The backstop for what the runtime check structurally cannot see.
-  // Not an attempt to enumerate every way of writing a gate - seven
-  // reviews proved that unwinnable - but it must at least catch the
-  // shapes the runner is blind to, and findings S1, T5, U3, U4 and V3
-  // each showed it did not.
+  //
+  // Governance finding W3: this used to say it "must at least catch the
+  // shapes the runner is blind to", and the reviewer got five ordinary
+  // JavaScript idioms past it in the same breath - the ninth consecutive
+  // cycle in which it was defeated. The sentence is narrowed to what the
+  // code actually does, because an overstated claim about a check is the
+  // same defect class as an overstated claim about a gate.
+  //
+  // WHAT IT DOES: it reads source text, and catches the shapes named by
+  // the probes in test/fixtures/gatedSuiteProbes - direct, bracketed,
+  // destructured, aliased and computed reads of the environment, a file
+  // that registers no tests, and an early return on configuration. Those
+  // probes are the definition; this comment is not.
+  //
+  // WHAT IT DOES NOT DO: prove that no gated suite is undeclared. A
+  // sufficiently indirect gate escapes any source scan. The durable
+  // version, named by the sixteenth reviewer, is a positive obligation
+  // measured by RUNNING the tree rather than reading it: every suite must
+  // either register a test under a bare DATABASE_URL-only environment or
+  // appear in GATED. It is deliberately not built here - rewriting the
+  // test harness on the way to a release is the scope drift these reviews
+  // exist to catch - and it is recorded as the next step rather than
+  // claimed as done. Nothing in the real tree exploits the gap today; the
+  // sixteenth reviewer checked that independently with a stricter scan of
+  // their own and found every non-database gate declared.
   //
   // The classifier itself lives in test/helpers/gatedSuiteScan.js and is
   // exercised directly by test/gatedSuiteScan.test.js against committed

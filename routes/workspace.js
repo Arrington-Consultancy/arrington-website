@@ -494,9 +494,13 @@ router.post('/api/workspace/ask', requireWorkspaceApiAccess, askLimiter, async (
       // Ruth's line about where the question went. Built from the
       // routing facts only - she is handed no record and no answer text,
       // so she cannot repeat anything a lane decided not to show.
+      // `answered` used to be passed here as !!result.answer. Governance
+      // finding W1: it was always true, because parseReply refuses a
+      // reply whose answer is not a non-empty trimmed string and this
+      // route answers 503 before reaching this line. It is gone, and the
+      // field guard in the receptionist throws if anyone passes it again.
       receptionist: receptionist.handoffNote({
         laneId: result.laneId || null,
-        answered: !!result.answer,
         recordCount: result.provenanceKeys.length,
         gapRaised: !!result.gap
       })
