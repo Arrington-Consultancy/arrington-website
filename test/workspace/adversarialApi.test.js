@@ -23,10 +23,17 @@ const PASSPHRASE = process.env.WORKSPACE_TEST_PASSPHRASE;
 const PAGES = [
   '/workspace', '/workspace/chat', '/workspace/brain', '/workspace/opportunities',
   '/workspace/projects', '/workspace/contacts', '/workspace/social',
-  '/workspace/workforce', '/workspace/approvals', '/workspace/gaps', '/workspace/activity'
+  '/workspace/workforce', '/workspace/approvals', '/workspace/gaps', '/workspace/activity',
+  // Added for G1: the unlock screen is a workspace path like any other
+  // and was the one page this list did not probe.
+  '/workspace/unlock'
 ];
 const APIS = [
   ['/api/workspace/ask', { question: 'what is the current position' }],
+  // Added for G2: these two were the only workspace endpoints never
+  // probed, and they were the two answering in a different shape.
+  ['/api/workspace/unlock', { passphrase: 'not-the-passphrase' }],
+  ['/api/workspace/lock', {}],
   ['/api/workspace/contacts/sync', {}],
   ['/api/workspace/contacts/1/erase', { confirmEmail: 'x@y.test', reason: 'probe' }],
   ['/api/workspace/gaps/1/resolve', { note: 'probe', sourceCorrected: true }],
@@ -115,16 +122,47 @@ test('adversarial workspace checks', { skip: configured ? false : 'set WORKSPACE
   // out before comparing, since those differ on every response.
   const stripNonces = (html) => html.replace(/nonce="[^"]*"/g, 'nonce="X"');
 
+  // Governance finding G1 (31/08/2026), HIGH. The anonymous checks below
+  // compared status and body and NOTHING ELSE, so they reported a pass
+  // while X-Robots-Tag was being stamped on every workspace denial and
+  // on no other 404. One header is as readable as one status code, and
+  // it was present with the enable flag OFF, which is production's
+  // configuration if this branch merges. Headers are now part of the
+  // comparison. Hop-by-hop and per-response headers that legitimately
+  // differ between any two requests are excluded by name; everything
+  // else must match the control path exactly.
+  const VOLATILE_HEADERS = new Set([
+    'date', 'content-length', 'etag', 'last-modified', 'set-cookie',
+    'keep-alive', 'connection', 'transfer-encoding', 'ratelimit',
+    'ratelimit-limit', 'ratelimit-remaining', 'ratelimit-reset',
+    'retry-after', 'x-ratelimit-limit', 'x-ratelimit-remaining', 'x-ratelimit-reset'
+  ]);
+  // Nonces are normalised inside header VALUES as well as in the body:
+  // the CSP header carries the same per-request nonce, so comparing it
+  // raw would fail on every pair of requests and tell us nothing. The
+  // header is compared rather than excluded, because excluding it would
+  // blind this check to a genuine CSP difference between a workspace
+  // denial and a real 404.
+  const stripNoncesInHeader = (v) => String(v).replace(/'nonce-[^']*'/g, "'nonce-X'");
+  const headerFingerprint = (res) => [...res.headers.entries()]
+    .filter(([k]) => !VOLATILE_HEADERS.has(k.toLowerCase()))
+    .map(([k, v]) => `${k.toLowerCase()}: ${stripNoncesInHeader(v)}`)
+    .sort()
+    .join('\n');
+
   await t.test('an anonymous visitor gets an ordinary 404, not a login redirect', async () => {
     const anon = makeClient();
     const control = await anon.go('/definitely-not-a-real-page-9f3c');
     assert.equal(control.status, 404, 'the control path did not 404');
     const controlBody = stripNonces(await control.text());
+    const controlHeaders = headerFingerprint(control);
     for (const path of PAGES) {
       const res = await anon.go(path);
       assert.equal(res.status, 404, `${path} returned ${res.status} to an anonymous visitor`);
       assert.equal(stripNonces(await res.text()), controlBody,
         `${path} produced a 404 distinguishable from a genuinely missing page`);
+      assert.equal(headerFingerprint(res), controlHeaders,
+        `${path} produced a 404 whose HEADERS differ from a genuinely missing page (finding G1)`);
     }
   });
 
@@ -132,6 +170,7 @@ test('adversarial workspace checks', { skip: configured ? false : 'set WORKSPACE
     const anon = makeClient();
     const control = await anon.go('/api/definitely-not-a-real-endpoint-9f3c', { method: 'POST', body: {} });
     const controlBody = await control.text();
+    const controlHeaders = headerFingerprint(control);
     for (const [path, body] of APIS) {
       const res = await anon.go(path, { method: 'POST', body });
       assert.ok(res.status !== 200, `${path} answered an anonymous POST`);
@@ -139,6 +178,8 @@ test('adversarial workspace checks', { skip: configured ? false : 'set WORKSPACE
         `${path} returned ${res.status} where a non-existent endpoint returns ${control.status}`);
       const text = await res.text();
       assert.equal(text, controlBody, `${path} denial differs from a non-existent endpoint's`);
+      assert.equal(headerFingerprint(res), controlHeaders,
+        `${path} denial has HEADERS a non-existent endpoint does not (finding G1)`);
       assert.doesNotMatch(text, /workspace/i, `${path} named the workspace in its denial`);
     }
   });
@@ -190,6 +231,11 @@ test('adversarial workspace checks', { skip: configured ? false : 'set WORKSPACE
   await t.test('a logged-in cleared session reaches nothing until it presents the passphrase', async () => {
     for (const path of PAGES) {
       const res = await tom.go(path);
+      if (path === '/workspace/unlock') {
+        // The one page a locked session may render: it is how you unlock.
+        assert.equal(res.status, 200, 'the unlock screen was not reachable while locked');
+        continue;
+      }
       assert.equal(res.status, 302, `${path} returned ${res.status} to a locked session`);
       assert.equal(res.headers.get('location'), '/workspace/unlock',
         `${path} sent a locked session somewhere other than the unlock screen`);
@@ -204,7 +250,12 @@ test('adversarial workspace checks', { skip: configured ? false : 'set WORKSPACE
     const csrf = ((await (await tom.go('/workspace/unlock')).text())
       .match(/name="csrf-token" content="([^"]+)"/) || [])[1];
     assert.ok(csrf, 'no CSRF token could be read, so the API checks below would only be testing CSRF');
+    // The two unlock endpoints are deliberately reachable while locked:
+    // they are the way out of being locked, and refusing them would make
+    // the workspace unopenable. Everything else must be shut.
+    const REACHABLE_WHILE_LOCKED = new Set(['/api/workspace/unlock', '/api/workspace/lock']);
     for (const [path, body] of APIS) {
+      if (REACHABLE_WHILE_LOCKED.has(path)) continue;
       const res = await tom.go(path, { method: 'POST', body, headers: { 'x-csrf-token': csrf } });
       assert.equal(res.status, 404, `${path} answered ${res.status} to a locked session`);
       const text = await res.text();
@@ -228,7 +279,10 @@ test('adversarial workspace checks', { skip: configured ? false : 'set WORKSPACE
     assert.equal(unlocked.status, 200, 'the passphrase was refused, so nothing below was exercised');
     for (const path of PAGES) {
       const res = await tom.go(path);
-      assert.equal(res.status, 200, `${path} returned ${res.status} for Tom`);
+      // An already-unlocked session is sent on from the unlock screen
+      // rather than shown a form it does not need.
+      const expected = path === '/workspace/unlock' ? 302 : 200;
+      assert.equal(res.status, expected, `${path} returned ${res.status} for Tom`);
       assert.match(res.headers.get('x-robots-tag') || '', /noindex/,
         `${path} is missing the noindex header`);
     }

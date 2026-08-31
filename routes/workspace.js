@@ -20,7 +20,8 @@ const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const repo = require('../lib/workspace/repo');
 const { filterRecordsForClearance, clearanceCanSeeRecord, clearanceCanSeeSensitivity, clearanceCovers, CLEARANCES } = require('../lib/workspace/clearance');
 const { LANES, SOURCE_CLASSES, laneById } = require('../lib/workspace/lanes');
-const { requireWorkspacePageAccess, requireWorkspaceApiAccess, workspaceNoindex } = require('../lib/workspace/access');
+const { requireWorkspacePageAccess, requireWorkspaceApiAccess, setNoindex } = require('../lib/workspace/access');
+const { render404 } = require('../lib/render404');
 const wsUnlock = require('../lib/workspace/unlock');
 const { workspaceEnabled, workspaceClearance } = require('../lib/workspace/access');
 const { askWorkspace, isWorkspaceAIEnabled, routeToLane } = require('../lib/workspace/orchestrator');
@@ -96,7 +97,7 @@ function withFreshness(records) {
 
 function mountPageRoute(app, generateCsrfToken) {
   const page = (path, handler) => {
-    app.get(path, workspaceNoindex, requireWorkspacePageAccess, async (req, res, next) => {
+    app.get(path, requireWorkspacePageAccess, async (req, res, next) => {
       try { await handler(req, res); } catch (err) { next(err); }
     });
   };
@@ -107,7 +108,7 @@ function mountPageRoute(app, generateCsrfToken) {
   // business: no counts, no record titles, no navigation, because a
   // locked session must learn nothing from the screen that asks it to
   // unlock.
-  app.get('/workspace/unlock', workspaceNoindex, requireWorkspacePageAccess, (req, res) => {
+  app.get('/workspace/unlock', requireWorkspacePageAccess, (req, res) => {
     if (wsUnlock.isUnlocked(req)) return res.redirect('/workspace');
     res.render('workspace/unlock', {
       nonce: res.locals.nonce,
@@ -275,10 +276,19 @@ function mountPageRoute(app, generateCsrfToken) {
   page('/workspace/activity', async (req, res) => {
     // Governance finding F6: activity summaries quote gap descriptions,
     // record titles and approval titles, so the log is a derived view of
-    // material the other pages filter. It is gated at the same level as
-    // the narrowest thing it can quote.
+    // material the other pages filter.
+    //
+    // Finding G8 (31/08/2026) corrected the level. The comment used to
+    // claim this was "gated at the same level as the narrowest thing it
+    // can quote" while gating on 'commercial', and a gap's sensitivity
+    // can be 'confidential' (gapFallbackSensitivity now deliberately
+    // defaults it there). A clearance holding standard and commercial
+    // would have passed the gate and received confidential quotations.
+    // No such clearance exists today; the comment asserting a property
+    // the code did not have is the same pattern as F1 and F2, which is
+    // why it is worth a line rather than a shrug.
     const clearanceId = req.workspaceClearance;
-    const permitted = clearanceCanSeeSensitivity(clearanceId, 'commercial');
+    const permitted = clearanceCanSeeSensitivity(clearanceId, 'confidential');
     res.render('workspace/activity', {
       ...viewer(req),
       counts: await navCounts(clearanceId),
@@ -326,15 +336,22 @@ function mountPageRoute(app, generateCsrfToken) {
 // locked session, which would make unlocking impossible. This checks the
 // flag and the identity binding only, so the passphrase is the single
 // thing being tested here.
+// Governance finding G2 (31/08/2026): these two hand-wrote a JSON 404
+// where a genuinely missing endpoint answers with the site's HTML 404,
+// so the two were distinguishable by shape even though the status
+// matched. They now go through the same renderer as everything else,
+// which negotiates HTML or JSON from the Accept header exactly as the
+// real 404 handler does.
 function requireWorkspaceIdentity(req, res, next) {
-  if (!workspaceEnabled()) return res.status(404).json({ error: 'Not found' });
+  if (!workspaceEnabled()) return render404(req, res);
   const clearance = workspaceClearance(req);
-  if (!clearance) return res.status(404).json({ error: 'Not found' });
+  if (!clearance) return render404(req, res);
+  setNoindex(res);
   req.workspaceClearance = clearance;
   return next();
 }
 
-router.post('/api/workspace/unlock', workspaceNoindex, requireWorkspaceIdentity, unlockLimiter, async (req, res, next) => {
+router.post('/api/workspace/unlock', requireWorkspaceIdentity, unlockLimiter, async (req, res, next) => {
   try {
     const username = req.session.user.username;
     if (!wsUnlock.configuredPassphrase()) {
@@ -360,12 +377,12 @@ router.post('/api/workspace/unlock', workspaceNoindex, requireWorkspaceIdentity,
 
 // Locking again is always allowed and never fails: it only forgets a
 // session fact.
-router.post('/api/workspace/lock', workspaceNoindex, requireWorkspaceIdentity, (req, res) => {
+router.post('/api/workspace/lock', requireWorkspaceIdentity, (req, res) => {
   wsUnlock.clearUnlock(req);
   res.json({ ok: true });
 });
 
-router.post('/api/workspace/ask', workspaceNoindex, requireWorkspaceApiAccess, askLimiter, async (req, res, next) => {
+router.post('/api/workspace/ask', requireWorkspaceApiAccess, askLimiter, async (req, res, next) => {
   try {
     const username = req.session.user.username;
     const clearanceId = req.workspaceClearance;
@@ -455,7 +472,7 @@ async function recordForGap(gap) {
   return repo.getRecordByKey(m[1]);
 }
 
-router.post('/api/workspace/approvals/:id/decide', workspaceNoindex, requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
+router.post('/api/workspace/approvals/:id/decide', requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
     const decision = req.body.decision === 'approved' ? 'approved' : req.body.decision === 'declined' ? 'declined' : null;
@@ -468,7 +485,7 @@ router.post('/api/workspace/approvals/:id/decide', workspaceNoindex, requireWork
   } catch (err) { next(err); }
 });
 
-router.post('/api/workspace/gaps/:id/resolve', workspaceNoindex, requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
+router.post('/api/workspace/gaps/:id/resolve', requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
     const note = typeof req.body.note === 'string' ? req.body.note.trim().slice(0, 2000) : '';
@@ -491,7 +508,7 @@ router.post('/api/workspace/gaps/:id/resolve', workspaceNoindex, requireWorkspac
 // consequential external actions, and lib/workspace/social/actions.js
 // refuses them by construction. The most this API can do with one is
 // put it in the human approval queue as a record.
-router.post('/api/workspace/social/engagement/:id/replied', workspaceNoindex, requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
+router.post('/api/workspace/social/engagement/:id/replied', requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (!Number.isInteger(id)) return res.status(400).json({ error: 'Bad id.' });
@@ -502,7 +519,7 @@ router.post('/api/workspace/social/engagement/:id/replied', workspaceNoindex, re
   } catch (err) { next(err); }
 });
 
-router.post('/api/workspace/social/request-action', workspaceNoindex, requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
+router.post('/api/workspace/social/request-action', requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
   try {
     const { platform, action, summary, detail } = req.body || {};
     if (!platform || !action || !summary) return res.status(400).json({ error: 'platform, action and summary are required.' });
@@ -519,7 +536,7 @@ router.post('/api/workspace/social/request-action', workspaceNoindex, requireWor
   } catch (err) { next(err); }
 });
 
-router.post('/api/workspace/contacts/sync', workspaceNoindex, requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
+router.post('/api/workspace/contacts/sync', requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
   try {
     if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'commercial')) {
       return res.status(404).json({ error: 'Not found' });
@@ -538,7 +555,7 @@ router.post('/api/workspace/contacts/sync', workspaceNoindex, requireWorkspaceAp
 // access, commercial clearance, the confirming human typing the address
 // back exactly, and a written reason. There is no bulk version and no
 // query parameter that widens it beyond one person.
-router.post('/api/workspace/contacts/:id/erase', workspaceNoindex, requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
+router.post('/api/workspace/contacts/:id/erase', requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
   try {
     if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'commercial')) {
       return res.status(404).json({ error: 'Not found' });

@@ -88,7 +88,12 @@ function fakePageRes(sink) {
     status(c) { sink.status = c; return this; },
     render(v) { sink.rendered = v; return this; },
     json(b) { sink.json = b; return this; },
-    redirect(url) { sink.redirected = url; return this; }
+    redirect(url) { sink.redirected = url; return this; },
+    // Finding G1 moved the noindex header out of a pre-guard middleware
+    // and into the guards' success paths, so these fakes have to record
+    // headers. That is deliberate: the header is now part of the access
+    // decision and the tests should see it.
+    setHeader(k, v) { (sink.headers = sink.headers || {})[k] = v; return this; }
   };
 }
 function fakeReq(session, originalUrl = '/workspace/brain') {
@@ -145,7 +150,7 @@ test('the API answers 404 to both the anonymous and the uncleared caller, tellin
 test('a cleared and unlocked request carries its clearance forward for the route to filter with', () => {
   const req = unlockedReq({ ...TOM, role: 'admin' });
   let called = false;
-  access.requireWorkspaceApiAccess(req, { status() { return this; }, json() {} }, () => { called = true; });
+  access.requireWorkspaceApiAccess(req, fakePageRes({}), () => { called = true; });
   assert.equal(called, true);
   assert.equal(req.workspaceClearance, 'owner_admin');
 });
@@ -186,10 +191,34 @@ test('an uncleared user does not get the unlock screen, because that would admit
   assert.equal(sink.rendered, undefined);
 });
 
-test('the noindex header is set for every workspace response', () => {
-  const headers = {};
-  let nexted = false;
-  access.workspaceNoindex({}, { setHeader: (k, v) => { headers[k] = v; } }, () => { nexted = true; });
-  assert.equal(headers['X-Robots-Tag'], 'noindex, nofollow');
-  assert.equal(nexted, true);
+// Governance finding G1 (31/08/2026), HIGH. This used to call a
+// middleware that ran BEFORE the access guard, so it stamped the header
+// on denials too and let an anonymous scanner enumerate the workspace
+// with the enable flag OFF. The header is now set only after access is
+// granted, and these two cases pin both halves of that: it arrives for a
+// served response, and it is ABSENT from every denial.
+test('the noindex header is set on a response the workspace actually serves', () => {
+  const sink = {};
+  access.requireWorkspaceApiAccess(unlockedReq({ ...TOM, role: 'admin' }), fakePageRes(sink), () => {});
+  assert.equal((sink.headers || {})['X-Robots-Tag'], 'noindex, nofollow');
+});
+
+test('no denial carries a workspace-specific header, whatever the reason for it', async () => {
+  // An uncleared user, an anonymous visitor, and the flag being off.
+  // None of them may produce a header a missing page would not have.
+  const uncleared = {};
+  await access.requireWorkspacePageAccess(
+    fakeReq({ user: { id: 2, username: 'nat', role: 'admin' } }), fakePageRes(uncleared), () => {}
+  );
+  assert.equal(uncleared.headers, undefined, 'an uncleared denial carried a workspace header');
+
+  const anon = {};
+  await access.requireWorkspacePageAccess(fakeReq({}), fakePageRes(anon), () => {});
+  assert.equal(anon.headers, undefined, 'an anonymous denial carried a workspace header');
+
+  delete process.env.ENABLE_ARRINGTON_AI_WORKSPACE;
+  const flagOff = {};
+  await access.requireWorkspacePageAccess(fakeReq({ user: TOM }), fakePageRes(flagOff), () => {});
+  assert.equal(flagOff.headers, undefined,
+    'with the flag OFF a workspace path still carried a header a missing page does not: merging would not be inert');
 });

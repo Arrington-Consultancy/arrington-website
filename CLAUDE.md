@@ -1061,6 +1061,64 @@ is built staging-first and credential-gated, and the expansion is being
 routed to Governance and Assurance as a controlled change rather than
 treated as self-approved.
 
+### Second governance review: AMBER again, nine findings (31/08/2026)
+
+`review/workspace-v0.1-governance-review-2026-08-31.md` (**AMBER**, G1-G9),
+answered in `review/workspace-v0.1-g-remediation-2026-08-31.md`. Eight
+corrected; **G3 is open and reserved to Tom**.
+
+**G1 was HIGH and it was finding F2 all over again in a place nobody
+looked.** `workspaceNoindex` was registered BEFORE the access guard on
+every route, so it stamped `X-Robots-Tag` on the DENIAL. A missing path
+gets no such header, so an anonymous scanner could still separate a real
+workspace route from a missing one and enumerate the page list, **with
+the enable flag OFF**. That falsified this file's own claim that
+"merging is inert": on merge, the public site would have started
+announcing the area. It is now `setNoindex(res)`, called only on the
+success path, and deliberately no longer exported as middleware so it
+cannot be reintroduced ahead of a guard by copying a route registration.
+**The adversarial suite now compares the full response header set against
+a control path**, not just status and body, which is the gap that let it
+through; per-request nonces are normalised inside header values the same
+way they are in the body.
+
+**G3 (MEDIUM, OPEN).** Three commits landed on this branch AFTER the
+30/08 review was issued (`4da96ae`, `aa9fee2`, `1b770eb`). They are not
+remediation. `views/scott/social.ejs` **does not exist on main at all**
+and carries the chat widget; `routes/scott.js` now passes `aiEnabled` to
+every Scott data page. Scott is live publicly with `ENABLE_SCOTT_AI=true`,
+so **merging this branch adds a live AI chat surface to a released public
+demonstration**. Tom's F3 approval is worded "already presented to
+Governance ... bounded to that reviewed scope", and these landed after,
+so by its own wording they are not covered. Either they come out and
+return as their own change, or Tom names them individually in a decision.
+
+Others worth knowing because they changed behaviour beyond the workspace:
+
+- **G5**: `routes/auth.js` now calls `req.session.regenerate()` at login.
+  Session fixation was a pre-existing SITE-WIDE weakness; the workspace
+  made it load-bearing, because the unlock is a session fact.
+- **G7**: `configuredPassphrase` tested the trimmed value and returned the
+  UNTRIMMED one, so a trailing newline on the Railway variable would have
+  locked Tom out while the boot line said it was fine. The same Railway
+  failure mode that cost a whole session on the Market Ready Test. Now
+  trimmed once, and the boot line names any surrounding whitespace.
+- **G9**: `lib/crm/emailHash.js` no longer falls back to a hard-coded key
+  when `SESSION_SECRET` is unset; it throws. The fallback reinstated the
+  F4 membership oracle in dev, CI and throwaway databases.
+- **G4**: the live-AI leak probe's canary set was six tokens of which one
+  was distinctive, and the free guard tested a COPY of the filter. One
+  shared derivation now, and the case skips as NOT EXECUTABLE when no
+  distinctive canary survives rather than passing on ordinary English.
+  Consequence worth stating: the `ws-20260831-c` run proved less on its
+  third case than its `ok` implied.
+- **G6 (LOW, partly open)**: the unlock attempt budget is in-memory and
+  resets on any restart. The sharper half is that
+  `workspace_unlock_failed` rows are only visible on `/workspace/activity`,
+  which needs the unlock to view, so in the exact scenario the gate exists
+  for the warning goes to a screen nobody can open. Emailing on a burst is
+  proposed, not built.
+
 ### Governance review: AMBER, and what is still open (31/08/2026)
 
 The independent review is `review/workspace-v0.1-governance-review-2026-08-30.md`

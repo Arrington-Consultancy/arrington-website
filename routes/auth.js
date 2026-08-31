@@ -97,6 +97,26 @@ router.post('/login', loginLimiter, async (req, res) => {
       return res.render('login', { error: 'Invalid credentials.', theme, nextPath });
     }
 
+    // Governance finding G5 (31/08/2026): the session id an anonymous
+    // visitor arrives with used to be the session id they held after
+    // logging in, which is textbook session fixation. Anyone who could
+    // plant a connect.sid value in a browser and then wait for the real
+    // user to log in inherited that authenticated session.
+    //
+    // This is a site-wide weakness that predates the workspace. What the
+    // workspace did was make it load-bearing: a fixated session used to
+    // get CMS content, and would now get the controlled brain and the
+    // irreversible erasure control, because the workspace unlock is a
+    // session fact and rides on this cookie.
+    //
+    // Regenerating issues a new id and discards anything the old session
+    // carried, including any workspace unlock, so a fixated cookie is
+    // worth nothing the moment a real login happens. The flash data this
+    // route needs is re-set below, after the swap.
+    await new Promise((resolve, reject) => {
+      req.session.regenerate((err) => (err ? reject(err) : resolve()));
+    });
+
     req.session.user = {
       id: user.id,
       username: user.username,
