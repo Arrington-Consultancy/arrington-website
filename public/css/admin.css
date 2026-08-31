@@ -169,6 +169,38 @@
     }
 }
 
+/* Section action buttons are always-visible on mobile (touch has no
+   hover), at the same top-right position used for desktop's hover
+   reveal. That position sits inside the normal content area, and on a
+   narrow viewport a section's own heading/text routinely reaches that
+   same band - worst on the hero, where a long heading wraps across
+   several lines starting near the top of the section. The result was
+   button icons visually interleaved with mid-word text, reported by Tom
+   as "broken mobile layout" after signing in (bug predates the
+   31/08/2026 Workspace release; confirmed identical on the prior
+   production commit, so this is a fix, not a regression).
+   A solid backdrop behind the whole row turns "icons interrupting a
+   sentence" into a normal toolbar sitting on top, which is what it is.
+   Sized to the row's own bounding box (5 buttons, 32px each, spanning
+   right:0.75rem to right:9.75rem+32px, top:0.75rem to +32px) plus a
+   small margin. Scoped with :has() to sections that actually render the
+   edit button, so a logged-in viewer without edit_content (admin.css
+   still loads for them) never gets an empty box in the corner. */
+@media (max-width: 900px) {
+    .cms-section:has(.cms-edit-btn)::before {
+        content: '';
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        width: 11.75rem;
+        height: 2.5rem;
+        background: rgba(12, 12, 12, 0.95);
+        border-radius: 6px;
+        z-index: 49;
+        pointer-events: none;
+    }
+}
+
 /* ---- IMAGE EDIT BUTTONS ---- */
 .nav-logo,
 .hero-photo,
