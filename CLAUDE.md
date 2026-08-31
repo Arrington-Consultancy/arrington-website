@@ -935,7 +935,7 @@ Tom returned an agreed-changes brief (`arrington_copy_review_agreed_changes_20_j
 
 The real internal workspace, at `/workspace`. **On its branch, not on
 main, and OFF in production.** Branch `feature/arrington-ai-workspace-v0-1`,
-head `451d47d` at time of writing. Staging service
+head `3078ff5` (31/08/2026, the AMBER remediation pass). Staging service
 `arrington-ai-workspace` (staging environment only, it has no production
 instance), URL `arrington-ai-workspace-staging.up.railway.app`, first
 deploy `94280d0c` SUCCESS. Tom confirmed staging works on 30/08/2026.
