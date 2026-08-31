@@ -122,6 +122,24 @@ describe('classifyReasonableness', () => {
     });
   }
 
+  // Governance review 2 (31/08/2026), finding N1: the M2 widening of
+  // signed_contracts to a bare word match over-refused ordinary,
+  // non-contract, low-consequence staff-rota/workflow questions. Narrowed
+  // to require a commercial noun alongside the contract word. These four
+  // are the reviewer's own examples, and must now be ALLOWED again (not
+  // reserved) while the two M2 catches immediately above still refuse.
+  for (const [label, question] of [
+    ['contract cleaner, not a supplier contract', 'is our contract cleaner coming this week'],
+    ['staff rota, not a customer arrangement', 'what arrangement do we have for who opens up on Mondays'],
+    ['holiday cover, not a written arrangement with anyone external', 'is there an informal arrangement about who covers holidays'],
+    ['internal order split, not a supplier agreement', 'do we have a rough agreement about how orders get split between the two of you']
+  ]) {
+    test(`N1 regression: ordinary staff/workflow question using "contract/agreement/arrangement" is not reserved (${label})`, () => {
+      const result = memory.classifyReasonableness({ workerId: 'operations', personaId: 'tony_marsh', domain: 'suppliers_ops', canonicalQuestion: question });
+      assert.equal(result.allowed, true, `expected this ordinary question to be allowed, not reserved: ${question}`);
+    });
+  }
+
   test('refuses a question too vague to be worth establishing as a fact', () => {
     const result = memory.classifyReasonableness({ workerId: 'operations', personaId: 'tony_marsh', domain: 'suppliers_ops', canonicalQuestion: 'why' });
     assert.equal(result.allowed, false);
@@ -300,5 +318,36 @@ describe('evolving fictional memory ledger (real database)', { skip: DB_AVAILABL
 
     const active = await memory.findActiveFact('suppliers_ops', memory.canonicalizeQuestion(question));
     assert.equal(active.id, superseded.fact.id, 'only the new fact should be active now');
+  });
+
+  // Governance review 2 (31/08/2026), finding N2. Pinned as an explicit,
+  // intentional test of ACCEPTED behaviour, not a silent gap: the one
+  // production caller with a genuinely unset personaId (the anonymous
+  // public lead enquiry's fire-and-forget draft) resolves it to the
+  // owner persona in contextBuilders.js's buildContext(), one level
+  // above findRelevantFacts — the same pre-existing fallback every other
+  // piece of deep-brain context data already receives on that identical
+  // path. This test exists so that behaviour can never again drift
+  // without someone reading this and deciding, rather than an untested
+  // assumption either way.
+  test('N2: buildContext resolves an unset personaId to the owner default before reaching memory retrieval, matching every other deep-brain block on the same anonymous-draft path', async () => {
+    const contextBuilders = require('../../../lib/scott/data/contextBuilders');
+    const question = unique('what is our usual budget for a promoted post');
+    const seeded = await memory.establishFact({
+      workerId: 'customers_marketing', domain: 'marketing_performance', canonicalQuestion: question,
+      answerText: 'Around £90 a month, reviewed quarterly.', askedByPersonaId: 'tony_marsh'
+    });
+    created.push(seeded.fact.id);
+
+    // No personaId key at all — the exact shape of the anonymous
+    // fire-and-forget draft call in routes/scott.js.
+    const context = await contextBuilders.buildContext('customers_marketing', { message: question, entities: {} });
+    assert.match(context, /PREVIOUSLY ESTABLISHED FICTIONAL COMPANY MEMORY/, 'an unset persona currently retrieves at owner-level visibility, not nothing — see the comment on findRelevantFacts for why this is accepted rather than fixed');
+
+    // Control: a real, narrower-clearance persona who is explicitly
+    // denied this domain must never see it, proving the gap is specific
+    // to the unset-persona default and not a general leak.
+    const chloeContext = await contextBuilders.buildContext('customers_marketing', { message: question, entities: {}, personaId: 'chloe_reed' });
+    assert.doesNotMatch(chloeContext, /PREVIOUSLY ESTABLISHED FICTIONAL COMPANY MEMORY/, 'chloe_reed must not see a marketing_performance fact her own clearance denies');
   });
 });

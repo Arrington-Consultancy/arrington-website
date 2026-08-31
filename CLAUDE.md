@@ -2700,7 +2700,12 @@ instruction.
   1, finding M2, when eight rephrased probes evaded every original
   pattern — each of the eight is now individually pinned as a regression
   test, and the claim is stated honestly as a keyword heuristic layered on
-  top of the domain/clearance gates, not a semantic guarantee), and
+  top of the domain/clearance gates, not a semantic guarantee; the
+  `signed_contracts` widening then over-refused ordinary staff-rota
+  questions using "arrangement"/"agreement" in an unrelated sense,
+  governance review 2 finding N1, narrowed to require a commercial noun
+  alongside the contract word rather than a bare match, with both the
+  original catches and the newly-allowed ordinary questions pinned), and
   persists atomically (`establishFact` / `createFactAtomic`).
   Never imports `deepBusinessFacts.js` at all (asserted by
   `test/scott/memory/firewall.test.js`), so it has no path to overwrite
@@ -2753,9 +2758,20 @@ instruction.
   other piece of company brain data: a generated fact inherits its
   topic's existing clearance domain and is never visible to a
   persona/worker pair that domain would already deny. **Fails closed on
-  a missing persona** (governance review 1, finding M5): an unset
-  `personaId` returns no facts at all rather than defaulting to the
-  owner's full view, the direction this codebase otherwise insists on.
+  a missing persona at the function level** (governance review 1, finding
+  M5): an unset `personaId` passed directly to `findRelevantFacts`
+  returns no facts at all. **Precisely stated (governance review 2,
+  finding N2):** the one production caller with a genuinely unset persona
+  — the anonymous public lead enquiry's fire-and-forget AI draft — never
+  actually reaches `findRelevantFacts` with a falsy value, because
+  `buildContext` resolves it to the owner persona one level up, the same
+  pre-existing fallback every other deep-brain block already gets on that
+  identical path. That scenario therefore retrieves memory facts at
+  owner-level visibility (still bounded by the routed worker's own domain
+  permission), not "nothing" — a deliberate, pre-existing, documented
+  behaviour left as is rather than redesigned, and pinned by its own test
+  (`test/scott/memory/factLedger.test.js`) so it cannot drift silently
+  either way.
 - `lib/scott/orchestrator.js` — a new nullable `memoryFact` field on the
   worker JSON schema (`{domain, canonicalQuestion, answer}`), validated
   for shape only; the actual reasonableness/clearance/domain gate runs in
@@ -2782,10 +2798,11 @@ instruction.
   previously-established fact verbatim rather than restate it
   differently.
 
-**Tests** (`test/scott/memory/*.test.js`, 60 tests, all passing against a
-real database — verified by `find test -name '*.test.js'` rather than a
-`test/**/*.test.js` glob, which governance review 1 found silently misses
-files two directories deep without `globstar` enabled): first-time creation and persistence; repeat-question
+**Tests** (`test/scott/memory/*.test.js`, 65 tests after the N1/N2
+regression tests below, all passing against a real database — verified
+by `find test -name '*.test.js'` rather than a `test/**/*.test.js` glob,
+which governance review 1 found silently misses files two directories
+deep without `globstar` enabled): first-time creation and persistence; repeat-question
 consistency (a second, deliberately different proposed answer never
 overwrites the first); materially equivalent wording retrieving the same
 canonical fact; reserved-topic and domain-ineligibility refusal with
@@ -2817,7 +2834,7 @@ which has not been run for this feature and is not required to prove the
 deterministic guarantees above, only the model's own behaviour inside
 them.
 
-### Governance review 1: AMBER, one HIGH — remediated, confirmatory pass pending (31/08/2026)
+### Governance review 1: AMBER, one HIGH — remediated (31/08/2026)
 
 `review/scott-evolving-memory-governance-review-1-2026-08-31.md`
 (**AMBER**, M1 HIGH plus M2/M3 MEDIUM, M4/M5/M6 LOW, against branch head
@@ -2900,6 +2917,79 @@ rewriting the spoken reply, not merely nulling a side-channel field;
 Ruth structurally unable to create a fact under any input the reviewer
 could construct by reading the code; and nothing in the diff touching
 `lib/workspace`, `server.js`, any view, or any non-`scott_*` table.
+
+### Governance review 2: PASS, two new LOW findings — both fixed (31/08/2026)
+
+`review/scott-evolving-memory-governance-review-2-2026-08-31.md`
+(**PASS**, N1/N2 both LOW, against remediation head `12456c4`),
+commissioned per review 1's own recommendation to re-attack M1
+specifically on the corrected head rather than accept a code read. A
+second fresh session, independent of both the original implementation
+and the M1-M6 remediation, wrote its own standalone scripts against a
+real database and a fake Anthropic client rather than trusting either.
+
+**All three substantive review-1 findings (M1 HIGH, M2 and M3 MEDIUM)
+independently re-verified as genuinely fixed**, and pushed harder than
+either review 1 or the builder's own tests: M1 checked across all four
+worker/persona combinations, across all three eligible domains (not only
+`marketing_performance`), all three falsy `personaId` spellings
+(`''`/`null`/`undefined`), and end to end through `callWorker` with a
+fake model scripted to misbehave exactly as feared. M3 used a positive
+case the builder's own test didn't (a different persona on the second
+call) and read `callWorker`'s post-model block to confirm every branch
+is exhaustively handled, not merely the one path tested. M2 confirmed
+all eight original probes now caught, then tried five new rephrasings of
+its own (mostly still evade, which is the disclosed, expected residual
+limit of a keyword heuristic, not an oversold claim) and an
+eight-question false-positive sweep across ordinary phrasing (zero false
+positives). M4 and M6 confirmed wording-only.
+
+**N1 (LOW):** the M2 widening of `signed_contracts` to a bare word match
+also refused ordinary staff-rota questions using "arrangement"/
+"agreement" with no supplier or customer in view at all (e.g. "what
+arrangement do we have for who opens up on Mondays"). Fails safe
+(over-refusal, not fabrication), so not a security finding, but
+identified as exactly the failure mode a future widening pass could make
+worse without measuring it. **Fixed** by requiring a commercial noun
+(supplier/customer/merchant/terms/payment/order/etc.) alongside the
+contract word, closing the false positive while keeping both of the
+reviewer's original catches — verified by both remaining true.
+
+**N2 (LOW):** M5's fix is correct for `findRelevantFacts` in isolation,
+but the one real call path with a genuinely unset persona (the anonymous
+public lead enquiry's fire-and-forget draft) never reaches it falsy,
+because `buildContext`'s own separate, pre-existing default resolves it
+to the owner one level up — the same fallback every other deep-brain
+block already gets on that identical path. So that scenario in practice
+gets owner-level retrieval visibility (still bounded by the routed
+worker's own domain permission), not "nothing," which is what the fix's
+own comment had claimed. Bounded and confirmed bounded before being
+called LOW: creation-time (M1) is entirely unaffected and still refuses
+correctly in the identical scenario, and no logged-in human with
+narrower clearance is shown anything their own clearance denies — only
+an internal drafting mechanism whose output already requires a human's
+approval downstream. **Corrected the claim rather than the code**: per
+the doc's own "do not redesign unrelated Scott features" instruction,
+`buildContext`'s pre-existing default (which every other piece of deep-
+brain data already relies on for this exact path) was left untouched;
+the comment on `findRelevantFacts` and this file now state the actual
+behaviour precisely, and it is pinned by its own explicit test
+(`test/scott/memory/factLedger.test.js`) so it cannot drift silently in
+either direction without someone reading it and deciding.
+
+**The reviewer's own recommendation: no further review round required
+before this feature is treated as governed/live authority** on the
+strength of the two PASS verdicts — M1/M2/M3 genuinely fixed, M4/M6
+accurate, and N1/N2 both cheap, bounded, non-blocking corrections now
+also applied rather than merely recorded. This is the project's standard
+stopping point once a confirmatory pass returns PASS with LOW-only
+findings (the same shape as the Workspace's sixteenth through eighteenth
+reviews).
+
+**Still not run, unchanged from review 1's own note:** the paid,
+explicitly-authorised live-AI suite for this specific feature. Nothing
+in either review required it to establish the deterministic guarantees
+above; it would only test the real model's own behaviour inside them.
 
 ### Testing
 
