@@ -2684,15 +2684,35 @@ instruction.
   fully deterministic and tested with no live model call: canonicalises a
   question into a bag-of-words key (`canonicalizeQuestion`, honestly
   documented as heuristic, not semantic understanding), classifies
-  reasonableness in code (`classifyReasonableness`, two independent
+  reasonableness in code (`classifyReasonableness`, three independent
   gates: a curated `ALLOWED_MEMORY_DOMAINS` allowlist currently holding
   exactly three existing clearance domains, `marketing_performance` /
-  `suppliers_ops` / `materials`, plus a reserved-topic regex denylist
-  covering every category the doc names, checked even inside an eligible
-  domain), and persists atomically (`establishFact` / `createFactAtomic`).
+  `suppliers_ops` / `materials`; that the asking WORKER holds the domain
+  AND separately that the asking PERSONA holds it too, both legs of
+  07Q/05A's "narrowest wins" rule (governance review 1, finding M1 HIGH:
+  the persona leg was missing entirely at first — a persona whose own
+  clearance withheld a domain could still have a fact created and spoken
+  through a specialist worker that held it, demonstrated concretely with
+  Chloe Reed and `marketing_performance`, now fixed and regression-tested
+  both at the pure-gate level and end to end through `callWorker`); and a
+  reserved-topic regex denylist covering every category the doc names,
+  checked even inside an eligible domain (widened after governance review
+  1, finding M2, when eight rephrased probes evaded every original
+  pattern — each of the eight is now individually pinned as a regression
+  test, and the claim is stated honestly as a keyword heuristic layered on
+  top of the domain/clearance gates, not a semantic guarantee), and
+  persists atomically (`establishFact` / `createFactAtomic`).
   Never imports `deepBusinessFacts.js` at all (asserted by
   `test/scott/memory/firewall.test.js`), so it has no path to overwrite
-  controlled evidence, structurally rather than by convention.
+  controlled evidence, structurally rather than by convention. **Precisely
+  stated (governance review 1, finding M4):** this proves a generated fact
+  cannot overwrite the controlled evidence FILE — it does not prove a
+  generated fact cannot CONTRADICT what that file says on the same topic.
+  The only thing preventing that is the prompt instruction to check the
+  DEEP COMPANY BRAIN block (shown first, ahead of runtime memory, an order
+  asserted by the firewall test) before proposing a new fact. That
+  ordering guarantee is real; it is not the same guarantee as content-
+  level non-contradiction, and the two should not be conflated.
 - `lib/scott/memory/driveExport.js` + `scripts/exportScottMemoryLedger.js`
   — the "controlled write-back/export route" the doc requires. The script
   writes a labelled Markdown export of the ledger to
@@ -2732,7 +2752,10 @@ instruction.
   clearance-gated by the exact same `isDomainVisible()` call as every
   other piece of company brain data: a generated fact inherits its
   topic's existing clearance domain and is never visible to a
-  persona/worker pair that domain would already deny.
+  persona/worker pair that domain would already deny. **Fails closed on
+  a missing persona** (governance review 1, finding M5): an unset
+  `personaId` returns no facts at all rather than defaulting to the
+  owner's full view, the direction this codebase otherwise insists on.
 - `lib/scott/orchestrator.js` — a new nullable `memoryFact` field on the
   worker JSON schema (`{domain, canonicalQuestion, answer}`), validated
   for shape only; the actual reasonableness/clearance/domain gate runs in
@@ -2740,11 +2763,18 @@ instruction.
   followed its own prompt instructions. A refused proposal is never
   persisted AND the reply text itself is overwritten to an honest "not
   held" answer, so a model that ignores its instructions cannot leave an
-  unpersisted fabrication sitting in the visible reply either. The
-  receptionist's own reply schema and prompt carry no `memoryFact` field
-  at all (asserted directly against the source), so Ruth structurally
-  cannot invent a specialist fact herself: she routes, the relevant
-  specialist owns the judgement, exactly as the doc requires.
+  unpersisted fabrication sitting in the visible reply either. **Reusing
+  an existing fact also corrects the spoken reply** (governance review 1,
+  finding M3): "must not generate a different answer merely because the
+  model is called again" is enforced for what is SAID, not only what is
+  STORED — if a worker restates a previously-established fact with
+  drifted wording, `callWorker` overwrites the reply with the canonical
+  stored answer unconditionally, rather than only when a difference
+  happens to be detected. The receptionist's own reply schema and prompt
+  carry no `memoryFact` field at all (asserted directly against the
+  source), so Ruth structurally cannot invent a specialist fact herself:
+  she routes, the relevant specialist owns the judgement, exactly as the
+  doc requires.
 - `lib/scott/governance.js` — a new "EVOLVING FICTIONAL MEMORY" section
   in the shared preamble, explicitly framed as "a narrow exception to
   never fill a gap, not a replacement for it", naming every reserved
@@ -2752,8 +2782,10 @@ instruction.
   previously-established fact verbatim rather than restate it
   differently.
 
-**Tests** (`test/scott/memory/*.test.js`, 50 tests, all passing against a
-real database): first-time creation and persistence; repeat-question
+**Tests** (`test/scott/memory/*.test.js`, 60 tests, all passing against a
+real database — verified by `find test -name '*.test.js'` rather than a
+`test/**/*.test.js` glob, which governance review 1 found silently misses
+files two directories deep without `globstar` enabled): first-time creation and persistence; repeat-question
 consistency (a second, deliberately different proposed answer never
 overwrites the first); materially equivalent wording retrieving the same
 canonical fact; reserved-topic and domain-ineligibility refusal with
@@ -2785,14 +2817,89 @@ which has not been run for this feature and is not required to prove the
 deterministic guarantees above, only the model's own behaviour inside
 them.
 
-**Independent Governance & Assurance recheck: commissioned, not
-self-awarded.** Consistent with every other Scott/Workspace governance
-cycle recorded in this file, a fresh session with no memory of this
-implementation was asked to adversarially review it against the Drive
-doc's own requirements. See its verdict recorded immediately below this
-entry once returned, and do not treat this feature as "live authority"
-(the doc's own phrase) until that verdict, and any findings it raises,
-are addressed.
+### Governance review 1: AMBER, one HIGH — remediated, confirmatory pass pending (31/08/2026)
+
+`review/scott-evolving-memory-governance-review-1-2026-08-31.md`
+(**AMBER**, M1 HIGH plus M2/M3 MEDIUM, M4/M5/M6 LOW, against branch head
+`1be78ea`), commissioned the same way as every other Scott/Workspace
+governance cycle in this file: a fresh session with no memory of the
+implementation, reading only the branch and the Drive doc. The builder
+does not award itself the PASS this feature needs before being treated
+as "live authority" (the doc's own phrase) — that is a fresh session's
+job, and one has been commissioned on the corrected head, per the
+reviewer's own recommendation to re-attack M1 specifically rather than
+accept a code read of the fix.
+
+**M1 (HIGH) is the review's headline finding, and it was real.**
+`classifyReasonableness` checked only the WORKER's domain permission,
+never the asking PERSONA's — the opposite half of 07Q/05A's own
+"narrowest wins" rule this codebase enforces everywhere else. Concretely
+reachable: `marketing_performance` is deliberately withheld from Chloe
+Reed (the comment on her `PERSONA_DOMAINS` entry says so in as many
+words), but `customers_marketing` — her own specialist, Bob Fletcher —
+holds it as a worker permission. Before the fix, Chloe asking Bob an
+ordinary marketing-budget question would have had a fabricated
+`marketing_performance` fact created AND spoken in that same reply, both
+things this feature exists to prevent. Fixed by requiring
+`clearance.personaCanSeeDomain(personaId, domain)` alongside
+`workerCanReadDomain`, with the missing-persona case failing closed (no
+default to the owner) rather than reusing the read-path's fail-open
+convention, since this is a brand new capability with no legacy caller
+to stay compatible with. Regression-tested at both the pure-gate level
+and end to end through `callWorker` with the exact Chloe/Bob-Fletcher
+scenario, plus a positive-path test proving the fix does not
+overcorrect (the same worker/domain, asked by a persona who does hold
+it, still works).
+
+**M2 (MEDIUM):** the reserved-topic denylist was a keyword match, and
+eight rephrased probes chosen to name a reserved topic without matching
+any listed word or phrase evaded it 8 for 8 (predictive claims worded
+around "will be", contract/agreement questions worded around "signed",
+discretionary discounts worded around "discount", fabricated analytics
+worded around the named metrics). Patterns widened specifically against
+each of the eight, which are now individually pinned as regression
+tests so they cannot silently reopen. Stated honestly in both the code
+comment and this file: this remains a keyword heuristic layered on top
+of the domain/worker/persona gates, not a semantic guarantee against
+every future rephrasing.
+
+**M3 (MEDIUM):** "must not generate a different answer merely because
+the model is called again" was enforced for what got stored, never for
+what got said — a worker restating a previously-established fact with
+drifted wording would have that drifted text spoken to the visitor even
+though the ledger correctly kept the original. Fixed: `callWorker` now
+overwrites the reply with the canonical stored answer unconditionally
+whenever an existing fact is reused (both the ordinary repeat-question
+case and a lost first-write race, which no longer need separate
+handling), not only when a difference happens to be detected.
+
+**M4 (LOW, wording):** "cannot be overwritten by generated memory" was
+true only in the narrow sense of "no write path to the file" — it did
+not prove a generated fact cannot content-level *contradict* controlled
+evidence, which the document's own wording also requires. Corrected in
+both the code comment and this file to state precisely what is and is
+not guaranteed, per the entries above.
+
+**M5 (LOW):** `findRelevantFacts` defaulted a missing persona to the
+owner (fail open) rather than to nothing — unreachable today since
+`clearance.getEffectivePersonaId` never returns falsy, but the wrong
+direction for a codebase that otherwise insists on fail-closed. Fixed
+and regression-tested for both `''` and `undefined`.
+
+**M6 (LOW, documentation precision):** this file claimed "50 tests" for
+the memory suite; the real count at review time, run correctly, was 46.
+Corrected above to the current true count (60, after the M1/M2/M3/M5
+regression tests were added) rather than re-estimated.
+
+**What held under attack, per the reviewer's own testing, not the
+builder's claims:** the atomic first-write-wins guarantee, verified
+against 12 genuinely separate OS processes with cold connection pools
+(the specific shape of test that has previously found this exact defect
+class in the Workspace's own history); the refusal path genuinely
+rewriting the spoken reply, not merely nulling a side-channel field;
+Ruth structurally unable to create a fact under any input the reviewer
+could construct by reading the code; and nothing in the diff touching
+`lib/workspace`, `server.js`, any view, or any non-`scott_*` table.
 
 ### Testing
 

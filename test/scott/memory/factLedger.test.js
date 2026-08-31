@@ -39,7 +39,7 @@ describe('canonicalizeQuestion (equivalent wording)', () => {
 
 describe('classifyReasonableness', () => {
   test('refuses a domain outside the curated allowlist', () => {
-    const result = memory.classifyReasonableness({ workerId: 'operations', domain: 'finance_full', canonicalQuestion: 'what is our overdraft limit' });
+    const result = memory.classifyReasonableness({ workerId: 'operations', personaId: 'scott_mercer', domain: 'finance_full', canonicalQuestion: 'what is our overdraft limit' });
     assert.equal(result.allowed, false);
     assert.equal(result.reason, 'domain_not_eligible');
   });
@@ -48,9 +48,40 @@ describe('classifyReasonableness', () => {
     // marketing_performance is eligible in principle, but the operations
     // worker's own WORKER_DOMAINS list does not include it (that domain
     // belongs to customers_marketing, and separately to commercial).
-    const result = memory.classifyReasonableness({ workerId: 'operations', domain: 'marketing_performance', canonicalQuestion: 'what is our usual boosted-post budget' });
+    const result = memory.classifyReasonableness({ workerId: 'operations', personaId: 'scott_mercer', domain: 'marketing_performance', canonicalQuestion: 'what is our usual boosted-post budget' });
     assert.equal(result.allowed, false);
     assert.equal(result.reason, 'worker_not_authorised_for_domain');
+  });
+
+  // Governance review 1 (31/08/2026), finding M1 (HIGH): the persona leg
+  // of "narrowest wins" was entirely missing. This is the exact reachable
+  // scenario the reviewer demonstrated: Chloe Reed's own specialist,
+  // customers_marketing, holds marketing_performance, but her PERSONA
+  // deliberately does not (see the comment on her PERSONA_DOMAINS entry
+  // in clearance.js — "not what the company pays to acquire a lead").
+  test('refuses a persona proposing a domain their OWN clearance withholds, even though the worker they asked holds it (M1)', () => {
+    const result = memory.classifyReasonableness({ workerId: 'customers_marketing', personaId: 'chloe_reed', domain: 'marketing_performance', canonicalQuestion: 'what is our usual boosted-post budget' });
+    assert.equal(result.allowed, false);
+    assert.equal(result.reason, 'persona_not_authorised_for_domain');
+  });
+
+  test('allows the same worker/domain when the ASKING persona does hold the domain (the positive case the M1 fix must not break)', () => {
+    // tony_marsh holds marketing_performance (07E, given deliberately to
+    // Tony and not Chloe) and customers_marketing holds it as a worker
+    // permission — both legs satisfied.
+    const result = memory.classifyReasonableness({ workerId: 'customers_marketing', personaId: 'tony_marsh', domain: 'marketing_performance', canonicalQuestion: 'what is our usual boosted-post budget' });
+    assert.equal(result.allowed, true);
+  });
+
+  test('fails closed (refuses) when personaId is missing entirely, even for an otherwise-eligible worker/domain pair', () => {
+    // No default to the owner persona here (M5's fail-closed direction
+    // applied consistently to the creation gate too) — unlike this is
+    // unreachable in production (clearance.getEffectivePersonaId never
+    // returns falsy), a future caller that forgets to pass one must not
+    // silently get owner-level creation rights.
+    const result = memory.classifyReasonableness({ workerId: 'operations', domain: 'suppliers_ops', canonicalQuestion: 'who is our usual glue supplier' });
+    assert.equal(result.allowed, false);
+    assert.equal(result.reason, 'persona_not_authorised_for_domain');
   });
 
   for (const [label, question] of [
@@ -63,20 +94,42 @@ describe('classifyReasonableness', () => {
     ['predictive', 'what will our marketing budget be next year']
   ]) {
     test(`refuses a reserved topic even inside an eligible domain (${label})`, () => {
-      const result = memory.classifyReasonableness({ workerId: 'customers_marketing', domain: 'marketing_performance', canonicalQuestion: question });
+      const result = memory.classifyReasonableness({ workerId: 'customers_marketing', personaId: 'tony_marsh', domain: 'marketing_performance', canonicalQuestion: question });
+      assert.equal(result.allowed, false, `expected refusal for: ${question}`);
+      assert.match(result.reason, /^reserved_topic:/);
+    });
+  }
+
+  // Governance review 1, finding M2: these eight exact rephrasings
+  // evaded every pattern before the fix (see
+  // review/scott-evolving-memory-governance-review-1-2026-08-31.md).
+  // Pinned individually, verbatim, so a future edit to the patterns
+  // cannot silently reopen any of them.
+  for (const [label, question] of [
+    ['predictive, seasonal, no "will be"', 'what will our glue costs look like in the run up to spring'],
+    ['predictive, "will...charge"', 'what will our timber supplier charge us in the autumn'],
+    ['unsigned agreement, no "signed"', 'what are the minimum order terms in our agreement with the timber merchant'],
+    ['unsigned arrangement, no "signed"', 'is there a written arrangement with our usual glue supplier about payment terms'],
+    ['discretionary discount, no "discount"', 'do we always knock a bit off the price for regulars'],
+    ['free extra, no "free of charge"', 'do we throw in free delivery for repeat customers'],
+    ['fabricated analytics, "conversion rate"', 'what is our usual conversion rate from boosted posts'],
+    ['fabricated analytics, "see our posts"', 'how many people usually see our posts each month']
+  ]) {
+    test(`M2 regression: previously-evading rephrasing is now refused (${label})`, () => {
+      const result = memory.classifyReasonableness({ workerId: 'customers_marketing', personaId: 'tony_marsh', domain: 'marketing_performance', canonicalQuestion: question });
       assert.equal(result.allowed, false, `expected refusal for: ${question}`);
       assert.match(result.reason, /^reserved_topic:/);
     });
   }
 
   test('refuses a question too vague to be worth establishing as a fact', () => {
-    const result = memory.classifyReasonableness({ workerId: 'operations', domain: 'suppliers_ops', canonicalQuestion: 'why' });
+    const result = memory.classifyReasonableness({ workerId: 'operations', personaId: 'tony_marsh', domain: 'suppliers_ops', canonicalQuestion: 'why' });
     assert.equal(result.allowed, false);
     assert.equal(result.reason, 'too_vague');
   });
 
-  test('allows a genuinely ordinary, low-consequence question in an eligible domain the worker holds', () => {
-    const result = memory.classifyReasonableness({ workerId: 'operations', domain: 'suppliers_ops', canonicalQuestion: 'who is our usual glue supplier' });
+  test('allows a genuinely ordinary, low-consequence question in an eligible domain both the worker and the persona hold', () => {
+    const result = memory.classifyReasonableness({ workerId: 'operations', personaId: 'tony_marsh', domain: 'suppliers_ops', canonicalQuestion: 'who is our usual glue supplier' });
     assert.equal(result.allowed, true);
     // 'who', 'is', 'our' and 'usual' are all stopwords, leaving glue/supplier.
     assert.equal(result.canonicalKey, 'glue-supplier');
@@ -215,6 +268,14 @@ describe('evolving fictional memory ledger (real database)', { skip: DB_AVAILABL
     // of which worker is asked.
     const visibleToMike = await memory.findRelevantFacts('mike_evans', 'operations', question);
     assert.ok(!visibleToMike.some((f) => f.id === result.fact.id), 'mike_evans must not see a materials fact — his persona does not hold that domain');
+
+    // Governance review 1, finding M5: a falsy personaId used to default
+    // to the owner (fail open). It must now see nothing at all, not the
+    // owner's full view.
+    const visibleToNoPersona = await memory.findRelevantFacts('', 'operations', question);
+    assert.deepEqual(visibleToNoPersona, [], 'an empty/missing personaId must fail closed to nothing, never the owner view');
+    const visibleToUndefinedPersona = await memory.findRelevantFacts(undefined, 'operations', question);
+    assert.deepEqual(visibleToUndefinedPersona, [], 'an undefined personaId must fail closed to nothing, never the owner view');
   });
 
   test('legitimate supersession retains history rather than overwriting the row in place', async () => {
