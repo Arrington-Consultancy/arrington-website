@@ -48,19 +48,21 @@ function everyTestFile(dir) {
 }
 
 test('every declared gated suite still exists', () => {
-  // Governance findings L5, M4, N5, P4 and Q3: the source-scanning drift
-  // guard that used to live here was defeated in five consecutive
-  // reviews, each time by an ordinary way of writing a gate it did not
-  // recognise. Matching the shape of a gate is an arms race against
-  // JavaScript, and it was losing.
+  // Governance findings L5, M4, N5, P4, Q3, R2 and S2: the source scan
+  // below was defeated in five consecutive reviews, each time by an
+  // ordinary way of writing a gate it did not recognise, so
+  // scripts/runTests.js was added to read the SKIP directives the runner
+  // actually emits.
   //
-  // It has been replaced by scripts/runTests.js, which reads the SKIP
-  // directives the test runner actually emits. A skip appears there
-  // whatever the source looks like, so there is no shape to evade, and
-  // `npm test` now prints what did not run on every invocation.
+  // That did NOT replace the scan, and this comment claimed twice that
+  // it had (finding S2), while the code two functions below said
+  // otherwise. Two shapes never reach the runner's output at all: a
+  // suite that is never registered, and an early return from a test
+  // body, which the runner reports as PASSING. So both halves exist and
+  // neither is sufficient alone.
   //
-  // What is left here is the part that check cannot do: naming what
-  // ARMS each suite, so a person knows how to run it.
+  // This particular test is the third thing, which neither check can do:
+  // naming what ARMS each suite, so a person knows how to run it.
   for (const g of GATED) {
     assert.ok(fs.existsSync(path.join(TEST_ROOT, g.file)), `declared gated suite ${g.file} no longer exists`);
     assert.ok(g.arms && g.arms.length > 4, `${g.file} does not say what arms it`);
@@ -68,29 +70,62 @@ test('every declared gated suite still exists', () => {
 });
 
 test('a gated suite cannot appear without being declared', () => {
-  // The shapes below are the ones the runner cannot see. This is not an
-  // attempt to enumerate every way of writing a gate - five reviews
-  // proved that unwinnable - it is the narrow backstop for what the
-  // runtime check structurally misses.
+  // The backstop for what the runtime check structurally cannot see.
+  // Not an attempt to enumerate every way of writing a gate - five
+  // reviews proved that unwinnable - but it must at least catch the
+  // shapes the runner is blind to, and finding S1 showed it did not.
   const declared = new Set(GATED.map((g) => path.join(TEST_ROOT, g.file)));
   const undeclared = [];
+
+  // Variables a developer running the suite normally has set, which
+  // therefore do not make a suite conditional in the sense that matters.
+  const AMBIENT_ENV = new Set(['DATABASE_URL', 'SESSION_SECRET', 'NODE_ENV', 'CI', 'TZ']);
 
   for (const file of everyTestFile(TEST_ROOT)) {
     if (file === __filename) continue; // this file quotes the patterns it looks for
     const src = fs.readFileSync(file, 'utf8');
 
-    // A suite that registers nothing: no test() or describe() call at all.
+    // 1. Reading configuration at all.
+    //
+    // Finding S1: `if (process.env.X) { test(...) }` was caught by
+    // NEITHER half. The runner cannot see it, because a test that is
+    // never registered emits nothing; and the check below for "registers
+    // nothing" passed it, because the source text does contain `test(`.
+    // A suite cannot decide whether to register on configuration without
+    // READING configuration, so this is the check that catches it.
+    const referenced = new Set(
+      (src.match(/process\.env\.([A-Z0-9_]+)/g) || []).map((m) => m.split('.').pop())
+        .concat((src.match(/process\.env\[['"]([A-Z0-9_]+)['"]\]/g) || [])
+          .map((m) => m.replace(/.*['"]([A-Z0-9_]+)['"].*/, '$1')))
+        .concat((src.match(/\{([^{}]*)\}\s*=\s*process\.env/g) || [])
+          .flatMap((m) => (m.match(/[A-Z0-9_]{2,}/g) || [])))
+    );
+    // A name the file ASSIGNS is being manipulated as part of a test
+    // (setting the owner binding, clearing a mailbox), not gated on.
+    const assigned = new Set(
+      (src.match(/process\.env\.([A-Z0-9_]+)\s*=/g) || [])
+        .map((m) => m.replace(/process\.env\.([A-Z0-9_]+)\s*=/, '$1'))
+        .concat((src.match(/delete\s+process\.env\.([A-Z0-9_]+)/g) || []).map((m) => m.split('.').pop()))
+    );
+    const readsConfiguration = [...referenced].filter((n) => !AMBIENT_ENV.has(n) && !assigned.has(n));
+
+    // 2. A file that registers nothing at all.
     const registersSomething = /\b(?:test|describe|it)\s*\(/.test(src);
 
-    // An early return from a test body, guarded on configuration. The
-    // runner reports such a test as PASSING, not skipped, which is the
-    // worse of the two failures this backstop exists for.
-    const returnsEarlyOnEnv = /if\s*\([^)]*(?:process\.env|[A-Z][A-Z0-9_]{3,})[^)]*\)\s*\{?\s*return\b/.test(src)
-      && !DB_ONLY_GATE.test(src);
+    // 3. An early return guarded on configuration, which the runner
+    //    reports as a PASSING test rather than a skipped one.
+    //
+    // Finding S1 again: this used to accept any capitalised identifier,
+    // so ordinary code like `if (res.STATUS_CODE) return` was reported as
+    // a gated suite. It names process.env now, because that is what a
+    // configuration gate actually reads.
+    const returnsEarlyOnEnv = /if\s*\([^)]*process\.env[^)]*\)\s*\{?\s*return\b/.test(src);
 
-    if ((!registersSomething || returnsEarlyOnEnv) && !declared.has(file)) {
-      undeclared.push(`${path.relative(TEST_ROOT, file)} (${!registersSomething ? 'registers no tests' : 'returns early on configuration'})`);
-    }
+    const why = readsConfiguration.length ? `reads ${readsConfiguration.sort().join(', ')}`
+      : (!registersSomething ? 'registers no tests'
+        : (returnsEarlyOnEnv ? 'returns early on configuration' : null));
+
+    if (why && !declared.has(file)) undeclared.push(`${path.relative(TEST_ROOT, file)} (${why})`);
   }
 
   assert.deepEqual(undeclared, [],

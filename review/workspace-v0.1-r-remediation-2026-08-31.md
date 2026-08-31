@@ -57,6 +57,15 @@ to enumerate every way of writing a gate, which five reviews proved
 unwinnable, but the backstop for exactly what the runtime check
 structurally cannot see. **Verified: both shapes caught.**
 
+> **CORRECTION, added 31/08/2026 after finding S1.** That sentence was
+> wrong. One of the two shapes - `if (process.env.X) { test(...) }` - was
+> caught by NEITHER half: the runner emits nothing for a test that is
+> never registered, and the scan's "registers nothing" check passed it
+> because the source text does contain `test(`. The scan also
+> false-positived on ordinary code such as `if (res.STATUS_CODE) return`.
+> Both are fixed, and this time each shape was planted and watched, in
+> both directions, rather than asserted.
+
 Also corrected: the file header still advertised the deleted check, and
 the runner reported a test whose *name* contains `# SKIP` as a suite
 that did not run. TAP escapes a `#` inside a description as `\#`, so a
