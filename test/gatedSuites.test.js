@@ -51,35 +51,58 @@ test('the suites that can decline to run are all declared', () => {
   const declared = new Set(GATED.map((g) => path.join(TEST_ROOT, g.file)));
   const undeclared = [];
 
-  // Governance finding L5 (31/08/2026): the first version of this looked
-  // only for a literal `skip:`, and three ordinary ways of writing the
-  // same thing walked straight past it - `t.skip(...)` and
-  // `test.skip(...)`, a gate spread in from an options object, and a
-  // suite that simply returns early when its environment is absent. A
-  // drift guard that a normal refactor defeats is not a guard.
-  const GATE_SHAPES = [
-    /skip:\s*[^\n]*/g,                       // { skip: ... } in test options
-    /\b(?:t|test|describe|it)\.skip\s*\(/g,   // t.skip(...) / test.skip(...)
-    /\.\.\.[A-Za-z_$][\w$]*(?:Gate|Skip|Opts|Options)\b/g, // { ...maybeSkip }
-    // Finding M4: this shape used to require a trailing comment saying
-    // "not configured", so it matched the COMMENT and not the gate, and
-    // the same early return written without one walked straight past.
-    // It now matches the guard itself: a return conditioned on an
-    // environment variable.
-    /if\s*\([^)]*process\.env[^)]*\)\s*\{?\s*return\b/g
-  ];
+  // Governance findings L5, M4 and N5: three passes of adding patterns,
+  // and each pass a reviewer found more shapes that walked past them -
+  // `t.skip`, a hoisted const, a spread options object, an early return
+  // with and without a comment. Matching the SHAPE of a gate is
+  // whack-a-mole, and the guard was blind to the very forms this
+  // repository's own suites use.
+  //
+  // So this no longer looks for how a gate is written. It looks for what
+  // a gate must DO: read an environment variable. A suite cannot decline
+  // to run based on configuration without reading configuration, however
+  // it is spelled. Anything reading an env var outside the allowlist
+  // below has to be declared.
+  //
+  // The allowlist is the variables a developer running the suite
+  // normally has set, and which therefore do not make a suite
+  // conditional in the sense that matters.
+  const AMBIENT_ENV = new Set(['DATABASE_URL', 'SESSION_SECRET', 'NODE_ENV', 'CI', 'TZ']);
 
   for (const file of everyTestFile(TEST_ROOT)) {
-    if (file === __filename) continue; // this file quotes the patterns it looks for
+    if (file === __filename) continue; // this file names the variables it looks for
     const src = fs.readFileSync(file, 'utf8');
-    const gates = GATE_SHAPES.flatMap((re) => src.match(re) || []);
-    const realGates = gates.filter((g) => !DB_ONLY_GATE.test(g) && !/skip:\s*false/.test(g));
-    // A DB-only gate is excluded by its message, which only the `skip:`
-    // shape carries; for the other shapes, check the whole file for a
-    // non-database gate before flagging it.
-    const dbOnlyFile = /set DATABASE_URL/.test(src) && !/(?:BASE_URL|_PASSWORD|RUN_[A-Z_]+|WAI_SEED_TEST)/.test(src);
-    if (realGates.length && !dbOnlyFile && !declared.has(file)) {
-      undeclared.push(path.relative(TEST_ROOT, file));
+    const referenced = new Set(
+      (src.match(/process\.env\.([A-Z0-9_]+)/g) || []).map((m) => m.split('.').pop())
+        .concat((src.match(/process\.env\[['"]([A-Z0-9_]+)['"]\]/g) || [])
+          .map((m) => m.replace(/.*['"]([A-Z0-9_]+)['"].*/, '$1')))
+        // Destructuring: const { FOO, BAR } = process.env
+        .concat((src.match(/\{([^{}]*)\}\s*=\s*process\.env/g) || [])
+          .flatMap((m) => (m.match(/[A-Z0-9_]{2,}/g) || [])))
+    );
+    // A file that ASSIGNS a variable is manipulating it as part of a
+    // test (setting the owner binding, clearing a mailbox), not deciding
+    // whether to run on it. Only a name that is read and never written
+    // can gate the suite.
+    const assigned = new Set(
+      (src.match(/process\.env\.([A-Z0-9_]+)\s*=/g) || []).map((m) => m.replace(/process\.env\.([A-Z0-9_]+)\s*=/, '$1'))
+        .concat((src.match(/delete\s+process\.env\.([A-Z0-9_]+)/g) || [])
+          .map((m) => m.split('.').pop()))
+        .concat((src.match(/process\.env\[['"]([A-Z0-9_]+)['"]\]\s*=/g) || [])
+          .map((m) => m.replace(/.*['"]([A-Z0-9_]+)['"].*/, '$1')))
+    );
+    const gating = [...referenced].filter((name) => !AMBIENT_ENV.has(name) && !assigned.has(name));
+
+    // The env check cannot see an UNCONDITIONAL skip, because such a
+    // suite reads no configuration at all - it simply never runs. That
+    // is arguably worse than a gated one, so the shape check stays
+    // alongside the semantic one. They catch different things and
+    // neither replaces the other.
+    const hardSkips = (src.match(/\b(?:t|test|describe|it)\.skip\s*\(/g) || []);
+
+    if ((gating.length || hardSkips.length) && !declared.has(file)) {
+      const why = gating.length ? `reads ${gating.sort().join(', ')}` : 'skips unconditionally';
+      undeclared.push(`${path.relative(TEST_ROOT, file)} (${why})`);
     }
   }
 

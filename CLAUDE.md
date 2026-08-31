@@ -1161,6 +1161,62 @@ have been caught by it.
   adding more genuine confidential records, not the builder writing
   synthetic ones into the real snapshot.
 
+### Eighth governance review: AMBER, no HIGH (31/08/2026)
+
+`review/workspace-v0.1-governance-review-8-2026-08-31.md` (**AMBER**,
+N1-N5, two MEDIUM three LOW), answered in
+`review/workspace-v0.1-n-remediation-2026-08-31.md`. All five corrected.
+
+**The concurrency guarantee now holds, established by the reviewer's own
+instruments:** roughly 1,500 bursts across nine harness shapes, zero
+duplicated and zero wrongly silent, with the same harnesses breaking the
+previous head at 4% and 10.7%. All three gates held, including 45/45
+workspace paths byte-identical to a genuine 404 and the full CMS-admin
+takeover stopping at the unlock screen.
+
+**N1 is the eighth instance and it was in the commit that fixed the
+seventh.** M2's fix corrected one direction of the honesty rule and
+opened the other: any failure AFTER the send, including the statement
+that records the outcome, was reported as "NO send was attempted" about a
+message that had reached the mailbox, and started no cooldown, so a
+duplicate followed. What was attempted and what it returned is now
+recorded before the send and decides what is written: nothing attempted
+gives an error, an attempted failure gives a failed send, and a
+**successful** send gives delivered with the hour running, because a
+delivered message is delivered whatever went wrong while recording it.
+
+**The test was the finding.** The case pinning M2's property threw from
+`sendFn` - a send that WAS attempted - then asserted the "nothing was
+attempted" wording, so it passed against the defect it was named for.
+
+**N4 taught the same lesson in a different place:** claim ages were
+computed from the Node clock against timestamps written by the DATABASE
+clock, and those disagree here by up to a minute. A future-dated claim is
+newer than any lease, so it was never reclaimed and silenced the alarm
+for the whole skew. Every authoritative window is now expressed in SQL
+against `now()`, so one clock decides. Fixing it surfaced a second
+defect: the reclaim ran after the state was read, so the decision still
+gated on the future row and never reached the takeover.
+
+**N3**: contention was declared a distinct error and handled identically
+to a database fault, so losing a race bought the send backoff and
+silenced a genuine burst. **N5**: the drift guard, third pass. It no
+longer matches how a gate is written - a suite cannot decline to run on
+configuration without READING configuration, so it looks for environment
+reads outside an ambient allowlist, ignoring names the file assigns, with
+the shape check kept only for an unconditional `t.skip`. Seven evasion
+shapes verified caught. **N2**: the four structural changes of the
+previous cycle appeared nowhere in the test tree and are now named
+directly, including that the DATABASE refuses a second claim (asserting
+`23505`) rather than that the code declines to make one.
+
+**Recorded rather than glossed:** the reviewer showed the concurrency
+test's stagger turning a clean 150/150 into 16 failures in 150. I could
+not reproduce that here - fifty rounds at each profile against both
+candidate predecessors, index dropped, zero bad rounds either way - so
+the stagger is kept as a more realistic arrival pattern and nothing more
+is claimed for it.
+
 ### Seventh governance review: AMBER, no HIGH, no production defect (31/08/2026)
 
 `review/workspace-v0.1-governance-review-7-2026-08-31.md` (**AMBER**,

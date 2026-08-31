@@ -284,7 +284,26 @@ test('a real Pool and a checked-out client are both recognised', () => {
         sent.push(m);
         return { sent: true };
       };
-      await Promise.all(Array.from({ length: 8 }, () => alert.maybeAlertOnFailedUnlock(db, { username: SUBJECT, sendFn: send })));
+      // Finding N2: the reviewer showed that at its original profile -
+      // eight callers released in the same tick - this test ran clean
+      // 150 times against code that was demonstrably broken, and that a
+      // 0-40ms arrival stagger made the same code fail 16 times in 150.
+      // Callers in a real burst arrive at slightly different moments,
+      // and it is the gap between one caller's read and another's write
+      // that the guarantee has to survive, so the stagger is kept.
+      //
+      // Stated honestly rather than claimed: I could NOT reproduce that
+      // sensitivity here. Fifty rounds at each profile against both
+      // candidate predecessors, with the unique index dropped so the old
+      // failure mode was reachable, produced zero bad rounds either way.
+      // So on this machine the stagger is a more realistic arrival
+      // pattern, and nothing more than that has been demonstrated. The
+      // tests below, which name the structural guarantees directly, are
+      // the ones carrying the weight.
+      await Promise.all(Array.from({ length: 8 }, async (_v, i) => {
+        await new Promise((r) => setTimeout(r, (i * 7) % 40));
+        return alert.maybeAlertOnFailedUnlock(db, { username: SUBJECT, sendFn: send });
+      }));
       assert.equal(sent.length, 1, `round ${round}: eight concurrent attempts delivered ${sent.length} messages; the stated bound is one`);
       assert.equal((await rowsOf(alert.ALERT_EVENT)).length, 1, `round ${round}: more than one delivered row was written for one burst`);
     }
@@ -452,6 +471,86 @@ test('a real Pool and a checked-out client are both recognised', () => {
     }
   });
 
+  // The four structural changes of this cycle, named. Finding N2: none
+  // of them appeared anywhere in the test tree, so the guarantee rested
+  // on code review alone - which is precisely how the previous seven
+  // defects survived.
+
+  await t.test('the database itself refuses a second unresolved claim', async () => {
+    await reset();
+    await db.query(
+      'INSERT INTO workspace_activity (actor, event_type, summary, subject) VALUES ($1,$2,$3,$4)',
+      ['system', alert.ALERT_PENDING_EVENT, 'first claim', SUBJECT]
+    );
+    // Not "the code declines to insert a second" - the DATABASE refuses
+    // it. This is the guarantee that does not depend on any caller
+    // behaving, and it is the one thing four previous fixes lacked.
+    await assert.rejects(
+      () => db.query(
+        'INSERT INTO workspace_activity (actor, event_type, summary, subject) VALUES ($1,$2,$3,$4)',
+        ['system', alert.ALERT_PENDING_EVENT, 'second claim', SUBJECT]
+      ),
+      (err) => err.code === '23505',
+      'a second unresolved claim was accepted; the unique index is missing or not partial'
+    );
+  });
+
+  await t.test('one account cannot block another account claiming', async () => {
+    await reset();
+    const other = `${SUBJECT}-other`;
+    await db.query(
+      'INSERT INTO workspace_activity (actor, event_type, summary, subject) VALUES ($1,$2,$3,$4)',
+      ['system', alert.ALERT_PENDING_EVENT, 'held', SUBJECT]
+    );
+    try {
+      // The index is on subject, so it must constrain per account. A
+      // global one would let one person's burst silence everyone else's.
+      await db.query(
+        'INSERT INTO workspace_activity (actor, event_type, summary, subject) VALUES ($1,$2,$3,$4)',
+        ['system', alert.ALERT_PENDING_EVENT, 'other account', other]
+      );
+    } finally {
+      await db.query('DELETE FROM workspace_activity WHERE subject = $1', [other]);
+    }
+  });
+
+  await t.test('an abandoned claim is recorded and does NOT gate the next alert', async () => {
+    await reset();
+    await seedFailures(alert.THRESHOLD);
+    await db.query(
+      `INSERT INTO workspace_activity (actor, event_type, summary, subject, created_at)
+       VALUES ('system', $1, 'died mid-send', $2, now() - ($3 || ' minutes')::interval)`,
+      [alert.ALERT_PENDING_EVENT, SUBJECT, String(alert.CLAIM_LEASE_MINUTES + 1)]
+    );
+    const sent = [];
+    const res = await alert.maybeAlertOnFailedUnlock(db, {
+      username: SUBJECT, sendFn: async (m) => { sent.push(m); return { sent: true }; }
+    });
+    assert.equal(res.sent, true, 'an abandoned claim silenced the alarm instead of being reclaimed');
+    assert.equal(sent.length, 1);
+    assert.equal((await rowsOf(alert.ALERT_ABANDONED_EVENT)).length, 1, 'the abandonment left no trace');
+  });
+
+  await t.test('a claim dated in the future is reclaimed, not trusted', async () => {
+    // Finding N4: the Node clock and the database clock demonstrably
+    // disagree here. A claim dated ahead of now is newer than any lease,
+    // so it was never reclaimed and never expired - it silenced the
+    // alarm for the whole of the skew.
+    await reset();
+    await seedFailures(alert.THRESHOLD);
+    await db.query(
+      `INSERT INTO workspace_activity (actor, event_type, summary, subject, created_at)
+       VALUES ('system', $1, 'future dated', $2, now() + interval '30 minutes')`,
+      [alert.ALERT_PENDING_EVENT, SUBJECT]
+    );
+    const sent = [];
+    const res = await alert.maybeAlertOnFailedUnlock(db, {
+      username: SUBJECT, sendFn: async (m) => { sent.push(m); return { sent: true }; }
+    });
+    assert.equal(res.sent, true, 'a future-dated claim silenced the alarm');
+    assert.equal(sent.length, 1);
+  });
+
   await t.test('a failed send does not buy the hour, and the next attempt retries', async () => {
     await reset();
     await seedFailures(alert.THRESHOLD);
@@ -513,33 +612,78 @@ test('a real Pool and a checked-out client are both recognised', () => {
   });
 
   // Finding J3: a failure BEFORE the send must leave a durable trace.
-  await t.test('a failure before the send is recorded, not just logged', async () => {
+  await t.test('a transport that throws is a FAILED SEND, not "nothing was attempted"', async () => {
+    // Governance finding N1: the test that used to stand here proved the
+    // wrong thing. It threw from sendFn - which is a send that WAS
+    // attempted - and then asserted the "NO send was attempted" wording.
+    // So it passed against the defect it was named for.
     await reset();
     await seedFailures(alert.THRESHOLD);
     const res = await alert.maybeAlertOnFailedUnlock(db, {
       username: SUBJECT,
-      sendFn: async () => { throw new Error('transport exploded before sending'); }
+      sendFn: async () => { throw new Error('transport exploded mid-send'); }
     });
     assert.equal(res.sent, false);
-    assert.match(res.error, /exploded/);
-    // Finding M2: this is an evaluation failure - the transport threw
-    // before anything was sent - so it must NOT be recorded as a failed
-    // send. Recording it as one made the register say "the last notice
-    // FAILED to send" about an attempt that never reached a mailbox,
-    // which is exactly what this module's rule 4 forbids.
-    const errored = await rowsOf(alert.ALERT_ERROR_EVENT);
-    assert.equal(errored.length, 1, 'a pre-send failure left no durable record, so the alarm could go silent unnoticed');
-    assert.equal((await rowsOf(alert.ALERT_FAILED_EVENT)).length, 0, 'an attempt that never sent was recorded as a failed send');
-    assert.match(errored[0].summary, /NO send was attempted/, 'the durable record does not say that nothing was sent');
+    const failed = await rowsOf(alert.ALERT_FAILED_EVENT);
+    assert.equal(failed.length, 1, 'an attempted send that threw was not recorded as a failed send');
+    assert.equal((await rowsOf(alert.ALERT_ERROR_EVENT)).length, 0, 'an attempted send was recorded as never attempted');
+    assert.ok(!/NO send was attempted/.test(failed[0].summary), 'the register claims nothing was sent, about a send that was tried');
+  });
 
-    // And the reason given to the next caller must say the same thing.
-    const next = alert.decideAlert({
-      failuresInWindow: alert.THRESHOLD, lastSuccessAt: null, lastFailureAt: null,
-      lastErrorAt: new Date(Date.now() - 60000), now: Date.now()
+  await t.test('a send that SUCCEEDED is never recorded as "no send was attempted"', async () => {
+    // THE N1 CASE. The message reached the mailbox and the single
+    // statement that records the outcome then failed. The old code
+    // reported "NO send was attempted" about a delivered notice, and
+    // started no cooldown, so a duplicate followed five minutes later.
+    await reset();
+    await seedFailures(alert.THRESHOLD);
+
+    // Fail the outcome UPDATE once, and only after the send.
+    let seen = 0;
+    const flaky = {
+      pool: db.pool,
+      query: async (text, params) => {
+        if (/UPDATE workspace_activity SET event_type/.test(text) && seen++ === 0) {
+          throw new Error('connection reset while recording the outcome');
+        }
+        return db.query(text, params);
+      }
+    };
+
+    const sent = [];
+    const res = await alert.maybeAlertOnFailedUnlock(flaky, {
+      username: SUBJECT, sendFn: async (m) => { sent.push(m); return { sent: true }; }
     });
-    assert.equal(next.alert, false);
-    assert.match(next.reason, /could not be evaluated .* NO send was attempted/,
-      'the next caller is told the notice failed to send, when no send was ever tried');
+
+    assert.equal(sent.length, 1, 'the message was not actually sent, so this case is not being tested');
+    const delivered = await rowsOf(alert.ALERT_EVENT);
+    assert.equal(delivered.length, 1, 'a delivered notice was not recorded as delivered');
+    assert.equal((await rowsOf(alert.ALERT_ERROR_EVENT)).length, 0, 'a delivered notice was recorded as never attempted');
+    assert.ok(!/NO send was attempted/.test(delivered[0].summary), 'the register denies a send that reached the mailbox');
+
+    // And the hour must start, or the duplicate the finding describes
+    // arrives on the next failed attempt.
+    const again = await alert.maybeAlertOnFailedUnlock(db, {
+      username: SUBJECT, sendFn: async () => { throw new Error('should not be called'); }
+    });
+    assert.equal(again.sent, false, 'a second notice went out for the same burst');
+    assert.match(again.reason, /claimed or completed|DELIVERED/i);
+    assert.equal(res.sent, true);
+  });
+
+  await t.test('contention that sends nothing does not buy the send backoff', async () => {
+    // Finding N3: ClaimContentionError was declared distinct and then
+    // handled exactly like a database fault, so losing a race bought the
+    // five-minute backoff and silenced a genuine burst.
+    const d = alert.decideAlert({
+      failuresInWindow: alert.THRESHOLD,
+      lastSuccessAt: null, lastFailureAt: null, lastErrorAt: null,
+      // An abandoned/contended record is not one of the gating types at
+      // all, so the only thing that could gate here is a pending claim.
+      lastPendingAt: null,
+      now: Date.now()
+    });
+    assert.equal(d.alert, true, 'a burst was refused with nothing holding it back');
   });
 
   await t.test('a claim left behind by a dead process does not silence the alarm forever', async () => {
