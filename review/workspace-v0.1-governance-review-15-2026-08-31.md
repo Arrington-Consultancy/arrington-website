@@ -952,3 +952,52 @@ than to the property it is named for.
 The builder does not award itself the upgrade. A sixteenth pass, or a
 narrower confirmatory pass over V1 to V3 with the tests watched red
 first, is what moves this to PASS.
+
+---
+
+## Author's erratum, added 31 August 2026, after the report was delivered
+
+**This section is additive. No finding, no severity and no verdict
+changes. The body above is left exactly as it was reviewed and
+delivered, so it can still be compared byte for byte with the copy the
+builder carried onto the candidate branch.**
+
+**The error.** Throughout the body I refer to the crafted-lane-id /
+`Object.prototype` defect as **T2**, and to the inert `gapRaised` defect
+as **T3**. That is the wrong way round. The thirteenth review, which is
+the source, numbers them:
+
+```
+### T2. `gapRaised` is passed to Ruth on every turn and provably changes nothing she says.
+### T3. A crafted lane id makes Ruth name a colleague who does not exist, and 500s the ask endpoint.
+```
+
+So every "T2" in this report that means the prototype defect should read
+**T3**, and the single reference to "T3" meaning the inert gap should read
+**T2**. The affected passages are section 4.1 ("T2 holds at the
+receptionist"), section 4.10 ("The T2 prototype class, hunted again", and
+the quotation of the fourteenth pass), finding V5 (heading and body), and
+section 6.
+
+**Whose error it is.** Mine. The builder's T remediation reversed the two
+numbers, the code comments follow the remediation, and I took the
+labelling from them rather than from the thirteenth review. That is the
+same failure I graded elsewhere in this report: inheriting an assertion
+instead of checking it against its source. The builder found and
+disclosed the reversal independently while assembling its completion
+report, and correctly declined to edit a reviewed document; correcting it
+is the author's job, so it is done here.
+
+**What is unaffected.** Everything substantive. Every probe in this
+report was run against the mechanics, not against a finding number: the
+272 direct calls and eight crafted forced lane ids that establish the
+prototype behaviour, the gap-on-both-paths checks that establish the
+`gapRaised` behaviour, and the codebase-wide hunt in section 4.10. The
+conclusions of V1 to V5, the evidence for them, and the AMBER verdict
+stand exactly as written.
+
+**Note on copies.** The candidate branch carries the as-delivered text
+without this erratum, because a reviewed document is not the builder's to
+edit and I did not push to their branch. This branch,
+`governance/workspace-v01-review-15`, carries the as-delivered text plus
+this note. The two differ by this section and nothing else.
