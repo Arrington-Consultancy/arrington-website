@@ -155,6 +155,31 @@ test('she never claims a record when there was none, and says so when there was'
   }
 });
 
+test('a singular count reads as a singular sentence', () => {
+  // Self-found while enumerating her whole reachable output space after
+  // the V cycle: "the 1 record behind it DO not fully cover the question"
+  // was on a real path (a lane answered, a gap was raised, exactly one
+  // record supplied).
+  //
+  // Not a correctness or honesty defect, and it is tested anyway, because
+  // this is owner-facing copy in the one product whose value is that its
+  // wording can be relied on. Swept rather than pinned to the one
+  // sentence that was wrong, which is the habit these fifteen passes
+  // taught.
+  const disagreement = /\b1 records\b|\bthe 1 record[^.]*\bdo not\b|\b[2-9]\d* records?[^.]*\bdoes not\b/i;
+  for (const laneId of ['google_ads', null, 'constructor', 'not-a-lane']) {
+    for (const answered of [true, false]) {
+      for (const gapRaised of [true, false]) {
+        for (const recordCount of [0, 1, 2, 5]) {
+          const note = receptionist.handoffNote({ laneId, answered, recordCount, gapRaised });
+          assert.ok(!disagreement.test(note),
+            `count and verb disagree on lane=${laneId} answered=${answered} gap=${gapRaised} records=${recordCount}: "${note}"`);
+        }
+      }
+    }
+  }
+});
+
 test('her directory exposes names, never what any lane can read', () => {
   for (const entry of receptionist.directory()) {
     assert.deepEqual(Object.keys(entry).sort(), ['id', 'kind', 'name'],
