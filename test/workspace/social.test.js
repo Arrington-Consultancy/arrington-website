@@ -126,3 +126,40 @@ test('queuing a consequential action records it and executes nothing', async () 
     repo.addActivity = origActivity;
   }
 });
+
+// The attribution on a queued post. Worth a test of its own because the
+// value was a hard-coded 'tom' when this route was written, while the two
+// sibling routes beside it read the session.
+//
+// An HTTP test cannot establish this and would be the easy path rule 2
+// warns about: gate 2 means the only person who can reach this route IS
+// Tom, so a literal 'tom' and a session read produce the same row and the
+// check would pass against the defect. So the real handler is invoked
+// directly with a session naming somebody else, which is the one
+// condition that separates the two.
+test('a queued post is attributed to the session, not to a literal', async () => {
+  const { router } = require('../../routes/workspace');
+  const layer = router.stack.find((l) => l.route && l.route.path === '/api/workspace/social/queue');
+  assert.ok(layer, 'the queue route is not registered under the path this test names');
+  const handler = layer.route.stack[layer.route.stack.length - 1].handle;
+
+  const captured = [];
+  const orig = actions.requestHumanAction;
+  actions.requestHumanAction = async (a) => { captured.push(a); return { id: 7 }; };
+  try {
+    const req = {
+      body: { platform: 'linkedin', text: 'We looked at the margin on the three biggest jobs and it was not where the owner thought.' },
+      session: { user: { username: 'somebody_else' } },
+      workspaceClearance: 'owner_admin'
+    };
+    let payload = null;
+    const res = { json: (b) => { payload = b; }, status() { return this; } };
+    await handler(req, res, (e) => { throw e; });
+
+    assert.ok(captured.length === 1, `the handler did not reach requestHumanAction: ${JSON.stringify(payload)}`);
+    assert.equal(captured[0].requestedBy, 'somebody_else',
+      'the queued approval names someone other than the session user, so the record asserts who asked without reading it');
+  } finally {
+    actions.requestHumanAction = orig;
+  }
+});

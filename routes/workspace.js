@@ -595,7 +595,11 @@ router.post('/api/workspace/social/queue', requireWorkspaceApiAccess, writeLimit
       action: 'publish',
       summary: text.slice(0, 120),
       detail: text,
-      requestedBy: 'tom'
+      // The session's user, never a literal. Gate 2 means that is Tom
+      // today, but a record that ASSERTS who asked must read it rather
+      // than assume it: the two sibling routes below already do, and an
+      // attribution nobody checks is how a record starts lying.
+      requestedBy: req.session.user.username
     });
     res.json({ ok: true, approvalId: approval.id, warnings: gate.warnings, note: 'Queued for approval. Nothing has been published.' });
   } catch (err) { next(err); }
