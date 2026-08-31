@@ -1,3 +1,20 @@
+> **CORRECTION, added 31/08/2026, self-found during the freeze for the
+> fifteenth review.** This document originally reversed T2 and T3. The
+> thirteenth review, which is the source, numbers them:
+>
+> - **T2** - `gapRaised` is passed on every turn and changes nothing she says.
+> - **T3** - a crafted lane id makes her name a colleague who does not exist.
+>
+> I labelled them the other way round here, and the fourteenth and
+> fifteenth reviewers both followed my labelling rather than their
+> predecessor's, so `review/...-14-...` and `review/...-15-...` carry the
+> reversal too. Nothing about the code was ever wrong: both defects were
+> found, both were fixed, and both were independently verified red against
+> `93d6afa`. Only the citation was. The numbering here, in the U and V
+> remediations, in `CLAUDE.md` and in every code comment now follows the
+> thirteenth review; reviews 14 and 15 are left exactly as their authors
+> wrote them, because a reviewed document is not the builder's to edit.
+
 # Response to the thirteenth independent Governance & Assurance review
 
 Against `review/workspace-v0.1-governance-review-13-2026-08-31.md`
@@ -34,7 +51,7 @@ statement of the point: for an unrouted question she says "I answered
 that one myself" while `laneName` is null, so hers is the only name on
 an answer she did not write and cannot write.
 
-## T2 (LOW). A crafted lane id made her name a colleague called "Object".
+## T3 (LOW). A crafted lane id made her name a colleague called "Object".
 
 Accepted, and it was worse than cosmetic. `LANES_BY_ID` was a plain
 object literal, so `laneById('constructor')` returned the Object
@@ -51,7 +68,7 @@ actually reach through the prototype chain, and there is a new test in
 `lanes.test.js` pinning `laneById` itself - which is where the defect
 was, and where a receptionist-level guard would have masked it.
 
-## T3 (LOW). `gapRaised` was passed every turn and changed nothing.
+## T2 (LOW). `gapRaised` was passed every turn and changed nothing.
 
 Accepted. It was only consulted on the `!answered` branch, and the
 caller passes `answered: !!result.answer`, which is true whenever the
@@ -90,7 +107,7 @@ tests.
 - Full suite: **547 tests, 545 pass, 0 fail**.
 - T1: all three controlled statements amended and dated; no
   contradicting sentence remains.
-- T2 and T3: three tests **red against `93d6afa`**, green after.
+- T3 and T2: three tests **red against `93d6afa`**, green after.
 - T5: six probes, both directions, all correct.
 - Adversarial by hand: workspace **10/10**, Scott **18/18**.
 
