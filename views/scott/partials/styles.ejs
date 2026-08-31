@@ -188,6 +188,29 @@
   .sc-pill-risk { background: #fbe9e3; color: var(--sc-terracotta); }
   .sc-pill-status { background: #eef0e7; color: var(--sc-sage); }
   .sc-pill-new { background: #fdf1de; color: var(--sc-mustard); }
+  /* Used on the Social Media page (CONNECTED/PUBLISHED/REPEATABLE and
+     their opposites) but never previously defined, so every one of those
+     eight badges rendered with no colour at all — just the base pill's
+     padding and border-radius around plain text. Same palette as the
+     equivalent-meaning classes above: ok mirrors sc-pill-status (sage),
+     warn mirrors sc-pill-risk (terracotta). */
+  .sc-pill-ok { background: #eef0e7; color: var(--sc-sage); }
+  .sc-pill-warn { background: #fbe9e3; color: var(--sc-terracotta); }
+
+  /* ---------- social platform badges ---------- */
+  .sc-platform-icon {
+    width: 40px; height: 40px; border-radius: 999px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-family: 'Playfair Display', Georgia, serif; font-weight: 700; font-size: 16px;
+  }
+  .sc-platform-icon svg { width: 20px; height: 20px; }
+  .sc-platform-facebook { background: #1877F2; }
+  .sc-platform-instagram { background: linear-gradient(135deg, #f9ce34 0%, #ee2a7b 55%, #6228d7 100%); }
+  .sc-platform-linkedin { background: #0A66C2; font-size: 13px; letter-spacing: -0.02em; }
+  .sc-platform-x { background: #14171a; font-size: 18px; }
+  .sc-platform-default { background: var(--sc-text-muted); }
+  .sc-social-row { align-items: flex-start; gap: 14px; }
+  .sc-social-row-text { min-width: 0; flex: 1; }
 
   .sc-filter-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
   .sc-filter-bar a { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--sc-border); font-size: 13px; text-decoration: none; color: var(--sc-text-muted); background: #fff; transition: all 150ms ease; }

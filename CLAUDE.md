@@ -1143,6 +1143,20 @@ existing 07E domains rather than inventing one, which is what makes
 Chloe seeing the comments but not the paid performance a real
 demonstration.
 
+**Visual bug fixed (31/08/2026):** `.sc-pill-ok` and `.sc-pill-warn` were
+used eight times on `views/scott/social.ejs` (CONNECTED/PUBLISHED/
+REPEATABLE and their opposites) but never defined in
+`views/scott/partials/styles.ejs` — every one of those status badges
+rendered with no colour, just the base pill's padding around plain text,
+making the whole page look unstyled rather than like a real product.
+Added both classes (same sage/terracotta palette as the equivalent
+`sc-pill-status`/`sc-pill-risk` classes elsewhere) and gave the
+"Connected accounts" cards a per-platform icon badge (`sc-platform-icon`)
+instead of bare text, so Facebook/Instagram/LinkedIn/X are visually
+distinct. Verified logged-out (redirects to `/scott/login`, unaffected)
+and logged-in as `tom` on mobile (390px) and desktop (1440px) with local
+Playwright screenshots; `node --test test/scott/*.test.js` still 257/257.
+
 **Governance note:** the approved v0.1 source map explicitly excluded
 social, email, banking, Ads, Calendar, accounting, analytics and CRM
 systems. Tom's instruction of 30/08/2026 approves the social

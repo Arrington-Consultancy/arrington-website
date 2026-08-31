@@ -39,13 +39,27 @@
       <% if (canSee('marketing_performance')) { %>
         <div class="sc-card">
           <h2 class="sc-h2">Connected accounts</h2>
-          <% facts.SOCIAL_ACCOUNTS.forEach(function (a) { %>
-            <div class="sc-card sc-row-card">
-              <div class="sc-row-title"><%= a.platform %> <span class="sc-pill <%= a.status === 'CONNECTED' ? 'sc-pill-ok' : 'sc-pill-muted' %>"><%= a.status %></span></div>
-              <div class="sc-row-sub"><%= a.handle %><% if (a.note) { %> · <%= a.note %><% } %></div>
-              <div class="sc-row-sub sc-muted">
-                <%= a.followers === null ? 'Followers unknown' : a.followers.toLocaleString() + ' followers' %><% if (a.followersChange30d) { %> (+<%= a.followersChange30d %> in 30 days)<% } %>
-                · last retrieval <%= a.lastRetrieval || 'never' %><% if (a.lastOutcome) { %>, <%= a.lastOutcome %><% } %>
+          <% facts.SOCIAL_ACCOUNTS.forEach(function (a) {
+               var platformClass = 'sc-platform-' + (a.platform || '').toLowerCase();
+               var knownPlatforms = ['sc-platform-facebook', 'sc-platform-instagram', 'sc-platform-linkedin', 'sc-platform-x'];
+               if (knownPlatforms.indexOf(platformClass) === -1) platformClass = 'sc-platform-default';
+          %>
+            <div class="sc-card sc-row-card sc-social-row">
+              <div class="sc-platform-icon <%= platformClass %>" aria-hidden="true">
+                <% if (a.platform === 'Facebook') { %>f
+                <% } else if (a.platform === 'LinkedIn') { %>in
+                <% } else if (a.platform === 'X') { %>X
+                <% } else if (a.platform === 'Instagram') { %><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="5" stroke="#fff" stroke-width="1.8"/><circle cx="12" cy="12" r="4.2" stroke="#fff" stroke-width="1.8"/><circle cx="17.3" cy="6.7" r="1.1" fill="#fff"/></svg>
+                <% } else { %><%= (a.platform || '?').charAt(0) %>
+                <% } %>
+              </div>
+              <div class="sc-social-row-text">
+                <div class="sc-row-title"><%= a.platform %> <span class="sc-pill <%= a.status === 'CONNECTED' ? 'sc-pill-ok' : 'sc-pill-muted' %>"><%= a.status %></span></div>
+                <div class="sc-row-sub"><%= a.handle %><% if (a.note) { %> · <%= a.note %><% } %></div>
+                <div class="sc-row-sub sc-muted">
+                  <%= a.followers === null ? 'Followers unknown' : a.followers.toLocaleString() + ' followers' %><% if (a.followersChange30d) { %> (+<%= a.followersChange30d %> in 30 days)<% } %>
+                  · last retrieval <%= a.lastRetrieval || 'never' %><% if (a.lastOutcome) { %>, <%= a.lastOutcome %><% } %>
+                </div>
               </div>
             </div>
           <% }) %>
