@@ -1269,6 +1269,67 @@ the previous pass - the advisory lock alone holding the alert's bound
 across 40 bursts with the unique index dropped, while a lock-free
 predecessor breaks 29 times in 40.
 
+### Eighteenth governance review: PASS, two LOW, fitness confirmed - RELEASE PROCEEDING (31/08/2026)
+
+`review/workspace-v0.1-governance-review-18-2026-08-31.md` (**PASS**,
+Y1-Y2, both LOW, against head `bdc3d0d`). Third PASS in a row, and this
+is where the cycle stops: Tom asked the reviewer for an explicit fitness
+judgement rather than a bare verdict, and got one.
+
+> "Yes, I think the register has reached its floor, and yes, I consider
+> the candidate fit for a production release decision... Neither Y1 nor
+> Y2 should gate a release."
+
+**Y1**: the X2 property test is named for a property over an unbounded
+domain (the record count) and establishes it over counts 2-60. A
+sentence conditional on `n === 137` would pass. It is nonetheless
+sufficient in practice, because `MAX_CONTEXT_RECORDS = 24` in
+`orchestrator.js` caps the domain the function can ever actually be
+called with - a cross-module fact the test does not state. **Y2**: the
+dated builder's note added for X4 says the two copies of the fifteenth
+review "no longer differ at all", inside the very commit that makes them
+differ by twenty lines - X4's own shape, one iteration along, and purely
+self-referential.
+
+**Neither is fixed.** Per Tom's standing instruction: a PASS plus an
+explicit fitness judgement ends the cycle, and a nineteenth pass is not
+commissioned to chase a LOW wording point. Both are recorded here as
+open, cheap, non-blocking corrections for a later ordinary commit.
+
+**What eighteen passes actually changed, in the reviewer's own framing,
+worth keeping as the honest summary of this whole project:**
+
+> "Reviews 1 to 11 found HIGH findings, and several were live security
+> defects... Reviews 12 and 14 to 18 have found no HIGH and no MEDIUM.
+> Every finding in the last four cycles - W, X, and now Y - has been a
+> sentence that outruns its code... The access controls are the
+> strongest part of this system and they have now been attacked
+> independently eighteen times without giving way."
+
+**Re-established one final time rather than inherited:** 224/224
+anonymous workspace probes byte-identical to a genuinely missing path
+with the flag off, across eight methods and 28 paths; the full
+CMS-admin takeover (a second admin actually resets Tom's password, logs
+in, holds the right username and the right user id) stopping at the
+unlock screen with a positive control unlocking in the same run;
+passphrase rotation invalidating an open unlock while login stays
+intact; the alert's bound across 240 racing processes with a negative
+control breaking 7 of 12 rounds; 91 clearance-by-lane combinations
+against an independently computed expected set. Every measurement claim
+in the X remediation verified, including the 21 no-`DATABASE_URL`
+failures being identical at both heads and none of them in the
+workspace.
+
+**Two things reserved to Tom, and treated as pre-flight checks on the
+day rather than code changes:** the secret rotation named throughout
+this file (`WORKSPACE_ACCESS_PASSPHRASE`, `WORKSPACE_SNAPSHOT_KEY`, then
+`SESSION_SECRET` and the account passwords), and one real delivery of
+the failed-unlock alert email in production - the one control here
+whose end-to-end behaviour nobody has observed in eighteen passes.
+
+**Release proceeds per Tom's decision of 31/08/2026**, in the sequence
+recorded immediately below.
+
 ### Sixteenth governance review: PASS, four LOW (31/08/2026)
 
 `review/workspace-v0.1-governance-review-16-2026-08-31.md` (**PASS**,
