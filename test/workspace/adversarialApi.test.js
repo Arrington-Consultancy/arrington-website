@@ -184,6 +184,40 @@ test('adversarial workspace checks', { skip: configured ? false : 'set WORKSPACE
     }
   });
 
+  await t.test('every method is refused the same way, not just GET and POST', async () => {
+    // Governance finding Q1 (HIGH). Express answers OPTIONS from its own
+    // route table BEFORE any route middleware runs, so every real
+    // /api/workspace/* endpoint returned 200 with an Allow header while a
+    // fabricated sibling returned 404 - anonymously, with the enable flag
+    // OFF. A complete map of the area's shape, and it falsified the claim
+    // that merging the workspace is inert.
+    //
+    // It survived nine reviews and this suite reporting 9/9 green on the
+    // same server in the same minute, because every probe here sent GET
+    // or POST. Testing the methods nobody uses is the whole point: they
+    // are the ones no route handles, and therefore the ones the framework
+    // answers on your behalf.
+    const anon = makeClient();
+    const REAL = APIS.map(([path]) => path).concat(['/workspace', '/workspace/today']);
+    const FABRICATED = ['/api/workspace/records-9f3c', '/workspace/nowhere-9f3c'];
+
+    for (const method of ['OPTIONS', 'PUT', 'DELETE', 'PATCH']) {
+      const control = await anon.go('/definitely-not-a-real-path-9f3c', { method });
+      const controlBody = await control.text();
+      const controlHeaders = headerFingerprint(control);
+
+      for (const path of REAL.concat(FABRICATED)) {
+        const res = await anon.go(path, { method });
+        assert.equal(res.status, control.status,
+          `${method} ${path} returned ${res.status} where a non-existent path returns ${control.status}`);
+        assert.equal(stripNonces(await res.text()), stripNonces(controlBody),
+          `${method} ${path} body differs from a non-existent path's`);
+        assert.equal(headerFingerprint(res), controlHeaders,
+          `${method} ${path} headers differ from a non-existent path's, which is enough to enumerate the area`);
+      }
+    }
+  });
+
   await t.test('a logged-in site admin who is not Tom sees nothing, and is told nothing', async (tt) => {
     if (!OTHER_PASSWORD) return tt.skip('set WORKSPACE_TEST_OTHER_PASSWORD');
     const other = makeClient();

@@ -20,7 +20,7 @@ const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const repo = require('../lib/workspace/repo');
 const { filterRecordsForClearance, clearanceCanSeeRecord, clearanceCanSeeSensitivity, clearanceCovers, CLEARANCES } = require('../lib/workspace/clearance');
 const { LANES, SOURCE_CLASSES, laneById } = require('../lib/workspace/lanes');
-const { requireWorkspacePageAccess, requireWorkspaceApiAccess, setNoindex } = require('../lib/workspace/access');
+const { requireWorkspacePageAccess, requireWorkspaceApiAccess, setNoindex, refuseUnroutedMethods } = require('../lib/workspace/access');
 const { render404 } = require('../lib/render404');
 const wsUnlock = require('../lib/workspace/unlock');
 const unlockAlert = require('../lib/workspace/unlockAlert');
@@ -34,6 +34,11 @@ const crm = require('../lib/crm/contacts');
 const erasure = require('../lib/crm/erasure');
 
 const router = express.Router();
+
+// FIRST, before any route is declared: Express answers OPTIONS from its
+// route table before route middleware runs, so this has to sit ahead of
+// everything or the area is enumerable anonymously (finding Q1).
+router.use(refuseUnroutedMethods);
 
 // The one level at which activity rows may be shown, used by BOTH
 // surfaces that render them: the dashboard strip and /workspace/activity.
@@ -107,6 +112,10 @@ function withFreshness(records) {
 }
 
 function mountPageRoute(app, generateCsrfToken) {
+  // The page routes are registered on the app rather than on the router,
+  // so they need the same guard ahead of them (finding Q1).
+  app.use(refuseUnroutedMethods);
+
   const page = (path, handler) => {
     app.get(path, requireWorkspacePageAccess, async (req, res, next) => {
       try { await handler(req, res); } catch (err) { next(err); }

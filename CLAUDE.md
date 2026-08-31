@@ -1161,6 +1161,52 @@ have been caught by it.
   adding more genuine confidential records, not the builder writing
   synthetic ones into the real snapshot.
 
+### Tenth governance review: AMBER, one HIGH (31/08/2026)
+
+`review/workspace-v0.1-governance-review-10-2026-08-31.md` (**AMBER**,
+Q1 HIGH plus Q2-Q4 LOW), answered in
+`review/workspace-v0.1-q-remediation-2026-08-31.md`. All four corrected.
+The reviewer attacked all four P-cycle fixes and found all four hold.
+
+**Q1 (HIGH): anonymous OPTIONS enumerated the workspace API with the
+flag OFF.** Express answers `OPTIONS` from its own route table BEFORE
+any route middleware runs, so every real `/api/workspace/*` endpoint
+returned `200 Allow: POST` to an unauthenticated request while a
+fabricated sibling returned 404, on a server with no workspace variables
+set at all. `routes/workspace.js` is not on main, so **merging would
+have added that oracle to the live site** and the claim that merging is
+inert was false as written. Same consequence as G1, which this chain
+graded HIGH, through a method instead of a header.
+
+**Why it survived ten passes:** the adversarial suite reported 9/9 green
+on the same server in the same minute, because every probe anyone had
+written sent GET or POST. **The methods nobody uses are exactly the ones
+no route handles, and therefore the ones the framework answers on your
+behalf.** That is the lesson to keep.
+
+Closed by `refuseUnroutedMethods` in `lib/workspace/access.js`,
+registered first on the router AND first in `mountPageRoute` (Express
+decides before route middleware, and the page routes live on the app).
+Measured at **65/65 byte-identical to a genuinely missing path**, both
+flag states, anonymous. The adversarial suite now sweeps four methods
+across real and fabricated paths and is red against `09cd35e`.
+
+**Q3 changed a method rather than patching again.** Five reviews found
+more drift-guard evasion shapes; matching the shape of a gate is an arms
+race against ordinary JavaScript. `npm test` now runs
+`scripts/runTests.js`, which streams `node --test` through unchanged,
+preserves its exit code, and reads the `# SKIP` directives the runner
+itself emits. A skip appears there whatever the source looks like, so
+there is no shape left to evade, and all five gated suites are named on
+every run.
+
+**Q2**: the "one clock decides" sentence was still wrong after P5, and
+is now precise: the authoritative gate is entirely in SQL, while
+`decideAlert`'s comparisons stay in JavaScript on purpose so the rule is
+testable without a database. **Q4**: `recordedAs` could name a row that
+was never written, which is N1's class one layer out; it reports null
+when nothing was recorded.
+
 ### Ninth governance review: AMBER, no HIGH (31/08/2026)
 
 `review/workspace-v0.1-governance-review-9-2026-08-31.md` (**AMBER**,
@@ -1245,7 +1291,12 @@ computed from the Node clock against timestamps written by the DATABASE
 clock, and those disagree here by up to a minute. A future-dated claim is
 newer than any lease, so it was never reclaimed and silenced the alarm
 for the whole skew. Every authoritative window is now expressed in SQL
-against `now()`, so one clock decides. Fixing it surfaced a second
+against `now()`, so the database's clock alone gates a claim. **That
+sentence originally read "every authoritative window", which was untrue
+of the threshold window (P3) and still over-broad after it (Q2): the
+comparisons in `decideAlert` remain in JavaScript on purpose, because
+they produce the reason string and keep the rule testable without a
+database. Where the clocks disagree the SQL wins.** Fixing it surfaced a second
 defect: the reclaim ran after the state was read, so the decision still
 gated on the future row and never reached the takeover.
 

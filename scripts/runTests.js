@@ -1,0 +1,60 @@
+#!/usr/bin/env node
+// `npm test`, with an honest account of what did not run.
+//
+// Governance findings L5, M4, N5, P4 and Q3: five consecutive reviews
+// found more ways to write a gate that the source-scanning guard did not
+// recognise - `t.skip`, a hoisted const, a spread options object, an
+// early return with and without a comment, a renamed destructure, an
+// alias, `process.env` passed as an argument. Every round added
+// patterns; every round a reviewer found more. Matching the SHAPE of a
+// gate is an arms race against ordinary JavaScript, and it was losing.
+//
+// So this stops guessing from source and reads what the test runner
+// actually did. A skip appears in the TAP output as a `# SKIP`
+// directive whatever the source looks like, so there is no shape to
+// evade. The runner streams node --test through unchanged and preserves
+// its exit code; all it adds is the summary at the end.
+const { spawn } = require('node:child_process');
+
+const args = process.argv.slice(2);
+const child = spawn(process.execPath, ['--test', ...args], {
+  env: process.env,
+  stdio: ['inherit', 'pipe', 'inherit']
+});
+
+let buffered = '';
+const skipped = [];
+
+child.stdout.on('data', (chunk) => {
+  process.stdout.write(chunk);
+  buffered += chunk.toString();
+  let nl;
+  while ((nl = buffered.indexOf('\n')) !== -1) {
+    const line = buffered.slice(0, nl);
+    buffered = buffered.slice(nl + 1);
+    // TAP: "ok 12 - name # SKIP reason". Indentation varies with nesting.
+    const m = line.match(/^\s*(?:not )?ok\s+\d+\s*-\s*(.+?)\s*#\s*SKIP\s*(.*)$/);
+    if (m) skipped.push({ name: m[1], reason: m[2] || '(no reason given)' });
+  }
+});
+
+child.on('close', (code) => {
+  const rule = '  ' + '='.repeat(64);
+  const lines = ['', rule];
+  if (!skipped.length) {
+    lines.push('  Every suite ran. Nothing was skipped.');
+  } else {
+    lines.push(`  ${skipped.length} SUITE(S) DID NOT RUN. The counts above do not cover them.`);
+    lines.push('  ' + '-'.repeat(64));
+    for (const s of skipped) {
+      lines.push(`  [SKIP] ${s.name}`);
+      lines.push(`         ${s.reason}`);
+    }
+    lines.push('  ' + '-'.repeat(64));
+    lines.push('  A release decision needs the adversarial suites run by hand');
+    lines.push('  against a running instance. A green npm test is not that.');
+  }
+  lines.push(rule, '');
+  process.stdout.write(lines.join('\n'));
+  process.exit(code === null ? 1 : code);
+});

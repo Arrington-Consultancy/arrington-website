@@ -47,95 +47,23 @@ function everyTestFile(dir) {
   });
 }
 
-test('the suites that can decline to run are all declared', () => {
-  const declared = new Set(GATED.map((g) => path.join(TEST_ROOT, g.file)));
-  const undeclared = [];
-
-  // Governance findings L5, M4 and N5: three passes of adding patterns,
-  // and each pass a reviewer found more shapes that walked past them -
-  // `t.skip`, a hoisted const, a spread options object, an early return
-  // with and without a comment. Matching the SHAPE of a gate is
-  // whack-a-mole, and the guard was blind to the very forms this
-  // repository's own suites use.
+test('every declared gated suite still exists', () => {
+  // Governance findings L5, M4, N5, P4 and Q3: the source-scanning drift
+  // guard that used to live here was defeated in five consecutive
+  // reviews, each time by an ordinary way of writing a gate it did not
+  // recognise. Matching the shape of a gate is an arms race against
+  // JavaScript, and it was losing.
   //
-  // So this no longer looks for how a gate is written. It looks for what
-  // a gate must DO: read an environment variable. A suite cannot decline
-  // to run based on configuration without reading configuration, however
-  // it is spelled. Anything reading an env var outside the allowlist
-  // below has to be declared.
+  // It has been replaced by scripts/runTests.js, which reads the SKIP
+  // directives the test runner actually emits. A skip appears there
+  // whatever the source looks like, so there is no shape to evade, and
+  // `npm test` now prints what did not run on every invocation.
   //
-  // The allowlist is the variables a developer running the suite
-  // normally has set, and which therefore do not make a suite
-  // conditional in the sense that matters.
-  const AMBIENT_ENV = new Set(['DATABASE_URL', 'SESSION_SECRET', 'NODE_ENV', 'CI', 'TZ']);
-
-  for (const file of everyTestFile(TEST_ROOT)) {
-    if (file === __filename) continue; // this file names the variables it looks for
-    const src = fs.readFileSync(file, 'utf8');
-    const referenced = new Set(
-      (src.match(/process\.env\.([A-Z0-9_]+)/g) || []).map((m) => m.split('.').pop())
-        .concat((src.match(/process\.env\[['"]([A-Z0-9_]+)['"]\]/g) || [])
-          .map((m) => m.replace(/.*['"]([A-Z0-9_]+)['"].*/, '$1')))
-        // Destructuring: const { FOO, BAR } = process.env
-        .concat((src.match(/\{([^{}]*)\}\s*=\s*process\.env/g) || [])
-          .flatMap((m) => (m.match(/[A-Z0-9_]{2,}/g) || [])))
-    );
-
-    // Finding P4: an alias defeats every pattern above, and the guard's
-    // OWN file used the idiom - `const env = process.env`, then
-    // `env.FOO`. Chasing the alias name is the only honest answer, but
-    // it must be done by what is READ off the alias, not by the alias
-    // existing: two real suites here spread process.env into a child
-    // process and snapshot it for restore, and neither is a gate.
-    const aliasNames = [
-      ...(src.match(/(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*process\.env\s*[;\n]/g) || []),
-      ...(src.match(/(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*\{\s*\.\.\.\s*process\.env[^}]*\}/g) || [])
-    ].map((m) => m.replace(/^(?:const|let|var)\s+([A-Za-z_$][\w$]*)[\s\S]*$/, '$1'));
-
-    for (const alias of aliasNames) {
-      const reads = src.match(new RegExp(`\\b${alias}\\.([A-Z0-9_]{2,})`, 'g')) || [];
-      for (const r of reads) referenced.add(r.split('.').pop());
-    }
-
-    // process.env handed to a function as a bare argument: the callee can
-    // read anything and this file cannot say what.
-    const passesEnvWholesale = /\(\s*process\.env\s*\)/.test(src);
-
-    // A file that ASSIGNS a variable is manipulating it as part of a
-    // test (setting the owner binding, clearing a mailbox), not deciding
-    // whether to run on it. Only a name that is read and never written
-    // can gate the suite.
-    const assigned = new Set(
-      (src.match(/process\.env\.([A-Z0-9_]+)\s*=/g) || []).map((m) => m.replace(/process\.env\.([A-Z0-9_]+)\s*=/, '$1'))
-        .concat((src.match(/delete\s+process\.env\.([A-Z0-9_]+)/g) || [])
-          .map((m) => m.split('.').pop()))
-        .concat((src.match(/process\.env\[['"]([A-Z0-9_]+)['"]\]\s*=/g) || [])
-          .map((m) => m.replace(/.*['"]([A-Z0-9_]+)['"].*/, '$1')))
-    );
-    const gating = [...referenced].filter((name) => !AMBIENT_ENV.has(name) && !assigned.has(name));
-
-    // The env check cannot see an UNCONDITIONAL skip, because such a
-    // suite reads no configuration at all - it simply never runs. That
-    // is arguably worse than a gated one, so the shape check stays
-    // alongside the semantic one. They catch different things and
-    // neither replaces the other.
-    const hardSkips = (src.match(/\b(?:t|test|describe|it)\.skip\s*\(/g) || []);
-
-    if ((gating.length || hardSkips.length || passesEnvWholesale) && !declared.has(file)) {
-      const why = gating.length
-        ? `reads ${gating.sort().join(', ')}`
-        : (passesEnvWholesale ? 'hands process.env to a function, so it can read anything' : 'skips unconditionally');
-      undeclared.push(`${path.relative(TEST_ROOT, file)} (${why})`);
-    }
-  }
-
-  assert.deepEqual(
-    undeclared, [],
-    `these suites can skip but are not declared in GATED, so a run that omits them would report nothing: ${undeclared.join(', ')}`
-  );
-
+  // What is left here is the part that check cannot do: naming what
+  // ARMS each suite, so a person knows how to run it.
   for (const g of GATED) {
     assert.ok(fs.existsSync(path.join(TEST_ROOT, g.file)), `declared gated suite ${g.file} no longer exists`);
+    assert.ok(g.arms && g.arms.length > 4, `${g.file} does not say what arms it`);
   }
 });
 

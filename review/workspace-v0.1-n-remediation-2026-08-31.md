@@ -65,6 +65,15 @@ recorded as abandonment, which gates nothing.
 
 ## N4 (LOW). Two clocks, and a future-dated claim silenced the alarm.
 
+> **CORRECTION, added 31/08/2026 after findings P3 and Q2.** "Every
+> authoritative window" was untrue when written: the threshold window
+> was still on the Node clock (P3), and even after that the phrasing was
+> over-broad (Q2), because `decideAlert`'s comparisons are still in
+> JavaScript. That is deliberate - they produce the reason string and
+> keep the rule testable without a database - and where the two clocks
+> disagree the SQL gate wins. The accurate statement is that the
+> authoritative gate, the conditional INSERT, is entirely in SQL.
+
 Accepted. Claim ages were computed from the Node clock against
 timestamps written by the database clock. Those clocks demonstrably
 disagree here - a claim seconds old has been observed reading a minute in
