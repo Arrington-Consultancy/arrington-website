@@ -135,12 +135,11 @@
 </div>
 
 <div class="ws-card">
-  <h2>Useful Thinking articles (<%= memory.USEFUL_THINKING_ARTICLES.length %> live)</h2>
-  <p class="ws-meta">From <%= memory.SOURCE_ARTICLES %>, which is the source of truth for what is actually published.</p>
+  <h2>Published website thinking (<%= memory.USEFUL_THINKING_ARTICLES.length %> live)</h2>
+  <p class="ws-meta">Useful Thinking is evergreen website content, not a time-led feed, so it sits apart from the social chronology above and carries no publication date. If the timing of an article ever matters, the repository history shows when it first entered the site. Source: <%= memory.SOURCE_ARTICLES %>.</p>
   <% memory.USEFUL_THINKING_ARTICLES.forEach(function (a) { %>
     <div class="ws-item">
       <span class="ws-item-title"><%= a.title %></span>
-      <span class="ws-badge ws-badge-stale">no date recorded</span>
       <div class="ws-meta">/useful-thinking/<%= a.slug %><% if (a.socialCrossover) { %> · <%= a.socialCrossover %><% } %></div>
     </div>
   <% }) %>
