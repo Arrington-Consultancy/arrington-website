@@ -219,6 +219,34 @@ those are not the absences that have been mistaken for coverage.
 - Secret sweep: 3 files found and cleared across the whole session
   directory, final sweep clean, repository clean.
 
+## One attempt that failed, recorded because a null result is not a pass
+
+The reviewer's sharpest demonstration of K1 was **two dispatches from a
+single five-attempt burst through the real HTTP endpoint**. I tried to
+reproduce that against the fix and could not — and the control shows
+why that is not the good news it looks like.
+
+Running the same burst against the **pre-fix** code, the harness also
+reported exactly one dispatch, in every round of every variant I tried:
+five concurrent posts as the logged-in owner, then with the failure rows
+pre-seeded so the threshold was already met when they arrived, then with
+the server's connection pool warmed by eight concurrent requests first.
+All five posts demonstrably reached the alert path each time (the
+failure rows are there to count).
+
+So the harness is insensitive, not the fix effective. A test that
+reports the same result for broken and corrected code is evidence of
+nothing, which is the whole lesson of K2, and it would have been easy to
+write the green number down and move on. The most likely cause is that
+the natural jitter between five separate curl processes going through
+Express exceeds the race window, where the process-level harness
+spin-waits to a shared instant and hits it.
+
+**What this means for the evidence below:** the defect and the fix are
+both established at the function level, by a harness that is red against
+the old code and green against the new. The HTTP-level reproduction is
+the reviewer's, and it stands on its record, not on mine.
+
 ## What is NOT claimed
 
 - The workspace adversarial suite and both live-AI suites did not run in
