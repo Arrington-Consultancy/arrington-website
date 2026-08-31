@@ -1006,6 +1006,21 @@ enforce it in both directions.
 Clients & projects, Contacts, Social media, AI workforce, Decisions &
 approvals, Brain gaps, Activity.
 
+**Governance on Ruth (findings T1-T3, 31/08/2026).** The thirteenth
+review confirmed the access argument below in full, by its own probes:
+six canary records at three sensitivities, twenty clearance-by-lane
+combinations with the model stubbed to echo everything it could see, and
+no withheld canary reaching her. **But the access argument answered only
+half the controlled statement.** `lanes.js`, `orchestrator.js` and this
+file said the router "never speaks as a person and never appears in
+output as a tenth identity" - a statement about OUTPUT, which Ruth does
+change. All three are now amended and dated rather than argued past.
+Two defects came with her and are fixed: a crafted lane id reached
+through `Object.prototype` so she named a colleague called "Object"
+(and `routes/workspace.js` accepted it as a valid forced lane before
+500ing, since `laneById` is what validates that input), and `gapRaised`
+was passed every turn while changing nothing.
+
 **Ruth, the receptionist (31/08/2026).** Tom's instruction: "Make Ruth
 in Arrington as well." `lib/workspace/receptionist.js`.
 
@@ -1037,8 +1052,13 @@ no Scott code and names no Scott character.
 **Nine lanes, no new worker** (`lib/workspace/lanes.js`). The canonical
 Arrington workers appear as routing lanes with read-only source classes
 and sensitivity ceilings taken from their published remits. The router
-is faceless plumbing, never a tenth identity, per the completion
-mandate. Only Governance & Assurance reads every source class, and a
+is faceless plumbing, per the completion mandate: it has no name and no
+voice, and no lane speaks. **Amended 31/08/2026 (finding T1):** this
+used to read "never a tenth identity", and a receptionist now presents
+the router's output under a name (see Ruth, above). No tenth WORKER
+exists - she holds no source class, ceiling or clearance and reads no
+record - but the output statement was untrue as written and is corrected
+here rather than argued past. Only Governance & Assurance reads every source class, and a
 test fails if a second lane ever does.
 
 **Permission legs.** Human clearance AND lane permission AND task

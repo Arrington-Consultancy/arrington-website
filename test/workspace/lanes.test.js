@@ -29,6 +29,19 @@ test('the lanes are exactly the nine canonical workers, in register order, with 
   assert.deepEqual(LANES.map((l) => l.name), CANONICAL_NAMES);
 });
 
+test('a lane id inherited from Object.prototype is not a lane', () => {
+  // Governance finding T2: LANES_BY_ID was a plain object literal, so
+  // laneById('constructor') returned the Object function. The
+  // receptionist then named a colleague called "Object", and
+  // routes/workspace.js accepted it as a VALID forced lane id before
+  // 500ing - laneById is what that route uses to validate caller input.
+  // Fixed by giving the map a null prototype, which fixes every caller
+  // at once.
+  for (const id of ['constructor', '__proto__', 'toString', 'hasOwnProperty', 'valueOf', 'isPrototypeOf']) {
+    assert.equal(laneById(id), null, `laneById("${id}") returned something from the prototype chain`);
+  }
+});
+
 test('the two project workers are marked as such, so neither reads as permanent staff', () => {
   const project = LANES.filter((l) => l.kind === 'project').map((l) => l.name);
   assert.deepEqual(project, ['ARRINGTON AI DEMONSTRATION BUILDER', 'ARRINGTON AI WORKSPACE BUILDER']);

@@ -3,8 +3,10 @@
 //
 // The runtime half is scripts/runTests.js, which `npm test` runs: it
 // reads the `# SKIP` directives the test runner actually emits, so a
-// skip is observed rather than inferred and there is no source shape to
-// evade.
+// skip there is observed rather than inferred. It sees nothing of a
+// suite that never registers, or of a test that returns early - the
+// runner calls that one PASSING - which is why the source half below
+// exists and why saying the runner replaced it was findings S2 and T4.
 //
 // The source half is below. Governance finding R2: replacing the source
 // scan with the runner LOST coverage, because two ordinary shapes never
@@ -100,6 +102,21 @@ test('a gated suite cannot appear without being declared', () => {
         .concat((src.match(/\{([^{}]*)\}\s*=\s*process\.env/g) || [])
           .flatMap((m) => (m.match(/[A-Z0-9_]{2,}/g) || [])))
     );
+
+    // Finding T5: an alias walks past all of the above -
+    // `const env = process.env` and then `env.FOO`. Track what is read
+    // off the alias, not the alias itself, because two real suites here
+    // spread process.env into a child process or snapshot it for
+    // restore and neither is a gate.
+    const aliases = [
+      ...(src.match(/(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*process\.env\s*[;\n]/g) || []),
+      ...(src.match(/(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*\{\s*\.\.\.\s*process\.env[^}]*\}/g) || [])
+    ].map((m) => m.replace(/^(?:const|let|var)\s+([A-Za-z_$][\w$]*)[\s\S]*$/, '$1'));
+    for (const alias of aliases) {
+      for (const r of src.match(new RegExp(`\\b${alias}\\.([A-Z0-9_]{2,})`, 'g')) || []) {
+        referenced.add(r.split('.').pop());
+      }
+    }
     // A name the file ASSIGNS is being manipulated as part of a test
     // (setting the owner binding, clearing a mailbox), not gated on.
     const assigned = new Set(
@@ -108,6 +125,12 @@ test('a gated suite cannot appear without being declared', () => {
         .concat((src.match(/delete\s+process\.env\.([A-Z0-9_]+)/g) || []).map((m) => m.split('.').pop()))
     );
     const readsConfiguration = [...referenced].filter((n) => !AMBIENT_ENV.has(n) && !assigned.has(n));
+
+    // Finding T5 again, the other direction: dropping the DATABASE_URL
+    // suppression made this report every database-only suite as an
+    // undeclared gate. A developer without a database knows it, and
+    // those are not the absences that have been mistaken for coverage.
+    const dbOnly = DB_ONLY_GATE.test(src) && !readsConfiguration.length;
 
     // 2. A file that registers nothing at all.
     const registersSomething = /\b(?:test|describe|it)\s*\(/.test(src);
@@ -121,7 +144,8 @@ test('a gated suite cannot appear without being declared', () => {
     // configuration gate actually reads.
     const returnsEarlyOnEnv = /if\s*\([^)]*process\.env[^)]*\)\s*\{?\s*return\b/.test(src);
 
-    const why = readsConfiguration.length ? `reads ${readsConfiguration.sort().join(', ')}`
+    const why = dbOnly ? null
+      : readsConfiguration.length ? `reads ${readsConfiguration.sort().join(', ')}`
       : (!registersSomething ? 'registers no tests'
         : (returnsEarlyOnEnv ? 'returns early on configuration' : null));
 

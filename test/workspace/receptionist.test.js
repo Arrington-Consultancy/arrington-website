@@ -48,10 +48,39 @@ test('she can speak about the routing and never about the content', () => {
   );
 });
 
-test('she cannot invent a colleague', () => {
-  const note = receptionist.handoffNote({ laneId: 'not-a-real-lane', answered: true, recordCount: 2 });
-  assert.ok(!/not-a-real-lane/.test(note), 'an unknown lane id was echoed back as if it were a person');
-  assert.match(note, /could not tell who holds that|myself/);
+test('she cannot invent a colleague, including one inherited from Object', () => {
+  // Governance finding T2: this test was named for exactly this and
+  // missed it, because it only tried an id that was obviously fake. A
+  // crafted id made her announce a colleague called "Object" and 500'd
+  // the ask endpoint, since the lane map was a plain object literal and
+  // inherited Object.prototype. Fixed at source in lanes.js; pinned
+  // here with the ids that actually reach through a prototype.
+  const ids = ['not-a-real-lane', 'constructor', '__proto__', 'toString', 'hasOwnProperty', 'valueOf'];
+  for (const laneId of ids) {
+    const note = receptionist.handoffNote({ laneId, answered: true, recordCount: 2 });
+    assert.ok(!/Object|Function|\[native code\]/.test(note), `"${laneId}" produced a colleague from the prototype chain: ${note}`);
+    assert.ok(!note.includes(laneId), `"${laneId}" was echoed back as if it were a person`);
+    assert.match(note, /could not tell who holds that|myself/);
+  }
+});
+
+test('a gap is reported even when an answer came back', () => {
+  // Finding T3, tested the way it actually fails. The caller passes
+  // `answered: !!result.answer`, which is true whenever the workspace
+  // replied at all, so `answered: false` is not a case production
+  // reaches. gapRaised was only consulted on the !answered branch, which
+  // made both honest gap sentences dead in practice while a
+  // hand-written case list still hit them.
+  //
+  // So this pins the combination the route really produces: an answer
+  // came back AND a gap was raised. A gap is the most useful thing she
+  // can tell the owner - the records did not cover it and somebody wrote
+  // that down instead of guessing - and it must not be swallowed by the
+  // answer.
+  const withGap = receptionist.handoffNote({ laneId: 'google_ads', answered: true, recordCount: 2, gapRaised: true });
+  const withoutGap = receptionist.handoffNote({ laneId: 'google_ads', answered: true, recordCount: 2, gapRaised: false });
+  assert.match(withGap, /gap/i, 'a gap raised alongside an answer is never mentioned, so the flag changes nothing');
+  assert.notEqual(withGap, withoutGap, 'gapRaised makes no difference to what she says');
 });
 
 test('her directory exposes names, never what any lane can read', () => {

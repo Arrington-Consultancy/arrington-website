@@ -9,11 +9,18 @@
 // patterns; every round a reviewer found more. Matching the SHAPE of a
 // gate is an arms race against ordinary JavaScript, and it was losing.
 //
-// So this stops guessing from source and reads what the test runner
-// actually did. A skip appears in the TAP output as a `# SKIP`
-// directive whatever the source looks like, so there is no shape to
-// evade. The runner streams node --test through unchanged and preserves
-// its exit code; all it adds is the summary at the end.
+// So this reads what the test runner actually did, rather than guessing
+// from source: a skip appears in the TAP output as a `# SKIP` directive
+// whatever the source looks like. The runner streams node --test through
+// unchanged and preserves its exit code; all it adds is the summary at
+// the end.
+//
+// It does NOT replace the source scan in test/gatedSuites.test.js, and
+// saying it did was finding S2, repeated here after the first correction
+// missed this copy (finding T4). Two shapes never reach this output at
+// all - a suite that is never registered, and an early return from a
+// test body, which the runner reports as PASSING. Both halves exist
+// because neither is sufficient alone.
 const { spawn } = require('node:child_process');
 
 const args = process.argv.slice(2);
