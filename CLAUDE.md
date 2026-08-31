@@ -2323,16 +2323,26 @@ and staging databases that carry history.
 The `scott-demo` staging service remains for pre-production testing.
 
 - **Staging URL:** https://scott-demo-staging.up.railway.app
-- **Access:** the real Scott login. `SCOTT_DEMO_SKIP_LOGIN` and
+- **Access:** `SCOTT_DEMO_SKIP_LOGIN=true` is set on the staging service
+  (re-enabled 31/08/2026 at Tom's request, this time as a **standing**
+  state rather than the same-day temporary uses on 29/08 and 30/08
+  recorded below). Visiting the staging URL now auto-signs in as `tom`
+  with no login step. **This is staging only, and the reason it is safe
+  to leave on is entirely code-enforced, not convention:**
+  `lib/scott/access.js` refuses the bypass outright whenever
+  `CANONICAL_HOST` resolves to the live domain, so the flag cannot do
+  anything on production even if it were copied there by accident — see
+  the comment at the top of that file. Nothing indexes or links to the
+  staging URL. If solo testing is ever done and the demo needs to show
+  the real login/clearance flow again, unset the variable and redeploy;
+  `RESET_SCOTT_STAFF_PASSWORDS` stays unset either way.
+  **History, kept for context:** `SCOTT_DEMO_SKIP_LOGIN` and
   `RESET_SCOTT_STAFF_PASSWORDS` were removed from the staging service on
   29/08/2026 as part of the post-release security follow-up (PR #115).
   Skip-login was temporarily re-enabled on 30/08/2026 at Tom's request
   for solo testing and removed again the same day on his "lock it"
   instruction (doc 24 finding F3, closed; boot log verified free of the
-  bypass warning). The skip-login code path remains in
-  `lib/scott/access.js`, still refused outright on the public site, for
-  any future non-public deploy that needs it, and any use of it is a
-  deliberate, temporary, Tom-approved state.
+  bypass warning).
 - **Fictional staff logins:** eight accounts in `scott_portal_users`
   (`scott.mercer`, `tony.marsh`, `chloe.reed`, `leah.morgan`,
   `ellie.park`, `ravi.singh`, `jo.bell`, `mike.evans`), password from
