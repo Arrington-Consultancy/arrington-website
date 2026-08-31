@@ -1,22 +1,24 @@
-// What did NOT run, said plainly.
+// What did NOT run, said plainly, by two checks that catch different
+// things.
 //
-// Governance concern, raised in all five reviews of the workspace
-// candidate and never turned into a finding because nothing is broken:
-// `npm test` reports "skipped 2" while five whole suites carry a SKIP
-// directive, and the five include BOTH adversarial suites and BOTH
-// live-AI suites. A reader of that summary reasonably concludes that
-// almost everything ran. The important things had not.
+// The runtime half is scripts/runTests.js, which `npm test` runs: it
+// reads the `# SKIP` directives the test runner actually emits, so a
+// skip there is observed rather than inferred. It sees nothing of a
+// suite that never registers, or of a test that returns early - the
+// runner calls that one PASSING - which is why the source half below
+// exists and why saying the runner replaced it was findings S2 and T4.
 //
-// Node's counter is not wrong, it is counting something else: a suite
-// gated at the `describe`/`test` level reports as one passing entry with
-// a SKIP directive attached, and only some shapes land in the skipped
-// tally. Rather than argue with the runner, this file states the truth
-// separately, every run, where it cannot be missed.
+// The source half is below. Governance finding R2: replacing the source
+// scan with the runner LOST coverage, because two ordinary shapes never
+// reach the runner's output at all - a suite that is never registered,
+// and an early return from inside a test body. Both were caught by the
+// scan. So both halves stay; neither replaces the other.
 //
-// It also fails if a NEW gated suite appears without being listed here,
-// so the honest summary cannot quietly fall behind the test tree - the
-// same drift guard used elsewhere in this codebase for VALID_TEMPLATES
-// and the permission maps.
+// Between them they answer the concern five consecutive reviews raised
+// and none turned into a finding: `npm test` reported "skipped 2" while
+// five whole suites carried a SKIP directive, including both adversarial
+// suites and both live-AI suites, so a reader of that summary reasonably
+// concluded almost everything had run.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -47,73 +49,134 @@ function everyTestFile(dir) {
   });
 }
 
-test('the suites that can decline to run are all declared', () => {
+test('every declared gated suite still exists', () => {
+  // Governance findings L5, M4, N5, P4, Q3, R2 and S2: the source scan
+  // below was defeated in five consecutive reviews, each time by an
+  // ordinary way of writing a gate it did not recognise, so
+  // scripts/runTests.js was added to read the SKIP directives the runner
+  // actually emits.
+  //
+  // That did NOT replace the scan, and this comment claimed twice that
+  // it had (finding S2), while the code two functions below said
+  // otherwise. Two shapes never reach the runner's output at all: a
+  // suite that is never registered, and an early return from a test
+  // body, which the runner reports as PASSING. So both halves exist and
+  // neither is sufficient alone.
+  //
+  // This particular test is the third thing, which neither check can do:
+  // naming what ARMS each suite, so a person knows how to run it.
+  for (const g of GATED) {
+    assert.ok(fs.existsSync(path.join(TEST_ROOT, g.file)), `declared gated suite ${g.file} no longer exists`);
+    assert.ok(g.arms && g.arms.length > 4, `${g.file} does not say what arms it`);
+  }
+});
+
+test('a gated suite cannot appear without being declared', () => {
+  // The backstop for what the runtime check structurally cannot see.
+  // Not an attempt to enumerate every way of writing a gate - five
+  // reviews proved that unwinnable - but it must at least catch the
+  // shapes the runner is blind to, and finding S1 showed it did not.
   const declared = new Set(GATED.map((g) => path.join(TEST_ROOT, g.file)));
   const undeclared = [];
 
-  // Governance findings L5, M4 and N5: three passes of adding patterns,
-  // and each pass a reviewer found more shapes that walked past them -
-  // `t.skip`, a hoisted const, a spread options object, an early return
-  // with and without a comment. Matching the SHAPE of a gate is
-  // whack-a-mole, and the guard was blind to the very forms this
-  // repository's own suites use.
-  //
-  // So this no longer looks for how a gate is written. It looks for what
-  // a gate must DO: read an environment variable. A suite cannot decline
-  // to run based on configuration without reading configuration, however
-  // it is spelled. Anything reading an env var outside the allowlist
-  // below has to be declared.
-  //
-  // The allowlist is the variables a developer running the suite
-  // normally has set, and which therefore do not make a suite
-  // conditional in the sense that matters.
+  // Variables a developer running the suite normally has set, which
+  // therefore do not make a suite conditional in the sense that matters.
   const AMBIENT_ENV = new Set(['DATABASE_URL', 'SESSION_SECRET', 'NODE_ENV', 'CI', 'TZ']);
 
   for (const file of everyTestFile(TEST_ROOT)) {
-    if (file === __filename) continue; // this file names the variables it looks for
+    if (file === __filename) continue; // this file quotes the patterns it looks for
     const src = fs.readFileSync(file, 'utf8');
+
+    // 1. Reading configuration at all.
+    //
+    // Finding S1: `if (process.env.X) { test(...) }` was caught by
+    // NEITHER half. The runner cannot see it, because a test that is
+    // never registered emits nothing; and the check below for "registers
+    // nothing" passed it, because the source text does contain `test(`.
+    // A suite cannot decide whether to register on configuration without
+    // READING configuration, so this is the check that catches it.
+    // Finding U4: the name after process.env was required to be upper
+    // case, so a lower-case or mixed-case variable slipped through, and a
+    // computed bracket key was invisible. Both are ordinary JavaScript,
+    // and the paragraph above claimed to cover them.
     const referenced = new Set(
-      (src.match(/process\.env\.([A-Z0-9_]+)/g) || []).map((m) => m.split('.').pop())
-        .concat((src.match(/process\.env\[['"]([A-Z0-9_]+)['"]\]/g) || [])
-          .map((m) => m.replace(/.*['"]([A-Z0-9_]+)['"].*/, '$1')))
-        // Destructuring: const { FOO, BAR } = process.env
+      (src.match(/process\.env\.([A-Za-z0-9_]+)/g) || []).map((m) => m.split('.').pop())
+        .concat((src.match(/process\.env\[['"]([A-Za-z0-9_]+)['"]\]/g) || [])
+          .map((m) => m.replace(/.*['"]([A-Za-z0-9_]+)['"].*/, '$1')))
+        // A computed READ: process.env[whatever], where the name cannot
+        // be resolved statically, so it is treated as reading something
+        // unknown. Deliberately not a computed WRITE - five real suites
+        // here set or delete env keys by computed name as part of a
+        // test, and flagging those was a false positive that would have
+        // made this check noise.
+        .concat(
+          (src.match(/process\.env\[[^\]]+\]\s*(=[^=]|$)?/gm) || [])
+            .filter((m) => !/\]\s*=[^=]/.test(m))
+            .filter((m) => !new RegExp(`delete\\s+${m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`).test(src))
+            .length ? ['<computed>'] : []
+        )
         .concat((src.match(/\{([^{}]*)\}\s*=\s*process\.env/g) || [])
           .flatMap((m) => (m.match(/[A-Z0-9_]{2,}/g) || [])))
     );
-    // A file that ASSIGNS a variable is manipulating it as part of a
-    // test (setting the owner binding, clearing a mailbox), not deciding
-    // whether to run on it. Only a name that is read and never written
-    // can gate the suite.
-    const assigned = new Set(
-      (src.match(/process\.env\.([A-Z0-9_]+)\s*=/g) || []).map((m) => m.replace(/process\.env\.([A-Z0-9_]+)\s*=/, '$1'))
-        .concat((src.match(/delete\s+process\.env\.([A-Z0-9_]+)/g) || [])
-          .map((m) => m.split('.').pop()))
-        .concat((src.match(/process\.env\[['"]([A-Z0-9_]+)['"]\]\s*=/g) || [])
-          .map((m) => m.replace(/.*['"]([A-Z0-9_]+)['"].*/, '$1')))
-    );
-    const gating = [...referenced].filter((name) => !AMBIENT_ENV.has(name) && !assigned.has(name));
 
-    // The env check cannot see an UNCONDITIONAL skip, because such a
-    // suite reads no configuration at all - it simply never runs. That
-    // is arguably worse than a gated one, so the shape check stays
-    // alongside the semantic one. They catch different things and
-    // neither replaces the other.
-    const hardSkips = (src.match(/\b(?:t|test|describe|it)\.skip\s*\(/g) || []);
-
-    if ((gating.length || hardSkips.length) && !declared.has(file)) {
-      const why = gating.length ? `reads ${gating.sort().join(', ')}` : 'skips unconditionally';
-      undeclared.push(`${path.relative(TEST_ROOT, file)} (${why})`);
+    // Finding T5: an alias walks past all of the above -
+    // `const env = process.env` and then `env.FOO`. Track what is read
+    // off the alias, not the alias itself, because two real suites here
+    // spread process.env into a child process or snapshot it for
+    // restore and neither is a gate.
+    const aliases = [
+      ...(src.match(/(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*process\.env\s*[;\n]/g) || []),
+      ...(src.match(/(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*\{\s*\.\.\.\s*process\.env[^}]*\}/g) || [])
+    ].map((m) => m.replace(/^(?:const|let|var)\s+([A-Za-z_$][\w$]*)[\s\S]*$/, '$1'));
+    for (const alias of aliases) {
+      for (const r of src.match(new RegExp(`\\b${alias}\\.([A-Za-z0-9_]{2,})`, 'g')) || []) {
+        referenced.add(r.split('.').pop());
+      }
     }
+    // A name the file ASSIGNS is being manipulated as part of a test
+    // (setting the owner binding, clearing a mailbox), not gated on.
+    const assigned = new Set(
+      (src.match(/process\.env\.([A-Z0-9_]+)\s*=/g) || [])
+        .map((m) => m.replace(/process\.env\.([A-Z0-9_]+)\s*=/, '$1'))
+        .concat((src.match(/delete\s+process\.env\.([A-Z0-9_]+)/g) || []).map((m) => m.split('.').pop()))
+    );
+    const readsConfiguration = [...referenced].filter((n) => !AMBIENT_ENV.has(n) && !assigned.has(n));
+
+    // Finding T5 again, the other direction: dropping the DATABASE_URL
+    // suppression made this report every database-only suite as an
+    // undeclared gate. A developer without a database knows it, and
+    // those are not the absences that have been mistaken for coverage.
+    // Finding U3: this suppression was applied to ALL THREE clauses, so
+    // any file containing the literal phrase "set DATABASE_URL" stopped
+    // being checked for registering nothing or returning early - ten real
+    // files, silently. It suppresses only the clause it is about: a
+    // database-only gate is not an absence anyone has mistaken for
+    // coverage, but a file that registers no tests is, whatever else it
+    // happens to say.
+    const dbOnlyEnvGate = DB_ONLY_GATE.test(src) && !readsConfiguration.length;
+
+    // 2. A file that registers nothing at all.
+    const registersSomething = /\b(?:test|describe|it)\s*\(/.test(src);
+
+    // 3. An early return guarded on configuration, which the runner
+    //    reports as a PASSING test rather than a skipped one.
+    //
+    // Finding S1 again: this used to accept any capitalised identifier,
+    // so ordinary code like `if (res.STATUS_CODE) return` was reported as
+    // a gated suite. It names process.env now, because that is what a
+    // configuration gate actually reads.
+    const returnsEarlyOnEnv = /if\s*\([^)]*process\.env[^)]*\)\s*\{?\s*return\b/.test(src);
+
+    const why = !registersSomething ? 'registers no tests'
+      : (!dbOnlyEnvGate && readsConfiguration.length) ? `reads ${readsConfiguration.sort().join(', ')}`
+        : (!dbOnlyEnvGate && returnsEarlyOnEnv) ? 'returns early on configuration'
+          : null;
+
+    if (why && !declared.has(file)) undeclared.push(`${path.relative(TEST_ROOT, file)} (${why})`);
   }
 
-  assert.deepEqual(
-    undeclared, [],
-    `these suites can skip but are not declared in GATED, so a run that omits them would report nothing: ${undeclared.join(', ')}`
-  );
-
-  for (const g of GATED) {
-    assert.ok(fs.existsSync(path.join(TEST_ROOT, g.file)), `declared gated suite ${g.file} no longer exists`);
-  }
+  assert.deepEqual(undeclared, [],
+    `these suites can decline to run in a way the runner cannot report: ${undeclared.join(', ')}`);
 });
 
 test('what did not run in this invocation is reported', () => {

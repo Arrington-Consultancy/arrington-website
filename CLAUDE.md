@@ -1002,15 +1002,64 @@ secret; the passphrase never appears in any log, only its length.
 fictional fact is reachable from the workspace, or the reverse. Tests
 enforce it in both directions.
 
-**Screens:** Today, Ask the workspace, Company Brain, Opportunities,
+**Screens:** Today, Ask Ruth, Company Brain, Opportunities,
 Clients & projects, Contacts, Social media, AI workforce, Decisions &
 approvals, Brain gaps, Activity.
+
+**Governance on Ruth (findings T1-T3, 31/08/2026).** The thirteenth
+review confirmed the access argument below in full, by its own probes:
+six canary records at three sensitivities, twenty clearance-by-lane
+combinations with the model stubbed to echo everything it could see, and
+no withheld canary reaching her. **But the access argument answered only
+half the controlled statement.** `lanes.js`, `orchestrator.js` and this
+file said the router "never speaks as a person and never appears in
+output as a tenth identity" - a statement about OUTPUT, which Ruth does
+change. All three are now amended and dated rather than argued past.
+Two defects came with her and are fixed: a crafted lane id reached
+through `Object.prototype` so she named a colleague called "Object"
+(and `routes/workspace.js` accepted it as a valid forced lane before
+500ing, since `laneById` is what validates that input), and `gapRaised`
+was passed every turn while changing nothing.
+
+**Ruth, the receptionist (31/08/2026).** Tom's instruction: "Make Ruth
+in Arrington as well." `lib/workspace/receptionist.js`.
+
+**She is not a tenth identity, and the distinction is the whole point.**
+A lane is a scoped READING CONTEXT: a set of source classes and a
+sensitivity ceiling. Ruth has neither, plus no clearance of her own. She
+cannot read a record, widen a lane's answer, or see anything a lane
+declined to show. The permission model still has exactly three legs
+(human clearance AND lane permission AND task necessity); she adds no
+fourth and no bypass. The mandate's concern was a super-worker with god
+access, and a receptionist who can read nothing is the opposite of that.
+The lane register is untouched at nine, and a test asserts she never
+appears in it.
+
+What she may say is declared as a field list and anything else THROWS -
+the same structural discipline as the unlock alert after finding H7 -
+because a named component that talks to the owner is otherwise a
+disclosure channel with no gate on it. She is handed a lane id, two booleans and a
+count, never a record and never the answer text (finding U2 corrected
+the earlier "three booleans", and the count is the one value she
+interpolates).
+
+**She is Arrington's, not Scott's.** Scott's demonstration has a
+receptionist too; nothing is imported in either direction. "Reuse
+principles, not fictional content" - the principle of one named person
+who takes the question and routes it is reused, the fictional identity,
+prompt and business facts are not, and a test asserts this module reaches
+no Scott code and names no Scott character.
 
 **Nine lanes, no new worker** (`lib/workspace/lanes.js`). The canonical
 Arrington workers appear as routing lanes with read-only source classes
 and sensitivity ceilings taken from their published remits. The router
-is faceless plumbing, never a tenth identity, per the completion
-mandate. Only Governance & Assurance reads every source class, and a
+is faceless plumbing, per the completion mandate: it has no name and no
+voice, and no lane speaks. **Amended 31/08/2026 (finding T1):** this
+used to read "never a tenth identity", and a receptionist now presents
+the router's output under a name (see Ruth, above). No tenth WORKER
+exists - she holds no source class, ceiling or clearance and reads no
+record - but the output statement was untrue as written and is corrected
+here rather than argued past. Only Governance & Assurance reads every source class, and a
 test fails if a second lane ever does.
 
 **Permission legs.** Human clearance AND lane permission AND task
@@ -1067,6 +1116,81 @@ connectors, which is a genuine expansion of the approved source set. It
 is built staging-first and credential-gated, and the expansion is being
 routed to Governance and Assurance as a controlled change rather than
 treated as self-approved.
+
+### Twelfth review PASS, then two more after Ruth (31/08/2026)
+
+The **twelfth** pass (`review/workspace-v0.1-governance-review-12-2026-08-31.md`)
+returned **PASS** against head `d745a55`, the first green verdict in
+twelve, with two LOW findings (S1, S2) answered in the S remediation.
+That verdict covers the candidate **as it stood at that head**. Ruth was
+added afterwards on Tom's instruction, which is a material change, so the
+candidate went back for confirmatory passes rather than inheriting the
+green.
+
+**Thirteenth** (`...-13-...`, **AMBER**, T1-T6 against head `93d6afa`)
+and **fourteenth** (`...-14-...`, **AMBER**, U1 MEDIUM plus four LOW
+against head `eeb3a25`), answered in
+`review/workspace-v0.1-t-remediation-2026-08-31.md` and
+`review/workspace-v0.1-u-remediation-2026-08-31.md`. All eleven
+corrected. T1-T3 are recorded in the Ruth section above.
+
+**U1 is the sharpest finding in fourteen passes, because it is an honesty
+defect in the voice of the component added to be honest.** Ruth said
+**"I answered that one myself"**. She holds no clearance and reads no
+record, so she authors nothing. It is the same class of untruth thirteen
+reviews spent their time removing from the unlock alert: a component
+describing something that did not happen.
+
+Two things made it worse than a stray sentence, and both are the
+recurring pattern rather than new:
+
+- **A two-part finding fixed in one part and reported as fixed in both,
+  for the third cycle running.** T1 had two limbs, the controlled
+  statements and Ruth's own output. The T remediation corrected the
+  statements and said "all six corrected".
+- **It was the DEFAULT path, not an edge case.** Routing is nine keyword
+  regexes, so an unrouted question is the common case, and the T2
+  prototype fix then sent every invalid lane id down that same branch.
+  The reach of the false sentence grew inside the commit meant to correct
+  things.
+
+The no-lane turn now says what is true: no specialist matched, and the
+workspace answered from its general records. The test sweeps four lane
+ids by two answered states by two gap states by three record counts
+rather than the one combination that was wrong, and was watched red
+against `eeb3a25`.
+
+**U5** is the same shape: T3's `gapRaised` branch sat below the no-lane
+early return, so it was inert on the default path, and the test written
+for T3 used a lane id that never reaches that return. A gap is now
+reported on both paths and asserted on both.
+
+**U3 and U4 were both my own over- and under-correction of T5** in
+`test/gatedSuites.test.js`. `DB_ONLY_GATE` suppressed all three clauses
+instead of the one it is about, so any file containing the literal phrase
+"set DATABASE_URL" stopped being checked for registering nothing or
+returning early, silently, on ten real files. And the environment-name
+match required upper case, so a lower-case or mixed-case read and a
+computed bracket key both walked past a paragraph claiming to cover them.
+The computed rule is deliberately narrowed to a computed **read**: five
+real suites here set or delete env keys by computed name as part of a
+test, and flagging those would have made the check noise. Seven probes
+now run in both directions.
+
+**What the fourteenth reviewer re-established rather than inherited:**
+the full CMS-admin takeover stopping at the unlock screen with a positive
+control in the same run; 3,591 paired anonymous raw-socket requests per
+flag state, all identical; and Ruth probed across twenty
+clearance-by-lane combinations with the model stubbed to echo everything
+it could see, leaking nothing. They also hunted T2's prototype class
+across every dynamic lookup in `lib/`, `routes/`, `middleware/`,
+`server.js` and `db/` and found no second reachable instance.
+
+**One latent fail-open is carried to Tom rather than fixed here.**
+`lib/scott/clearance.js`'s `personaDomains` falls back to the owner
+persona for an unrecognised id. It is unreachable today and it is live in
+production, so changing it on the way to a workspace release would be
+exactly the scope drift these reviews exist to catch.
 
 ### Fourth governance review: AMBER, four findings, no HIGH (31/08/2026)
 
@@ -1161,6 +1285,138 @@ have been caught by it.
   adding more genuine confidential records, not the builder writing
   synthetic ones into the real snapshot.
 
+### Eleventh governance review: AMBER, one HIGH (31/08/2026)
+
+`review/workspace-v0.1-governance-review-11-2026-08-31.md` (**AMBER**,
+R1 HIGH, R2 LOW), answered in
+`review/workspace-v0.1-r-remediation-2026-08-31.md`. Both corrected.
+
+**R1 (HIGH): the Q1 fix was case-sensitive and Express's routing is
+not.** `server.js` never sets `case sensitive routing`, so Express's
+default applies and `/API/workspace/ask` reaches the same handler. The
+guard matched lower case only, so one capital letter walked past it and
+reopened the entire OPTIONS enumeration oracle: all nine real endpoints,
+anonymously, in both flag states, with no workspace variables set.
+
+**The rule: a guard that decides on a path must match paths the same way
+the router does, or it is guarding a different application from the one
+that is running.** Fixed with an `i` flag; measured at 220/220
+byte-identical to a genuinely missing path across five methods, eleven
+paths and four spellings, both flag states. Trailing slashes, doubled
+slashes, `..` traversal and percent-encoding were checked too, and
+non-workspace routes are unaffected.
+
+**And the Q1 test reported 10/10 green on the same server, in the same
+minute, as that enumeration** - it swept four methods but listed paths by
+hand in one spelling. Paths are now generated into case variants, and the
+case is red against `ebac5f6`.
+
+**R2 (LOW): replacing the source scan with the runner lost coverage.**
+Two shapes never reach the runner's output - a suite that registers
+nothing, and an early return from a test body, which the runner reports
+as PASSING rather than skipped. Both halves are back, with the source
+scan narrowed to exactly what the runtime check cannot see. Also fixed:
+the runner reported a test whose NAME contains `# SKIP` as a skipped
+suite (TAP escapes a `#` in a description as `\#`, so the lookbehind is
+the discriminator), and the file header advertised the deleted check.
+
+### Tenth governance review: AMBER, one HIGH (31/08/2026)
+
+`review/workspace-v0.1-governance-review-10-2026-08-31.md` (**AMBER**,
+Q1 HIGH plus Q2-Q4 LOW), answered in
+`review/workspace-v0.1-q-remediation-2026-08-31.md`. All four corrected.
+The reviewer attacked all four P-cycle fixes and found all four hold.
+
+**Q1 (HIGH): anonymous OPTIONS enumerated the workspace API with the
+flag OFF.** Express answers `OPTIONS` from its own route table BEFORE
+any route middleware runs, so every real `/api/workspace/*` endpoint
+returned `200 Allow: POST` to an unauthenticated request while a
+fabricated sibling returned 404, on a server with no workspace variables
+set at all. `routes/workspace.js` is not on main, so **merging would
+have added that oracle to the live site** and the claim that merging is
+inert was false as written. Same consequence as G1, which this chain
+graded HIGH, through a method instead of a header.
+
+**Why it survived ten passes:** the adversarial suite reported 9/9 green
+on the same server in the same minute, because every probe anyone had
+written sent GET or POST. **The methods nobody uses are exactly the ones
+no route handles, and therefore the ones the framework answers on your
+behalf.** That is the lesson to keep.
+
+Closed by `refuseUnroutedMethods` in `lib/workspace/access.js`,
+registered first on the router AND first in `mountPageRoute` (Express
+decides before route middleware, and the page routes live on the app).
+Measured at **65/65 byte-identical to a genuinely missing path**, both
+flag states, anonymous. The adversarial suite now sweeps four methods
+across real and fabricated paths and is red against `09cd35e`.
+
+**Q3 changed a method rather than patching again.** Five reviews found
+more drift-guard evasion shapes; matching the shape of a gate is an arms
+race against ordinary JavaScript. `npm test` now runs
+`scripts/runTests.js`, which streams `node --test` through unchanged,
+preserves its exit code, and reads the `# SKIP` directives the runner
+itself emits. A skip appears there whatever the source looks like, so
+there is no shape left to evade, and all five gated suites are named on
+every run.
+
+**Q2**: the "one clock decides" sentence was still wrong after P5, and
+is now precise: the authoritative gate is entirely in SQL, while
+`decideAlert`'s comparisons stay in JavaScript on purpose so the rule is
+testable without a database. **Q4**: `recordedAs` could name a row that
+was never written, which is N1's class one layer out; it reports null
+when nothing was recorded.
+
+### Ninth governance review: AMBER, no HIGH (31/08/2026)
+
+`review/workspace-v0.1-governance-review-9-2026-08-31.md` (**AMBER**,
+P1-P5, two MEDIUM three LOW), answered in
+`review/workspace-v0.1-p-remediation-2026-08-31.md`. All five corrected.
+
+**P1 is the ninth instance, and it is the worst kind: a fix recorded as
+made, in three places, that never ran.** The N3 correction lived in a
+branch with no reachable caller. `ClaimContentionError` is thrown inside
+`claimAlertSlot`, which is awaited BEFORE `claimId` is assigned, so a
+contended failure always took the `else` branch, and that branch
+hard-coded the error type and its own sentence instead of using the
+outcome computed three lines above it. So contention still bought five
+minutes of guaranteed silence, while the remediation, a code comment and
+this file all said it did not. The reviewer also mutated the frozen head
+so contention recorded itself as a DELIVERED notice buying the full
+hour, and the entire 538-test suite stayed green.
+
+**The test named for the property called the pure helper with null
+inputs.** That is the same failure as K2, M1 and N1: the test asserts
+something adjacent to the property and passes while the property is
+false. Both branches now record the same computed outcome, and the test
+holds the advisory lock from a second connection so the real function
+meets real contention. It is red against `1710179`.
+
+**P2: my "I could not reproduce it" was wrong, and measured wrong.** Two
+variables were off. The stagger has to be RANDOM rather than a
+deterministic ladder, and the send has to be SHORT: a long send lets the
+winner resolve its claim before the stragglers arrive, closing the very
+window the test opens. Corrected, 60 rounds against two defective
+predecessors break 8 times and 4 times; the profile I had defended broke
+neither, 0 in 60 against both.
+
+**P3**: "every authoritative window is now in SQL against `now()`" was
+untrue of the threshold window, which still used the Node clock. It does
+not now. **P4**: four more drift-guard evasion shapes, including the
+`const env = process.env` idiom the guard's own file used. The guard now
+tracks what is read off an alias or a copy, rather than flagging the
+alias itself, because two real suites here spread `process.env` into a
+child process and snapshot it for restore and neither is a gate.
+**P5**: P1's and P3's inaccuracies were written into this file too, and
+are corrected above.
+
+**What held:** all three gates, with 153/153 path, identity and Accept
+combinations byte-identical to a genuine 404 with the flag on and off;
+the concurrency guarantee across 220 bursts plus 120 racing worker
+processes, zero duplicated and zero silent, against a control
+reproducing the old defect 23 times in 180. The reviewer also added a
+check nobody had done: rotating the passphrase invalidates an open
+unlock immediately while leaving the login intact.
+
 ### Eighth governance review: AMBER, no HIGH (31/08/2026)
 
 `review/workspace-v0.1-governance-review-8-2026-08-31.md` (**AMBER**,
@@ -1194,13 +1450,20 @@ computed from the Node clock against timestamps written by the DATABASE
 clock, and those disagree here by up to a minute. A future-dated claim is
 newer than any lease, so it was never reclaimed and silenced the alarm
 for the whole skew. Every authoritative window is now expressed in SQL
-against `now()`, so one clock decides. Fixing it surfaced a second
+against `now()`, so the database's clock alone gates a claim. **That
+sentence originally read "every authoritative window", which was untrue
+of the threshold window (P3) and still over-broad after it (Q2): the
+comparisons in `decideAlert` remain in JavaScript on purpose, because
+they produce the reason string and keep the rule testable without a
+database. Where the clocks disagree the SQL wins.** Fixing it surfaced a second
 defect: the reclaim ran after the state was read, so the decision still
 gated on the future row and never reached the takeover.
 
 **N3**: contention was declared a distinct error and handled identically
 to a database fault, so losing a race bought the send backoff and
-silenced a genuine burst. **N5**: the drift guard, third pass. It no
+silenced a genuine burst. **That fix was dead code and this sentence was
+wrong until finding P1 corrected it** (see the ninth review above): the
+branch it added had no reachable caller. **N5**: the drift guard, third pass. It no
 longer matches how a gate is written - a suite cannot decline to run on
 configuration without READING configuration, so it looks for environment
 reads outside an ambient allowlist, ignoring names the file assigns, with

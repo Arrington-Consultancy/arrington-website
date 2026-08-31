@@ -279,29 +279,35 @@ test('a real Pool and a checked-out client are both recognised', () => {
       await seedFailures(10);
       const sent = [];
       // A delay in the transport widens the window further.
+      // A SHORT send (finding P2). A long one lets the winner finish and
+      // resolve its claim before the stragglers arrive, which closes the
+      // very window the test is trying to open. 120ms was hiding the
+      // defect, not exposing it.
       const send = async (m) => {
-        await new Promise((r) => setTimeout(r, 120));
+        await new Promise((r) => setTimeout(r, 5));
         sent.push(m);
         return { sent: true };
       };
-      // Finding N2: the reviewer showed that at its original profile -
-      // eight callers released in the same tick - this test ran clean
-      // 150 times against code that was demonstrably broken, and that a
-      // 0-40ms arrival stagger made the same code fail 16 times in 150.
-      // Callers in a real burst arrive at slightly different moments,
-      // and it is the gap between one caller's read and another's write
-      // that the guarantee has to survive, so the stagger is kept.
+      // Findings N2 and P2. The original profile, eight callers released
+      // in the same tick, ran clean 150 times against code that was
+      // demonstrably broken. I changed it to a fixed ladder and then
+      // reported that I could not reproduce the reviewer's sensitivity.
       //
-      // Stated honestly rather than claimed: I could NOT reproduce that
-      // sensitivity here. Fifty rounds at each profile against both
-      // candidate predecessors, with the unique index dropped so the old
-      // failure mode was reachable, produced zero bad rounds either way.
-      // So on this machine the stagger is a more realistic arrival
-      // pattern, and nothing more than that has been demonstrated. The
-      // tests below, which name the structural guarantees directly, are
-      // the ones carrying the weight.
-      await Promise.all(Array.from({ length: 8 }, async (_v, i) => {
-        await new Promise((r) => setTimeout(r, (i * 7) % 40));
+      // That report was wrong, and the correction is measured rather
+      // than asserted. Two variables were off: the stagger has to be
+      // RANDOM rather than a deterministic ladder, and the send has to
+      // be SHORT. With both corrected, 60 rounds against two defective
+      // predecessors break 8 times and 4 times. The profile I had
+      // defended broke neither: 0 in 60 against both.
+      //
+      // The lesson is the one this module keeps teaching. A green test
+      // is evidence of nothing until it has been watched to fail.
+      await Promise.all(Array.from({ length: 8 }, async () => {
+        // RANDOM, not a fixed ladder (finding P2). A deterministic
+        // stagger lands every caller in the same relative position every
+        // round, so the round either always races or never does. Random
+        // arrival explores the gaps, which is what a real burst does.
+        await new Promise((r) => setTimeout(r, Math.random() * 40));
         return alert.maybeAlertOnFailedUnlock(db, { username: SUBJECT, sendFn: send });
       }));
       assert.equal(sent.length, 1, `round ${round}: eight concurrent attempts delivered ${sent.length} messages; the stated bound is one`);
@@ -671,19 +677,55 @@ test('a real Pool and a checked-out client are both recognised', () => {
     assert.equal(res.sent, true);
   });
 
-  await t.test('contention that sends nothing does not buy the send backoff', async () => {
-    // Finding N3: ClaimContentionError was declared distinct and then
-    // handled exactly like a database fault, so losing a race bought the
-    // five-minute backoff and silenced a genuine burst.
-    const d = alert.decideAlert({
-      failuresInWindow: alert.THRESHOLD,
-      lastSuccessAt: null, lastFailureAt: null, lastErrorAt: null,
-      // An abandoned/contended record is not one of the gating types at
-      // all, so the only thing that could gate here is a pending claim.
-      lastPendingAt: null,
-      now: Date.now()
+  await t.test('contention is recorded as contention, and buys no backoff', async () => {
+    // Governance finding P1: the test that stood here called the pure
+    // decideAlert helper with null inputs. It asserted nothing about the
+    // path contention actually takes, so the N3 fix could be - and was -
+    // completely dead while this stayed green. The reviewer proved the
+    // point by making contention record itself as a DELIVERED notice and
+    // watching the whole suite pass.
+    //
+    // This drives the real function into real contention by holding the
+    // advisory lock from another connection for longer than every retry
+    // put together.
+    await reset();
+    await seedFailures(alert.THRESHOLD);
+
+    const holder = await db.pool.connect();
+    let res;
+    try {
+      await holder.query('BEGIN');
+      await holder.query('SELECT pg_advisory_xact_lock($1, hashtext($2))', [4267, SUBJECT]);
+      res = await alert.maybeAlertOnFailedUnlock(db, {
+        username: SUBJECT, sendFn: async () => { throw new Error('must not be called'); }
+      });
+    } finally {
+      await holder.query('ROLLBACK').catch(() => {});
+      holder.release();
+    }
+
+    assert.equal(res.sent, false, 'a notice was sent while the claim could not be taken');
+
+    // What was written must say contention, not "could not be
+    // evaluated", and must not be one of the types that gates.
+    const abandoned = await rowsOf(alert.ALERT_ABANDONED_EVENT);
+    assert.equal(abandoned.length, 1, `contention was not recorded as contention: ${JSON.stringify(await rowsOf(alert.ALERT_ERROR_EVENT))}`);
+    assert.match(abandoned[0].summary, /contention/i);
+    assert.equal((await rowsOf(alert.ALERT_ERROR_EVENT)).length, 0, 'contention was recorded as an evaluation failure, which buys the backoff');
+    assert.equal((await rowsOf(alert.ALERT_FAILED_EVENT)).length, 0, 'contention was recorded as a failed send');
+
+    // And what the caller was told must match the row (finding N1's rule,
+    // applied to this path).
+    assert.equal(res.recordedAs, alert.ALERT_ABANDONED_EVENT,
+      'the caller was told one thing and the register says another');
+
+    // The alarm must still be able to fire immediately afterwards.
+    const sent = [];
+    const again = await alert.maybeAlertOnFailedUnlock(db, {
+      username: SUBJECT, sendFn: async (m) => { sent.push(m); return { sent: true }; }
     });
-    assert.equal(d.alert, true, 'a burst was refused with nothing holding it back');
+    assert.equal(again.sent, true, 'losing a race silenced the next genuine burst');
+    assert.equal(sent.length, 1);
   });
 
   await t.test('a claim left behind by a dead process does not silence the alarm forever', async () => {
