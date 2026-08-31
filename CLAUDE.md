@@ -712,7 +712,8 @@ npm run dev
 - **Platform:** Railway (project: arrington-prototype, plan upgraded from Hobby to support two custom domains)
 - **Database:** Railway PostgreSQL addon (internal networking only)
 - **Required env vars:** `DATABASE_URL` (auto-set by addon), `SESSION_SECRET`, `RAILWAY_ENVIRONMENT` (auto-set)
-- **`GMAIL_APP_PASSWORD`** — Gmail SMTP app password for lead/quiz/Market Ready Test notification emails (see Lead capture section). Optional locally; `notify()` no-ops with a console warning if unset.
+- **`GMAIL_APP_PASSWORD`** — Gmail SMTP app password for lead/quiz/Market Ready Test notification emails (see Lead capture section). Optional locally; `notify()` no-ops with a console warning if unset. **It is also what makes the workspace's failed-unlock security alert able to ring** (finding H3): with it unset that alarm is inert, and the boot line now says so rather than leaving the operator to find out during an attack.
+- **`WORKSPACE_ALERT_EMAIL`** — where the workspace's failed-unlock security alert goes. Optional; falls back to the built-in owner address. It deliberately does **not** fall back to the `contact.email` CMS row (finding H1): that row is editable by anyone holding `edit_content`, which is exactly the account the alarm exists to warn about, so the default was retargetable by the attacker.
 - **Bootstrap env vars (first boot only):** `NAT_PASSWORD`, `TOM_PASSWORD` — remove from Railway after the first successful deploy seeds the user rows
 - **Production detection:** checks for `RAILWAY_ENVIRONMENT` or `NODE_ENV=production`
 - **Trust proxy:** enabled (required for rate limiting, secure cookies, and HTTPS redirect behind Railway's reverse proxy)
@@ -1066,6 +1067,65 @@ connectors, which is a genuine expansion of the approved source set. It
 is built staging-first and credential-gated, and the expansion is being
 routed to Governance and Assurance as a controlled change rather than
 treated as self-approved.
+
+### Third governance review: AMBER, seven findings (31/08/2026)
+
+`review/workspace-v0.1-governance-review-3-2026-08-31.md` (**AMBER**,
+H1-H7), answered in `review/workspace-v0.1-h-remediation-2026-08-31.md`.
+All seven corrected except the snapshot half of H6, which is blocked.
+
+**Two HIGH findings, and both were the same pattern for a third time:**
+a security property asserted in a comment and untrue in the code. Both
+were in the G6 alert, i.e. in the newest code, written in response to the
+previous review.
+
+- **H1**: the alert's recipient fell through to the CMS row
+  `content['contact.email']` when `WORKSPACE_ALERT_EMAIL` was unset. That
+  row is editable by anyone holding `edit_content` — which is exactly the
+  account the alarm exists to warn about. The reviewer retargeted the
+  alarm to `attacker@evil.example` with one `PUT /api/content`. Now the
+  recipient comes only from the Railway variable or a hard-coded
+  constant, and `alertRecipient()` **takes no database handle at all**,
+  so a query cannot be slipped back in unnoticed. The test that pinned
+  the fallback now forbids it.
+- **H2**: a failed send wrote the same row a success did, so it started
+  the sixty-minute cooldown. With `GMAIL_APP_PASSWORD` unset every send
+  fails, so **the alarm could never fire**. The reviewer did not have to
+  construct this: it happened by itself in the real database, where an
+  undelivered notice ate the budget and the genuine five-attempt burst
+  45 seconds later produced no alert. Failures now use their own event
+  type and earn a 5-minute backoff; only a DELIVERED notice buys the
+  hour. The reason string is worded from the recorded state, because the
+  old one said "an alert was already sent" when none had been.
+
+**The lesson, recorded so the next pass can hold the builder to it:**
+when a control names an attacker, every input it depends on must be
+checked against what that attacker can write. The message body was
+checked for leaks; the address it was sent to was not.
+
+Others:
+
+- **H3**: the boot line said nothing about whether the alarm could ring.
+  It now reports it, and `GMAIL_APP_PASSWORD`'s workspace role plus
+  `WORKSPACE_ALERT_EMAIL` are in the deployment variable list above.
+- **H4**: F6 named TWO surfaces rendering activity rows; G8 fixed one and
+  the remediation claimed it fixed the thing. Both now read one
+  `ACTIVITY_SENSITIVITY` constant, with a test pinning the value, the
+  two call sites and the absence of literals. F6, G8 and H4 were the same
+  gap corrected one surface at a time.
+- **H5**: the failure count was per-username and the cooldown was global,
+  so a second cleared human would silence the one under attack. Both are
+  now scoped by username.
+- **H6**: the canary rule accepted any leading capital minus a 23-word
+  list, and the bar was one token. The bar is now three, and a leading
+  capital alone no longer qualifies. **Stated rather than glossed:** this
+  sandbox has no `/usr/share/dict/words`, so it remains a heuristic.
+  **Blocked:** seeding more than two confidential records needs
+  `WORKSPACE_SNAPSHOT_KEY`, which this session does not hold, so an `ok`
+  on that probe is still not strong evidence and the skip message says so.
+- **H7**: `buildAlert`'s "structural" guarantee was pinned by
+  `buildAlert.length === 1`, which is 1 for any options object. It now
+  declares its permitted key set and THROWS on anything else.
 
 ### Second governance review: AMBER again, nine findings (31/08/2026)
 

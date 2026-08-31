@@ -1195,6 +1195,14 @@ async function describeWorkspaceAccessConfig() {
       : `owner binding NOT SET: ${binding.problems.join('; ')}`,
     pass.ok ? pass.detail : `passphrase NOT SET: ${pass.detail}`
   ];
+  // Finding H3 (31/08/2026): the workspace gained a fourth deployment
+  // dependency - whether its security alarm can actually ring - and this
+  // line said nothing about it. An operator could set the gates up
+  // correctly, read a line saying everything was fine, and be running
+  // with an alert that can never fire. Reported on the same honest
+  // pattern as the rest: what it is, and where it would go.
+  const alertCfg = require('./lib/workspace/unlockAlert').describeAlertConfig();
+  parts.push(alertCfg.detail);
   const shut = !binding.ok || !pass.ok;
   // The id an operator actually needs. Without this line, setting
   // WORKSPACE_OWNER_USER_ID correctly means having database access,

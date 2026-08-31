@@ -222,3 +222,24 @@ test('no denial carries a workspace-specific header, whatever the reason for it'
   assert.equal(flagOff.headers, undefined,
     'with the flag OFF a workspace path still carried a header a missing page does not: merging would not be inert');
 });
+
+// Governance finding H4 (31/08/2026). F6 named TWO surfaces that render
+// repo.listActivity rows: /workspace/activity and the dashboard strip.
+// G8 corrected only the first, so the two then disagreed about the
+// level, which is harder to spot than one being wrong. They now share a
+// constant, and this asserts the routes file still reads it in both
+// places rather than reintroducing a literal.
+test('both surfaces that render activity rows gate at the same level', () => {
+  const fs = require('node:fs');
+  const src = fs.readFileSync(require('node:path').join(__dirname, '../../routes/workspace.js'), 'utf8');
+  const declared = src.match(/const ACTIVITY_SENSITIVITY = '([a-z]+)'/);
+  assert.ok(declared, 'the shared activity gate constant is gone');
+  assert.equal(declared[1], 'confidential',
+    'activity rows quote confidential gap descriptions, so the gate must be confidential');
+  const uses = src.match(/clearanceCanSeeSensitivity\([^,]+, ACTIVITY_SENSITIVITY\)/g) || [];
+  assert.equal(uses.length, 2,
+    `expected both activity surfaces to use the shared constant, found ${uses.length}`);
+  // And neither surface may quietly go back to a literal.
+  assert.ok(!/activity: clearanceCanSeeSensitivity\([^,]+, '(standard|commercial)'\)/.test(src),
+    'an activity surface gates on a literal level again');
+});

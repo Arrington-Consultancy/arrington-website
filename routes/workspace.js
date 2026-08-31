@@ -35,6 +35,15 @@ const erasure = require('../lib/crm/erasure');
 
 const router = express.Router();
 
+// The one level at which activity rows may be shown, used by BOTH
+// surfaces that render them: the dashboard strip and /workspace/activity.
+// Activity summaries quote gap descriptions, and a gap's sensitivity can
+// be confidential, so this is the narrowest thing they can carry rather
+// than the level of the page they sit on. Findings F6, G8 and H4 were
+// all this same gap, corrected one surface at a time; a shared constant
+// is what stops a fourth.
+const ACTIVITY_SENSITIVITY = 'confidential';
+
 // Governance finding F9 (30/08/2026): only /ask was limited, so the
 // sync, erase, decide and resolve endpoints had none. The site's own
 // authed-write limiter is mounted on /api/content and /api/admin only.
@@ -143,7 +152,12 @@ function mountPageRoute(app, generateCsrfToken) {
       openGaps: visibleGaps,
       openApprovals: approvals.filter((a) => clearanceCanSeeSensitivity(clearanceId, a.sensitivity)),
       syncRun,
-      activity: clearanceCanSeeSensitivity(clearanceId, 'commercial') ? activity : [],
+      // Finding H4 (31/08/2026): F6 named TWO surfaces that render
+      // repo.listActivity rows, and G8 corrected only one. This is the
+      // other. Both must gate at the same level or the pair disagrees,
+      // which is harder to spot than one surface being wrong. The shared
+      // constant is asserted by a test.
+      activity: clearanceCanSeeSensitivity(clearanceId, ACTIVITY_SENSITIVITY) ? activity : [],
       aiEnabled: isWorkspaceAIEnabled(),
       csrfToken: generateCsrfToken(req, res)
     });
@@ -290,7 +304,7 @@ function mountPageRoute(app, generateCsrfToken) {
     // the code did not have is the same pattern as F1 and F2, which is
     // why it is worth a line rather than a shrug.
     const clearanceId = req.workspaceClearance;
-    const permitted = clearanceCanSeeSensitivity(clearanceId, 'confidential');
+    const permitted = clearanceCanSeeSensitivity(clearanceId, ACTIVITY_SENSITIVITY);
     res.render('workspace/activity', {
       ...viewer(req),
       counts: await navCounts(clearanceId),
