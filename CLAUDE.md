@@ -935,7 +935,10 @@ Tom returned an agreed-changes brief (`arrington_copy_review_agreed_changes_20_j
 
 The real internal workspace, at `/workspace`. **On its branch, not on
 main, and OFF in production.** Branch `feature/arrington-ai-workspace-v0-1`,
-head `852502c` (31/08/2026, after the second review's G-findings).
+head is the tip of this branch as pushed on 31/08/2026, **frozen for the
+third independent review**. The exact SHA is recorded in the review
+request rather than here, because a commit that states its own SHA cannot
+exist.
 **Both independent reviews and both responses now live in `review/` on
 the candidate itself**, so a reader of the branch can open every finding
 it cites rather than following a reference to somebody else's branch. Staging service
