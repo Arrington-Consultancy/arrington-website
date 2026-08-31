@@ -265,3 +265,57 @@ describe('filterByClearance / clearanceDeniedNote', () => {
     assert.doesNotMatch(note, /we (do not|don't) have/i);
   });
 });
+
+test('an unrecognised persona fails closed to the narrowest view, never to the owner', () => {
+  // Found by the fourteenth Arrington Workspace reviewer while hunting a
+  // related class elsewhere, reported as a latent concern rather than a
+  // finding, and corrected on Tom's instruction of 31/08/2026 so that a
+  // known fail-open is not carried silently into later Scott work.
+  //
+  // personaDomains used to fall back to Scott Mercer, who holds '*'. So
+  // an unrecognised id resolved to the OWNER view: the inversion of the
+  // rule 07Q states and the rule getEffectivePersonaId already applied
+  // in the same file. It is not reachable today, because every call site
+  // passes a persona from a closed set. It is tested because a control
+  // that is safe only by virtue of who happens to call it is one
+  // refactor away from not being safe at all.
+  //
+  // The prototype keys are here for the same reason: a plain object
+  // answers `constructor` and `toString` from Object.prototype, and a
+  // truthiness guard lets that through.
+  const owned = ['finance_full', 'payroll_full', 'director_private', 'marketing_performance'];
+  for (const bogus of ['nobody', '', null, undefined, 'constructor', '__proto__', 'toString', 'hasOwnProperty']) {
+    const domains = clearance.personaDomains(bogus);
+    assert.ok(Array.isArray(domains), `personaDomains(${String(bogus)}) did not return a list`);
+    assert.ok(!domains.includes('*'),
+      `an unrecognised persona (${String(bogus)}) was given the owner's wildcard`);
+    for (const d of owned) {
+      assert.equal(clearance.personaCanSeeDomain(bogus, d), false,
+        `an unrecognised persona (${String(bogus)}) can see ${d}`);
+    }
+    // Fail CLOSED, not empty: it lands on the narrowest real persona, so
+    // the universal safety baseline is still visible. 07K exists because
+    // a rule telling you to stop work when you believe there is a serious
+    // risk is useless if your clearance hides it.
+    assert.equal(clearance.personaCanSeeDomain(bogus, 'safety_baseline'), true,
+      `${String(bogus)} lost the universal safety baseline`);
+  }
+
+  // The real personas are untouched.
+  assert.equal(clearance.personaCanSeeDomain('scott_mercer', 'finance_full'), true);
+  assert.equal(clearance.personaCanSeeDomain('mike_evans', 'finance_full'), false);
+  assert.equal(clearance.personaCanSeeDomain('tony_marsh', 'jobs_ops'), true);
+});
+
+test('a prototype key never resolves to a persona identity', () => {
+  // getPersona is identity only and keeps the owner as its fallback on
+  // purpose: falling back to a narrower NAME would put the wrong person
+  // on the screen without changing what that screen may show. What it
+  // must not do is hand back Object.prototype's own members.
+  for (const key of ['constructor', '__proto__', 'toString', 'valueOf', 'hasOwnProperty']) {
+    const p = clearance.getPersona(key);
+    assert.equal(typeof p, 'object', `${key} returned a ${typeof p} rather than a persona`);
+    assert.ok(p && typeof p.name === 'string' && p.name.length > 0,
+      `${key} returned something that is not a persona`);
+  }
+});
