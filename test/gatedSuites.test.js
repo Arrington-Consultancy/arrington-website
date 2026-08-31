@@ -1,22 +1,22 @@
-// What did NOT run, said plainly.
+// What did NOT run, said plainly, by two checks that catch different
+// things.
 //
-// Governance concern, raised in all five reviews of the workspace
-// candidate and never turned into a finding because nothing is broken:
-// `npm test` reports "skipped 2" while five whole suites carry a SKIP
-// directive, and the five include BOTH adversarial suites and BOTH
-// live-AI suites. A reader of that summary reasonably concludes that
-// almost everything ran. The important things had not.
+// The runtime half is scripts/runTests.js, which `npm test` runs: it
+// reads the `# SKIP` directives the test runner actually emits, so a
+// skip is observed rather than inferred and there is no source shape to
+// evade.
 //
-// Node's counter is not wrong, it is counting something else: a suite
-// gated at the `describe`/`test` level reports as one passing entry with
-// a SKIP directive attached, and only some shapes land in the skipped
-// tally. Rather than argue with the runner, this file states the truth
-// separately, every run, where it cannot be missed.
+// The source half is below. Governance finding R2: replacing the source
+// scan with the runner LOST coverage, because two ordinary shapes never
+// reach the runner's output at all - a suite that is never registered,
+// and an early return from inside a test body. Both were caught by the
+// scan. So both halves stay; neither replaces the other.
 //
-// It also fails if a NEW gated suite appears without being listed here,
-// so the honest summary cannot quietly fall behind the test tree - the
-// same drift guard used elsewhere in this codebase for VALID_TEMPLATES
-// and the permission maps.
+// Between them they answer the concern five consecutive reviews raised
+// and none turned into a finding: `npm test` reported "skipped 2" while
+// five whole suites carried a SKIP directive, including both adversarial
+// suites and both live-AI suites, so a reader of that summary reasonably
+// concluded almost everything had run.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -65,6 +65,36 @@ test('every declared gated suite still exists', () => {
     assert.ok(fs.existsSync(path.join(TEST_ROOT, g.file)), `declared gated suite ${g.file} no longer exists`);
     assert.ok(g.arms && g.arms.length > 4, `${g.file} does not say what arms it`);
   }
+});
+
+test('a gated suite cannot appear without being declared', () => {
+  // The shapes below are the ones the runner cannot see. This is not an
+  // attempt to enumerate every way of writing a gate - five reviews
+  // proved that unwinnable - it is the narrow backstop for what the
+  // runtime check structurally misses.
+  const declared = new Set(GATED.map((g) => path.join(TEST_ROOT, g.file)));
+  const undeclared = [];
+
+  for (const file of everyTestFile(TEST_ROOT)) {
+    if (file === __filename) continue; // this file quotes the patterns it looks for
+    const src = fs.readFileSync(file, 'utf8');
+
+    // A suite that registers nothing: no test() or describe() call at all.
+    const registersSomething = /\b(?:test|describe|it)\s*\(/.test(src);
+
+    // An early return from a test body, guarded on configuration. The
+    // runner reports such a test as PASSING, not skipped, which is the
+    // worse of the two failures this backstop exists for.
+    const returnsEarlyOnEnv = /if\s*\([^)]*(?:process\.env|[A-Z][A-Z0-9_]{3,})[^)]*\)\s*\{?\s*return\b/.test(src)
+      && !DB_ONLY_GATE.test(src);
+
+    if ((!registersSomething || returnsEarlyOnEnv) && !declared.has(file)) {
+      undeclared.push(`${path.relative(TEST_ROOT, file)} (${!registersSomething ? 'registers no tests' : 'returns early on configuration'})`);
+    }
+  }
+
+  assert.deepEqual(undeclared, [],
+    `these suites can decline to run in a way the runner cannot report: ${undeclared.join(', ')}`);
 });
 
 test('what did not run in this invocation is reported', () => {

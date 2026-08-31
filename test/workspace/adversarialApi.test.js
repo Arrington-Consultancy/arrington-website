@@ -198,8 +198,18 @@ test('adversarial workspace checks', { skip: configured ? false : 'set WORKSPACE
     // are the ones no route handles, and therefore the ones the framework
     // answers on your behalf.
     const anon = makeClient();
-    const REAL = APIS.map(([path]) => path).concat(['/workspace', '/workspace/today']);
-    const FABRICATED = ['/api/workspace/records-9f3c', '/workspace/nowhere-9f3c'];
+    // Finding R1: the previous version of this listed paths by hand in
+    // one spelling, and reported 10/10 green on the same server, in the
+    // same minute, as an enumeration of the whole API through
+    // `/API/workspace/...`. Express routes case-insensitively by
+    // default; the guard's regex did not. So the paths are generated,
+    // not typed, and the variants are the ones the router treats as the
+    // same route.
+    const variantsOf = (p) => [p, p.toUpperCase(), p.replace('/api', '/Api'), `${p}/`];
+    const REAL = APIS.map(([path]) => path)
+      .concat(['/workspace', '/workspace/today'])
+      .flatMap(variantsOf);
+    const FABRICATED = ['/api/workspace/records-9f3c', '/workspace/nowhere-9f3c'].flatMap(variantsOf);
 
     for (const method of ['OPTIONS', 'PUT', 'DELETE', 'PATCH']) {
       const control = await anon.go('/definitely-not-a-real-path-9f3c', { method });

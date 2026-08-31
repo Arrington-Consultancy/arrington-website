@@ -1161,6 +1161,41 @@ have been caught by it.
   adding more genuine confidential records, not the builder writing
   synthetic ones into the real snapshot.
 
+### Eleventh governance review: AMBER, one HIGH (31/08/2026)
+
+`review/workspace-v0.1-governance-review-11-2026-08-31.md` (**AMBER**,
+R1 HIGH, R2 LOW), answered in
+`review/workspace-v0.1-r-remediation-2026-08-31.md`. Both corrected.
+
+**R1 (HIGH): the Q1 fix was case-sensitive and Express's routing is
+not.** `server.js` never sets `case sensitive routing`, so Express's
+default applies and `/API/workspace/ask` reaches the same handler. The
+guard matched lower case only, so one capital letter walked past it and
+reopened the entire OPTIONS enumeration oracle: all nine real endpoints,
+anonymously, in both flag states, with no workspace variables set.
+
+**The rule: a guard that decides on a path must match paths the same way
+the router does, or it is guarding a different application from the one
+that is running.** Fixed with an `i` flag; measured at 220/220
+byte-identical to a genuinely missing path across five methods, eleven
+paths and four spellings, both flag states. Trailing slashes, doubled
+slashes, `..` traversal and percent-encoding were checked too, and
+non-workspace routes are unaffected.
+
+**And the Q1 test reported 10/10 green on the same server, in the same
+minute, as that enumeration** - it swept four methods but listed paths by
+hand in one spelling. Paths are now generated into case variants, and the
+case is red against `ebac5f6`.
+
+**R2 (LOW): replacing the source scan with the runner lost coverage.**
+Two shapes never reach the runner's output - a suite that registers
+nothing, and an early return from a test body, which the runner reports
+as PASSING rather than skipped. Both halves are back, with the source
+scan narrowed to exactly what the runtime check cannot see. Also fixed:
+the runner reported a test whose NAME contains `# SKIP` as a skipped
+suite (TAP escapes a `#` in a description as `\#`, so the lookbehind is
+the discriminator), and the file header advertised the deleted check.
+
 ### Tenth governance review: AMBER, one HIGH (31/08/2026)
 
 `review/workspace-v0.1-governance-review-10-2026-08-31.md` (**AMBER**,

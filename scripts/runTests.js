@@ -33,7 +33,12 @@ child.stdout.on('data', (chunk) => {
     const line = buffered.slice(0, nl);
     buffered = buffered.slice(nl + 1);
     // TAP: "ok 12 - name # SKIP reason". Indentation varies with nesting.
-    const m = line.match(/^\s*(?:not )?ok\s+\d+\s*-\s*(.+?)\s*#\s*SKIP\s*(.*)$/);
+    // The `#` of a real directive is UNESCAPED. TAP escapes a `#` that
+    // appears inside a description as `\#`, so that one negative
+    // lookbehind is the whole difference between a genuine skip and a
+    // test whose name happens to discuss one - which the first version
+    // of this reported as a suite that did not run (finding R2).
+    const m = line.match(/^\s*(?:not )?ok\s+\d+\s*-\s*(.+?)\s*(?<!\\)#\s*SKIP\s*(.*)$/);
     if (m) skipped.push({ name: m[1], reason: m[2] || '(no reason given)' });
   }
 });
