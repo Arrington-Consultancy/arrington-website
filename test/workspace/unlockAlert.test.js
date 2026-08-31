@@ -208,7 +208,49 @@ test('failed-unlock alerting, against a real database', { skip: dbReady ? false 
     assert.equal((await rowsOf(alert.ALERT_EVENT)).length, 1);
   });
 
-  // THE J1 CASE, corrected after governance finding K2 (31/08/2026).
+  // FINDING L1. The test that would have caught it, and did not exist.
+//
+// The K1 fix identified a pool with `typeof db.connect === 'function' &&
+// typeof db.totalCount === 'number'`. `db/pool.js` exports `{ query,
+// pool }`, which has neither, so the dedicated-client branch was dead on
+// the deployed path and every statement ran on a different connection:
+// no transaction, no lock, connections left idle in transaction. The
+// remediation claimed "both paths are exercised". Nothing checked.
+//
+// This asserts the branch taken by THE REAL MODULE the application
+// passes, not by a handle invented for the test.
+test('the handle the application actually passes yields a dedicated connection', () => {
+  const realDb = require('../../db/pool');
+  const source = alert.dedicatedConnectionSource(realDb);
+  assert.ok(
+    source, 'the deployed database handle resolves to no dedicated connection, so the claim cannot hold a transaction or a lock'
+  );
+  assert.equal(source, 'wrapper', 'db/pool.js exports { query, pool }; if that changed, this branch needs revisiting');
+});
+
+test('a handle that cannot give a dedicated connection is refused, not silently used', async () => {
+  // The failure mode being prevented is precisely L1: continuing on a
+  // round-robin query shorthand, where BEGIN, the lock and the INSERT
+  // land on different connections and the whole thing is a no-op that
+  // looks like it worked.
+  const shorthandOnly = { query: async () => ({ rows: [] }) };
+  assert.equal(alert.dedicatedConnectionSource(shorthandOnly), null);
+  await assert.rejects(
+    () => alert.claimAlertSlot(shorthandOnly, { username: 'someone', now: Date.now() }),
+    /no dedicated database connection/,
+    'a handle with no dedicated connection was accepted instead of refused'
+  );
+});
+
+test('a real Pool and a checked-out client are both recognised', () => {
+  const { Pool } = require('pg');
+  const p = new Pool({ connectionString: 'postgres://unused/unused' });
+  assert.equal(alert.dedicatedConnectionSource(p), 'pool');
+  p.end().catch(() => {});
+  assert.equal(alert.dedicatedConnectionSource({ query() {}, release() {} }), 'client');
+});
+
+// THE J1 CASE, corrected after governance finding K2 (31/08/2026).
   //
   // The original version of this subtest called the real function,
   // concurrently, against a real database - and still proved nothing,
@@ -245,6 +287,45 @@ test('failed-unlock alerting, against a real database', { skip: dbReady ? false 
       await Promise.all(Array.from({ length: 8 }, () => alert.maybeAlertOnFailedUnlock(db, { username: SUBJECT, sendFn: send })));
       assert.equal(sent.length, 1, `round ${round}: eight concurrent attempts delivered ${sent.length} messages; the stated bound is one`);
       assert.equal((await rowsOf(alert.ALERT_EVENT)).length, 1, `round ${round}: more than one delivered row was written for one burst`);
+    }
+  });
+
+  // FINDING L2. The failure the K1 fix introduced: not too many alerts,
+  // but NONE.
+  //
+  // Standing down on a lost try-lock meant a caller holding a stale,
+  // sub-threshold count could win the decision, write nothing, and
+  // silence every caller that could see the true count. Worst at exactly
+  // the threshold, and worse than duplication, because this is the one
+  // control meant to reach someone who cannot open the workspace.
+  //
+  // Asserted at the threshold itself, warmed and repeated, because that
+  // is where it was found.
+  await t.test('a burst at exactly the threshold is never silent', async () => {
+    await Promise.all(Array.from({ length: 8 }, () => db.query('SELECT 1')));
+
+    for (let round = 1; round <= 8; round += 1) {
+      await reset();
+      const sent = [];
+      const send = async (m) => { sent.push(m); return { sent: true }; };
+      // Exactly THRESHOLD attempts, arriving together, each writing its
+      // own failure row and then evaluating - which is what the unlock
+      // route does on a real burst.
+      await Promise.all(Array.from({ length: alert.THRESHOLD }, async () => {
+        await db.query(
+          'INSERT INTO workspace_activity (actor, event_type, summary, subject) VALUES ($1,$2,$3,$4)',
+          [SUBJECT, alert.FAILED_EVENT, 'refused', SUBJECT]
+        );
+        return alert.maybeAlertOnFailedUnlock(db, { username: SUBJECT, sendFn: send });
+      }));
+
+      assert.equal(
+        sent.length, 1,
+        `round ${round}: a burst of exactly ${alert.THRESHOLD} attempts produced ${sent.length} notices; `
+        + (sent.length === 0
+          ? 'nobody was warned, which is the L2 failure'
+          : 'the stated bound is one')
+      );
     }
   });
 

@@ -58,6 +58,20 @@ marker-before-spend discipline already used by the paid-suite runner, for
 the same reason — the thing that must not happen twice is guarded by a
 row, not by the hope that two callers do not overlap.
 
+> **CORRECTION, added 31/08/2026 (findings K1 and L4).** The sentence
+> above is false. At READ COMMITTED an uncommitted insert is invisible to
+> a concurrent transaction, so two callers CAN both find `NOT EXISTS`
+> true and both insert, and no unique constraint could reject the second
+> because none can express "at most one within a moving time window".
+> The fifth review broke it 18 rounds in 20. What serialises the claim is
+> an advisory lock, added in the K remediation and corrected again in the
+> L remediation after the lock was found never to run on the deployed
+> path. The marker-before-spend paragraph stands; the claim about the
+> conditional insert does not.
+>
+> This correction was stated as already made in the K remediation, and
+> was not made here — only in `CLAUDE.md`. That was finding L4.
+
 The claim row becomes the outcome row: it is updated to the delivered
 type or the failed type, so H2's rule still holds (only a delivered
 notice consumes the hour). A claim carries a three minute lease, so a

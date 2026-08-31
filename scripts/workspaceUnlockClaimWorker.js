@@ -25,7 +25,7 @@ const db = require(path.join(__dirname, '../db/pool'));
   try {
     await db.query('SELECT 1'); // establish the connection before the gun
     while (Date.now() < startAt) { /* spin to the shared instant */ }
-    id = (await alert.claimAlertSlot(db, { username: subject, now: Date.now(), failuresInWindow: 10 })).id;
+    id = (await alert.claimAlertSlot(db, { username: subject, now: Date.now() })).id;
   } catch (e) {
     err = e.message;
   }

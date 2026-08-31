@@ -1161,6 +1161,62 @@ have been caught by it.
   adding more genuine confidential records, not the builder writing
   synthetic ones into the real snapshot.
 
+### Sixth governance review: AMBER, three HIGH (31/08/2026)
+
+`review/workspace-v0.1-governance-review-6-2026-08-31.md` (**AMBER**,
+L1-L5, three HIGH), answered in
+`review/workspace-v0.1-l-remediation-2026-08-31.md`. All five corrected.
+**The first severity RISE in the chain**, and rightly: two of the three
+HIGH findings were defects introduced in the previous cycle while fixing
+the one before it.
+
+**L1 (HIGH) is the most instructive failure in the whole chain, because
+the mechanism added to make the property true had never once run.**
+`db/pool.js` exports `{ query, pool }`; the pool test was
+`typeof db.connect === 'function' && typeof db.totalCount === 'number'`,
+which a plain object fails. So for the handle the application and every
+test actually pass, the dedicated-client branch was dead code, and
+BEGIN, the advisory lock, the INSERT and COMMIT each ran on a **different
+connection**: no transaction, the lock released immediately, connections
+stranded idle in transaction. The reviewer measured 65 calls, 65
+not-pool, 0 pool, against a remediation claiming "both paths are
+exercised". It passed anyway because an idle pool hands the
+just-released connection back to the same caller.
+
+**The rule this adds, since "test the real function" was not enough:
+assert the BRANCH, not just the outcome.** A test that checks only the
+result cannot tell a working mechanism from one that never ran and got
+lucky. `dedicatedConnectionSource()` is exported so a test can pin which
+branch the deployed handle takes, and a handle that cannot hold a
+transaction now **throws** rather than continuing.
+
+**L2 (HIGH): the K1 fix could produce NO alert at all**, which is worse
+than the duplicates it replaced. `failuresInWindow` was read outside the
+lock, so a caller with a stale sub-threshold count could win the lock,
+decide nothing was due, and silence every caller that could see the true
+count — worst at exactly the threshold of three. Fixed by reading the
+burst inside the lock and by retrying on lost contention (4 attempts,
+100ms apart) instead of standing down. Measured over the real HTTP
+endpoint: **5 of 10 threshold bursts silent before, 0 of 10 after.**
+
+**L3 (HIGH): the K4 secret sweep missed the main session transcript**,
+which held a Railway payload with `SESSION_SECRET`,
+`WORKSPACE_SNAPSHOT_KEY`, **`WORKSPACE_ACCESS_PASSPHRASE`** (gate 3, the
+mechanism closing F1) and three account passwords. Cause: I swept for
+the five values I had in front of me rather than for the shape of a
+secret. The scrub is now pattern-driven across the whole session tree
+and verified by re-scan at zero. **Rotate `WORKSPACE_ACCESS_PASSPHRASE`
+and `WORKSPACE_SNAPSHOT_KEY` before production**, then `SESSION_SECRET`
+and the account passwords. The repository was clean throughout.
+
+**L4 (MEDIUM)**: the disproven "conditional insert only one caller can
+win" survived in the module's rule 2 and the J remediation, both of
+which the K remediation claimed were corrected (only this file was).
+Rule 2 no longer states the guarantee at all; it points at the lock that
+provides it. A guarantee asserted far from its mechanism is how this
+went wrong twice. **L5 (LOW)**: the gated-suite drift guard matched only
+a literal `skip:`; it now covers four shapes, each verified to go red.
+
 ### Fifth governance review: AMBER, five findings (31/08/2026)
 
 `review/workspace-v0.1-governance-review-5-2026-08-31.md` (**AMBER**,

@@ -51,13 +51,29 @@ test('the suites that can decline to run are all declared', () => {
   const declared = new Set(GATED.map((g) => path.join(TEST_ROOT, g.file)));
   const undeclared = [];
 
+  // Governance finding L5 (31/08/2026): the first version of this looked
+  // only for a literal `skip:`, and three ordinary ways of writing the
+  // same thing walked straight past it - `t.skip(...)` and
+  // `test.skip(...)`, a gate spread in from an options object, and a
+  // suite that simply returns early when its environment is absent. A
+  // drift guard that a normal refactor defeats is not a guard.
+  const GATE_SHAPES = [
+    /skip:\s*[^\n]*/g,                       // { skip: ... } in test options
+    /\b(?:t|test|describe|it)\.skip\s*\(/g,   // t.skip(...) / test.skip(...)
+    /\.\.\.[A-Za-z_$][\w$]*(?:Gate|Skip|Opts|Options)\b/g, // { ...maybeSkip }
+    /\breturn\b[^\n;]{0,40};?\s*\/\/\s*(?:not |un)?(?:configured|armed|available)/gi
+  ];
+
   for (const file of everyTestFile(TEST_ROOT)) {
-    if (file === __filename) continue; // this file quotes the pattern it looks for
+    if (file === __filename) continue; // this file quotes the patterns it looks for
     const src = fs.readFileSync(file, 'utf8');
-    // A gate is a `skip:` whose message is not the plain database gate.
-    const gates = src.match(/skip:\s*[^\n]*/g) || [];
+    const gates = GATE_SHAPES.flatMap((re) => src.match(re) || []);
     const realGates = gates.filter((g) => !DB_ONLY_GATE.test(g) && !/skip:\s*false/.test(g));
-    if (realGates.length && !declared.has(file)) {
+    // A DB-only gate is excluded by its message, which only the `skip:`
+    // shape carries; for the other shapes, check the whole file for a
+    // non-database gate before flagging it.
+    const dbOnlyFile = /set DATABASE_URL/.test(src) && !/(?:BASE_URL|_PASSWORD|RUN_[A-Z_]+|WAI_SEED_TEST)/.test(src);
+    if (realGates.length && !dbOnlyFile && !declared.has(file)) {
       undeclared.push(path.relative(TEST_ROOT, file));
     }
   }
