@@ -47,6 +47,16 @@ are red against `6226673`.
 
 ## N3 (LOW). Contention bought the send backoff.
 
+> **CORRECTION, added 31/08/2026 after governance finding P1.** The fix
+> described below was **dead code and the defect stood.**
+> `ClaimContentionError` is thrown inside `claimAlertSlot`, which is
+> awaited before `claimId` is assigned, so a contended failure always
+> reached the branch that hard-coded the error type and wrote its own
+> sentence, ignoring the outcome computed above it. This was recorded as
+> corrected here, in a code comment, and in `CLAUDE.md`. It was not. The
+> test named for it called the pure helper with null inputs, which is
+> why nothing caught it. See the P remediation.
+
 Accepted. `ClaimContentionError` was declared distinct and then handled
 identically to a database fault, so losing a race earned the five-minute
 backoff and silenced a genuine burst - the opposite of the reasoning
@@ -103,6 +113,13 @@ survived. Added: the **database itself** refuses a second unresolved
 claim (asserting a `23505`, not that the code declines); one account's
 claim cannot block another's; an abandoned claim is recorded and does
 **not** gate; a future-dated claim is reclaimed.
+
+**The arrival stagger is kept. I reported that I could not reproduce the
+reviewer's measurement; that report was wrong (finding P2). Two
+variables were off: the stagger has to be RANDOM rather than a fixed
+ladder, and the send has to be SHORT. Corrected, 60 rounds against two
+defective predecessors break 8 and 4 times, where the profile I defended
+broke neither. The original text follows for the record.**
 
 **The arrival stagger is kept, but I could not reproduce the reviewer's
 measurement and am not claiming otherwise.** They showed the committed

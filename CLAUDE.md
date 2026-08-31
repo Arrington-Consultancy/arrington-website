@@ -1161,6 +1161,57 @@ have been caught by it.
   adding more genuine confidential records, not the builder writing
   synthetic ones into the real snapshot.
 
+### Ninth governance review: AMBER, no HIGH (31/08/2026)
+
+`review/workspace-v0.1-governance-review-9-2026-08-31.md` (**AMBER**,
+P1-P5, two MEDIUM three LOW), answered in
+`review/workspace-v0.1-p-remediation-2026-08-31.md`. All five corrected.
+
+**P1 is the ninth instance, and it is the worst kind: a fix recorded as
+made, in three places, that never ran.** The N3 correction lived in a
+branch with no reachable caller. `ClaimContentionError` is thrown inside
+`claimAlertSlot`, which is awaited BEFORE `claimId` is assigned, so a
+contended failure always took the `else` branch, and that branch
+hard-coded the error type and its own sentence instead of using the
+outcome computed three lines above it. So contention still bought five
+minutes of guaranteed silence, while the remediation, a code comment and
+this file all said it did not. The reviewer also mutated the frozen head
+so contention recorded itself as a DELIVERED notice buying the full
+hour, and the entire 538-test suite stayed green.
+
+**The test named for the property called the pure helper with null
+inputs.** That is the same failure as K2, M1 and N1: the test asserts
+something adjacent to the property and passes while the property is
+false. Both branches now record the same computed outcome, and the test
+holds the advisory lock from a second connection so the real function
+meets real contention. It is red against `1710179`.
+
+**P2: my "I could not reproduce it" was wrong, and measured wrong.** Two
+variables were off. The stagger has to be RANDOM rather than a
+deterministic ladder, and the send has to be SHORT: a long send lets the
+winner resolve its claim before the stragglers arrive, closing the very
+window the test opens. Corrected, 60 rounds against two defective
+predecessors break 8 times and 4 times; the profile I had defended broke
+neither, 0 in 60 against both.
+
+**P3**: "every authoritative window is now in SQL against `now()`" was
+untrue of the threshold window, which still used the Node clock. It does
+not now. **P4**: four more drift-guard evasion shapes, including the
+`const env = process.env` idiom the guard's own file used. The guard now
+tracks what is read off an alias or a copy, rather than flagging the
+alias itself, because two real suites here spread `process.env` into a
+child process and snapshot it for restore and neither is a gate.
+**P5**: P1's and P3's inaccuracies were written into this file too, and
+are corrected above.
+
+**What held:** all three gates, with 153/153 path, identity and Accept
+combinations byte-identical to a genuine 404 with the flag on and off;
+the concurrency guarantee across 220 bursts plus 120 racing worker
+processes, zero duplicated and zero silent, against a control
+reproducing the old defect 23 times in 180. The reviewer also added a
+check nobody had done: rotating the passphrase invalidates an open
+unlock immediately while leaving the login intact.
+
 ### Eighth governance review: AMBER, no HIGH (31/08/2026)
 
 `review/workspace-v0.1-governance-review-8-2026-08-31.md` (**AMBER**,
@@ -1200,7 +1251,9 @@ gated on the future row and never reached the takeover.
 
 **N3**: contention was declared a distinct error and handled identically
 to a database fault, so losing a race bought the send backoff and
-silenced a genuine burst. **N5**: the drift guard, third pass. It no
+silenced a genuine burst. **That fix was dead code and this sentence was
+wrong until finding P1 corrected it** (see the ninth review above): the
+branch it added had no reachable caller. **N5**: the drift guard, third pass. It no
 longer matches how a gate is written - a suite cannot decline to run on
 configuration without READING configuration, so it looks for environment
 reads outside an ambient allowlist, ignoring names the file assigns, with
