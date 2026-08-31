@@ -40,7 +40,7 @@
         <div class="sc-card">
           <h2 class="sc-h2">Connected accounts</h2>
           <% facts.SOCIAL_ACCOUNTS.forEach(function (a) { %>
-            <div class="sc-card sc-row-card">
+            <div class="sc-card sc-row-card" id="social-<%= a.platform.toLowerCase() %>">
               <div class="sc-row-title"><%= a.platform %> <span class="sc-pill <%= a.status === 'CONNECTED' ? 'sc-pill-ok' : 'sc-pill-muted' %>"><%= a.status %></span></div>
               <div class="sc-row-sub"><%= a.handle %><% if (a.note) { %> · <%= a.note %><% } %></div>
               <div class="sc-row-sub sc-muted">

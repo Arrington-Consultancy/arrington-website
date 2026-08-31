@@ -104,6 +104,46 @@
     margin: 18px 0 6px; padding: 0 10px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.09em;
     text-transform: uppercase; color: rgba(238,243,238,0.42);
   }
+  /* Social media strip, at the top of the sidebar.
+     A row of brand logos rather than four more text links: the platforms
+     are recognised faster by their marks than read, and four extra words
+     in a sidebar that already carries fifteen record links would be
+     noise. The name is still there for screen readers and as a tooltip.
+     Each chip is a white circle so brand colours stay themselves against
+     the forest green; without it, four coloured glyphs on a dark ground
+     read as decoration rather than logos. */
+  .sc-social-strip { margin: 14px 0 4px; }
+  .sc-social-strip-head {
+    padding: 0 10px 7px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.09em;
+    text-transform: uppercase; color: rgba(238,243,238,0.42);
+  }
+  .sc-social-links { list-style: none; margin: 0; padding: 0 6px; display: flex; gap: 8px; }
+  .sc-social-link {
+    position: relative; display: flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; border-radius: 50%; background: #fff;
+    text-decoration: none; border: 1px solid rgba(255,255,255,0.18);
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .sc-social-link:hover, .sc-social-link:focus-visible {
+    transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.28); outline: none;
+  }
+  .sc-social-link:focus-visible { border-color: var(--sc-mustard); }
+  .sc-social-glyph { display: block; width: 17px; height: 17px; color: #444; }
+  .sc-social-glyph svg { width: 100%; height: 100%; display: block; fill: currentColor; }
+  /* An account that is not connected is dimmed rather than removed: the
+     platform is still an option, and hiding it would make "we do not use
+     this" indistinguishable from "this does not exist". */
+  .sc-social-off { background: rgba(255,255,255,0.55); }
+  .sc-social-off .sc-social-glyph { opacity: 0.5; }
+  .sc-social-dot {
+    position: absolute; right: -1px; bottom: -1px; width: 9px; height: 9px; border-radius: 50%;
+    background: rgba(120,130,120,0.55); border: 2px solid var(--sc-forest);
+  }
+  .sc-social-dot-on { background: #4c9a68; }
+  .sc-social-name, .sc-sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
   .sc-clearance-block { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.12); }
   .sc-clearance-value { font-size: 12.5px; color: #fff; font-weight: 600; margin-bottom: 2px; }
   .sc-persona-label-spaced { margin-top: 12px; }
@@ -395,6 +435,13 @@
        "Company records" heading is dropped rather than shrunk: on a phone
        the grouping is obvious from the wrap, and a full-width label would
        cost a line of screen for nothing. */
+    /* The strip keeps its place at the top on a phone (it is declared
+       before the nav lists, and shares their order value), but loses the
+       heading: one word of label is not worth a line of screen when four
+       logos say it. */
+    .sc-social-strip { order: 2; flex: 1 1 100%; margin: 2px 0 6px; }
+    .sc-social-strip-head { display: none; }
+    .sc-social-links { padding: 0 4px; }
     .sc-nav { order: 2; flex-direction: row; flex-wrap: wrap; flex: 1 1 100%; }
     .sc-nav a { padding: 7px 10px; font-size: 13.5px; }
     .sc-nav-heading { display: none; }

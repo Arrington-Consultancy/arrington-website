@@ -6,6 +6,7 @@
       <span>Armchair &amp; Knitting Co.</span>
     </div>
   </div>
+  <%- include('social-icons', { socialPlatforms: (typeof socialPlatforms !== 'undefined' ? socialPlatforms : []) }) %>
   <div class="sc-search-wrap">
     <input type="text" id="scSearchInput" class="sc-search-input" placeholder="Search jobs, enquiries, customers..." autocomplete="off">
     <div id="scSearchResults" class="sc-search-results" hidden></div>

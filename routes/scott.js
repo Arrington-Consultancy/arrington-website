@@ -31,6 +31,7 @@ const { runTurn, isScottAIEnabled } = require('../lib/scott/orchestrator');
 const clearance = require('../lib/scott/clearance');
 const { checkReleaseGate } = require('../lib/scott/qualityGate');
 const deepFacts = require('../lib/scott/deepBusinessFacts');
+const socialPlatforms = require('../lib/scott/social/platforms');
 const contextBuilders = require('../lib/scott/data/contextBuilders');
 const brainGaps = require('../lib/scott/brainGaps');
 const { sendGapNotification } = require('../lib/scott/gapNotifier');
@@ -120,7 +121,16 @@ function viewerViewModel(req) {
     // mediating the read.
     field: (record, name) => clearance.fieldValue(personaId, null, record, name),
     deniedNote: clearance.clearanceDeniedNote,
-    dataPages: NAV_PAGES
+    dataPages: NAV_PAGES,
+    // The sidebar's social strip. Built here, in the one place every
+    // Scott view already gets its sidebar locals from, for the same
+    // reason dataPages is: a list assembled per page is a list that
+    // drifts. The connection state is clearance-gated inside
+    // platformsForViewer rather than in the view.
+    socialPlatforms: socialPlatforms.platformsForViewer({
+      canSee: (domain) => clearance.personaCanSeeDomain(personaId, domain),
+      accounts: deepFacts.SOCIAL_ACCOUNTS
+    })
   };
 }
 
