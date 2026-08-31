@@ -61,7 +61,12 @@ test('the suites that can decline to run are all declared', () => {
     /skip:\s*[^\n]*/g,                       // { skip: ... } in test options
     /\b(?:t|test|describe|it)\.skip\s*\(/g,   // t.skip(...) / test.skip(...)
     /\.\.\.[A-Za-z_$][\w$]*(?:Gate|Skip|Opts|Options)\b/g, // { ...maybeSkip }
-    /\breturn\b[^\n;]{0,40};?\s*\/\/\s*(?:not |un)?(?:configured|armed|available)/gi
+    // Finding M4: this shape used to require a trailing comment saying
+    // "not configured", so it matched the COMMENT and not the gate, and
+    // the same early return written without one walked straight past.
+    // It now matches the guard itself: a return conditioned on an
+    // environment variable.
+    /if\s*\([^)]*process\.env[^)]*\)\s*\{?\s*return\b/g
   ];
 
   for (const file of everyTestFile(TEST_ROOT)) {
@@ -94,7 +99,11 @@ test('what did not run in this invocation is reported', () => {
     'waiSeedMode.test.js': !!env.WAI_SEED_TEST_DATABASE_URL,
     'scott/adversarialApi.test.js': !!(env.SCOTT_TEST_BASE_URL && env.SCOTT_DEMO_STAFF_PASSWORD),
     'scott/liveAiPressure.test.js': !!(env.RUN_SCOTT_LIVE_AI && env.ANTHROPIC_API_KEY && env.ENABLE_SCOTT_AI === 'true'),
-    'workspace/adversarialApi.test.js': !!(env.WORKSPACE_TEST_BASE_URL && env.WORKSPACE_TEST_TOM_PASSWORD),
+    // Finding M5: WORKSPACE_TEST_PASSPHRASE was missing here, so a run
+    // without it printed [RAN ] over a suite whose post-unlock half had
+    // asserted nothing. Reporting a suite as run when half of it stood
+    // down is the same dishonesty the alert's rule 4 forbids.
+    'workspace/adversarialApi.test.js': !!(env.WORKSPACE_TEST_BASE_URL && env.WORKSPACE_TEST_TOM_PASSWORD && env.WORKSPACE_TEST_PASSPHRASE),
     'workspace/liveAiPressure.test.js': !!(env.RUN_WORKSPACE_LIVE_AI && env.ANTHROPIC_API_KEY && env.ENABLE_WORKSPACE_AI === 'true')
   };
 

@@ -30,5 +30,15 @@ const db = require(path.join(__dirname, '../db/pool'));
     err = e.message;
   }
   process.stdout.write(`${JSON.stringify({ id, err })}\n`);
-  await db.end().catch(() => {});
+  // db/pool.js exports { query, pool }: it has no end(). Calling db.end()
+  // here threw on every run, and the test's error assertion did not
+  // notice because it discarded execFile's exit code whenever a JSON
+  // line had already been printed.
+  //
+  // Governance finding M1 (31/08/2026). It is the same wrong assumption
+  // about this module's shape as L1, written eleven lines below the
+  // comment explaining L1 - which is the argument for asking the module
+  // what it offers rather than assuming.
+  const closable = typeof db.end === 'function' ? db : (db.pool && typeof db.pool.end === 'function' ? db.pool : null);
+  if (closable) await closable.end().catch(() => {});
 })();

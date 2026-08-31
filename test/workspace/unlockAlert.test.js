@@ -178,7 +178,7 @@ test('failed-unlock alerting, against a real database', { skip: dbReady ? false 
     }
   };
   const rowsOf = async (event) => (await db.query(
-    'SELECT id FROM workspace_activity WHERE event_type = $1 AND subject = $2', [event, SUBJECT]
+    'SELECT id, summary FROM workspace_activity WHERE event_type = $1 AND subject = $2', [event, SUBJECT]
   )).rows;
 
   t.after(reset);
@@ -350,9 +350,15 @@ test('a real Pool and a checked-out client are both recognised', () => {
     const gun = Date.now() + 2500; // time enough for every process to boot and connect
 
     const runs = Array.from({ length: WORKERS }, () => new Promise((resolve) => {
-      execFile(process.execPath, [workerPath, String(gun), SUBJECT], { env: process.env }, (err, stdout) => {
+      execFile(process.execPath, [workerPath, String(gun), SUBJECT], { env: process.env }, (err, stdout, stderr) => {
         const line = String(stdout).trim().split('\n').filter((l) => l.startsWith('{')).pop();
-        resolve(line ? JSON.parse(line) : { id: null, err: err ? err.message : 'no output' });
+        const parsed = line ? JSON.parse(line) : { id: null, err: 'no output' };
+        // Finding M1: this used to discard `err` whenever a JSON line had
+        // been printed, so a worker that printed its result and THEN died
+        // was counted as a clean run. Every worker was exiting 1 on a
+        // TypeError and the suite reported zero errors.
+        if (err) parsed.err = parsed.err || `worker exited ${err.code}: ${String(stderr).trim().split('\n').pop()}`;
+        resolve(parsed);
       });
     }));
     const results = await Promise.all(runs);
@@ -516,8 +522,24 @@ test('a real Pool and a checked-out client are both recognised', () => {
     });
     assert.equal(res.sent, false);
     assert.match(res.error, /exploded/);
-    const failed = await rowsOf(alert.ALERT_FAILED_EVENT);
-    assert.equal(failed.length, 1, 'a pre-send failure left no durable record, so the alarm could go silent unnoticed');
+    // Finding M2: this is an evaluation failure - the transport threw
+    // before anything was sent - so it must NOT be recorded as a failed
+    // send. Recording it as one made the register say "the last notice
+    // FAILED to send" about an attempt that never reached a mailbox,
+    // which is exactly what this module's rule 4 forbids.
+    const errored = await rowsOf(alert.ALERT_ERROR_EVENT);
+    assert.equal(errored.length, 1, 'a pre-send failure left no durable record, so the alarm could go silent unnoticed');
+    assert.equal((await rowsOf(alert.ALERT_FAILED_EVENT)).length, 0, 'an attempt that never sent was recorded as a failed send');
+    assert.match(errored[0].summary, /NO send was attempted/, 'the durable record does not say that nothing was sent');
+
+    // And the reason given to the next caller must say the same thing.
+    const next = alert.decideAlert({
+      failuresInWindow: alert.THRESHOLD, lastSuccessAt: null, lastFailureAt: null,
+      lastErrorAt: new Date(Date.now() - 60000), now: Date.now()
+    });
+    assert.equal(next.alert, false);
+    assert.match(next.reason, /could not be evaluated .* NO send was attempted/,
+      'the next caller is told the notice failed to send, when no send was ever tried');
   });
 
   await t.test('a claim left behind by a dead process does not silence the alarm forever', async () => {

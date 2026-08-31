@@ -1161,6 +1161,58 @@ have been caught by it.
   adding more genuine confidential records, not the builder writing
   synthetic ones into the real snapshot.
 
+### Seventh governance review: AMBER, no HIGH, no production defect (31/08/2026)
+
+`review/workspace-v0.1-governance-review-7-2026-08-31.md` (**AMBER**,
+M1-M5, three MEDIUM two LOW), answered in
+`review/workspace-v0.1-m-remediation-2026-08-31.md`. All five corrected.
+
+**The reviewer verified the concurrency work independently** rather than
+reading it: five separately written harnesses, roughly 380
+threshold-sized bursts, zero silent and zero duplicated, with the same
+harnesses reproducing both of the sixth review's HIGH defects against
+the older head.
+
+**M1** was the same wrong assumption about `db/pool.js` as L1, eleven
+lines below the comment explaining L1: the worker called `db.end()`,
+which the module does not have, so all twelve workers exited 1 while the
+test reported zero errors because it discarded the exit code whenever
+output had been printed. **M2**: a failure before any send was recorded
+as a failed *send*, bought the send backoff, and made the register say
+"the last notice FAILED to send" about an attempt that never reached a
+mailbox — the exact prohibition in the module's own rule 4; there is now
+a distinct error type with honest wording. **M3**: retry exhaustion was
+silent and returned a never-reassigned constant. **M4/M5**: the drift
+guard matched a trailing comment rather than a gate, and the armed map
+omitted `WORKSPACE_TEST_PASSPHRASE` so a half-run suite printed as run.
+
+**The larger finding came out of chasing M3, and it is the one worth
+remembering.** Re-measuring the bound showed a **5% duplicate rate** the
+advisory lock did not prevent. Instrumenting the real decision path
+showed why: `decideAlert` reads the state, and the INSERT acting on that
+decision is a **later moment**. A caller can read an empty table, be
+descheduled, and insert after another caller has claimed, sent and
+*resolved* its row, at which point the claim slot is free again. Neither
+caller misbehaves; the decision is simply older than the write it
+authorises.
+
+Closed by making the guarantee **structural rather than sequential**,
+which is what every previous fix here failed to do: the `NOT EXISTS`
+guard travels inside the INSERT so check and write share one snapshot
+(sound now, unlike pre-K1, because the lock means nothing sits between
+them), plus a partial unique index `uq_workspace_alert_pending` so a
+second unresolved claim is refused by Postgres whatever the callers do.
+Measured after: **100 consecutive bursts, exactly one notice every
+time**, nothing left idle in transaction or holding a lock.
+
+**A production-crash bug the index nearly introduced, worth knowing:**
+`CREATE UNIQUE INDEX` fails on pre-existing duplicates, and duplicate
+claims are exactly what J1 and K1 produced — so on a database that ran
+that code, the seed (which is the start command) would have crashlooped
+the app on boot. Same class as the Scott release incident. The seed now
+retires superseded duplicates first; verified on a fresh database and on
+one deliberately polluted with duplicates.
+
 ### Sixth governance review: AMBER, three HIGH (31/08/2026)
 
 `review/workspace-v0.1-governance-review-6-2026-08-31.md` (**AMBER**,
