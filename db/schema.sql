@@ -522,6 +522,72 @@ CREATE INDEX IF NOT EXISTS idx_scott_brain_gaps_responsible ON scott_brain_gaps 
 -- plainly in the body which fictional person it is addressed to.
 ALTER TABLE scott_portal_users ADD COLUMN IF NOT EXISTS notify_email VARCHAR(255) NOT NULL DEFAULT '';
 
+-- Evolving fictional business memory (added 31/08/2026, "SCOTT EVOLVING
+-- FICTIONAL BUSINESS MEMORY - APPROVED DESIGN CHANGE - 31 AUGUST 2026").
+-- A structured fact ledger, not free-form chat history: each row is one
+-- bounded, low-consequence fictional company fact a specialist worker
+-- established because a sensible business of Scott's type would
+-- reasonably know it and the controlled evidence did not already say so.
+--
+-- The partial unique index below is the actual mechanism for "two
+-- simultaneous first questions cannot establish contradictory facts" —
+-- deliberately a database constraint, not an application-level
+-- check-then-insert. That distinction is not academic in this codebase:
+-- the Workspace's failed-unlock alert took several review cycles (see
+-- CLAUDE.md, findings K1/L1/L2) to learn that an app-level "SELECT then
+-- INSERT if missing" is not atomic under real concurrency, even inside a
+-- transaction, without either a real constraint or an advisory lock. A
+-- unique index needs neither a lock nor a read-then-decide window: two
+-- concurrent INSERTs for the same (domain, canonical_key) both attempt to
+-- insert, Postgres itself allows exactly one to succeed, and the loser's
+-- `ON CONFLICT DO NOTHING` means the loser simply re-reads the winner's
+-- row rather than erroring or racing again.
+CREATE TABLE IF NOT EXISTS scott_memory_facts (
+    id SERIAL PRIMARY KEY,
+    -- Existing clearance domain this fact belongs to (lib/scott/clearance.js
+    -- DOMAIN taxonomy). Generation is only ever permitted into a small
+    -- curated allowlist of genuinely low-consequence domains — see
+    -- ALLOWED_MEMORY_DOMAINS in lib/scott/memory/factLedger.js — never a
+    -- domain invented for this feature, so the fact is gated by the exact
+    -- same persona/worker clearance intersection as everything else with
+    -- no second access-control model to keep in step.
+    domain VARCHAR(60) NOT NULL,
+    -- Deterministic bag-of-words normalisation of the canonical question
+    -- (see canonicalizeQuestion()), so "what's our usual glue supplier"
+    -- and "the glue supplier we usually use" resolve to the same key.
+    -- This is a heuristic, not semantic understanding — documented as
+    -- such rather than oversold.
+    canonical_key VARCHAR(300) NOT NULL,
+    -- The clean canonical question/intent the creating specialist judged
+    -- this fact answers (a short phrase, not the visitor's raw message).
+    canonical_question TEXT NOT NULL,
+    answer_text TEXT NOT NULL,
+    created_by_worker_id VARCHAR(30) NOT NULL,
+    asked_by_persona_id VARCHAR(40) NOT NULL DEFAULT '',
+    -- Always this literal value for a row created by this feature. Kept as
+    -- a column rather than assumed, so a Drive export or a future second
+    -- provenance type (a human directly editing the ledger, say) is a
+    -- WHERE clause, not an inference from which table the row lives in.
+    provenance VARCHAR(60) NOT NULL DEFAULT 'ai_generated_fictional_memory',
+    reasonableness_class VARCHAR(60) NOT NULL DEFAULT 'reasonable_low_consequence',
+    status VARCHAR(20) NOT NULL DEFAULT 'runtime_generated'
+        CHECK (status IN ('runtime_generated', 'drive_mirrored', 'superseded', 'disputed', 'retired')),
+    related_source_refs JSONB NOT NULL DEFAULT '[]'::jsonb,
+    supersedes_id INTEGER REFERENCES scott_memory_facts(id),
+    version INTEGER NOT NULL DEFAULT 1,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+-- Enforces "existing controlled fact cannot be overwritten by generated
+-- memory" together with the application check, and is what actually makes
+-- first-write-wins atomic: see the comment above the table. Only an
+-- ACTIVE fact (not yet superseded/retired) occupies the slot, so a
+-- legitimate later change creates a new row and marks the old one
+-- superseded rather than being blocked by its own predecessor.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_scott_memory_facts_active
+    ON scott_memory_facts (domain, canonical_key)
+    WHERE status IN ('runtime_generated', 'drive_mirrored');
+CREATE INDEX IF NOT EXISTS idx_scott_memory_facts_status ON scott_memory_facts (status);
+
 
 -- ============================================================
 -- Arrington AI Workspace v0.1 (added 30/08/2026)

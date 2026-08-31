@@ -2642,6 +2642,158 @@ fixed an honesty bug in `describeNotification` ("failed after a retry"
 when zero attempts were made; the sentence is now built from the
 recorded attempt count).
 
+### Evolving fictional business memory (added 31/08/2026, IMPLEMENTED, NOT YET INDEPENDENTLY GOVERNANCE-CLEARED)
+
+Implements "SCOTT EVOLVING FICTIONAL BUSINESS MEMORY - APPROVED DESIGN
+CHANGE - 31 AUGUST 2026" (Drive file
+`1MbwTpyLj3QUT376uMCmdCDWrJHj-kaARIZEBNjNhP_I`), read directly from Drive
+before any code was written, per the "inspect the actual controlled
+source" discipline this file's own governance section requires. The
+document is explicit that this is "APPROVED DESIGN DIRECTION" requiring
+"IMPLEMENTATION AND BOUNDED GOVERNANCE RECHECK... BEFORE THIS NEW MEMORY
+BEHAVIOUR IS TREATED AS LIVE AUTHORITY" — this entry records the
+implementation half; the recheck is a separate, independent step (see
+below), not something the implementing session can award itself, per the
+Workspace release history's own rule that "the builder must not award
+itself that PASS."
+
+**What it does.** Until now, a Scott specialist worker with no controlled
+evidence for a question had exactly one honest option: raise a Brain Gap
+and say "not held" (`lib/scott/brainGaps.js`, `governance.js`'s "never
+fill a gap by inference"). This adds one narrow, code-enforced exception:
+for a genuinely ordinary, low-consequence operating fact (a normal
+marketing budget, a routine supplier preference, an internal recurring
+practice) that a business like Scott's would plainly have settled and
+that neither the controlled evidence nor an existing memory fact answers,
+the relevant specialist may state ONE plausible answer, which is
+persisted immediately and used verbatim by every later equivalent
+question. Everything else (finance, HR, legal, safety, insurance,
+contracts, personal data, external-platform activity, quality inspection
+results, consequential promises, anything predictive) stays exactly as
+before: a plain "not held" or a raised gap, never invented.
+
+**Storage decision, per the doc's own instruction.** The Scott production
+database is the immediate operational memory store (fast, durable, no
+Drive round trip mid-conversation). Google Drive remains the controlled
+project record and audit/backup layer. SharePoint was not introduced as
+a second source of truth for this feature, matching the doc's explicit
+instruction.
+
+**Files:**
+- `lib/scott/memory/factLedger.js` — the structured fact ledger. Pure,
+  fully deterministic and tested with no live model call: canonicalises a
+  question into a bag-of-words key (`canonicalizeQuestion`, honestly
+  documented as heuristic, not semantic understanding), classifies
+  reasonableness in code (`classifyReasonableness`, two independent
+  gates: a curated `ALLOWED_MEMORY_DOMAINS` allowlist currently holding
+  exactly three existing clearance domains, `marketing_performance` /
+  `suppliers_ops` / `materials`, plus a reserved-topic regex denylist
+  covering every category the doc names, checked even inside an eligible
+  domain), and persists atomically (`establishFact` / `createFactAtomic`).
+  Never imports `deepBusinessFacts.js` at all (asserted by
+  `test/scott/memory/firewall.test.js`), so it has no path to overwrite
+  controlled evidence, structurally rather than by convention.
+- `lib/scott/memory/driveExport.js` + `scripts/exportScottMemoryLedger.js`
+  — the "controlled write-back/export route" the doc requires. The script
+  writes a labelled Markdown export of the ledger to
+  `handover/scott-memory-ledger-export-<date>.md`, mirroring the exact
+  pattern `handover/regenerate-export.js` already uses for the real
+  Arrington content snapshot in this repo. Every exported row/section
+  restates "AI-created fictional memory, not independently sourced
+  evidence" regardless of lifecycle status, satisfying "no circular AI
+  evidence" (tested in `driveExport.test.js`). **Deliberately does not
+  call the Google Drive API from the running app**: there is no Drive
+  service-account credential wired into this codebase, and inventing one
+  to auto-push on every chat message would be a materially bigger,
+  uncredentialed, unrequested change. Placing the exported file's content
+  into the actual controlled Drive record is a manual reconciliation step
+  (same as every other Drive-mirrored record in this project), and
+  `markFactsMirrored()` flips a fact's status to `drive_mirrored` once
+  that has genuinely happened.
+- `db/schema.sql` + `db/seed.js` — `scott_memory_facts` table, added to
+  both in the same two-tier pattern as `scott_brain_gaps` (schema.sql for
+  a fresh database, a guarded `CREATE TABLE IF NOT EXISTS` migration in
+  seed.js for an existing one). **The atomic first-write-wins guarantee is
+  a partial unique index (`uq_scott_memory_facts_active` on
+  `(domain, canonical_key) WHERE status IN ('runtime_generated',
+  'drive_mirrored')`), not application logic** — deliberately applying
+  the lesson the Workspace's failed-unlock alert took several review
+  cycles to learn (K1/L1/L2 above): an app-level "check then insert" is
+  not atomic under real concurrency even inside a transaction, without
+  either a real constraint or an advisory lock, and a unique index needs
+  neither. Verified against a genuinely fresh database (`psql -f
+  db/schema.sql` then `node db/seed.js` with no prior state), not only
+  against a database carrying history, per the lesson from the Scott v0.2
+  release incident earlier in this file.
+- `lib/scott/data/contextBuilders.js` — `formatMemoryFactsBlock`, pushed
+  into `buildContext` immediately after `formatDeepFactsBlock` (asserted
+  in order by a firewall test), so a worker's own context always shows
+  controlled evidence before any runtime memory. Retrieval is
+  clearance-gated by the exact same `isDomainVisible()` call as every
+  other piece of company brain data: a generated fact inherits its
+  topic's existing clearance domain and is never visible to a
+  persona/worker pair that domain would already deny.
+- `lib/scott/orchestrator.js` — a new nullable `memoryFact` field on the
+  worker JSON schema (`{domain, canonicalQuestion, answer}`), validated
+  for shape only; the actual reasonableness/clearance/domain gate runs in
+  `callWorker` after the model reply, independently of whether the model
+  followed its own prompt instructions. A refused proposal is never
+  persisted AND the reply text itself is overwritten to an honest "not
+  held" answer, so a model that ignores its instructions cannot leave an
+  unpersisted fabrication sitting in the visible reply either. The
+  receptionist's own reply schema and prompt carry no `memoryFact` field
+  at all (asserted directly against the source), so Ruth structurally
+  cannot invent a specialist fact herself: she routes, the relevant
+  specialist owns the judgement, exactly as the doc requires.
+- `lib/scott/governance.js` — a new "EVOLVING FICTIONAL MEMORY" section
+  in the shared preamble, explicitly framed as "a narrow exception to
+  never fill a gap, not a replacement for it", naming every reserved
+  category the doc lists and instructing every worker to reuse a
+  previously-established fact verbatim rather than restate it
+  differently.
+
+**Tests** (`test/scott/memory/*.test.js`, 50 tests, all passing against a
+real database): first-time creation and persistence; repeat-question
+consistency (a second, deliberately different proposed answer never
+overwrites the first); materially equivalent wording retrieving the same
+canonical fact; reserved-topic and domain-ineligibility refusal with
+nothing persisted; a worker proposing a domain outside its own permission
+refused even though the domain is otherwise eligible (specialist
+isolation through Ruth routing); two real concurrent `Promise.all` first-
+write calls resolving to exactly one canonical row; clearance isolation
+(a `materials` fact visible to a persona/worker pair holding that domain,
+invisible to one that does not); legitimate supersession retaining
+history rather than overwriting in place; Drive-export provenance
+labelling across every lifecycle status; and a structural firewall
+proving no path exists into `deepBusinessFacts.js`, `lib/workspace`, or
+any non-`scott_*` table. Two callWorker-level integration tests
+(fake Anthropic client, same pattern as `orchestrator.integration.test.js`)
+prove the end-to-end plumbing: a worker's `memoryFact` is actually
+persisted, and a worker proposing a domain it does not hold is refused in
+code with the reply corrected.
+
+**What this does NOT prove**, stated plainly rather than glossed, same as
+every other AI feature in this codebase: nothing here proves what the
+real model will actually decide is "ordinary and low-consequence" when
+genuinely free to choose, nor whether it reliably checks controlled
+evidence and existing memory before proposing a new fact, nor whether it
+follows the "never restate a stored fact differently" instruction under
+real pressure. That needs the paid, explicitly-authorised live-AI suite
+(same gating pattern as every other Scott/Workspace AI feature:
+`RUN_SCOTT_LIVE_AI` on top of `ANTHROPIC_API_KEY` + `ENABLE_SCOTT_AI`),
+which has not been run for this feature and is not required to prove the
+deterministic guarantees above, only the model's own behaviour inside
+them.
+
+**Independent Governance & Assurance recheck: commissioned, not
+self-awarded.** Consistent with every other Scott/Workspace governance
+cycle recorded in this file, a fresh session with no memory of this
+implementation was asked to adversarially review it against the Drive
+doc's own requirements. See its verdict recorded immediately below this
+entry once returned, and do not treat this feature as "live authority"
+(the doc's own phrase) until that verdict, and any findings it raises,
+are addressed.
+
 ### Testing
 
 `node --test` covers it (`test/scott/*.test.js`). Beyond unit tests, the

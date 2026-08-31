@@ -5039,6 +5039,37 @@ async function seed() {
     console.log('Scott AI Demonstration: job lifecycle quality stages verified.');
   }
 
+  // Evolving fictional business memory (31/08/2026 approved design
+  // change). Migration for a pre-existing database; schema.sql carries
+  // the identical definition for a fresh one, same two-tier pattern as
+  // scott_brain_gaps above. See the comment on the table in schema.sql
+  // for why the unique index, not application logic, is what actually
+  // makes concurrent first-write resolution atomic.
+  {
+    await db.query(`CREATE TABLE IF NOT EXISTS scott_memory_facts (
+      id SERIAL PRIMARY KEY,
+      domain VARCHAR(60) NOT NULL,
+      canonical_key VARCHAR(300) NOT NULL,
+      canonical_question TEXT NOT NULL,
+      answer_text TEXT NOT NULL,
+      created_by_worker_id VARCHAR(30) NOT NULL,
+      asked_by_persona_id VARCHAR(40) NOT NULL DEFAULT '',
+      provenance VARCHAR(60) NOT NULL DEFAULT 'ai_generated_fictional_memory',
+      reasonableness_class VARCHAR(60) NOT NULL DEFAULT 'reasonable_low_consequence',
+      status VARCHAR(20) NOT NULL DEFAULT 'runtime_generated'
+        CHECK (status IN ('runtime_generated', 'drive_mirrored', 'superseded', 'disputed', 'retired')),
+      related_source_refs JSONB NOT NULL DEFAULT '[]'::jsonb,
+      supersedes_id INTEGER REFERENCES scott_memory_facts(id),
+      version INTEGER NOT NULL DEFAULT 1,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`);
+    await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_scott_memory_facts_active
+      ON scott_memory_facts (domain, canonical_key)
+      WHERE status IN ('runtime_generated', 'drive_mirrored')`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_scott_memory_facts_status ON scott_memory_facts (status)`);
+    console.log('Scott AI Demonstration: evolving fictional memory ledger verified.');
+  }
+
   // One-shot Brain Gap acceptance check, gated on
   // RUN_GAP_ACCEPTANCE_CHECK=true and its own already-ran marker. Proves
   // the real notification chain in this environment; see the script's
