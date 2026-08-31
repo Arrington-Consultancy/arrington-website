@@ -35,27 +35,58 @@ test('without the enable flag the workspace does not exist for anyone, including
   assert.equal(access.workspaceEnabled(), false, "only the exact string 'true' enables it");
 });
 
-test('an unauthorised page request 404s rather than admitting the area exists', () => {
-  let status = null; let rendered = null;
-  const res = { status(c) { status = c; return this; }, render(v) { rendered = v; }, redirect() { rendered = 'redirect'; } };
-  access.requireWorkspacePageAccess({ session: { user: { username: 'nat', role: 'admin' } } }, res, () => { rendered = 'NEXT'; });
-  assert.equal(status, 404);
-  assert.equal(rendered, '404');
+// A denial goes through the site's own 404 renderer (lib/render404), so
+// these fakes answer the two things that renderer asks of a request: what
+// it accepts, and where to render. Nothing here reaches a database,
+// because a non-HTML request short-circuits to JSON before the queries.
+function fakePageRes(sink) {
+  return {
+    status(c) { sink.status = c; return this; },
+    render(v) { sink.rendered = v; return this; },
+    json(b) { sink.json = b; return this; },
+    redirect(url) { sink.redirected = url; return this; }
+  };
+}
+function fakeReq(session, originalUrl = '/workspace/brain') {
+  return { session, originalUrl, accepts: () => false };
+}
+
+test('an unauthorised page request 404s rather than admitting the area exists', async () => {
+  const sink = {};
+  await access.requireWorkspacePageAccess(
+    fakeReq({ user: { username: 'nat', role: 'admin' } }), fakePageRes(sink), () => { sink.rendered = 'NEXT'; }
+  );
+  assert.equal(sink.status, 404);
+  assert.equal(sink.rendered, undefined, 'the guard called next() on an unauthorised request');
+  assert.equal(sink.redirected, undefined);
 });
 
-test('an anonymous page request is sent to login carrying where it was going', () => {
-  let redirected = null;
-  const res = { redirect(url) { redirected = url; } };
-  access.requireWorkspacePageAccess({ session: {}, originalUrl: '/workspace/brain' }, res, () => {});
-  assert.equal(redirected, '/login?next=%2Fworkspace%2Fbrain');
+// Governance finding F2 (30/08/2026): this test used to REQUIRE the login
+// redirect, which is what made the leak look like intended behaviour. A
+// 302 to /login confirms to an unauthenticated scanner that
+// /workspace/brain is a real route, and echoes the path back in the
+// redirect target. The workspace's own rule is that its existence is
+// operating information, so an anonymous request now gets the same 404 as
+// a logged-in one who is not cleared.
+test('an anonymous page request 404s too, and is never redirected to a login page', async () => {
+  const sink = {};
+  await access.requireWorkspacePageAccess(fakeReq({}), fakePageRes(sink), () => { sink.rendered = 'NEXT'; });
+  assert.equal(sink.status, 404);
+  assert.equal(sink.redirected, undefined, 'an anonymous visitor was told where to log in');
+  assert.equal(sink.rendered, undefined);
 });
 
-test('the API distinguishes not signed in from not permitted, and never 403s with detail', () => {
+test('the API answers 404 to both the anonymous and the uncleared caller, telling neither apart', async () => {
   const codes = [];
-  const mkRes = () => ({ status(c) { codes.push(c); return this; }, json() {} });
-  access.requireWorkspaceApiAccess({ session: {} }, mkRes(), () => codes.push('NEXT'));
-  access.requireWorkspaceApiAccess({ session: { user: { username: 'nat', role: 'admin' } } }, mkRes(), () => codes.push('NEXT'));
-  assert.deepEqual(codes, [401, 404]);
+  const bodies = [];
+  const mkRes = () => ({ status(c) { codes.push(c); return this; }, json(b) { bodies.push(b); return this; }, render(v) { bodies.push(v); return this; } });
+  await access.requireWorkspaceApiAccess(fakeReq({}), mkRes(), () => codes.push('NEXT'));
+  await access.requireWorkspaceApiAccess(fakeReq({ user: { username: 'nat', role: 'admin' } }), mkRes(), () => codes.push('NEXT'));
+  assert.deepEqual(codes, [404, 404]);
+  // A 401 body saying "not signed in" would confirm the endpoint exists
+  // just as loudly as the status code did.
+  bodies.forEach((b) => assert.doesNotMatch(JSON.stringify(b), /sign|log ?in|auth/i));
+  assert.deepEqual(bodies[0], bodies[1], 'the two denials are distinguishable by body');
 });
 
 test('a cleared request carries its clearance forward for the route to filter with', () => {

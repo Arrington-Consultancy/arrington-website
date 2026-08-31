@@ -18,7 +18,7 @@
 const express = require('express');
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const repo = require('../lib/workspace/repo');
-const { filterRecordsForClearance, clearanceCanSeeRecord, clearanceCanSeeSensitivity, CLEARANCES } = require('../lib/workspace/clearance');
+const { filterRecordsForClearance, clearanceCanSeeRecord, clearanceCanSeeSensitivity, clearanceCovers, CLEARANCES } = require('../lib/workspace/clearance');
 const { LANES, SOURCE_CLASSES, laneById } = require('../lib/workspace/lanes');
 const { requireWorkspacePageAccess, requireWorkspaceApiAccess, workspaceNoindex } = require('../lib/workspace/access');
 const { askWorkspace, isWorkspaceAIEnabled, routeToLane } = require('../lib/workspace/orchestrator');
@@ -29,6 +29,21 @@ const crm = require('../lib/crm/contacts');
 const erasure = require('../lib/crm/erasure');
 
 const router = express.Router();
+
+// Governance finding F9 (30/08/2026): only /ask was limited, so the
+// sync, erase, decide and resolve endpoints had none. The site's own
+// authed-write limiter is mounted on /api/content and /api/admin only.
+// The erasure endpoint is the one that matters most: an unlimited loop
+// against a stolen session is worst there, and contacts/sync walks the
+// whole lead table on every call.
+const writeLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  keyGenerator: (req) => (req.session && req.session.user ? `u:${req.session.user.id}` : ipKeyGenerator(req)),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Try again shortly.' }
+});
 
 const askLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -93,7 +108,7 @@ function mountPageRoute(app, generateCsrfToken) {
       openGaps: visibleGaps,
       openApprovals: approvals.filter((a) => clearanceCanSeeSensitivity(clearanceId, a.sensitivity)),
       syncRun,
-      activity,
+      activity: clearanceCanSeeSensitivity(clearanceId, 'commercial') ? activity : [],
       aiEnabled: isWorkspaceAIEnabled(),
       csrfToken: generateCsrfToken(req, res)
     });
@@ -134,6 +149,22 @@ function mountPageRoute(app, generateCsrfToken) {
   // "not connected" is information the owner needs, and an unconfigured
   // connector showing an empty timeline would read as "no activity".
   page('/workspace/social', async (req, res) => {
+    // Governance finding F6 (30/08/2026): this page applied no clearance
+    // test at all. It leaks nothing today because owner_admin is the only
+    // clearance a request can hold, but the module's own rule covers every
+    // surface, and this is where a second clearance would fail silently.
+    const clearanceId = req.workspaceClearance;
+    const permitted = clearanceCanSeeSensitivity(clearanceId, 'commercial');
+    if (!permitted) {
+      return res.render('workspace/social', {
+        ...viewer(req),
+        counts: await navCounts(clearanceId),
+        permitted: false,
+        accounts: [], posts: [], outstanding: [], memory: null,
+        aiEnabled: isWorkspaceAIEnabled(),
+        csrfToken: generateCsrfToken(req, res)
+      });
+    }
     const [accounts, posts, outstanding] = await Promise.all([
       socialRepo.accountStates(),
       socialRepo.listPosts({ limit: 40 }),
@@ -145,6 +176,7 @@ function mountPageRoute(app, generateCsrfToken) {
       accounts,
       posts,
       outstanding,
+      permitted: true,
       memory: socialMemory,
       aiEnabled: isWorkspaceAIEnabled(),
       csrfToken: generateCsrfToken(req, res)
@@ -209,22 +241,38 @@ function mountPageRoute(app, generateCsrfToken) {
   });
 
   page('/workspace/activity', async (req, res) => {
+    // Governance finding F6: activity summaries quote gap descriptions,
+    // record titles and approval titles, so the log is a derived view of
+    // material the other pages filter. It is gated at the same level as
+    // the narrowest thing it can quote.
+    const clearanceId = req.workspaceClearance;
+    const permitted = clearanceCanSeeSensitivity(clearanceId, 'commercial');
     res.render('workspace/activity', {
       ...viewer(req),
-      counts: await navCounts(req.workspaceClearance),
-      activity: await repo.listActivity(200),
+      counts: await navCounts(clearanceId),
+      permitted,
+      activity: permitted ? await repo.listActivity(200) : [],
       csrfToken: generateCsrfToken(req, res)
     });
   });
 
   page('/workspace/chat', async (req, res) => {
     const username = req.session.user.username;
-    const conversations = await repo.listConversationsFor(username);
+    const clearanceId = req.workspaceClearance;
+    // Governance finding F7 (30/08/2026): an answer carries whatever the
+    // asker was cleared for at the time. Owning the conversation is not
+    // enough to read it back; the reader's clearance today has to still
+    // cover the clearance the answer was built at. Narrowing someone's
+    // clearance therefore narrows their own history with it, rather than
+    // leaving a transcript as a way round the change.
+    const conversations = (await repo.listConversationsFor(username))
+      .filter((c) => clearanceCovers(clearanceId, c.clearance));
     let active = null;
     let messages = [];
     const requested = parseInt(req.query.c, 10);
     if (Number.isInteger(requested)) {
       active = await repo.getConversationFor(requested, username);
+      if (active && !clearanceCovers(clearanceId, active.clearance)) active = null;
       if (active) messages = await repo.listMessages(active.id);
     }
     res.render('workspace/chat', {
@@ -254,6 +302,10 @@ router.post('/api/workspace/ask', workspaceNoindex, requireWorkspaceApiAccess, a
     const requested = parseInt(req.body.conversationId, 10);
     if (Number.isInteger(requested)) {
       conversation = await repo.getConversationFor(requested, username);
+      // Same rule as the page: a conversation answered at a clearance the
+      // asker no longer covers is not theirs to continue, and reads as
+      // absent rather than as refused.
+      if (conversation && !clearanceCovers(clearanceId, conversation.clearance)) conversation = null;
       if (!conversation) return res.status(404).json({ error: 'Conversation not found.' });
     }
 
@@ -285,7 +337,14 @@ router.post('/api/workspace/ask', workspaceNoindex, requireWorkspaceApiAccess, a
         gapType: result.gap.gap_type,
         description: result.gap.description.slice(0, 2000),
         recordKey: record ? record.record_key : '',
-        sensitivity: record ? record.sensitivity : 'commercial',
+        // Governance finding F7 (30/08/2026): where no record key could be
+        // identified, the gap's own sensitivity is unknown, and a gap
+        // description quotes the evidence that is missing. Fall back to
+        // the answering lane's ceiling, which is the most the gap could
+        // possibly have drawn on, and to the narrowest level of all when
+        // even the lane is unknown. Never to a mid value chosen for
+        // convenience.
+        sensitivity: record ? record.sensitivity : gapFallbackSensitivity(result.laneId),
         material: !!result.gap.material,
         raisedBy: result.laneId ? `lane:${result.laneId}` : 'workspace_ai'
       });
@@ -308,6 +367,11 @@ router.post('/api/workspace/ask', workspaceNoindex, requireWorkspaceApiAccess, a
 
 // A gap quoted a record: carry that record's sensitivity onto the gap so
 // the register filters it exactly like the evidence it quotes.
+function gapFallbackSensitivity(laneId) {
+  const lane = laneId ? laneById(laneId) : null;
+  return (lane && lane.sensitivityCeiling) || 'confidential';
+}
+
 async function recordForGap(gap) {
   // Record keys are dotted (e.g. authority.constitution), so require a
   // dot: plain English words in the description never look like keys.
@@ -316,7 +380,7 @@ async function recordForGap(gap) {
   return repo.getRecordByKey(m[1]);
 }
 
-router.post('/api/workspace/approvals/:id/decide', workspaceNoindex, requireWorkspaceApiAccess, async (req, res, next) => {
+router.post('/api/workspace/approvals/:id/decide', workspaceNoindex, requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
     const decision = req.body.decision === 'approved' ? 'approved' : req.body.decision === 'declined' ? 'declined' : null;
@@ -329,7 +393,7 @@ router.post('/api/workspace/approvals/:id/decide', workspaceNoindex, requireWork
   } catch (err) { next(err); }
 });
 
-router.post('/api/workspace/gaps/:id/resolve', workspaceNoindex, requireWorkspaceApiAccess, async (req, res, next) => {
+router.post('/api/workspace/gaps/:id/resolve', workspaceNoindex, requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
     const note = typeof req.body.note === 'string' ? req.body.note.trim().slice(0, 2000) : '';
@@ -352,7 +416,7 @@ router.post('/api/workspace/gaps/:id/resolve', workspaceNoindex, requireWorkspac
 // consequential external actions, and lib/workspace/social/actions.js
 // refuses them by construction. The most this API can do with one is
 // put it in the human approval queue as a record.
-router.post('/api/workspace/social/engagement/:id/replied', workspaceNoindex, requireWorkspaceApiAccess, async (req, res, next) => {
+router.post('/api/workspace/social/engagement/:id/replied', workspaceNoindex, requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (!Number.isInteger(id)) return res.status(400).json({ error: 'Bad id.' });
@@ -363,7 +427,7 @@ router.post('/api/workspace/social/engagement/:id/replied', workspaceNoindex, re
   } catch (err) { next(err); }
 });
 
-router.post('/api/workspace/social/request-action', workspaceNoindex, requireWorkspaceApiAccess, async (req, res, next) => {
+router.post('/api/workspace/social/request-action', workspaceNoindex, requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
   try {
     const { platform, action, summary, detail } = req.body || {};
     if (!platform || !action || !summary) return res.status(400).json({ error: 'platform, action and summary are required.' });
@@ -380,7 +444,7 @@ router.post('/api/workspace/social/request-action', workspaceNoindex, requireWor
   } catch (err) { next(err); }
 });
 
-router.post('/api/workspace/contacts/sync', workspaceNoindex, requireWorkspaceApiAccess, async (req, res, next) => {
+router.post('/api/workspace/contacts/sync', workspaceNoindex, requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
   try {
     if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'commercial')) {
       return res.status(404).json({ error: 'Not found' });
@@ -399,7 +463,7 @@ router.post('/api/workspace/contacts/sync', workspaceNoindex, requireWorkspaceAp
 // access, commercial clearance, the confirming human typing the address
 // back exactly, and a written reason. There is no bulk version and no
 // query parameter that widens it beyond one person.
-router.post('/api/workspace/contacts/:id/erase', workspaceNoindex, requireWorkspaceApiAccess, async (req, res, next) => {
+router.post('/api/workspace/contacts/:id/erase', workspaceNoindex, requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
   try {
     if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'commercial')) {
       return res.status(404).json({ error: 'Not found' });

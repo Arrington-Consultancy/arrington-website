@@ -754,28 +754,7 @@ const isValid = (id) => baseOf(id) !== null;
 // bottom of the file and by renderPage()'s own not-found/restricted-access
 // branches, so every kind of missing page gets the same on-brand result
 // instead of the bare "Not found" text a naive early-return would send.
-async function render404(req, res) {
-  if (!req.accepts('html')) {
-    return res.status(404).json({ error: 'Not found' });
-  }
-  try {
-    const { rows: allAccessRows } = await db.query('SELECT DISTINCT page_id FROM page_access');
-    const restrictedPageIds = new Set(allAccessRows.map(r => r.page_id));
-    const { rows: pageRows } = await db.query(
-      'SELECT id, slug, title, nav_label, hidden, show_in_nav FROM pages ORDER BY sort_order, created_at'
-    );
-    const pages = pageRows.filter(p => !p.hidden && !restrictedPageIds.has(p.id) && p.show_in_nav);
-    const { rows: themeRows } = await db.query(
-      "SELECT content FROM content WHERE section_key = 'site.theme'"
-    );
-    const activeTheme = (themeRows[0] && themeRows[0].content) || 'dark';
-    const theme = themes[activeTheme] || themes.dark;
-    res.status(404).render('404', { pages, theme });
-  } catch (err) {
-    console.error('404 handler failed:', err.message);
-    res.status(404).send('Not found');
-  }
-}
+const { render404 } = require('./lib/render404');
 
 async function renderPage(req, res, next, pageSlug) {
   try {

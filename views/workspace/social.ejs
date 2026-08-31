@@ -3,6 +3,10 @@
 <h1 class="ws-h">Social media</h1>
 <p class="ws-sub">Facebook, Instagram, LinkedIn and X in one place: connector state, recent posts, performance, engagement and planned content. The workspace reads, analyses and drafts. Publishing, deleting, replying publicly, changing account settings and spending money stay with a person.</p>
 
+<% if (!permitted) { %>
+  <div class="ws-card"><p class="ws-empty">This area holds account performance, spend and the people who have engaged with us, which your clearance does not cover.</p></div>
+<% } else { %>
+
 <div class="ws-card">
   <h2>Ask the social lane</h2>
   <p class="ws-body-text"><strong>ARRINGTON SOCIAL CONTENT BUILDER</strong> is the lane that holds this: what was posted, what it cost, which listings renew and what any of it produced. Ask it here and the question is routed to that lane only, with nothing from outside its remit.</p>
@@ -230,5 +234,7 @@
     });
   })();
 </script>
+
+<% } %>
 
 <%- include('partials/shell-bottom') %>

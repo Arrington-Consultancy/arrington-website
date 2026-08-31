@@ -31,12 +31,34 @@ test('read, analyse and draft are permitted, so the useful work is still possibl
   });
 });
 
+// Governance finding F5 (30/08/2026): the original version of this test
+// used a loose regex that let `instagram_manage_comments` through, and
+// that scope grants replying to and deleting comments. The check is now
+// the other way round: ANY scope whose name suggests management is a
+// failure unless it appears in this list with a reason. Meta's insights
+// scope is the one genuine exception, because Meta named its read-only
+// Instagram metrics scope `manage` and offers no read-named equivalent.
+const JUSTIFIED_MANAGE_SCOPES = {
+  instagram_manage_insights: 'Meta naming quirk: read-only access to Instagram professional metrics. There is no instagram_read_insights. It confers no publish, reply or delete capability.'
+};
+
 test('no connector declares a write or publish scope: least privilege on the token itself', () => {
   registry.PLATFORM_IDS.forEach((p) => {
     registry.PLATFORMS[p].readScopes.forEach((scope) => {
-      assert.doesNotMatch(scope, /publish|write|manage_posts|w_/,
+      assert.doesNotMatch(scope, /publish|write|w_|\.write\b/,
         `${p} declares ${scope}, which grants more than reading`);
+      if (/manage|modify|delete|comment/i.test(scope)) {
+        assert.ok(JUSTIFIED_MANAGE_SCOPES[scope],
+          `${p} declares ${scope}, which reads as more than reading and carries no recorded justification`);
+      }
     });
+  });
+});
+
+test('every justified exception is actually in use, so the list cannot become a standing permission to add more', () => {
+  const inUse = new Set(registry.PLATFORM_IDS.flatMap((p) => registry.PLATFORMS[p].readScopes));
+  Object.keys(JUSTIFIED_MANAGE_SCOPES).forEach((scope) => {
+    assert.ok(inUse.has(scope), `${scope} is justified here but no connector requests it; remove the entry`);
   });
 });
 

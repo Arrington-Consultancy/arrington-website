@@ -13,7 +13,8 @@ const {
   clearanceForUser,
   clearanceCanSeeSensitivity,
   clearanceCanSeeRecord,
-  filterRecordsForClearance
+  filterRecordsForClearance,
+  clearanceCovers
 } = require('../../lib/workspace/clearance');
 
 test('exactly one real human is mapped, and it is Tom', () => {
@@ -52,4 +53,33 @@ test('the restricted clearance never reaches commercial or confidential rows', (
   ];
   assert.deepEqual(filterRecordsForClearance('ws_restricted', rows).map((r) => r.record_key), ['a']);
   assert.deepEqual(filterRecordsForClearance('owner_admin', rows).map((r) => r.record_key), ['a', 'b', 'c']);
+});
+
+// Governance finding F7 (30/08/2026): workspace_conversations.clearance
+// was written on every conversation and read by nothing. These pin the
+// helper that now gates history on it, because the failure it prevents
+// is silent: a person whose clearance is narrowed keeps reading their own
+// old transcripts, which were composed from material they can no longer
+// be shown.
+test('a reader must still cover the clearance an answer was composed at', () => {
+  assert.equal(clearanceCovers('owner_admin', 'owner_admin'), true);
+  assert.equal(clearanceCovers('owner_admin', 'ws_restricted'), true,
+    'a wider clearance can read back a narrower conversation');
+  assert.equal(clearanceCovers('ws_restricted', 'owner_admin'), false,
+    'a narrowed clearance can still read a conversation composed at the wider one');
+});
+
+test('an unrecognised stored clearance is covered by nobody', () => {
+  // A renamed or removed clearance must close the history, not open it.
+  assert.equal(clearanceCovers('owner_admin', 'clearance_that_no_longer_exists'), false);
+  assert.equal(clearanceCovers('owner_admin', null), false);
+  assert.equal(clearanceCovers('owner_admin', ''), false);
+  assert.equal(clearanceCovers(null, 'owner_admin'), false);
+});
+
+test('covering is about the sensitivities, not the label, so a renamed clearance of equal reach still covers', () => {
+  const a = CLEARANCES.owner_admin.sensitivities;
+  const b = CLEARANCES.ws_restricted.sensitivities;
+  assert.ok(b.every((s) => a.includes(s)));
+  assert.ok(!a.every((s) => b.includes(s)));
 });

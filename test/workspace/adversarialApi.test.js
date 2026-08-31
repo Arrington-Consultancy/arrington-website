@@ -73,25 +73,56 @@ function makeClient() {
   };
 }
 
+// A failed login and a genuine denial both look like "no workspace" from
+// the outside. Repeated runs against one server hit the site's own login
+// limiter (5 per 15 minutes per IP) and every later assertion then fails
+// for the wrong reason, which costs a release decision. So each block
+// that logs in proves the session first, on a page that has nothing to
+// do with the workspace.
+async function assertLoggedIn(client, username) {
+  const res = await client.go('/login');
+  assert.equal(res.status, 302,
+    `${username} is not authenticated: /login returned ${res.status} instead of redirecting an existing session. `
+    + 'If this is a repeat run, the login rate limiter is the likely cause; restart the server and try again.');
+}
+
 const configured = !!(BASE && TOM_PASSWORD);
 test('adversarial workspace checks', { skip: configured ? false : 'set WORKSPACE_TEST_BASE_URL and WORKSPACE_TEST_TOM_PASSWORD to run' }, async (t) => {
-  await t.test('an anonymous visitor reaches no workspace page', async () => {
+  // Governance finding F2 (30/08/2026): this assertion used to accept a
+  // 302 to /login as well as a 404, which is exactly the leak it was
+  // meant to catch. A redirect to a login page confirms that
+  // /workspace/contacts is a real route worth logging in for, and the
+  // workspace's own rule is that its existence is operating information.
+  // Only a 404 passes now, and it must be the same 404 the site gives
+  // for a path that was never there. Per-request nonces are normalised
+  // out before comparing, since those differ on every response.
+  const stripNonces = (html) => html.replace(/nonce="[^"]*"/g, 'nonce="X"');
+
+  await t.test('an anonymous visitor gets an ordinary 404, not a login redirect', async () => {
     const anon = makeClient();
+    const control = await anon.go('/definitely-not-a-real-page-9f3c');
+    assert.equal(control.status, 404, 'the control path did not 404');
+    const controlBody = stripNonces(await control.text());
     for (const path of PAGES) {
       const res = await anon.go(path);
-      assert.ok([302, 404].includes(res.status), `${path} returned ${res.status} to an anonymous visitor`);
-      if (res.status === 302) {
-        assert.match(res.headers.get('location') || '', /^\/login/, `${path} redirected somewhere other than login`);
-      }
+      assert.equal(res.status, 404, `${path} returned ${res.status} to an anonymous visitor`);
+      assert.equal(stripNonces(await res.text()), controlBody,
+        `${path} produced a 404 distinguishable from a genuinely missing page`);
     }
   });
 
-  await t.test('an anonymous visitor reaches no workspace API', async () => {
+  await t.test('an anonymous workspace API call looks like a call to a route that does not exist', async () => {
     const anon = makeClient();
+    const control = await anon.go('/api/definitely-not-a-real-endpoint-9f3c', { method: 'POST', body: {} });
+    const controlBody = await control.text();
     for (const [path, body] of APIS) {
       const res = await anon.go(path, { method: 'POST', body });
-      assert.ok(res.status >= 400, `${path} returned ${res.status} to an anonymous POST`);
       assert.ok(res.status !== 200, `${path} answered an anonymous POST`);
+      assert.equal(res.status, control.status,
+        `${path} returned ${res.status} where a non-existent endpoint returns ${control.status}`);
+      const text = await res.text();
+      assert.equal(text, controlBody, `${path} denial differs from a non-existent endpoint's`);
+      assert.doesNotMatch(text, /workspace/i, `${path} named the workspace in its denial`);
     }
   });
 
@@ -99,9 +130,10 @@ test('adversarial workspace checks', { skip: configured ? false : 'set WORKSPACE
     if (!OTHER_PASSWORD) return tt.skip('set WORKSPACE_TEST_OTHER_PASSWORD');
     const other = makeClient();
     await other.login(OTHER_USER, OTHER_PASSWORD);
-    // Confirm the session is genuinely authenticated on the main site.
-    const home = await other.go('/');
-    assert.equal(home.status, 200);
+    // Confirm the session is genuinely authenticated, not merely able to
+    // fetch a public page: an anonymous client gets 200 on '/' too, so
+    // that check proved nothing about the login.
+    await assertLoggedIn(other, OTHER_USER);
     for (const path of PAGES) {
       const res = await other.go(path);
       assert.equal(res.status, 404, `${path} did not 404 for a non-workspace user`);
@@ -121,6 +153,7 @@ test('adversarial workspace checks', { skip: configured ? false : 'set WORKSPACE
   await t.test('Tom reaches every page, and every one is noindex', async () => {
     const tom = makeClient();
     await tom.login('tom', TOM_PASSWORD);
+    await assertLoggedIn(tom, 'tom');
     for (const path of PAGES) {
       const res = await tom.go(path);
       assert.equal(res.status, 200, `${path} returned ${res.status} for Tom`);
@@ -129,14 +162,22 @@ test('adversarial workspace checks', { skip: configured ? false : 'set WORKSPACE
     }
   });
 
-  await t.test('erasure refuses a mismatched confirmation even for Tom', async () => {
+  // The reviewer noted on 30/08/2026 that this check used to `return`
+  // when the environment held no contact, so it could report a pass
+  // having asserted nothing. It now skips loudly instead: a permanent
+  // deletion control that is silently untested is exactly the thing that
+  // should be visible in the output.
+  await t.test('erasure refuses a mismatched confirmation even for Tom', async (tt) => {
     const tom = makeClient();
     await tom.login('tom', TOM_PASSWORD);
+    await assertLoggedIn(tom, 'tom');
     const page = await tom.go('/workspace/contacts');
     const html = await page.text();
     const token = (html.match(/name="csrf-token" content="([^"]+)"/) || [])[1];
     const idMatch = html.match(/contacts\?id=(\d+)/);
-    if (!idMatch) return; // nothing to erase in this environment
+    if (!idMatch) {
+      return tt.skip('NOT EXECUTABLE: no contact exists in this environment, so the erasure refusal was not exercised');
+    }
     const res = await tom.go(`/api/workspace/contacts/${idMatch[1]}/erase`, {
       method: 'POST',
       headers: { 'x-csrf-token': token },

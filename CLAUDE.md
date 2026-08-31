@@ -1022,6 +1022,74 @@ is built staging-first and credential-gated, and the expansion is being
 routed to Governance and Assurance as a controlled change rather than
 treated as self-approved.
 
+### Governance review: AMBER, and what is still open (31/08/2026)
+
+The independent review is `review/workspace-v0.1-governance-review-2026-08-30.md`
+(**verdict AMBER**, ten findings F1-F10). The builder's response, finding
+by finding, is `review/workspace-v0.1-amber-remediation-2026-08-31.md`.
+**AMBER stands.** The builder does not upgrade its own verdict, and two
+of the three HIGH findings are reserved to Tom:
+
+- **F1 (HIGH, OPEN).** Clearance is keyed on the username string `tom`,
+  and any admin CMS account can rewrite the password behind that
+  username through `PUT /api/admin/user/:id/password` and then hold the
+  workspace, including the irreversible erasure control. Demonstrated
+  end to end by the reviewer. Recorded in `lib/workspace/clearance.js`
+  as an open, explicitly **un**accepted risk with the three options
+  (accept in writing / refuse password changes against a cleared
+  username / bind clearance to user id plus a second Railway variable).
+  Until Tom picks one, treat workspace access as no stronger than CMS
+  admin access.
+- **F3 (HIGH, OPEN).** The social control area, and the two scope lines
+  added to Bob Fletcher in `lib/scott/workers.js`, expand the approved
+  v0.1 source map. Tom instructed the expansion; an assurance lane
+  cannot approve it from the builder's description of the instruction.
+  He either records both as explicit decisions or has them lifted out of
+  this candidate.
+
+F2 and F4 to F10 are corrected on the branch. The ones worth knowing
+about because they changed behaviour elsewhere:
+
+- **F2**: the workspace no longer redirects an anonymous visitor to
+  `/login?next=...` and no longer answers 401 on its APIs. Anonymous and
+  uncleared requests both get the site's ordinary 404. The unit test
+  that *required* the redirect, and the adversarial assertion
+  `[302, 404].includes(status)`, were what made the leak look
+  deliberate; both now compare against a control request to a genuinely
+  non-existent path.
+- **F4**: `lib/crm/emailHash.js` is now HMAC-SHA256 keyed on
+  `SESSION_SECRET`, not a bare hash. **This invalidates every tombstone
+  written under the old function, and rotating `SESSION_SECRET` does the
+  same.** Safe today only because erasure also deletes the source rows.
+- **F5**: `instagram_manage_comments` dropped (it confers moderation).
+  Instagram comments are therefore not read, and the page says so. The
+  scope test is inverted: any manage/modify/delete/comment-shaped scope
+  fails unless named in a justification list, which currently holds one
+  entry, `instagram_manage_insights` (Meta's read-only metrics scope,
+  misleadingly named, with no read-named equivalent).
+- **F8**: the site's 404 renderer is extracted to `lib/render404.js` and
+  used by **both** `lib/workspace/access.js` and `lib/scott/access.js`,
+  so a denial is byte-identical to a genuinely missing page. Scott's
+  anonymous redirect to `/scott/login` is deliberately unchanged: that
+  is the invited-guest journey, not the finding.
+
+**Two things have still never been run**, and neither should be reported
+as passing:
+
+1. **The workspace has never called a model, in any environment.**
+   `test/workspace/liveAiPressure.test.js` now exists on the same
+   two-half pattern as Scott's (free guard half always runs; paid half
+   armed only by `RUN_WORKSPACE_LIVE_AI=<run label>` on top of
+   `ANTHROPIC_API_KEY` + `ENABLE_WORKSPACE_AI=true` + `DATABASE_URL`).
+   Its canaries are derived from the confidential records at run time,
+   never committed. Running the paid half is a spend decision for Tom.
+2. **A bare `npm test` does not cover the workspace surface.**
+   `test/workspace/adversarialApi.test.js` skips silently without
+   `WORKSPACE_TEST_BASE_URL`, `WORKSPACE_TEST_TOM_PASSWORD` and
+   `WORKSPACE_TEST_OTHER_PASSWORD`. It must be run by hand against a
+   running instance before each release decision. Same for
+   `test/scott/adversarialApi.test.js`.
+
 ## Contacts (CRM) and signup source (live, 30/08/2026)
 
 **On main and live**, merged as `45bb922`. First production run built
@@ -1056,10 +1124,17 @@ bulk version.
 statutory retention period, and the confirmation screen and register
 both say so with the reason rather than leaving data quietly behind.
 
-The register stores a one-way hash plus a redacted address, never the
+The register stores a keyed hash plus a redacted address, never the
 address itself: enough to answer "did you action my request" when
 someone quotes their own email, not enough to rebuild a contact list.
-The audit line carries the same redacted form.
+The audit line carries the same redacted form. **It is an HMAC keyed on
+`SESSION_SECRET`, not a bare hash** (governance finding F4, 31/08/2026):
+an unsalted hash of an email is a membership oracle for anyone with
+database access, which is the opposite of what this register claimed to
+be. Consequence, stated rather than hidden: changing the function, or
+rotating `SESSION_SECRET`, invalidates every existing tombstone. That is
+safe only because erasure also deletes the source rows, so there is
+nothing left for a rebuild to rebuild from.
 
 **Two real races were found and fixed while testing this**, both worth
 knowing: a rebuild running during an erasure could resurrect the person
@@ -1072,7 +1147,12 @@ scoped in time, not a lifetime blacklist: a new enquiry afterwards is
 honoured.
 
 The privacy page (`views/privacy.ejs`) describes the contact record
-accurately. Keep it that way when this area changes.
+accurately, and since 31/08/2026 (finding F10) also states in the
+deletion section that a payment record is kept when the rest is deleted,
+and why, plus that a short note of the deletion itself is kept holding a
+shortened form of the address. The internal register already said this;
+the person whose data it is could not read it. Keep both accurate when
+this area changes.
 
 **Tests:** full suite 455 pass, 0 fail (30/08/2026), including
 `test/crmContacts.test.js`, `test/crmErasure.test.js`,

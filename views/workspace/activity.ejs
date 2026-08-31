@@ -3,6 +3,10 @@
 <h1 class="ws-h">Activity</h1>
 <p class="ws-sub">Append-only. Nothing here can be edited or deleted by any route, and no AI path writes to it except through the server's own audited helpers.</p>
 
+<% if (!permitted) { %>
+  <div class="ws-card"><p class="ws-empty">The activity record names people, records and decisions across every area of the workspace, which your clearance does not cover.</p></div>
+<% } else { %>
+
 <div class="ws-card">
   <% if (activity.length === 0) { %><p class="ws-empty">Nothing recorded yet.</p><% } %>
   <% if (activity.length > 0) { %>
@@ -21,5 +25,7 @@
   </div>
   <% } %>
 </div>
+
+<% } %>
 
 <%- include('partials/shell-bottom') %>
