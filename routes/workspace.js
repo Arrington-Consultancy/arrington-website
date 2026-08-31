@@ -23,6 +23,8 @@ const { LANES, SOURCE_CLASSES, laneById } = require('../lib/workspace/lanes');
 const { requireWorkspacePageAccess, requireWorkspaceApiAccess, setNoindex } = require('../lib/workspace/access');
 const { render404 } = require('../lib/render404');
 const wsUnlock = require('../lib/workspace/unlock');
+const unlockAlert = require('../lib/workspace/unlockAlert');
+const db = require('../db/pool');
 const { workspaceEnabled, workspaceClearance } = require('../lib/workspace/access');
 const { askWorkspace, isWorkspaceAIEnabled, routeToLane } = require('../lib/workspace/orchestrator');
 const socialRepo = require('../lib/workspace/social/repo');
@@ -367,6 +369,17 @@ router.post('/api/workspace/unlock', requireWorkspaceIdentity, unlockLimiter, as
       // signature of exactly the attack this gate exists for, and it is
       // the only warning anyone would get.
       await repo.addActivity({ actor: username, eventType: 'workspace_unlock_failed', summary: 'A workspace unlock attempt was refused: the passphrase did not match.' });
+      // Governance finding G6 and Tom's instruction of 31/08/2026: the
+      // warning must not live only behind the gate it protects. This
+      // reads the burst from the database (so a container restart cannot
+      // reset the count the way it resets the limiter), and emails the
+      // configured owner address once per cooldown window. It carries no
+      // passphrase, no guessed value and nothing from inside the
+      // workspace. Deliberately not awaited: a mail problem must not
+      // change what this route answers or how long it takes to answer,
+      // since a timing difference here would itself be a signal.
+      unlockAlert.maybeAlertOnFailedUnlock(db, { username })
+        .catch((err) => console.error('Workspace unlock alert failed:', err.message));
       return res.status(401).json({ error: 'That passphrase is not correct.' });
     }
     wsUnlock.recordUnlock(req);

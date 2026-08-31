@@ -12,10 +12,10 @@
 |---|---|---|
 | G1. `X-Robots-Tag` announces every workspace route, with the flag OFF | HIGH | **Corrected.** Verified with the flag off, which was the worst part. |
 | G2. Unlock/lock answer JSON where a missing endpoint answers HTML | MEDIUM | **Corrected**, and both endpoints added to the adversarial suite. |
-| G3. Three post-review commits added un-reviewed scope, incl. a live AI chat surface on the public Scott demo | MEDIUM | **OPEN, reserved to Tom.** Not something a builder can close. |
+| G3. Three post-review commits added un-reviewed scope, incl. a live AI chat surface on the public Scott demo | MEDIUM | **CLOSED.** Tom chose Option B on 31/08/2026 and named all three changes. |
 | G4. The leak probe rests on one distinctive token; the guard tests a copy of the filter | MEDIUM | **Corrected.** |
 | G5. Session fixation: login never regenerates the session id | MEDIUM | **Corrected**, site-wide. |
-| G6. The unlock attempt budget resets on any process restart | LOW | **Partly corrected**: see below. The detection half is the real point. |
+| G6. The unlock attempt budget resets on any process restart | LOW | **Closed on the half that matters.** Tom instructed the alert be built; it is. The limiter store is unchanged and stated. |
 | G7. A trailing newline in the passphrase locks Tom out while the boot line says it is fine | MEDIUM | **Corrected.** |
 | G8. `/workspace/activity` gated one level wider than the material it quotes | LOW | **Corrected.** |
 | G9. `emailHash` falls back to a hard-coded key when `SESSION_SECRET` is unset | LOW | **Corrected.** |
@@ -95,29 +95,36 @@ suite correctly excludes them from the locked-session refusal check, since
 they are the way out of being locked and refusing them would make the
 workspace unopenable.
 
-## G3. OPEN. Reserved to Tom
+## G3. Closed. Tom chose Option B on 31/08/2026
 
-I have verified the reviewer's claim rather than taking it on trust.
+I verified the reviewer's claim rather than taking it on trust.
 `views/scott/social.ejs` **does not exist on main at all**; the whole page
 is new on this branch, and line 32 includes the chat widget partial.
 `routes/scott.js` now passes `aiEnabled` and `workersById` to every Scott
-data page. Scott is live on the public site with `ENABLE_SCOTT_AI=true`.
+data page. Scott is live on the public site with `ENABLE_SCOTT_AI=true`,
+so merging this branch adds a live AI chat surface to a released public
+demonstration.
 
-So merging this branch adds a live AI chat surface to a released public
-demonstration, arriving inside a release candidate for an unrelated,
-flag-gated internal area. That is a change to a live system.
+Tom's decision, verbatim:
 
-Tom's F3 approval reads "already presented to Governance ... bounded to
-that reviewed scope". These three commits landed **after** the 30/08
-review was issued, so by the wording of his own approval they fall
-outside it. I am not treating them as covered, and I have not lifted them
-out either, because he asked for the Bob Fletcher social page on both
-systems and removing it unilaterally would discard work he requested.
+> "I explicitly approve the following three items as part of this release
+> candidate: 1. The new Scott social page, including its live AI chat
+> widget on the public Scott demonstration. 2. The new Scott fictional
+> social records. 3. The new Arrington social memory source containing
+> real Arrington material. This approval is limited to those three named
+> changes. It does not widen worker permissions, Scott clearance,
+> autonomous actions or any of the previously excluded Social action
+> classes."
 
-His two options are the reviewer's: lift the three commits out and bring
-them as their own change with their own review, or record an explicit
-decision naming the Scott chat widget on live, the new Scott social
-records and the new Arrington social memory source individually.
+The three commits are `4da96ae`, `aa9fee2` and `1b770eb`. Nothing was
+changed in response: the scope now approved is the scope on the branch.
+
+The bound is the standing obligation. Worker permissions, Scott clearance
+and the six refused Social action classes are untouched by these commits
+and must stay untouched by anything that follows: widening
+`ACTION_CLASS_HUMAN`'s complement, adding a write scope, granting a
+persona a new domain or introducing a credential write path would each
+exceed this approval rather than extend it.
 
 ## G4. Corrected
 
@@ -155,24 +162,79 @@ controlled brain and the erasure control.
 Verified by re-running the adversarial suite end to end after the change:
 login, unlock, page access and erasure refusal all still work.
 
-## G6. Partly corrected, and the honest half stated
+## G6. The alert is built. The limiter store is not, and that is stated
 
-The attempt budget is still `express-rate-limit`'s in-memory store, so a
-container restart returns it to five. Moving it to Postgres is a change to
-shared site infrastructure that I am not making inside this candidate.
+Tom's instruction, verbatim:
 
-The reviewer's sharper half is the part that matters and I am recording it
-rather than answering it: the `workspace_unlock_failed` rows are only
-visible on `/workspace/activity`, which requires the unlock to view. In
-the exact scenario this gate exists for, the attacker is locked out and
-Tom may also be locked out of the CMS account whose password was changed.
-Nothing is emailed. My own sentence, "it is the only warning anyone would
-get", was accurate and the warning is delivered to a screen nobody in that
-scenario can open.
+> "A failed-unlock security warning must not only appear behind the
+> Workspace unlock it is protecting. Add a bounded security alert to the
+> configured owner/admin email when the failed-unlock threshold is
+> triggered. Do not expose the passphrase, guessed values or confidential
+> Workspace content in that alert."
 
-Notifying on a burst of failed unlocks through the existing Gmail path is
-the right fix. It is new outbound behaviour on a candidate under review,
-so it is proposed rather than built.
+`lib/workspace/unlockAlert.js` does that. Four properties, each of which
+is about not letting the alert become a liability of its own:
+
+1. **It carries nothing from inside.** No passphrase, no length, no
+   guessed value, no record, contact or count. The guarantee is
+   structural rather than textual: none of those is a parameter of
+   `buildAlert`, so none can appear however it is called, and a test
+   pins the signature so it cannot quietly grow one. The message names
+   `WORKSPACE_ACCESS_PASSPHRASE` as the thing to rotate, which is
+   necessary advice and discloses nothing about its value.
+2. **It is bounded.** One notice per hour however many attempts arrive.
+   A security control that turns a guessing loop into a mail flood is a
+   denial-of-service against the owner delivered by his own alarm.
+3. **The count comes from the database, not from memory.** This is the
+   other half of the finding. The attempt limiter resets on any
+   container restart, so a memory-resident counter would reset with it
+   and a patient attacker restarting between bursts would never trip it.
+   `workspace_activity` rows outlive the process.
+4. **It cannot fail the request it is attached to, and cannot claim a
+   send that did not happen.** It is not awaited, so a mail problem
+   changes neither the answer nor its timing (a timing difference here
+   would itself be a signal). The send returns a result, the result is
+   what gets written, and a failure is written as a failure with its
+   real error. Same discipline as `lib/scott/gapNotifier`.
+
+Verified end to end against a running server and a real database. Four
+wrong passphrases through the real endpoint produced:
+
+```
+tom    | workspace_unlock_failed     | ...refused: the passphrase did not match.
+tom    | workspace_unlock_failed     | ...refused: the passphrase did not match.
+tom    | workspace_unlock_failed     | ...refused: the passphrase did not match.
+system | workspace_unlock_alert_sent | Security notice could NOT be sent after 3 failed
+                                     | unlock attempt(s) against "tom": email is not
+                                     | configured in this environment...
+tom    | workspace_unlock_failed     | ...refused: the passphrase did not match.
+```
+
+The alert fired on the third attempt, before the limiter's budget of five
+was exhausted, and the fourth produced no second alert. Note what the
+recorded row says: locally there is no `GMAIL_APP_PASSWORD`, and it
+recorded a failure with the real reason rather than a send.
+
+With a transport injected, the message it actually produces was captured
+and checked: it went to the configured address, and
+
+```
+contains the passphrase: false
+contains a guessed value: false
+```
+
+**Recipient**: `WORKSPACE_ALERT_EMAIL` if set, so a security alert can be
+routed somewhere other than the address printed on the public website;
+otherwise the site's own `contact.email`; otherwise the hard default. A
+database that cannot be read still yields a real address, because an
+alert sent to an empty string is an alert lost.
+
+**Not done, and stated rather than implied**: the attempt limiter still
+uses the in-memory store, so the five-per-fifteen-minutes budget still
+resets on a restart. Moving it to Postgres is a change to shared site
+infrastructure and is not in this candidate. The real bound on guessing
+remains the passphrase's own entropy; what has changed is that a person
+now hears about it.
 
 ## G7. Corrected
 
@@ -212,6 +274,6 @@ explanation rather than degrading quietly.
 ## What was NOT changed
 
 - No production merge, no production deploy, no production enablement.
-- The three commits G3 identifies are untouched, pending Tom's decision.
-- The unlock limiter store and the failed-unlock notification are
-  proposed, not built.
+- The three commits G3 identifies are untouched, and now explicitly
+  approved rather than pending.
+- The unlock limiter store is unchanged and still in-memory.

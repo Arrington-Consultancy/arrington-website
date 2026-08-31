@@ -1085,16 +1085,22 @@ a control path**, not just status and body, which is the gap that let it
 through; per-request nonces are normalised inside header values the same
 way they are in the body.
 
-**G3 (MEDIUM, OPEN).** Three commits landed on this branch AFTER the
-30/08 review was issued (`4da96ae`, `aa9fee2`, `1b770eb`). They are not
-remediation. `views/scott/social.ejs` **does not exist on main at all**
-and carries the chat widget; `routes/scott.js` now passes `aiEnabled` to
-every Scott data page. Scott is live publicly with `ENABLE_SCOTT_AI=true`,
-so **merging this branch adds a live AI chat surface to a released public
-demonstration**. Tom's F3 approval is worded "already presented to
-Governance ... bounded to that reviewed scope", and these landed after,
-so by its own wording they are not covered. Either they come out and
-return as their own change, or Tom names them individually in a decision.
+**G3 — CLOSED, Option B (31/08/2026).** Three commits landed on this
+branch AFTER the 30/08 review (`4da96ae`, `aa9fee2`, `1b770eb`). They are
+not remediation. `views/scott/social.ejs` **does not exist on main at
+all** and carries the chat widget; `routes/scott.js` now passes
+`aiEnabled` to every Scott data page. Scott is live publicly with
+`ENABLE_SCOTT_AI=true`, so **merging this branch adds a live AI chat
+surface to a released public demonstration**. Tom's earlier F3 approval
+did not cover them by its own wording, so he named all three explicitly:
+the Scott social page including its live chat widget, the new Scott
+fictional social records, and the new Arrington social memory source
+holding real Arrington material. "This approval is limited to those three
+named changes. It does not widen worker permissions, Scott clearance,
+autonomous actions or any of the previously excluded Social action
+classes." Keep it that way: widening the refused action set, adding a
+write scope, granting a persona a new domain or introducing a credential
+write path would each EXCEED this approval rather than extend it.
 
 Others worth knowing because they changed behaviour beyond the workspace:
 
@@ -1115,12 +1121,22 @@ Others worth knowing because they changed behaviour beyond the workspace:
   distinctive canary survives rather than passing on ordinary English.
   Consequence worth stating: the `ws-20260831-c` run proved less on its
   third case than its `ok` implied.
-- **G6 (LOW, partly open)**: the unlock attempt budget is in-memory and
-  resets on any restart. The sharper half is that
-  `workspace_unlock_failed` rows are only visible on `/workspace/activity`,
-  which needs the unlock to view, so in the exact scenario the gate exists
-  for the warning goes to a screen nobody can open. Emailing on a burst is
-  proposed, not built.
+- **G6**: on Tom's instruction the failed-unlock warning no longer lives
+  only behind the gate it protects. `lib/workspace/unlockAlert.js` emails
+  the configured owner address (`WORKSPACE_ALERT_EMAIL`, else
+  `contact.email`, else the hard default) on the **third** failure inside
+  30 minutes, which is below the limiter's budget of five, at most once
+  per hour. It carries no passphrase, no length, no guessed value and
+  nothing from inside the workspace — guaranteed structurally, because
+  none of those is a parameter of `buildAlert`, and a test pins the
+  signature. The count is read from `workspace_activity` rather than
+  memory, which is the other half of the finding: the limiter resets on a
+  container restart and a memory counter would reset with it. The send is
+  not awaited (a timing difference on the refusal would itself be a
+  signal) and a failed send is recorded as a failure with its real error,
+  never as a send. **Still not done and worth knowing:** the attempt
+  limiter itself is unchanged and still in-memory, so the five-per-15-min
+  budget does reset on a restart.
 
 ### Governance review: AMBER, and what is still open (31/08/2026)
 
