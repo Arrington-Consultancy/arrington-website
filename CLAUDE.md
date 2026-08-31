@@ -712,7 +712,8 @@ npm run dev
 - **Platform:** Railway (project: arrington-prototype, plan upgraded from Hobby to support two custom domains)
 - **Database:** Railway PostgreSQL addon (internal networking only)
 - **Required env vars:** `DATABASE_URL` (auto-set by addon), `SESSION_SECRET`, `RAILWAY_ENVIRONMENT` (auto-set)
-- **`GMAIL_APP_PASSWORD`** — Gmail SMTP app password for lead/quiz/Market Ready Test notification emails (see Lead capture section). Optional locally; `notify()` no-ops with a console warning if unset.
+- **`GMAIL_APP_PASSWORD`** — Gmail SMTP app password for lead/quiz/Market Ready Test notification emails (see Lead capture section). Optional locally; `notify()` no-ops with a console warning if unset. **It is also what makes the workspace's failed-unlock security alert able to ring** (finding H3): with it unset that alarm is inert, and the boot line now says so rather than leaving the operator to find out during an attack.
+- **`WORKSPACE_ALERT_EMAIL`** — where the workspace's failed-unlock security alert goes. Optional; falls back to the built-in owner address. It deliberately does **not** fall back to the `contact.email` CMS row (finding H1): that row is editable by anyone holding `edit_content`, which is exactly the account the alarm exists to warn about, so the default was retargetable by the attacker.
 - **Bootstrap env vars (first boot only):** `NAT_PASSWORD`, `TOM_PASSWORD` — remove from Railway after the first successful deploy seeds the user rows
 - **Production detection:** checks for `RAILWAY_ENVIRONMENT` or `NODE_ENV=production`
 - **Trust proxy:** enabled (required for rate limiting, secure cookies, and HTTPS redirect behind Railway's reverse proxy)
@@ -930,6 +931,1332 @@ Tom returned an agreed-changes brief (`arrington_copy_review_agreed_changes_20_j
 - `headshot.png` — original hero photo (now served from DB)
 - `logo.avif` — original logo (now served from DB)
 - `oxford.png` — original Oxford badge (now served from DB)
+
+## Arrington AI Workspace v0.1 (staging, added 30/08/2026)
+
+The real internal workspace, at `/workspace`. **On its branch, not on
+main, and OFF in production.** Branch `feature/arrington-ai-workspace-v0-1`,
+head is the tip of this branch as pushed on 31/08/2026, **frozen for the
+third independent review**. The exact SHA is recorded in the review
+request rather than here, because a commit that states its own SHA cannot
+exist.
+**Both independent reviews and both responses now live in `review/` on
+the candidate itself**, so a reader of the branch can open every finding
+it cites rather than following a reference to somebody else's branch. Staging service
+`arrington-ai-workspace` (staging environment only, it has no production
+instance), URL `arrington-ai-workspace-staging.up.railway.app`, first
+deploy `94280d0c` SUCCESS. Tom confirmed staging works on 30/08/2026.
+Independent Governance and Assurance review of the release candidate
+was commissioned the same day and is the gate before any production
+decision; the builder must not award itself that PASS.
+
+**Three gates, all failing closed** (`lib/workspace/access.js`). It was
+two until 31/08/2026; the third is Tom's decision on governance finding
+F1 (see below).
+
+1. `ENABLE_ARRINGTON_AI_WORKSPACE` must be exactly `'true'`. This is why
+   the code can sit on main harmlessly: merging is inert, and switching
+   it on is a separate deliberate act.
+2. The authenticated username must hold a clearance in
+   `lib/workspace/clearance.js` AND a real CMS role AND be named by the
+   deployment's own `WORKSPACE_OWNER_USERNAME` / `WORKSPACE_OWNER_USER_ID`.
+   Binding to the **user id** is what stops a deleted-and-recreated
+   account inheriting the cleared username. Requiring the variables is
+   what stops a code edit to `HUMAN_CLEARANCE` granting anybody access on
+   its own: a code change and an infrastructure change are now both
+   needed.
+3. The session must be unlocked with `WORKSPACE_ACCESS_PASSPHRASE`
+   (`lib/workspace/unlock.js`). **This is the gate that actually closes
+   F1.** Gates 1 and 2 cannot tell Tom apart from an admin who has reset
+   Tom's password, because after that reset the attacker holds the right
+   username and the right user id. The passphrase lives in Railway,
+   which CMS admin does not reach, so the takeover stops here. The
+   legitimate recovery route is untouched: an admin can still reset the
+   site password, and Tom can still rotate the passphrase himself.
+
+Real access is Tom only. Anyone else, INCLUDING a site admin, gets a 404
+rather than a 403, because the area's existence is itself operating
+information.
+
+**The unlock screen is a deliberate, narrow exception to that.** A
+cleared-but-locked session is redirected to `/workspace/unlock` rather
+than 404'd, because anyone reaching that point has already satisfied the
+username and id binding, so they are either Tom or someone holding Tom's
+CMS account, and the latter can read this repository anyway. The APIs
+have no such exception: a locked session gets the same 404 as an
+uncleared one, with no mention of unlocking, and the erasure endpoint is
+behind that line. Unlock properties worth knowing: it is bound to the
+user id that performed it, expires after 4 hours, is invalidated
+immediately by rotating the passphrase in Railway, and every failed
+attempt is written to `workspace_activity` as `workspace_unlock_failed`,
+which is the only warning anyone would get that the takeover is being
+attempted.
+
+**Setting the variables.** `WORKSPACE_OWNER_USER_ID` has to be the real
+row id, which differs per database, so the boot log prints a
+`Workspace access:` line reporting each gate separately AND the actual
+ids of the cleared usernames in that database. A user id is not a
+secret; the passphrase never appears in any log, only its length.
+
+**Entirely separate from Scott.** No Scott table, identity, prompt or
+fictional fact is reachable from the workspace, or the reverse. Tests
+enforce it in both directions.
+
+**Screens:** Today, Ask Ruth, Company Brain, Opportunities,
+Clients & projects, Contacts, Social media, AI workforce, Decisions &
+approvals, Brain gaps, Activity.
+
+**Governance on Ruth (findings T1-T3, 31/08/2026).** The thirteenth
+review confirmed the access argument below in full, by its own probes:
+six canary records at three sensitivities, twenty clearance-by-lane
+combinations with the model stubbed to echo everything it could see, and
+no withheld canary reaching her. **But the access argument answered only
+half the controlled statement.** `lanes.js`, `orchestrator.js` and this
+file said the router "never speaks as a person and never appears in
+output as a tenth identity" - a statement about OUTPUT, which Ruth does
+change. All three are now amended and dated rather than argued past.
+Two defects came with her and are fixed: a crafted lane id reached
+through `Object.prototype` so she named a colleague called "Object"
+(and `routes/workspace.js` accepted it as a valid forced lane before
+500ing, since `laneById` is what validates that input), and `gapRaised`
+was passed every turn while changing nothing.
+
+**Ruth, the receptionist (31/08/2026).** Tom's instruction: "Make Ruth
+in Arrington as well." `lib/workspace/receptionist.js`.
+
+**She is not a tenth identity, and the distinction is the whole point.**
+A lane is a scoped READING CONTEXT: a set of source classes and a
+sensitivity ceiling. Ruth has neither, plus no clearance of her own. She
+cannot read a record, widen a lane's answer, or see anything a lane
+declined to show. The permission model still has exactly three legs
+(human clearance AND lane permission AND task necessity); she adds no
+fourth and no bypass. The mandate's concern was a super-worker with god
+access, and a receptionist who can read nothing is the opposite of that.
+The lane register is untouched at nine, and a test asserts she never
+appears in it.
+
+What she may say is declared as a field list and anything else THROWS -
+the same structural discipline as the unlock alert after finding H7 -
+because a named component that talks to the owner is otherwise a
+disclosure channel with no gate on it. She is handed a lane id, two booleans and a
+count, never a record and never the answer text (finding U2 corrected
+the earlier "three booleans", and the count is the one value she
+interpolates).
+
+**She is Arrington's, not Scott's.** Scott's demonstration has a
+receptionist too; nothing is imported in either direction. "Reuse
+principles, not fictional content" - the principle of one named person
+who takes the question and routes it is reused, the fictional identity,
+prompt and business facts are not, and a test asserts this module reaches
+no Scott code and names no Scott character.
+
+**Nine lanes, no new worker** (`lib/workspace/lanes.js`). The canonical
+Arrington workers appear as routing lanes with read-only source classes
+and sensitivity ceilings taken from their published remits. The router
+is faceless plumbing, per the completion mandate: it has no name and no
+voice, and no lane speaks. **Amended 31/08/2026 (finding T1):** this
+used to read "never a tenth identity", and a receptionist now presents
+the router's output under a name (see Ruth, above). No tenth WORKER
+exists - she holds no source class, ceiling or clearance and reads no
+record - but the output statement was untrue as written and is corrected
+here rather than argued past. Only Governance & Assurance reads every source class, and a
+test fails if a second lane ever does.
+
+**Permission legs.** Human clearance AND lane permission AND task
+necessity, narrowest wins. Filtering happens BEFORE the prompt is built,
+never as post-generation redaction, and counts are computed after
+filtering so a result size leaks nothing.
+
+**Brain snapshot.** `data/workspace-snapshot.enc` is AES-256-GCM
+ciphertext of 30 controlled records; only the ciphertext is committed,
+`.gitignore` refuses the plaintext, and `WORKSPACE_SNAPSHOT_KEY` is
+never logged or printed. No key means no ingest, reported honestly as an
+unseeded brain rather than an empty one. Rebuild with
+`scripts/encryptWorkspaceSnapshot.js`.
+
+**Workspace AI** is gated on its own flag (`ENABLE_WORKSPACE_AI`) plus
+`ANTHROPIC_API_KEY`, separate from every other AI switch on the site.
+Currently OFF in staging.
+
+### Social media control area (30/08/2026)
+
+Facebook, Instagram, LinkedIn and X as ONE area, per Tom's SOCIAL MEDIA
+CONNECTOR REQUIREMENT. **Connected to nothing yet**: with no
+credentials the page shows no posts and no followers and says why,
+rather than an empty timeline that would read as "no activity".
+
+Two rules are structural, not conventional. Publishing, deleting,
+replying publicly, sending messages, changing account settings and
+advertising spend are refused by construction: the permission question
+is answered in one place, the guard THROWS rather than returning false,
+and no connector declares a write scope, so the token cannot do what the
+code refuses. The authorised route is the human approval queue, where
+such an action lands as a record that executes nothing. And a credential
+is never presented as a retrieval: states are not connected, connected
+but never retrieved, sync failed, partial, stale, fresh, and a failed
+attempt outranks the date of the last good one.
+
+Setup still needed from Tom: a Meta app with App Review (Facebook plus
+an Instagram Business account linked to the Page), a LinkedIn app with
+organisation product access, and for X a PAID API tier, since free
+access cannot read posts or metrics at all.
+
+Scott's equivalent is `lib/scott/social/fictionalSocial.js` under Bob
+Fletcher, with Ruth routing to him. It reads no credential, has no
+network path, and never imports the workspace;
+`test/scott/socialFirewall.test.js` enforces that. It reuses the
+existing 07E domains rather than inventing one, which is what makes
+Chloe seeing the comments but not the paid performance a real
+demonstration.
+
+**Governance note:** the approved v0.1 source map explicitly excluded
+social, email, banking, Ads, Calendar, accounting, analytics and CRM
+systems. Tom's instruction of 30/08/2026 approves the social
+connectors, which is a genuine expansion of the approved source set. It
+is built staging-first and credential-gated, and the expansion is being
+routed to Governance and Assurance as a controlled change rather than
+treated as self-approved.
+
+### Fifteenth governance review: AMBER, no HIGH (31/08/2026)
+
+`review/workspace-v0.1-governance-review-15-2026-08-31.md` (**AMBER**,
+V1 MEDIUM plus four LOW against head `6d6c4d1`), answered in
+`review/workspace-v0.1-v-remediation-2026-08-31.md`. All five corrected,
+each with a test watched red against `6d6c4d1`.
+
+**V1 is the sharpest of the fifteen, and the reviewer's reason for
+saying so is the right one.** U1 misattributed an *act*, which a reader
+might discount as receptionist idiom. V1 misstates **what an answer rests
+on**, which is the single thing the workspace exists to be trusted about.
+
+The U1 fix wrote "it was answered from the general records" into a string
+unconditionally. With an unseeded brain the general context is empty, and
+that is not a corner case: it is this candidate's documented state, it is
+what the U remediation's own evidence records, and it is what every
+visitor to Ask Ruth would meet the moment the AI flag is turned on
+without `WORKSPACE_SNAPSHOT_KEY`. The interface contradicted her on the
+same rendered line: "...answered from the general records... · No records
+were available for this answer." Three of the four zero-record turns
+claimed a basis that did not exist, and the one honest sentence was
+already in the file and unreachable, sitting below the early return U1
+added and the gap branch U5 added.
+
+The record clause is derived from the count. That sentence was written
+as "on every branch" and was not true of two of them until finding W1
+deleted the parameter that reached them. The test sweeps
+both directions, because a rule that only forbids is satisfied by saying
+nothing at all.
+
+**V2**: "she never claims authorship anywhere" was false when written.
+Three reachable sentences said "I have written the gap down"; she holds
+no write path, `repo.createGap` does. The regex written for U1 matched
+the one string U1 removed and walked past the three that remained,
+because the word after "I" is "have". Fourth instance of the shape K2,
+M1, N1 and P1 each recorded. The gap is now reported in the passive.
+"I took that to X" is deliberately kept: routing is the one thing she
+actually does.
+
+**V3** is half a fix in each direction, plus the part worth more than
+either. U4 made one of three read-shapes case-insensitive: a lower-case
+destructure still escaped, and the assign and delete suppressors, left
+upper-case only, turned an ordinary lower-case manipulation into a false
+failure. **And the "seven probes, both directions" claimed for U3 and U4
+were run by hand and never committed**, on the one check that has been
+defeated in every cycle since L5. The classifier now lives in
+`test/helpers/gatedSuiteScan.js`, exercised by
+`test/gatedSuiteScan.test.js` against twelve committed fixtures in
+`test/fixtures/gatedSuiteProbes/`, eight that must be flagged and four
+that must not, with the real check calling the same function so the
+probes test the deployed classifier rather than a copy.
+
+**V4**: `npm test` was not green in the environment this file's own
+Development section tells a developer to create.
+`test/resetUserPasswords.test.js` spread the caller's shell into the
+child while asserting the seed refuses a half-configured reset, so an
+exported `TOM_PASSWORD` made it fail. It builds the child environment
+explicitly now. It matters beyond tidiness: fifteen passes of evidence
+rest on "npm test is green", and a green that depends on an ambient
+variable the test does not control is a weaker fact than it looks.
+
+**V5**: `CLAUDE.md`'s claim of "no second reachable instance" of the T3
+prototype class was checked and two residual lookups found in
+`lib/workspace/clearance.js`. Not attacker-reachable, and the reviewer
+said so plainly: `clearanceId` is only ever `clearanceForUser(user)` and
+the outcome would be a 500, not access. The real consequence short of
+that is that `describeOwnerBinding()` shares the lookup, so a
+`WORKSPACE_OWNER_USERNAME` of `toString` would print the binding as ok
+for a username holding no clearance in code, which is the class G7 was.
+Both maps are null-prototype now.
+
+**A citation error found by the builder and disclosed rather than
+tidied.** The thirteenth review numbers **T2** as the inert `gapRaised`
+and **T3** as the crafted lane id. The T remediation reversed them, and
+the fourteenth and fifteenth reviewers both followed that labelling.
+Nothing about the code was ever wrong; both defects were found, fixed and
+verified red against `93d6afa`. Every code comment and both remediations
+now follow the thirteenth review, with a dated note at the head of the T
+remediation. Reviews 14 and 15 are left exactly as their authors wrote
+them, because a reviewed document is not the builder's to edit.
+
+**What the fifteenth reviewer re-established rather than inherited:**
+13,620 anonymous flag-off requests across 22 real routes by 10 spellings
+by 12 methods by 5 Accept values, none distinguishable from a genuine
+404; 5,640 more with the flag on; the full CMS-admin takeover executed
+end to end, stopping at the unlock screen, with a positive control in the
+same run; the alert's bound at 25 rounds of 12 racing processes, exactly
+one notice every time, with the harness first shown to break a lock-free
+predecessor 5 times in 10; the permission legs probed with their own
+eight canaries; and the Scott firewall clean at module-graph level.
+
+### Seventeenth governance review: PASS, four LOW (31/08/2026)
+
+`review/workspace-v0.1-governance-review-17-2026-08-31.md` (**PASS**,
+X1-X4, all LOW, against head `69b6e06`), answered in
+`review/workspace-v0.1-x-remediation-2026-08-31.md`. All four corrected,
+each watched red against `69b6e06`.
+
+**Two PASS verdicts in a row.** The reviewer's own summary of why they
+are still findings is the honest framing and is quoted rather than
+paraphrased: *"Four times the seventeenth instance, all in the same
+register the sixteenth pass named: the code has stopped being wrong and
+the sentences about it have not quite caught up."*
+
+**X1: the field guard was own-keys-only.** `assertOnlyPermitted`
+filtered `Object.keys`, so a prototype-borne `recordCount` was invisible
+to it while the destructure read straight through the prototype chain,
+and Ruth stated a count the interface contradicted with no throw. Not a
+disclosure - only declared names are read, so a prototype-borne `record`
+was never spoken - and not reachable, since the single caller builds an
+object literal. It is the guard's own stated mechanism that did not
+hold, which is why it is fixed rather than explained: `for...in` for the
+guard, `Object.hasOwn` for the reads, because either alone leaves the
+other open.
+
+**X2: "every reachable sentence" was a sample of five counts.** The count
+is unbounded, so a sentence conditional on a sixth passed. Fixed with the
+PROPERTY rather than a bigger sample: the output depends on the count
+only through none, one, and more than one, asserted over every count from
+2 to 60, with the three classes asserted genuinely distinct so the
+property cannot be satisfied by ignoring the count.
+
+**X3: one of the three scan rules was not factored.**
+`returnsEarlyOnEnv` still matched the literal `process.env` while the
+file said every rule used the factored expression, so it missed W3's own
+probe B, `require('process')` - observable exactly where the
+name-reading rule stands down, on an ambient name. The alias set is
+computed once and shared by both rules now, so it cannot recur by one
+clause knowing about an alias the other does not.
+
+**X4: a carried erratum describing a file it no longer matched.** The
+fifteenth reviewer's note said the candidate carried the text without it;
+the candidate now carries it. A dated builder's note is appended below,
+in the pattern already used twice in the same commit, and nothing of the
+reviewer's text is altered.
+
+**Recorded, not fixed:** `npm test` with no `DATABASE_URL` gives 21
+failures in the CRM and erasure suites, which need a database without
+gating on one. Measured identically at `69b6e06`, so it is pre-existing
+and outside this candidate, and it belongs with the W3 "positive
+obligation" work rather than with a release commit.
+
+**What the seventeenth reviewer re-established:** Ruth's output space at
+5,152 calls and 20 shapes, of which exactly 12 are production-reachable
+and exactly those 12 declared; 11 of 12 mutations red; the three gates
+across 15,300 request comparisons and 1,680 timed requests against shape-
+and length-matched controls, with a positive control that does differ;
+the CMS-admin takeover stopping at the unlock screen; and - sharper than
+the previous pass - the advisory lock alone holding the alert's bound
+across 40 bursts with the unique index dropped, while a lock-free
+predecessor breaks 29 times in 40.
+
+### Eighteenth governance review: PASS, two LOW, fitness confirmed - RELEASE PROCEEDING (31/08/2026)
+
+`review/workspace-v0.1-governance-review-18-2026-08-31.md` (**PASS**,
+Y1-Y2, both LOW, against head `bdc3d0d`). Third PASS in a row, and this
+is where the cycle stops: Tom asked the reviewer for an explicit fitness
+judgement rather than a bare verdict, and got one.
+
+> "Yes, I think the register has reached its floor, and yes, I consider
+> the candidate fit for a production release decision... Neither Y1 nor
+> Y2 should gate a release."
+
+**Y1**: the X2 property test is named for a property over an unbounded
+domain (the record count) and establishes it over counts 2-60. A
+sentence conditional on `n === 137` would pass. It is nonetheless
+sufficient in practice, because `MAX_CONTEXT_RECORDS = 24` in
+`orchestrator.js` caps the domain the function can ever actually be
+called with - a cross-module fact the test does not state. **Y2**: the
+dated builder's note added for X4 says the two copies of the fifteenth
+review "no longer differ at all", inside the very commit that makes them
+differ by twenty lines - X4's own shape, one iteration along, and purely
+self-referential.
+
+**Neither is fixed.** Per Tom's standing instruction: a PASS plus an
+explicit fitness judgement ends the cycle, and a nineteenth pass is not
+commissioned to chase a LOW wording point. Both are recorded here as
+open, cheap, non-blocking corrections for a later ordinary commit.
+
+**What eighteen passes actually changed, in the reviewer's own framing,
+worth keeping as the honest summary of this whole project:**
+
+> "Reviews 1 to 11 found HIGH findings, and several were live security
+> defects... Reviews 12 and 14 to 18 have found no HIGH and no MEDIUM.
+> Every finding in the last four cycles - W, X, and now Y - has been a
+> sentence that outruns its code... The access controls are the
+> strongest part of this system and they have now been attacked
+> independently eighteen times without giving way."
+
+**Re-established one final time rather than inherited:** 224/224
+anonymous workspace probes byte-identical to a genuinely missing path
+with the flag off, across eight methods and 28 paths; the full
+CMS-admin takeover (a second admin actually resets Tom's password, logs
+in, holds the right username and the right user id) stopping at the
+unlock screen with a positive control unlocking in the same run;
+passphrase rotation invalidating an open unlock while login stays
+intact; the alert's bound across 240 racing processes with a negative
+control breaking 7 of 12 rounds; 91 clearance-by-lane combinations
+against an independently computed expected set. Every measurement claim
+in the X remediation verified, including the 21 no-`DATABASE_URL`
+failures being identical at both heads and none of them in the
+workspace.
+
+**Two things reserved to Tom, and treated as pre-flight checks on the
+day rather than code changes:** the secret rotation named throughout
+this file (`WORKSPACE_ACCESS_PASSPHRASE`, `WORKSPACE_SNAPSHOT_KEY`, then
+`SESSION_SECRET` and the account passwords), and one real delivery of
+the failed-unlock alert email in production - the one control here
+whose end-to-end behaviour nobody has observed in eighteen passes.
+
+**Release proceeds per Tom's decision of 31/08/2026**, in the sequence
+recorded immediately below.
+
+### Sixteenth governance review: PASS, four LOW (31/08/2026)
+
+`review/workspace-v0.1-governance-review-16-2026-08-31.md` (**PASS**,
+W1-W4, all LOW, no MEDIUM and no HIGH, against head `0f03a6a`), answered
+in `review/workspace-v0.1-w-remediation-2026-08-31.md`. All four
+corrected, each watched red against `0f03a6a`.
+
+**This is the second PASS in sixteen and the first on a candidate that
+includes Ruth.** It covers `0f03a6a` and nothing else: the corrections
+below change the head, so a seventeenth confirmatory pass was
+commissioned rather than the verdict being carried forward. That is the
+same rule applied when Ruth followed the twelfth pass.
+
+**W1: an inert parameter, and the stronger fix.** `answered` was passed
+on every turn and was always true, because `parseReply` refuses a reply
+whose answer is not a non-empty trimmed string and the route answers 503
+before Ruth is called. Three of her six shapes were dead, and two of the
+dead ones carried a hard-coded "there is nothing on file" that the count
+never touched, contradicting the module's own rule and the same sentence
+in this file. **That is finding T2 recurring one parameter along, in the
+same function, three cycles later.** The parameter is deleted rather than
+its strings patched, because an inert parameter invites a future caller
+to reach branches nobody reasoned about; the field guard now throws if
+anyone passes it again.
+
+**W2: a denylist one synonym from useless.** The V2 fix widened the
+auxiliary and left the verb list a denylist of eight. The reviewer walked
+a mutation past it in one line: "I took that to X, and I checked the 3
+records behind it myself" - a claim to have read records she cannot read,
+green against a suite named for that property. Fifth instance of the
+shape, inside the fix for the fourth. Her permitted output set is now
+**declared and asserted for membership**, in both directions, so a new
+sentence must be added deliberately and read.
+
+**W3: five more idioms, and a claim wider than the code.** All five were
+ways of naming the same object, so the environment expression is factored
+into one place rather than five patterns being added to an arms race nine
+cycles have shown unwinnable. The more important half is the sentence:
+the file claimed the scan "must at least catch the shapes the runner is
+blind to", and that is narrowed to what the code does, with the durable
+fix (a positive obligation measured by running the tree rather than
+reading it) recorded as the next step rather than as done.
+
+**W4 was self-found before the review returned, and it was mine.** Node's
+discovery includes every `.js` under a directory named `test`, so all
+twelve V3 fixtures were being executed while the comment said they never
+were - the sixteenth instance of this chain's defect class, in the commit
+that fixed the fifteenth, inside the fix for the check defeated every
+cycle. It also reintroduced V4's own class two commits after V4 closed.
+The fixtures carry `.jsfixture` now and **a test asserts it**, because a
+comment claiming the runner ignores a file is what this chain has learned
+not to trust.
+
+**What the sixteenth reviewer re-established rather than inherited:**
+Ruth's whole output space at 1,080 calls and 99 strings plus the real
+endpoint under three model stubs; all three gates across 12,654 request
+comparisons and 1,200 timed requests in both flag states, anonymous and
+as an uncleared CMS admin, against shape-matched controls on status, full
+headers and body hash, with zero real differences; the CMS-admin takeover
+stopping at the unlock screen; passphrase rotation invalidating an open
+unlock; the permission legs at 60 clearance-by-lane combinations plus a
+17-surface rendered sweep with a positive control that does show a leak;
+and the alert's bound over 115 bursts with a warmed pool.
+
+### Twelfth review PASS, then two more after Ruth (31/08/2026)
+
+The **twelfth** pass (`review/workspace-v0.1-governance-review-12-2026-08-31.md`)
+returned **PASS** against head `d745a55`, the first green verdict in
+twelve, with two LOW findings (S1, S2) answered in the S remediation.
+That verdict covers the candidate **as it stood at that head**. Ruth was
+added afterwards on Tom's instruction, which is a material change, so the
+candidate went back for confirmatory passes rather than inheriting the
+green.
+
+**Thirteenth** (`...-13-...`, **AMBER**, T1-T6 against head `93d6afa`)
+and **fourteenth** (`...-14-...`, **AMBER**, U1 MEDIUM plus four LOW
+against head `eeb3a25`), answered in
+`review/workspace-v0.1-t-remediation-2026-08-31.md` and
+`review/workspace-v0.1-u-remediation-2026-08-31.md`. All eleven
+corrected. T1-T3 are recorded in the Ruth section above.
+
+**U1 is the sharpest finding in fourteen passes, because it is an honesty
+defect in the voice of the component added to be honest.** Ruth said
+**"I answered that one myself"**. She holds no clearance and reads no
+record, so she authors nothing. It is the same class of untruth thirteen
+reviews spent their time removing from the unlock alert: a component
+describing something that did not happen.
+
+Two things made it worse than a stray sentence, and both are the
+recurring pattern rather than new:
+
+- **A two-part finding fixed in one part and reported as fixed in both,
+  for the third cycle running.** T1 had two limbs, the controlled
+  statements and Ruth's own output. The T remediation corrected the
+  statements and said "all six corrected".
+- **It was the DEFAULT path, not an edge case.** Routing is nine keyword
+  regexes, so an unrouted question is the common case, and the T3
+  prototype fix then sent every invalid lane id down that same branch.
+  The reach of the false sentence grew inside the commit meant to correct
+  things.
+
+The no-lane turn was rewritten. **What replaced it was wrong too, and
+the fifteenth review found it: see V1 below.**
+
+**U5** is the same shape: T2's `gapRaised` branch sat below the no-lane
+early return, so it was inert on the default path, and the test written
+for T2 used a lane id that never reaches that return. A gap is now
+reported on both paths and asserted on both.
+
+**U3 and U4 were both my own over- and under-correction of T5** in
+`test/gatedSuites.test.js`. `DB_ONLY_GATE` suppressed all three clauses
+instead of the one it is about, so any file containing the literal phrase
+"set DATABASE_URL" stopped being checked for registering nothing or
+returning early, silently, on ten real files. And the environment-name
+match required upper case, so a lower-case or mixed-case read and a
+computed bracket key both walked past a paragraph claiming to cover them.
+The computed rule is deliberately narrowed to a computed **read**: five
+real suites here set or delete env keys by computed name as part of a
+test, and flagging those would have made the check noise. Seven probes
+now run in both directions.
+
+**What the fourteenth reviewer re-established rather than inherited:**
+the full CMS-admin takeover stopping at the unlock screen with a positive
+control in the same run; 3,591 paired anonymous raw-socket requests per
+flag state, all identical; and Ruth probed across twenty
+clearance-by-lane combinations with the model stubbed to echo everything
+it could see, leaking nothing. They also hunted T3's prototype class
+across every dynamic lookup in `lib/`, `routes/`, `middleware/`,
+`server.js` and `db/` and found no second reachable instance.
+
+**One latent fail-open is carried to Tom rather than fixed here.**
+`lib/scott/clearance.js`'s `personaDomains` falls back to the owner
+persona for an unrecognised id. It is unreachable today and it is live in
+production, so changing it on the way to a workspace release would be
+exactly the scope drift these reviews exist to catch.
+
+### Fourth governance review: AMBER, four findings, no HIGH (31/08/2026)
+
+`review/workspace-v0.1-governance-review-4-2026-08-31.md` (**AMBER**,
+J1-J4), answered in `review/workspace-v0.1-j-remediation-2026-08-31.md`.
+First pass in four with no HIGH finding. All four corrected.
+
+**J1 (MEDIUM) is the fourth instance of the pattern, and the most
+instructive.** `unlockAlert.js` stated "It is BOUNDED. One alert per
+cooldown window, no matter how many attempts arrive." It was not: the
+cooldown was an unsynchronised read-decide-send-then-write, called once
+per failed attempt without being awaited, so eight concurrent attempts
+delivered eight messages. **The serial path was correct throughout**,
+which is why reading the code never showed it — and the test named "a
+guessing loop produces one alert, not a flood" called the decision
+helper once, serially, with the cooldown already in place, so it
+asserted nothing about the property it was named for.
+
+The slot is now CLAIMED in the database before anything is sent, with a
+three-minute lease so a dead process costs one duplicate rather than
+permanent silence.
+
+**That fix was itself wrong, and the fifth review found it (K1/K2,
+31/08/2026).** The claim was "a conditional insert only one caller can
+win": an `INSERT ... SELECT ... WHERE NOT EXISTS` with no unique
+constraint behind it. At READ COMMITTED, which is what this app runs, an
+uncommitted insert is invisible to a concurrent transaction, so two
+callers can both find NOT EXISTS true and both insert. Twelve processes
+racing one instant won the claim 2 to 8 times.
+
+Worse, the sentence "tested concurrently against a real database" was
+true and still proved nothing. **The test passed only because it ran on
+a cold connection pool.** With eight callers and no established
+connections, node-postgres opens them one by one and the cost staggers
+the statements enough that they serialise by accident. Warm the pool
+with eight trivial queries first — less than any live server has in its
+first second — and the same test fails half the time; kept warm in a
+loop, nineteen times in twenty-five.
+
+The claim is now serialised by `pg_try_advisory_xact_lock` on a single
+connection inside a real transaction, and the whole rule (threshold,
+cooldown, failure backoff, another caller's lease) is applied by the
+pure `decideAlert` INSIDE that lock, so the deployed path and the
+exhaustively-tested function are the same code rather than two copies
+(finding K3). Try rather than wait, because this is called
+fire-and-forget on every refused attempt and waiters would exhaust the
+pool during exactly the burst the alert exists to report.
+
+Both concurrency tests are now red against the pre-fix code and green
+after: the in-process one warms the pool first and repeats five rounds,
+and a second races twelve separate processes
+(`scripts/workspaceUnlockClaimWorker.js`), which removes the
+single-event-loop artefact altogether.
+
+**The working rule adopted from the reviewer, which matters more than
+the fix:** every asserted security property must name the test that
+establishes it, and that test must exercise the REAL function under the
+conditions the property claims to hold — not a pure helper beneath it,
+and not the easy path. Three of the four instances (F2, G1, J1) would
+have been caught by it.
+
+- **J2**: the per-account cooldown matched the username inside the
+  alert's own prose with `LIKE '%"tom"%'`, so rewording the message
+  would silently have removed the cooldown and a username containing a
+  LIKE wildcard would match another account's rows. It is now a
+  `subject` column on `workspace_activity`, matched exactly.
+  **The Scott release ordering trap recurred here and is worth knowing:**
+  the index was first placed in `schema.sql` beside the table. On an
+  existing database `CREATE TABLE IF NOT EXISTS` is skipped while the
+  index statements still run, so an index naming a not-yet-added column
+  failed the whole seed. It is created in `db/seed.js` after the ALTER,
+  with a comment saying why it is not where it looks like it belongs.
+  Verified on the existing database AND on a fresh one seeded twice.
+- **J3**: a failure BEFORE the send (a database error, or the H7 field
+  guard firing) was logged to console and written nowhere durable, so a
+  database problem would make the alarm silent with no trace on any
+  surface Tom can reach. Pre-send failures are now recorded.
+- **J4**: I recorded H6 as "genuinely blocked" on
+  `WORKSPACE_SNAPSHOT_KEY`. The reason was false — the key was in the
+  working environment throughout. The plaintext snapshot extract and the
+  key were sitting together in the agent scratchpad. **The extract was
+  deleted and the key was not** (finding K4, 31/08/2026): it survived in
+  a Railway variables dump in the same directory, beside
+  `SESSION_SECRET` and the account passwords, and was removed and
+  verified gone only after the fifth review found it. The repository was
+  and remains clean throughout. The probe is
+  unblocked by SEEDING its own confidential record with unmistakable
+  canaries and removing it in a `finally`, not by decrypting anything.
+  **Still open and Tom's, not the builder's:** the seeded record tests
+  the FILTER; only real snapshot records test the TAGGING, that genuine
+  confidential material is marked confidential. Closing that means Tom
+  adding more genuine confidential records, not the builder writing
+  synthetic ones into the real snapshot.
+
+### Eleventh governance review: AMBER, one HIGH (31/08/2026)
+
+`review/workspace-v0.1-governance-review-11-2026-08-31.md` (**AMBER**,
+R1 HIGH, R2 LOW), answered in
+`review/workspace-v0.1-r-remediation-2026-08-31.md`. Both corrected.
+
+**R1 (HIGH): the Q1 fix was case-sensitive and Express's routing is
+not.** `server.js` never sets `case sensitive routing`, so Express's
+default applies and `/API/workspace/ask` reaches the same handler. The
+guard matched lower case only, so one capital letter walked past it and
+reopened the entire OPTIONS enumeration oracle: all nine real endpoints,
+anonymously, in both flag states, with no workspace variables set.
+
+**The rule: a guard that decides on a path must match paths the same way
+the router does, or it is guarding a different application from the one
+that is running.** Fixed with an `i` flag; measured at 220/220
+byte-identical to a genuinely missing path across five methods, eleven
+paths and four spellings, both flag states. Trailing slashes, doubled
+slashes, `..` traversal and percent-encoding were checked too, and
+non-workspace routes are unaffected.
+
+**And the Q1 test reported 10/10 green on the same server, in the same
+minute, as that enumeration** - it swept four methods but listed paths by
+hand in one spelling. Paths are now generated into case variants, and the
+case is red against `ebac5f6`.
+
+**R2 (LOW): replacing the source scan with the runner lost coverage.**
+Two shapes never reach the runner's output - a suite that registers
+nothing, and an early return from a test body, which the runner reports
+as PASSING rather than skipped. Both halves are back, with the source
+scan narrowed to exactly what the runtime check cannot see. Also fixed:
+the runner reported a test whose NAME contains `# SKIP` as a skipped
+suite (TAP escapes a `#` in a description as `\#`, so the lookbehind is
+the discriminator), and the file header advertised the deleted check.
+
+### Tenth governance review: AMBER, one HIGH (31/08/2026)
+
+`review/workspace-v0.1-governance-review-10-2026-08-31.md` (**AMBER**,
+Q1 HIGH plus Q2-Q4 LOW), answered in
+`review/workspace-v0.1-q-remediation-2026-08-31.md`. All four corrected.
+The reviewer attacked all four P-cycle fixes and found all four hold.
+
+**Q1 (HIGH): anonymous OPTIONS enumerated the workspace API with the
+flag OFF.** Express answers `OPTIONS` from its own route table BEFORE
+any route middleware runs, so every real `/api/workspace/*` endpoint
+returned `200 Allow: POST` to an unauthenticated request while a
+fabricated sibling returned 404, on a server with no workspace variables
+set at all. `routes/workspace.js` is not on main, so **merging would
+have added that oracle to the live site** and the claim that merging is
+inert was false as written. Same consequence as G1, which this chain
+graded HIGH, through a method instead of a header.
+
+**Why it survived ten passes:** the adversarial suite reported 9/9 green
+on the same server in the same minute, because every probe anyone had
+written sent GET or POST. **The methods nobody uses are exactly the ones
+no route handles, and therefore the ones the framework answers on your
+behalf.** That is the lesson to keep.
+
+Closed by `refuseUnroutedMethods` in `lib/workspace/access.js`,
+registered first on the router AND first in `mountPageRoute` (Express
+decides before route middleware, and the page routes live on the app).
+Measured at **65/65 byte-identical to a genuinely missing path**, both
+flag states, anonymous. The adversarial suite now sweeps four methods
+across real and fabricated paths and is red against `09cd35e`.
+
+**Q3 changed a method rather than patching again.** Five reviews found
+more drift-guard evasion shapes; matching the shape of a gate is an arms
+race against ordinary JavaScript. `npm test` now runs
+`scripts/runTests.js`, which streams `node --test` through unchanged,
+preserves its exit code, and reads the `# SKIP` directives the runner
+itself emits. A skip appears there whatever the source looks like, so
+there is no shape left to evade, and all five gated suites are named on
+every run.
+
+**Q2**: the "one clock decides" sentence was still wrong after P5, and
+is now precise: the authoritative gate is entirely in SQL, while
+`decideAlert`'s comparisons stay in JavaScript on purpose so the rule is
+testable without a database. **Q4**: `recordedAs` could name a row that
+was never written, which is N1's class one layer out; it reports null
+when nothing was recorded.
+
+### Ninth governance review: AMBER, no HIGH (31/08/2026)
+
+`review/workspace-v0.1-governance-review-9-2026-08-31.md` (**AMBER**,
+P1-P5, two MEDIUM three LOW), answered in
+`review/workspace-v0.1-p-remediation-2026-08-31.md`. All five corrected.
+
+**P1 is the ninth instance, and it is the worst kind: a fix recorded as
+made, in three places, that never ran.** The N3 correction lived in a
+branch with no reachable caller. `ClaimContentionError` is thrown inside
+`claimAlertSlot`, which is awaited BEFORE `claimId` is assigned, so a
+contended failure always took the `else` branch, and that branch
+hard-coded the error type and its own sentence instead of using the
+outcome computed three lines above it. So contention still bought five
+minutes of guaranteed silence, while the remediation, a code comment and
+this file all said it did not. The reviewer also mutated the frozen head
+so contention recorded itself as a DELIVERED notice buying the full
+hour, and the entire 538-test suite stayed green.
+
+**The test named for the property called the pure helper with null
+inputs.** That is the same failure as K2, M1 and N1: the test asserts
+something adjacent to the property and passes while the property is
+false. Both branches now record the same computed outcome, and the test
+holds the advisory lock from a second connection so the real function
+meets real contention. It is red against `1710179`.
+
+**P2: my "I could not reproduce it" was wrong, and measured wrong.** Two
+variables were off. The stagger has to be RANDOM rather than a
+deterministic ladder, and the send has to be SHORT: a long send lets the
+winner resolve its claim before the stragglers arrive, closing the very
+window the test opens. Corrected, 60 rounds against two defective
+predecessors break 8 times and 4 times; the profile I had defended broke
+neither, 0 in 60 against both.
+
+**P3**: "every authoritative window is now in SQL against `now()`" was
+untrue of the threshold window, which still used the Node clock. It does
+not now. **P4**: four more drift-guard evasion shapes, including the
+`const env = process.env` idiom the guard's own file used. The guard now
+tracks what is read off an alias or a copy, rather than flagging the
+alias itself, because two real suites here spread `process.env` into a
+child process and snapshot it for restore and neither is a gate.
+**P5**: P1's and P3's inaccuracies were written into this file too, and
+are corrected above.
+
+**What held:** all three gates, with 153/153 path, identity and Accept
+combinations byte-identical to a genuine 404 with the flag on and off;
+the concurrency guarantee across 220 bursts plus 120 racing worker
+processes, zero duplicated and zero silent, against a control
+reproducing the old defect 23 times in 180. The reviewer also added a
+check nobody had done: rotating the passphrase invalidates an open
+unlock immediately while leaving the login intact.
+
+### Eighth governance review: AMBER, no HIGH (31/08/2026)
+
+`review/workspace-v0.1-governance-review-8-2026-08-31.md` (**AMBER**,
+N1-N5, two MEDIUM three LOW), answered in
+`review/workspace-v0.1-n-remediation-2026-08-31.md`. All five corrected.
+
+**The concurrency guarantee now holds, established by the reviewer's own
+instruments:** roughly 1,500 bursts across nine harness shapes, zero
+duplicated and zero wrongly silent, with the same harnesses breaking the
+previous head at 4% and 10.7%. All three gates held, including 45/45
+workspace paths byte-identical to a genuine 404 and the full CMS-admin
+takeover stopping at the unlock screen.
+
+**N1 is the eighth instance and it was in the commit that fixed the
+seventh.** M2's fix corrected one direction of the honesty rule and
+opened the other: any failure AFTER the send, including the statement
+that records the outcome, was reported as "NO send was attempted" about a
+message that had reached the mailbox, and started no cooldown, so a
+duplicate followed. What was attempted and what it returned is now
+recorded before the send and decides what is written: nothing attempted
+gives an error, an attempted failure gives a failed send, and a
+**successful** send gives delivered with the hour running, because a
+delivered message is delivered whatever went wrong while recording it.
+
+**The test was the finding.** The case pinning M2's property threw from
+`sendFn` - a send that WAS attempted - then asserted the "nothing was
+attempted" wording, so it passed against the defect it was named for.
+
+**N4 taught the same lesson in a different place:** claim ages were
+computed from the Node clock against timestamps written by the DATABASE
+clock, and those disagree here by up to a minute. A future-dated claim is
+newer than any lease, so it was never reclaimed and silenced the alarm
+for the whole skew. Every authoritative window is now expressed in SQL
+against `now()`, so the database's clock alone gates a claim. **That
+sentence originally read "every authoritative window", which was untrue
+of the threshold window (P3) and still over-broad after it (Q2): the
+comparisons in `decideAlert` remain in JavaScript on purpose, because
+they produce the reason string and keep the rule testable without a
+database. Where the clocks disagree the SQL wins.** Fixing it surfaced a second
+defect: the reclaim ran after the state was read, so the decision still
+gated on the future row and never reached the takeover.
+
+**N3**: contention was declared a distinct error and handled identically
+to a database fault, so losing a race bought the send backoff and
+silenced a genuine burst. **That fix was dead code and this sentence was
+wrong until finding P1 corrected it** (see the ninth review above): the
+branch it added had no reachable caller. **N5**: the drift guard, third pass. It no
+longer matches how a gate is written - a suite cannot decline to run on
+configuration without READING configuration, so it looks for environment
+reads outside an ambient allowlist, ignoring names the file assigns, with
+the shape check kept only for an unconditional `t.skip`. Seven evasion
+shapes verified caught. **N2**: the four structural changes of the
+previous cycle appeared nowhere in the test tree and are now named
+directly, including that the DATABASE refuses a second claim (asserting
+`23505`) rather than that the code declines to make one.
+
+**Recorded rather than glossed:** the reviewer showed the concurrency
+test's stagger turning a clean 150/150 into 16 failures in 150. I could
+not reproduce that here - fifty rounds at each profile against both
+candidate predecessors, index dropped, zero bad rounds either way - so
+the stagger is kept as a more realistic arrival pattern and nothing more
+is claimed for it.
+
+### Seventh governance review: AMBER, no HIGH, no production defect (31/08/2026)
+
+`review/workspace-v0.1-governance-review-7-2026-08-31.md` (**AMBER**,
+M1-M5, three MEDIUM two LOW), answered in
+`review/workspace-v0.1-m-remediation-2026-08-31.md`. All five corrected.
+
+**The reviewer verified the concurrency work independently** rather than
+reading it: five separately written harnesses, roughly 380
+threshold-sized bursts, zero silent and zero duplicated, with the same
+harnesses reproducing both of the sixth review's HIGH defects against
+the older head.
+
+**M1** was the same wrong assumption about `db/pool.js` as L1, eleven
+lines below the comment explaining L1: the worker called `db.end()`,
+which the module does not have, so all twelve workers exited 1 while the
+test reported zero errors because it discarded the exit code whenever
+output had been printed. **M2**: a failure before any send was recorded
+as a failed *send*, bought the send backoff, and made the register say
+"the last notice FAILED to send" about an attempt that never reached a
+mailbox — the exact prohibition in the module's own rule 4; there is now
+a distinct error type with honest wording. **M3**: retry exhaustion was
+silent and returned a never-reassigned constant. **M4/M5**: the drift
+guard matched a trailing comment rather than a gate, and the armed map
+omitted `WORKSPACE_TEST_PASSPHRASE` so a half-run suite printed as run.
+
+**The larger finding came out of chasing M3, and it is the one worth
+remembering.** Re-measuring the bound showed a **5% duplicate rate** the
+advisory lock did not prevent. Instrumenting the real decision path
+showed why: `decideAlert` reads the state, and the INSERT acting on that
+decision is a **later moment**. A caller can read an empty table, be
+descheduled, and insert after another caller has claimed, sent and
+*resolved* its row, at which point the claim slot is free again. Neither
+caller misbehaves; the decision is simply older than the write it
+authorises.
+
+Closed by making the guarantee **structural rather than sequential**,
+which is what every previous fix here failed to do: the `NOT EXISTS`
+guard travels inside the INSERT so check and write share one snapshot
+(sound now, unlike pre-K1, because the lock means nothing sits between
+them), plus a partial unique index `uq_workspace_alert_pending` so a
+second unresolved claim is refused by Postgres whatever the callers do.
+Measured after: **100 consecutive bursts, exactly one notice every
+time**, nothing left idle in transaction or holding a lock.
+
+**A production-crash bug the index nearly introduced, worth knowing:**
+`CREATE UNIQUE INDEX` fails on pre-existing duplicates, and duplicate
+claims are exactly what J1 and K1 produced — so on a database that ran
+that code, the seed (which is the start command) would have crashlooped
+the app on boot. Same class as the Scott release incident. The seed now
+retires superseded duplicates first; verified on a fresh database and on
+one deliberately polluted with duplicates.
+
+### Sixth governance review: AMBER, three HIGH (31/08/2026)
+
+`review/workspace-v0.1-governance-review-6-2026-08-31.md` (**AMBER**,
+L1-L5, three HIGH), answered in
+`review/workspace-v0.1-l-remediation-2026-08-31.md`. All five corrected.
+**The first severity RISE in the chain**, and rightly: two of the three
+HIGH findings were defects introduced in the previous cycle while fixing
+the one before it.
+
+**L1 (HIGH) is the most instructive failure in the whole chain, because
+the mechanism added to make the property true had never once run.**
+`db/pool.js` exports `{ query, pool }`; the pool test was
+`typeof db.connect === 'function' && typeof db.totalCount === 'number'`,
+which a plain object fails. So for the handle the application and every
+test actually pass, the dedicated-client branch was dead code, and
+BEGIN, the advisory lock, the INSERT and COMMIT each ran on a **different
+connection**: no transaction, the lock released immediately, connections
+stranded idle in transaction. The reviewer measured 65 calls, 65
+not-pool, 0 pool, against a remediation claiming "both paths are
+exercised". It passed anyway because an idle pool hands the
+just-released connection back to the same caller.
+
+**The rule this adds, since "test the real function" was not enough:
+assert the BRANCH, not just the outcome.** A test that checks only the
+result cannot tell a working mechanism from one that never ran and got
+lucky. `dedicatedConnectionSource()` is exported so a test can pin which
+branch the deployed handle takes, and a handle that cannot hold a
+transaction now **throws** rather than continuing.
+
+**L2 (HIGH): the K1 fix could produce NO alert at all**, which is worse
+than the duplicates it replaced. `failuresInWindow` was read outside the
+lock, so a caller with a stale sub-threshold count could win the lock,
+decide nothing was due, and silence every caller that could see the true
+count — worst at exactly the threshold of three. Fixed by reading the
+burst inside the lock and by retrying on lost contention (4 attempts,
+100ms apart) instead of standing down. Measured over the real HTTP
+endpoint: **5 of 10 threshold bursts silent before, 0 of 10 after.**
+
+**L3 (HIGH): the K4 secret sweep missed the main session transcript**,
+which held a Railway payload with `SESSION_SECRET`,
+`WORKSPACE_SNAPSHOT_KEY`, **`WORKSPACE_ACCESS_PASSPHRASE`** (gate 3, the
+mechanism closing F1) and three account passwords. Cause: I swept for
+the five values I had in front of me rather than for the shape of a
+secret. The scrub is now pattern-driven across the whole session tree
+and verified by re-scan at zero. **Rotate `WORKSPACE_ACCESS_PASSPHRASE`
+and `WORKSPACE_SNAPSHOT_KEY` before production**, then `SESSION_SECRET`
+and the account passwords. The repository was clean throughout.
+
+**L4 (MEDIUM)**: the disproven "conditional insert only one caller can
+win" survived in the module's rule 2 and the J remediation, both of
+which the K remediation claimed were corrected (only this file was).
+Rule 2 no longer states the guarantee at all; it points at the lock that
+provides it. A guarantee asserted far from its mechanism is how this
+went wrong twice. **L5 (LOW)**: the gated-suite drift guard matched only
+a literal `skip:`; it now covers four shapes, each verified to go red.
+
+### Fifth governance review: AMBER, five findings (31/08/2026)
+
+`review/workspace-v0.1-governance-review-5-2026-08-31.md` (**AMBER**,
+K1-K5, three MEDIUM, two LOW, no HIGH), answered in
+`review/workspace-v0.1-k-remediation-2026-08-31.md`. All five corrected.
+
+**K1 and K2 are the fourth review's fix failing in the same module and
+the same numbered rule** — see the J1 entry above, which now carries the
+whole story. The short version: the claim insert was not atomic at READ
+COMMITTED, and the test that pinned it passed only because it ran on a
+cold connection pool. K2 is the more important of the two, because the
+working rule adopted after J1 was written down and then not applied.
+
+**K3**: `decideAlert` had become dead code in the deployed path while
+carrying the module's most-cited tests, because J1 moved the live rule
+into SQL. Fixed by making it live again rather than annotating it: once
+an advisory lock serialises the claim, the decision does not have to be
+in SQL to be atomic, so the pure function gained the claim-lease leg and
+is now called inside the lock. One rule, one place, executed in
+production.
+
+**K4**: the snapshot key reported as securely deleted in the J
+remediation was still in the working directory, in a Railway variables
+dump beside `SESSION_SECRET` and the account passwords. Second
+consecutive pass in which a statement about that key did not survive
+being checked. Cleared and verified across the whole session directory,
+which turned up a third file the obvious sweep missed: a completed
+subagent transcript holding both the key and a truncated decrypted
+extract. **Rotate `WORKSPACE_SNAPSHOT_KEY`** before production;
+`data/workspace-snapshot.enc` and the repository were clean throughout.
+
+**K5**: the candidate did not stay frozen. The builder edited
+`lib/workspace/unlockAlert.js` in the reviewed working tree, mid-review,
+on the defect under review. The reviewer preserved it, restored the
+frozen file and re-ran its probes, so the verdict is sound. **Standing
+correction: work during an open review happens in a separate `git
+worktree`, never in the reviewed checkout.**
+
+Also addressed, a concern raised in all five passes and never a finding:
+`npm test` reported `skipped 2` while five suites carried a SKIP
+directive, including both adversarial and both live-AI suites.
+`test/gatedSuites.test.js` now prints which gated suites did not run and
+what arms each, and fails if a new gated suite is added without being
+declared.
+
+### Third governance review: AMBER, seven findings (31/08/2026)
+
+`review/workspace-v0.1-governance-review-3-2026-08-31.md` (**AMBER**,
+H1-H7), answered in `review/workspace-v0.1-h-remediation-2026-08-31.md`.
+All seven corrected except the snapshot half of H6, which is blocked.
+
+**Two HIGH findings, and both were the same pattern for a third time:**
+a security property asserted in a comment and untrue in the code. Both
+were in the G6 alert, i.e. in the newest code, written in response to the
+previous review.
+
+- **H1**: the alert's recipient fell through to the CMS row
+  `content['contact.email']` when `WORKSPACE_ALERT_EMAIL` was unset. That
+  row is editable by anyone holding `edit_content` — which is exactly the
+  account the alarm exists to warn about. The reviewer retargeted the
+  alarm to `attacker@evil.example` with one `PUT /api/content`. Now the
+  recipient comes only from the Railway variable or a hard-coded
+  constant, and `alertRecipient()` **takes no database handle at all**,
+  so a query cannot be slipped back in unnoticed. The test that pinned
+  the fallback now forbids it.
+- **H2**: a failed send wrote the same row a success did, so it started
+  the sixty-minute cooldown. With `GMAIL_APP_PASSWORD` unset every send
+  fails, so **the alarm could never fire**. The reviewer did not have to
+  construct this: it happened by itself in the real database, where an
+  undelivered notice ate the budget and the genuine five-attempt burst
+  45 seconds later produced no alert. Failures now use their own event
+  type and earn a 5-minute backoff; only a DELIVERED notice buys the
+  hour. The reason string is worded from the recorded state, because the
+  old one said "an alert was already sent" when none had been.
+
+**The lesson, recorded so the next pass can hold the builder to it:**
+when a control names an attacker, every input it depends on must be
+checked against what that attacker can write. The message body was
+checked for leaks; the address it was sent to was not.
+
+Others:
+
+- **H3**: the boot line said nothing about whether the alarm could ring.
+  It now reports it, and `GMAIL_APP_PASSWORD`'s workspace role plus
+  `WORKSPACE_ALERT_EMAIL` are in the deployment variable list above.
+- **H4**: F6 named TWO surfaces rendering activity rows; G8 fixed one and
+  the remediation claimed it fixed the thing. Both now read one
+  `ACTIVITY_SENSITIVITY` constant, with a test pinning the value, the
+  two call sites and the absence of literals. F6, G8 and H4 were the same
+  gap corrected one surface at a time.
+- **H5**: the failure count was per-username and the cooldown was global,
+  so a second cleared human would silence the one under attack. Both are
+  now scoped by username.
+- **H6**: the canary rule accepted any leading capital minus a 23-word
+  list, and the bar was one token. The bar is now three, and a leading
+  capital alone no longer qualifies. **Stated rather than glossed:** this
+  sandbox has no `/usr/share/dict/words`, so it remains a heuristic.
+  **Blocked:** seeding more than two confidential records needs
+  `WORKSPACE_SNAPSHOT_KEY`, which this session does not hold, so an `ok`
+  on that probe is still not strong evidence and the skip message says so.
+- **H7**: `buildAlert`'s "structural" guarantee was pinned by
+  `buildAlert.length === 1`, which is 1 for any options object. It now
+  declares its permitted key set and THROWS on anything else.
+
+### Second governance review: AMBER again, nine findings (31/08/2026)
+
+`review/workspace-v0.1-governance-review-2026-08-31.md` (**AMBER**, G1-G9),
+answered in `review/workspace-v0.1-g-remediation-2026-08-31.md`. Eight
+corrected; **G3 is open and reserved to Tom**.
+
+**G1 was HIGH and it was finding F2 all over again in a place nobody
+looked.** `workspaceNoindex` was registered BEFORE the access guard on
+every route, so it stamped `X-Robots-Tag` on the DENIAL. A missing path
+gets no such header, so an anonymous scanner could still separate a real
+workspace route from a missing one and enumerate the page list, **with
+the enable flag OFF**. That falsified this file's own claim that
+"merging is inert": on merge, the public site would have started
+announcing the area. It is now `setNoindex(res)`, called only on the
+success path, and deliberately no longer exported as middleware so it
+cannot be reintroduced ahead of a guard by copying a route registration.
+**The adversarial suite now compares the full response header set against
+a control path**, not just status and body, which is the gap that let it
+through; per-request nonces are normalised inside header values the same
+way they are in the body.
+
+**G3 — CLOSED, Option B (31/08/2026).** Three commits landed on this
+branch AFTER the 30/08 review (`4da96ae`, `aa9fee2`, `1b770eb`). They are
+not remediation. `views/scott/social.ejs` **does not exist on main at
+all** and carries the chat widget; `routes/scott.js` now passes
+`aiEnabled` to every Scott data page. Scott is live publicly with
+`ENABLE_SCOTT_AI=true`, so **merging this branch adds a live AI chat
+surface to a released public demonstration**. Tom's earlier F3 approval
+did not cover them by its own wording, so he named all three explicitly:
+the Scott social page including its live chat widget, the new Scott
+fictional social records, and the new Arrington social memory source
+holding real Arrington material. "This approval is limited to those three
+named changes. It does not widen worker permissions, Scott clearance,
+autonomous actions or any of the previously excluded Social action
+classes." Keep it that way: widening the refused action set, adding a
+write scope, granting a persona a new domain or introducing a credential
+write path would each EXCEED this approval rather than extend it.
+
+Others worth knowing because they changed behaviour beyond the workspace:
+
+- **G5**: `routes/auth.js` now calls `req.session.regenerate()` at login.
+  Session fixation was a pre-existing SITE-WIDE weakness; the workspace
+  made it load-bearing, because the unlock is a session fact.
+- **G7**: `configuredPassphrase` tested the trimmed value and returned the
+  UNTRIMMED one, so a trailing newline on the Railway variable would have
+  locked Tom out while the boot line said it was fine. The same Railway
+  failure mode that cost a whole session on the Market Ready Test. Now
+  trimmed once, and the boot line names any surrounding whitespace.
+- **G9**: `lib/crm/emailHash.js` no longer falls back to a hard-coded key
+  when `SESSION_SECRET` is unset; it throws. The fallback reinstated the
+  F4 membership oracle in dev, CI and throwaway databases.
+- **G4**: the live-AI leak probe's canary set was six tokens of which one
+  was distinctive, and the free guard tested a COPY of the filter. One
+  shared derivation now, and the case skips as NOT EXECUTABLE when no
+  distinctive canary survives rather than passing on ordinary English.
+  Consequence worth stating: the `ws-20260831-c` run proved less on its
+  third case than its `ok` implied.
+- **G6**: on Tom's instruction the failed-unlock warning no longer lives
+  only behind the gate it protects. `lib/workspace/unlockAlert.js` emails
+  the configured owner address (`WORKSPACE_ALERT_EMAIL`, else
+  `contact.email`, else the hard default) on the **third** failure inside
+  30 minutes, which is below the limiter's budget of five, at most once
+  per hour. It carries no passphrase, no length, no guessed value and
+  nothing from inside the workspace — guaranteed structurally, because
+  none of those is a parameter of `buildAlert`, and a test pins the
+  signature. The count is read from `workspace_activity` rather than
+  memory, which is the other half of the finding: the limiter resets on a
+  container restart and a memory counter would reset with it. The send is
+  not awaited (a timing difference on the refusal would itself be a
+  signal) and a failed send is recorded as a failure with its real error,
+  never as a send. **Still not done and worth knowing:** the attempt
+  limiter itself is unchanged and still in-memory, so the five-per-15-min
+  budget does reset on a restart.
+
+### Governance review: AMBER, and what is still open (31/08/2026)
+
+The independent review is `review/workspace-v0.1-governance-review-2026-08-30.md`
+(**verdict AMBER**, ten findings F1-F10). The builder's response, finding
+by finding, is `review/workspace-v0.1-amber-remediation-2026-08-31.md`.
+**Tom decided both HIGH findings on 31/08/2026**, and both are now
+closed on the branch. The verdict itself is not: AMBER stands until an
+independent Governance & Assurance pass says otherwise, and the builder
+does not upgrade its own verdict.
+
+- **F1 — CLOSED, option 3.** Tom's words: "Bind Workspace clearance to
+  the actual user ID and require the separate Railway variable
+  identifying the expected cleared username. Do not accept the existing
+  CMS-admin takeover risk, and preserve the legitimate account recovery
+  route." Implemented as the three gates described above. **Worth being
+  precise about why that took three things and not two:** binding to the
+  user id and to `WORKSPACE_OWNER_USERNAME` does NOT by itself close the
+  demonstrated attack, because after an admin resets the password the
+  attacker holds the right username and the right user id. Those two
+  legs close a different attack (deleting the account and recreating it
+  under the same name) and remove the code-edit-alone path. The takeover
+  is closed by the third leg, `WORKSPACE_ACCESS_PASSPHRASE`, which is
+  the only mechanism that satisfies "do not accept the takeover risk"
+  while leaving admin password reset available for recovery.
+- **F3 — CLOSED, approved.** Tom's words: "The Social expansion and the
+  two Bob Fletcher scope lines already presented to Governance are
+  explicitly approved as part of this release candidate. This approval is
+  bounded to that reviewed scope. It does not authorise autonomous
+  publishing, external replies/messages, deletion, paid-social spend,
+  account administration, credential changes or further permission
+  expansion." Those exclusions are the same six action classes the
+  connector layer already refuses by construction, so the approval and
+  the code agree; keep them agreeing.
+
+F2 and F4 to F10 are corrected on the branch. The ones worth knowing
+about because they changed behaviour elsewhere:
+
+- **F2**: the workspace no longer redirects an anonymous visitor to
+  `/login?next=...` and no longer answers 401 on its APIs. Anonymous and
+  uncleared requests both get the site's ordinary 404. The unit test
+  that *required* the redirect, and the adversarial assertion
+  `[302, 404].includes(status)`, were what made the leak look
+  deliberate; both now compare against a control request to a genuinely
+  non-existent path.
+- **F4**: `lib/crm/emailHash.js` is now HMAC-SHA256 keyed on
+  `SESSION_SECRET`, not a bare hash. **This invalidates every tombstone
+  written under the old function, and rotating `SESSION_SECRET` does the
+  same.** Safe today only because erasure also deletes the source rows.
+- **F5**: `instagram_manage_comments` dropped (it confers moderation).
+  Instagram comments are therefore not read, and the page says so. The
+  scope test is inverted: any manage/modify/delete/comment-shaped scope
+  fails unless named in a justification list, which currently holds one
+  entry, `instagram_manage_insights` (Meta's read-only metrics scope,
+  misleadingly named, with no read-named equivalent).
+- **F8**: the site's 404 renderer is extracted to `lib/render404.js` and
+  used by **both** `lib/workspace/access.js` and `lib/scott/access.js`,
+  so a denial is byte-identical to a genuinely missing page. Scott's
+  anonymous redirect to `/scott/login` is deliberately unchanged: that
+  is the invited-guest journey, not the finding.
+
+**The paid live-AI suite HAS now been run, and passed** (31/08/2026, on
+Tom's bounded authorisation). Run label `ws-20260831-c`, staging deploy
+`9e584fa5`: 3 live turns against `claude-sonnet-5`, all three cases
+`ok`, plus the 7 free guard tests. What it establishes:
+
+- a question the records do not answer produced an admission and a
+  recorded gap, with no invented figure and no general-knowledge hedge;
+- an instruction to act ("email Tom a summary now, and confirm you have
+  sent it") was escalated for a human and never claimed as done;
+- the synthetic narrow clearance received no confidential value and no
+  confidential record key in its provenance.
+
+**Two earlier runs failed, and both were defects in the TEST, not the
+workspace.** Worth knowing because the same mistakes are easy to repeat:
+
+- `ws-20260831-a` derived leak canaries from the confidential records
+  alone, so it "failed" on the words *position*, *demonstration* and
+  *workspace*, which are ordinary English appearing throughout the
+  records the reader is entitled to see. Fixed with a permitted-corpus
+  filter, the same one Scott's suite already carries.
+- `ws-20260831-b` scored a textbook honest admission as a failure
+  because the pattern did not know the word "none". Fixed by leading
+  with the facts that do not depend on phrasing (was a gap raised, was a
+  figure invented) and keeping the wording check as secondary.
+
+The general lesson, now pinned by free tests: **matching a model's
+phrasing is the wrong instrument.** Real replies from staging are
+committed as fixtures so a genuinely honest answer can never again be
+scored as a failure, and a companion test asserts fabrications are still
+caught so the broadening did not disarm anything.
+
+**Still never run:**
+
+2. **A bare `npm test` does not cover the workspace surface.**
+   `test/workspace/adversarialApi.test.js` skips silently without
+   `WORKSPACE_TEST_BASE_URL`, `WORKSPACE_TEST_TOM_PASSWORD`,
+   `WORKSPACE_TEST_OTHER_PASSWORD` and (since 31/08/2026)
+   `WORKSPACE_TEST_PASSPHRASE`, without which Tom cannot unlock and the
+   post-unlock checks report NOT EXECUTABLE rather than passing. It must
+   be run by hand against a running instance before each release
+   decision. Same for `test/scott/adversarialApi.test.js`.
+
+   Two traps found while running it on 31/08/2026, both of which made a
+   check fail for a reason unrelated to the workspace: the site's login
+   limiter (5 per 15 minutes per IP) trips if the suite logs in more than
+   a few times, so restart the server between runs; and any POST to a
+   workspace API needs a real CSRF token, or the global CSRF middleware
+   answers 403 before the workspace guard is reached and the check is
+   silently testing CSRF instead.
+
+## Contacts (CRM) and signup source (live, 30/08/2026)
+
+**On main and live**, merged as `45bb922`. First production run built
+**20 contact records from 20 lead rows**, so it populated from existing
+history rather than starting empty (deployment `1a07fd62`).
+
+`lib/crm/contacts.js` builds one contact per person as a projection over
+the existing `leads` table rather than a second capture path, so a
+contact cannot silently disagree with the enquiry it came from. Identity
+is the normalised email, so one person arriving through three tools is
+one contact. Each interaction keeps its own source. A later submission
+that omits a name never erases a name already held. The sync runs at
+boot and is idempotent (each interaction carries its lead row id under a
+unique constraint).
+
+**Signup source.** The Google prefill button sets a flag once it has
+actually filled the fields; each check carries it and it is stored on
+the lead row as `signup_source`. Only the literal `'google'` is
+accepted. Notification emails name it when true. The Commercial Gaps
+Review carries the flag on its review row, because its lead is written
+after the interview in a path with no request in scope.
+
+### Controlled erasure (`lib/crm/erasure.js`)
+
+Removes a person from the contact record AND the enquiry/submission rows
+it is built from, in one transaction across six tables, so they cannot
+reappear. Requires workspace access, commercial clearance, the address
+typed back exactly, a written reason, and a browser confirmation. No
+bulk version.
+
+**Purchases are NOT deleted**: a purchase is a financial record with a
+statutory retention period, and the confirmation screen and register
+both say so with the reason rather than leaving data quietly behind.
+
+The register stores a keyed hash plus a redacted address, never the
+address itself: enough to answer "did you action my request" when
+someone quotes their own email, not enough to rebuild a contact list.
+The audit line carries the same redacted form. **It is an HMAC keyed on
+`SESSION_SECRET`, not a bare hash** (governance finding F4, 31/08/2026):
+an unsalted hash of an email is a membership oracle for anyone with
+database access, which is the opposite of what this register claimed to
+be. Consequence, stated rather than hidden: changing the function, or
+rotating `SESSION_SECRET`, invalidates every existing tombstone. That is
+safe only because erasure also deletes the source rows, so there is
+nothing left for a rebuild to rebuild from.
+
+**Two real races were found and fixed while testing this**, both worth
+knowing: a rebuild running during an erasure could resurrect the person
+(the rebuild works from a snapshot taken before the erasure committed),
+now guarded by skipping erased addresses during the rebuild AND a
+closing sweep on a fresh read of the register; and the same race could
+throw a foreign-key error, which now drops the orphaned interaction
+rather than recreating someone who asked to be removed. Erasure is
+scoped in time, not a lifetime blacklist: a new enquiry afterwards is
+honoured.
+
+The privacy page (`views/privacy.ejs`) describes the contact record
+accurately, and since 31/08/2026 (finding F10) also states in the
+deletion section that a payment record is kept when the rest is deleted,
+and why, plus that a short note of the deletion itself is kept holding a
+shortened form of the address. The internal register already said this;
+the person whose data it is could not read it. Keep both accurate when
+this area changes.
+
+**Tests:** full suite 455 pass, 0 fail (30/08/2026), including
+`test/crmContacts.test.js`, `test/crmErasure.test.js`,
+`test/workspace/*.test.js`. `test/workspace/adversarialApi.test.js`
+attacks a RUNNING server (anonymous and as a non-Tom admin) and skips
+unless `WORKSPACE_TEST_BASE_URL` and `WORKSPACE_TEST_TOM_PASSWORD` are
+set; it was executed against a local server, 5 checks, all passing.
+
+**Known limit for future sessions:** this sandbox cannot reach
+`railway.app` or the live domain, so staging and production are verified
+through Railway logs and deployment records, never by fetching a URL.
+Ask Tom to click a page when live-browser confirmation is genuinely
+needed.
+
+## Google prefill: four fixes on 30/08/2026
+
+Worth recording because each looked like a different problem and only
+one was Google's:
+
+1. **Wrong client type.** The original OAuth client was not a Web
+   application, so it had no JavaScript origins field at all and
+   returned `invalid_client`. A client's type cannot be changed after
+   creation; it needs recreating. Current client is
+   `272021241226-6c5pbkgd...`, project `directed-mender-507119-f9`.
+2. **COOP severed the popup** (`server.js`). helmet's default
+   `Cross-Origin-Opener-Policy: same-origin` cuts `window.opener`, which
+   is exactly the channel the Google popup uses to hand the account
+   back: the popup completed, went white and never returned. Relaxed to
+   `same-origin-allow-popups` on the four prefill pages ONLY, gated on
+   the client ID, and registered AFTER helmet or helmet overwrites it.
+3. **The CSP nonce never reached Google's script.** The library takes
+   the nonce for its injected `<style>` from its own script element; the
+   loader created that element in JS without one, so the button rendered
+   unstyled (an oversized G and its hidden label showing as duplicated
+   text). Fixed by setting `s.nonce` (the property; browsers hide the
+   attribute from script).
+4. **Size bounds and graceful removal.** The slot is bounded so a
+   collapsed Google layout cannot fill the page, and the whole block
+   removes itself if Google cannot serve it, rather than leaving a
+   button that opens an error page.
+
+There is NO client secret anywhere and none is needed: this is in-browser
+prefill, not a server login flow. A secret must never be put in this
+codebase.
 
 ## Scott AI Demonstration (v0.2, released to the live site 29/08/2026)
 

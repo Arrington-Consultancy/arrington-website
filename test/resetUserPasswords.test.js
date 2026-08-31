@@ -26,9 +26,26 @@ const bcrypt = require('bcrypt');
 const DB_AVAILABLE = !!process.env.DATABASE_URL;
 const SEED_SCRIPT = path.join(__dirname, '..', 'db', 'seed.js');
 
+// The child's environment is built explicitly, not inherited wholesale.
+//
+// Governance finding V4: this used to spread the caller's shell, so a
+// developer who followed CLAUDE.md's own Development section - which says
+// to export NAT_PASSWORD and TOM_PASSWORD to bring up a fresh database -
+// and then ran the suite in that same shell got a red run. The
+// half-configured case below asserts the seed REFUSES when only one
+// password is present, and an exported TOM_PASSWORD rode through the
+// spread and made the seed correctly not refuse.
+//
+// It is worth more than a tidy-up: fifteen passes of evidence rest on
+// "npm test is green", and a green that depends on an ambient variable
+// the test does not control is a weaker fact than it looks.
+const PASSWORD_VARS = ['NAT_PASSWORD', 'TOM_PASSWORD', 'RESET_USER_PASSWORDS'];
+
 function runSeed(extraEnv) {
+  const env = { ...process.env };
+  for (const name of PASSWORD_VARS) delete env[name];
   return execFileSync('node', [SEED_SCRIPT], {
-    env: { ...process.env, ...extraEnv },
+    env: { ...env, ...extraEnv },
     encoding: 'utf8'
   });
 }

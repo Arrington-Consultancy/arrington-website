@@ -11,3 +11,13 @@ npm-debug.log*
 # (it carries /goodnight, see WORKING-METHOD.md)
 .claude/*
 !.claude/skills/
+
+# Workspace snapshot: only the encrypted file is committed. Any plaintext
+# extract of the controlled Drive records stays outside the repository.
+data/*.json
+
+# A symlink named node_modules is NOT matched by the directory rule
+# above. One was committed in 5f24740 by a `git add -A` in a worktree
+# where it had been linked to the real one, which then broke `npm ci` on
+# checkout. Both forms are refused now.
+node_modules

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unlock | Arrington AI Workspace</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="csrf-token" content="<%= csrfToken %>">
+  <%- include('partials/styles') %>
+  <style nonce="<%= nonce %>">
+    /* Deliberately not the workspace shell: no navigation, no counts, no
+       record titles. A locked session must learn nothing from the screen
+       that asks it to unlock. */
+    .wsu-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
+    .wsu-card { width: 100%; max-width: 420px; }
+    .wsu-card h1 { font-size: 1.15rem; margin: 0 0 0.4rem; }
+    .wsu-card p { color: var(--ws-muted); font-size: 0.88rem; margin: 0 0 1rem; }
+    .wsu-card .ws-form-row { flex-direction: column; align-items: stretch; }
+    .wsu-card input.ws-input { width: 100%; }
+    .wsu-card .ws-btn { width: 100%; }
+  </style>
+</head>
+<body class="ws-body">
+  <div class="wsu-wrap">
+    <div class="ws-card wsu-card">
+      <h1>Unlock the workspace</h1>
+      <% if (!configured) { %>
+        <p>This environment has no workspace passphrase set, so the workspace cannot be opened here. Set <code>WORKSPACE_ACCESS_PASSPHRASE</code> on the service and redeploy.</p>
+      <% } else { %>
+        <p>Signing in to the site is not enough to open this area. The passphrase is held outside the CMS on purpose, so that an administrator who can change a site password still cannot reach what is in here.</p>
+        <form id="wsUnlockForm">
+          <div class="ws-form-row">
+            <input class="ws-input" type="password" id="wsPassphrase" name="passphrase"
+                   autocomplete="current-password" autofocus maxlength="200"
+                   aria-label="Workspace passphrase" placeholder="Workspace passphrase">
+            <button class="ws-btn" type="submit">Unlock</button>
+          </div>
+          <p class="ws-note-error" id="wsUnlockError" hidden></p>
+        </form>
+      <% } %>
+      <p class="ws-meta"><a href="/">Back to the website</a></p>
+    </div>
+  </div>
+  <script nonce="<%= nonce %>">
+    (function () {
+      var form = document.getElementById('wsUnlockForm');
+      if (!form) return;
+      var err = document.getElementById('wsUnlockError');
+      var token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        err.hidden = true;
+        var value = document.getElementById('wsPassphrase').value;
+        fetch('/api/workspace/unlock', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-csrf-token': token },
+          body: JSON.stringify({ passphrase: value })
+        }).then(function (r) {
+          return r.json().then(function (d) { return { ok: r.ok, d: d }; });
+        }).then(function (res) {
+          if (res.ok && res.d.ok) { window.location.href = '/workspace'; return; }
+          err.textContent = res.d.error || 'That did not work.';
+          err.hidden = false;
+        }).catch(function () {
+          err.textContent = 'The request could not be sent.';
+          err.hidden = false;
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

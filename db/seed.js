@@ -68,6 +68,69 @@ async function seed() {
   `);
   console.log('Market Ready Test context column verified.');
 
+  // Migration: governance finding J2 (31/08/2026). The failed-unlock
+  // alert's per-account cooldown was keyed by substring-matching the
+  // account name inside the human-readable summary, so rewording the
+  // message would have silently removed the cooldown and a username
+  // containing a LIKE wildcard would have matched another account's
+  // rows. The account a row is about now has its own column, matched
+  // exactly. Existing rows default to empty, which is correct: they are
+  // not about a particular account.
+  await db.query(`
+    ALTER TABLE workspace_activity ADD COLUMN IF NOT EXISTS subject VARCHAR(200) NOT NULL DEFAULT '';
+    CREATE INDEX IF NOT EXISTS idx_workspace_activity_subject ON workspace_activity (event_type, subject, created_at DESC);
+  `);
+
+  // At most ONE unresolved alert claim per account, guaranteed by the
+  // database rather than by sequencing.
+  //
+  // Governance history: the bound on this alert has been asserted and
+  // broken four times (J1, K1, L1/L2, and a duplicate rate of about 5%
+  // that survived even the advisory lock). Every previous fix guaranteed
+  // it by arranging for callers not to overlap. This one makes the
+  // overlap impossible to record: a second concurrent claim violates a
+  // unique index and is refused by Postgres, whatever the callers do.
+  //
+  // Partial, so it constrains only unresolved claims: a claim row is
+  // updated to the delivered, failed or error type once the send is
+  // decided, at which point it leaves the index and the next burst can
+  // claim again.
+  //
+  // Created here rather than in schema.sql, after the ALTER above, for
+  // the reason recorded against finding J2: on an existing database
+  // CREATE TABLE IF NOT EXISTS is skipped while index statements still
+  // run, so an index naming a not-yet-added column fails the whole seed.
+  // Retire any duplicate unresolved claims BEFORE building the index.
+  //
+  // This is not hypothetical: duplicate claims are exactly what the
+  // defects this index exists to prevent (J1, K1) actually produced, so
+  // a database that ran that code can hold them. CREATE UNIQUE INDEX
+  // fails on them, and this seed runs as the start command - so without
+  // this step the app would crashloop on boot on precisely the
+  // deployments most likely to be affected. Same class as the Scott
+  // release incident: a migration that is fine everywhere except the one
+  // place it has to work.
+  //
+  // The newest claim per account is kept; older ones are marked
+  // abandoned, which is what they are.
+  await db.query(`
+    UPDATE workspace_activity SET event_type = 'workspace_unlock_alert_abandoned',
+           summary = 'Superseded duplicate claim, retired when the one-claim-per-account rule was introduced.'
+     WHERE id IN (
+       SELECT id FROM (
+         SELECT id, ROW_NUMBER() OVER (PARTITION BY subject ORDER BY created_at DESC, id DESC) AS rn
+           FROM workspace_activity
+          WHERE event_type = 'workspace_unlock_alert_pending'
+       ) ranked WHERE rn > 1
+     );
+  `);
+  await db.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_workspace_alert_pending
+      ON workspace_activity (subject)
+      WHERE event_type = 'workspace_unlock_alert_pending';
+  `);
+  console.log('Workspace activity subject column verified.');
+
   // Migration: Commercial Gaps Review failure-recovery columns, added
   // 01/08/2026. This is schema setup only (idempotent, one-off structural
   // change) — the actual retention/deletion of stale rows deliberately
@@ -4982,6 +5045,12 @@ async function seed() {
   // header for exactly what it does and does not claim.
   await require('../scripts/scottGapAcceptance').runGapAcceptanceCheck(db);
 
+  // Arrington AI Workspace: ingest the encrypted snapshot into
+  // workspace_records. A no-op when WORKSPACE_SNAPSHOT_KEY is unset, and
+  // never fatal: an ingest failure records itself as a failed sync run
+  // and the boot continues, because a brain that cannot refresh must say
+  // so rather than take the website down.
+  await require('../lib/workspace/ingest').ingestWorkspaceSnapshot(require('../lib/workspace/repo'));
   // Contacts (CRM): rebuild from the lead history. Idempotent, and it
   // populates from everything already captured rather than starting
   // empty on the day it was switched on. Never fatal: a contact index

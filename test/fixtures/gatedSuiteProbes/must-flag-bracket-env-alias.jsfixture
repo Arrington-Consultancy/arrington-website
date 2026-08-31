@@ -1,0 +1,6 @@
+// W3 probe C: the env object reached by a bracket key on process.
+const test = require('node:test');
+const e = process['env'];
+if (e.RUN_LIVE_THING) {
+  test('costs money', () => {});
+}

@@ -37,9 +37,16 @@ const loginLimiter = rateLimit({
   legacyHeaders: false
 });
 
+function safeNextPath(next) {
+  if (typeof next === 'string' && /^\/[a-z0-9][a-z0-9/-]*(?:\?[a-z0-9=&._%-]+)?$/i.test(next)) {
+    return next;
+  }
+  return '/';
+}
+
 router.get('/login', async (req, res) => {
   if (req.session.user) {
-    return res.redirect('/');
+    return res.redirect(safeNextPath(req.query.next));
   }
   let theme = themes.dark;
   try {
@@ -48,7 +55,7 @@ router.get('/login', async (req, res) => {
       theme = themes[rows[0].content];
     }
   } catch (e) { /* use default */ }
-  res.render('login', { error: null, theme });
+  res.render('login', { error: null, theme, nextPath: safeNextPath(req.query.next) });
 });
 
 async function getActiveTheme() {
@@ -62,9 +69,10 @@ async function getActiveTheme() {
 router.post('/login', loginLimiter, async (req, res) => {
   const { username, password } = req.body;
   const theme = await getActiveTheme();
+  const nextPath = safeNextPath(req.body.next);
 
   if (!username || !password) {
-    return res.render('login', { error: 'Username and password required.', theme });
+    return res.render('login', { error: 'Username and password required.', theme, nextPath });
   }
 
   try {
@@ -78,7 +86,7 @@ router.post('/login', loginLimiter, async (req, res) => {
       // exists, then record the failed attempt.
       await bcrypt.compare(password, DUMMY_HASH);
       await logFailedLogin(null, username);
-      return res.render('login', { error: 'Invalid credentials.', theme });
+      return res.render('login', { error: 'Invalid credentials.', theme, nextPath });
     }
 
     const user = rows[0];
@@ -86,8 +94,28 @@ router.post('/login', loginLimiter, async (req, res) => {
 
     if (!valid) {
       await logFailedLogin(user.id, username);
-      return res.render('login', { error: 'Invalid credentials.', theme });
+      return res.render('login', { error: 'Invalid credentials.', theme, nextPath });
     }
+
+    // Governance finding G5 (31/08/2026): the session id an anonymous
+    // visitor arrives with used to be the session id they held after
+    // logging in, which is textbook session fixation. Anyone who could
+    // plant a connect.sid value in a browser and then wait for the real
+    // user to log in inherited that authenticated session.
+    //
+    // This is a site-wide weakness that predates the workspace. What the
+    // workspace did was make it load-bearing: a fixated session used to
+    // get CMS content, and would now get the controlled brain and the
+    // irreversible erasure control, because the workspace unlock is a
+    // session fact and rides on this cookie.
+    //
+    // Regenerating issues a new id and discards anything the old session
+    // carried, including any workspace unlock, so a fixated cookie is
+    // worth nothing the moment a real login happens. The flash data this
+    // route needs is re-set below, after the swap.
+    await new Promise((resolve, reject) => {
+      req.session.regenerate((err) => (err ? reject(err) : resolve()));
+    });
 
     req.session.user = {
       id: user.id,
@@ -101,10 +129,10 @@ router.post('/login', loginLimiter, async (req, res) => {
       [user.id, 'login', `${user.username} logged in`]
     );
 
-    res.redirect('/');
+    res.redirect(nextPath);
   } catch (err) {
     console.error('Login error:', err);
-    res.render('login', { error: 'Something went wrong. Please try again.', theme });
+    res.render('login', { error: 'Something went wrong. Please try again.', theme, nextPath });
   }
 });
 

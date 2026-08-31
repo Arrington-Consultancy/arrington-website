@@ -1,0 +1,240 @@
+<%- include('partials/shell-top', { pageTitle: 'Social media', active: 'social' }) %>
+
+<h1 class="ws-h">Social media</h1>
+<p class="ws-sub">Facebook, Instagram, LinkedIn and X in one place: connector state, recent posts, performance, engagement and planned content. The workspace reads, analyses and drafts. Publishing, deleting, replying publicly, changing account settings and spending money stay with a person.</p>
+
+<% if (!permitted) { %>
+  <div class="ws-card"><p class="ws-empty">This area holds account performance, spend and the people who have engaged with us, which your clearance does not cover.</p></div>
+<% } else { %>
+
+<div class="ws-card">
+  <h2>Ask the social lane</h2>
+  <p class="ws-body-text"><strong>ARRINGTON SOCIAL CONTENT BUILDER</strong> is the lane that holds this: what was posted, what it cost, which listings renew and what any of it produced. Ask it here and the question is routed to that lane only, with nothing from outside its remit.</p>
+  <% if (!aiEnabled) { %>
+    <p class="ws-empty">Workspace AI is not enabled in this environment, so a question would be refused rather than answered from memory. Everything below still works.</p>
+  <% } %>
+  <div class="ws-chat-thread" id="wsSocialThread"></div>
+  <form id="wsSocialAsk">
+    <div class="ws-form-row">
+      <input class="ws-input" type="text" name="question" maxlength="1000" placeholder="What did we spend on directories last year, and what did it bring?">
+      <button class="ws-btn" type="submit">Ask</button>
+    </div>
+    <p class="ws-note-error" id="wsSocialError" hidden></p>
+  </form>
+</div>
+
+<div class="ws-card">
+  <h2>Connectors</h2>
+  <div class="ws-table-wrap">
+  <table class="ws-table">
+    <tr><th>Platform</th><th>State</th><th>Last retrieval</th><th>Followers</th></tr>
+    <% accounts.forEach(function (a) { %>
+      <tr>
+        <td>
+          <span class="ws-item-title"><%= a.name %></span>
+          <div class="ws-meta"><%= a.api %></div>
+        </td>
+        <td>
+          <span class="ws-badge ws-badge-<%= a.freshness.state === 'fresh' ? 'fresh' : (a.freshness.state === 'sync_failed' ? 'failed' : (a.freshness.state === 'not_connected' ? 'unverified' : 'stale')) %>"><%= a.freshness.state.replace(/_/g, ' ') %></span>
+          <% if (!a.configured) { %>
+            <div class="ws-meta">No credential in this environment. Nothing is retrieved and nothing is shown.</div>
+          <% } %>
+        </td>
+        <td class="ws-meta">
+          <% if (a.freshness.state === 'never_retrieved') { %>
+            Connected, but no retrieval has ever succeeded.
+          <% } else if (a.lastSyncAt) { %>
+            <%= new Date(a.lastSyncAt).toUTCString() %> (<%= a.lastSyncOutcome %>)
+            <% if (a.lastError) { %><div class="ws-note-error"><%= a.lastError %></div><% } %>
+          <% } else { %>
+            Never
+          <% } %>
+        </td>
+        <td class="ws-meta"><%= a.followers === null ? 'unknown' : a.followers %><% if (a.followersChange) { %> (<%= a.followersChange > 0 ? '+' : '' %><%= a.followersChange %>)<% } %></td>
+      </tr>
+    <% }) %>
+  </table>
+  </div>
+  <% if (accounts.every(function (a) { return !a.configured; })) { %>
+    <p class="ws-meta">No connector is configured yet, so every figure on this page would be invented. The page deliberately shows nothing rather than a plausible empty timeline. Setup requirements are listed under each platform below.</p>
+  <% } %>
+</div>
+
+<% if (accounts.some(function (a) { return !a.configured; })) { %>
+<div class="ws-card">
+  <h2>What each connector needs before it can read anything</h2>
+  <% accounts.filter(function (a) { return !a.configured; }).forEach(function (a) { %>
+    <div class="ws-item">
+      <span class="ws-item-title"><%= a.name %></span>
+      <div class="ws-body-text"><%= a.setupNote %></div>
+      <div class="ws-meta">Least-privilege read scopes: <%= a.readScopes.join(', ') %></div>
+    </div>
+  <% }) %>
+</div>
+<% } %>
+
+<div class="ws-card">
+  <h2>Outstanding replies (<%= outstanding.length %>)</h2>
+  <% if (outstanding.length === 0) { %>
+    <p class="ws-empty">Nothing waiting. This list fills from comments, mentions and messages the connectors retrieve.</p>
+  <% } %>
+  <% outstanding.forEach(function (e) { %>
+    <div class="ws-item">
+      <span class="ws-badge ws-badge-plain"><%= e.platform %></span> <%= e.kind %> from <%= e.author %>
+      <div class="ws-body-text"><%= e.body %></div>
+      <% if (e.suggested_reply) { %>
+        <div class="ws-meta">Suggested reply, for a person to send or ignore: <%= e.suggested_reply %></div>
+      <% } %>
+    </div>
+  <% }) %>
+</div>
+
+<div class="ws-card">
+  <h2>Recent and planned content</h2>
+  <% if (posts.length === 0) { %>
+    <p class="ws-empty">No content retrieved or drafted yet.</p>
+  <% } %>
+  <% posts.forEach(function (p) { %>
+    <div class="ws-item">
+      <span class="ws-badge ws-badge-plain"><%= p.platform %></span>
+      <span class="ws-badge <%= p.kind === 'published' ? 'ws-badge-fresh' : 'ws-badge-stale' %>"><%= p.kind %></span>
+      <div class="ws-body-text"><%= p.body %></div>
+      <div class="ws-meta">
+        <% if (p.posted_at) { %><%= new Date(p.posted_at).toUTCString() %><% } %>
+        <% if (p.impressions !== null && p.impressions !== undefined) { %> · <%= p.impressions %> impressions<% } %>
+        <% if (p.engagements !== null && p.engagements !== undefined) { %> · <%= p.engagements %> engagements<% } %>
+        <% if (p.kind === 'proposed') { %> · proposed content, not published and not scheduled<% } %>
+      </div>
+    </div>
+  <% }) %>
+</div>
+
+<div class="ws-card">
+  <h2>Published posts (<%= memory.PUBLISHED_POSTS.length %>)</h2>
+  <p class="ws-meta">From <%= memory.SOURCE_POSTS %>. A date is shown only where the source records one; nothing here is inferred.</p>
+  <% memory.PUBLISHED_POSTS.forEach(function (post) { %>
+    <div class="ws-item">
+      <span class="ws-item-title"><%= post.title %></span>
+      <span class="ws-badge ws-badge-plain"><%= post.platform %></span>
+      <% if (!post.dateRecorded) { %><span class="ws-badge ws-badge-stale">date not logged</span><% } %>
+      <div class="ws-meta">
+        <%= post.ref %><% if (post.dateRecorded) { %> · <%= post.dateRecorded %><% } %> · <%= post.theme %>
+        <% if (post.engagement) { %> · <%= post.engagement %><% } %>
+        <% if (post.crossPost) { %> · <%= post.crossPost %><% } %>
+      </div>
+      <div class="ws-body-text"><%= post.note %></div>
+    </div>
+  <% }) %>
+</div>
+
+<div class="ws-card">
+  <h2>Drafted, not yet published</h2>
+  <% memory.DRAFT_POSTS.forEach(function (d) { %>
+    <div class="ws-item">
+      <span class="ws-item-title"><%= d.title %></span>
+      <div class="ws-meta"><%= d.ref %> · <%= d.platform %> · suggested timing: <%= d.recommendedTiming %></div>
+      <div class="ws-body-text"><%= d.note %></div>
+    </div>
+  <% }) %>
+</div>
+
+<div class="ws-card">
+  <h2>Published website thinking (<%= memory.USEFUL_THINKING_ARTICLES.length %> live)</h2>
+  <p class="ws-meta">Useful Thinking is evergreen website content, not a time-led feed, so it sits apart from the social chronology above and carries no publication date. If the timing of an article ever matters, the repository history shows when it first entered the site. Source: <%= memory.SOURCE_ARTICLES %>.</p>
+  <% memory.USEFUL_THINKING_ARTICLES.forEach(function (a) { %>
+    <div class="ws-item">
+      <span class="ws-item-title"><%= a.title %></span>
+      <div class="ws-meta">/useful-thinking/<%= a.slug %><% if (a.socialCrossover) { %> · <%= a.socialCrossover %><% } %></div>
+    </div>
+  <% }) %>
+</div>
+
+<div class="ws-card">
+  <h2>Themes worth returning to</h2>
+  <% memory.REUSABLE_THEMES.forEach(function (t) { %>
+    <div class="ws-item">
+      <span class="ws-item-title"><%= t.theme %></span>
+      <div class="ws-body-text"><%= t.bestLine %></div>
+      <% if (t.caution) { %><div class="ws-meta">Caution: <%= t.caution %></div><% } %>
+      <% if (t.note) { %><div class="ws-meta"><%= t.note %></div><% } %>
+    </div>
+  <% }) %>
+</div>
+
+<div class="ws-card">
+  <h2>Working rules for content</h2>
+  <% memory.CONTENT_RULES.forEach(function (r) { %>
+    <div class="ws-item">
+      <span class="ws-item-title"><%= r.rule %></span>
+      <div class="ws-body-text"><%= r.detail %></div>
+    </div>
+  <% }) %>
+</div>
+
+<div class="ws-card ws-danger-card">
+  <h2>What the record does not hold</h2>
+  <p class="ws-meta">Named rather than left as an apparent gap in performance. Nothing on this page is inferred to fill any of it.</p>
+  <% memory.MEMORY_GAPS.forEach(function (g) { %>
+    <div class="ws-item">
+      <span class="ws-item-title"><%= g.item %></span>
+      <span class="ws-badge ws-badge-material"><%= g.position %></span>
+      <div class="ws-body-text"><%= g.detail %></div>
+    </div>
+  <% }) %>
+</div>
+
+<script nonce="<%= nonce %>">
+  (function () {
+    var form = document.getElementById('wsSocialAsk');
+    if (!form) return;
+    var thread = document.getElementById('wsSocialThread');
+    var err = document.getElementById('wsSocialError');
+    var csrf = document.querySelector('meta[name="csrf-token"]').content;
+    var conversationId = null;
+    function bubble(role, text, meta) {
+      var d = document.createElement('div');
+      d.className = 'ws-msg ws-msg-' + role;
+      var body = document.createElement('div');
+      body.textContent = text;
+      d.appendChild(body);
+      if (meta) {
+        var m = document.createElement('div');
+        m.className = 'ws-prov';
+        m.textContent = meta;
+        d.appendChild(m);
+      }
+      thread.appendChild(d);
+    }
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var q = form.question.value.trim();
+      if (!q) return;
+      err.hidden = true;
+      bubble('user', q);
+      form.question.value = '';
+      try {
+        var r = await fetch('/api/workspace/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf },
+          // Pinned to the social lane: this page asks social questions,
+          // so the answer must come from that remit rather than from
+          // whatever the router would have guessed.
+          body: JSON.stringify({ question: q, laneId: 'social_content_builder', conversationId: conversationId })
+        });
+        var data = await r.json();
+        if (!r.ok) { err.textContent = data.error || 'That did not work.'; err.hidden = false; return; }
+        conversationId = data.conversationId;
+        bubble('assistant', data.answer, data.provenance.length
+          ? 'Records supplied: ' + data.provenance.join(', ')
+          : 'No records were available for this question.');
+      } catch (ex) {
+        err.textContent = 'Network problem: ' + ex.message;
+        err.hidden = false;
+      }
+    });
+  })();
+</script>
+
+<% } %>
+
+<%- include('partials/shell-bottom') %>

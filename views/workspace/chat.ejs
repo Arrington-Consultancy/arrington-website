@@ -1,0 +1,128 @@
+<%- include('partials/shell-top', { pageTitle: 'Ask Ruth', active: 'chat' }) %>
+
+<h1 class="ws-h">Ask <%= receptionist.RUTH.name %></h1>
+<p class="ws-sub">Answers come only from records you are cleared to see, routed to the relevant specialist lane. Every answer names the records it rests on. The workspace performs no actions.</p>
+
+<!-- Ruth is the way in, not an extra worker. She holds no clearance and
+     reads no record: she takes the question, says who it went to, and
+     shows you their answer. See lib/workspace/receptionist.js. -->
+<div class="ws-card ws-reception">
+  <div class="ws-reception-mark"><%= receptionist.RUTH.name.slice(0, 2).toUpperCase() %></div>
+  <div>
+    <strong><%= receptionist.RUTH.name %></strong>
+    <span class="ws-reception-role"><%= receptionist.RUTH.role %></span>
+    <p class="ws-reception-line"><%= receptionist.RUTH.line %></p>
+    <p class="ws-note">She routes to <%= receptionist.directory().length %> specialists. She holds no clearance of her own, so she can never show you more than they would.</p>
+  </div>
+</div>
+
+<% if (!aiEnabled) { %>
+  <div class="ws-card"><p class="ws-empty">Workspace AI is not enabled in this environment, so questions will be refused rather than answered from memory. Everything else on this page still works.</p></div>
+<% } %>
+
+<div class="ws-card">
+  <div class="ws-chat-thread" id="wsThread">
+    <% messages.forEach(function (m) { %>
+      <div class="ws-msg ws-msg-<%= m.role %>">
+        <div><%= m.content %></div>
+        <% if (m.role === 'assistant') { %>
+          <div class="ws-prov">
+            <%= m.lane_id ? 'Lane: ' + m.lane_id.replace(/_/g, ' ') + ' · ' : '' %>
+            <% const prov = Array.isArray(m.provenance) ? m.provenance : []; %>
+            <%= prov.length ? 'Records supplied: ' + prov.join(', ') : 'No records were available for this answer.' %>
+          </div>
+        <% } %>
+      </div>
+    <% }) %>
+  </div>
+
+  <form id="wsAskForm">
+    <input type="hidden" name="conversationId" value="<%= active ? active.id : '' %>">
+    <div class="ws-form-row">
+      <select class="ws-input" name="laneId">
+        <option value="">Route automatically</option>
+        <% lanes.forEach(function (l) { %><option value="<%= l.id %>"><%= l.name %></option><% }) %>
+      </select>
+    </div>
+    <div class="ws-form-row">
+      <textarea class="ws-input" name="question" placeholder="Ask about the brain, the register, an opportunity, the website state" maxlength="4000" required></textarea>
+    </div>
+    <button class="ws-btn" type="submit" id="wsAskBtn">Ask</button>
+    <p class="ws-note-error" id="wsAskError" hidden></p>
+  </form>
+</div>
+
+<div class="ws-card">
+  <h2>Your conversations</h2>
+  <% if (conversations.length === 0) { %><p class="ws-empty">None yet.</p><% } %>
+  <% conversations.forEach(function (c) { %>
+    <div class="ws-item">
+      <a href="/workspace/chat?c=<%= c.id %>"><%= c.title || ('Conversation ' + c.id) %></a>
+      <div class="ws-meta"><%= new Date(c.updated_at).toUTCString() %><%= c.lane_id ? ' · ' + c.lane_id.replace(/_/g, ' ') : '' %></div>
+    </div>
+  <% }) %>
+</div>
+
+<script nonce="<%= nonce %>">
+  (function () {
+    const csrf = document.querySelector('meta[name="csrf-token"]').content;
+    const form = document.getElementById('wsAskForm');
+    const thread = document.getElementById('wsThread');
+    const errEl = document.getElementById('wsAskError');
+    const btn = document.getElementById('wsAskBtn');
+
+    function bubble(role, text, meta) {
+      const d = document.createElement('div');
+      d.className = 'ws-msg ws-msg-' + role;
+      const body = document.createElement('div');
+      body.textContent = text;
+      d.appendChild(body);
+      if (meta) {
+        const m = document.createElement('div');
+        m.className = 'ws-prov';
+        m.textContent = meta;
+        d.appendChild(m);
+      }
+      thread.appendChild(d);
+      d.scrollIntoView({ block: 'nearest' });
+    }
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const question = form.question.value.trim();
+      if (!question) return;
+      errEl.hidden = true;
+      btn.disabled = true;
+      bubble('user', question);
+      form.question.value = '';
+      try {
+        const r = await fetch('/api/workspace/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf },
+          body: JSON.stringify({
+            question: question,
+            laneId: form.laneId.value || null,
+            conversationId: form.conversationId.value || null
+          })
+        });
+        const data = await r.json();
+        if (!r.ok) { errEl.textContent = data.error || 'That did not work.'; errEl.hidden = false; return; }
+        form.conversationId.value = data.conversationId;
+        const bits = [];
+        if (data.receptionist) bits.push(data.receptionist);
+        if (data.laneName) bits.push('Lane: ' + data.laneName);
+        bits.push(data.provenance.length ? 'Records supplied: ' + data.provenance.join(', ') : 'No records were available for this answer.');
+        if (data.gap) bits.push('Gap raised: ' + data.gap.gap_type);
+        if (data.escalation) bits.push('For a human decision: ' + data.escalation);
+        bubble('assistant', data.answer, bits.join(' · '));
+      } catch (ex) {
+        errEl.textContent = 'Network problem: ' + ex.message;
+        errEl.hidden = false;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  })();
+</script>
+
+<%- include('partials/shell-bottom') %>

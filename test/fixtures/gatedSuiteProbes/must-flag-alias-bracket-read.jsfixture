@@ -1,0 +1,6 @@
+// W3 probe G: a plain alias, read with a bracket rather than a dot.
+const test = require('node:test');
+const E = process.env;
+if (E['RUN_LIVE_THING']) {
+  test('costs money', () => {});
+}

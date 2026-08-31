@@ -125,6 +125,7 @@
         <% } %>
         <form method="POST" action="/login">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input type="hidden" name="next" value="<%= nextPath || '/' %>">
             <div class="form-group">
                 <label for="username">Username</label>
                 <input type="text" id="username" name="username" autocomplete="username" required autofocus>

@@ -1,0 +1,6 @@
+// W3 probe D: an alias built with Object.assign rather than a spread.
+const test = require('node:test');
+const e = Object.assign({}, process.env);
+if (e.RUN_LIVE_THING) {
+  test('costs money', () => {});
+}

@@ -523,6 +523,240 @@ CREATE INDEX IF NOT EXISTS idx_scott_brain_gaps_responsible ON scott_brain_gaps 
 ALTER TABLE scott_portal_users ADD COLUMN IF NOT EXISTS notify_email VARCHAR(255) NOT NULL DEFAULT '';
 
 
+-- ============================================================
+-- Arrington AI Workspace v0.1 (added 30/08/2026)
+--
+-- Entirely separate from the Scott demonstration tables above: no
+-- Scott table is referenced, no Scott identity is reused, and no
+-- workspace table is readable through any Scott route. The workspace
+-- holds REAL Arrington operating knowledge, so every read surface is
+-- filtered by lib/workspace/clearance.js (human leg) intersected with
+-- lib/workspace/lanes.js (lane leg). Real human access is Tom only.
+-- ============================================================
+
+-- The indexed brain. One row per controlled record extracted from the
+-- approved source set (controlled Drive records, verified website /
+-- GitHub / Railway state). Provenance is carried on the row itself:
+-- source_ref names where the fact came from, as_of dates the fact,
+-- synced_at dates the extraction, stale_after_days drives the freshness
+-- display, sync_outcome records honestly whether the last sync worked.
+CREATE TABLE IF NOT EXISTS workspace_records (
+    id SERIAL PRIMARY KEY,
+    record_key VARCHAR(120) UNIQUE NOT NULL,
+    source_class VARCHAR(40) NOT NULL,
+    authority_class VARCHAR(40) NOT NULL DEFAULT 'supporting' CHECK (authority_class IN ('master_authority', 'live_authority', 'handoff', 'evidence', 'supporting')),
+    doc_status VARCHAR(20) NOT NULL DEFAULT 'current' CHECK (doc_status IN ('current', 'historic', 'superseded', 'proposed', 'unverified')),
+    sensitivity VARCHAR(20) NOT NULL DEFAULT 'standard' CHECK (sensitivity IN ('standard', 'commercial', 'confidential')),
+    title VARCHAR(300) NOT NULL,
+    source_ref VARCHAR(500) NOT NULL DEFAULT '',
+    body TEXT NOT NULL DEFAULT '',
+    as_of DATE,
+    synced_at TIMESTAMPTZ,
+    stale_after_days INTEGER,
+    sync_outcome VARCHAR(20) NOT NULL DEFAULT 'ok' CHECK (sync_outcome IN ('ok', 'partial', 'failed')),
+    meta JSONB NOT NULL DEFAULT '{}',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_workspace_records_class ON workspace_records (source_class, doc_status);
+
+-- Conversations are owned by the authenticated human who started them,
+-- with the clearance they held at the time snapshotted onto the row, so
+-- history replay can never show more than the owner could see live.
+CREATE TABLE IF NOT EXISTS workspace_conversations (
+    id SERIAL PRIMARY KEY,
+    owner_username VARCHAR(100) NOT NULL,
+    clearance VARCHAR(40) NOT NULL,
+    lane_id VARCHAR(60) NOT NULL DEFAULT '',
+    title VARCHAR(300) NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_workspace_conversations_owner ON workspace_conversations (owner_username, updated_at DESC);
+
+-- provenance holds the record_keys the server actually supplied to the
+-- model for this turn: server-known fact, never a model claim.
+CREATE TABLE IF NOT EXISTS workspace_messages (
+    id SERIAL PRIMARY KEY,
+    conversation_id INTEGER NOT NULL REFERENCES workspace_conversations(id) ON DELETE CASCADE,
+    role VARCHAR(20) NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
+    content TEXT NOT NULL,
+    lane_id VARCHAR(60) NOT NULL DEFAULT '',
+    provenance JSONB NOT NULL DEFAULT '[]',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_workspace_messages_conv ON workspace_messages (conversation_id, id);
+
+-- Brain gaps, per ARRINGTON AI WORKSPACE V0.1 - BRAIN GAP & HUMAN
+-- NOTIFICATION STANDARD. Same honesty rules as scott_brain_gaps, which
+-- proved them: a gap carries the sensitivity of the evidence it quotes
+-- and is filtered like the record it concerns; resolving requires a
+-- human and a written statement; resolve and dismiss stay different.
+CREATE TABLE IF NOT EXISTS workspace_gaps (
+    id SERIAL PRIMARY KEY,
+    gap_type VARCHAR(20) NOT NULL DEFAULT 'missing' CHECK (gap_type IN ('missing', 'stale', 'conflicting', 'provenance', 'source_failure')),
+    description TEXT NOT NULL,
+    record_key VARCHAR(120) NOT NULL DEFAULT '',
+    sensitivity VARCHAR(20) NOT NULL DEFAULT 'standard' CHECK (sensitivity IN ('standard', 'commercial', 'confidential')),
+    material BOOLEAN NOT NULL DEFAULT false,
+    status VARCHAR(20) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'resolved', 'dismissed')),
+    raised_by VARCHAR(100) NOT NULL,
+    resolved_by VARCHAR(100) NOT NULL DEFAULT '',
+    source_corrected BOOLEAN NOT NULL DEFAULT false,
+    resolution_note TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    resolved_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_workspace_gaps_status ON workspace_gaps (status, created_at DESC);
+
+-- Human approval gates: a record-only queue. Approving a row records a
+-- decision; it executes nothing. Action classes follow the control
+-- pack; the workspace itself only ever performs class 3 (workspace
+-- record writes). Class 4+ actions are out of scope for v0.1.
+CREATE TABLE IF NOT EXISTS workspace_approvals (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(300) NOT NULL,
+    detail TEXT NOT NULL DEFAULT '',
+    action_class SMALLINT NOT NULL DEFAULT 3,
+    sensitivity VARCHAR(20) NOT NULL DEFAULT 'commercial' CHECK (sensitivity IN ('standard', 'commercial', 'confidential')),
+    requested_by VARCHAR(100) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'approved', 'declined')),
+    decided_by VARCHAR(100) NOT NULL DEFAULT '',
+    decision_note TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    decided_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_workspace_approvals_status ON workspace_approvals (status, created_at DESC);
+
+-- Append-only. No route updates or deletes rows here, and no AI path
+-- writes anything except through the server's own audited helpers.
+CREATE TABLE IF NOT EXISTS workspace_activity (
+    id SERIAL PRIMARY KEY,
+    actor VARCHAR(100) NOT NULL,
+    event_type VARCHAR(60) NOT NULL,
+    summary TEXT NOT NULL,
+    -- Governance finding J2 (31/08/2026): the failed-unlock alert's
+    -- per-account cooldown was keyed by substring-matching the account
+    -- name inside `summary`, which is human-readable prose. Rewording
+    -- the message would silently remove the cooldown, and a username
+    -- containing a LIKE wildcard would match another account's rows.
+    -- The account a row is ABOUT now has its own column and is matched
+    -- exactly. Empty for rows that are not about a particular account.
+    subject VARCHAR(200) NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_workspace_activity_time ON workspace_activity (created_at DESC);
+-- The (event_type, subject) index is created in db/seed.js AFTER the
+-- ALTER that adds `subject`, deliberately, NOT here. On an existing
+-- database CREATE TABLE IF NOT EXISTS is skipped while the index
+-- statements still run, so an index naming a column that the ALTER has
+-- not yet added fails the whole seed. That is the same ordering trap
+-- that crashed production during the Scott v0.2 release: it is
+-- invisible in every environment whose schema already carries history.
+
+-- One row per ingest attempt, successful or not, so freshness claims on
+-- the Today page rest on recorded runs rather than assumption.
+CREATE TABLE IF NOT EXISTS workspace_sync_runs (
+    id SERIAL PRIMARY KEY,
+    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    finished_at TIMESTAMPTZ,
+    outcome VARCHAR(20) NOT NULL DEFAULT 'failed' CHECK (outcome IN ('ok', 'partial', 'failed')),
+    records_written INTEGER NOT NULL DEFAULT 0,
+    detail TEXT NOT NULL DEFAULT ''
+);
+
+-- ------------------------------------------------------------
+-- Arrington AI Workspace: social media control area (30/08/2026)
+--
+-- Four platforms (Facebook, Instagram, LinkedIn, X) presented as ONE
+-- control area rather than four unrelated integrations, so every table
+-- here is keyed by platform rather than duplicated per network.
+--
+-- The load-bearing distinction is between a credential and a
+-- retrieval. workspace_social_accounts records both separately:
+-- whether a connector is configured, and when it last actually
+-- returned data. An interface may only claim the second on the
+-- strength of last_sync_outcome, never on the strength of a token
+-- existing.
+-- ------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS workspace_social_accounts (
+    id SERIAL PRIMARY KEY,
+    platform VARCHAR(20) UNIQUE NOT NULL CHECK (platform IN ('facebook', 'instagram', 'linkedin', 'x')),
+    -- 'not_configured' is the honest default: no credential has ever
+    -- been supplied. 'configured' means a credential exists and nothing
+    -- more. Only a real retrieval moves last_sync_outcome to 'ok'.
+    status VARCHAR(20) NOT NULL DEFAULT 'not_configured' CHECK (status IN ('not_configured', 'configured', 'revoked', 'error')),
+    account_ref VARCHAR(200) NOT NULL DEFAULT '',
+    display_name VARCHAR(200) NOT NULL DEFAULT '',
+    granted_scopes TEXT NOT NULL DEFAULT '',
+    connected_at TIMESTAMPTZ,
+    last_sync_at TIMESTAMPTZ,
+    last_sync_outcome VARCHAR(20) NOT NULL DEFAULT 'never' CHECK (last_sync_outcome IN ('never', 'ok', 'partial', 'failed')),
+    last_error TEXT NOT NULL DEFAULT '',
+    stale_after_hours INTEGER NOT NULL DEFAULT 24,
+    followers INTEGER,
+    followers_change INTEGER,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Retrieved content. kind separates what was published from what is
+-- only proposed, so a draft can never be mistaken for something that
+-- actually went out. 'proposed' rows are written by the drafting lane
+-- and are inert until a human publishes them by hand.
+CREATE TABLE IF NOT EXISTS workspace_social_posts (
+    id SERIAL PRIMARY KEY,
+    platform VARCHAR(20) NOT NULL,
+    external_id VARCHAR(200) NOT NULL DEFAULT '',
+    kind VARCHAR(20) NOT NULL DEFAULT 'published' CHECK (kind IN ('published', 'scheduled', 'draft', 'proposed')),
+    body TEXT NOT NULL DEFAULT '',
+    permalink TEXT NOT NULL DEFAULT '',
+    posted_at TIMESTAMPTZ,
+    impressions INTEGER,
+    engagements INTEGER,
+    comments_count INTEGER,
+    drafted_by VARCHAR(60) NOT NULL DEFAULT '',
+    retrieved_at TIMESTAMPTZ,
+    UNIQUE (platform, external_id)
+);
+CREATE INDEX IF NOT EXISTS idx_workspace_social_posts_platform ON workspace_social_posts (platform, posted_at DESC);
+
+-- Comments, mentions and messages needing a human reply. needs_reply
+-- plus replied_at is the outstanding-replies list; nothing here is ever
+-- answered by the workspace itself.
+CREATE TABLE IF NOT EXISTS workspace_social_engagement (
+    id SERIAL PRIMARY KEY,
+    platform VARCHAR(20) NOT NULL,
+    external_id VARCHAR(200) NOT NULL DEFAULT '',
+    kind VARCHAR(20) NOT NULL DEFAULT 'comment' CHECK (kind IN ('comment', 'mention', 'message', 'review')),
+    author VARCHAR(200) NOT NULL DEFAULT '',
+    body TEXT NOT NULL DEFAULT '',
+    permalink TEXT NOT NULL DEFAULT '',
+    occurred_at TIMESTAMPTZ,
+    needs_reply BOOLEAN NOT NULL DEFAULT false,
+    -- Set by a human recording that they replied on the platform. The
+    -- workspace cannot reply, so it cannot set this on its own.
+    replied_at TIMESTAMPTZ,
+    replied_by VARCHAR(100) NOT NULL DEFAULT '',
+    suggested_reply TEXT NOT NULL DEFAULT '',
+    retrieved_at TIMESTAMPTZ,
+    UNIQUE (platform, external_id)
+);
+CREATE INDEX IF NOT EXISTS idx_workspace_social_engagement_open ON workspace_social_engagement (needs_reply, occurred_at DESC);
+
+-- One row per retrieval attempt per platform, successful or not, so the
+-- control area can show what actually happened rather than what was
+-- intended.
+CREATE TABLE IF NOT EXISTS workspace_social_sync_runs (
+    id SERIAL PRIMARY KEY,
+    platform VARCHAR(20) NOT NULL,
+    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    finished_at TIMESTAMPTZ,
+    outcome VARCHAR(20) NOT NULL DEFAULT 'failed' CHECK (outcome IN ('ok', 'partial', 'failed', 'skipped_not_configured')),
+    items_written INTEGER NOT NULL DEFAULT 0,
+    detail TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_workspace_social_sync_runs_platform ON workspace_social_sync_runs (platform, id DESC);
 -- ------------------------------------------------------------
 -- Contacts (CRM), added 30/08/2026
 --
@@ -586,3 +820,28 @@ ALTER TABLE leads ADD COLUMN IF NOT EXISTS signup_source VARCHAR(20) NOT NULL DE
 -- finishes, in a code path with no request in scope, so the source of
 -- the visitor's details is carried on the review row from the start.
 ALTER TABLE commercial_gaps_reviews ADD COLUMN IF NOT EXISTS signup_source VARCHAR(20) NOT NULL DEFAULT '';
+
+-- Erasure register (30/08/2026).
+--
+-- Evidence that a specific erasure request was carried out, designed so
+-- the register does not itself defeat the erasure: it stores a one-way
+-- hash of the address plus a redacted form for a human to recognise,
+-- never the address itself. That is enough to answer "did you action my
+-- request" when someone quotes their own email, and not enough to
+-- rebuild a contact list from the register.
+--
+-- removed/retained record what actually happened per table. Retention
+-- is stated rather than hidden: a purchase is a financial record with
+-- its own statutory retention period, so it is NOT deleted with the
+-- contact, and the register says so.
+CREATE TABLE IF NOT EXISTS crm_erasures (
+    id SERIAL PRIMARY KEY,
+    email_hash CHAR(64) NOT NULL,
+    email_redacted VARCHAR(120) NOT NULL DEFAULT '',
+    requested_by VARCHAR(100) NOT NULL,
+    reason TEXT NOT NULL,
+    removed JSONB NOT NULL DEFAULT '{}',
+    retained JSONB NOT NULL DEFAULT '{}',
+    erased_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_crm_erasures_hash ON crm_erasures (email_hash);

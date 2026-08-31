@@ -1,0 +1,58 @@
+<%- include('partials/shell-top', { pageTitle: 'Brain gaps', active: 'gaps' }) %>
+
+<h1 class="ws-h">Brain gaps</h1>
+<p class="ws-sub">Missing, stale or contradictory evidence in the controlled sources. A gap is closed by a human correcting the source, or dismissed with a reason; the two stay different, and no AI path can close either.</p>
+
+<% if (gaps.length === 0) { %>
+  <div class="ws-card"><p class="ws-empty">No gaps recorded.</p></div>
+<% } %>
+<% gaps.forEach(function (g) { %>
+  <div class="ws-card">
+    <span class="ws-badge ws-badge-plain"><%= g.gap_type.replace('_', ' ') %></span>
+    <% if (g.material) { %><span class="ws-badge ws-badge-material">material</span><% } %>
+    <span class="ws-badge <%= g.status === 'open' ? 'ws-badge-stale' : (g.status === 'resolved' ? 'ws-badge-fresh' : 'ws-badge-plain') %>"><%= g.status %></span>
+    <div class="ws-body-text"><%= g.description %></div>
+    <div class="ws-meta">Raised by <%= g.raised_by %> · <%= new Date(g.created_at).toUTCString() %><% if (g.record_key) { %> · record <%= g.record_key %><% } %></div>
+    <% if (g.status !== 'open') { %>
+      <div class="ws-meta"><%= g.status === 'resolved' ? 'Resolved (source corrected)' : 'Dismissed' %> by <%= g.resolved_by %>: <%= g.resolution_note %></div>
+    <% } else { %>
+      <form class="ws-form-row js-gap-form" data-id="<%= g.id %>">
+        <input class="ws-input" type="text" name="note" placeholder="What was done (required)" maxlength="2000" required>
+        <button class="ws-btn" type="submit" data-corrected="true">Source corrected</button>
+        <button class="ws-btn ws-btn-quiet" type="submit" data-corrected="false">Dismiss</button>
+      </form>
+      <p class="ws-note-error js-gap-error" hidden></p>
+    <% } %>
+  </div>
+<% }) %>
+
+<script nonce="<%= nonce %>">
+  (function () {
+    const csrf = document.querySelector('meta[name="csrf-token"]').content;
+    document.querySelectorAll('.js-gap-form').forEach(function (form) {
+      let corrected = 'true';
+      form.querySelectorAll('button[data-corrected]').forEach(function (btn) {
+        btn.addEventListener('click', function () { corrected = btn.dataset.corrected; });
+      });
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const err = form.parentElement.querySelector('.js-gap-error');
+        err.hidden = true;
+        try {
+          const r = await fetch('/api/workspace/gaps/' + form.dataset.id + '/resolve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf },
+            body: JSON.stringify({ sourceCorrected: corrected === 'true', note: form.querySelector('input[name="note"]').value })
+          });
+          const data = await r.json();
+          if (!r.ok) { err.textContent = data.error || 'That did not work.'; err.hidden = false; return; }
+          window.location.reload();
+        } catch (ex) {
+          err.textContent = 'Network problem: ' + ex.message; err.hidden = false;
+        }
+      });
+    });
+  })();
+</script>
+
+<%- include('partials/shell-bottom') %>

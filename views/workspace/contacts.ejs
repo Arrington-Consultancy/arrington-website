@@ -1,0 +1,186 @@
+<%- include('partials/shell-top', { pageTitle: 'Contacts', active: 'contacts' }) %>
+
+<h1 class="ws-h">Contacts</h1>
+<p class="ws-sub">One record per person, matched on email, built from every enquiry, check, quiz and download this site has ever captured. Nothing here is bought in or enriched from elsewhere.</p>
+
+<% if (!permitted) { %>
+  <div class="ws-card"><p class="ws-empty">This area holds people's contact details, which your clearance does not cover.</p></div>
+<% } else { %>
+
+<div class="ws-card">
+  <h2>Summary</h2>
+  <div class="ws-item"><span class="ws-item-title"><%= stats.contacts %></span> contact(s) on record.</div>
+  <div class="ws-item"><span class="ws-item-title"><%= stats.via_google %></span> have used Continue with Google at least once.</div>
+  <div class="ws-item"><span class="ws-item-title"><%= stats.active_30d %></span> have been in touch in the last 30 days.</div>
+  <div class="ws-item">
+    <button class="ws-btn ws-btn-quiet" id="wsSyncContacts" type="button">Rebuild from enquiry history</button>
+    <span class="ws-meta" id="wsSyncNote">Runs automatically on every deploy. Rebuilding is safe to repeat: it adds nothing it already has.</span>
+  </div>
+</div>
+
+<div class="ws-card">
+  <form method="GET" action="/workspace/contacts" class="ws-form-row">
+    <input class="ws-input" type="text" name="q" value="<%= q %>" placeholder="Search name, email or company" maxlength="120">
+    <button class="ws-btn" type="submit">Search</button>
+    <% if (q) { %><a class="ws-btn ws-btn-quiet" href="/workspace/contacts">Clear</a><% } %>
+  </form>
+  <% if (contacts.length === 0) { %>
+    <p class="ws-empty"><%= q ? 'No contact matches that.' : 'No contacts yet. They appear as people use the forms and checks.' %></p>
+  <% } else { %>
+  <div class="ws-table-wrap">
+  <table class="ws-table">
+    <tr><th>Name</th><th>Email</th><th>Interactions</th><th>First seen</th><th>Last seen</th><th>Arrived via</th></tr>
+    <% contacts.forEach(function (c) { %>
+      <tr>
+        <td><a href="/workspace/contacts?id=<%= c.id %>"><%= c.name || '(no name given)' %></a></td>
+        <td class="ws-meta"><%= c.email %></td>
+        <td><%= c.interaction_count %></td>
+        <td class="ws-meta"><%= c.first_seen_at ? new Date(c.first_seen_at).toISOString().slice(0, 10) : '' %></td>
+        <td class="ws-meta"><%= c.last_seen_at ? new Date(c.last_seen_at).toISOString().slice(0, 10) : '' %></td>
+        <td>
+          <span class="ws-badge ws-badge-plain"><%= (c.first_source || 'unknown').replace(/_/g, ' ') %></span>
+          <% if (c.used_google_prefill) { %><span class="ws-badge ws-badge-fresh">google</span><% } %>
+        </td>
+      </tr>
+    <% }) %>
+  </table>
+  </div>
+  <% } %>
+</div>
+
+<% if (detail) { %>
+<div class="ws-card">
+  <h2>History: <%= detail.name || detail.email %></h2>
+  <div class="ws-item">
+    <span class="ws-item-title"><%= detail.email %></span>
+    <div class="ws-meta">
+      <%= detail.phone ? detail.phone + ' · ' : '' %><%= detail.company ? detail.company + ' · ' : '' %>
+      <%= detail.interaction_count %> interaction(s)
+      <%= detail.used_google_prefill ? ' · has used Continue with Google' : ' · always typed their details' %>
+    </div>
+  </div>
+  <% detail.events.forEach(function (e) { %>
+    <div class="ws-item">
+      <span class="ws-badge ws-badge-plain"><%= e.kind.replace(/_/g, ' ') %></span>
+      <% if (e.signup_source === 'google') { %><span class="ws-badge ws-badge-fresh">via google</span><% } %>
+      <span class="ws-meta"><%= new Date(e.occurred_at).toUTCString() %></span>
+      <div class="ws-body-text"><%= e.summary %></div>
+    </div>
+  <% }) %>
+</div>
+<% } %>
+
+<% if (detail && erasurePreview) { %>
+<div class="ws-card ws-danger-card">
+  <h2>Erase this contact</h2>
+  <p class="ws-body-text">Permanent. It removes this person's details from the contact record and from the enquiries and submissions the record is built from, so they do not reappear on the next rebuild. There is no undo.</p>
+
+  <div class="ws-item">
+    <span class="ws-item-title">What this removes</span>
+    <% Object.keys(erasurePreview.removed).forEach(function (t) { %>
+      <div class="ws-meta"><%= erasurePreview.removed[t].label %>: <%= erasurePreview.removed[t].count %> record(s)</div>
+    <% }) %>
+  </div>
+
+  <div class="ws-item">
+    <span class="ws-item-title">What this keeps, and why</span>
+    <% Object.keys(erasurePreview.retained).forEach(function (t) { %>
+      <div class="ws-meta"><%= erasurePreview.retained[t].label %>: <%= erasurePreview.retained[t].count %> record(s). <%= erasurePreview.retained[t].reason %></div>
+    <% }) %>
+  </div>
+
+  <div class="ws-item">
+    <span class="ws-item-title">Confirm</span>
+    <p class="ws-meta">Type the address back exactly, and say why. Both are required, and the reason is kept as the record of the decision.</p>
+    <form id="wsEraseForm" data-id="<%= detail.id %>" data-email="<%= detail.email %>">
+      <div class="ws-form-row">
+        <input class="ws-input" type="text" name="confirmEmail" placeholder="<%= detail.email %>" autocomplete="off" required>
+      </div>
+      <div class="ws-form-row">
+        <input class="ws-input" type="text" name="reason" placeholder="Reason (for example: erasure requested by the person on 30 August)" maxlength="2000" required>
+      </div>
+      <button class="ws-btn ws-btn-danger" type="submit">Erase permanently</button>
+      <p class="ws-note-error" id="wsEraseError" hidden></p>
+      <p class="ws-meta" id="wsEraseDone" hidden></p>
+    </form>
+  </div>
+</div>
+<% } %>
+
+<% if (erasures && erasures.length) { %>
+<div class="ws-card">
+  <h2>Erasure register</h2>
+  <p class="ws-meta">Evidence that a request was carried out. Addresses are stored one-way and shown redacted, so this register cannot itself be used to rebuild a contact list.</p>
+  <% erasures.forEach(function (e) { %>
+    <div class="ws-item">
+      <span class="ws-item-title"><%= e.email_redacted %></span>
+      <div class="ws-meta">Erased by <%= e.requested_by %> on <%= new Date(e.erased_at).toUTCString() %></div>
+      <div class="ws-body-text"><%= e.reason %></div>
+    </div>
+  <% }) %>
+</div>
+<% } %>
+
+<script nonce="<%= nonce %>">
+  (function () {
+    var btn = document.getElementById('wsSyncContacts');
+    if (!btn) return;
+    var note = document.getElementById('wsSyncNote');
+    var csrf = document.querySelector('meta[name="csrf-token"]').content;
+    btn.addEventListener('click', async function () {
+      btn.disabled = true;
+      note.textContent = 'Rebuilding...';
+      try {
+        var r = await fetch('/api/workspace/contacts/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf }
+        });
+        var data = await r.json();
+        if (!r.ok) { note.textContent = data.error || 'That did not work.'; return; }
+        note.textContent = data.leadsScanned + ' enquiry row(s) scanned, ' + data.eventsAdded + ' new interaction(s).';
+        if (data.eventsAdded > 0) window.location.reload();
+      } catch (ex) {
+        note.textContent = 'Network problem: ' + ex.message;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  })();
+
+  (function () {
+    var form = document.getElementById('wsEraseForm');
+    if (!form) return;
+    var err = document.getElementById('wsEraseError');
+    var done = document.getElementById('wsEraseDone');
+    var csrf = document.querySelector('meta[name="csrf-token"]').content;
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      err.hidden = true;
+      // A second, deliberate step in the browser as well as the server's
+      // own exact-match requirement. Erasure is irreversible.
+      if (!window.confirm('Erase ' + form.dataset.email + ' permanently? This cannot be undone.')) return;
+      try {
+        var r = await fetch('/api/workspace/contacts/' + form.dataset.id + '/erase', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf },
+          body: JSON.stringify({
+            confirmEmail: form.confirmEmail.value,
+            reason: form.reason.value
+          })
+        });
+        var data = await r.json();
+        if (!r.ok) { err.textContent = data.error || 'That did not work.'; err.hidden = false; return; }
+        var total = Object.keys(data.removed).reduce(function (n, k) { return n + data.removed[k].count; }, 0);
+        done.textContent = 'Erased ' + data.redacted + ': ' + total + ' record(s) removed.';
+        done.hidden = false;
+        window.setTimeout(function () { window.location.href = '/workspace/contacts'; }, 1500);
+      } catch (ex) {
+        err.textContent = 'Network problem: ' + ex.message;
+        err.hidden = false;
+      }
+    });
+  })();
+</script>
+
+<% } %>
+<%- include('partials/shell-bottom') %>

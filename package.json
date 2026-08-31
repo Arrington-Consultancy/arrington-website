@@ -9,7 +9,7 @@
     "start": "node db/seed.js && node server.js",
     "seed": "node db/seed.js",
     "dev": "node db/seed.js && npx nodemon server.js",
-    "test": "node --test",
+    "test": "node scripts/runTests.js",
     "scott:pressure-test": "node scripts/runScottPressureTests.js"
   },
   "dependencies": {

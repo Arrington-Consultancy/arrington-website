@@ -54,14 +54,27 @@ test('one person arriving through several routes is one contact with several int
 test('a rebuild is idempotent: running the sync again adds nothing', async () => {
   const who = email('idem');
   await db.query(`INSERT INTO leads (kind, name, email, message) VALUES ('contact', 'Ann Hill', $1, 'Hello')`, [who]);
+  const countFor = async () => {
+    const { rows } = await db.query(
+      'SELECT COUNT(*)::int AS n FROM crm_contact_events e JOIN crm_contacts c ON c.id = e.contact_id WHERE c.email = $1',
+      [who]
+    );
+    return rows[0].n;
+  };
   await crm.syncFromLeads();
-  const first = await crm.syncFromLeads();
-  assert.equal(first.eventsAdded, 0, 'a second sync must add no interactions');
-  const { rows } = await db.query(
-    'SELECT COUNT(*)::int AS n FROM crm_contact_events e JOIN crm_contacts c ON c.id = e.contact_id WHERE c.email = $1',
-    [who]
-  );
-  assert.equal(rows[0].n, 1);
+  assert.equal(await countFor(), 1, 'the first sync did not record the interaction');
+  await crm.syncFromLeads();
+  // Measured on this test's own namespace, deliberately, not on the
+  // sync's global eventsAdded counter. `node --test` runs test files in
+  // parallel against one database, so another suite inserting a lead
+  // between the two syncs makes that counter non-zero for reasons that
+  // have nothing to do with idempotence. It failed exactly that way on
+  // 31/08/2026, and it is the same isolation defect already fixed once
+  // in the unusable-email case below. What idempotence actually means
+  // here is that this person does not gain a second interaction.
+  assert.equal(await countFor(), 1, 'a second sync duplicated an interaction for the same lead row');
+  const { rows: contacts } = await db.query('SELECT * FROM crm_contacts WHERE email = $1', [who]);
+  assert.equal(contacts.length, 1, 'a second sync created a second contact for the same person');
 });
 
 test('the Google source is recorded per interaction, not smeared across the contact', async () => {
@@ -81,12 +94,15 @@ test('the Google source is recorded per interaction, not smeared across the cont
 });
 
 test('a lead with an unusable email is skipped rather than guessed at', async () => {
-  const before = await crm.summary();
-  await db.query(`INSERT INTO leads (kind, name, email, message) VALUES ('contact', 'Broken', 'not-an-email', 'x')`);
+  // Scoped to this suite's own namespace: the whole test run shares one
+  // database and other suites create and erase contacts concurrently, so
+  // a global count would measure them rather than this behaviour.
+  const bad = `not-an-email-${NS}`;
+  await db.query(`INSERT INTO leads (kind, name, email, message) VALUES ('contact', 'Broken', $1, 'x')`, [bad]);
   await crm.syncFromLeads();
-  const after = await crm.summary();
-  assert.equal(after.contacts, before.contacts, 'no contact is invented from an unusable address');
-  await db.query(`DELETE FROM leads WHERE email = 'not-an-email'`);
+  const { rows } = await db.query('SELECT COUNT(*)::int AS n FROM crm_contacts WHERE email LIKE $1', [`%${bad}%`]);
+  assert.equal(rows[0].n, 0, 'no contact is invented from an unusable address');
+  await db.query('DELETE FROM leads WHERE email = $1', [bad]);
 });
 
 test('search finds a contact by email, name or company', async () => {
