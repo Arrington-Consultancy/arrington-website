@@ -25,7 +25,7 @@ finding was fixed in one part and declared fixed in both.**
 
 And the reviewer's new evidence makes it worse than an edge case:
 routing is nine keyword regexes, so an **unrouted question is the
-default path**, not a rarity. My own T2 fix then sent every invalid lane
+default path**, not a rarity. My own T3 fix then sent every invalid lane
 id down that same path, so the reach of the false sentence grew in the
 commit meant to correct things.
 
@@ -33,16 +33,39 @@ commit meant to correct things.
 matched, and the workspace answered from its general records. She never
 claims authorship anywhere.
 
+> **CORRECTION, added 31/08/2026 after governance findings V1 and V2.**
+> Both sentences above are wrong, and they are wrong in the way this
+> chain keeps repeating: a property asserted in the document that fixed
+> the previous instance of it.
+>
+> *"answered from its general records"* was written unconditionally. With
+> an unseeded brain, which is this candidate's actual state and the state
+> the Evidence section below records, there were no general records, so
+> three of the four zero-record turns claimed an evidential basis that did
+> not exist while the interface printed "No records were available for
+> this answer" on the same rendered line. That is V1, and it is worse than
+> U1: U1 misattributed authorship, this misstates what an answer rests on,
+> which is the one thing the workspace exists to be trusted about.
+>
+> *"She never claims authorship anywhere"* was false when written. Three
+> reachable sentences said "I have written the gap down". She holds no
+> write path; `repo.createGap` writes it. And the test named for the
+> property used `\bI (?:answered|wrote|...)`, which the word "have"
+> walks straight past. That is V2, and it is the K2/M1/N1/P1 shape again.
+>
+> Both corrected in `workspace-v0.1-v-remediation-2026-08-31.md`, with
+> tests watched red against `6d6c4d1`.
+
 **The test sweeps every combination**, not the one that was wrong: four
 lane ids by two answered states by two gap states by three record
 counts, asserting no note ever contains "I answered" or "I wrote". Red
 against `eeb3a25`.
 
-## U5 (LOW). The T3 fix did not reach the commonest turn.
+## U5 (LOW). The T2 fix did not reach the commonest turn.
 
 Accepted, and it is the same shape as U1. The gap branch sat below the
 no-lane early return, so `gapRaised` remained fully inert on the default
-path - and the test I wrote for T3 used `laneId: 'google_ads'`, which
+path - and the test I wrote for T2 used `laneId: 'google_ads'`, which
 never reaches that return. A gap is now reported on both paths, and the
 test asserts it on both.
 
@@ -78,10 +101,10 @@ CMS-admin takeover stopping at the unlock screen with a positive control
 in the same run; 3,591 paired anonymous raw-socket requests per flag
 state, 3591/3591 identical; Ruth probed across twenty clearance-by-lane
 combinations with five canaries and the model stubbed to echo everything
-it could see, leaking nothing. T2 and T3 verified genuinely fixed, red
+it could see, leaking nothing. T3 and T2 verified genuinely fixed, red
 against `93d6afa`.
 
-They also hunted the T2 prototype class across every dynamic lookup in
+They also hunted the T3 prototype class across every dynamic lookup in
 `lib/`, `routes/`, `middleware/`, `server.js` and `db/` and found **no
 second reachable instance**. One latent fail-open is recorded as a
 concern rather than a finding: `lib/scott/clearance.js`'s
@@ -96,6 +119,16 @@ scope drift these reviews exist to catch. It is carried to Tom's list.
 - Full suite: **548 tests, 546 pass, 0 fail**.
 - U1 and U5: tests **red against `eeb3a25`**, green after.
 - U3 and U4: seven probes, both directions, all correct.
+
+> **CORRECTION, added 31/08/2026 after governance finding V3.** Those
+> probes were run by hand and never committed, so nothing in the tree
+> established U3 or U4 - on the one check that has been defeated in every
+> single cycle. The chain's own rule, adopted after J1, is that an
+> asserted property must name the test that establishes it. They are now
+> `test/gatedSuiteScan.test.js` and `test/fixtures/gatedSuiteProbes/`.
+> V3 also found the U4 fix was half done in each direction: the
+> destructure read and both the assign and delete suppressors were left
+> upper-case only.
 - Adversarial by hand: workspace **10/10**, Scott **18/18**.
 
 ## What is NOT claimed

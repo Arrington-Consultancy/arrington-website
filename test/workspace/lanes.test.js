@@ -30,7 +30,7 @@ test('the lanes are exactly the nine canonical workers, in register order, with 
 });
 
 test('a lane id inherited from Object.prototype is not a lane', () => {
-  // Governance finding T2: LANES_BY_ID was a plain object literal, so
+  // Governance finding T3: LANES_BY_ID was a plain object literal, so
   // laneById('constructor') returned the Object function. The
   // receptionist then named a colleague called "Object", and
   // routes/workspace.js accepted it as a VALID forced lane id before

@@ -49,7 +49,7 @@ test('she can speak about the routing and never about the content', () => {
 });
 
 test('she cannot invent a colleague, including one inherited from Object', () => {
-  // Governance finding T2: this test was named for exactly this and
+  // Governance finding T3: this test was named for exactly this and
   // missed it, because it only tried an id that was obviously fake. A
   // crafted id made her announce a colleague called "Object" and 500'd
   // the ask endpoint, since the lane map was a plain object literal and
@@ -66,7 +66,7 @@ test('she cannot invent a colleague, including one inherited from Object', () =>
 });
 
 test('a gap is reported even when an answer came back, on BOTH paths', () => {
-  // Finding T3, and finding U5 which is the half T3's test could not
+  // Finding T2, and finding U5 which is the half T2's test could not
   // see. The gap branch sat below the no-lane early return, so
   // gapRaised was still fully inert on the commonest turn of all - and
   // the test pinned it with laneId: 'google_ads', which never reaches
@@ -83,23 +83,72 @@ test('a gap is reported even when an answer came back, on BOTH paths', () => {
   }
 });
 
-test('she never claims to have written an answer', () => {
-  // Finding U1. She holds no clearance and reads no record, so she
-  // cannot author anything. A sentence claiming she did is the same
-  // class of untruth this codebase spent thirteen reviews removing from
-  // the alert: a component describing something that did not happen.
+test('she never claims an act she did not perform', () => {
+  // Findings U1 and V2. She holds no clearance, no database handle and
+  // no write path, so she cannot author an answer and cannot write a
+  // gap: repo.createGap does that, from a field the model returned.
+  // A sentence claiming otherwise is the same class of untruth this
+  // codebase spent thirteen reviews removing from the alert.
   //
-  // Swept across every combination rather than the one that was wrong,
-  // because the previous sentence was reached by the DEFAULT path and
-  // nobody noticed for two cycles.
-  const claims = /\bI (?:answered|wrote|worked (?:it|that) out)\b/i;
+  // V2 is the regex, not the module. The previous version of this
+  // pattern was `\bI (?:answered|wrote|...)`, which matched the one
+  // string U1 had removed and walked straight past "I have written the
+  // gap down" on three other reachable sentences, because the word after
+  // "I" is "have". That is the K2/M1/N1/P1 shape again: a test asserting
+  // something adjacent to the property, staying green while the property
+  // is false. It now covers the auxiliary and the perfect forms.
+  //
+  // "I took that to X" is deliberately NOT forbidden. Routing is the one
+  // thing she actually does.
+  const claims = /\bI(?:'ve|’ve| have| had| already)?\s+(?:answered|wrote|written|recorded|logged|noted|raised|worked (?:it|that) out)\b/i;
   for (const laneId of ['google_ads', null, 'constructor', 'not-a-lane']) {
     for (const answered of [true, false]) {
       for (const gapRaised of [true, false]) {
         for (const recordCount of [0, 1, 5]) {
           const note = receptionist.handoffNote({ laneId, answered, recordCount, gapRaised });
           assert.ok(!claims.test(note),
-            `she claims authorship on lane=${laneId} answered=${answered} gap=${gapRaised}: "${note}"`);
+            `she claims an act she did not perform on lane=${laneId} answered=${answered} gap=${gapRaised} records=${recordCount}: "${note}"`);
+        }
+      }
+    }
+  }
+});
+
+test('she never claims a record when there was none, and says so when there was', () => {
+  // Finding V1, and it is the sharpest of the fifteen because it is the
+  // one thing the workspace exists to be trusted about: what an answer
+  // is actually based on.
+  //
+  // U1's fix said "it was answered from the general records" on the
+  // no-lane path unconditionally. With an unseeded brain, which is this
+  // candidate's real state, there were no general records, and the
+  // interface printed "No records were available for this answer" on the
+  // same rendered line. Three of the four zero-record turns asserted a
+  // basis that did not exist, because the one honest branch sat below
+  // two early returns.
+  //
+  // Swept in BOTH directions, because a rule that only forbids can be
+  // satisfied by saying nothing at all.
+  // Deliberately narrow: it matches an ASSERTION of a basis ("from the
+  // general records", "3 records"), not any use of the word. "with no
+  // record behind it" is the honest zero-record sentence and must pass.
+  const claimsRecords = /(?:from\s+(?:the\s+)?(?:\d+\s+)?(?:general\s+)?records?\b)|(?:\b\d+\s+records?\b)/i;
+  for (const laneId of ['google_ads', null, 'constructor', 'not-a-lane']) {
+    for (const answered of [true, false]) {
+      for (const gapRaised of [true, false]) {
+        const where = `lane=${laneId} answered=${answered} gap=${gapRaised}`;
+
+        const none = receptionist.handoffNote({ laneId, answered, recordCount: 0, gapRaised });
+        assert.ok(!claimsRecords.test(none),
+          `she claims records that did not exist on ${where}: "${none}"`);
+
+        // The other direction. Only turns that actually answered from a
+        // lane or the general context can name a count, so the positive
+        // assertion is scoped to those.
+        if (answered) {
+          const some = receptionist.handoffNote({ laneId, answered, recordCount: 3, gapRaised });
+          assert.ok(claimsRecords.test(some),
+            `three records were behind this answer and she does not say so on ${where}: "${some}"`);
         }
       }
     }

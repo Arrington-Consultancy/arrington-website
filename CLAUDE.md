@@ -1117,6 +1117,96 @@ is built staging-first and credential-gated, and the expansion is being
 routed to Governance and Assurance as a controlled change rather than
 treated as self-approved.
 
+### Fifteenth governance review: AMBER, no HIGH (31/08/2026)
+
+`review/workspace-v0.1-governance-review-15-2026-08-31.md` (**AMBER**,
+V1 MEDIUM plus four LOW against head `6d6c4d1`), answered in
+`review/workspace-v0.1-v-remediation-2026-08-31.md`. All five corrected,
+each with a test watched red against `6d6c4d1`.
+
+**V1 is the sharpest of the fifteen, and the reviewer's reason for
+saying so is the right one.** U1 misattributed an *act*, which a reader
+might discount as receptionist idiom. V1 misstates **what an answer rests
+on**, which is the single thing the workspace exists to be trusted about.
+
+The U1 fix wrote "it was answered from the general records" into a string
+unconditionally. With an unseeded brain the general context is empty, and
+that is not a corner case: it is this candidate's documented state, it is
+what the U remediation's own evidence records, and it is what every
+visitor to Ask Ruth would meet the moment the AI flag is turned on
+without `WORKSPACE_SNAPSHOT_KEY`. The interface contradicted her on the
+same rendered line: "...answered from the general records... · No records
+were available for this answer." Three of the four zero-record turns
+claimed a basis that did not exist, and the one honest sentence was
+already in the file and unreachable, sitting below the early return U1
+added and the gap branch U5 added.
+
+The record clause is now derived from the count on every branch, so no
+path can mention records without records having existed. The test sweeps
+both directions, because a rule that only forbids is satisfied by saying
+nothing at all.
+
+**V2**: "she never claims authorship anywhere" was false when written.
+Three reachable sentences said "I have written the gap down"; she holds
+no write path, `repo.createGap` does. The regex written for U1 matched
+the one string U1 removed and walked past the three that remained,
+because the word after "I" is "have". Fourth instance of the shape K2,
+M1, N1 and P1 each recorded. The gap is now reported in the passive.
+"I took that to X" is deliberately kept: routing is the one thing she
+actually does.
+
+**V3** is half a fix in each direction, plus the part worth more than
+either. U4 made one of three read-shapes case-insensitive: a lower-case
+destructure still escaped, and the assign and delete suppressors, left
+upper-case only, turned an ordinary lower-case manipulation into a false
+failure. **And the "seven probes, both directions" claimed for U3 and U4
+were run by hand and never committed**, on the one check that has been
+defeated in every cycle since L5. The classifier now lives in
+`test/helpers/gatedSuiteScan.js`, exercised by
+`test/gatedSuiteScan.test.js` against twelve committed fixtures in
+`test/fixtures/gatedSuiteProbes/`, eight that must be flagged and four
+that must not, with the real check calling the same function so the
+probes test the deployed classifier rather than a copy.
+
+**V4**: `npm test` was not green in the environment this file's own
+Development section tells a developer to create.
+`test/resetUserPasswords.test.js` spread the caller's shell into the
+child while asserting the seed refuses a half-configured reset, so an
+exported `TOM_PASSWORD` made it fail. It builds the child environment
+explicitly now. It matters beyond tidiness: fifteen passes of evidence
+rest on "npm test is green", and a green that depends on an ambient
+variable the test does not control is a weaker fact than it looks.
+
+**V5**: `CLAUDE.md`'s claim of "no second reachable instance" of the T3
+prototype class was checked and two residual lookups found in
+`lib/workspace/clearance.js`. Not attacker-reachable, and the reviewer
+said so plainly: `clearanceId` is only ever `clearanceForUser(user)` and
+the outcome would be a 500, not access. The real consequence short of
+that is that `describeOwnerBinding()` shares the lookup, so a
+`WORKSPACE_OWNER_USERNAME` of `toString` would print the binding as ok
+for a username holding no clearance in code, which is the class G7 was.
+Both maps are null-prototype now.
+
+**A citation error found by the builder and disclosed rather than
+tidied.** The thirteenth review numbers **T2** as the inert `gapRaised`
+and **T3** as the crafted lane id. The T remediation reversed them, and
+the fourteenth and fifteenth reviewers both followed that labelling.
+Nothing about the code was ever wrong; both defects were found, fixed and
+verified red against `93d6afa`. Every code comment and both remediations
+now follow the thirteenth review, with a dated note at the head of the T
+remediation. Reviews 14 and 15 are left exactly as their authors wrote
+them, because a reviewed document is not the builder's to edit.
+
+**What the fifteenth reviewer re-established rather than inherited:**
+13,620 anonymous flag-off requests across 22 real routes by 10 spellings
+by 12 methods by 5 Accept values, none distinguishable from a genuine
+404; 5,640 more with the flag on; the full CMS-admin takeover executed
+end to end, stopping at the unlock screen, with a positive control in the
+same run; the alert's bound at 25 rounds of 12 racing processes, exactly
+one notice every time, with the harness first shown to break a lock-free
+predecessor 5 times in 10; the permission legs probed with their own
+eight canaries; and the Scott firewall clean at module-graph level.
+
 ### Twelfth review PASS, then two more after Ruth (31/08/2026)
 
 The **twelfth** pass (`review/workspace-v0.1-governance-review-12-2026-08-31.md`)
@@ -1149,20 +1239,17 @@ recurring pattern rather than new:
   statements and Ruth's own output. The T remediation corrected the
   statements and said "all six corrected".
 - **It was the DEFAULT path, not an edge case.** Routing is nine keyword
-  regexes, so an unrouted question is the common case, and the T2
+  regexes, so an unrouted question is the common case, and the T3
   prototype fix then sent every invalid lane id down that same branch.
   The reach of the false sentence grew inside the commit meant to correct
   things.
 
-The no-lane turn now says what is true: no specialist matched, and the
-workspace answered from its general records. The test sweeps four lane
-ids by two answered states by two gap states by three record counts
-rather than the one combination that was wrong, and was watched red
-against `eeb3a25`.
+The no-lane turn was rewritten. **What replaced it was wrong too, and
+the fifteenth review found it: see V1 below.**
 
-**U5** is the same shape: T3's `gapRaised` branch sat below the no-lane
+**U5** is the same shape: T2's `gapRaised` branch sat below the no-lane
 early return, so it was inert on the default path, and the test written
-for T3 used a lane id that never reaches that return. A gap is now
+for T2 used a lane id that never reaches that return. A gap is now
 reported on both paths and asserted on both.
 
 **U3 and U4 were both my own over- and under-correction of T5** in
@@ -1182,7 +1269,7 @@ the full CMS-admin takeover stopping at the unlock screen with a positive
 control in the same run; 3,591 paired anonymous raw-socket requests per
 flag state, all identical; and Ruth probed across twenty
 clearance-by-lane combinations with the model stubbed to echo everything
-it could see, leaking nothing. They also hunted T2's prototype class
+it could see, leaking nothing. They also hunted T3's prototype class
 across every dynamic lookup in `lib/`, `routes/`, `middleware/`,
 `server.js` and `db/` and found no second reachable instance.
 

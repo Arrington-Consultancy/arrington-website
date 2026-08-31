@@ -140,3 +140,28 @@ test('covering is about the sensitivities, not the label, so a renamed clearance
   assert.ok(b.every((s) => a.includes(s)));
   assert.ok(!a.every((s) => b.includes(s)));
 });
+
+test('a prototype key is refused, not answered from Object.prototype', () => {
+  // Finding V5, and finding T3 one file along. CLEARANCES and
+  // HUMAN_CLEARANCE are keyed by values that come from configuration
+  // (WORKSPACE_OWNER_USERNAME, and the clearance id derived from it), and
+  // a plain object literal answers `constructor` and friends from the
+  // prototype chain. The truthiness guards then pass, because a function
+  // is truthy, and the next line throws rather than refusing.
+  //
+  // Nothing reaches this today and the fifteenth reviewer said so
+  // plainly. It is fixed for symmetry with lanes.js, and because
+  // describeOwnerBinding shares the lookup: a WORKSPACE_OWNER_USERNAME of
+  // `toString` would otherwise print the binding as ok for a username
+  // holding no clearance in code, which is the class finding G7 was.
+  for (const key of ['constructor', '__proto__', 'toString', 'valueOf', 'hasOwnProperty', 'isPrototypeOf']) {
+    assert.equal(clearanceForUser({ username: key, id: 1 }), null,
+      `${key} resolved to a clearance through the prototype chain`);
+    assert.equal(clearanceCanSeeSensitivity(key, 'standard'), false,
+      `${key} was answered as a clearance rather than refused`);
+    assert.equal(clearanceCanSeeSensitivity(key, 'confidential'), false);
+    assert.equal(clearanceCovers(key, 'owner_admin'), false);
+    assert.equal(clearanceCovers('owner_admin', key), false,
+      `${key} was covered as a stored clearance`);
+  }
+});
