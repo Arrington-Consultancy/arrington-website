@@ -20,11 +20,31 @@
     <li><a href="/scott/team" class="<%= active === 'team' ? 'active' : '' %>">How this team works</a></li>
   </ul>
   <%
+    // Finance and Social Media get their own tabs rather than sitting
+    // inside the collapsed Company records list, per Tom's instruction
+    // (31/08/2026). This is a nav placement change only: both routes,
+    // both pages and everything they show are exactly what was already
+    // built and reviewed. PINNED_NAV_KEYS drives the split, so the
+    // single source of truth for path/label stays DATA_PAGES in
+    // routes/scott.js - nothing is duplicated here.
+    var PINNED_NAV_KEYS = ['finance', 'social'];
+    var allDataPages = (typeof dataPages !== 'undefined' ? dataPages : []);
+    var pinnedPages = allDataPages.filter(function (p) { return PINNED_NAV_KEYS.indexOf(p.nav) !== -1; });
+  %>
+  <ul class="sc-nav">
+    <% pinnedPages.forEach(function (p) { %>
+      <li><a href="<%= p.path %>" class="<%= active === p.nav ? 'active' : '' %>"><%= p.label %></a></li>
+    <% }); %>
+  </ul>
+  <%
     // The records are the building, not the doorway: fifteen links at
     // first contact is what made the demo need explaining. Collapsed by
     // default, auto-expanded when you are already inside one, and
-    // nothing is removed.
-    var recordsPages = (typeof dataPages !== 'undefined' ? dataPages : []);
+    // nothing is removed - Finance and Social Media are filtered out of
+    // this list only because they are now pinned above, not deleted from
+    // dataPages/DATA_PAGES, so route registration and search are
+    // untouched.
+    var recordsPages = allDataPages.filter(function (p) { return PINNED_NAV_KEYS.indexOf(p.nav) === -1; });
     var recordsOpen = recordsPages.some(function (p) { return p.nav === active; });
   %>
   <button type="button" class="sc-nav-heading sc-nav-toggle" id="scRecordsToggle" aria-expanded="<%= recordsOpen ? 'true' : 'false' %>">Company records <span class="sc-nav-caret"><%= recordsOpen ? '▾' : '▸' %></span></button>
