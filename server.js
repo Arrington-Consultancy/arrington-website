@@ -1180,15 +1180,65 @@ setTimeout(() => {
   setInterval(pruneStaleCommercialGapsReviews, CGR_SWEEP_INTERVAL_MS);
 }, 60 * 1000);
 
+// Reports the three workspace gates one by one. Kept here rather than in
+// the workspace modules because it is a deployment diagnostic, and it
+// deliberately reports the passphrase's presence and length only.
+async function describeWorkspaceAccessConfig() {
+  const enabled = process.env.ENABLE_ARRINGTON_AI_WORKSPACE === 'true';
+  if (!enabled) return "ENABLE_ARRINGTON_AI_WORKSPACE is not 'true', so the workspace does not exist in this environment";
+  const binding = require('./lib/workspace/clearance').describeOwnerBinding();
+  const pass = require('./lib/workspace/unlock').describeUnlockConfig();
+  const parts = [
+    'flag on',
+    binding.ok
+      ? `owner binding ok (username '${binding.username}', expects user id ${binding.userId})`
+      : `owner binding NOT SET: ${binding.problems.join('; ')}`,
+    pass.ok ? pass.detail : `passphrase NOT SET: ${pass.detail}`
+  ];
+  const shut = !binding.ok || !pass.ok;
+  // The id an operator actually needs. Without this line, setting
+  // WORKSPACE_OWNER_USER_ID correctly means having database access,
+  // which the person doing the deploy may not have. A user id is not a
+  // secret; the passphrase is, and is never printed.
+  try {
+    const names = Object.keys(require('./lib/workspace/clearance').HUMAN_CLEARANCE);
+    const { rows } = await db.query('SELECT id, username FROM users WHERE username = ANY($1)', [names]);
+    parts.push(rows.length
+      ? 'actual ids in this database: ' + rows.map((r) => `${r.username}=${r.id}`).join(', ')
+      : `no account exists here for the cleared username(s) ${names.join(', ')}`);
+  } catch (err) {
+    parts.push(`could not read the users table to report the actual id (${err.message})`);
+  }
+  return parts.join(' | ') + (shut ? ' | RESULT: nobody can reach the workspace until these are set' : ' | RESULT: the cleared owner can unlock');
+}
+
 loadPermissions().then(() => {
   app.listen(PORT, () => {
     console.log(`[${isProd ? 'PROD' : 'DEV'}] Arrington CMS running on port ${PORT}`);
     console.log(require('./lib/scott/orchestrator').describeScottAIStatus());
     console.log('Workspace AI: ' + require('./lib/workspace/orchestrator').describeWorkspaceAIStatus());
+    // Governance finding F1 (Tom's decision, 31/08/2026): the workspace
+    // now has three gates, and two of them are Railway variables that
+    // are easy to get subtly wrong. This line reports each separately,
+    // so an operator can tell an unset variable from a wrong one without
+    // guessing. It prints the expected user id, which is not a secret
+    // and is the thing you need to see in order to set it, and it never
+    // prints any part of the passphrase.
+    describeWorkspaceAccessConfig()
+      .then((line) => console.log('Workspace access: ' + line))
+      .catch((err) => console.error('Workspace access: could not be described:', err.message));
+    // Writes a paid-run authorisation row when ARM_WORKSPACE_LIVE_PRESSURE
+    // is set, and launches nothing. This is route (b) in that script:
+    // the arming half, for an operator whose shell cannot reach the
+    // database. It refuses to run alongside RUN_WORKSPACE_LIVE_PRESSURE.
+    require('./scripts/armWorkspaceLivePressure').armAtBoot(require('./db/pool'));
     // One-shot, marker-guarded, env-gated runner for the paid live-AI
     // pressure suite. A no-op unless RUN_SCOTT_LIVE_PRESSURE=true; see
     // the script header for the spend controls.
     require('./scripts/scottLivePressureRunner').maybeRunLivePressureSuite(require('./db/pool'));
+    // The workspace's own paid suite, same shape, its own flag and its
+    // own marker so one can never spend on behalf of the other.
+    require('./scripts/workspaceLivePressureRunner').maybeRunWorkspacePressureSuite(require('./db/pool'));
   });
 }).catch(err => {
   console.error('Failed to load permissions:', err);

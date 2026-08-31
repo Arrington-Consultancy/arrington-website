@@ -15,6 +15,10 @@ const BASE = process.env.WORKSPACE_TEST_BASE_URL;
 const TOM_PASSWORD = process.env.WORKSPACE_TEST_TOM_PASSWORD;
 const OTHER_USER = process.env.WORKSPACE_TEST_OTHER_USER || 'nat';
 const OTHER_PASSWORD = process.env.WORKSPACE_TEST_OTHER_PASSWORD;
+// Governance finding F1, Tom's decision of 31/08/2026: reaching a
+// workspace page now needs the deployment passphrase as well as the
+// login. Without it these checks can only prove the closed half.
+const PASSPHRASE = process.env.WORKSPACE_TEST_PASSPHRASE;
 
 const PAGES = [
   '/workspace', '/workspace/chat', '/workspace/brain', '/workspace/opportunities',
@@ -79,6 +83,19 @@ function makeClient() {
 // for the wrong reason, which costs a release decision. So each block
 // that logs in proves the session first, on a page that has nothing to
 // do with the workspace.
+// Presents the passphrase the way the unlock screen does. Returns the
+// HTTP status so a caller can assert on a refusal as well as a success.
+async function unlockWorkspace(client, passphrase) {
+  const page = await client.go('/workspace/unlock');
+  const html = await page.text();
+  const token = (html.match(/name="csrf-token" content="([^"]+)"/) || [])[1];
+  return client.go('/api/workspace/unlock', {
+    method: 'POST',
+    headers: { 'x-csrf-token': token },
+    body: { passphrase }
+  });
+}
+
 async function assertLoggedIn(client, username) {
   const res = await client.go('/login');
   assert.equal(res.status, 302,
@@ -150,10 +167,65 @@ test('adversarial workspace checks', { skip: configured ? false : 'set WORKSPACE
     }
   });
 
-  await t.test('Tom reaches every page, and every one is noindex', async () => {
-    const tom = makeClient();
+  // ONE login as Tom for everything below.
+  //
+  // It used to be one per block, which meant five login attempts in a
+  // run and tripped the site's own limiter (5 per 15 minutes) on the
+  // fifth. Every later assertion then failed for a reason that had
+  // nothing to do with the workspace, which is exactly the misreading
+  // assertLoggedIn exists to catch. The blocks are ordered so the locked
+  // checks and the wrong-passphrase check run BEFORE the successful
+  // unlock, because after that the session is no longer locked and they
+  // would be testing nothing.
+  const tom = makeClient();
+
+  await t.test('Tom can authenticate, so every check below means something', async () => {
     await tom.login('tom', TOM_PASSWORD);
     await assertLoggedIn(tom, 'tom');
+  });
+
+  // Governance finding F1, the claim being made to Governance, tested
+  // over real HTTP against the running application rather than argued:
+  // holding the cleared account is not holding the workspace.
+  await t.test('a logged-in cleared session reaches nothing until it presents the passphrase', async () => {
+    for (const path of PAGES) {
+      const res = await tom.go(path);
+      assert.equal(res.status, 302, `${path} returned ${res.status} to a locked session`);
+      assert.equal(res.headers.get('location'), '/workspace/unlock',
+        `${path} sent a locked session somewhere other than the unlock screen`);
+    }
+    // The APIs make no exception and give no hint: a script must learn
+    // nothing it could act on, and the erasure endpoint is in this list.
+    //
+    // A valid CSRF token is sent deliberately. Without one the site's
+    // global CSRF middleware answers 403 before the workspace guard is
+    // ever reached, and the check would be testing CSRF rather than the
+    // unlock gate. It caught exactly that on 31/08/2026.
+    const csrf = ((await (await tom.go('/workspace/unlock')).text())
+      .match(/name="csrf-token" content="([^"]+)"/) || [])[1];
+    assert.ok(csrf, 'no CSRF token could be read, so the API checks below would only be testing CSRF');
+    for (const [path, body] of APIS) {
+      const res = await tom.go(path, { method: 'POST', body, headers: { 'x-csrf-token': csrf } });
+      assert.equal(res.status, 404, `${path} answered ${res.status} to a locked session`);
+      const text = await res.text();
+      assert.doesNotMatch(text, /unlock|passphrase/i, `${path} told a locked caller how to get in`);
+    }
+  });
+
+  await t.test('a wrong passphrase is refused, it is recorded, and the session stays locked', async () => {
+    const res = await unlockWorkspace(tom, 'definitely-not-the-passphrase');
+    assert.equal(res.status, 401, 'a wrong passphrase was not refused');
+    const body = await res.json();
+    // The refusal must not describe the real value: no length, no prefix.
+    assert.doesNotMatch(JSON.stringify(body), /\d{2,}/, 'the refusal leaked a number that could describe the passphrase');
+    const after = await tom.go('/workspace/contacts');
+    assert.equal(after.status, 302, 'a refused attempt left the session unlocked');
+  });
+
+  await t.test('the right passphrase opens it, and every page is noindex', async (tt) => {
+    if (!PASSPHRASE) return tt.skip('NOT EXECUTABLE: set WORKSPACE_TEST_PASSPHRASE; without it Tom cannot unlock');
+    const unlocked = await unlockWorkspace(tom, PASSPHRASE);
+    assert.equal(unlocked.status, 200, 'the passphrase was refused, so nothing below was exercised');
     for (const path of PAGES) {
       const res = await tom.go(path);
       assert.equal(res.status, 200, `${path} returned ${res.status} for Tom`);
@@ -164,13 +236,11 @@ test('adversarial workspace checks', { skip: configured ? false : 'set WORKSPACE
 
   // The reviewer noted on 30/08/2026 that this check used to `return`
   // when the environment held no contact, so it could report a pass
-  // having asserted nothing. It now skips loudly instead: a permanent
+  // having asserted nothing. It skips loudly instead: a permanent
   // deletion control that is silently untested is exactly the thing that
   // should be visible in the output.
   await t.test('erasure refuses a mismatched confirmation even for Tom', async (tt) => {
-    const tom = makeClient();
-    await tom.login('tom', TOM_PASSWORD);
-    await assertLoggedIn(tom, 'tom');
+    if (!PASSPHRASE) return tt.skip('NOT EXECUTABLE: set WORKSPACE_TEST_PASSPHRASE; without it Tom cannot unlock');
     const page = await tom.go('/workspace/contacts');
     const html = await page.text();
     const token = (html.match(/name="csrf-token" content="([^"]+)"/) || [])[1];

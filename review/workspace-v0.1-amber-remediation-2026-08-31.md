@@ -4,8 +4,15 @@
 **Responds to:** `review/workspace-v0.1-governance-review-2026-08-30.md` (verdict AMBER, ten findings)
 **Written by:** the technical builder. This is a remediation record, not an
 assurance verdict. Nothing here upgrades AMBER. The builder does not award
-itself a Governance PASS, and two of the three HIGH findings are reserved
-to Tom Arrington by the review's own terms and remain open below.
+itself a Governance PASS.
+
+**Updated 31 August 2026 (second pass).** Tom decided both HIGH findings
+that the first pass left open: F1 by choosing option 3, F3 by explicitly
+approving the reviewed scope. Both are now closed below, and the
+candidate goes back to independent Governance & Assurance for the
+PASS/AMBER/STOP verdict. Tom has separately withheld production merge,
+production deployment and production enablement until that verdict and
+his own production approval.
 
 **Branch:** `feature/arrington-ai-workspace-v0-1`
 **Production state:** unchanged. `ENABLE_ARRINGTON_AI_WORKSPACE` is not set
@@ -17,9 +24,9 @@ on the production service, so none of this is reachable on the public site.
 
 | Finding | Severity | State after this pass |
 |---|---|---|
-| F1. A site admin can take Tom's workspace access | HIGH | **OPEN, reserved to Tom.** Recorded in `clearance.js` as an open, explicitly *un*accepted risk, with the three options. No code change to the access model. |
+| F1. A site admin can take Tom's workspace access | HIGH | **CLOSED.** Tom chose option 3 on 31/08/2026. Implemented as a third gate. |
 | F2. The area announces its existence to anonymous visitors | HIGH | **Corrected.** |
-| F3. The social expansion and the Bob Fletcher scope lines are not approved | HIGH (control point) | **OPEN, reserved to Tom.** No change made; it is his decision to record or to lift the work out of this candidate. |
+| F3. The social expansion and the Bob Fletcher scope lines are not approved | HIGH (control point) | **CLOSED.** Explicitly approved by Tom on 31/08/2026, bounded to the reviewed scope. |
 | F4. The erasure tombstone identifies the people it erased | MEDIUM | **Corrected**, with its consequence stated rather than hidden. |
 | F5. One declared social scope is a write permission | MEDIUM | **Corrected**, and the test that let it through is now the other way round. |
 | F6. Two workspace surfaces apply no clearance filter | MEDIUM | **Corrected.** |
@@ -31,28 +38,85 @@ on the production service, so none of this is reachable on the public site.
 
 ---
 
-## F1. Open, and deliberately not accepted
+## F1. Closed. Tom chose option 3 on 31/08/2026
 
-The review demonstrated end to end that an admin CMS account can rewrite
-the password behind the username `tom` and then hold the workspace,
-including sight of the whole controlled brain and the irreversible
-erasure control.
+His instruction: "Bind Workspace clearance to the actual user ID and
+require the separate Railway variable identifying the expected cleared
+username. Do not accept the existing CMS-admin takeover risk, and
+preserve the legitimate account recovery route."
 
-`lib/workspace/clearance.js` previously implied the opposite. It now
-records the risk in full, and records that it is **not accepted**, because
-only Tom can accept it. The three options the review set out are written
-into the file so a later reader cannot mistake silence for a decision:
+Those are two requirements, and the named mechanism satisfies only one
+of them. That is worth stating plainly rather than quietly implementing
+three things and calling it option 3.
 
-1. accept it in writing, on the basis that the only admin account belongs
-   to an org owner who already has database access;
-2. refuse a password change against any username holding workspace
-   clearance, which also removes Tom's own admin-assisted recovery path;
-3. bind clearance to the user id and require a second Railway variable
-   naming the expected username, so seizing access needs infrastructure
-   access as well as CMS access.
+**What binding to the user id and the username variable actually
+closes.** Not the demonstrated attack. After an admin resets the
+password behind `tom`, the attacker logs in as `tom`, with Tom's real
+row and Tom's real user id: both bindings look correct because nothing
+about the identity has changed, only who knows the password. What these
+two legs do close is a different and real attack, deleting the `tom`
+account and creating a new one under the same name, which the username
+check alone would have accepted. They also remove the code-edit-alone
+path: adding a name to `HUMAN_CLEARANCE` no longer grants anything by
+itself, because Railway must name that account too. A code change and an
+infrastructure change are now both required.
 
-No option was implemented. Option 2 in particular changes how Tom would
-recover his own account, which is his call and not a defect fix.
+**What closes the takeover.** A secret the CMS cannot rewrite.
+`WORKSPACE_ACCESS_PASSPHRASE` lives in Railway, which is Tom's own
+account and is not reachable from CMS admin. A cleared session must
+present it before any page renders or any API answers. So an admin who
+seizes the CMS account still cannot read the brain and cannot erase a
+contact, which is the instruction's second requirement.
+
+**The recovery route is untouched**, which was the third. An admin can
+still reset Tom's site password so he can get back into the CMS; that
+now simply does not carry the workspace with it. Tom can rotate the
+passphrase himself in Railway if he loses it, and doing so immediately
+invalidates every open unlock rather than waiting for one to expire.
+
+Implementation notes that matter for review:
+
+- `lib/workspace/clearance.js` gains the identity binding. Everything
+  fails closed: an unset variable, a mismatch, or a session with no user
+  id yields no clearance at all. An environment that forgot to configure
+  it does not fall back to the old username-only rule.
+- `lib/workspace/unlock.js` holds the second factor. It is one extra
+  fact about an already-authenticated session, not a second login and
+  not a second user store. Constant-time comparison over SHA-256
+  digests, so neither the length nor a prefix leaks from timing. The
+  unlock is bound to the user id that performed it and to a fingerprint
+  of the passphrase in force, expires after four hours, and a passphrase
+  under twelve characters is treated as unset rather than accepted.
+- Failed attempts are written to `workspace_activity` as
+  `workspace_unlock_failed`, and a run of them against the cleared
+  username is the signature of exactly this attack. It is the only
+  warning anyone would get.
+- The unlock POST is limited to five attempts per fifteen minutes,
+  keyed on the session, because the caller this defends against is
+  authenticated.
+- **One deliberate exception to the hide-existence rule.** A
+  cleared-but-locked page request is redirected to `/workspace/unlock`
+  rather than 404'd. This looks like a reversal of F2 and is not: F2 was
+  about anonymous and uncleared callers, who learn something real from a
+  302. Anyone reaching this point has already satisfied the identity
+  binding, so they are either Tom or someone holding Tom's CMS account,
+  and the latter is an org member who can read the repository anyway.
+  Hiding it from them buys nothing and costs Tom a 404 on his own
+  bookmark. The APIs make no such exception: a locked session gets the
+  same 404 as an uncleared one, with no mention of unlocking, and the
+  erasure endpoint is behind that line.
+- `WORKSPACE_OWNER_USER_ID` is a real row id and differs per database,
+  so the boot log now reports each gate separately AND the actual ids of
+  the cleared usernames in that database. A user id is not a secret. The
+  passphrase never appears in any log, only its length, which is the
+  distinction that cost a whole session on the Market Ready Test.
+
+Covered by `test/workspace/unlock.test.js` (10 cases, including the
+finding itself stated as a test: an admin holding the right username and
+the right user id still cannot open the workspace, and cannot guess in),
+by the identity cases in `test/workspace/clearance.test.js` and
+`test/workspace/access.test.js`, and end to end over HTTP in
+`test/workspace/adversarialApi.test.js`.
 
 ## F2. Corrected
 
@@ -69,16 +133,51 @@ non-existent path: same status, same body after normalising per-request
 nonces. The API case does the same against a non-existent endpoint, and
 additionally asserts the denial never says "log in".
 
-## F3. Open, and not something a builder can close
+## F3. Closed. Explicitly approved by Tom on 31/08/2026
 
-Unchanged and unresolved. The social control area, and the two scope lines
-added to Bob Fletcher's specification in `lib/scott/workers.js`, are an
-expansion of the approved v0.1 source map. Tom instructed the expansion;
-an assurance lane cannot approve it on the strength of the builder's
-description of the instruction. Either Tom records the approval of both as
-explicit decisions, or he asks for them to be lifted out of this candidate
-and brought as their own change. Nothing has been done here to make that
-decision easier to skip.
+His words, recorded verbatim because the bound matters as much as the
+approval: "The Social expansion and the two Bob Fletcher scope lines
+already presented to Governance are explicitly approved as part of this
+release candidate. This approval is bounded to that reviewed scope. It
+does not authorise autonomous publishing, external replies/messages,
+deletion, paid-social spend, account administration, credential changes
+or further permission expansion."
+
+He named seven exclusions. Six of them are exactly the six action
+classes `ACTION_CLASS_HUMAN` already refuses by construction, checked
+against the code rather than assumed:
+
+| Tom's exclusion | Refused as |
+|---|---|
+| autonomous publishing | `publish` |
+| external replies | `reply_publicly` |
+| external messages | `send_message` |
+| deletion | `delete` |
+| paid-social spend | `advertising_spend` |
+| account administration | `change_account_settings` |
+
+The permission question is answered in one place, the guard THROWS
+rather than returning false so a caller that forgets to check still
+cannot proceed, and no connector declares a write scope, so the token
+could not perform these even if the code tried.
+
+The seventh, **credential changes**, is not a connector action and so is
+not in that list. It is excluded by there being no write path at all:
+every credential is read from `process.env` (`isConfigured` reads them,
+nothing writes them), so the workspace has no way to set, rotate or
+store a credential. The same is true of **further permission
+expansion**: the declared read scopes are constants in the registry, and
+the scope test now fails any manage-shaped addition that is not
+justified by name.
+
+The approval and the code therefore agree today, item by item. Keeping
+them in agreement is the standing obligation this decision creates, and
+it is worth saying plainly that widening `ACTION_CLASS_HUMAN`'s
+complement, adding a write scope, or introducing a credential write path
+would each exceed this approval rather than merely extend it.
+
+Nothing was changed in response to this decision. The scope that was
+reviewed is the scope that is approved.
 
 ## F4. Corrected, with its cost stated
 
@@ -171,30 +270,50 @@ the deletion itself is kept holding a shortened form of the address rather
 than the address. The internal register already said this honestly; the
 person whose data it is could not read it.
 
-## Review item 5: the workspace has still never called a model
+## Review item 5: the workspace live-AI suite
 
-`test/workspace/liveAiPressure.test.js` now exists, built on the same
+`test/workspace/liveAiPressure.test.js` exists, built on the same
 two-half pattern as Scott's. The paid half is armed only by
-`RUN_WORKSPACE_LIVE_AI=<run label>` on top of `ANTHROPIC_API_KEY`,
+`RUN_WORKSPACE_LIVE_PRESSURE=<run label>` on top of `ANTHROPIC_API_KEY`,
 `ENABLE_WORKSPACE_AI=true` and `DATABASE_URL`, so a deployment with live
 AI switched on can never make `npm test` spend money. It tests the two
-claims only a live run can test: that a question the records do not answer
-produces an admission and a gap rather than an invention, and that an
-instruction to act is escalated rather than claimed as done. A third case
-probes clearance with canaries derived from the confidential records **at
-run time**, never written into the file, since committing the values that
-must not leak in order to test that they do not leak would be the leak.
+claims only a live run can test: that a question the records do not
+answer produces an admission and a gap rather than an invention, and
+that an instruction to act is escalated rather than claimed as done. A
+third case probes clearance with canaries derived from the confidential
+records **at run time**, never written into the file, since committing
+the values that must not leak in order to test that they do not leak
+would be the leak.
 
-The free half always runs and exists to keep the paid half sound while it
-sits idle: it proves each honesty check catches the dishonest sentence and
-clears the honest one, that the probe clearance is genuinely narrower than
-the owner's, that a canary cannot be a sensitivity label mistaken for a
-value, and that the arming logic does not arm on `''` or `'false'`.
+The free half always runs and keeps the paid half sound while it sits
+idle: it proves each honesty check catches the dishonest sentence and
+clears the honest one, that the probe clearance is genuinely narrower
+than the owner's, that a canary cannot be a sensitivity label mistaken
+for a value, and that the arming logic does not arm on `''` or
+`'false'`.
 
-**The paid half has not been run.** `ENABLE_WORKSPACE_AI` is off
-everywhere, and running it is a spend decision that is Tom's, not the
-builder's. Until it runs, treat "the workspace does not fill a gap by
-inference" as designed and unit-tested, not as demonstrated.
+**Tom authorised one bounded staging run on 31/08/2026**, in his words
+"approval for that bounded test spend, not general AI expenditure or
+production activation". Arming is two acts that cannot be collapsed into
+one deploy:
+
+1. an authorisation row, written either by
+   `scripts/armWorkspaceLivePressure.js` from a shell that can reach the
+   database, or by `ARM_WORKSPACE_LIVE_PRESSURE` on one deploy for an
+   operator whose shell cannot (this sandbox cannot reach Railway, so
+   that route exists for a real reason and not for convenience);
+2. `RUN_WORKSPACE_LIVE_PRESSURE=<label>` on a **second** deploy.
+
+The two variables refuse to coexist in both directions: the arming hook
+declines to write while the run variable is set, and the runner declines
+to launch while the arming variable is set. A label that has been spent
+can never launch again, the marker is written before the child starts so
+a container restart cannot pay twice, and an exit 0 without a
+`LIVE AI: N turn(s) executed` line is reported as INCONCLUSIVE rather
+than as a pass. `test/workspace/livePressureRunner.test.js` pins all of
+that, free, and asserts that the workspace and Scott runners use
+different marker and authorisation events so a run authorised for one
+can never spend on the other.
 
 ## Review item 7: the "455 pass" figure
 
@@ -205,11 +324,59 @@ decision, with `WORKSPACE_TEST_BASE_URL`, `WORKSPACE_TEST_TOM_PASSWORD`
 and `WORKSPACE_TEST_OTHER_PASSWORD` set. The same is true of
 `test/scott/adversarialApi.test.js`.
 
+## Evidence from this pass
+
+**Regression suite** against a real database: 498 tests, 496 pass, 0
+fail, 2 skipped. The two skips are the paid AI suites for Scott and for
+the workspace. (An earlier run in this session reported 71 failures; the
+local Postgres had died mid-run. It is recorded here rather than
+quietly re-run, because a suite result is only worth anything if the
+failures are explained.)
+
+**Adversarial suite** against a running server with all three gates on:
+8 checks, 0 fail, 0 skipped. Every check was genuinely exercised,
+including the erasure refusal, which the reviewer noted could previously
+pass having asserted nothing.
+
+**The reviewer's own F1 attack, replayed end to end** against the
+running application, as `nat` (admin, 404 on every workspace page):
+reset Tom's password through the real `PUT /api/admin/user/:id/password`
+(200), logged in as `tom` successfully, and then:
+
+- every workspace page redirected to `/workspace/unlock` and rendered
+  nothing;
+- `/api/workspace/contacts/sync` and `/api/workspace/contacts/1/erase`
+  both answered 404, with no mention of unlocking or of a passphrase;
+- five guessed passphrases were all refused, and the session was still
+  locked afterwards;
+- all five refusals were recorded in `workspace_activity` as
+  `workspace_unlock_failed` against the actor `tom`, which is the
+  warning this attack would now generate.
+
+**Two test defects were corrected rather than worked around**, both
+found by the checks failing for the wrong reason:
+
+- the locked-session API assertions were getting 403 from the site's
+  global CSRF middleware before the workspace guard was ever reached, so
+  they were testing CSRF rather than the unlock gate. They now send a
+  real token, and assert that they could obtain one.
+- the suite logged in as Tom once per block, which was five attempts in
+  a run and tripped the site's own login limiter on the fifth. Every
+  later assertion then failed for a reason unrelated to the workspace.
+  There is now one shared session, and the blocks are ordered so the
+  locked checks run before the successful unlock.
+
 ## What was NOT changed
 
 - No production merge, no production deploy, no flag set on production.
-- No external account connected; nothing published, replied to or spent.
+  Tom has withheld all three until the independent verdict and his own
+  production approval.
+- No external account connected; nothing published, replied to or spent
+  on social.
 - No new worker, no lane added, no permission widened, no second human
-  granted clearance.
-- No change to Scott's clearance model, worker roster or activation state.
-- F1 and F3 left open for Tom.
+  granted clearance. The F1 work NARROWS access: it adds a gate, and
+  grants nobody anything.
+- No change to Scott's clearance model, worker roster or activation
+  state.
+- No change to the social connector's refusal set, which is what Tom's
+  F3 approval is bounded by.

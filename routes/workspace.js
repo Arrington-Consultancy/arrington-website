@@ -21,6 +21,8 @@ const repo = require('../lib/workspace/repo');
 const { filterRecordsForClearance, clearanceCanSeeRecord, clearanceCanSeeSensitivity, clearanceCovers, CLEARANCES } = require('../lib/workspace/clearance');
 const { LANES, SOURCE_CLASSES, laneById } = require('../lib/workspace/lanes');
 const { requireWorkspacePageAccess, requireWorkspaceApiAccess, workspaceNoindex } = require('../lib/workspace/access');
+const wsUnlock = require('../lib/workspace/unlock');
+const { workspaceEnabled, workspaceClearance } = require('../lib/workspace/access');
 const { askWorkspace, isWorkspaceAIEnabled, routeToLane } = require('../lib/workspace/orchestrator');
 const socialRepo = require('../lib/workspace/social/repo');
 const socialActions = require('../lib/workspace/social/actions');
@@ -43,6 +45,20 @@ const writeLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests. Try again shortly.' }
+});
+
+// Governance finding F1, Tom's decision of 31/08/2026. Deliberately far
+// tighter than any other limiter here: this is the one secret standing
+// between a seized CMS account and the whole controlled brain, so a
+// guessing loop must die quickly. Keyed on the session where there is
+// one, since the attacker this defends against is authenticated.
+const unlockLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  keyGenerator: (req) => (req.session && req.session.user ? `u:${req.session.user.id}` : ipKeyGenerator(req)),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many attempts. Wait fifteen minutes.' }
 });
 
 const askLimiter = rateLimit({
@@ -84,6 +100,22 @@ function mountPageRoute(app, generateCsrfToken) {
       try { await handler(req, res); } catch (err) { next(err); }
     });
   };
+
+  // The unlock screen. requireWorkspacePageAccess lets this ONE path
+  // through while locked; every other workspace path redirects here, and
+  // every workspace API refuses outright. It renders nothing about the
+  // business: no counts, no record titles, no navigation, because a
+  // locked session must learn nothing from the screen that asks it to
+  // unlock.
+  app.get('/workspace/unlock', workspaceNoindex, requireWorkspacePageAccess, (req, res) => {
+    if (wsUnlock.isUnlocked(req)) return res.redirect('/workspace');
+    res.render('workspace/unlock', {
+      nonce: res.locals.nonce,
+      csrfToken: generateCsrfToken(req, res),
+      configured: wsUnlock.describeUnlockConfig().ok,
+      error: null
+    });
+  });
 
   page('/workspace', async (req, res) => {
     const clearanceId = req.workspaceClearance;
@@ -289,6 +321,49 @@ function mountPageRoute(app, generateCsrfToken) {
 }
 
 // --- APIs (behind global CSRF) -----------------------------------------
+
+// Its own guard, not requireWorkspaceApiAccess: that one refuses a
+// locked session, which would make unlocking impossible. This checks the
+// flag and the identity binding only, so the passphrase is the single
+// thing being tested here.
+function requireWorkspaceIdentity(req, res, next) {
+  if (!workspaceEnabled()) return res.status(404).json({ error: 'Not found' });
+  const clearance = workspaceClearance(req);
+  if (!clearance) return res.status(404).json({ error: 'Not found' });
+  req.workspaceClearance = clearance;
+  return next();
+}
+
+router.post('/api/workspace/unlock', workspaceNoindex, requireWorkspaceIdentity, unlockLimiter, async (req, res, next) => {
+  try {
+    const username = req.session.user.username;
+    if (!wsUnlock.configuredPassphrase()) {
+      // Said plainly rather than reported as a wrong passphrase, because
+      // an operator staring at a rejection needs to know the difference
+      // between "you typed it wrong" and "nobody has set one".
+      await repo.addActivity({ actor: username, eventType: 'workspace_unlock_unconfigured', summary: 'Unlock attempted while WORKSPACE_ACCESS_PASSPHRASE is unset or too short.' });
+      return res.status(503).json({ error: 'No workspace passphrase is configured in this environment, so the workspace cannot be opened.' });
+    }
+    const supplied = typeof req.body.passphrase === 'string' ? req.body.passphrase : '';
+    if (!wsUnlock.passphraseMatches(supplied)) {
+      // Recorded every time. A run of these against a username is the
+      // signature of exactly the attack this gate exists for, and it is
+      // the only warning anyone would get.
+      await repo.addActivity({ actor: username, eventType: 'workspace_unlock_failed', summary: 'A workspace unlock attempt was refused: the passphrase did not match.' });
+      return res.status(401).json({ error: 'That passphrase is not correct.' });
+    }
+    wsUnlock.recordUnlock(req);
+    await repo.addActivity({ actor: username, eventType: 'workspace_unlocked', summary: 'The workspace was unlocked with the deployment passphrase.' });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// Locking again is always allowed and never fails: it only forgets a
+// session fact.
+router.post('/api/workspace/lock', workspaceNoindex, requireWorkspaceIdentity, (req, res) => {
+  wsUnlock.clearUnlock(req);
+  res.json({ ok: true });
+});
 
 router.post('/api/workspace/ask', workspaceNoindex, requireWorkspaceApiAccess, askLimiter, async (req, res, next) => {
   try {

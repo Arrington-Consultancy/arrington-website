@@ -14,7 +14,8 @@ const {
   clearanceCanSeeSensitivity,
   clearanceCanSeeRecord,
   filterRecordsForClearance,
-  clearanceCovers
+  clearanceCovers,
+  describeOwnerBinding
 } = require('../../lib/workspace/clearance');
 
 test('exactly one real human is mapped, and it is Tom', () => {
@@ -22,11 +23,67 @@ test('exactly one real human is mapped, and it is Tom', () => {
   assert.equal(HUMAN_CLEARANCE.tom, 'owner_admin');
 });
 
+// Governance finding F1, Tom's decision of 31/08/2026: clearanceForUser
+// now needs the deployment binding as well as the map, so these cases
+// set it. Without that they would pass because NOTHING resolves in an
+// unconfigured environment, which proves nothing about who is excluded.
+const BIND_KEYS = ['WORKSPACE_OWNER_USERNAME', 'WORKSPACE_OWNER_USER_ID'];
+const BIND_ORIGINAL = Object.fromEntries(BIND_KEYS.map((k) => [k, process.env[k]]));
+test.beforeEach(() => {
+  process.env.WORKSPACE_OWNER_USERNAME = 'tom';
+  process.env.WORKSPACE_OWNER_USER_ID = '7';
+});
+test.after(() => {
+  BIND_KEYS.forEach((k) => {
+    if (BIND_ORIGINAL[k] === undefined) delete process.env[k];
+    else process.env[k] = BIND_ORIGINAL[k];
+  });
+});
+
+test('the cleared owner does resolve, so the exclusions below mean something', () => {
+  assert.equal(clearanceForUser({ id: 7, username: 'tom', role: 'content' }), 'owner_admin');
+});
+
 test('nobody else resolves to a clearance, whatever their CMS role', () => {
-  assert.equal(clearanceForUser({ username: 'nat', role: 'admin' }), null);
-  assert.equal(clearanceForUser({ username: 'client1', role: 'client' }), null);
+  assert.equal(clearanceForUser({ id: 2, username: 'nat', role: 'admin' }), null);
+  assert.equal(clearanceForUser({ id: 3, username: 'client1', role: 'client' }), null);
   assert.equal(clearanceForUser(null), null);
   assert.equal(clearanceForUser({}), null);
+});
+
+test('the user id must match the deployment, so a recreated account inherits nothing', () => {
+  assert.equal(clearanceForUser({ id: 8, username: 'tom', role: 'content' }), null);
+  assert.equal(clearanceForUser({ username: 'tom', role: 'content' }), null, 'a session with no id was cleared');
+  assert.equal(clearanceForUser({ id: '', username: 'tom', role: 'content' }), null);
+  assert.equal(clearanceForUser({ id: 0, username: 'tom', role: 'content' }), null);
+});
+
+test('an absent deployment binding clears nobody', () => {
+  delete process.env.WORKSPACE_OWNER_USERNAME;
+  assert.equal(clearanceForUser({ id: 7, username: 'tom', role: 'content' }), null);
+  process.env.WORKSPACE_OWNER_USERNAME = 'tom';
+  delete process.env.WORKSPACE_OWNER_USER_ID;
+  assert.equal(clearanceForUser({ id: 7, username: 'tom', role: 'content' }), null);
+});
+
+test('the binding cannot grant clearance to a username the code does not clear', () => {
+  process.env.WORKSPACE_OWNER_USERNAME = 'nat';
+  process.env.WORKSPACE_OWNER_USER_ID = '2';
+  assert.equal(clearanceForUser({ id: 2, username: 'nat', role: 'admin' }), null,
+    'Railway alone granted clearance; it is meant to require a code change too');
+});
+
+test('the boot diagnostic names what is missing rather than just failing', () => {
+  delete process.env.WORKSPACE_OWNER_USERNAME;
+  delete process.env.WORKSPACE_OWNER_USER_ID;
+  const d = describeOwnerBinding();
+  assert.equal(d.ok, false);
+  assert.equal(d.problems.length, 2);
+  process.env.WORKSPACE_OWNER_USERNAME = 'tom';
+  process.env.WORKSPACE_OWNER_USER_ID = 'not-a-number';
+  assert.match(describeOwnerBinding().problems.join(' '), /positive integer/);
+  process.env.WORKSPACE_OWNER_USER_ID = '7';
+  assert.equal(describeOwnerBinding().ok, true);
 });
 
 test('the synthetic test clearance is narrower than the owner and is not a login', () => {
