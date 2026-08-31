@@ -30,6 +30,7 @@ const { askWorkspace, isWorkspaceAIEnabled, routeToLane } = require('../lib/work
 const socialRepo = require('../lib/workspace/social/repo');
 const socialActions = require('../lib/workspace/social/actions');
 const socialMemory = require('../lib/workspace/social/memory');
+const receptionist = require('../lib/workspace/receptionist');
 const crm = require('../lib/crm/contacts');
 const erasure = require('../lib/crm/erasure');
 
@@ -343,6 +344,7 @@ function mountPageRoute(app, generateCsrfToken) {
       if (active) messages = await repo.listMessages(active.id);
     }
     res.render('workspace/chat', {
+      receptionist,
       ...viewer(req),
       counts: await navCounts(req.workspaceClearance),
       conversations,
@@ -488,7 +490,16 @@ router.post('/api/workspace/ask', requireWorkspaceApiAccess, askLimiter, async (
       answer: result.answer,
       provenance: result.provenanceKeys,
       gap: result.gap,
-      escalation: result.escalation
+      escalation: result.escalation,
+      // Ruth's line about where the question went. Built from the
+      // routing facts only - she is handed no record and no answer text,
+      // so she cannot repeat anything a lane decided not to show.
+      receptionist: receptionist.handoffNote({
+        laneId: result.laneId || null,
+        answered: !!result.answer,
+        recordCount: result.provenanceKeys.length,
+        gapRaised: !!result.gap
+      })
     });
   } catch (err) { next(err); }
 });
