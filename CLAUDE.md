@@ -2991,6 +2991,109 @@ explicitly-authorised live-AI suite for this specific feature. Nothing
 in either review required it to establish the deterministic guarantees
 above; it would only test the real model's own behaviour inside them.
 
+### Live-AI pressure suite: run against the real model, four real runs, tested commit `2e1a1ec` (31/08/2026–01/09/2026)
+
+Tom explicitly approved and requested this run on 01/09/2026, with ten
+required proofs verbatim and an explicit instruction not to merge to
+`main` until he separately approves the tested commit. `test/scott/
+memory/liveMemoryPressure.test.js` (new), armed by the same two-step
+marker-before-spend pattern as the other two paid Scott/workspace
+suites, its own flags and its own marker so it can never spend on their
+behalf (`scripts/armScottMemoryLiveTest.js`,
+`scripts/scottMemoryLiveTestRunner.js`, wired into `server.js` boot
+alongside them). Run on the `scott-demo` staging service (temporarily
+repointed from `feature/scott-ai-demonstration` to
+`feature/scott-evolving-memory` for the duration, then reverted, source
+and variables both confirmed back to their pre-test state afterwards).
+
+Four real runs (`mem-20260901-a` through `-d`), each a genuine
+`orchestrator.runTurn()` call against `claude-sonnet-5` with a fake
+client nowhere in the loop. The first three each surfaced a genuine test
+bug (never a code bug): a materials-vs-suppliers_ops domain-classification
+mismatch against tony_marsh's actual persona clearance, a payment-terms
+question Ruth correctly routed to Finance & Accounts (which holds none
+of the three memory-eligible domains), an over-blunt regex that flagged
+the model's own honest citation of a real unrelated controlled figure as
+if it were the fabrication under test, and a hard assertion that a named
+worker specifically (rather than any worker, or Ruth directly) must
+answer. Each was fixed and pushed before the next run, record in full in
+the three commits after `1be78ea` on this branch.
+
+**Result across all four runs, reported in full rather than only the
+cleanest one:**
+
+- **Requirement 5 (existing controlled evidence always wins)** — PROVEN,
+  all four runs. Asked "Who is our usual supplier for foam?", the real
+  answer (South Devon Foam & Webbing Ltd, 2 working days, Exeter
+  Upholstery Materials as the dual-source alternate) came back every
+  time, with `memoryFact: null` — no attempt to remember an answer that
+  already existed as controlled evidence. Run 4's answer even carried a
+  real, previously-unseen quality-hold flag from the controlled record
+  (batch F-8821 quarantined), confirming this reaches the genuine
+  Supplier Resilience Ledger rather than a cached or invented figure.
+- **Requirement 6 (a lower-clearance persona cannot get a restricted
+  fact created)** — PROVEN, all four runs. chloe_reed asking Bob
+  (customers_marketing) for the usual Facebook boost budget was refused
+  every time with `established: false, refusedReason:
+  'persona_not_authorised_for_domain'`, zero new `marketing_performance`
+  rows in every run.
+- **Requirement 7 (a silly/unknowable question is refused, not
+  fabricated)** — PROVEN. Asked how many blades of grass grow outside
+  the workshop, Ruth declined outright every time ("we don't count
+  blades of grass"), no fabricated number, no memory fact.
+- **Requirement 8 (a protected/consequential fact is not invented)** —
+  PROVEN. Asked the excess on the public liability policy, every run
+  refused to state a figure; run 3's `governance` worker gave the
+  clearest example, naming the one real insurance-adjacent record on
+  file (OPP-012, a renewal premium comparison) while explicitly refusing
+  to invent the excess itself and raising a genuine `gap` for it.
+- **Requirements 1/2/10 (a sensible fact is created, persisted, with
+  correct provenance)** — PROVEN ONCE, genuinely, in run 2: two
+  simultaneous `runTurn()` calls for a brand-new supplier-vetting
+  question resolved to exactly one `suppliers_ops` row (`factId: 1`),
+  correctly labelled `provenance: 'ai_generated_fictional_memory'` on
+  read-back. This is real, unprompted creation by the model, not a
+  scripted result.
+- **Requirement 9 (simultaneous first requests cannot conflict)** —
+  PROVEN by the same run 2 pair: one of the two concurrent calls created
+  the fact, the other did not, and exactly one canonical row resulted —
+  the property this test exists to establish.
+- **Requirements 3/4 (repeat consistency, equivalent-wording reuse) —
+  NOT independently exercised live.** Both need a fresh creation within
+  the same run to chain from, and across six total live attempts at a
+  deliberately eligible, low-consequence, missing-answer supplier
+  question (runs 2 through 4), the model chose to invoke the optional
+  `memoryFact` mechanism only once. Every other attempt gave a
+  substantive, on-topic, clearly-rememberable answer and simply did not
+  propose remembering it. **This is a genuine, stable characteristic of
+  the live system worth Tom's awareness, not a test artefact**: the
+  creation trigger is a real judgement call the model makes per-call,
+  and it leans conservative for this class of question. It is a safe
+  failure direction (the system under-creates rather than over-creates,
+  and never contradicts controlled evidence when it does), but it means
+  the feature may in practice remember less than a reader of the design
+  doc would expect. The REUSE mechanism itself (a repeat or equivalent
+  question retrieving the same stored row rather than creating a
+  second) is not a model-dependent code path — it is exhaustively
+  covered by the deterministic fake-client suites
+  (`test/scott/memory/factLedger.test.js`,
+  `orchestratorMemory.integration.test.js`) already passed under both
+  governance reviews above, so this gap is specifically "does the model
+  choose to create a fact for an eligible question reliably," not "does
+  a created fact get reused correctly."
+
+**Full prompts, model replies and DB state for every turn of every run**
+are in the four commit messages and the raw deployment logs for
+deployments `009100d6`, `cebbf11e`, `b5c1076e` and `d79e973e` on the
+`scott-demo` staging service (31/08/2026–01/09/2026 boundary). Nothing
+here is summarised from a single cherry-picked run.
+
+**Per Tom's explicit instruction, `feature/scott-evolving-memory` is NOT
+merged to `main`.** The tested commit is `2e1a1ec` (the same commit
+deployed for run 4, `mem-20260901-d`; no code changed after that
+deploy). Merging requires his separate, explicit approval of this exact
+commit.
+
 ### Testing
 
 `node --test` covers it (`test/scott/*.test.js`). Beyond unit tests, the
