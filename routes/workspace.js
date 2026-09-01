@@ -35,6 +35,8 @@ const receptionist = require('../lib/workspace/receptionist');
 const financeRepo = require('../lib/workspace/finance/repo');
 const financeRegistry = require('../lib/workspace/finance/registry');
 const financeAccounting = require('../lib/workspace/finance/accounting');
+const financeRecurring = require('../lib/workspace/finance/recurring');
+const financeAnnaCsv = require('../lib/workspace/finance/annaStatementCsv');
 const financeSync = require('../lib/workspace/finance/sync');
 const xeroClient = require('../lib/workspace/finance/xeroClient');
 const { encryptToken, tokenCryptoConfigured } = require('../lib/workspace/finance/tokenCrypto');
@@ -260,51 +262,60 @@ function mountPageRoute(app, generateCsrfToken) {
     const clearanceId = req.workspaceClearance;
     const permitted = clearanceCanSeeSensitivity(clearanceId, 'confidential');
     const connectError = typeof req.query.connectError === 'string' ? req.query.connectError.slice(0, 300) : '';
+    const importResult = typeof req.query.importResult === 'string' ? req.query.importResult.slice(0, 500) : '';
     const xeroRedirectUri = `${req.protocol}://${req.get('host')}/workspace/finance/xero/callback`;
     if (!permitted) {
       return res.render('workspace/finance', {
         ...viewer(req),
         counts: await navCounts(clearanceId),
         permitted: false,
-        account: null, transactions: [], syncRuns: [], connectError: '', xeroRedirectUri,
-        xeroConfigured: false, tokenCryptoReady: false,
+        accounts: [], headlineBalance: null, transactions: [], syncRuns: [], connectError: '', importResult: '', xeroRedirectUri,
+        tokenCryptoReady: false,
         moneyActionsNeverBuilt: financeRegistry.MONEY_ACTION_CLASS_NEVER_BUILT,
-        period: null, summary: null, periodPresets: [],
+        period: null, summary: null, periodPresets: [], recurringGroups: [], trend: [],
         csrfToken: generateCsrfToken(req, res)
       });
     }
     // Free, built-in accounting summary (01/09/2026): no third-party free
     // accounting software actually integrates with ANNA today (see
     // lib/workspace/finance/accounting.js header), so this is computed
-    // entirely from transactions already synced here - no new credential,
-    // no new service. period comes from the query string, validated
-    // server-side before it ever reaches the database.
+    // entirely from transactions already synced/imported here - no new
+    // credential, no new service. period comes from the query string,
+    // validated server-side before it ever reaches the database.
     const period = financeAccounting.resolvePeriod({
       preset: typeof req.query.period === 'string' ? req.query.period : undefined,
       from: typeof req.query.from === 'string' ? req.query.from : undefined,
       to: typeof req.query.to === 'string' ? req.query.to : undefined
     });
-    const [account, transactions, syncRuns, periodTransactions] = await Promise.all([
-      financeRepo.accountState(),
+    const [accounts, transactions, syncRuns, periodTransactions, allTransactions] = await Promise.all([
+      financeRepo.listAccountStates(),
       financeRepo.listTransactions({ limit: 100 }),
       financeRepo.recentSyncRuns(10),
-      financeRepo.listTransactions({ limit: 5000, from: period.from, to: period.to })
+      financeRepo.listTransactions({ limit: 5000, from: period.from, to: period.to }),
+      // Recurring detection looks across the whole ledger, not just the
+      // selected period: a monthly cost needs several months of history
+      // to be recognised as a pattern regardless of which period is on
+      // screen.
+      financeRepo.listTransactions({ limit: 5000 })
     ]);
     res.render('workspace/finance', {
       ...viewer(req),
       counts: await navCounts(clearanceId),
       permitted: true,
-      account,
+      accounts,
+      headlineBalance: financeRepo.headlineAccountState(accounts),
       transactions,
       syncRuns,
       connectError,
+      importResult,
       xeroRedirectUri,
-      xeroConfigured: financeRegistry.isConfigured('xero'),
       tokenCryptoReady: tokenCryptoConfigured(),
       moneyActionsNeverBuilt: financeRegistry.MONEY_ACTION_CLASS_NEVER_BUILT,
       period,
       summary: financeAccounting.summarise(periodTransactions),
       periodPresets: financeAccounting.PERIOD_PRESETS,
+      recurringGroups: financeRecurring.detectRecurringGroups(allTransactions),
+      trend: financeAccounting.monthlyTrend(allTransactions, 12),
       formatPence: financeRepo.formatPence,
       csrfToken: generateCsrfToken(req, res)
     });
@@ -718,9 +729,46 @@ router.post('/api/workspace/social/request-action', requireWorkspaceApiAccess, w
   } catch (err) { next(err); }
 });
 
-// Manual "Sync now". No scheduled sync exists yet in v1 (that is a later,
-// separately-approved step); every retrieval today is either the
-// automatic first sync after connecting, or triggered here by Tom.
+// Primary route: import an ANNA statement. Tom exports a CSV himself
+// from the ANNA app ("Get an account statement") and uploads it here.
+// The body is plain JSON (CSV as a text field), not multipart: CSV is
+// text, so this avoids adding a file-upload dependency for one format,
+// matching the site's existing base64-JSON pattern for image uploads
+// (server.js gives this route the same kind of size exemption).
+// Never throws on a malformed file: a parse failure with zero usable
+// rows is reported as a 400 with the reasons, so Tom can see exactly
+// what went wrong rather than a stack trace.
+router.post('/api/workspace/finance/anna/import', requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
+  try {
+    if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'confidential')) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    const csv = typeof req.body.csv === 'string' ? req.body.csv : '';
+    if (!csv.trim()) return res.status(400).json({ error: 'No CSV content was received.' });
+    const parsed = financeAnnaCsv.parseStatementCsv(csv);
+    if (parsed.transactions.length === 0) {
+      return res.status(400).json({ error: 'Nothing could be read from that file.', warnings: parsed.warnings });
+    }
+    const result = await financeRepo.recordCsvImport('anna_statement_csv', {
+      transactions: parsed.transactions,
+      warnings: parsed.warnings,
+      closingBalancePence: parsed.closingBalancePence,
+      closingBalanceDate: parsed.closingBalanceDate,
+      importedBy: req.session.user.username
+    });
+    await repo.addActivity({
+      actor: req.session.user.username,
+      eventType: 'finance_anna_imported',
+      summary: `Imported an ANNA statement (${result.outcome}): ${result.detail}`
+    });
+    res.json({ ok: true, ...result });
+  } catch (err) { next(err); }
+});
+
+// Manual "Sync now", Xero only (the ANNA route above is an import, not a
+// sync - there is nothing to poll). No scheduled sync exists yet in v1;
+// every retrieval today is either the automatic first sync after
+// connecting Xero, or triggered here by Tom.
 router.post('/api/workspace/finance/sync', requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
   try {
     if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'confidential')) {
@@ -739,13 +787,17 @@ router.post('/api/workspace/finance/sync', requireWorkspaceApiAccess, writeLimit
 // Disconnecting forgets the credential; the synced transaction history
 // is kept as a factual record of what already happened. There is no
 // route anywhere in this area that could move money, so there is
-// nothing else disconnecting needs to protect against.
+// nothing else disconnecting needs to protect against. provider is
+// validated against the real provider list rather than trusted as-is;
+// in practice only 'xero' has anything to disconnect (an ANNA import has
+// no credential), but the route stays generic rather than hardcoding it.
 router.post('/api/workspace/finance/disconnect', requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
   try {
     if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'confidential')) {
       return res.status(404).json({ error: 'Not found' });
     }
-    await financeRepo.disconnectAccount('xero', req.session.user.username);
+    const provider = financeRegistry.PROVIDER_IDS.includes(req.body.provider) ? req.body.provider : 'xero';
+    await financeRepo.disconnectAccount(provider, req.session.user.username);
     res.json({ ok: true });
   } catch (err) { next(err); }
 });

@@ -1172,173 +1172,255 @@ is built staging-first and credential-gated, and the expansion is being
 routed to Governance and Assurance as a controlled change rather than
 treated as self-approved.
 
-### Business banking: read-only ANNA Money via Xero (01/09/2026)
+### Business banking: read-only, ANNA-first (01/09/2026, reworked ANNA-first same day)
 
-Tom's **1 SEPTEMBER 2026 - ANNA MONEY BANKING INTEGRATION DECISION**
-(the current ARRINGTON AI WORKSPACE BUILDER handoff in Drive) approved
-bringing Arrington's ANNA Money business account into the Workspace as
-a controlled, read-only finance source. The decision required
-determining the real provider route rather than assuming one.
+**Superseded the same day it was written.** The original build (below,
+kept as historical record) made Xero the only provider, on the finding
+that ANNA -> Xero was the proven route. Tom then gave a direct
+instruction: **he does not currently use Xero, and this must never
+require it or ask him to subscribe to it purely for the Workspace.**
+The architecture was reworked to be ANNA-first, with Xero demoted to an
+entirely optional, off-by-default future connector.
 
-**Provider finding.** Public evidence (TrueLayer's own partnership
-material and independent coverage, cross-checked against ANNA's
-regulatory status as a Prepay Technologies/PayrNet e-money institution)
-shows ANNA is the CLIENT of TrueLayer's Data API, not a provider exposed
-by it: ANNA adopted TrueLayer so its OWN customers could connect their
-OTHER banks into ANNA, which is the opposite direction from what this
-decision needs. No aggregator's public material lists ANNA itself as a
-connectable provider. This sandbox could not reach TrueLayer's live
-provider console or ANNA's own developer docs directly (both hosts are
-blocked by the network egress proxy here), so this is public-evidence
-research pushed as far as it goes without creating a TrueLayer developer
-account or Tom's own ANNA Open Banking consent - neither of which is
-this builder's to start unilaterally. The finding rests on the
-documented DIRECTION of ANNA's TrueLayer use, not on the fallacy the
-decision doc warned against ("ANNA uses TrueLayer" does not imply the
-reverse is supported). **Conclusion: build the accounting-feed route**,
-which ANNA publicly and demonstrably supports: automatic bank-feed sync
-into Xero, transactions, categories and receipt attachments included.
-**ANNA Money -> Xero -> this Workspace.**
+**Second investigation, before rebuilding anything**, into the
+strongest authorised way to get ANNA data into the Workspace directly:
 
-**Built, on branch `feature/arrington-workspace-finance-anna-xero`, not
-yet merged.** One provider only (`xero`), read-only throughout:
+1. A public ANNA developer API for third parties. Checked ANNA's own
+   GitHub organisation (`github.com/anna-money`): its public
+   repositories are internal engineering tooling (CI helpers, Python
+   test plugins, a UK sort-code validator), no public API client, SDK
+   or Open Banking integration library. No developer portal exists.
+2. Direct Open Banking retrieval via TrueLayer or another aggregator.
+   Unchanged from the first investigation: ANNA is TrueLayer's CLIENT,
+   not a provider it exposes for reading out of ANNA.
+3. **"ANNA for Accountants"**, a real ANNA product: a practice dashboard
+   giving an invited accountant real-time transaction access once the
+   account holder shares a connection, including a CSV export via a
+   generated "Accountant View" link. A genuine authorised route, but
+   built around a human accountant relationship (KYC checks, a
+   VAT-filing bridge, client invitations), not a machine feed for a
+   third-party app - inventing an "accountant" relationship for
+   Arrington's own Workspace to use it would be a stretch of what it is
+   for.
+4. **ANNA's own account-holder statement export - the real answer.**
+   Inside the ANNA app, typing "Get an account statement" lets the
+   account holder choose a period (any month, or full history since the
+   account opened) and download it as **CSV or PDF**. No accountant
+   relationship, no third party, no subscription, no OAuth. This is
+   what the Workspace now reads.
 
-- `lib/workspace/finance/registry.js` - the provider description and the
-  refusal-by-construction list (`MONEY_ACTION_CLASS_NEVER_BUILT`:
-  payment_initiation, transfer, beneficiary_creation, card_control,
-  change_account_settings), same three structural rules as
-  `lib/workspace/social/registry.js` (least privilege, consequential
-  actions are human - except here there IS no legitimate consequential
-  action, so unlike social there is no `requestHumanAction`-style
-  approval-queue path for money movement at all: a payment prepared "for
-  a human to carry out" still means the system knows how to construct
-  one, which read-only banking access must never be able to do).
-- `lib/workspace/finance/actions.js` - `assertReadOnlyAllowed` throws
-  `MoneyMovementError` for anything in that list, exactly like social's
-  `assertAutonomousAllowed`.
-- `lib/workspace/finance/tokenCrypto.js` - AES-256-GCM encryption for
-  the stored Xero OAuth tokens, keyed on its own secret
-  `WORKSPACE_FINANCE_TOKEN_KEY` (64-char hex, 32 bytes), deliberately
-  separate from `WORKSPACE_SNAPSHOT_KEY`: different blast radius,
-  rotating one must never touch the other. No plaintext fallback:
-  encryption throws if the key is unset rather than storing in the clear.
-- `lib/workspace/finance/xeroClient.js` - real Xero OAuth 2.0 and
-  Accounting API calls (authorize URL, token exchange/refresh,
-  connections, Accounts, the Bank Summary report for current balance,
-  BankTransactions for the ledger). Documented limitation: Xero's
-  Accounting API has no "this is a recurring payment" flag on raw
-  bank-feed lines (that concept exists only for invoices, a different
-  object this client does not read), so `is_recurring`/`recurring_group`
-  are left false/empty rather than guessed from payee/amount patterns -
-  inventing a recurring flag the source did not provide would be the
-  same defect class this codebase treats seriously elsewhere (Scott's
-  brain gaps, the Market Ready Test's deterministic rebuild).
-- `lib/workspace/finance/repo.js` - DB access plus the bridge into AI
-  context: after every sync, `syncFinanceSummaryRecord()` regenerates
-  ONE bounded record (`finance.xero_summary`) in the same
-  `workspace_records` table every other source uses, capped at the 15
-  most recent transactions plus the current balance, rather than a raw
-  ledger dump. This routes finance data through the SAME
-  clearance-filtering mechanism as everything else
-  (`lib/workspace/clearance.js` / `lib/workspace/lanes.js`) instead of a
-  second, less-tested filtering path.
-- `db/schema.sql` - `workspace_finance_accounts` (one row, the `xero`
-  connection: encrypted tokens, tenant/bank account identity, balance,
-  freshness), `workspace_finance_transactions` (deduplicated on
-  `(provider, external_id)`), `workspace_finance_sync_runs`. No payment,
-  transfer, beneficiary or card-control column or table exists anywhere
-  in this schema - not a declined permission, a capability never built.
-- `lib/workspace/lanes.js` - `finance` added to `SOURCE_CLASSES`
-  (confidential sensitivity), granted to **no lane** except
-  `governance_assurance` (which reads every source class by its own
-  remit). No canonical worker's approved remit currently includes
-  finance data, so least privilege means nobody else gets it via a lane;
-  widening that is a worker-permission change for Tom plus the governed
-  route, not a code tidy.
-- `lib/workspace/orchestrator.js` - `finance` added to
-  `GENERAL_SOURCE_CLASSES`, so Tom's own general (no-lane) questions can
-  draw on it. Still double-gated: finance sensitivity is `confidential`,
-  the narrowest tier the workspace has, and only `owner_admin` (Tom)
-  holds it.
-- `routes/workspace.js` / `views/workspace/finance.ejs` - the Finance
-  screen (added to the sidebar nav), gated on `confidential` sensitivity
-  so it 404s in substance (renders its own "clearance does not cover
-  this" card) for anything narrower. Xero OAuth is a real
-  redirect-and-callback pair (`/workspace/finance/xero/connect` /
-  `/xero/callback`), state-token protected against a callback that did
-  not originate from a connect this session started, both still behind
-  the workspace's existing unlock+clearance gates. A first sync runs
-  automatically right after connecting. Manual "Sync now" and
-  "Disconnect" are POST APIs behind the same gates; disconnecting drops
-  the credential and keeps the synced transaction history, the same
-  factual-record reasoning `contact.previewErasure` uses elsewhere.
-- `test/workspace/finance.test.js` - mirrors `social.test.js`'s
-  structural-refusal pattern (every money-movement action throws, no
-  function on the whole module's surface looks like it moves money, no
-  scope requested grants more than reading, a credential is never a
-  retrieval), plus lane/clearance wiring tests (finance reaches no lane
-  but `governance_assurance`, an unrelated lane never surfaces it even
-  for the owner, `ws_restricted` never sees it) and token round-trip
-  tests. 16/16 pass; full `test/workspace/*.test.js` plus
-  `test/noEmDashes.test.js` still 154/154 (2 skipped, the paid live-AI
-  suites, unaffected). Verified against a genuinely fresh database (the
-  same discipline the Scott v0.2 release-ordering incident taught this
-  project) as well as the existing dev database run twice for
-  idempotency, and smoke-tested end to end over real HTTP as `tom`:
-  login, unlock, `/workspace/finance` rendering the honest
-  not-configured setup instructions, and both APIs answering
-  `skipped_not_configured` / `ok` correctly with no Xero credentials
-  present.
+As before, this sandbox could not reach `anna.money`, TrueLayer's
+console, or accountingweb.co.uk directly (egress-blocked); the finding
+is public-evidence research (search results plus what remains directly
+fetchable, e.g. ANNA's own GitHub org) pushed as far as it goes without
+Tom's own ANNA login, which is not this builder's to use.
 
-**Still needed before this can connect to a real account, all Tom's:**
-set up ANNA's own Xero integration inside ANNA so its transactions
-actually flow into a Xero organisation; register a Xero developer app
-(developer.xero.com/app/manage) with redirect URI `{site}/workspace/
-finance/xero/callback` and set `XERO_CLIENT_ID` / `XERO_CLIENT_SECRET`;
-set `WORKSPACE_FINANCE_TOKEN_KEY`; if Arrington has no Xero account at
-all, obtaining one is a new-account decision this builder does not make
-on its own. None of this can be completed without Tom's own Xero OAuth
-consent screen.
+**CONCLUSION: primary provider is `anna_statement_csv`.** Tom downloads
+a CSV from the ANNA app himself and uploads it to the Workspace. `xero`
+remains available, built exactly as before, but now explicitly optional
+- never defaulted to, never required, never nagged about. If Arrington
+adopts Xero for its own accounting independent of this Workspace, that
+connector is already there.
 
-**Not yet done, each a deliberate stop rather than an oversight:** no
-scheduled/background sync exists in v1 (manual "Sync now" only); the
-xeroClient module is written against Xero's real, documented API shapes
-but has never been exercised against a live connected organisation
-(nothing in this sandbox can reach Xero's OAuth screen), so "prove the
-real authorised connection" per the decision doc is Tom's step to
-complete, not a status this file can claim ahead of it; and this is a
-material connector-permission change under the decision doc's own
-instruction ("route the resulting material connector-permission design
-to ARRINGTON AI GOVERNANCE & ASSURANCE before production use"), so the
-write-back below routes it there rather than treating a green test
-suite as a self-issued PASS.
+**Rebuilt on the same branch,
+`feature/arrington-workspace-finance-anna-xero`, still not merged:**
 
-**Write-back.** Findings recorded in Drive as "1 SEPTEMBER 2026 - ANNA
-MONEY FINANCE CONNECTOR - IMPLEMENTATION FINDINGS" (Drive ID
+- `lib/workspace/finance/registry.js` - two providers now.
+  `anna_statement_csv` has no `credentialEnv` at all and
+  `isConfigured()` is always `true` for it: the capability is a file
+  upload, not a credential, so there is nothing to configure. `xero`
+  is unchanged in mechanics, `primary: false`, and its `setupNote` says
+  plainly that Tom does not use it and nothing requires it.
+  `MONEY_ACTION_CLASS_NEVER_BUILT` refusal-by-construction is unchanged
+  and applies to both providers identically.
+- `lib/workspace/finance/annaStatementCsv.js` - the primary parser. A
+  small hand-rolled RFC 4180 CSV reader (quoted fields, embedded commas,
+  `""` escaping) rather than a new npm dependency for one file format.
+  Flexible header matching (Date/Transaction Date/Value Date; a signed
+  Amount column OR separate Money In/Money Out; Description/
+  Counterparty/Merchant/Payee/Name; Reference/Notes; Category/Type;
+  Balance/Running Balance) - this shape is common across UK business
+  bank exports generally, not confirmed against a real ANNA file (this
+  sandbox cannot log into a real ANNA account), so the first real
+  upload is the actual proof; a column that is not recognised produces
+  an honest warning rather than a guess. `external_id` is a content
+  hash of each row (ANNA's export carries no persistent transaction id),
+  so re-uploading an overlapping period is safe. Never throws: a bad
+  file produces zero transactions and warnings explaining why; a bad
+  row is skipped with its own warning rather than losing the file.
+- `lib/workspace/finance/recurring.js` - **estimated** recurring costs.
+  Neither ANNA's statement nor Xero's API provides a genuine recurring
+  flag (see the original xeroClient finding below, still true), so this
+  is a heuristic: the same normalised payee appearing at least 3 times,
+  with a consistent cadence (weekly/monthly/quarterly/annual, detected
+  from the median gap) and a consistent amount (20% relative tolerance,
+  £1 floor). Two occurrences is deliberately not enough - the cost of a
+  false "this looks like a subscription" is worse than waiting for a
+  third instance. Every transaction it marks carries
+  `recurring_estimated = true` in the database (new column), and the
+  Finance page always labels it "(est.)", never as a bank-confirmed fact.
+- `lib/workspace/finance/tokenCrypto.js`, `xeroClient.js` - unchanged,
+  Xero-only, exactly as originally built (see below).
+- `lib/workspace/finance/repo.js` - reworked for two providers:
+  `accountState(providerId, ...)` now requires an explicit provider
+  (was hardcoded to `'xero'`); `listAccountStates()` returns both, ANNA
+  first. `recordCsvImport()` is the new high-level entry point: runs
+  `recurring.annotateRecurring`, upserts transactions and the account
+  row (balance as of the statement, explicitly never called "live" or
+  "current" without qualification), writes the sync run, and
+  regenerates the AI-context summary, all in one call. `syncFinanceSummaryRecord()`
+  (record key renamed `finance.summary`, was `finance.xero_summary`)
+  now **combines** whichever providers actually have data rather than
+  assuming one; `headlineAccountState()` (pure, exported, tested
+  directly) is the shared rule both the summary record and the Finance
+  page's balance card use to pick which provider's balance to show:
+  the freshest real balance among active providers, falling back to any
+  active provider, `null` if nothing has ever synced or been imported.
+- `lib/workspace/finance/accounting.js` - gained `monthlyTrend(transactions, months, now)`
+  for basic cashflow/management reporting (one bucket per calendar
+  month, oldest first, zero-filled for months with no data) alongside
+  the existing `summarise`/`periodRange`/`resolvePeriod` from the
+  free-accounting-summary work.
+- `db/schema.sql` - `provider` CHECK widened to
+  `('anna_statement_csv', 'xero')` on both the accounts and
+  transactions tables (`VARCHAR(20)` -> `VARCHAR(30)` to fit the longer
+  id); new `recurring_estimated BOOLEAN` column. Rewritten in place
+  rather than migrated, since this branch was never merged or deployed.
+- `routes/workspace.js` / `views/workspace/finance.ejs` - the primary
+  flow is now a file upload ("Upload an ANNA statement": an
+  `<input type=file>`, read client-side with `FileReader.readAsText()`,
+  POSTed as a JSON text field to `POST /api/workspace/finance/anna/import`
+  - CSV is text, so this avoids a multipart dependency, following the
+  same base64-JSON convention the CMS image-upload route already uses).
+  `server.js` gives that one route its own body-size limit (8mb,
+  alongside the existing 5mb image-upload exemption). New cards: Balance
+  (labelled "as of the last imported statement" for the CSV route),
+  Accounting summary (unchanged), Cashflow last 12 months
+  (`monthlyTrend`), Estimated recurring costs (`recurring.detectRecurringGroups`,
+  always labelled an estimate), Transactions (now shows a Source column
+  per row), and Invoices and receipts (an honest "not yet available - no
+  evidenced ANNA export route found" note rather than inventing one).
+  Xero moves into a `<details>` "Optional: Xero (not required, not
+  connected by default)" section near the bottom - same OAuth
+  connect/callback/sync/disconnect mechanics as before, just no longer
+  the primary card on the page.
+- **Two real bugs found and fixed by end-to-end testing with a genuine
+  seeded statement (not just unit tests):** both `recurring.js` and
+  `accounting.js`'s `monthlyTrend` read a transaction's date as `t.date`
+  / `String(t.txn_date)` respectively. The CSV parser's own output uses
+  `date` (a plain `'YYYY-MM-DD'` string), so unit tests built with that
+  shape passed. But a real Postgres row's column is `txn_date`, returned
+  by `node-postgres` as a JS `Date` object, and `String(dateObject)`
+  gives `"Thu Mar 05 2026 00:00:00 GMT..."` rather than an ISO date - so
+  both functions silently matched nothing when called from the route
+  with real database rows, while the page's OTHER numbers (computed at
+  import time, from the parser's own shape) were correct. The
+  "Estimated recurring costs" card showed empty and the "Cashflow"
+  table showed all zeros, on a page that otherwise looked entirely
+  populated - exactly the kind of inconsistency that is easy to miss
+  reading code and immediate once you actually upload a file and look.
+  Fixed by normalising both a `date`/`txn_date` string and a `Date`
+  object identically (`repo.js`'s own `syncFinanceSummaryRecord` already
+  did this correctly - the bug was in not reusing that pattern
+  everywhere). Both fixes are pinned by regression tests using an actual
+  `Date` object, not a string, so the shape gap cannot reopen unnoticed.
+- `test/workspace/finance.test.js` - 48 tests (was 25): the original
+  structural-refusal/lane/token suite, now run for BOTH providers where
+  provider-generic; the CSV parser (signed and split-column amount
+  shapes, quoted/escaped fields, empty file, missing date/amount
+  column, a bad row skipped without losing the file, dedup via content
+  hash, UK and ISO date formats, currency-symbol amounts); the
+  recurring-cost heuristic (3+ occurrences required, cadence detection,
+  amount-consistency rejection, irregular gaps rejected, income never
+  flagged, non-mutation) **including the two regression tests above**
+  using real Postgres row shape; `headlineAccountState`'s selection
+  rule; and `monthlyTrend`'s bucketing. Full `test/workspace/*.test.js`
+  plus `test/noEmDashes.test.js`: 186/186 (2 unrelated paid suites
+  skipped). Full `npm test`: 695/695. Verified against a genuinely
+  fresh database (the Scott v0.2 release-ordering lesson) and the
+  existing dev database. Smoke-tested end to end over real HTTP as
+  `tom` with **zero Xero configuration present at all** (boot line
+  confirms: "primary route: ANNA statement CSV upload, always
+  available, no configuration needed"): logged in, unlocked, uploaded a
+  real multi-month synthetic statement, and confirmed every card - a
+  £11,900.02 balance correctly labelled "as of the last imported
+  statement", the £49.99 monthly Railway payment correctly detected as
+  recurring, and the cashflow table showing real monthly figures -
+  which is what caught the two Date-object bugs above.
+
+**Governance, unchanged in substance.** Still a material connector-
+permission change per the original decision doc's own instruction
+("route the resulting material connector-permission design to
+ARRINGTON AI GOVERNANCE & ASSURANCE before production use"); still
+presented for that review rather than merged or self-approved. The
+write-back below is being extended with this rework's findings rather
+than replaced.
+
+**Write-back.** Original findings recorded in Drive as "1 SEPTEMBER
+2026 - ANNA MONEY FINANCE CONNECTOR - IMPLEMENTATION FINDINGS" (Drive ID
 `1H95ihoCb4Zsi62jUQpkFVzPSaZlDnYNkoL1WcY6eUVM`), written to be appended
 as the next dated entry in the live ARRINGTON AI WORKSPACE BUILDER
 handoff - a separate file because this session's Drive tools can create
-a new Doc but not edit an existing one's body in place. Archive it once
-merged into the handoff proper.
+a new Doc but not edit an existing one's body in place. This rework's
+findings are recorded the same way, as a second dated entry: "1
+SEPTEMBER 2026 - ANNA-FIRST FINANCE REWORK - IMPLEMENTATION FINDINGS"
+(Drive ID `1PZIGYxLW4-Q8DVqDgusQmKyqwWjCXG07_n__UB2GCpU`). Archive both
+once merged into the handoff proper.
 
-**Built-in accounting summary, free (01/09/2026).** Tom asked for free
+**Still needed before ANNA data can actually flow, Tom's alone:** log
+into the ANNA app, request a statement, download the CSV, upload it to
+the Finance page. Nothing else is required - no account registration,
+no OAuth, no new subscription. Xero remains available later if Arrington
+ever adopts it independently.
+
+**Original build, kept as historical record (superseded above).** ANNA
+Money via Xero, Tom's first ANNA MONEY BANKING INTEGRATION DECISION.
+
+Public evidence (TrueLayer's own partnership material and independent
+coverage, cross-checked against ANNA's regulatory status as a Prepay
+Technologies/PayrNet e-money institution) showed ANNA is the CLIENT of
+TrueLayer's Data API, not a provider exposed by it: ANNA adopted
+TrueLayer so its OWN customers could connect their OTHER banks into
+ANNA, the opposite direction from what the decision needed. No
+aggregator's public material lists ANNA itself as a connectable
+provider. **ANNA Money -> Xero -> this Workspace** was built as the
+accounting-feed route ANNA publicly and demonstrably supports
+(automatic bank-feed sync into Xero).
+
+- `lib/workspace/finance/xeroClient.js` - real Xero OAuth 2.0 and
+  Accounting API calls (authorize URL, token exchange/refresh,
+  connections, Accounts, the Bank Summary report for current balance,
+  BankTransactions for the ledger). Documented limitation, still true:
+  Xero's Accounting API has no "this is a recurring payment" flag on
+  raw bank-feed lines (that concept exists only for invoices, a
+  different object this client does not read) - inventing one would be
+  the same defect class this codebase treats seriously elsewhere
+  (Scott's brain gaps, the Market Ready Test's deterministic rebuild).
+  This is exactly why the rework above builds a clearly-labelled
+  ESTIMATE instead, rather than pretending Xero ever provided the fact.
+- `routes/workspace.js` / `views/workspace/finance.ejs` - Xero OAuth was
+  (and remains) a real redirect-and-callback pair
+  (`/workspace/finance/xero/connect` / `/xero/callback`), state-token
+  protected against a callback that did not originate from a connect
+  this session started, behind the workspace's existing
+  unlock+clearance gates. A first sync ran automatically right after
+  connecting; manual "Sync now" and "Disconnect" are POST APIs behind
+  the same gates.
+
+**Built-in accounting summary, free (01/09/2026, unchanged by the
+rework above except for `monthlyTrend`).** Tom asked for free
 accounting software built into the banking area. Checked before
-building anything, same discipline as the provider-route finding above:
-ANNA's own live integrations are Xero and Sage only (both paid);
-FreeAgent and Clearbooks are on ANNA's public roadmap, not live, so
-there is no free third-party software ANNA actually feeds today.
-Confirmed with Tom via `AskUserQuestion`, who chose the buildable
-option: a read-only accounting summary built directly into the
-Workspace, computed from transactions already synced, no new
+building anything: ANNA's own live integrations are Xero and Sage only
+(both paid); FreeAgent and Clearbooks are on ANNA's public roadmap, not
+live, so there is no free third-party software ANNA actually feeds
+today. Confirmed with Tom via `AskUserQuestion`, who chose the
+buildable option: a read-only accounting summary built directly into
+the Workspace, computed from transactions already synced, no new
 credential and no new subscription.
 
-- `lib/workspace/finance/accounting.js` - pure module, no database. `summarise(transactions)` totals income/expenses/net and breaks them out by category (blank/whitespace-only categories become `(uncategorised)`, never dropped). `periodRange(preset, now)` / `resolvePeriod({preset, from, to})` resolve five presets (this month, last month, last 3/12 months, all time) plus a validated custom range - malformed dates, a reversed range, or anything SQL/script-shaped fall back to `this_month` rather than reaching the database. Deliberately NOT double-entry bookkeeping, VAT calculation or MTD filing, and the page copy says so: Xero (or an accountant) stays the system of record for anything that has to be correct in that sense.
-- `lib/workspace/finance/repo.js` - `listTransactions` gained optional `from`/`to` date filters (backward compatible; the plain recent-ledger call is unaffected) with a higher row cap (5000 vs 500) when a range is given, since a category summary over a real period needs more than the ledger's usual page of 100.
-- `routes/workspace.js` - the `/workspace/finance` page reads `period`/`from`/`to` from the query string, resolves them through `resolvePeriod`, and passes both the plain recent ledger and the period-filtered summary to the view.
-- `views/workspace/finance.ejs` - a new "Accounting summary (built in, free)" card: period-preset buttons plus a custom date-range form (both plain GET, no CSRF needed), income/expenses/net totals, and a category breakdown table.
-- **Inline-style bug caught and fixed in the same pass:** the initial Finance build (this same file, three `style="..."` attributes) violated the site's own strict CSP - nonces cover `<style>`/`<script>` elements, not inline `style=""` attributes, and this CSP carries no `unsafe-inline` for either. curl-based smoke testing never catches this (CSP is browser-enforced), which is exactly why it slipped through the first pass. Replaced with real classes (`.ws-h-tight`, `.ws-stat`, `.ws-input-narrow` in `views/workspace/partials/styles.ejs`). Worth remembering for any future workspace view: grep for `style="` before calling a page done, not just curl it.
-- **Related gating bug fixed in the same pass:** the Transactions and Sync history cards were gated on `account.status === 'configured'`, so disconnecting hid the transaction ledger entirely - directly contradicting `disconnectAccount()`'s own comment that synced history is kept. Now gated on "currently connected OR history exists", with an honest "not currently connected, this is kept history" note when showing history from a disconnected state. The Current balance card stays gated on live connection only, since showing a balance figure after disconnect would read as current when it is not.
-- Tests: 25/25 in `test/workspace/finance.test.js` now (was 16), covering totals, category breakout, uncategorised handling, non-mutation, period-boundary correctness (including the January `last_month` year-rollover case), and `resolvePeriod`'s validation (malformed input, reversed range, a SQL-injection-shaped string all fall back rather than reach the database). Full `test/workspace/*.test.js` plus `test/noEmDashes.test.js` still 163/163 (2 unrelated paid suites skipped). Smoke-tested end to end with real seeded transactions across `this_month`/`last_3_months`/`all_time`/custom-range, verified the category totals by hand, and grepped the rendered HTML for `style="` to confirm the CSP fix actually took.
+- `lib/workspace/finance/accounting.js` - pure module, no database. `summarise(transactions)` totals income/expenses/net and breaks them out by category (blank/whitespace-only categories become `(uncategorised)`, never dropped). `periodRange(preset, now)` / `resolvePeriod({preset, from, to})` resolve five presets (this month, last month, last 3/12 months, all time) plus a validated custom range - malformed dates, a reversed range, or anything SQL/script-shaped fall back to `this_month` rather than reaching the database. Deliberately NOT double-entry bookkeeping, VAT calculation or MTD filing, and the page copy says so.
+- **Inline-style bug caught and fixed in this pass, then repeated and caught again in the ANNA-first rework:** strict CSP blocks inline `style=""` attributes (nonces cover `<style>`/`<script>` elements only), and curl-based smoke testing never catches this - only a grep for `style="` does. Fixed both times (`.ws-h-tight`, `.ws-stat`, `.ws-input-narrow`, then `.ws-summary`, `.ws-h-inline` in `views/workspace/partials/styles.ejs`). Worth stating plainly rather than just fixing again: this is now a proven repeat mistake on this exact page, so grep for `style="` before calling ANY future edit to this view done, every time, not just when something reminds you to.
+- **Related gating bug fixed in the same pass:** the Transactions and Sync history cards were gated on `account.status === 'configured'`, hiding history entirely after disconnecting - contradicting `disconnectAccount()`'s own comment that history is kept. Fixed then, unaffected by the rework (the ledger is provider-agnostic).
 
 ### Fifteenth governance review: AMBER, no HIGH (31/08/2026)
 

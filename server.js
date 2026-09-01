@@ -276,11 +276,14 @@ app.use(cookieParser());
 // routes/whereToStart.js for the handler itself.
 whereToStart.mountWebhook(app);
 
-// Body parsing. Only the image upload route carries a large base64 payload, so
-// it gets a 5mb limit; every other JSON endpoint gets a small default, which
-// keeps the request surface tight. express.json won't double-parse, so the
-// path-scoped parser wins for the image route and the global one covers the rest.
+// Body parsing. Only the image upload route and the ANNA statement import
+// carry a large payload (base64 image; a multi-year CSV statement as a JSON
+// text field), so each gets its own limit; every other JSON endpoint gets a
+// small default, which keeps the request surface tight. express.json won't
+// double-parse, so the path-scoped parser wins for these two routes and the
+// global one covers the rest.
 app.use('/api/content/image', express.json({ limit: '5mb' }));
+app.use('/api/workspace/finance/anna/import', express.json({ limit: '8mb' }));
 app.use(express.json({ limit: '512kb' }));
 app.use(express.urlencoded({ extended: false }));
 
@@ -1276,9 +1279,13 @@ loadPermissions().then(() => {
       })
       .catch((err) => console.error('Scott brain: approved additions could NOT be loaded, workers will not see them:', err.message));
     console.log('Workspace AI: ' + require('./lib/workspace/orchestrator').describeWorkspaceAIStatus());
-    // Read-only business banking (ANNA Money via Xero), added 01/09/2026.
-    // Same reporting discipline as the rest of this boot sequence: name
-    // each gate, never print a secret, report the length only for the
+    // Read-only business banking, added 01/09/2026, reworked ANNA-first
+    // the same day. The primary route (ANNA statement CSV upload) needs
+    // no environment configuration at all - it is always available, Tom
+    // uploads a file himself. Only the optional, secondary Xero
+    // connector has gates worth reporting at boot. Same reporting
+    // discipline as the rest of this boot sequence: name each gate,
+    // never print a secret, report the length only for the
     // token-encryption key.
     {
       const financeRegistry = require('./lib/workspace/finance/registry');
@@ -1287,11 +1294,11 @@ loadPermissions().then(() => {
       const keyConfigured = tokenCryptoConfigured();
       const tokenKeyRaw = process.env.WORKSPACE_FINANCE_TOKEN_KEY;
       console.log('Workspace finance: ' + [
-        xeroConfigured ? 'XERO_CLIENT_ID/XERO_CLIENT_SECRET set' : 'XERO_CLIENT_ID/XERO_CLIENT_SECRET NOT set',
+        'primary route: ANNA statement CSV upload, always available, no configuration needed',
+        xeroConfigured ? 'optional Xero: XERO_CLIENT_ID/XERO_CLIENT_SECRET set' : 'optional Xero: not configured (this is fine; Xero is never required)',
         keyConfigured
-          ? 'WORKSPACE_FINANCE_TOKEN_KEY set (64-char hex)'
-          : `WORKSPACE_FINANCE_TOKEN_KEY ${tokenKeyRaw ? `set but malformed (length ${String(tokenKeyRaw).length}, expected 64 hex chars)` : 'not set'}`,
-        (xeroConfigured && keyConfigured) ? 'RESULT: Tom can connect Xero from /workspace/finance' : 'RESULT: the Finance page will show what is still needed'
+          ? 'WORKSPACE_FINANCE_TOKEN_KEY set (64-char hex, needed only if Xero is ever connected)'
+          : `WORKSPACE_FINANCE_TOKEN_KEY ${tokenKeyRaw ? `set but malformed (length ${String(tokenKeyRaw).length}, expected 64 hex chars)` : 'not set (fine unless Xero is connected later)'}`
       ].join(' | '));
     }
     // Governance finding F1 (Tom's decision, 31/08/2026): the workspace

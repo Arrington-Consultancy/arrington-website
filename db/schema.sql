@@ -823,19 +823,28 @@ CREATE TABLE IF NOT EXISTS workspace_social_sync_runs (
 CREATE INDEX IF NOT EXISTS idx_workspace_social_sync_runs_platform ON workspace_social_sync_runs (platform, id DESC);
 
 -- ------------------------------------------------------------
--- Arrington AI Workspace: read-only business banking (01/09/2026)
+-- Arrington AI Workspace: read-only business banking (01/09/2026,
+-- reworked to be ANNA-first on 01/09/2026)
 --
--- Tom's ANNA MONEY BANKING INTEGRATION DECISION (1 September 2026):
--- ANNA Money's own account is not evidenced as directly retrievable
--- through TrueLayer or another regulated Open Banking data provider
--- (ANNA consumes TrueLayer to read INTO itself from other banks; no
--- public evidence shows the reverse). The proven real route is the
--- accounting-feed architecture ANNA -> Xero -> Workspace, which ANNA
--- publicly supports (automatic bank-feed sync). One provider only:
--- 'xero'. Read-only. No payment, transfer, beneficiary or card-control
--- column or table exists anywhere in this schema, on purpose: that is
--- not a permission this area declines to use, it is a capability that
--- was never built.
+-- Tom does not currently use Xero and this must never require it or
+-- nag him to subscribe to it. Investigated first: ANNA Money has no
+-- public developer API (its GitHub org is internal engineering tooling
+-- only) and is not evidenced as directly retrievable through TrueLayer
+-- or another regulated Open Banking provider (ANNA consumes TrueLayer
+-- to read INTO itself from other banks; no public evidence shows the
+-- reverse). What IS real and requires no third party at all: ANNA's own
+-- account-holder feature ("Get an account statement" in the ANNA app)
+-- lets the account holder download a CSV or PDF statement for any
+-- period, including full history since the account opened. That is the
+-- primary provider here: 'anna_statement_csv', a manual, fully
+-- authorised export Tom performs himself and uploads to the Workspace.
+-- 'xero' remains available, entirely optional, off unless Tom
+-- separately sets it up later.
+--
+-- Read-only throughout, both providers. No payment, transfer,
+-- beneficiary or card-control column or table exists anywhere in this
+-- schema, on purpose: that is not a permission this area declines to
+-- use, it is a capability that was never built.
 --
 -- Same honesty discipline as workspace_social_accounts: a credential is
 -- not a retrieval, and a failed sync outranks the timestamp of the last
@@ -844,23 +853,28 @@ CREATE INDEX IF NOT EXISTS idx_workspace_social_sync_runs_platform ON workspace_
 
 CREATE TABLE IF NOT EXISTS workspace_finance_accounts (
     id SERIAL PRIMARY KEY,
-    provider VARCHAR(20) UNIQUE NOT NULL CHECK (provider IN ('xero')),
+    provider VARCHAR(30) UNIQUE NOT NULL CHECK (provider IN ('anna_statement_csv', 'xero')),
     status VARCHAR(20) NOT NULL DEFAULT 'not_configured' CHECK (status IN ('not_configured', 'configured', 'revoked', 'error')),
     -- Xero organisation (tenant) identifier and display name, learned
     -- from the connections endpoint after OAuth, never guessed or typed.
+    -- Unused (left blank) for anna_statement_csv, which has no OAuth
+    -- concept: an upload is not a connection.
     tenant_id VARCHAR(100) NOT NULL DEFAULT '',
     tenant_name VARCHAR(200) NOT NULL DEFAULT '',
-    -- Xero bank account this feed represents, once known.
     bank_account_id VARCHAR(100) NOT NULL DEFAULT '',
     bank_account_name VARCHAR(200) NOT NULL DEFAULT '',
     currency VARCHAR(10) NOT NULL DEFAULT '',
-    -- OAuth 2.0 tokens, AES-256-GCM ciphertext (lib/workspace/finance/tokenCrypto.js),
-    -- keyed on WORKSPACE_FINANCE_TOKEN_KEY. Never stored, logged or
-    -- returned in plaintext by any route.
+    -- OAuth 2.0 tokens (Xero only), AES-256-GCM ciphertext
+    -- (lib/workspace/finance/tokenCrypto.js), keyed on
+    -- WORKSPACE_FINANCE_TOKEN_KEY. Never stored, logged or returned in
+    -- plaintext by any route. Always empty for anna_statement_csv.
     refresh_token_enc TEXT NOT NULL DEFAULT '',
     access_token_enc TEXT NOT NULL DEFAULT '',
     access_token_expires_at TIMESTAMPTZ,
     current_balance_pence BIGINT,
+    -- For anna_statement_csv this is "as of the last row of the most
+    -- recently imported statement", not a live balance, and the
+    -- Workspace must label it that way rather than as current.
     balance_as_of TIMESTAMPTZ,
     connected_at TIMESTAMPTZ,
     connected_by VARCHAR(100) NOT NULL DEFAULT '',
@@ -872,12 +886,18 @@ CREATE TABLE IF NOT EXISTS workspace_finance_accounts (
 );
 
 -- One row per transaction, deduplicated on (provider, external_id) so a
--- re-sync never doubles the ledger. category and is_recurring/
--- recurring_group are populated only where the source (Xero) actually
--- provides them; never inferred here.
+-- re-import or re-sync never doubles the ledger. For anna_statement_csv,
+-- external_id is a content hash of the row (ANNA's statement export
+-- carries no persistent transaction id), so re-uploading an overlapping
+-- statement is safe. category is populated only where the source
+-- actually provides it. is_recurring / recurring_group are ESTIMATED by
+-- lib/workspace/finance/recurring.js from repeating payee/amount
+-- patterns, never source-confirmed (no source here provides a genuine
+-- recurring flag) - recurring_estimated is always true when set, and
+-- the Workspace must always present it as an estimate.
 CREATE TABLE IF NOT EXISTS workspace_finance_transactions (
     id SERIAL PRIMARY KEY,
-    provider VARCHAR(20) NOT NULL,
+    provider VARCHAR(30) NOT NULL,
     external_id VARCHAR(200) NOT NULL,
     txn_date DATE NOT NULL,
     amount_pence BIGINT NOT NULL,
@@ -887,6 +907,7 @@ CREATE TABLE IF NOT EXISTS workspace_finance_transactions (
     category VARCHAR(150) NOT NULL DEFAULT '',
     is_recurring BOOLEAN NOT NULL DEFAULT false,
     recurring_group VARCHAR(150) NOT NULL DEFAULT '',
+    recurring_estimated BOOLEAN NOT NULL DEFAULT false,
     synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (provider, external_id)
 );
@@ -894,7 +915,7 @@ CREATE INDEX IF NOT EXISTS idx_workspace_finance_txn_date ON workspace_finance_t
 
 CREATE TABLE IF NOT EXISTS workspace_finance_sync_runs (
     id SERIAL PRIMARY KEY,
-    provider VARCHAR(20) NOT NULL,
+    provider VARCHAR(30) NOT NULL,
     started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     finished_at TIMESTAMPTZ,
     outcome VARCHAR(20) NOT NULL DEFAULT 'failed' CHECK (outcome IN ('ok', 'partial', 'failed', 'skipped_not_configured')),

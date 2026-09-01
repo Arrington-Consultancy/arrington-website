@@ -1,7 +1,7 @@
 <%- include('partials/shell-top', { pageTitle: 'Finance', active: 'finance' }) %>
 
 <h1 class="ws-h">Finance</h1>
-<p class="ws-sub">Read-only business banking: current balance, transactions, categories, recurring payments where the source provides them, and provenance/freshness. Per Tom's ANNA MONEY BANKING INTEGRATION DECISION (1 September 2026): ANNA's own account is not evidenced as directly retrievable through TrueLayer or another regulated Open Banking provider, so this reads through the accounting-feed route ANNA has publicly proven: <strong>ANNA Money &rarr; Xero &rarr; this Workspace</strong>.</p>
+<p class="ws-sub">Read-only business banking and accounting. Primary source: <strong>ANNA Money</strong>, the real account Arrington uses today. Investigated first (1 September 2026): ANNA has no public developer API, and its own account is not evidenced as directly retrievable through TrueLayer or another regulated Open Banking provider. What ANNA does offer directly to the account holder, no third party needed: a CSV or PDF statement for any period, including full history. That is what this page reads. Xero is available separately as an entirely optional, future accounting-system connector - Tom does not currently use Xero and nothing here requires it.</p>
 
 <% if (!permitted) { %>
   <div class="ws-card"><p class="ws-empty">This area holds real business banking data, which your clearance does not cover.</p></div>
@@ -10,48 +10,36 @@
 <% if (connectError) { %>
   <div class="ws-card ws-danger-card"><p class="ws-note-error"><%= connectError %></p></div>
 <% } %>
+<% if (importResult) { %>
+  <div class="ws-card"><p class="ws-meta"><%= importResult %></p></div>
+<% } %>
 
 <div class="ws-card">
-  <h2>Connection</h2>
-  <% if (!xeroConfigured) { %>
-    <p class="ws-empty">No credential in this environment. <code>XERO_CLIENT_ID</code> and <code>XERO_CLIENT_SECRET</code> are not both set, so nothing can be connected yet.</p>
-    <div class="ws-body-text">
-      <p><strong>To connect a real ANNA Money account, in order:</strong></p>
-      <ol>
-        <li>Set up ANNA's own Xero integration inside ANNA (ANNA &rarr; Business tools &rarr; Xero), so ANNA's transactions actually flow into a Xero organisation.</li>
-        <li>Register a Xero developer app at developer.xero.com/app/manage, with redirect URI <code><%= xeroRedirectUri %></code>.</li>
-        <li>Set <code>XERO_CLIENT_ID</code> and <code>XERO_CLIENT_SECRET</code> on the deployment (the Xero app's own credentials, not ANNA's).</li>
-        <li>Set <code>WORKSPACE_FINANCE_TOKEN_KEY</code> (64-character hex, 32 bytes) so tokens can be stored encrypted rather than in plaintext.</li>
-        <li>Return here and click Connect. Tom completes the Xero consent screen himself; nothing here can do that step for him.</li>
-      </ol>
-      <p class="ws-meta">Least-privilege read scopes requested: offline_access, accounting.transactions.read, accounting.settings.read. No write, payment or bank-feed-write scope is ever requested.</p>
-    </div>
-  <% } else if (!tokenCryptoReady) { %>
-    <p class="ws-empty"><code>WORKSPACE_FINANCE_TOKEN_KEY</code> is not set, so tokens cannot be stored encrypted. Set it before connecting.</p>
+  <h2>Upload an ANNA statement</h2>
+  <p class="ws-body-text">In the ANNA app, type <strong>"Get an account statement"</strong>, choose a period (a single month, or your full history since the account opened), and choose <strong>CSV</strong>. Upload that file below. Re-uploading a period you have already imported is safe: matching transactions are recognised and not duplicated.</p>
+  <form id="wsAnnaImportForm" class="ws-form-row">
+    <input class="ws-input" type="file" id="wsAnnaCsvFile" accept=".csv,text/csv">
+    <button class="ws-btn" type="submit">Import statement</button>
+  </form>
+  <p class="ws-note-error" id="wsAnnaImportError" hidden></p>
+</div>
+
+<div class="ws-card">
+  <h2>Balance</h2>
+  <% if (!headlineBalance) { %>
+    <p class="ws-empty">No statement uploaded yet.</p>
   <% } else { %>
-    <span class="ws-badge ws-badge-<%= account.freshness.state === 'fresh' ? 'fresh' : (account.freshness.state === 'sync_failed' ? 'failed' : (account.freshness.state === 'not_connected' || account.freshness.state === 'never_retrieved' ? 'unverified' : 'stale')) %>"><%= account.freshness.state.replace(/_/g, ' ') %></span>
-    <% if (account.status === 'configured') { %>
-      <p class="ws-body-text">Connected to <strong><%= account.tenantName || 'a Xero organisation' %></strong><% if (account.bankAccountName) { %>, bank account <strong><%= account.bankAccountName %></strong><% } %>.</p>
-      <p class="ws-meta">
-        <% if (account.lastSyncAt) { %>Last sync: <%= new Date(account.lastSyncAt).toUTCString() %> (<%= account.lastSyncOutcome %>)<% } else { %>No sync has run yet.<% } %>
-        <% if (account.lastError) { %><div class="ws-note-error"><%= account.lastError %></div><% } %>
-      </p>
-      <form id="wsFinanceSync" class="ws-form-row">
-        <button class="ws-btn" type="submit">Sync now</button>
-      </form>
-      <form id="wsFinanceDisconnect" class="ws-form-row">
-        <button class="ws-btn ws-btn-danger" type="submit">Disconnect</button>
-      </form>
-    <% } else { %>
-      <p class="ws-body-text">Not connected yet.</p>
-      <a class="ws-btn" href="/workspace/finance/xero/connect">Connect Xero</a>
-    <% } %>
+    <p class="ws-h ws-h-tight"><%= formatPence(headlineBalance.currentBalancePence) %></p>
+    <p class="ws-meta">
+      From <%= headlineBalance.name %><% if (headlineBalance.balanceAsOf) { %>, as of <%= new Date(headlineBalance.balanceAsOf).toUTCString() %><% } %>.
+      <% if (headlineBalance.provider === 'anna_statement_csv') { %>This is the balance as of the last imported statement, not a live balance.<% } %>
+    </p>
   <% } %>
 </div>
 
 <div class="ws-card">
   <h2>Accounting summary (built in, free)</h2>
-  <p class="ws-meta">A read-only summary of the transactions already synced here: categorised income and expenses over a period, built into the Workspace at no extra cost. It is not bookkeeping, VAT calculation or a tax return, and does not replace Xero or an accountant. ANNA's own live accounting integrations are Xero and Sage; no free third-party accounting software actually connects to ANNA today, so this is computed from data already in the Workspace instead.</p>
+  <p class="ws-meta">A read-only summary of the transactions already imported here: categorised income and expenses over a period, built into the Workspace at no extra cost. It is not bookkeeping, VAT calculation or a tax return, and does not replace an accountant.</p>
 
   <form class="ws-form-row" method="get" action="/workspace/finance">
     <% periodPresets.forEach(function (p) { %>
@@ -92,26 +80,59 @@
   <% } %>
 </div>
 
-<% if (account && account.status === 'configured') { %>
 <div class="ws-card">
-  <h2>Current balance</h2>
-  <p class="ws-h ws-h-tight"><%= formatPence(account.currentBalancePence) %></p>
-  <p class="ws-meta"><%= account.currency || '' %><% if (account.balanceAsOf) { %> as of <%= new Date(account.balanceAsOf).toUTCString() %><% } else { %> (no balance retrieved yet)<% } %></p>
-</div>
-<% } %>
-
-<% if ((account && account.status === 'configured') || transactions.length > 0) { %>
-<div class="ws-card">
-  <h2>Transactions (<%= transactions.length %>)</h2>
-  <% if (!account || account.status !== 'configured') { %>
-    <p class="ws-meta">Not currently connected. This is the transaction history kept from before disconnecting.</p>
-  <% } %>
-  <% if (transactions.length === 0) { %>
-    <p class="ws-empty">No transactions synced yet.</p>
+  <h2>Cashflow, last 12 months</h2>
+  <% if (trend.every(function (m) { return m.count === 0; })) { %>
+    <p class="ws-empty">No transactions imported yet.</p>
   <% } else { %>
   <div class="ws-table-wrap">
   <table class="ws-table">
-    <tr><th>Date</th><th>Amount</th><th>Payee</th><th>Reference</th><th>Category</th><th>Recurring</th></tr>
+    <tr><th>Month</th><th>Income</th><th>Expenses</th><th>Net</th></tr>
+    <% trend.forEach(function (m) { %>
+      <tr>
+        <td class="ws-meta"><%= m.month %></td>
+        <td class="ws-amount-in"><%= m.incomePence ? formatPence(m.incomePence) : '' %></td>
+        <td class="ws-amount-out"><%= m.expensesPence ? formatPence(m.expensesPence) : '' %></td>
+        <td><%= formatPence(m.netPence) %></td>
+      </tr>
+    <% }) %>
+  </table>
+  </div>
+  <% } %>
+</div>
+
+<div class="ws-card">
+  <h2>Estimated recurring costs</h2>
+  <p class="ws-meta">Not a bank-confirmed flag: neither ANNA's statement export nor Xero's API marks a transaction as recurring. This is an estimate, detected from the same payee repeating at a similar amount roughly monthly, quarterly or annually, at least three times.</p>
+  <% if (recurringGroups.length === 0) { %>
+    <p class="ws-empty">No repeating pattern detected yet. This needs at least three occurrences of the same payee and amount to show up.</p>
+  <% } else { %>
+  <div class="ws-table-wrap">
+  <table class="ws-table">
+    <tr><th>Payee</th><th>Cadence</th><th>Est. amount</th><th>Occurrences</th><th>Last seen</th><th>Next expected (est.)</th></tr>
+    <% recurringGroups.forEach(function (g) { %>
+      <tr>
+        <td><%= g.payee %></td>
+        <td class="ws-meta"><%= g.cadence %></td>
+        <td class="ws-amount-out"><%= formatPence(g.averageAmountPence) %></td>
+        <td class="ws-meta"><%= g.occurrences %></td>
+        <td class="ws-meta"><%= g.lastDate %></td>
+        <td class="ws-meta"><%= g.estimatedNextDate %></td>
+      </tr>
+    <% }) %>
+  </table>
+  </div>
+  <% } %>
+</div>
+
+<div class="ws-card">
+  <h2>Transactions (<%= transactions.length %>)</h2>
+  <% if (transactions.length === 0) { %>
+    <p class="ws-empty">No transactions imported or synced yet.</p>
+  <% } else { %>
+  <div class="ws-table-wrap">
+  <table class="ws-table">
+    <tr><th>Date</th><th>Amount</th><th>Payee</th><th>Reference</th><th>Category</th><th>Recurring (est.)</th><th>Source</th></tr>
     <% transactions.forEach(function (t) { %>
       <tr>
         <td class="ws-meta"><%= new Date(t.txn_date).toISOString().slice(0, 10) %></td>
@@ -119,37 +140,47 @@
         <td><%= t.payee || '(no payee recorded)' %></td>
         <td class="ws-meta"><%= t.reference %></td>
         <td class="ws-meta"><%= t.category %></td>
-        <td class="ws-meta"><%= t.is_recurring ? (t.recurring_group || 'yes') : '' %></td>
+        <td class="ws-meta"><%= t.is_recurring ? 'yes' : '' %></td>
+        <td class="ws-meta"><%= t.provider === 'anna_statement_csv' ? 'ANNA' : 'Xero' %></td>
       </tr>
     <% }) %>
   </table>
   </div>
   <% } %>
 </div>
-<% } %>
 
-<% if ((account && account.status === 'configured') || syncRuns.length > 0) { %>
 <div class="ws-card">
-  <h2>Sync history</h2>
-  <% if (syncRuns.length === 0) { %>
-    <p class="ws-empty">No sync has run yet.</p>
-  <% } else { %>
-  <div class="ws-table-wrap">
-  <table class="ws-table">
-    <tr><th>Started</th><th>Outcome</th><th>Items</th><th>Detail</th></tr>
-    <% syncRuns.forEach(function (s) { %>
-      <tr>
-        <td class="ws-meta"><%= new Date(s.started_at).toUTCString() %></td>
-        <td><span class="ws-badge <%= s.outcome === 'ok' ? 'ws-badge-fresh' : (s.outcome === 'failed' ? 'ws-badge-failed' : 'ws-badge-stale') %>"><%= s.outcome %></span></td>
-        <td class="ws-meta"><%= s.items_written %></td>
-        <td class="ws-meta"><%= s.detail %></td>
-      </tr>
-    <% }) %>
-  </table>
-  </div>
-  <% } %>
+  <h2>Invoices and receipts</h2>
+  <p class="ws-empty">Not yet available. ANNA's invoicing and receipt-capture features live inside the ANNA app itself; no evidenced export route for that data (separate from the bank statement) has been found. This is an open item, not something guessed at or built without a real source.</p>
 </div>
-<% } %>
+
+<details class="ws-card">
+  <summary class="ws-summary"><h2 class="ws-h-inline">Optional: Xero (not required, not connected by default)</h2></summary>
+  <p class="ws-meta">Tom does not currently use Xero. Nothing on this page requires it. This exists only for later, if Arrington ever adopts Xero for its own accounting independent of this Workspace.</p>
+  <% accounts.filter(function (a) { return a.provider === 'xero'; }).forEach(function (account) { %>
+    <span class="ws-badge ws-badge-<%= account.freshness.state === 'fresh' ? 'fresh' : (account.freshness.state === 'sync_failed' ? 'failed' : (account.freshness.state === 'not_connected' || account.freshness.state === 'never_retrieved' ? 'unverified' : 'stale')) %>"><%= account.freshness.state.replace(/_/g, ' ') %></span>
+    <% if (!account.configured) { %>
+      <p class="ws-body-text">Not configured in this environment. <code>XERO_CLIENT_ID</code> and <code>XERO_CLIENT_SECRET</code> are not both set.</p>
+    <% } else if (!tokenCryptoReady) { %>
+      <p class="ws-empty"><code>WORKSPACE_FINANCE_TOKEN_KEY</code> is not set, so tokens cannot be stored encrypted. Set it before connecting.</p>
+    <% } else if (account.status === 'configured') { %>
+      <p class="ws-body-text">Connected to <strong><%= account.tenantName || 'a Xero organisation' %></strong><% if (account.bankAccountName) { %>, bank account <strong><%= account.bankAccountName %></strong><% } %>.</p>
+      <p class="ws-meta">
+        <% if (account.lastSyncAt) { %>Last sync: <%= new Date(account.lastSyncAt).toUTCString() %> (<%= account.lastSyncOutcome %>)<% } else { %>No sync has run yet.<% } %>
+        <% if (account.lastError) { %><div class="ws-note-error"><%= account.lastError %></div><% } %>
+      </p>
+      <form id="wsFinanceSync" class="ws-form-row">
+        <button class="ws-btn ws-btn-quiet" type="submit">Sync now</button>
+      </form>
+      <form id="wsFinanceDisconnect" class="ws-form-row">
+        <button class="ws-btn ws-btn-quiet" type="submit">Disconnect</button>
+      </form>
+    <% } else { %>
+      <p class="ws-body-text">Not connected.</p>
+      <a class="ws-btn ws-btn-quiet" href="/workspace/finance/xero/connect">Connect Xero</a>
+    <% } %>
+  <% }) %>
+</details>
 
 <div class="ws-card ws-danger-card">
   <h2>What this area will never do</h2>
@@ -164,7 +195,47 @@
 <script nonce="<%= nonce %>">
   (function () {
     var csrf = document.querySelector('meta[name="csrf-token"]').content;
-    function wire(formId, url, confirmMsg) {
+
+    var importForm = document.getElementById('wsAnnaImportForm');
+    var importErr = document.getElementById('wsAnnaImportError');
+    if (importForm) {
+      importForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        importErr.hidden = true;
+        var fileInput = document.getElementById('wsAnnaCsvFile');
+        var file = fileInput.files && fileInput.files[0];
+        if (!file) { importErr.textContent = 'Choose a CSV file first.'; importErr.hidden = false; return; }
+        var btn = importForm.querySelector('button');
+        btn.disabled = true;
+        var reader = new FileReader();
+        reader.onload = async function () {
+          try {
+            var r = await fetch('/api/workspace/finance/anna/import', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf },
+              body: JSON.stringify({ csv: reader.result })
+            });
+            var data = await r.json();
+            if (!r.ok) {
+              importErr.textContent = (data.error || 'That did not work.') + (data.warnings && data.warnings.length ? ' ' + data.warnings.join(' ') : '');
+              importErr.hidden = false;
+              btn.disabled = false;
+              return;
+            }
+            var msg = data.itemsWritten + ' transaction(s) imported.' + (data.warnings && data.warnings.length ? ' ' + data.warnings.length + ' warning(s): ' + data.warnings.slice(0, 3).join(' ') : '');
+            window.location.href = '/workspace/finance?importResult=' + encodeURIComponent(msg);
+          } catch (ex) {
+            importErr.textContent = 'Network problem: ' + ex.message;
+            importErr.hidden = false;
+            btn.disabled = false;
+          }
+        };
+        reader.onerror = function () { importErr.textContent = 'Could not read that file.'; importErr.hidden = false; btn.disabled = false; };
+        reader.readAsText(file);
+      });
+    }
+
+    function wire(formId, url, confirmMsg, body) {
       var form = document.getElementById(formId);
       if (!form) return;
       form.addEventListener('submit', async function (e) {
@@ -173,7 +244,11 @@
         var btn = form.querySelector('button');
         btn.disabled = true;
         try {
-          var r = await fetch(url, { method: 'POST', headers: { 'x-csrf-token': csrf } });
+          var r = await fetch(url, {
+            method: 'POST',
+            headers: Object.assign({ 'x-csrf-token': csrf }, body ? { 'Content-Type': 'application/json' } : {}),
+            body: body ? JSON.stringify(body) : undefined
+          });
           var data = await r.json();
           if (!r.ok) { window.alert(data.error || 'That did not work.'); btn.disabled = false; return; }
           window.location.reload();
@@ -184,7 +259,7 @@
       });
     }
     wire('wsFinanceSync', '/api/workspace/finance/sync', null);
-    wire('wsFinanceDisconnect', '/api/workspace/finance/disconnect', 'Disconnect the finance connector? Synced transaction history is kept; the credential is removed.');
+    wire('wsFinanceDisconnect', '/api/workspace/finance/disconnect', 'Disconnect Xero? Synced transaction history is kept; the credential is removed.', { provider: 'xero' });
   })();
 </script>
 
