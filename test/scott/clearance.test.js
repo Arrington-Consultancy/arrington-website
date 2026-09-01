@@ -190,6 +190,24 @@ describe('identity-bound clearance (replaces the old "view as" selector)', () =>
     assert.equal(clearance.setImpersonatedPersona(req, 'scott_mercer'), false);
   });
 
+  test("'will' (client role) is a named exception and CAN impersonate, defaulting to the owner view", () => {
+    const will = { session: { user: { id: 99, username: 'will', role: 'client' } } };
+    assert.equal(clearance.canImpersonate(will), true);
+    assert.equal(clearance.getEffectivePersonaId(will), 'scott_mercer', 'no impersonation set yet -> owner view, same as case 3 for admin/content');
+    assert.equal(clearance.setImpersonatedPersona(will, 'jo_bell'), true);
+    assert.equal(clearance.getEffectivePersonaId(will), 'jo_bell');
+    // Case-insensitive on the stored username, same as the login lowercasing.
+    const willCaps = { session: { user: { id: 99, username: 'Will', role: 'client' } } };
+    assert.equal(clearance.canImpersonate(willCaps), true);
+  });
+
+  test('the named-exception allowlist does NOT widen for other client accounts, only the named one(s)', () => {
+    const otherClient = { session: { user: { id: 42, username: 'someotherclient', role: 'client' } } };
+    assert.equal(clearance.canImpersonate(otherClient), false);
+    assert.equal(clearance.setImpersonatedPersona(otherClient, 'scott_mercer'), false);
+    assert.equal(clearance.getEffectivePersonaId(otherClient), 'mike_evans', 'still fails closed to the narrowest persona');
+  });
+
   test('ESCALATION: a fictional staff account can never impersonate, even calling the setter directly', () => {
     const jo = portalReq('jo_bell');
     assert.equal(clearance.setImpersonatedPersona(jo, 'scott_mercer'), false);
