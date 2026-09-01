@@ -1313,6 +1313,14 @@ to ARRINGTON AI GOVERNANCE & ASSURANCE before production use"), so the
 write-back below routes it there rather than treating a green test
 suite as a self-issued PASS.
 
+**Write-back.** Findings recorded in Drive as "1 SEPTEMBER 2026 - ANNA
+MONEY FINANCE CONNECTOR - IMPLEMENTATION FINDINGS" (Drive ID
+`1H95ihoCb4Zsi62jUQpkFVzPSaZlDnYNkoL1WcY6eUVM`), written to be appended
+as the next dated entry in the live ARRINGTON AI WORKSPACE BUILDER
+handoff - a separate file because this session's Drive tools can create
+a new Doc but not edit an existing one's body in place. Archive it once
+merged into the handoff proper.
+
 ### Fifteenth governance review: AMBER, no HIGH (31/08/2026)
 
 `review/workspace-v0.1-governance-review-15-2026-08-31.md` (**AMBER**,
