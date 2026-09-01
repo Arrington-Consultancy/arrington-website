@@ -1241,6 +1241,16 @@ loadPermissions().then(() => {
   app.listen(PORT, () => {
     console.log(`[${isProd ? 'PROD' : 'DEV'}] Arrington CMS running on port ${PORT}`);
     console.log(require('./lib/scott/orchestrator').describeScottAIStatus());
+    // Approved additions to Scott's company brain (gap-driven authoring,
+    // 01/09/2026). Read once into memory here because the brain is read
+    // synchronously throughout lib/scott/data/contextBuilders.js, and
+    // refreshed by the approval route on each decision. A failure here
+    // must not stop the app booting: the consequence is workers not yet
+    // seeing approved additions, which is the safe direction, and it is
+    // reported rather than swallowed so it cannot look like "none yet".
+    require('./lib/scott/data/contextBuilders').loadApprovedFacts()
+      .then((n) => console.log(`Scott brain: ${n} approved addition${n === 1 ? '' : 's'} loaded.`))
+      .catch((err) => console.error('Scott brain: approved additions could NOT be loaded, workers will not see them:', err.message));
     console.log('Workspace AI: ' + require('./lib/workspace/orchestrator').describeWorkspaceAIStatus());
     // Governance finding F1 (Tom's decision, 31/08/2026): the workspace
     // now has three gates, and two of them are Railway variables that
