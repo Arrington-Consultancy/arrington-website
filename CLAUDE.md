@@ -932,7 +932,7 @@ Tom returned an agreed-changes brief (`arrington_copy_review_agreed_changes_20_j
 - `logo.avif` — original logo (now served from DB)
 - `oxford.png` — original Oxford badge (now served from DB)
 
-## Arrington AI Workspace v0.1 (RELEASED TO PRODUCTION CODE, WORKSPACE ITSELF STILL DISABLED, 31/08/2026)
+## Arrington AI Workspace v0.1 (RELEASED, UNLOCKED FOR TOM, 01/09/2026)
 
 **Merged to `main` and deployed to production on 31/08/2026, on Tom's
 explicit release approval, following the eighteenth independent
@@ -945,14 +945,21 @@ candidate's pre-release state rather than corrected line by line.
   `59c7a93a` SUCCESS, confirmed via Railway boot log and HTTP status
   metrics (0 5xx across the release window on both general and Scott
   traffic - see the full record).
-- **The workspace itself remains fail-closed.** Only
-  `ENABLE_ARRINGTON_AI_WORKSPACE=true` and `WORKSPACE_OWNER_USERNAME=tom`
-  are set on production so far, deliberately, to establish the real
-  `WORKSPACE_OWNER_USER_ID` (=2) from boot evidence without opening
-  anything - gates 2 and 3 both still fail, so nobody, Tom included, can
-  reach it yet. `WORKSPACE_ACCESS_PASSPHRASE` is Tom's to set directly in
-  Railway, never through chat or Drive; the fast rollback for any
-  workspace-specific concern is unsetting the flag, which returns to the
+- **All three gates are now live.** Confirmed directly from the
+  production boot log (deploy `7c383fd3`, 01/09/2026): `Workspace
+  access: flag on | owner binding ok (username 'tom', expects user id 2)
+  | WORKSPACE_ACCESS_PASSPHRASE set, length 12 | ... | RESULT: the
+  cleared owner can unlock`. `WORKSPACE_ACCESS_PASSPHRASE` and
+  `WORKSPACE_OWNER_USER_ID` are both set on the Railway service now (set
+  directly by Tom; nobody else's account and no code change was
+  involved). `/workspace` is reachable at
+  `https://www.arringtonconsultancy.com/workspace` for Tom's own login
+  only, landing on `/workspace/unlock` until the passphrase is entered.
+  **Workspace AI is still off** (`ENABLE_WORKSPACE_AI` unset) — the
+  screens load but Ask Ruth and the AI-backed views won't answer until
+  that flag plus `ANTHROPIC_API_KEY` (already present, 108 chars) are
+  both live. The fast rollback for any workspace-specific concern is
+  still unsetting `ENABLE_ARRINGTON_AI_WORKSPACE`, which returns to the
   fully-inert state with no code change.
 - Y1 and Y2 (both LOW, from the eighteenth review) are unchanged, per
   Tom's instruction not to chase a wording point after a
