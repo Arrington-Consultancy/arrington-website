@@ -521,3 +521,40 @@ describe('shape and provenance', () => {
     assert.equal(driver.length, 0, 'the narrowest persona must not see it');
   });
 });
+
+describe('an aggregate is not a private detail', () => {
+  const { buildWorkerSystemPrompt } = require('../../lib/scott/orchestrator');
+  const { getWorker, WORKERS } = require('../../lib/scott/workers');
+
+  test('the prompt distinguishes a total from an individual, in both directions', () => {
+    const p = buildWorkerSystemPrompt(getWorker('finance_accounts'));
+    assert.match(p, /A TOTAL is not a private detail/);
+    assert.match(p, /monthly wage bill/i);
+    assert.match(p, /live disciplinary/i);
+    assert.match(p, /holiday the team has left/i);
+    // The half that must survive: aggregates yes, named individuals no.
+    assert.match(p, /Aggregate freely, embroider nobody/);
+    assert.match(p, /do not do is invent a named individual's salary/i);
+  });
+
+  test('no worker spec tells a worker to refuse rather than estimate', () => {
+    // Regression. Nigel's spec said "Flag where accountant, payroll, tax
+    // or legal evidence would be required rather than inventing an
+    // answer". Asked on 01/09/2026 for the monthly wage bill he refused
+    // outright, correctly following his own job description, which had
+    // been written before the estimate policy existed. A role-level
+    // instruction beats a global one in practice, so this asserts no
+    // worker carries such a line again.
+    const offenders = [];
+    Object.entries(WORKERS).forEach(([id, w]) => {
+      const text = [...(w.scope || []), w.boundaries || '', w.personality || ''].join(' ');
+      if (/rather than inventing an answer|rather than guess(ing)? an answer/i.test(text)) offenders.push(id);
+    });
+    assert.deepEqual(offenders, [], `these specs still forbid estimating: ${offenders.join(', ')}`);
+  });
+
+  test("Nigel may still not pass an estimate off as accounts or as tax advice", () => {
+    const scope = getWorker('finance_accounts').scope.join(' ');
+    assert.match(scope, /never presenting one as filed accounts or as accountant, payroll, tax or legal advice/i);
+  });
+});
