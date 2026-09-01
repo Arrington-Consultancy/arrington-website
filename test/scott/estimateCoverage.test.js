@@ -283,10 +283,23 @@ describe('the whole prompt chain, not just the worker specs', () => {
     assert.deepEqual(dead, [], `reviewed entries that match nothing any more: ${dead.join(', ')}`);
   });
 
-  test('the commitment rule survives: a promise still needs evidence', () => {
-    // The half that must not be lost while fixing the half that was wrong.
-    assert.match(GOVERNANCE_PREAMBLE, /Never promise a price, delivery date, stock item, discount, refund or capacity/);
-    assert.match(GOVERNANCE_PREAMBLE, /A promise is not the same as an estimate/);
-    assert.match(GOVERNANCE_PREAMBLE, /do not let one be mistaken for a commitment/);
+  test('the commercial rule leads with answering, not with refusing', () => {
+    // Revised again 01/09/2026 on Tom's instruction. The previous version
+    // put the prohibition first and the permission second, so a worker
+    // reading top-down still met "say what is missing" as the default and
+    // estimating as an exception underneath. Order is instruction here:
+    // the answer comes first, the guard second.
+    assert.match(GOVERNANCE_PREAMBLE, /COMMERCIAL COMMITMENTS\nAnswer the commercial question/);
+    assert.match(GOVERNANCE_PREAMBLE, /having one is the normal case and not an exception you need permission for/);
+    assert.match(GOVERNANCE_PREAMBLE, /Refusing to give a figure at all is not the careful option here/);
+  });
+
+  test('but a promise is still a promise, which is the part that protects the business', () => {
+    // What must not be lost while removing the over-broad half: an
+    // estimate the customer could act on as a commitment is the one real
+    // risk in a commercial answer.
+    assert.match(GOVERNANCE_PREAMBLE, /must not do is turn an estimate into a COMMITMENT/);
+    assert.match(GOVERNANCE_PREAMBLE, /it binds the company, so it needs the controlled facts and your own authority behind it/);
+    assert.match(GOVERNANCE_PREAMBLE, /never let the label fall off/);
   });
 });
