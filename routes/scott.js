@@ -35,6 +35,12 @@ const contextBuilders = require('../lib/scott/data/contextBuilders');
 const brainGaps = require('../lib/scott/brainGaps');
 const brainCandidates = require('../lib/scott/brainCandidates');
 const banking = require('../lib/scott/banking');
+const finRepo = require('../lib/scott/finance/repository');
+const financeState = require('../lib/scott/finance/state');
+const financeReports = require('../lib/scott/finance/reports');
+const financeVm = require('../lib/scott/finance/viewModel');
+const financeLedger = require('../lib/scott/finance/ledger');
+const chartOfAccounts = require('../lib/scott/finance/chartOfAccounts');
 const { sendGapNotification, sendLoginNotification, shouldAlertOnLogin } = require('../lib/scott/gapNotifier');
 
 const router = express.Router();
@@ -337,14 +343,8 @@ const DATA_PAGES = [
   { path: '/scott/stock', view: 'scott/stock', nav: 'stock', label: 'Stock & Supply' },
   { path: '/scott/orders', view: 'scott/orders', nav: 'orders', label: 'Purchase Orders' },
   { path: '/scott/people', view: 'scott/people', nav: 'people', label: 'People' },
-  { path: '/scott/finance', view: 'scott/finance', nav: 'finance', label: 'Finance' },
   { path: '/scott/quality', view: 'scott/quality', nav: 'quality', label: 'Quality Control' },
   { path: '/scott/marketing', view: 'scott/marketing', nav: 'marketing', label: 'Marketing & Reviews' },
-  // Banking sits directly above Social Media, per Tom's request. It holds
-  // no banking credential and connects to nothing: see lib/scott/banking.js
-  // for why a "generic login that works with most banks" is not a thing
-  // that exists, and what this demonstrates instead.
-  { path: '/scott/banking', view: 'scott/banking', nav: 'banking', label: 'Banking' },
   { path: '/scott/social', view: 'scott/social', nav: 'social', label: 'Social Media' },
   { path: '/scott/assets', view: 'scott/assets', nav: 'assets', label: 'Assets & Maintenance' },
   { path: '/scott/premises', view: 'scott/premises', nav: 'premises', label: 'Premises & Facilities' },
@@ -362,6 +362,17 @@ const DATA_PAGES = [
 // separate one for "linked in the nav" is what stops a page being
 // reachable but invisible, or listed and 404.
 const NAV_PAGES = [
+  // Banking & Accounting is not a DATA_PAGES entry: unlike every page in
+  // that list it is not "read the deep company record and render it". It
+  // reads the live ledger, it has tabs, and it accepts writes, so it has
+  // its own route. It still has to appear in the nav, which is what this
+  // list is for.
+  //
+  // It REPLACES the old Finance and Banking items rather than joining
+  // them. Both paths still work: /scott/banking redirects into the bank
+  // accounts tab, so an existing link or bookmark lands somewhere sensible
+  // instead of on a 404.
+  { path: '/scott/finance', nav: 'finance', label: 'Banking & Accounting' },
   ...DATA_PAGES,
   { path: '/scott/gaps', nav: 'gaps', label: 'Needs Human Input' },
   { path: '/scott/activity', nav: 'activity', label: 'Activity & Audit' }
@@ -615,6 +626,81 @@ function mountPageRoute(app, generateCsrfToken) {
         next(err);
       }
     });
+  });
+
+  // ------------------------------------------------------------
+  // Banking & Accounting
+  // ------------------------------------------------------------
+  // Its own route rather than a DATA_PAGES entry because it is not a
+  // rendering of the static company record: it reads the live ledger, it
+  // has tabs, and unlike every other data page it accepts writes.
+  //
+  // Clearance is checked the same way as everywhere else, by persona, with
+  // no worker in the intersection: a human reading a screen has no worker
+  // mediating the read (see the block comment above the DATA_PAGES loop).
+  // A tab this person holds no clearance for does not appear AND is not
+  // routable: falling back to the first tab they can see is deliberate, so
+  // a typed URL cannot report whether a tab exists by behaving differently.
+  // Two paths, one handler. Express 5 removed the optional ':tab?' form,
+  // and a route that looks right but silently never matches is worse than
+  // one that is explicit.
+  const financeHandler = async (req, res, next) => {
+    try {
+      const personaId = clearance.getEffectivePersonaId(req);
+      const canSee = (d) => clearance.personaCanSeeDomain(personaId, d);
+      const canAct = (a) => clearance.personaCanAct(personaId, a);
+      const tabs = financeVm.visibleTabs(canSee);
+      if (!tabs.length) {
+        // Nobody with no financial clearance at all should be told this
+        // area exists in any detail. They still get the page, because the
+        // nav link is theirs to click, and it says plainly that this is
+        // not theirs rather than showing an empty ledger.
+        const navCounts = await repo.getDashboardSummary();
+        return res.render('scott/finance', {
+          ...viewerViewModel(req), navCounts, vm: null, workersById: WORKERS_BY_ID_JSON,
+          aiEnabled: isScottAIEnabled(), csrfToken: generateCsrfToken(req, res)
+        });
+      }
+      const requested = String(req.params.tab || tabs[0].id);
+      const tab = financeVm.isVisibleTab(requested, canSee) ? requested : tabs[0].id;
+
+      // Always read the live ledger for a page load rather than trusting
+      // the cache to be warm. The cache exists so the AI can read the
+      // ledger synchronously while building a prompt; a screen showing a
+      // figure one action out of date would undo the whole point of it.
+      await financeState.load();
+      const vm = financeVm.build(tab, { canSee, persona: personaId, canAct });
+
+      if (tab === 'audit') {
+        vm.recentJournals = await finRepo.getJournals({ limit: 40 });
+        vm.approvals = (await repo.getPendingApprovals())
+          .filter((a) => a.intent_type === 'payment_release_request');
+        vm.activity = await repo.getActivityFeed({ limit: 40, workerIds: WORKER_IDS });
+      }
+
+      const navCounts = await repo.getDashboardSummary();
+      res.render('scott/finance', {
+        ...viewerViewModel(req),
+        navCounts,
+        vm,
+        connection: banking.bankConnectionState(),
+        refusedActions: banking.REFUSED_ACTIONS,
+        controls: banking.BANKING_CONTROLS,
+        workersById: WORKERS_BY_ID_JSON,
+        aiEnabled: isScottAIEnabled(),
+        csrfToken: generateCsrfToken(req, res)
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+  app.get('/scott/finance', noindexHeader, requireScottPageAccess, financeHandler);
+  app.get('/scott/finance/:tab', noindexHeader, requireScottPageAccess, financeHandler);
+
+  // The old Banking tab. Kept as a redirect rather than deleted: a link
+  // somebody already has should land on the bank accounts, not a 404.
+  app.get('/scott/banking', noindexHeader, requireScottPageAccess, (req, res) => {
+    res.redirect(302, '/scott/finance/bank-accounts');
   });
 
   // Activity and audit. Its own route rather than a DATA_PAGES entry
@@ -1138,7 +1224,11 @@ router.post('/api/scott/approvals/:id/decide', noindexHeader, requireScottApiAcc
     // draft needs lead clearance, anything else is a management decision.
     const existing = await repo.getWritebackById(id);
     if (!existing || existing.status !== 'pending_approval') return res.status(404).json({ error: 'Not found or already decided.' });
-    const action = existing.intent_type === 'customer_reply_draft' ? 'writeback_customer_reply' : 'writeback_other';
+    const WRITEBACK_ACTIONS = Object.assign(Object.create(null), {
+      customer_reply_draft: 'writeback_customer_reply',
+      payment_release_request: 'writeback_payment_release'
+    });
+    const action = WRITEBACK_ACTIONS[existing.intent_type] || 'writeback_other';
     if (!clearance.personaCanAct(clearance.getEffectivePersonaId(req), action)) {
       return res.status(403).json({ error: clearance.actionDeniedNote(action) });
     }
@@ -1368,6 +1458,279 @@ router.post('/api/scott/jobs/:ref/status', noindexHeader, requireScottApiAccess,
     res.json({ ok: true, job: updated });
   } catch (err) {
     console.error('Scott job status update error:', err);
+    res.status(500).json({ error: 'Something went wrong.' });
+  }
+});
+
+// ------------------------------------------------------------
+// Banking & Accounting: the write endpoints
+// ------------------------------------------------------------
+//
+// These are the only places in the demonstration where a human changes the
+// company's financial state, and they exist because a workspace you can
+// only read is a slideshow. Four rules hold across all of them:
+//
+//  1. NO AI PATH REACHES THEM. Every one requires a logged-in human with
+//     the clearance to act, exactly like the job status and enquiry
+//     assignment routes. A worker can propose, a person posts.
+//  2. NOTHING MOVES REAL OR FICTIONAL MONEY. Raising an invoice, entering
+//     a bill and categorising a bank line are all bookkeeping: they record
+//     what happened. Paying anybody is refused by construction in
+//     lib/scott/banking.js and there is no endpoint here that could.
+//  3. EVERY WRITE IS VALIDATED AND BALANCED before it is stored, by the
+//     same validateJournal the opening books went through.
+//  4. THE LIVE STATE IS REFRESHED BEFORE THE RESPONSE RETURNS, so the
+//     figures the user sees next, and the figures Nigel reads next, are
+//     the ones their own action produced.
+//
+// Account codes arrive from request bodies, so every one is checked
+// against the chart of accounts AND against the poster's clearance for
+// that account's domain. A select box narrowed to the right options is a
+// layout choice; this is the access decision.
+function financeActor(req) {
+  const v = viewer(req);
+  return { name: v.displayName || v.username, personaId: clearance.getEffectivePersonaId(req) };
+}
+
+function moneyFromBody(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0 || n > 1000000) return null;
+  return financeLedger.toPence(Math.round(n * 100) / 100);
+}
+
+function dateFromBody(value, fallback) {
+  const v = String(value || '').slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : fallback;
+}
+
+// Whether this person may code a document or a posting to this account.
+//
+// The distinction here is worth stating, because getting it wrong once
+// broke the main thing this area demonstrates. CODING a document to an
+// analysis account is not READING that account's balance. Chloe raises
+// sales invoices and has to put each one against a service line; she never
+// sees turnover, gross profit or the sales account's balance, because
+// every report gates on the account's domain and she holds none of it.
+// That is exactly how a sales ledger clerk works in a real company.
+//
+// So a write is authorised by two things and not three: the ACTION, which
+// requireAction has already checked, and the GROUP the account belongs to,
+// which is what stops an invoice being coded to the director's loan
+// account. `requireVisible` adds the domain check on top for the paths
+// where the person posting is also being shown the position they are
+// posting into, which is everything except raising a sales invoice.
+function canPostTo(req, code, allowedGroups, { requireVisible = true } = {}) {
+  const a = chartOfAccounts.account(code);
+  if (!a || !allowedGroups.includes(a.group)) return false;
+  if (!requireVisible) return true;
+  return clearance.personaCanSeeDomain(clearance.getEffectivePersonaId(req), a.domain);
+}
+
+router.post('/api/scott/finance/invoice', noindexHeader, requireScottApiAccess, requireAction('invoice_create'), async (req, res) => {
+  try {
+    const actor = financeActor(req);
+    const party = plainText(req.body?.party, 160);
+    const description = plainText(req.body?.description, 300);
+    const accountCode = String(req.body?.accountCode || '');
+    const amountPence = moneyFromBody(req.body?.amount);
+    const vatable = req.body?.vatable !== false && req.body?.vatable !== 'false';
+    if (!party || !amountPence) return res.status(400).json({ error: 'A customer and an amount over zero are needed.' });
+    if (!canPostTo(req, accountCode, ['turnover'], { requireVisible: false })) return res.status(403).json({ error: 'That is not a sales account you can post to.' });
+
+    const asOf = financeState.asOf();
+    const documentDate = dateFromBody(req.body?.date, asOf);
+    const dueDate = dateFromBody(req.body?.dueDate, null) || (() => {
+      const d = new Date(`${documentDate}T00:00:00Z`);
+      d.setUTCDate(d.getUTCDate() + 30);
+      return d.toISOString().slice(0, 10);
+    })();
+    const ref = await finRepo.nextDocumentRef('sales');
+    const vatPence = vatable ? financeLedger.vatOnNet(amountPence) : 0;
+    const journal = financeLedger.salesInvoiceJournal({
+      date: documentDate, ref, customer: party,
+      lines: [{ accountCode, netPence: amountPence, vatable }]
+    });
+    const doc = await finRepo.createDocumentWithJournal(
+      { kind: 'sales', ref, party, description, accountCode, documentDate, dueDate,
+        netPence: amountPence, vatPence, grossPence: amountPence + vatPence, paidPence: 0, status: 'open' },
+      journal,
+      { postedBy: actor.name, personaId: actor.personaId }
+    );
+    await financeState.refresh();
+    await repo.addActivity({
+      actor: 'user',
+      eventType: 'finance_invoice_raised',
+      summary: `${actor.name} raised invoice ${ref} to ${party} for ${financeLedger.formatGbp(doc.grossPence)}.`
+    });
+    res.json({ ok: true, document: doc });
+  } catch (err) {
+    console.error('Scott finance invoice error:', err);
+    res.status(err.validation ? 400 : 500).json({ error: err.validation ? err.message : 'Something went wrong.' });
+  }
+});
+
+router.post('/api/scott/finance/bill', noindexHeader, requireScottApiAccess, requireAction('bill_record'), async (req, res) => {
+  try {
+    const actor = financeActor(req);
+    const party = plainText(req.body?.party, 160);
+    const description = plainText(req.body?.description, 300);
+    const accountCode = String(req.body?.accountCode || '');
+    const amountPence = moneyFromBody(req.body?.amount);
+    const vatable = req.body?.vatable !== false && req.body?.vatable !== 'false';
+    if (!party || !amountPence) return res.status(400).json({ error: 'A supplier and an amount over zero are needed.' });
+    if (!canPostTo(req, accountCode, ['direct_costs', 'overheads'])) return res.status(403).json({ error: 'That is not a cost account you can post to.' });
+
+    const asOf = financeState.asOf();
+    const documentDate = dateFromBody(req.body?.date, asOf);
+    const dueDate = dateFromBody(req.body?.dueDate, null) || (() => {
+      const d = new Date(`${documentDate}T00:00:00Z`);
+      d.setUTCDate(d.getUTCDate() + 30);
+      return d.toISOString().slice(0, 10);
+    })();
+    const ref = await finRepo.nextDocumentRef('purchase');
+    const vatPence = vatable ? financeLedger.vatOnNet(amountPence) : 0;
+    const journal = financeLedger.supplierBillJournal({
+      date: documentDate, ref, supplier: party,
+      lines: [{ accountCode, netPence: amountPence, vatable }]
+    });
+    const doc = await finRepo.createDocumentWithJournal(
+      { kind: 'purchase', ref, party, description, accountCode, documentDate, dueDate,
+        netPence: amountPence, vatPence, grossPence: amountPence + vatPence, paidPence: 0, status: 'open' },
+      journal,
+      { postedBy: actor.name, personaId: actor.personaId }
+    );
+    await financeState.refresh();
+    await repo.addActivity({
+      actor: 'user',
+      eventType: 'finance_bill_recorded',
+      summary: `${actor.name} recorded bill ${ref} from ${party} for ${financeLedger.formatGbp(doc.grossPence)}.`
+    });
+    res.json({ ok: true, document: doc });
+  } catch (err) {
+    console.error('Scott finance bill error:', err);
+    res.status(err.validation ? 400 : 500).json({ error: err.validation ? err.message : 'Something went wrong.' });
+  }
+});
+
+// Explaining a bank line. The amount is not taken from the request: it is
+// whatever the stored bank line says, so a caller cannot categorise a GBP
+// 74 direct debit as GBP 7,400 by editing the form.
+router.post('/api/scott/finance/bank/:id/categorise', noindexHeader, requireScottApiAccess, requireAction('bank_categorise'), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const accountCode = String(req.body?.accountCode || '');
+    if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid request.' });
+    if (!canPostTo(req, accountCode, ['direct_costs', 'overheads', 'turnover'])) {
+      return res.status(403).json({ error: 'That is not an account you can post to.' });
+    }
+    const txn = (await finRepo.getBankTransactions({ limit: 500 })).find((t) => t.id === id);
+    if (!txn) return res.status(404).json({ error: 'Bank line not found.' });
+    if (txn.matchedJournalId) return res.status(409).json({ error: 'That line has already been explained.' });
+
+    const actor = financeActor(req);
+    const journal = financeLedger.categorisationJournal({
+      date: txn.date,
+      description: txn.description,
+      amountPence: txn.amountPence,
+      accountCode,
+      bankCode: txn.bankCode
+    });
+    const result = await finRepo.categoriseBankTransaction(id, journal, { postedBy: actor.name, personaId: actor.personaId });
+    if (!result.ok) {
+      return res.status(result.reason === 'already_matched' ? 409 : 404)
+        .json({ error: result.reason === 'already_matched' ? 'Somebody else explained that line first.' : 'Bank line not found.' });
+    }
+    await financeState.refresh();
+    await repo.addActivity({
+      actor: 'user',
+      eventType: 'finance_bank_categorised',
+      summary: `${actor.name} categorised "${txn.description}" (${financeLedger.formatGbp(Math.abs(txn.amountPence))}) to ${chartOfAccounts.account(accountCode).name}.`
+    });
+    const bank = await finRepo.getBankTransactions({ limit: 500 });
+    res.json({ ok: true, reconciliation: financeReports.reconciliationSummary(bank) });
+  } catch (err) {
+    console.error('Scott finance categorise error:', err);
+    res.status(err.validation ? 400 : 500).json({ error: err.validation ? err.message : 'Something went wrong.' });
+  }
+});
+
+// A free-form journal, for the things a form cannot anticipate. Refused
+// unless it balances, with the difference named: a bookkeeping system that
+// accepts an unbalanced journal and quietly posts the difference somewhere
+// is how a ledger acquires a figure nobody can account for.
+router.post('/api/scott/finance/journal', noindexHeader, requireScottApiAccess, requireAction('journal_post'), async (req, res) => {
+  try {
+    const actor = financeActor(req);
+    const memo = plainText(req.body?.memo, 300);
+    const date = dateFromBody(req.body?.date, financeState.asOf());
+    const raw = Array.isArray(req.body?.lines) ? req.body.lines.slice(0, 20) : [];
+    if (!memo) return res.status(400).json({ error: 'A journal needs a memo saying what it is for.' });
+
+    const lines = [];
+    for (const l of raw) {
+      const code = String(l.accountCode || '');
+      const a = chartOfAccounts.account(code);
+      if (!a) return res.status(400).json({ error: `"${code}" is not an account in the chart of accounts.` });
+      if (!clearance.personaCanSeeDomain(actor.personaId, a.domain)) {
+        return res.status(403).json({ error: 'That journal touches an account outside your clearance.' });
+      }
+      const debit = moneyFromBody(l.debit) || 0;
+      const credit = moneyFromBody(l.credit) || 0;
+      if (!debit && !credit) continue;
+      lines.push(financeLedger.line(code, debit, credit));
+    }
+    const journal = { date, memo, source: 'manual_journal', sourceRef: null, lines };
+    const check = financeLedger.validateJournal(journal);
+    if (!check.ok) return res.status(400).json({ error: check.errors.join(' ') });
+
+    const id = await finRepo.postJournal(journal, { postedBy: actor.name, personaId: actor.personaId });
+    await financeState.refresh();
+    await repo.addActivity({
+      actor: 'user',
+      eventType: 'finance_journal_posted',
+      summary: `${actor.name} posted journal ${id}: ${memo} (${financeLedger.formatGbp(check.totals.debitPence)}).`
+    });
+    res.json({ ok: true, journalId: id });
+  } catch (err) {
+    console.error('Scott finance journal error:', err);
+    res.status(err.validation ? 400 : 500).json({ error: err.validation ? err.message : 'Something went wrong.' });
+  }
+});
+
+// Asking for a bill to be released for payment. This is the ONLY route in
+// the area that touches paying anybody, and it deliberately does not pay
+// anybody: it writes a record into the approvals queue and executes
+// nothing, which is the authorised route described in lib/scott/banking.js.
+// Approving it records an approval. Money still only ever moves when a
+// human moves it, outside this system.
+router.post('/api/scott/finance/payment-request', noindexHeader, requireScottApiAccess, requireAction('payment_request'), async (req, res) => {
+  try {
+    const actor = financeActor(req);
+    const ref = plainText(req.body?.ref, 40);
+    const doc = (await finRepo.getDocuments({ kind: 'purchase', limit: 500 })).find((d) => d.ref === ref);
+    if (!doc) return res.status(404).json({ error: 'Bill not found.' });
+
+    // Refused by construction, asserted here rather than assumed: if
+    // anybody ever wires this route to something that moves money, this
+    // throws rather than returning false.
+    banking.assertBankingActionRefused('make_payment');
+
+    const writeback = await repo.createWriteback({
+      conversationId: null,
+      messageId: null,
+      proposingWorkerId: 'finance_accounts',
+      intentType: 'payment_release_request',
+      summary: `${actor.name} asks for ${doc.ref} to ${doc.party}, ${financeLedger.formatGbp(doc.grossPence - doc.paidPence)}, due ${doc.dueDate}, to be released for payment. Approving this records the authorisation only. This system cannot and will not move money.`,
+      requiresApproval: true
+    });
+    await repo.addActivity({
+      actor: 'user',
+      eventType: 'finance_payment_requested',
+      summary: `${actor.name} requested payment release for ${doc.ref} (${financeLedger.formatGbp(doc.grossPence - doc.paidPence)} to ${doc.party}). Nothing has been paid.`
+    });
+    res.json({ ok: true, writebackId: writeback ? writeback.id : null });
+  } catch (err) {
+    console.error('Scott finance payment request error:', err);
     res.status(500).json({ error: 'Something went wrong.' });
   }
 });
