@@ -1264,6 +1264,15 @@ loadPermissions().then(() => {
             ? "SCOTT_BRAIN_AUTOFILL='true'"
             : `SCOTT_BRAIN_AUTOFILL is set but reads as ${JSON.stringify(raw)}, which is not exactly 'true'`);
         console.log(`Scott brain: ${n} approved addition${n === 1 ? '' : 's'} loaded. Estimate autofill ${armed ? 'ARMED' : 'OFF'} (${how}).`);
+        // The briefing that makes autofill supervisable. Only started when
+        // autofill is actually armed: a schedule reporting on a feature
+        // that is off would be noise, and its absence would be misread as
+        // "nothing has been invented" rather than "nothing could be".
+        if (armed) {
+          const briefing = require('./lib/scott/evolutionBriefing');
+          briefing.startEvolutionBriefingSchedule();
+          console.log(`Scott evolution briefing: scheduled, every ${briefing.digestIntervalHours()}h, checked hourly against the database clock.`);
+        }
       })
       .catch((err) => console.error('Scott brain: approved additions could NOT be loaded, workers will not see them:', err.message));
     console.log('Workspace AI: ' + require('./lib/workspace/orchestrator').describeWorkspaceAIStatus());
