@@ -801,4 +801,10 @@
   .sc-refused { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.6rem; }
   .sc-refused span { font-size: 0.74rem; padding: 0.2rem 0.5rem; border-radius: 999px; background: rgba(176, 92, 62, 0.1); color: var(--sc-terracotta); }
   @media (max-width: 700px) { .sc-tabs { gap: 0; } .sc-tab { padding: 0.5rem 0.6rem; font-size: 0.78rem; } }
+  /* The strict CSP blocks inline style attributes, so these exist as
+     classes rather than as style="" on the element. Caught by a headless
+     browser reporting the violations, not by reading the markup. */
+  .sc-fin-fill { width: 100%; }
+  .sc-fin-spaced { margin-top: 0.7rem; }
+  .sc-fin-note { margin-top: 0.8rem; }
 </style>

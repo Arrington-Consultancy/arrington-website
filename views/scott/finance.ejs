@@ -48,7 +48,7 @@
 
 <% if (vm.tab === 'overview') { %>
   <% if (canSee('finance_full')) { %>
-      <div class="sc-stats-row">
+      <div class="sc-stat-grid">
         <div class="sc-card sc-stat"><div class="sc-stat-label">Business current account</div><div class="sc-stat-value"><%= f(vm.cash.currentPence) %></div></div>
         <div class="sc-card sc-stat"><div class="sc-stat-label">VAT &amp; tax reserve</div><div class="sc-stat-value"><%= f(vm.cash.reservePence) %></div></div>
         <div class="sc-card sc-stat"><div class="sc-stat-label">Owed by customers</div><div class="sc-stat-value <%= vm.debtors.days31to60Pence + vm.debtors.over60Pence > 500000 ? 'warn' : '' %>"><%= f(vm.debtors.totalPence) %></div></div>
@@ -56,7 +56,7 @@
       </div>
 
       <h2 class="sc-section-title"><%= vm.latestMonthLabel %></h2>
-      <div class="sc-stats-row">
+      <div class="sc-stat-grid">
         <div class="sc-card sc-stat"><div class="sc-stat-label">Turnover</div><div class="sc-stat-value"><%= f(vm.pl.turnover.totalPence) %></div></div>
         <div class="sc-card sc-stat"><div class="sc-stat-label">Gross profit</div><div class="sc-stat-value"><%= f(vm.pl.grossProfitPence) %></div><div class="sc-stat-sub"><%= vm.pl.grossMarginPct %>% margin</div></div>
         <div class="sc-card sc-stat"><div class="sc-stat-label">Overheads</div><div class="sc-stat-value"><%= f(vm.pl.overheads.totalPence) %></div></div>
@@ -91,7 +91,7 @@
         <% } %>
       </div>
   <% } else if (canSee('invoice_status')) { %>
-      <div class="sc-stats-row">
+      <div class="sc-stat-grid">
         <div class="sc-card sc-stat"><div class="sc-stat-label">Owed by customers</div><div class="sc-stat-value"><%= f(vm.debtors.totalPence) %></div></div>
         <div class="sc-card sc-stat"><div class="sc-stat-label">Not yet due</div><div class="sc-stat-value"><%= f(vm.debtors.currentPence) %></div></div>
         <div class="sc-card sc-stat"><div class="sc-stat-label">Overdue</div><div class="sc-stat-value warn"><%= f(vm.debtors.totalPence - vm.debtors.currentPence) %></div></div>
@@ -167,7 +167,7 @@
 <% } %>
 
 <% if (vm.tab === 'reconciliation') { %>
-      <div class="sc-stats-row">
+      <div class="sc-stat-grid">
         <div class="sc-card sc-stat"><div class="sc-stat-label">Lines on the statement</div><div class="sc-stat-value"><%= vm.summary.totalCount %></div></div>
         <div class="sc-card sc-stat"><div class="sc-stat-label">Explained</div><div class="sc-stat-value"><%= vm.summary.matchedCount %></div></div>
         <div class="sc-card sc-stat"><div class="sc-stat-label">Not explained</div><div class="sc-stat-value <%= vm.summary.unmatchedCount ? 'warn' : '' %>"><%= vm.summary.unmatchedCount %></div></div>
@@ -179,14 +179,14 @@
       <div class="sc-list">
         <% vm.unmatched.forEach(function (t) { %>
         <div class="sc-card sc-row-card" data-txn="<%= t.id %>">
-          <div style="width:100%">
+          <div class="sc-fin-fill">
             <div class="sc-row-title"><%= t.description %> <span class="<%= t.amountPence < 0 ? 'sc-pill sc-pill-risk' : 'sc-pill sc-pill-ok' %>"><%= f(t.amountPence) %></span></div>
             <div class="sc-row-sub"><%= t.date %><% if (t.hint) { %> &middot; <%= t.hint %><% } %></div>
-            <form class="sc-form-grid js-categorise" data-id="<%= t.id %>" style="margin-top:0.7rem">
+            <form class="sc-form-grid sc-fin-spaced js-categorise" data-id="<%= t.id %>">
               <div class="sc-form-field">
                 <label for="cat<%= t.id %>">Post to</label>
                 <select id="cat<%= t.id %>" name="accountCode">
-                  <% vm.categories.forEach(function (a) { %><option value="<%= a.code %>"><%= a.code %> &middot; <%= a.name %></option><% }); %>
+                  <% (t.amountPence < 0 ? vm.costCategories : vm.incomeCategories).forEach(function (a) { %><option value="<%= a.code %>"><%= a.code %> &middot; <%= a.name %></option><% }); %>
                 </select>
               </div>
               <div class="sc-form-field">
@@ -212,7 +212,7 @@
 <% } %>
 
 <% if (vm.tab === 'sales') { %>
-      <div class="sc-stats-row">
+      <div class="sc-stat-grid">
         <div class="sc-card sc-stat"><div class="sc-stat-label">Not yet due</div><div class="sc-stat-value"><%= f(vm.aged.currentPence) %></div></div>
         <div class="sc-card sc-stat"><div class="sc-stat-label">1 to 30 days</div><div class="sc-stat-value"><%= f(vm.aged.days1to30Pence) %></div></div>
         <div class="sc-card sc-stat"><div class="sc-stat-label">31 to 60 days</div><div class="sc-stat-value warn"><%= f(vm.aged.days31to60Pence) %></div></div>
@@ -230,7 +230,7 @@
           <div class="sc-form-field"><button type="submit" class="sc-btn sc-btn-primary">Raise invoice</button></div>
         </form>
         <div class="sc-inline-note" id="invoiceNote" hidden></div>
-        <p class="sc-row-sub" style="margin-top:0.8rem">Raising an invoice posts a balanced journal: the customer owes the gross, the sale is recognised at the net, and the VAT goes to the control account. The sales figure, the debtor total, the VAT liability and the balance sheet all move together, because all four are computed from the same posting.</p>
+        <p class="sc-row-sub sc-fin-note">Raising an invoice posts a balanced journal: the customer owes the gross, the sale is recognised at the net, and the VAT goes to the control account. The sales figure, the debtor total, the VAT liability and the balance sheet all move together, because all four are computed from the same posting.</p>
       </div>
       <% } %>
 
@@ -252,7 +252,7 @@
 <% } %>
 
 <% if (vm.tab === 'bills') { %>
-      <div class="sc-stats-row">
+      <div class="sc-stat-grid">
         <div class="sc-card sc-stat"><div class="sc-stat-label">Owed to suppliers</div><div class="sc-stat-value"><%= f(vm.aged.totalPence) %></div></div>
         <div class="sc-card sc-stat"><div class="sc-stat-label">Open bills</div><div class="sc-stat-value"><%= vm.bills.filter(function (b) { return b.status !== 'paid'; }).length %></div></div>
         <div class="sc-card sc-stat"><div class="sc-stat-label">Overdue</div><div class="sc-stat-value <%= vm.aged.totalPence - vm.aged.currentPence ? 'warn' : '' %>"><%= f(vm.aged.totalPence - vm.aged.currentPence) %></div></div>
@@ -269,7 +269,7 @@
           <div class="sc-form-field"><button type="submit" class="sc-btn sc-btn-primary">Record bill</button></div>
         </form>
         <div class="sc-inline-note" id="billNote" hidden></div>
-        <p class="sc-row-sub" style="margin-top:0.8rem">Recording a bill is not approving it and is not paying it. It creates the liability and the recoverable VAT. Releasing money against it is a separate act, and one this system refuses to perform at all: the authorised route is a request into the approvals queue, which records the authorisation and executes nothing.</p>
+        <p class="sc-row-sub sc-fin-note">Recording a bill is not approving it and is not paying it. It creates the liability and the recoverable VAT. Releasing money against it is a separate act, and one this system refuses to perform at all: the authorised route is a request into the approvals queue, which records the authorisation and executes nothing.</p>
       </div>
       <% } %>
 
@@ -406,7 +406,7 @@
           <div class="sc-form-grid">
             <div class="sc-form-field"><label for="jMemo">What is it for</label><input id="jMemo" name="memo" required maxlength="300"></div>
           </div>
-          <div class="sc-form-grid" style="margin-top:0.7rem">
+          <div class="sc-form-grid sc-fin-spaced">
             <div class="sc-form-field"><label for="jAcc1">Debit account</label><select id="jAcc1"><% vm.allAccounts.forEach(function (a) { %><option value="<%= a.code %>"><%= a.code %> &middot; <%= a.name %></option><% }); %></select></div>
             <div class="sc-form-field"><label for="jAmt1">Amount (&pound;)</label><input id="jAmt1" type="number" step="0.01" min="0.01"></div>
             <div class="sc-form-field"><label for="jAcc2">Credit account</label><select id="jAcc2"><% vm.allAccounts.forEach(function (a) { %><option value="<%= a.code %>"><%= a.code %> &middot; <%= a.name %></option><% }); %></select></div>
@@ -414,7 +414,7 @@
           </div>
         </form>
         <div class="sc-inline-note" id="journalNote" hidden></div>
-        <p class="sc-row-sub" style="margin-top:0.8rem">A journal that does not balance is refused, with the difference named. It is not accepted and quietly balanced against a suspense account, which is how a real ledger ends up with a figure nobody can explain.</p>
+        <p class="sc-row-sub sc-fin-note">A journal that does not balance is refused, with the difference named. It is not accepted and quietly balanced against a suspense account, which is how a real ledger ends up with a figure nobody can explain.</p>
       </div>
       <% } %>
 <% } %>
