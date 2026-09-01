@@ -16,6 +16,7 @@
 // computed before filtering.
 
 const express = require('express');
+const crypto = require('node:crypto');
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const repo = require('../lib/workspace/repo');
 const { filterRecordsForClearance, clearanceCanSeeRecord, clearanceCanSeeSensitivity, clearanceCovers, CLEARANCES } = require('../lib/workspace/clearance');
@@ -31,6 +32,11 @@ const socialRepo = require('../lib/workspace/social/repo');
 const socialActions = require('../lib/workspace/social/actions');
 const socialMemory = require('../lib/workspace/social/memory');
 const receptionist = require('../lib/workspace/receptionist');
+const financeRepo = require('../lib/workspace/finance/repo');
+const financeRegistry = require('../lib/workspace/finance/registry');
+const financeSync = require('../lib/workspace/finance/sync');
+const xeroClient = require('../lib/workspace/finance/xeroClient');
+const { encryptToken, tokenCryptoConfigured } = require('../lib/workspace/finance/tokenCrypto');
 const crm = require('../lib/crm/contacts');
 const erasure = require('../lib/crm/erasure');
 
@@ -240,6 +246,114 @@ function mountPageRoute(app, generateCsrfToken) {
       aiEnabled: isWorkspaceAIEnabled(),
       csrfToken: generateCsrfToken(req, res)
     });
+  });
+
+  // Business banking (read-only). Sits at the confidential sensitivity
+  // level, the narrowest tier the workspace has: today that means Tom's
+  // owner_admin clearance only, and it is the reason no other clearance
+  // can reach this page even though the route itself has no separate
+  // permission system. Rendered whether or not Xero is connected, same
+  // reasoning as social: "not connected" is information Tom needs, not
+  // an absence to hide.
+  page('/workspace/finance', async (req, res) => {
+    const clearanceId = req.workspaceClearance;
+    const permitted = clearanceCanSeeSensitivity(clearanceId, 'confidential');
+    const connectError = typeof req.query.connectError === 'string' ? req.query.connectError.slice(0, 300) : '';
+    const xeroRedirectUri = `${req.protocol}://${req.get('host')}/workspace/finance/xero/callback`;
+    if (!permitted) {
+      return res.render('workspace/finance', {
+        ...viewer(req),
+        counts: await navCounts(clearanceId),
+        permitted: false,
+        account: null, transactions: [], syncRuns: [], connectError: '', xeroRedirectUri,
+        xeroConfigured: false, tokenCryptoReady: false,
+        moneyActionsNeverBuilt: financeRegistry.MONEY_ACTION_CLASS_NEVER_BUILT,
+        csrfToken: generateCsrfToken(req, res)
+      });
+    }
+    const [account, transactions, syncRuns] = await Promise.all([
+      financeRepo.accountState(),
+      financeRepo.listTransactions({ limit: 100 }),
+      financeRepo.recentSyncRuns(10)
+    ]);
+    res.render('workspace/finance', {
+      ...viewer(req),
+      counts: await navCounts(clearanceId),
+      permitted: true,
+      account,
+      transactions,
+      syncRuns,
+      connectError,
+      xeroRedirectUri,
+      xeroConfigured: financeRegistry.isConfigured('xero'),
+      tokenCryptoReady: tokenCryptoConfigured(),
+      moneyActionsNeverBuilt: financeRegistry.MONEY_ACTION_CLASS_NEVER_BUILT,
+      formatPence: financeRepo.formatPence,
+      csrfToken: generateCsrfToken(req, res)
+    });
+  });
+
+  // Xero OAuth: the browser leaves the site and comes back, so this is a
+  // page-level GET/redirect pair, not a JSON API. Both steps still sit
+  // behind requireWorkspacePageAccess: Tom only, unlocked session only.
+  // A CSRF-style `state` value guards against a callback that did not
+  // originate from a connect this session actually started.
+  app.get('/workspace/finance/xero/connect', requireWorkspacePageAccess, (req, res) => {
+    if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'confidential')) return res.redirect('/workspace/finance');
+    if (!financeRegistry.isConfigured('xero')) return res.redirect('/workspace/finance');
+    const state = crypto.randomBytes(24).toString('hex');
+    req.session.xeroOAuthState = state;
+    const redirectUri = `${req.protocol}://${req.get('host')}/workspace/finance/xero/callback`;
+    res.redirect(xeroClient.buildAuthorizeUrl({ redirectUri, state }));
+  });
+
+  app.get('/workspace/finance/xero/callback', requireWorkspacePageAccess, async (req, res, next) => {
+    try {
+      if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'confidential')) return res.redirect('/workspace/finance');
+      const expectedState = req.session.xeroOAuthState;
+      delete req.session.xeroOAuthState;
+      if (req.query.error) {
+        return res.redirect(`/workspace/finance?connectError=${encodeURIComponent(`Xero declined the connection: ${req.query.error}`)}`);
+      }
+      if (!expectedState || req.query.state !== expectedState) {
+        return res.redirect(`/workspace/finance?connectError=${encodeURIComponent('That connection attempt could not be verified (state mismatch). Start again from the Finance page.')}`);
+      }
+      if (typeof req.query.code !== 'string' || !req.query.code) {
+        return res.redirect(`/workspace/finance?connectError=${encodeURIComponent('Xero did not return an authorisation code.')}`);
+      }
+      const redirectUri = `${req.protocol}://${req.get('host')}/workspace/finance/xero/callback`;
+      const tokens = await xeroClient.exchangeCodeForTokens(req.query.code, redirectUri);
+      const connections = await xeroClient.getConnections(tokens.access_token);
+      if (!connections.length) {
+        return res.redirect(`/workspace/finance?connectError=${encodeURIComponent('Xero returned no connected organisation. Check that a Xero organisation was selected on the consent screen.')}`);
+      }
+      const org = connections[0]; // Single-organisation v1: the decision doc names one ANNA account.
+      await financeRepo.upsertAccount('xero', {
+        status: 'configured',
+        tenantId: org.tenantId,
+        tenantName: org.tenantName || '',
+        refreshTokenEnc: encryptToken(tokens.refresh_token),
+        accessTokenEnc: encryptToken(tokens.access_token),
+        accessTokenExpiresAt: new Date(Date.now() + (tokens.expires_in || 1800) * 1000),
+        connectedAt: new Date(),
+        connectedBy: req.session.user.username,
+        lastSyncOutcome: 'never'
+      });
+      await repo.addActivity({
+        actor: req.session.user.username,
+        eventType: 'finance_connected',
+        summary: `Connected the Xero finance connector to organisation "${org.tenantName || org.tenantId}".`
+      });
+      // First sync happens immediately so the page has real data rather
+      // than a bare "connected, never retrieved" state on first landing.
+      const result = await financeSync.syncFinance({ triggeredBy: req.session.user.username });
+      await repo.addActivity({
+        actor: req.session.user.username,
+        eventType: 'finance_synced',
+        summary: `Finance sync (${result.outcome}): ${result.detail}`
+      });
+      res.redirect('/workspace/finance');
+    } catch (err) { next(err); }
   });
 
   // Contacts. Real people's details, so the area sits at the commercial
@@ -584,6 +698,38 @@ router.post('/api/workspace/social/request-action', requireWorkspaceApiAccess, w
       requestedBy: req.session.user.username
     });
     res.json({ ok: true, approvalId: approval.id, note: 'Queued as a record for a human decision. Nothing has been sent or published.' });
+  } catch (err) { next(err); }
+});
+
+// Manual "Sync now". No scheduled sync exists yet in v1 (that is a later,
+// separately-approved step); every retrieval today is either the
+// automatic first sync after connecting, or triggered here by Tom.
+router.post('/api/workspace/finance/sync', requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
+  try {
+    if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'confidential')) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    const result = await financeSync.syncFinance({ triggeredBy: req.session.user.username });
+    await repo.addActivity({
+      actor: req.session.user.username,
+      eventType: 'finance_synced',
+      summary: `Finance sync (${result.outcome}): ${result.detail}`
+    });
+    res.json({ ok: true, ...result });
+  } catch (err) { next(err); }
+});
+
+// Disconnecting forgets the credential; the synced transaction history
+// is kept as a factual record of what already happened. There is no
+// route anywhere in this area that could move money, so there is
+// nothing else disconnecting needs to protect against.
+router.post('/api/workspace/finance/disconnect', requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
+  try {
+    if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'confidential')) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    await financeRepo.disconnectAccount('xero', req.session.user.username);
+    res.json({ ok: true });
   } catch (err) { next(err); }
 });
 

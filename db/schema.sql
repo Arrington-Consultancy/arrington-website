@@ -821,6 +821,88 @@ CREATE TABLE IF NOT EXISTS workspace_social_sync_runs (
     detail TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_workspace_social_sync_runs_platform ON workspace_social_sync_runs (platform, id DESC);
+
+-- ------------------------------------------------------------
+-- Arrington AI Workspace: read-only business banking (01/09/2026)
+--
+-- Tom's ANNA MONEY BANKING INTEGRATION DECISION (1 September 2026):
+-- ANNA Money's own account is not evidenced as directly retrievable
+-- through TrueLayer or another regulated Open Banking data provider
+-- (ANNA consumes TrueLayer to read INTO itself from other banks; no
+-- public evidence shows the reverse). The proven real route is the
+-- accounting-feed architecture ANNA -> Xero -> Workspace, which ANNA
+-- publicly supports (automatic bank-feed sync). One provider only:
+-- 'xero'. Read-only. No payment, transfer, beneficiary or card-control
+-- column or table exists anywhere in this schema, on purpose: that is
+-- not a permission this area declines to use, it is a capability that
+-- was never built.
+--
+-- Same honesty discipline as workspace_social_accounts: a credential is
+-- not a retrieval, and a failed sync outranks the timestamp of the last
+-- good one.
+-- ------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS workspace_finance_accounts (
+    id SERIAL PRIMARY KEY,
+    provider VARCHAR(20) UNIQUE NOT NULL CHECK (provider IN ('xero')),
+    status VARCHAR(20) NOT NULL DEFAULT 'not_configured' CHECK (status IN ('not_configured', 'configured', 'revoked', 'error')),
+    -- Xero organisation (tenant) identifier and display name, learned
+    -- from the connections endpoint after OAuth, never guessed or typed.
+    tenant_id VARCHAR(100) NOT NULL DEFAULT '',
+    tenant_name VARCHAR(200) NOT NULL DEFAULT '',
+    -- Xero bank account this feed represents, once known.
+    bank_account_id VARCHAR(100) NOT NULL DEFAULT '',
+    bank_account_name VARCHAR(200) NOT NULL DEFAULT '',
+    currency VARCHAR(10) NOT NULL DEFAULT '',
+    -- OAuth 2.0 tokens, AES-256-GCM ciphertext (lib/workspace/finance/tokenCrypto.js),
+    -- keyed on WORKSPACE_FINANCE_TOKEN_KEY. Never stored, logged or
+    -- returned in plaintext by any route.
+    refresh_token_enc TEXT NOT NULL DEFAULT '',
+    access_token_enc TEXT NOT NULL DEFAULT '',
+    access_token_expires_at TIMESTAMPTZ,
+    current_balance_pence BIGINT,
+    balance_as_of TIMESTAMPTZ,
+    connected_at TIMESTAMPTZ,
+    connected_by VARCHAR(100) NOT NULL DEFAULT '',
+    last_sync_at TIMESTAMPTZ,
+    last_sync_outcome VARCHAR(20) NOT NULL DEFAULT 'never' CHECK (last_sync_outcome IN ('never', 'ok', 'partial', 'failed')),
+    last_error TEXT NOT NULL DEFAULT '',
+    stale_after_hours INTEGER NOT NULL DEFAULT 24,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- One row per transaction, deduplicated on (provider, external_id) so a
+-- re-sync never doubles the ledger. category and is_recurring/
+-- recurring_group are populated only where the source (Xero) actually
+-- provides them; never inferred here.
+CREATE TABLE IF NOT EXISTS workspace_finance_transactions (
+    id SERIAL PRIMARY KEY,
+    provider VARCHAR(20) NOT NULL,
+    external_id VARCHAR(200) NOT NULL,
+    txn_date DATE NOT NULL,
+    amount_pence BIGINT NOT NULL,
+    direction VARCHAR(10) NOT NULL CHECK (direction IN ('in', 'out')),
+    payee VARCHAR(300) NOT NULL DEFAULT '',
+    reference VARCHAR(300) NOT NULL DEFAULT '',
+    category VARCHAR(150) NOT NULL DEFAULT '',
+    is_recurring BOOLEAN NOT NULL DEFAULT false,
+    recurring_group VARCHAR(150) NOT NULL DEFAULT '',
+    synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (provider, external_id)
+);
+CREATE INDEX IF NOT EXISTS idx_workspace_finance_txn_date ON workspace_finance_transactions (txn_date DESC, id DESC);
+
+CREATE TABLE IF NOT EXISTS workspace_finance_sync_runs (
+    id SERIAL PRIMARY KEY,
+    provider VARCHAR(20) NOT NULL,
+    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    finished_at TIMESTAMPTZ,
+    outcome VARCHAR(20) NOT NULL DEFAULT 'failed' CHECK (outcome IN ('ok', 'partial', 'failed', 'skipped_not_configured')),
+    items_written INTEGER NOT NULL DEFAULT 0,
+    detail TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_workspace_finance_sync_runs_provider ON workspace_finance_sync_runs (provider, id DESC);
+
 -- ------------------------------------------------------------
 -- Contacts (CRM), added 30/08/2026
 --

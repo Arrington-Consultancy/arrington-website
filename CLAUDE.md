@@ -1172,6 +1172,147 @@ is built staging-first and credential-gated, and the expansion is being
 routed to Governance and Assurance as a controlled change rather than
 treated as self-approved.
 
+### Business banking: read-only ANNA Money via Xero (01/09/2026)
+
+Tom's **1 SEPTEMBER 2026 - ANNA MONEY BANKING INTEGRATION DECISION**
+(the current ARRINGTON AI WORKSPACE BUILDER handoff in Drive) approved
+bringing Arrington's ANNA Money business account into the Workspace as
+a controlled, read-only finance source. The decision required
+determining the real provider route rather than assuming one.
+
+**Provider finding.** Public evidence (TrueLayer's own partnership
+material and independent coverage, cross-checked against ANNA's
+regulatory status as a Prepay Technologies/PayrNet e-money institution)
+shows ANNA is the CLIENT of TrueLayer's Data API, not a provider exposed
+by it: ANNA adopted TrueLayer so its OWN customers could connect their
+OTHER banks into ANNA, which is the opposite direction from what this
+decision needs. No aggregator's public material lists ANNA itself as a
+connectable provider. This sandbox could not reach TrueLayer's live
+provider console or ANNA's own developer docs directly (both hosts are
+blocked by the network egress proxy here), so this is public-evidence
+research pushed as far as it goes without creating a TrueLayer developer
+account or Tom's own ANNA Open Banking consent - neither of which is
+this builder's to start unilaterally. The finding rests on the
+documented DIRECTION of ANNA's TrueLayer use, not on the fallacy the
+decision doc warned against ("ANNA uses TrueLayer" does not imply the
+reverse is supported). **Conclusion: build the accounting-feed route**,
+which ANNA publicly and demonstrably supports: automatic bank-feed sync
+into Xero, transactions, categories and receipt attachments included.
+**ANNA Money -> Xero -> this Workspace.**
+
+**Built, on branch `feature/arrington-workspace-finance-anna-xero`, not
+yet merged.** One provider only (`xero`), read-only throughout:
+
+- `lib/workspace/finance/registry.js` - the provider description and the
+  refusal-by-construction list (`MONEY_ACTION_CLASS_NEVER_BUILT`:
+  payment_initiation, transfer, beneficiary_creation, card_control,
+  change_account_settings), same three structural rules as
+  `lib/workspace/social/registry.js` (least privilege, consequential
+  actions are human - except here there IS no legitimate consequential
+  action, so unlike social there is no `requestHumanAction`-style
+  approval-queue path for money movement at all: a payment prepared "for
+  a human to carry out" still means the system knows how to construct
+  one, which read-only banking access must never be able to do).
+- `lib/workspace/finance/actions.js` - `assertReadOnlyAllowed` throws
+  `MoneyMovementError` for anything in that list, exactly like social's
+  `assertAutonomousAllowed`.
+- `lib/workspace/finance/tokenCrypto.js` - AES-256-GCM encryption for
+  the stored Xero OAuth tokens, keyed on its own secret
+  `WORKSPACE_FINANCE_TOKEN_KEY` (64-char hex, 32 bytes), deliberately
+  separate from `WORKSPACE_SNAPSHOT_KEY`: different blast radius,
+  rotating one must never touch the other. No plaintext fallback:
+  encryption throws if the key is unset rather than storing in the clear.
+- `lib/workspace/finance/xeroClient.js` - real Xero OAuth 2.0 and
+  Accounting API calls (authorize URL, token exchange/refresh,
+  connections, Accounts, the Bank Summary report for current balance,
+  BankTransactions for the ledger). Documented limitation: Xero's
+  Accounting API has no "this is a recurring payment" flag on raw
+  bank-feed lines (that concept exists only for invoices, a different
+  object this client does not read), so `is_recurring`/`recurring_group`
+  are left false/empty rather than guessed from payee/amount patterns -
+  inventing a recurring flag the source did not provide would be the
+  same defect class this codebase treats seriously elsewhere (Scott's
+  brain gaps, the Market Ready Test's deterministic rebuild).
+- `lib/workspace/finance/repo.js` - DB access plus the bridge into AI
+  context: after every sync, `syncFinanceSummaryRecord()` regenerates
+  ONE bounded record (`finance.xero_summary`) in the same
+  `workspace_records` table every other source uses, capped at the 15
+  most recent transactions plus the current balance, rather than a raw
+  ledger dump. This routes finance data through the SAME
+  clearance-filtering mechanism as everything else
+  (`lib/workspace/clearance.js` / `lib/workspace/lanes.js`) instead of a
+  second, less-tested filtering path.
+- `db/schema.sql` - `workspace_finance_accounts` (one row, the `xero`
+  connection: encrypted tokens, tenant/bank account identity, balance,
+  freshness), `workspace_finance_transactions` (deduplicated on
+  `(provider, external_id)`), `workspace_finance_sync_runs`. No payment,
+  transfer, beneficiary or card-control column or table exists anywhere
+  in this schema - not a declined permission, a capability never built.
+- `lib/workspace/lanes.js` - `finance` added to `SOURCE_CLASSES`
+  (confidential sensitivity), granted to **no lane** except
+  `governance_assurance` (which reads every source class by its own
+  remit). No canonical worker's approved remit currently includes
+  finance data, so least privilege means nobody else gets it via a lane;
+  widening that is a worker-permission change for Tom plus the governed
+  route, not a code tidy.
+- `lib/workspace/orchestrator.js` - `finance` added to
+  `GENERAL_SOURCE_CLASSES`, so Tom's own general (no-lane) questions can
+  draw on it. Still double-gated: finance sensitivity is `confidential`,
+  the narrowest tier the workspace has, and only `owner_admin` (Tom)
+  holds it.
+- `routes/workspace.js` / `views/workspace/finance.ejs` - the Finance
+  screen (added to the sidebar nav), gated on `confidential` sensitivity
+  so it 404s in substance (renders its own "clearance does not cover
+  this" card) for anything narrower. Xero OAuth is a real
+  redirect-and-callback pair (`/workspace/finance/xero/connect` /
+  `/xero/callback`), state-token protected against a callback that did
+  not originate from a connect this session started, both still behind
+  the workspace's existing unlock+clearance gates. A first sync runs
+  automatically right after connecting. Manual "Sync now" and
+  "Disconnect" are POST APIs behind the same gates; disconnecting drops
+  the credential and keeps the synced transaction history, the same
+  factual-record reasoning `contact.previewErasure` uses elsewhere.
+- `test/workspace/finance.test.js` - mirrors `social.test.js`'s
+  structural-refusal pattern (every money-movement action throws, no
+  function on the whole module's surface looks like it moves money, no
+  scope requested grants more than reading, a credential is never a
+  retrieval), plus lane/clearance wiring tests (finance reaches no lane
+  but `governance_assurance`, an unrelated lane never surfaces it even
+  for the owner, `ws_restricted` never sees it) and token round-trip
+  tests. 16/16 pass; full `test/workspace/*.test.js` plus
+  `test/noEmDashes.test.js` still 154/154 (2 skipped, the paid live-AI
+  suites, unaffected). Verified against a genuinely fresh database (the
+  same discipline the Scott v0.2 release-ordering incident taught this
+  project) as well as the existing dev database run twice for
+  idempotency, and smoke-tested end to end over real HTTP as `tom`:
+  login, unlock, `/workspace/finance` rendering the honest
+  not-configured setup instructions, and both APIs answering
+  `skipped_not_configured` / `ok` correctly with no Xero credentials
+  present.
+
+**Still needed before this can connect to a real account, all Tom's:**
+set up ANNA's own Xero integration inside ANNA so its transactions
+actually flow into a Xero organisation; register a Xero developer app
+(developer.xero.com/app/manage) with redirect URI `{site}/workspace/
+finance/xero/callback` and set `XERO_CLIENT_ID` / `XERO_CLIENT_SECRET`;
+set `WORKSPACE_FINANCE_TOKEN_KEY`; if Arrington has no Xero account at
+all, obtaining one is a new-account decision this builder does not make
+on its own. None of this can be completed without Tom's own Xero OAuth
+consent screen.
+
+**Not yet done, each a deliberate stop rather than an oversight:** no
+scheduled/background sync exists in v1 (manual "Sync now" only); the
+xeroClient module is written against Xero's real, documented API shapes
+but has never been exercised against a live connected organisation
+(nothing in this sandbox can reach Xero's OAuth screen), so "prove the
+real authorised connection" per the decision doc is Tom's step to
+complete, not a status this file can claim ahead of it; and this is a
+material connector-permission change under the decision doc's own
+instruction ("route the resulting material connector-permission design
+to ARRINGTON AI GOVERNANCE & ASSURANCE before production use"), so the
+write-back below routes it there rather than treating a green test
+suite as a self-issued PASS.
+
 ### Fifteenth governance review: AMBER, no HIGH (31/08/2026)
 
 `review/workspace-v0.1-governance-review-15-2026-08-31.md` (**AMBER**,

@@ -1,0 +1,143 @@
+<%- include('partials/shell-top', { pageTitle: 'Finance', active: 'finance' }) %>
+
+<h1 class="ws-h">Finance</h1>
+<p class="ws-sub">Read-only business banking: current balance, transactions, categories, recurring payments where the source provides them, and provenance/freshness. Per Tom's ANNA MONEY BANKING INTEGRATION DECISION (1 September 2026): ANNA's own account is not evidenced as directly retrievable through TrueLayer or another regulated Open Banking provider, so this reads through the accounting-feed route ANNA has publicly proven: <strong>ANNA Money &rarr; Xero &rarr; this Workspace</strong>.</p>
+
+<% if (!permitted) { %>
+  <div class="ws-card"><p class="ws-empty">This area holds real business banking data, which your clearance does not cover.</p></div>
+<% } else { %>
+
+<% if (connectError) { %>
+  <div class="ws-card ws-danger-card"><p class="ws-note-error"><%= connectError %></p></div>
+<% } %>
+
+<div class="ws-card">
+  <h2>Connection</h2>
+  <% if (!xeroConfigured) { %>
+    <p class="ws-empty">No credential in this environment. <code>XERO_CLIENT_ID</code> and <code>XERO_CLIENT_SECRET</code> are not both set, so nothing can be connected yet.</p>
+    <div class="ws-body-text">
+      <p><strong>To connect a real ANNA Money account, in order:</strong></p>
+      <ol>
+        <li>Set up ANNA's own Xero integration inside ANNA (ANNA &rarr; Business tools &rarr; Xero), so ANNA's transactions actually flow into a Xero organisation.</li>
+        <li>Register a Xero developer app at developer.xero.com/app/manage, with redirect URI <code><%= xeroRedirectUri %></code>.</li>
+        <li>Set <code>XERO_CLIENT_ID</code> and <code>XERO_CLIENT_SECRET</code> on the deployment (the Xero app's own credentials, not ANNA's).</li>
+        <li>Set <code>WORKSPACE_FINANCE_TOKEN_KEY</code> (64-character hex, 32 bytes) so tokens can be stored encrypted rather than in plaintext.</li>
+        <li>Return here and click Connect. Tom completes the Xero consent screen himself; nothing here can do that step for him.</li>
+      </ol>
+      <p class="ws-meta">Least-privilege read scopes requested: offline_access, accounting.transactions.read, accounting.settings.read. No write, payment or bank-feed-write scope is ever requested.</p>
+    </div>
+  <% } else if (!tokenCryptoReady) { %>
+    <p class="ws-empty"><code>WORKSPACE_FINANCE_TOKEN_KEY</code> is not set, so tokens cannot be stored encrypted. Set it before connecting.</p>
+  <% } else { %>
+    <span class="ws-badge ws-badge-<%= account.freshness.state === 'fresh' ? 'fresh' : (account.freshness.state === 'sync_failed' ? 'failed' : (account.freshness.state === 'not_connected' || account.freshness.state === 'never_retrieved' ? 'unverified' : 'stale')) %>"><%= account.freshness.state.replace(/_/g, ' ') %></span>
+    <% if (account.status === 'configured') { %>
+      <p class="ws-body-text">Connected to <strong><%= account.tenantName || 'a Xero organisation' %></strong><% if (account.bankAccountName) { %>, bank account <strong><%= account.bankAccountName %></strong><% } %>.</p>
+      <p class="ws-meta">
+        <% if (account.lastSyncAt) { %>Last sync: <%= new Date(account.lastSyncAt).toUTCString() %> (<%= account.lastSyncOutcome %>)<% } else { %>No sync has run yet.<% } %>
+        <% if (account.lastError) { %><div class="ws-note-error"><%= account.lastError %></div><% } %>
+      </p>
+      <form id="wsFinanceSync" class="ws-form-row">
+        <button class="ws-btn" type="submit">Sync now</button>
+      </form>
+      <form id="wsFinanceDisconnect" class="ws-form-row">
+        <button class="ws-btn ws-btn-danger" type="submit">Disconnect</button>
+      </form>
+    <% } else { %>
+      <p class="ws-body-text">Not connected yet.</p>
+      <a class="ws-btn" href="/workspace/finance/xero/connect">Connect Xero</a>
+    <% } %>
+  <% } %>
+</div>
+
+<% if (account && account.status === 'configured') { %>
+<div class="ws-card">
+  <h2>Current balance</h2>
+  <p class="ws-h" style="margin:0;"><%= formatPence(account.currentBalancePence) %></p>
+  <p class="ws-meta"><%= account.currency || '' %><% if (account.balanceAsOf) { %> as of <%= new Date(account.balanceAsOf).toUTCString() %><% } else { %> (no balance retrieved yet)<% } %></p>
+</div>
+
+<div class="ws-card">
+  <h2>Transactions (<%= transactions.length %>)</h2>
+  <% if (transactions.length === 0) { %>
+    <p class="ws-empty">No transactions synced yet.</p>
+  <% } else { %>
+  <div class="ws-table-wrap">
+  <table class="ws-table">
+    <tr><th>Date</th><th>Amount</th><th>Payee</th><th>Reference</th><th>Category</th><th>Recurring</th></tr>
+    <% transactions.forEach(function (t) { %>
+      <tr>
+        <td class="ws-meta"><%= new Date(t.txn_date).toISOString().slice(0, 10) %></td>
+        <td class="<%= t.direction === 'in' ? 'ws-amount-in' : 'ws-amount-out' %>"><%= t.direction === 'in' ? '+' : '-' %><%= formatPence(t.amount_pence) %></td>
+        <td><%= t.payee || '(no payee recorded)' %></td>
+        <td class="ws-meta"><%= t.reference %></td>
+        <td class="ws-meta"><%= t.category %></td>
+        <td class="ws-meta"><%= t.is_recurring ? (t.recurring_group || 'yes') : '' %></td>
+      </tr>
+    <% }) %>
+  </table>
+  </div>
+  <% } %>
+</div>
+
+<div class="ws-card">
+  <h2>Sync history</h2>
+  <% if (syncRuns.length === 0) { %>
+    <p class="ws-empty">No sync has run yet.</p>
+  <% } else { %>
+  <div class="ws-table-wrap">
+  <table class="ws-table">
+    <tr><th>Started</th><th>Outcome</th><th>Items</th><th>Detail</th></tr>
+    <% syncRuns.forEach(function (s) { %>
+      <tr>
+        <td class="ws-meta"><%= new Date(s.started_at).toUTCString() %></td>
+        <td><span class="ws-badge <%= s.outcome === 'ok' ? 'ws-badge-fresh' : (s.outcome === 'failed' ? 'ws-badge-failed' : 'ws-badge-stale') %>"><%= s.outcome %></span></td>
+        <td class="ws-meta"><%= s.items_written %></td>
+        <td class="ws-meta"><%= s.detail %></td>
+      </tr>
+    <% }) %>
+  </table>
+  </div>
+  <% } %>
+</div>
+<% } %>
+
+<div class="ws-card ws-danger-card">
+  <h2>What this area will never do</h2>
+  <p class="ws-meta">Not a permission this connector declines to use. No code path anywhere in this system constructs a payment, transfer, beneficiary or card-control instruction, or changes an account setting.</p>
+  <ul>
+    <% moneyActionsNeverBuilt.forEach(function (a) { %>
+      <li><%= a.replace(/_/g, ' ') %></li>
+    <% }) %>
+  </ul>
+</div>
+
+<script nonce="<%= nonce %>">
+  (function () {
+    var csrf = document.querySelector('meta[name="csrf-token"]').content;
+    function wire(formId, url, confirmMsg) {
+      var form = document.getElementById(formId);
+      if (!form) return;
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        if (confirmMsg && !window.confirm(confirmMsg)) return;
+        var btn = form.querySelector('button');
+        btn.disabled = true;
+        try {
+          var r = await fetch(url, { method: 'POST', headers: { 'x-csrf-token': csrf } });
+          var data = await r.json();
+          if (!r.ok) { window.alert(data.error || 'That did not work.'); btn.disabled = false; return; }
+          window.location.reload();
+        } catch (ex) {
+          window.alert('Network problem: ' + ex.message);
+          btn.disabled = false;
+        }
+      });
+    }
+    wire('wsFinanceSync', '/api/workspace/finance/sync', null);
+    wire('wsFinanceDisconnect', '/api/workspace/finance/disconnect', 'Disconnect the finance connector? Synced transaction history is kept; the credential is removed.');
+  })();
+</script>
+
+<% } %>
+
+<%- include('partials/shell-bottom') %>
