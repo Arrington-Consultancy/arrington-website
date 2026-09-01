@@ -1291,6 +1291,11 @@ loadPermissions().then(() => {
     // the arming half, for an operator whose shell cannot reach the
     // database. It refuses to run alongside RUN_WORKSPACE_LIVE_PRESSURE.
     require('./scripts/armWorkspaceLivePressure').armAtBoot(require('./db/pool'));
+    // One-shot, label-guarded proof that outbound mail genuinely works
+    // from inside the running container: authenticates, sends through both
+    // transports, and prints what Gmail actually replied. A no-op unless
+    // MAIL_PROOF_CHECK names a run.
+    require('./scripts/mailProofCheck').runMailProofCheck(require('./db/pool'));
     // One-shot, marker-guarded, env-gated runner for the paid live-AI
     // pressure suite. A no-op unless RUN_SCOTT_LIVE_PRESSURE=true; see
     // the script header for the spend controls.
