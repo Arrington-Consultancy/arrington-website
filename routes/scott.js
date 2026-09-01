@@ -875,13 +875,49 @@ async function runScottTurnAndPersist({ conversation, conversationId, userMessag
         { ...wr.factProposal, gapId: record.id, proposedByWorkerId: wr.workerId },
         { canon: contextBuilders.allDeepFactRecords(), pending }
       );
-      const candidate = await repo.createBrainCandidate(assessment, {
+      let candidate = await repo.createBrainCandidate(assessment, {
         conversationId, gapId: record.id, workerId: wr.workerId
       });
+
+      // Autofill: where the rule allows it, the value the worker just
+      // answered with is admitted immediately and the brain cache is
+      // reloaded, so the NEXT question that touches the same thing sees
+      // the same number instead of producing a second one. That
+      // consistency is the entire reason this is worth doing; a company
+      // that estimates twice and differently is worse than one that
+      // admits it does not know.
+      //
+      // The rule is in brainCandidates.autofillDecision and is off unless
+      // SCOTT_BRAIN_AUTOFILL is exactly 'true'. It never admits anything
+      // that conflicts with a record or an earlier estimate, carries an
+      // unknown clearance domain, or is the wrong size for this company.
+      const autofill = brainCandidates.autofillDecision(assessment, {
+        estimated: wr.factProposal.estimated === true,
+        basis: wr.factProposal.basis
+      });
+      let admitted = false;
+      if (autofill.autofill) {
+        const filled = await repo.autofillBrainCandidate(candidate.id, { reason: autofill.reason });
+        if (filled) {
+          candidate = filled;
+          admitted = true;
+          // Awaited: an admitted fact that has not reached the cache is
+          // invisible to the next question, which is the one thing this
+          // is for. A failure is surfaced, never swallowed into silence.
+          try {
+            await contextBuilders.loadApprovedFacts();
+          } catch (err) {
+            console.error('Scott brain: fact admitted but the cache reload failed:', err.message);
+          }
+        }
+      }
+
       await repo.addActivity({
         actor: wr.workerId,
-        eventType: 'brain_fact_proposed',
-        summary: `Proposed a fill for ${candidate.domain}/${candidate.fact_key} on gap #${record.id}: ${assessment.verdict}. Not in the brain unless a person approves it.`,
+        eventType: admitted ? 'brain_fact_admitted' : 'brain_fact_proposed',
+        summary: admitted
+          ? `${candidate.estimated ? 'Estimated' : 'Recorded'} ${candidate.domain}/${candidate.fact_key} on gap #${record.id} and the company now holds it: ${autofill.reason}`
+          : `Proposed a fill for ${candidate.domain}/${candidate.fact_key} on gap #${record.id}: ${assessment.verdict}. Waiting on a person because ${autofill.reason}`,
         conversationId
       });
       candidateRecords.push(candidate);

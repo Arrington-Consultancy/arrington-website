@@ -231,7 +231,20 @@ test('worker reply schema: evidence gaps', async (t) => {
   await t.test('the governance preamble tells workers the two are different things', () => {
     const { GOVERNANCE_PREAMBLE } = require('../../lib/scott/governance');
     assert.match(GOVERNANCE_PREAMBLE, /NEEDS HUMAN INPUT/);
-    assert.match(GOVERNANCE_PREAMBLE, /Never fill a gap by inference/);
+    // Was /Never fill a gap by inference/ until 01/09/2026. That blanket
+    // prohibition was deliberately lifted: Scott is a fictional company,
+    // every record in it was invented anyway, and a demonstration that
+    // answers "no record of that" to most questions reads as an empty
+    // system rather than a careful one. What replaced it is narrower and
+    // is what this now pins, because the narrow part is the part that
+    // actually protects the demonstration.
+    assert.match(GOVERNANCE_PREAMBLE, /Never present a guess AS the record/);
+    assert.match(GOVERNANCE_PREAMBLE, /reasoned estimate/);
+    assert.match(GOVERNANCE_PREAMBLE, /say plainly that it is an estimate/);
+    // Consistency: an estimate already given is the company's number now.
+    assert.match(GOVERNANCE_PREAMBLE, /use it rather than producing a second one/);
+    // And the floor that did not move.
+    assert.match(GOVERNANCE_PREAMBLE, /a guess resting on nothing is worse than an admitted hole/i);
     // The specific dishonesty being designed out: a worker announcing a
     // notification it has no way of knowing happened.
     assert.match(GOVERNANCE_PREAMBLE, /never say that anyone has been contacted/);
