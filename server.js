@@ -1249,7 +1249,22 @@ loadPermissions().then(() => {
     // seeing approved additions, which is the safe direction, and it is
     // reported rather than swallowed so it cannot look like "none yet".
     require('./lib/scott/data/contextBuilders').loadApprovedFacts()
-      .then((n) => console.log(`Scott brain: ${n} approved addition${n === 1 ? '' : 's'} loaded.`))
+      .then((n) => {
+        // Autofill state is reported at boot for the same reason the
+        // Anthropic key's length is: this project lost an entire session
+        // to a Railway variable that looked correct in the dashboard and
+        // read as empty inside the container. The whole estimate-and-
+        // remember behaviour hangs on this one string, and "set in the
+        // dashboard" is not the same fact as "reads as true in here".
+        const raw = process.env.SCOTT_BRAIN_AUTOFILL;
+        const armed = raw === 'true';
+        const how = raw === undefined
+          ? 'SCOTT_BRAIN_AUTOFILL is unset'
+          : (armed
+            ? "SCOTT_BRAIN_AUTOFILL='true'"
+            : `SCOTT_BRAIN_AUTOFILL is set but reads as ${JSON.stringify(raw)}, which is not exactly 'true'`);
+        console.log(`Scott brain: ${n} approved addition${n === 1 ? '' : 's'} loaded. Estimate autofill ${armed ? 'ARMED' : 'OFF'} (${how}).`);
+      })
       .catch((err) => console.error('Scott brain: approved additions could NOT be loaded, workers will not see them:', err.message));
     console.log('Workspace AI: ' + require('./lib/workspace/orchestrator').describeWorkspaceAIStatus());
     // Governance finding F1 (Tom's decision, 31/08/2026): the workspace
