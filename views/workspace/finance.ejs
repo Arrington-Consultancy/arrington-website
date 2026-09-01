@@ -49,15 +49,63 @@
   <% } %>
 </div>
 
+<div class="ws-card">
+  <h2>Accounting summary (built in, free)</h2>
+  <p class="ws-meta">A read-only summary of the transactions already synced here: categorised income and expenses over a period, built into the Workspace at no extra cost. It is not bookkeeping, VAT calculation or a tax return, and does not replace Xero or an accountant. ANNA's own live accounting integrations are Xero and Sage; no free third-party accounting software actually connects to ANNA today, so this is computed from data already in the Workspace instead.</p>
+
+  <form class="ws-form-row" method="get" action="/workspace/finance">
+    <% periodPresets.forEach(function (p) { %>
+      <button class="ws-btn <%= period.preset === p ? '' : 'ws-btn-quiet' %>" type="submit" name="period" value="<%= p %>"><%= p.replace(/_/g, ' ') %></button>
+    <% }) %>
+  </form>
+  <form class="ws-form-row" method="get" action="/workspace/finance">
+    <input type="hidden" name="period" value="custom">
+    <input class="ws-input ws-input-narrow" type="date" name="from" value="<%= period.preset === 'custom' ? period.from : '' %>">
+    <input class="ws-input ws-input-narrow" type="date" name="to" value="<%= period.preset === 'custom' ? period.to : '' %>">
+    <button class="ws-btn ws-btn-quiet" type="submit">Custom range</button>
+  </form>
+
+  <p class="ws-meta">Showing: <strong><%= period.label %></strong></p>
+
+  <% if (summary.count === 0) { %>
+    <p class="ws-empty">No transactions in this period.</p>
+  <% } else { %>
+    <div class="ws-form-row">
+      <div><span class="ws-meta">Income</span><br><span class="ws-amount-in ws-stat"><%= formatPence(summary.incomePence) %></span></div>
+      <div><span class="ws-meta">Expenses</span><br><span class="ws-amount-out ws-stat"><%= formatPence(summary.expensesPence) %></span></div>
+      <div><span class="ws-meta">Net</span><br><span class="ws-stat"><%= formatPence(summary.netPence) %></span></div>
+    </div>
+    <div class="ws-table-wrap">
+    <table class="ws-table">
+      <tr><th>Category</th><th>Income</th><th>Expenses</th><th>Net</th><th>Transactions</th></tr>
+      <% summary.categories.forEach(function (c) { %>
+        <tr>
+          <td><%= c.category %></td>
+          <td class="ws-amount-in"><%= c.incomePence ? formatPence(c.incomePence) : '' %></td>
+          <td class="ws-amount-out"><%= c.expensesPence ? formatPence(c.expensesPence) : '' %></td>
+          <td><%= formatPence(c.netPence) %></td>
+          <td class="ws-meta"><%= c.count %></td>
+        </tr>
+      <% }) %>
+    </table>
+    </div>
+  <% } %>
+</div>
+
 <% if (account && account.status === 'configured') { %>
 <div class="ws-card">
   <h2>Current balance</h2>
-  <p class="ws-h" style="margin:0;"><%= formatPence(account.currentBalancePence) %></p>
+  <p class="ws-h ws-h-tight"><%= formatPence(account.currentBalancePence) %></p>
   <p class="ws-meta"><%= account.currency || '' %><% if (account.balanceAsOf) { %> as of <%= new Date(account.balanceAsOf).toUTCString() %><% } else { %> (no balance retrieved yet)<% } %></p>
 </div>
+<% } %>
 
+<% if ((account && account.status === 'configured') || transactions.length > 0) { %>
 <div class="ws-card">
   <h2>Transactions (<%= transactions.length %>)</h2>
+  <% if (!account || account.status !== 'configured') { %>
+    <p class="ws-meta">Not currently connected. This is the transaction history kept from before disconnecting.</p>
+  <% } %>
   <% if (transactions.length === 0) { %>
     <p class="ws-empty">No transactions synced yet.</p>
   <% } else { %>
@@ -78,7 +126,9 @@
   </div>
   <% } %>
 </div>
+<% } %>
 
+<% if ((account && account.status === 'configured') || syncRuns.length > 0) { %>
 <div class="ws-card">
   <h2>Sync history</h2>
   <% if (syncRuns.length === 0) { %>

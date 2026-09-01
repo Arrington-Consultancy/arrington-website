@@ -1321,6 +1321,25 @@ handoff - a separate file because this session's Drive tools can create
 a new Doc but not edit an existing one's body in place. Archive it once
 merged into the handoff proper.
 
+**Built-in accounting summary, free (01/09/2026).** Tom asked for free
+accounting software built into the banking area. Checked before
+building anything, same discipline as the provider-route finding above:
+ANNA's own live integrations are Xero and Sage only (both paid);
+FreeAgent and Clearbooks are on ANNA's public roadmap, not live, so
+there is no free third-party software ANNA actually feeds today.
+Confirmed with Tom via `AskUserQuestion`, who chose the buildable
+option: a read-only accounting summary built directly into the
+Workspace, computed from transactions already synced, no new
+credential and no new subscription.
+
+- `lib/workspace/finance/accounting.js` - pure module, no database. `summarise(transactions)` totals income/expenses/net and breaks them out by category (blank/whitespace-only categories become `(uncategorised)`, never dropped). `periodRange(preset, now)` / `resolvePeriod({preset, from, to})` resolve five presets (this month, last month, last 3/12 months, all time) plus a validated custom range - malformed dates, a reversed range, or anything SQL/script-shaped fall back to `this_month` rather than reaching the database. Deliberately NOT double-entry bookkeeping, VAT calculation or MTD filing, and the page copy says so: Xero (or an accountant) stays the system of record for anything that has to be correct in that sense.
+- `lib/workspace/finance/repo.js` - `listTransactions` gained optional `from`/`to` date filters (backward compatible; the plain recent-ledger call is unaffected) with a higher row cap (5000 vs 500) when a range is given, since a category summary over a real period needs more than the ledger's usual page of 100.
+- `routes/workspace.js` - the `/workspace/finance` page reads `period`/`from`/`to` from the query string, resolves them through `resolvePeriod`, and passes both the plain recent ledger and the period-filtered summary to the view.
+- `views/workspace/finance.ejs` - a new "Accounting summary (built in, free)" card: period-preset buttons plus a custom date-range form (both plain GET, no CSRF needed), income/expenses/net totals, and a category breakdown table.
+- **Inline-style bug caught and fixed in the same pass:** the initial Finance build (this same file, three `style="..."` attributes) violated the site's own strict CSP - nonces cover `<style>`/`<script>` elements, not inline `style=""` attributes, and this CSP carries no `unsafe-inline` for either. curl-based smoke testing never catches this (CSP is browser-enforced), which is exactly why it slipped through the first pass. Replaced with real classes (`.ws-h-tight`, `.ws-stat`, `.ws-input-narrow` in `views/workspace/partials/styles.ejs`). Worth remembering for any future workspace view: grep for `style="` before calling a page done, not just curl it.
+- **Related gating bug fixed in the same pass:** the Transactions and Sync history cards were gated on `account.status === 'configured'`, so disconnecting hid the transaction ledger entirely - directly contradicting `disconnectAccount()`'s own comment that synced history is kept. Now gated on "currently connected OR history exists", with an honest "not currently connected, this is kept history" note when showing history from a disconnected state. The Current balance card stays gated on live connection only, since showing a balance figure after disconnect would read as current when it is not.
+- Tests: 25/25 in `test/workspace/finance.test.js` now (was 16), covering totals, category breakout, uncategorised handling, non-mutation, period-boundary correctness (including the January `last_month` year-rollover case), and `resolvePeriod`'s validation (malformed input, reversed range, a SQL-injection-shaped string all fall back rather than reach the database). Full `test/workspace/*.test.js` plus `test/noEmDashes.test.js` still 163/163 (2 unrelated paid suites skipped). Smoke-tested end to end with real seeded transactions across `this_month`/`last_3_months`/`all_time`/custom-range, verified the category totals by hand, and grepped the rendered HTML for `style="` to confirm the CSP fix actually took.
+
 ### Fifteenth governance review: AMBER, no HIGH (31/08/2026)
 
 `review/workspace-v0.1-governance-review-15-2026-08-31.md` (**AMBER**,

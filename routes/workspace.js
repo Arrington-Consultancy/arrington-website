@@ -34,6 +34,7 @@ const socialMemory = require('../lib/workspace/social/memory');
 const receptionist = require('../lib/workspace/receptionist');
 const financeRepo = require('../lib/workspace/finance/repo');
 const financeRegistry = require('../lib/workspace/finance/registry');
+const financeAccounting = require('../lib/workspace/finance/accounting');
 const financeSync = require('../lib/workspace/finance/sync');
 const xeroClient = require('../lib/workspace/finance/xeroClient');
 const { encryptToken, tokenCryptoConfigured } = require('../lib/workspace/finance/tokenCrypto');
@@ -268,13 +269,26 @@ function mountPageRoute(app, generateCsrfToken) {
         account: null, transactions: [], syncRuns: [], connectError: '', xeroRedirectUri,
         xeroConfigured: false, tokenCryptoReady: false,
         moneyActionsNeverBuilt: financeRegistry.MONEY_ACTION_CLASS_NEVER_BUILT,
+        period: null, summary: null, periodPresets: [],
         csrfToken: generateCsrfToken(req, res)
       });
     }
-    const [account, transactions, syncRuns] = await Promise.all([
+    // Free, built-in accounting summary (01/09/2026): no third-party free
+    // accounting software actually integrates with ANNA today (see
+    // lib/workspace/finance/accounting.js header), so this is computed
+    // entirely from transactions already synced here - no new credential,
+    // no new service. period comes from the query string, validated
+    // server-side before it ever reaches the database.
+    const period = financeAccounting.resolvePeriod({
+      preset: typeof req.query.period === 'string' ? req.query.period : undefined,
+      from: typeof req.query.from === 'string' ? req.query.from : undefined,
+      to: typeof req.query.to === 'string' ? req.query.to : undefined
+    });
+    const [account, transactions, syncRuns, periodTransactions] = await Promise.all([
       financeRepo.accountState(),
       financeRepo.listTransactions({ limit: 100 }),
-      financeRepo.recentSyncRuns(10)
+      financeRepo.recentSyncRuns(10),
+      financeRepo.listTransactions({ limit: 5000, from: period.from, to: period.to })
     ]);
     res.render('workspace/finance', {
       ...viewer(req),
@@ -288,6 +302,9 @@ function mountPageRoute(app, generateCsrfToken) {
       xeroConfigured: financeRegistry.isConfigured('xero'),
       tokenCryptoReady: tokenCryptoConfigured(),
       moneyActionsNeverBuilt: financeRegistry.MONEY_ACTION_CLASS_NEVER_BUILT,
+      period,
+      summary: financeAccounting.summarise(periodTransactions),
+      periodPresets: financeAccounting.PERIOD_PRESETS,
       formatPence: financeRepo.formatPence,
       csrfToken: generateCsrfToken(req, res)
     });

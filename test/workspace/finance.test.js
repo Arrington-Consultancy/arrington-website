@@ -13,6 +13,7 @@ const actions = require('../../lib/workspace/finance/actions');
 const financeRepo = require('../../lib/workspace/finance/repo');
 const orchestrator = require('../../lib/workspace/orchestrator');
 const tokenCrypto = require('../../lib/workspace/finance/tokenCrypto');
+const accounting = require('../../lib/workspace/finance/accounting');
 
 test('exactly one provider exists: xero, the proven accounting-feed route', () => {
   assert.deepEqual(registry.PROVIDER_IDS, ['xero']);
@@ -159,4 +160,94 @@ test('a malformed key is treated as absent, not coerced', () => {
   assert.equal(tokenCrypto.keyFromEnv('not-64-hex-chars'), null);
   assert.equal(tokenCrypto.keyFromEnv(''), null);
   assert.equal(tokenCrypto.keyFromEnv(undefined), null);
+});
+
+// --- Built-in accounting summary (01/09/2026) ---------------------------
+//
+// Tom asked for free accounting software built in. ANNA's own live
+// integrations are Xero and Sage only (FreeAgent/Clearbooks are on
+// ANNA's roadmap, not live), so there is nothing free to connect to;
+// this is a read-only summary computed from transactions already
+// synced, not a bookkeeping system, and these tests hold it to that.
+
+test('summarise totals income, expenses and net correctly across mixed transactions', () => {
+  const txns = [
+    { direction: 'in', amount_pence: 150000, category: 'Sales' },
+    { direction: 'in', amount_pence: 5000, category: 'Sales' },
+    { direction: 'out', amount_pence: 20000, category: 'Software' },
+    { direction: 'out', amount_pence: 3000, category: '' }
+  ];
+  const s = accounting.summarise(txns);
+  assert.equal(s.incomePence, 155000);
+  assert.equal(s.expensesPence, 23000);
+  assert.equal(s.netPence, 132000);
+  assert.equal(s.count, 4);
+});
+
+test('an empty or missing category becomes "(uncategorised)", never dropped or blank', () => {
+  const s = accounting.summarise([{ direction: 'out', amount_pence: 500, category: '' }, { direction: 'out', amount_pence: 500, category: '   ' }]);
+  assert.equal(s.categories.length, 1);
+  assert.equal(s.categories[0].category, '(uncategorised)');
+  assert.equal(s.categories[0].count, 2);
+});
+
+test('categories are broken out separately with their own income/expense/net', () => {
+  const s = accounting.summarise([
+    { direction: 'in', amount_pence: 10000, category: 'Sales' },
+    { direction: 'out', amount_pence: 4000, category: 'Sales' },
+    { direction: 'out', amount_pence: 2000, category: 'Software' }
+  ]);
+  const byName = Object.fromEntries(s.categories.map((c) => [c.category, c]));
+  assert.equal(byName.Sales.incomePence, 10000);
+  assert.equal(byName.Sales.expensesPence, 4000);
+  assert.equal(byName.Sales.netPence, 6000);
+  assert.equal(byName.Software.expensesPence, 2000);
+});
+
+test('summarise never mutates its input', () => {
+  const txns = [{ direction: 'in', amount_pence: 100, category: 'Sales' }];
+  const copy = JSON.parse(JSON.stringify(txns));
+  accounting.summarise(txns);
+  assert.deepEqual(txns, copy);
+});
+
+test('summarise of an empty list is all zero, not an error', () => {
+  const s = accounting.summarise([]);
+  assert.deepEqual(s, { incomePence: 0, expensesPence: 0, netPence: 0, count: 0, categories: [] });
+});
+
+test('periodRange presets are internally consistent (from <= to) across a year boundary', () => {
+  // January: 'last_month' must resolve to the previous December, not
+  // month -1 = -1.
+  const jan = new Date('2026-01-15T00:00:00Z');
+  ['this_month', 'last_month', 'last_3_months', 'last_12_months'].forEach((preset) => {
+    const r = accounting.periodRange(preset, jan);
+    assert.ok(r.from <= r.to, `${preset}: from (${r.from}) must not be after to (${r.to})`);
+  });
+  assert.equal(accounting.periodRange('last_month', jan).from.slice(0, 7), '2025-12');
+});
+
+test('all_time has no bound on either side', () => {
+  const r = accounting.periodRange('all_time');
+  assert.equal(r.from, null);
+  assert.equal(r.to, null);
+});
+
+test('resolvePeriod falls back to a safe default on an unrecognised or missing preset', () => {
+  assert.equal(accounting.resolvePeriod({}).preset, 'this_month');
+  assert.equal(accounting.resolvePeriod({ preset: 'not_a_real_preset' }).preset, 'this_month');
+  assert.equal(accounting.resolvePeriod({ preset: 'last_12_months' }).preset, 'last_12_months');
+});
+
+test('resolvePeriod accepts a valid custom range only when both dates are well formed and ordered', () => {
+  const ok = accounting.resolvePeriod({ preset: 'custom', from: '2026-01-01', to: '2026-01-31' });
+  assert.equal(ok.preset, 'custom');
+  assert.equal(ok.from, '2026-01-01');
+  assert.equal(ok.to, '2026-01-31');
+
+  // Reversed order, malformed dates, and SQL/script-shaped input must all
+  // fall back rather than reach the database unvalidated.
+  assert.equal(accounting.resolvePeriod({ preset: 'custom', from: '2026-02-01', to: '2026-01-01' }).preset, 'this_month');
+  assert.equal(accounting.resolvePeriod({ preset: 'custom', from: 'not-a-date', to: '2026-01-31' }).preset, 'this_month');
+  assert.equal(accounting.resolvePeriod({ preset: 'custom', from: "2026-01-01'; DROP TABLE workspace_finance_transactions;--", to: '2026-01-31' }).preset, 'this_month');
 });
