@@ -5069,6 +5069,69 @@ async function seed() {
     console.log('Scott AI Demonstration: proposed-fact estimate columns verified.');
   }
 
+  // Authored company depth (01/09/2026). Fifteen records covering the
+  // areas the original transcription left thin: margin by service line,
+  // lead time, capacity, seasonality, leave, supplier terms, yield,
+  // marketing spend and enquiry mix. See lib/scott/seedCompanyDepth.js for
+  // why these are written rather than generated, and why they are canon
+  // rather than estimates.
+  //
+  // Each is put through the SAME assessCandidate the model's proposals go
+  // through, against the brain as it currently stands, INCLUDING anything
+  // the AI has already invented in production. A fact that conflicts is
+  // skipped and named, never written over: the fiction is allowed to have
+  // got there first, and a seed that overwrote live invented facts would
+  // undo the continuity this whole feature exists to provide.
+  //
+  // Idempotent by the same check: on a second run every fact collides with
+  // its own earlier insert and is skipped.
+  {
+    const { DEPTH_FACTS } = require('../lib/scott/seedCompanyDepth');
+    const brainCandidates = require('../lib/scott/brainCandidates');
+    const contextBuilders = require('../lib/scott/data/contextBuilders');
+    const repo = require('../lib/scott/data/repository');
+
+    await contextBuilders.loadApprovedFacts();
+    let written = 0;
+    const skipped = [];
+    for (const fact of DEPTH_FACTS) {
+      // Existence check FIRST, separately from the conflict check, because
+      // they answer different questions and only one of them makes this
+      // idempotent. assessCandidate treats an identical restatement as no
+      // conflict at all, which is right for a worker's proposal and
+      // useless as a seed guard: the first version of this added all
+      // fifteen again on the second run, which on production would have
+      // meant fifteen duplicates per deploy.
+      const { rows: already } = await db.query(
+        `SELECT 1 FROM scott_brain_candidates
+          WHERE domain = $1 AND fact_key = $2 AND status IN ('approved','pending') LIMIT 1`,
+        [fact.domain, fact.factKey]
+      );
+      if (already.length) {
+        skipped.push(`${fact.domain}/${fact.factKey} (already held)`);
+        continue;
+      }
+      const canon = contextBuilders.allDeepFactRecords();
+      const pending = (await repo.getPendingBrainCandidates({ limit: 200 }))
+        .map((r) => ({ domain: r.domain, factKey: r.fact_key, factValue: r.fact_value }));
+      const assessment = brainCandidates.assessCandidate(
+        { ...fact, proposedByWorkerId: 'company_brain' },
+        { canon, pending }
+      );
+      if (assessment.conflictFlags.length) {
+        skipped.push(`${fact.domain}/${fact.factKey} (${assessment.conflictFlags[0].code})`);
+        continue;
+      }
+      const row = await repo.createBrainCandidate(assessment, { workerId: 'company_brain' });
+      await repo.autofillBrainCandidate(row.id, { reason: 'authored company record, checked against the brain before writing' });
+      await contextBuilders.loadApprovedFacts();
+      written += 1;
+    }
+    if (written) console.log(`Scott AI Demonstration: ${written} authored company record(s) added to the brain.`);
+    if (skipped.length) console.log(`Scott AI Demonstration: ${skipped.length} authored record(s) already present or conflicting, left alone: ${skipped.join(', ')}`);
+    if (!written && !skipped.length) console.log('Scott AI Demonstration: no authored company records to add.');
+  }
+
   {
 
     // Quality release gate (doc 24 review, finding F2). The mutable job
