@@ -97,6 +97,44 @@ describe('what the briefing says', () => {
     assert.match(d.text, /no overheads figure on record to weigh them against|not checked|no turnover figure/i);
   });
 
+  test('overheads are found where they actually live, nested in the monthly accounts', () => {
+    // Regression, found in a real briefing on 01/09/2026. companyEconomics
+    // read only a record's top-level keys, and overheadsGbp lives inside
+    // FINANCE_SUMMARY.monthlyManagementAccounts, so the briefing reported
+    // "no overheads figure on record" while the records held five of them.
+    // The one aggregate check a per-answer rule cannot make was therefore
+    // not running at all. It failed honestly, which is why it was visible,
+    // but the honesty was covering a defect rather than a gap in the data.
+    const econ = companyEconomics(canon);
+    assert.ok(econ.monthlyOverheadsGbp > 0, 'overheads must be found');
+    assert.equal(econ.monthlyOverheadsGbp, 18100, 'and must be the LATEST month, not the largest');
+    assert.equal(econ.overheadsAsOf, '2026-08');
+  });
+
+  test('the latest overheads month wins, not the biggest number', () => {
+    // Overheads drift upward, so measuring this month's invented costs
+    // against a figure from five months ago flatters them.
+    const rec = {
+      domain: 'finance_full',
+      monthlyManagementAccounts: [
+        { month: '2026-04', overheadsGbp: 99000 },
+        { month: '2026-08', overheadsGbp: 18100 }
+      ]
+    };
+    assert.equal(companyEconomics([rec]).monthlyOverheadsGbp, 18100);
+  });
+
+  test('the cost total is reported against overheads as a real proportion', () => {
+    const costs = [
+      fact({ fact_key: 'a_cost', fact_value: 'A cost of GBP 950 a month.' }),
+      fact({ fact_key: 'b_cost', fact_value: 'A cost of GBP 430 a month.' })
+    ];
+    const d = buildDigest({ added: costs, queued: [], canon });
+    assert.match(d.text, /1,380/);
+    assert.match(d.text, /% of the monthly overheads/);
+    assert.doesNotMatch(d.text, /no overheads figure on record/);
+  });
+
   test('an empty briefing says so plainly rather than padding', () => {
     const d = buildDigest({ added: [], queued: [], canon });
     assert.match(d.text, /Nothing new/);
