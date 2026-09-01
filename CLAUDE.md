@@ -2336,6 +2336,25 @@ and staging databases that carry history.
 
 The `scott-demo` staging service remains for pre-production testing.
 
+**Not actually isolated from production, discovered 01/09/2026: `scott-demo`
+shares production's own Postgres database.** Its `DATABASE_URL` resolves to
+the identical service id (`a5757c59-e0a0-...`) as the `arrington-prototype`
+production service, and it inherits `SESSION_SECRET` and `ANTHROPIC_API_KEY`
+directly from production via Railway reference variables too. Found while
+running the paid live-AI pressure suite for `feature/scott-evolving-memory`
+against `scott-demo` (four real runs, 31/08-01/09/2026) — everything those
+runs wrote and cleaned up (`scott_memory_facts`, `scott_conversations`,
+`scott_messages`, `scott_writebacks` rows) was actually production data,
+not an isolated fixture. This does not appear to have caused the brief
+slow-login incident logged the same evening (see "Will's account" below):
+the timing doesn't line up (over an hour's gap) and both the app and the
+database showed near-zero load when checked, which points to the visitor's
+own mobile connection rather than the database. But it is a real
+architectural fact worth fixing before the next round of staging testing —
+`scott-demo` should get its own genuinely separate Postgres instance
+(the same pattern `Postgres-5XI9` already provides for the AI Workspace's
+own staging isolation) rather than sharing production's.
+
 - **Staging URL:** https://scott-demo-staging.up.railway.app
 - **Access:** `SCOTT_DEMO_SKIP_LOGIN=true` is set on the staging service
   (re-enabled 31/08/2026 at Tom's request, this time as a **standing**
@@ -2366,6 +2385,25 @@ The `scott-demo` staging service remains for pre-production testing.
   place; the plain seed only writes them when the table is short, so
   changing the password variable alone does nothing on an already-seeded
   database.
+
+**Real invited viewer: Will (01/09/2026).** A real `users` account
+(`will`, role `client`) hit the "valid login, not invited" branch of
+`POST /scott/login` on production, then `GET /scott` 404'd per
+`lib/scott/access.js`'s documented "logged in but not granted" behaviour
+(diagnosed from Railway's own access logs, since the app doesn't log the
+attempted username on that path and no `audit_log` row exists for a
+login that never reached `allowed=true`). Fixed by granting Will's
+account `page_access` on the synthetic Scott page, the same mechanism
+the admin panel's Page access control uses, applied as a guarded,
+idempotent seed migration (an additive `INSERT`, never a
+delete-and-reinsert of the page's whole access list, so no other
+grantee was touched) plus the matching `audit_log` entry, attributed to
+Tom's account. Verified live on production via two consecutive deploy
+boot logs (first: "granted"; second: "already has page access,
+skipping"). A slow/stuck-looking first login attempt right after the
+grant went live turned out to be the visitor's own mobile connection
+(see the shared-database note above for why that was checked and ruled
+out as the cause) — a retry a minute later succeeded normally.
 
 ### The clearance model is the point of the demo
 
