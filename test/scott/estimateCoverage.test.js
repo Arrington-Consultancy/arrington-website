@@ -221,3 +221,72 @@ describe('estimate coverage: does each worker actually estimate (paid)', { skip:
 });
 
 module.exports = { PROBES, REFUSAL, LABELLED_ESTIMATE };
+
+describe('the whole prompt chain, not just the worker specs', () => {
+  // Three instances of one class have now been found by Tom asking
+  // questions, not by any test: Nigel's spec ("rather than inventing an
+  // answer"), my own aggregate-versus-individual rule, and the governance
+  // preamble's commercial line ("rather than guessing"). Each was a
+  // prohibition written for a real-world reason, applied to a company
+  // where the reason does not exist. They were in three DIFFERENT files,
+  // which is why checking worker specs alone was never going to be
+  // enough. This sweeps every source that reaches a worker's prompt.
+  const { GOVERNANCE_PREAMBLE } = require('../../lib/scott/governance');
+  const { buildWorkerSystemPrompt } = require('../../lib/scott/orchestrator');
+
+  const OVERBROAD = /rather than guess(ing)?|rather than inventing|instead of guessing|never estimate|do not estimate|won'?t estimate/i;
+
+  test('the governance preamble carries no blanket ban on estimating', () => {
+    const hits = GOVERNANCE_PREAMBLE.split(/(?<=\.)\s+/).filter((s) => OVERBROAD.test(s));
+    assert.deepEqual(hits, [], `preamble sentences that forbid estimating: ${hits.join(' | ')}`);
+  });
+
+  // The reviewed set. Each of these is a prohibition that SHOULD be in the
+  // prompt, checked by hand and kept here so the sweep below can tell a
+  // known-good rule from a new one. Adding to this list is a deliberate
+  // act that says "I have read this and it does not over-apply".
+  //
+  // Written this way after the first version, a plain phrase hunt, flagged
+  // all three of these as defects. They are the opposite: not guessing a
+  // clearance DOMAIN is what stops an invented HR fact reaching the
+  // driver, and not estimating over an existing record is the difference
+  // between enriching the fiction and overwriting it. A denylist could not
+  // tell them apart from the real defects, which is the same lesson that
+  // produced this file.
+  const REVIEWED_PROHIBITIONS = [
+    /say that in "missing" rather than guessing a domain/i,
+    /that record is the only acceptable answer and you must never estimate over it/i,
+    /Never estimate a figure a record already answers/i
+  ];
+
+  test('no NEW prohibition on estimating appears without being reviewed', () => {
+    // Catches a rule nobody has looked at, rather than trying to judge
+    // wording. Anything matching the shape and not in the reviewed set is
+    // reported so a person decides whether it over-applies.
+    const unreviewed = [];
+    ROUTABLE_WORKER_IDS.forEach((id) => {
+      buildWorkerSystemPrompt(WORKERS[id]).split(/(?<=\.)\s+/).forEach((s) => {
+        if (!OVERBROAD.test(s)) return;
+        if (REVIEWED_PROHIBITIONS.some((re) => re.test(s))) return;
+        unreviewed.push(`${id}: ${s.trim().slice(0, 100)}`);
+      });
+    });
+    assert.deepEqual([...new Set(unreviewed)], [],
+      `unreviewed prohibitions on estimating. Read each one: if it is correct, add it to REVIEWED_PROHIBITIONS; if it over-applies, fix the prompt.\n${[...new Set(unreviewed)].join('\n')}`);
+  });
+
+  test('the reviewed set is not stale: every entry still appears somewhere', () => {
+    // Stops the allowlist quietly growing into a place where a fixed rule
+    // lingers and a future over-broad one could hide behind its pattern.
+    const all = ROUTABLE_WORKER_IDS.map((id) => buildWorkerSystemPrompt(WORKERS[id])).join('\n');
+    const dead = REVIEWED_PROHIBITIONS.filter((re) => !re.test(all));
+    assert.deepEqual(dead, [], `reviewed entries that match nothing any more: ${dead.join(', ')}`);
+  });
+
+  test('the commitment rule survives: a promise still needs evidence', () => {
+    // The half that must not be lost while fixing the half that was wrong.
+    assert.match(GOVERNANCE_PREAMBLE, /Never promise a price, delivery date, stock item, discount, refund or capacity/);
+    assert.match(GOVERNANCE_PREAMBLE, /A promise is not the same as an estimate/);
+    assert.match(GOVERNANCE_PREAMBLE, /do not let one be mistaken for a commitment/);
+  });
+});
