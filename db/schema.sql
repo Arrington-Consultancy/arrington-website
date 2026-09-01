@@ -588,6 +588,98 @@ ALTER TABLE scott_portal_users ADD COLUMN IF NOT EXISTS notify_email VARCHAR(255
 
 
 -- ============================================================
+-- Scott: Banking & Accounting (added 01/09/2026)
+--
+-- The fictional company's actual books. Four tables, deliberately: the
+-- chart of accounts lives in code (lib/scott/finance/chartOfAccounts.js)
+-- because it is structure rather than state, and every report the
+-- workspace shows is a projection over these journal lines rather than a
+-- stored figure. A balance, a profit, a VAT liability and an aged debtor
+-- total that are all computed from one ledger cannot disagree; four
+-- tables of pre-computed answers can, and eventually do.
+--
+-- These tables hold FICTIONAL money only. No real bank, card, payment
+-- rail, Stripe object or Arrington banking data reaches them, and no
+-- credential of any kind is stored here or anywhere else in this area.
+--
+-- Clearance is not a column. Each account code carries a domain in the
+-- chart of accounts and the existing clearance filter reads it, so this
+-- area adds no second access model.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS scott_fin_journals (
+    id SERIAL PRIMARY KEY,
+    entry_date DATE NOT NULL,
+    memo TEXT NOT NULL,
+    source VARCHAR(40) NOT NULL,
+    source_ref VARCHAR(60),
+    -- Who posted it. A fictional staff member has no users(id) row, so
+    -- both the display name and the persona are recorded rather than a
+    -- foreign key that would be NULL for most of the demonstration and
+    -- indistinguishable from a posting nobody made.
+    posted_by VARCHAR(120) NOT NULL DEFAULT 'system',
+    posted_by_persona VARCHAR(40),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS scott_fin_journal_lines (
+    id SERIAL PRIMARY KEY,
+    journal_id INTEGER NOT NULL REFERENCES scott_fin_journals(id) ON DELETE CASCADE,
+    account_code VARCHAR(10) NOT NULL,
+    debit_pence BIGINT NOT NULL DEFAULT 0,
+    credit_pence BIGINT NOT NULL DEFAULT 0,
+    CONSTRAINT scott_fin_line_one_side CHECK (debit_pence >= 0 AND credit_pence >= 0 AND NOT (debit_pence > 0 AND credit_pence > 0))
+);
+
+CREATE INDEX IF NOT EXISTS idx_scott_fin_lines_journal ON scott_fin_journal_lines (journal_id);
+CREATE INDEX IF NOT EXISTS idx_scott_fin_lines_account ON scott_fin_journal_lines (account_code);
+
+-- Sales invoices and supplier bills. One account code per document keeps
+-- this to the smallest thing that is still real bookkeeping; a document
+-- needing several analysis lines would be posted as a journal instead.
+CREATE TABLE IF NOT EXISTS scott_fin_documents (
+    id SERIAL PRIMARY KEY,
+    kind VARCHAR(12) NOT NULL CHECK (kind IN ('sales', 'purchase')),
+    doc_ref VARCHAR(40) NOT NULL UNIQUE,
+    party VARCHAR(160) NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    account_code VARCHAR(10) NOT NULL,
+    document_date DATE NOT NULL,
+    due_date DATE NOT NULL,
+    net_pence BIGINT NOT NULL,
+    vat_pence BIGINT NOT NULL DEFAULT 0,
+    gross_pence BIGINT NOT NULL,
+    paid_pence BIGINT NOT NULL DEFAULT 0,
+    status VARCHAR(16) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'part_paid', 'paid', 'void')),
+    journal_id INTEGER REFERENCES scott_fin_journals(id) ON DELETE SET NULL,
+    created_by VARCHAR(120) NOT NULL DEFAULT 'system',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_scott_fin_documents_kind ON scott_fin_documents (kind, status, due_date);
+
+-- The bank statement, which is deliberately NOT a copy of the ledger.
+-- Lines arrive unexplained and stay that way until a human categorises or
+-- matches them, so the Reconciliation screen has real work on it and the
+-- statement balance genuinely differs from the ledger balance until it is
+-- done. A reconciliation screen showing nothing to do demonstrates nothing.
+CREATE TABLE IF NOT EXISTS scott_fin_bank_transactions (
+    id SERIAL PRIMARY KEY,
+    bank_code VARCHAR(10) NOT NULL DEFAULT '1200',
+    txn_date DATE NOT NULL,
+    description TEXT NOT NULL,
+    amount_pence BIGINT NOT NULL,
+    hint TEXT NOT NULL DEFAULT '',
+    matched_journal_id INTEGER REFERENCES scott_fin_journals(id) ON DELETE SET NULL,
+    matched_by VARCHAR(120),
+    matched_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_scott_fin_bank_unmatched ON scott_fin_bank_transactions (matched_journal_id, txn_date DESC);
+
+
+-- ============================================================
 -- Arrington AI Workspace v0.1 (added 30/08/2026)
 --
 -- Entirely separate from the Scott demonstration tables above: no
