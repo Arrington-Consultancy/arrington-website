@@ -777,4 +777,28 @@
     .sc-row-card { flex-direction: column; align-items: flex-start; }
     .sc-page-header { flex-direction: column; align-items: flex-start; }
   }
+
+  /* Banking & Accounting (01/09/2026). A ledger is tabular data and
+     nothing else on this portal is, so these are the only new classes the
+     area needs: a tab strip, a figures table, and a form row. Everything
+     else reuses sc-card, sc-stat, sc-pill and the rest. */
+  .sc-tabs { display: flex; flex-wrap: wrap; gap: 2px; margin: 0 0 1.5rem; border-bottom: 1px solid var(--sc-border); padding-bottom: 0; }
+  .sc-tab { display: inline-block; padding: 0.55rem 0.85rem; font-size: 0.82rem; letter-spacing: 0.01em; color: var(--sc-text-muted); text-decoration: none; border-bottom: 2px solid transparent; white-space: nowrap; }
+  .sc-tab:hover { color: var(--sc-text); }
+  .sc-tab.active { color: var(--sc-forest-dark); border-bottom-color: var(--sc-forest); font-weight: 600; }
+  .sc-table-wrap { overflow-x: auto; }
+  .sc-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+  .sc-table th { text-align: left; font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--sc-text-muted); padding: 0.5rem 0.7rem; border-bottom: 1px solid var(--sc-border); white-space: nowrap; }
+  .sc-table td { padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--sc-border); vertical-align: top; }
+  .sc-table tbody tr:last-child td { border-bottom: none; }
+  .sc-table .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .sc-table .neg { color: var(--sc-terracotta); }
+  .sc-table tr.total td { font-weight: 700; border-top: 2px solid var(--sc-border); border-bottom: none; }
+  .sc-table tr.sub td { color: var(--sc-text-muted); }
+  .sc-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.75rem; align-items: end; }
+  .sc-form-field label { display: block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--sc-text-muted); margin-bottom: 0.3rem; }
+  .sc-form-field input, .sc-form-field select { width: 100%; padding: 0.5rem 0.6rem; border: 1px solid var(--sc-border); border-radius: var(--sc-radius-sm); font: inherit; font-size: 0.86rem; background: #fff; color: var(--sc-text); }
+  .sc-refused { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.6rem; }
+  .sc-refused span { font-size: 0.74rem; padding: 0.2rem 0.5rem; border-radius: 999px; background: rgba(176, 92, 62, 0.1); color: var(--sc-terracotta); }
+  @media (max-width: 700px) { .sc-tabs { gap: 0; } .sc-tab { padding: 0.5rem 0.6rem; font-size: 0.78rem; } }
 </style>

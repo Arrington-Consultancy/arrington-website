@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Finance | Scott's Armchair &amp; Knitting Service</title>
+  <title>Banking &amp; Accounting | Scott's Armchair &amp; Knitting Service</title>
   <meta name="robots" content="noindex, nofollow">
   <%- include('partials/styles') %>
 </head>
@@ -16,80 +16,550 @@
       <% } %>
       <div class="sc-page-header">
         <div>
-          <h1 class="sc-h">Finance</h1>
-          <p>07A SCOTT'S FINANCE &amp; ACCOUNTS. Viewing as <strong><%= persona.name %></strong> (<%= persona.role %>).</p>
+          <h1 class="sc-h">Banking &amp; Accounting</h1>
+          <p>The company's books. Viewing as <strong><%= persona.name %></strong> (<%= persona.role %>).<% if (vm && vm.live) { %> Made up to <%= vm.asOf %>.<% } %></p>
         </div>
       </div>
 
-      <% if (!canSee('finance_full')) { %>
-        <div class="sc-card sc-empty"><%= deniedNote('finance_full') %></div>
+<% if (!vm) { %>
+      <div class="sc-card sc-empty">
+        <p>The company's financial records are not part of your clearance.</p>
+        <p class="sc-row-sub">This is not an error and nothing is broken. Scott's Armchair &amp; Knitting Service holds finance, banking and accounting records at a narrower clearance than the work you do, so this area has nothing in it for your account.</p>
+      </div>
+<% } else if (!vm.live) { %>
+      <div class="sc-card sc-empty">
+        <p>The ledger has no postings yet.</p>
+        <p class="sc-row-sub">Said plainly rather than shown as a set of zeroes: an empty balance sheet and a company with no money look identical, and only one of them is true here.</p>
+      </div>
+<% } else { %>
+      <nav class="sc-tabs">
+        <% vm.tabs.forEach(function (t) { %>
+          <a class="sc-tab <%= t.id === vm.tab ? 'active' : '' %>" href="/scott/finance/<%= t.id %>"><%= t.label %></a>
+        <% }); %>
+      </nav>
+
+<%
+  // Shorthands. `f` formats pence as pounds; `cell` adds the negative
+  // class so a credit reads as one at a glance rather than needing the
+  // sign hunted for.
+  var f = vm.fmt;
+  function cell(pence) { return '<td class="num ' + (pence < 0 ? 'neg' : '') + '">' + f(pence) + '</td>'; }
+%>
+
+<% if (vm.tab === 'overview') { %>
+  <% if (canSee('finance_full')) { %>
+      <div class="sc-stats-row">
+        <div class="sc-card sc-stat"><div class="sc-stat-label">Business current account</div><div class="sc-stat-value"><%= f(vm.cash.currentPence) %></div></div>
+        <div class="sc-card sc-stat"><div class="sc-stat-label">VAT &amp; tax reserve</div><div class="sc-stat-value"><%= f(vm.cash.reservePence) %></div></div>
+        <div class="sc-card sc-stat"><div class="sc-stat-label">Owed by customers</div><div class="sc-stat-value <%= vm.debtors.days31to60Pence + vm.debtors.over60Pence > 500000 ? 'warn' : '' %>"><%= f(vm.debtors.totalPence) %></div></div>
+        <div class="sc-card sc-stat"><div class="sc-stat-label">Owed to suppliers</div><div class="sc-stat-value"><%= f(vm.creditors.totalPence) %></div></div>
+      </div>
+
+      <h2 class="sc-section-title"><%= vm.latestMonthLabel %></h2>
+      <div class="sc-stats-row">
+        <div class="sc-card sc-stat"><div class="sc-stat-label">Turnover</div><div class="sc-stat-value"><%= f(vm.pl.turnover.totalPence) %></div></div>
+        <div class="sc-card sc-stat"><div class="sc-stat-label">Gross profit</div><div class="sc-stat-value"><%= f(vm.pl.grossProfitPence) %></div><div class="sc-stat-sub"><%= vm.pl.grossMarginPct %>% margin</div></div>
+        <div class="sc-card sc-stat"><div class="sc-stat-label">Overheads</div><div class="sc-stat-value"><%= f(vm.pl.overheads.totalPence) %></div></div>
+        <div class="sc-card sc-stat"><div class="sc-stat-label">Operating profit</div><div class="sc-stat-value"><%= f(vm.pl.operatingProfitPence) %></div><div class="sc-stat-sub"><%= vm.pl.operatingMarginPct %>% of turnover</div></div>
+      </div>
+
+      <h2 class="sc-section-title">What needs attention</h2>
+      <div class="sc-list">
+        <% if (!vm.reconciliation.fullyReconciled) { %>
+        <div class="sc-card sc-row-card">
+          <div>
+            <div class="sc-row-title"><%= vm.reconciliation.unmatchedCount %> bank line<%= vm.reconciliation.unmatchedCount === 1 ? '' : 's' %> not yet explained</div>
+            <div class="sc-row-sub"><%= f(vm.reconciliation.unmatchedValuePence) %> of movement, oldest <%= vm.reconciliation.oldestUnmatchedDate %>. Until these are categorised the ledger and the bank statement will not agree, and the difference between them is exactly this figure. <a href="/scott/finance/reconciliation">Reconcile</a>.</div>
+          </div>
+        </div>
+        <% } %>
+        <% if (vm.vat && vm.vat.cleared && vm.cash.reservePence < vm.vat.box5NetVatDuePence) { %>
+        <div class="sc-card sc-row-card">
+          <div>
+            <div class="sc-row-title">The VAT reserve is short of the computed liability</div>
+            <div class="sc-row-sub">The quarter to <%= vm.vatQuarter.to %> computes to <%= f(vm.vat.box5NetVatDuePence) %> and the reserve holds <%= f(vm.cash.reservePence) %>. That is a shortfall of <%= f(vm.vat.box5NetVatDuePence - vm.cash.reservePence) %>. <a href="/scott/finance/vat">See the working</a>.</div>
+          </div>
+        </div>
+        <% } %>
+        <% if (vm.debtors.over60Pence > 0) { %>
+        <div class="sc-card sc-row-card">
+          <div>
+            <div class="sc-row-title"><%= f(vm.debtors.over60Pence) %> owed for more than 60 days</div>
+            <div class="sc-row-sub"><%= vm.debtors.rows[0].party %> is the oldest at <%= vm.debtors.rows[0].daysOverdue %> days. <a href="/scott/finance/sales">Sales ledger</a>.</div>
+          </div>
+        </div>
+        <% } %>
+      </div>
+  <% } else if (canSee('invoice_status')) { %>
+      <div class="sc-stats-row">
+        <div class="sc-card sc-stat"><div class="sc-stat-label">Owed by customers</div><div class="sc-stat-value"><%= f(vm.debtors.totalPence) %></div></div>
+        <div class="sc-card sc-stat"><div class="sc-stat-label">Not yet due</div><div class="sc-stat-value"><%= f(vm.debtors.currentPence) %></div></div>
+        <div class="sc-card sc-stat"><div class="sc-stat-label">Overdue</div><div class="sc-stat-value warn"><%= f(vm.debtors.totalPence - vm.debtors.currentPence) %></div></div>
+        <div class="sc-card sc-stat"><div class="sc-stat-label">Open invoices</div><div class="sc-stat-value"><%= vm.debtors.rows.length %></div></div>
+      </div>
+      <div class="sc-card">
+        <p class="sc-row-sub">This is the sales ledger, which is the part of the company's finances your role covers: what has been invoiced and who has paid. The bank accounts, the profit and loss and the company's cash position sit at a narrower clearance and are not shown here.</p>
+      </div>
+  <% } else if (canSee('finance_summary_ops')) { %>
+      <div class="sc-card">
+        <div class="sc-row-title">Payment capacity</div>
+        <p class="sc-row-sub"><strong><%= vm.paymentCapacity.supplierPaymentsDue %></strong> supplier payment<%= vm.paymentCapacity.supplierPaymentsDue === 1 ? '' : 's' %> outstanding, and committed payments are <strong>clear to release on normal terms</strong>.</p>
+        <p class="sc-row-sub"><%= vm.paymentCapacity.note %> That is deliberate: you can plan the work without seeing what is in the account.</p>
+      </div>
+  <% } %>
+<% } %>
+
+<% if (vm.tab === 'bank-accounts') { %>
+      <div class="sc-card">
+        <div class="sc-row-title">No bank is connected, and none can be</div>
+        <p class="sc-row-sub"><%= connection.explanation %></p>
+        <p class="sc-row-sub">The figures below are <%= connection.figuresBelowAre %>. What this area demonstrates is governed access to a company's money: who can see a balance, who can see only whether the suppliers can be paid, and which actions the system refuses no matter who asks.</p>
+        <div class="sc-refused">
+          <% refusedActions.forEach(function (a) { %><span>refuses: <%= a.replace(/_/g, ' ') %></span><% }); %>
+        </div>
+      </div>
+
+      <h2 class="sc-section-title">Accounts</h2>
+      <div class="sc-list">
+        <% vm.accounts.forEach(function (a) { %>
+        <div class="sc-card sc-row-card">
+          <div>
+            <div class="sc-row-title"><%= a.name %> <span class="sc-pill sc-pill-muted"><%= a.code %></span></div>
+            <div class="sc-row-sub">
+              Ledger balance <strong><%= f(a.ledgerBalancePence) %></strong>
+              <% if (a.unexplainedPence !== 0) { %>
+                &middot; statement <%= f(a.statementBalancePence) %> &middot; <span class="sc-pill sc-pill-warn"><%= f(Math.abs(a.unexplainedPence)) %> unexplained</span>
+              <% } else { %>
+                &middot; reconciled to the statement
+              <% } %>
+              <% if (a.note) { %><br><%= a.note %><% } %>
+            </div>
+          </div>
+        </div>
+        <% }); %>
+      </div>
+
+      <h2 class="sc-section-title">Controls</h2>
+      <div class="sc-list">
+        <% controls.filter(function (c) { return canSee(c.domain); }).forEach(function (c) { %>
+        <div class="sc-card sc-row-card"><div><div class="sc-row-title"><%= c.control %></div><div class="sc-row-sub"><%= c.rule %></div></div></div>
+        <% }); %>
+      </div>
+<% } %>
+
+<% if (vm.tab === 'transactions') { %>
+      <h2 class="sc-section-title">Bank statement</h2>
+      <div class="sc-card sc-table-wrap">
+        <table class="sc-table">
+          <thead><tr><th>Date</th><th>Description</th><th class="num">Amount</th><th>Status</th></tr></thead>
+          <tbody>
+          <% vm.transactions.forEach(function (t) { %>
+            <tr>
+              <td><%= t.date %></td>
+              <td><%= t.description %></td>
+              <%- cell(t.amountPence) %>
+              <td><% if (t.matchedJournalId) { %><span class="sc-pill sc-pill-ok">explained</span><% } else { %><span class="sc-pill sc-pill-warn">needs categorising</span><% } %></td>
+            </tr>
+          <% }); %>
+          </tbody>
+        </table>
+      </div>
+<% } %>
+
+<% if (vm.tab === 'reconciliation') { %>
+      <div class="sc-stats-row">
+        <div class="sc-card sc-stat"><div class="sc-stat-label">Lines on the statement</div><div class="sc-stat-value"><%= vm.summary.totalCount %></div></div>
+        <div class="sc-card sc-stat"><div class="sc-stat-label">Explained</div><div class="sc-stat-value"><%= vm.summary.matchedCount %></div></div>
+        <div class="sc-card sc-stat"><div class="sc-stat-label">Not explained</div><div class="sc-stat-value <%= vm.summary.unmatchedCount ? 'warn' : '' %>"><%= vm.summary.unmatchedCount %></div></div>
+        <div class="sc-card sc-stat"><div class="sc-stat-label">Value unexplained</div><div class="sc-stat-value"><%= f(vm.summary.unmatchedValuePence) %></div></div>
+      </div>
+
+      <% if (vm.unmatched.length) { %>
+      <h2 class="sc-section-title">Waiting to be explained</h2>
+      <div class="sc-list">
+        <% vm.unmatched.forEach(function (t) { %>
+        <div class="sc-card sc-row-card" data-txn="<%= t.id %>">
+          <div style="width:100%">
+            <div class="sc-row-title"><%= t.description %> <span class="<%= t.amountPence < 0 ? 'sc-pill sc-pill-risk' : 'sc-pill sc-pill-ok' %>"><%= f(t.amountPence) %></span></div>
+            <div class="sc-row-sub"><%= t.date %><% if (t.hint) { %> &middot; <%= t.hint %><% } %></div>
+            <form class="sc-form-grid js-categorise" data-id="<%= t.id %>" style="margin-top:0.7rem">
+              <div class="sc-form-field">
+                <label for="cat<%= t.id %>">Post to</label>
+                <select id="cat<%= t.id %>" name="accountCode">
+                  <% vm.categories.forEach(function (a) { %><option value="<%= a.code %>"><%= a.code %> &middot; <%= a.name %></option><% }); %>
+                </select>
+              </div>
+              <div class="sc-form-field">
+                <button type="submit" class="sc-btn sc-btn-primary">Explain this line</button>
+              </div>
+            </form>
+            <div class="sc-inline-note" hidden></div>
+          </div>
+        </div>
+        <% }); %>
+      </div>
       <% } else { %>
-        <div class="sc-stats-row">
-          <div class="sc-card sc-stat"><div class="sc-stat-label">Bank balance</div><div class="sc-stat-value">£<%= facts.FINANCE_SUMMARY.cash.bankBalanceGbp.toLocaleString() %></div></div>
-          <div class="sc-card sc-stat"><div class="sc-stat-label">VAT reserve</div><div class="sc-stat-value">£<%= facts.FINANCE_SUMMARY.cash.vatReserveGbp.toLocaleString() %></div></div>
-          <div class="sc-card sc-stat"><div class="sc-stat-label">Total debtors</div><div class="sc-stat-value <%= facts.FINANCE_SUMMARY.debtors.totalGbp > 25000 ? 'warn' : '' %>">£<%= facts.FINANCE_SUMMARY.debtors.totalGbp.toLocaleString() %></div></div>
-          <div class="sc-card sc-stat"><div class="sc-stat-label">Total creditors</div><div class="sc-stat-value">£<%= facts.FINANCE_SUMMARY.creditors.totalGbp.toLocaleString() %></div></div>
-        </div>
-
-        <h2 class="sc-section-title">Monthly management accounts</h2>
-        <div class="sc-list">
-          <% facts.FINANCE_SUMMARY.monthlyManagementAccounts.forEach(function (m) { %>
-            <div class="sc-card sc-row-card">
-              <div>
-                <div class="sc-row-title"><%= m.month %><% if (m.forecast) { %> <span class="sc-pill sc-pill-status">forecast</span><% } %></div>
-                <div class="sc-row-sub">Revenue £<%= m.revenueGbp.toLocaleString() %> &middot; Gross profit £<%= m.grossProfitGbp.toLocaleString() %> &middot; Operating profit £<%= m.operatingProfitGbp.toLocaleString() %><% if (m.note) { %><br><%= m.note %><% } %></div>
-              </div>
-            </div>
-          <% }); %>
-        </div>
-
-        <h2 class="sc-section-title">Debtors</h2>
-        <div class="sc-card">
-          <p class="sc-row-sub">Current £<%= facts.FINANCE_SUMMARY.debtors.currentGbp.toLocaleString() %> &middot; 1&ndash;30 days £<%= facts.FINANCE_SUMMARY.debtors.overdue1to30Gbp.toLocaleString() %> &middot; 31&ndash;60 days £<%= facts.FINANCE_SUMMARY.debtors.overdue31to60Gbp.toLocaleString() %> &middot; over 60 days £<%= facts.FINANCE_SUMMARY.debtors.overdueOver60Gbp.toLocaleString() %></p>
-          <p class="sc-row-sub">Largest overdue: <%= facts.FINANCE_SUMMARY.debtors.largest.customer %>, £<%= facts.FINANCE_SUMMARY.debtors.largest.amountGbp %>, <%= facts.FINANCE_SUMMARY.debtors.largest.daysOverdue %> days overdue.</p>
-        </div>
+      <div class="sc-card sc-empty">Every line on the statement is accounted for.</div>
       <% } %>
 
-      <% if (canSee('director_position')) { %>
-        <h2 class="sc-section-title">Director's Loan Account</h2>
-        <div class="sc-card">
-          <p class="sc-row-sub">Current balance: <strong>£<%= facts.DIRECTOR_POSITION.directorsLoanAccount.currentBalanceGbp.toLocaleString() %></strong> owed to Scott Mercer (as of <%= facts.DIRECTOR_POSITION.directorsLoanAccount.asOf %>).</p>
-        </div>
-        <div class="sc-list">
-          <% facts.DIRECTOR_POSITION.directorsLoanAccount.ledger.forEach(function (e) { %>
-            <div class="sc-card sc-row-card">
-              <div>
-                <div class="sc-row-title"><%= e.date %> &middot; <%= e.event %></div>
-                <div class="sc-row-sub">Movement <%= e.movementGbp >= 0 ? '+' : '' %>£<%= e.movementGbp.toLocaleString() %> &middot; Balance £<%= e.balanceGbp.toLocaleString() %></div>
-              </div>
-            </div>
-          <% }); %>
-        </div>
+      <h2 class="sc-section-title">Already explained</h2>
+      <div class="sc-card sc-table-wrap">
+        <table class="sc-table">
+          <thead><tr><th>Date</th><th>Description</th><th class="num">Amount</th></tr></thead>
+          <tbody><% vm.matched.forEach(function (t) { %><tr><td><%= t.date %></td><td><%= t.description %></td><%- cell(t.amountPence) %></tr><% }); %></tbody>
+        </table>
+      </div>
+<% } %>
 
-        <h2 class="sc-section-title">Dividends</h2>
-        <div class="sc-card">
-          <p class="sc-row-sub">2024/25: £<%= facts.DIRECTOR_POSITION.dividends.fy2425Gbp.toLocaleString() %> &middot; 2025/26: £<%= facts.DIRECTOR_POSITION.dividends.fy2526Gbp.toLocaleString() %> &middot; 2026/27 to date: £<%= facts.DIRECTOR_POSITION.dividends.fy2627PaidToDateGbp.toLocaleString() %></p>
-          <p class="sc-row-sub"><%= facts.DIRECTOR_POSITION.dividends.note %></p>
-        </div>
+<% if (vm.tab === 'sales') { %>
+      <div class="sc-stats-row">
+        <div class="sc-card sc-stat"><div class="sc-stat-label">Not yet due</div><div class="sc-stat-value"><%= f(vm.aged.currentPence) %></div></div>
+        <div class="sc-card sc-stat"><div class="sc-stat-label">1 to 30 days</div><div class="sc-stat-value"><%= f(vm.aged.days1to30Pence) %></div></div>
+        <div class="sc-card sc-stat"><div class="sc-stat-label">31 to 60 days</div><div class="sc-stat-value warn"><%= f(vm.aged.days31to60Pence) %></div></div>
+        <div class="sc-card sc-stat"><div class="sc-stat-label">Over 60 days</div><div class="sc-stat-value warn"><%= f(vm.aged.over60Pence) %></div></div>
+      </div>
+
+      <% if (vm.canCreate) { %>
+      <h2 class="sc-section-title">Raise an invoice</h2>
+      <div class="sc-card">
+        <form class="sc-form-grid" id="invoiceForm">
+          <div class="sc-form-field"><label for="invParty">Customer</label><input id="invParty" name="party" required maxlength="160"></div>
+          <div class="sc-form-field"><label for="invDesc">For</label><input id="invDesc" name="description" maxlength="300"></div>
+          <div class="sc-form-field"><label for="invAccount">Sales account</label><select id="invAccount" name="accountCode"><% vm.incomeAccounts.forEach(function (a) { %><option value="<%= a.code %>"><%= a.name %></option><% }); %></select></div>
+          <div class="sc-form-field"><label for="invAmount">Amount before VAT (&pound;)</label><input id="invAmount" name="amount" type="number" step="0.01" min="0.01" required></div>
+          <div class="sc-form-field"><button type="submit" class="sc-btn sc-btn-primary">Raise invoice</button></div>
+        </form>
+        <div class="sc-inline-note" id="invoiceNote" hidden></div>
+        <p class="sc-row-sub" style="margin-top:0.8rem">Raising an invoice posts a balanced journal: the customer owes the gross, the sale is recognised at the net, and the VAT goes to the control account. The sales figure, the debtor total, the VAT liability and the balance sheet all move together, because all four are computed from the same posting.</p>
+      </div>
+      <% } %>
+
+      <h2 class="sc-section-title">Sales ledger</h2>
+      <div class="sc-card sc-table-wrap">
+        <table class="sc-table">
+          <thead><tr><th>Invoice</th><th>Customer</th><th>For</th><th>Due</th><th class="num">Net</th><th class="num">VAT</th><th class="num">Total</th><th>Status</th></tr></thead>
+          <tbody>
+          <% vm.invoices.forEach(function (d) { %>
+            <tr>
+              <td><%= d.ref %></td><td><%= d.party %></td><td><%= d.description %></td><td><%= d.dueDate %></td>
+              <td class="num"><%= f(d.netPence) %></td><td class="num"><%= f(d.vatPence) %></td><td class="num"><%= f(d.grossPence) %></td>
+              <td><% var od = vm.aged.rows.find(function (r) { return r.ref === d.ref; }); %><% if (d.status === 'paid') { %><span class="sc-pill sc-pill-ok">paid</span><% } else if (od && od.daysOverdue > 0) { %><span class="sc-pill sc-pill-warn"><%= od.daysOverdue %>d overdue</span><% } else { %><span class="sc-pill sc-pill-status">open</span><% } %></td>
+            </tr>
+          <% }); %>
+          </tbody>
+        </table>
+      </div>
+<% } %>
+
+<% if (vm.tab === 'bills') { %>
+      <div class="sc-stats-row">
+        <div class="sc-card sc-stat"><div class="sc-stat-label">Owed to suppliers</div><div class="sc-stat-value"><%= f(vm.aged.totalPence) %></div></div>
+        <div class="sc-card sc-stat"><div class="sc-stat-label">Open bills</div><div class="sc-stat-value"><%= vm.bills.filter(function (b) { return b.status !== 'paid'; }).length %></div></div>
+        <div class="sc-card sc-stat"><div class="sc-stat-label">Overdue</div><div class="sc-stat-value <%= vm.aged.totalPence - vm.aged.currentPence ? 'warn' : '' %>"><%= f(vm.aged.totalPence - vm.aged.currentPence) %></div></div>
+      </div>
+
+      <% if (vm.canRecord) { %>
+      <h2 class="sc-section-title">Record a supplier bill</h2>
+      <div class="sc-card">
+        <form class="sc-form-grid" id="billForm">
+          <div class="sc-form-field"><label for="billParty">Supplier</label><input id="billParty" name="party" required maxlength="160"></div>
+          <div class="sc-form-field"><label for="billDesc">For</label><input id="billDesc" name="description" maxlength="300"></div>
+          <div class="sc-form-field"><label for="billAccount">Cost account</label><select id="billAccount" name="accountCode"><% vm.costAccounts.forEach(function (a) { %><option value="<%= a.code %>"><%= a.name %></option><% }); %></select></div>
+          <div class="sc-form-field"><label for="billAmount">Amount before VAT (&pound;)</label><input id="billAmount" name="amount" type="number" step="0.01" min="0.01" required></div>
+          <div class="sc-form-field"><button type="submit" class="sc-btn sc-btn-primary">Record bill</button></div>
+        </form>
+        <div class="sc-inline-note" id="billNote" hidden></div>
+        <p class="sc-row-sub" style="margin-top:0.8rem">Recording a bill is not approving it and is not paying it. It creates the liability and the recoverable VAT. Releasing money against it is a separate act, and one this system refuses to perform at all: the authorised route is a request into the approvals queue, which records the authorisation and executes nothing.</p>
+      </div>
+      <% } %>
+
+      <h2 class="sc-section-title">Purchase ledger</h2>
+      <div class="sc-card sc-table-wrap">
+        <table class="sc-table">
+          <thead><tr><th>Bill</th><th>Supplier</th><th>For</th><th>Due</th><th class="num">Net</th><th class="num">VAT</th><th class="num">Total</th><% if (vm.canRequestPayment) { %><th></th><% } %></tr></thead>
+          <tbody>
+          <% vm.bills.forEach(function (d) { %>
+            <tr>
+              <td><%= d.ref %></td><td><%= d.party %></td><td><%= d.description %></td><td><%= d.dueDate %></td>
+              <td class="num"><%= f(d.netPence) %></td><td class="num"><%= f(d.vatPence) %></td><td class="num"><%= f(d.grossPence) %></td>
+              <% if (vm.canRequestPayment) { %><td><button type="button" class="sc-btn sc-btn-quiet js-request-payment" data-ref="<%= d.ref %>">Request release</button></td><% } %>
+            </tr>
+          <% }); %>
+          </tbody>
+        </table>
+        <div class="sc-inline-note" id="payNote" hidden></div>
+      </div>
+<% } %>
+
+<% if (vm.tab === 'cashflow') { %>
+      <h2 class="sc-section-title">Cash in and out, by month</h2>
+      <div class="sc-card sc-table-wrap">
+        <table class="sc-table">
+          <thead><tr><th>Month</th><th class="num">In</th><th class="num">Out</th><th class="num">Net</th><th class="num">Closing cash</th></tr></thead>
+          <tbody>
+          <% vm.cashflow.months.forEach(function (m) { %>
+            <tr><td><%= vm.monthLabel(m.month) %></td><td class="num"><%= f(m.inPence) %></td><td class="num"><%= f(m.outPence) %></td><%- cell(m.netPence) %><td class="num"><%= f(m.closingBalancePence) %></td></tr>
+          <% }); %>
+          </tbody>
+        </table>
+      </div>
+      <p class="sc-row-sub">Cash, not profit. A month can be profitable and still take money out of the bank, which is the single most common thing an owner-managed business is surprised by.</p>
+<% } %>
+
+<% if (vm.tab === 'profit-and-loss') { %>
+      <h2 class="sc-section-title">Month by month</h2>
+      <div class="sc-card sc-table-wrap">
+        <table class="sc-table">
+          <thead><tr><th>Month</th><th class="num">Turnover</th><th class="num">Direct costs</th><th class="num">Gross profit</th><th class="num">Overheads</th><th class="num">Operating profit</th></tr></thead>
+          <tbody>
+          <% vm.months.forEach(function (m) { %>
+            <tr><td><%= vm.monthLabel(m.month) %></td><td class="num"><%= f(m.revenuePence) %></td><td class="num"><%= f(m.directCostsPence) %></td><td class="num"><%= f(m.grossProfitPence) %></td><td class="num"><%= f(m.overheadsPence) %></td><%- cell(m.operatingProfitPence) %></tr>
+          <% }); %>
+          </tbody>
+        </table>
+      </div>
+
+      <h2 class="sc-section-title">Year to date</h2>
+      <div class="sc-card sc-table-wrap">
+        <table class="sc-table">
+          <tbody>
+            <% vm.year.turnover.rows.forEach(function (r) { %><tr class="sub"><td><%= r.name %></td><td class="num"><%= f(r.amountPence) %></td></tr><% }); %>
+            <tr class="total"><td>Turnover</td><td class="num"><%= f(vm.year.turnover.totalPence) %></td></tr>
+            <% vm.year.directCosts.rows.forEach(function (r) { %><tr class="sub"><td><%= r.name %></td><td class="num"><%= f(r.amountPence) %></td></tr><% }); %>
+            <tr class="total"><td>Gross profit</td><td class="num"><%= f(vm.year.grossProfitPence) %> (<%= vm.year.grossMarginPct %>%)</td></tr>
+            <% vm.year.overheads.rows.forEach(function (r) { %><tr class="sub"><td><%= r.name %></td><td class="num"><%= f(r.amountPence) %></td></tr><% }); %>
+            <tr class="total"><td>Operating profit</td><td class="num"><%= f(vm.year.operatingProfitPence) %> (<%= vm.year.operatingMarginPct %>%)</td></tr>
+          </tbody>
+        </table>
+      </div>
+<% } %>
+
+<% if (vm.tab === 'balance-sheet') { %>
+      <div class="sc-card sc-table-wrap">
+        <table class="sc-table">
+          <thead><tr><th>As at <%= vm.balanceSheet.asOf %></th><th class="num"></th></tr></thead>
+          <tbody>
+            <% ['fixedAssets','currentAssets','currentLiabilities','longTermLiabilities','equity'].forEach(function (key) {
+                 var sec = vm.balanceSheet[key];
+                 var titles = { fixedAssets: 'Fixed assets', currentAssets: 'Current assets', currentLiabilities: 'Current liabilities', longTermLiabilities: 'Long term liabilities', equity: 'Capital and reserves' };
+                 if (!sec.rows.length) return; %>
+              <tr class="total"><td><%= titles[key] %></td><td class="num"><%= f(sec.totalPence) %></td></tr>
+              <% sec.rows.forEach(function (r) { %><tr class="sub"><td><%= r.name %></td><td class="num"><%= f(r.amountPence) %></td></tr><% }); %>
+            <% }); %>
+            <tr class="total"><td>Net assets</td><td class="num"><%= f(vm.balanceSheet.netAssetsPence) %></td></tr>
+            <tr class="sub"><td>Retained profit for the period</td><td class="num"><%= f(vm.balanceSheet.retainedProfitForPeriodPence) %></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <% if (vm.balanceSheet.partial) { %>
+        <p class="sc-row-sub">This is the part of the balance sheet your clearance covers, so it will not balance on its own. That is expected: a slice of a balanced set of books does not add up, and showing a made-up balancing figure to hide the fact would be worse than saying so.</p>
       <% } else { %>
-        <div class="sc-card sc-empty"><%= deniedNote('director_position') %></div>
+        <p class="sc-row-sub">Net assets and capital and reserves agree to the penny, computed from every posting in the books rather than from a stored figure.</p>
+      <% } %>
+<% } %>
+
+<% if (vm.tab === 'vat') { %>
+      <h2 class="sc-section-title">Quarter to <%= vm.quarter.to %>, the last complete one</h2>
+      <div class="sc-card sc-table-wrap">
+        <table class="sc-table">
+          <tbody>
+            <tr><td>Box 1, VAT due on sales</td><td class="num"><%= f(vm.ret.box1VatDueOnSalesPence) %></td></tr>
+            <tr><td>Box 4, VAT reclaimed on purchases</td><td class="num"><%= f(vm.ret.box4VatReclaimedPence) %></td></tr>
+            <tr class="total"><td>Box 5, net VAT due to HMRC</td><td class="num"><%= f(vm.ret.box5NetVatDuePence) %></td></tr>
+            <tr class="sub"><td>Box 6, total sales excluding VAT</td><td class="num"><%= f(vm.ret.box6TotalSalesExVatPence) %></td></tr>
+            <tr class="sub"><td>Box 7, total purchases excluding VAT</td><td class="num"><%= f(vm.ret.box7TotalPurchasesExVatPence) %></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="sc-card">
+        <div class="sc-row-title">Reserve against liability</div>
+        <p class="sc-row-sub">The VAT and tax reserve account holds <strong><%= f(vm.reservePence) %></strong>. The last complete quarter computes to <strong><%= f(vm.ret.box5NetVatDuePence) %></strong>.</p>
+        <% if (vm.reservePence < vm.ret.box5NetVatDuePence) { %>
+        <p class="sc-row-sub">That is a shortfall of <strong><%= f(vm.ret.box5NetVatDuePence - vm.reservePence) %></strong>. The reserve is being set aside at a rate the computed liability does not support. This is a working figure from the ledger, not a filed return, and it is the kind of gap worth a human checking before the quarter closes rather than after.</p>
+        <% } else { %>
+        <p class="sc-row-sub">The reserve covers it.</p>
+        <% } %>
+      </div>
+      <h2 class="sc-section-title">Current quarter so far, to <%= vm.asOf %></h2>
+      <div class="sc-card">
+        <p class="sc-row-sub">Net VAT accrued so far: <strong><%= f(vm.inProgress.box5NetVatDuePence) %></strong>. Part of a quarter, shown as such: presenting it as a return would understate the liability by whatever is left to trade.</p>
+      </div>
+      <p class="sc-row-sub"><%= vm.ret.status %>.</p>
+<% } %>
+
+<% if (vm.tab === 'reports') { %>
+      <h2 class="sc-section-title">Trial balance as at <%= vm.asOf %></h2>
+      <div class="sc-card sc-table-wrap">
+        <table class="sc-table">
+          <thead><tr><th>Code</th><th>Account</th><th class="num">Debit</th><th class="num">Credit</th></tr></thead>
+          <tbody>
+            <% vm.trial.rows.forEach(function (r) { %><tr><td><%= r.code %></td><td><%= r.name %></td><td class="num"><%= r.debitPence ? f(r.debitPence) : '' %></td><td class="num"><%= r.creditPence ? f(r.creditPence) : '' %></td></tr><% }); %>
+            <tr class="total"><td></td><td><%= vm.trial.balances ? 'In balance' : 'Out of balance' %></td><td class="num"><%= f(vm.trial.debitPence) %></td><td class="num"><%= f(vm.trial.creditPence) %></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <% if (vm.canPostJournal) { %>
+      <h2 class="sc-section-title">Post a journal</h2>
+      <div class="sc-card">
+        <form id="journalForm">
+          <div class="sc-form-grid">
+            <div class="sc-form-field"><label for="jMemo">What is it for</label><input id="jMemo" name="memo" required maxlength="300"></div>
+          </div>
+          <div class="sc-form-grid" style="margin-top:0.7rem">
+            <div class="sc-form-field"><label for="jAcc1">Debit account</label><select id="jAcc1"><% vm.allAccounts.forEach(function (a) { %><option value="<%= a.code %>"><%= a.code %> &middot; <%= a.name %></option><% }); %></select></div>
+            <div class="sc-form-field"><label for="jAmt1">Amount (&pound;)</label><input id="jAmt1" type="number" step="0.01" min="0.01"></div>
+            <div class="sc-form-field"><label for="jAcc2">Credit account</label><select id="jAcc2"><% vm.allAccounts.forEach(function (a) { %><option value="<%= a.code %>"><%= a.code %> &middot; <%= a.name %></option><% }); %></select></div>
+            <div class="sc-form-field"><button type="submit" class="sc-btn sc-btn-primary">Post journal</button></div>
+          </div>
+        </form>
+        <div class="sc-inline-note" id="journalNote" hidden></div>
+        <p class="sc-row-sub" style="margin-top:0.8rem">A journal that does not balance is refused, with the difference named. It is not accepted and quietly balanced against a suspense account, which is how a real ledger ends up with a figure nobody can explain.</p>
+      </div>
+      <% } %>
+<% } %>
+
+<% if (vm.tab === 'nigel') { %>
+      <div class="sc-card">
+        <div class="sc-row-title">Nigel Preece, Finance &amp; Accounts</div>
+        <p class="sc-row-sub">Nigel reads the ledger above, not a snapshot of it. An invoice raised on the Sales tab changes what he says about the debtor book on his next answer, because the figures he is given are computed from the postings at the moment he is asked.</p>
+        <p class="sc-row-sub">He reads it through the same clearance you do. Asked the same question by Tony Marsh he answers about payment capacity and never about the balance, because the record carrying the balance is not in the context he is handed. That filtering happens before his prompt is built, not by asking him to keep a secret.</p>
+      </div>
+      <%- include('partials/chat-widget', { workersById: workersById, aiEnabled: aiEnabled, csrfToken: csrfToken }) %>
+<% } %>
+
+<% if (vm.tab === 'audit') { %>
+      <h2 class="sc-section-title">Payment releases awaiting a decision</h2>
+      <% if (vm.approvals && vm.approvals.length) { %>
+      <div class="sc-list">
+        <% vm.approvals.forEach(function (a) { %>
+        <div class="sc-card sc-row-card"><div><div class="sc-row-title">Payment release request</div><div class="sc-row-sub"><%= a.summary %></div></div></div>
+        <% }); %>
+      </div>
+      <% } else { %>
+      <div class="sc-card sc-empty">Nothing waiting. A payment release request lands here, records the authorisation and moves no money: this system has no path that can.</div>
       <% } %>
 
-      <% if (canSee('finance_summary_ops')) { %>
-        <h2 class="sc-section-title">Recurring-cost opportunities (identified, not realised savings)</h2>
-        <div class="sc-list">
-          <% facts.COST_OPPORTUNITIES.forEach(function (o) { %>
-            <div class="sc-card sc-row-card">
-              <div>
-                <div class="sc-row-title"><%= o.item %> <span class="sc-pill sc-pill-status"><%= o.status %></span></div>
-                <div class="sc-row-sub">£<%= o.currentMonthlyGbp %>/month &middot; potential saving £<%= o.potentialAnnualSavingGbp %>/year &middot; <%= o.detail %></div>
-              </div>
-            </div>
+      <h2 class="sc-section-title">Postings</h2>
+      <div class="sc-card sc-table-wrap">
+        <table class="sc-table">
+          <thead><tr><th>Date</th><th>Memo</th><th>Source</th><th>Posted by</th><th class="num">Value</th></tr></thead>
+          <tbody>
+          <% (vm.recentJournals || []).forEach(function (j) { %>
+            <tr><td><%= j.date %></td><td><%= j.memo %></td><td><%= j.source.replace(/_/g, ' ') %></td><td><%= j.postedBy %></td><td class="num"><%= f(j.totalPence) %></td></tr>
           <% }); %>
-        </div>
-        <p class="sc-proposed-note">Total gross identified opportunity: £<%= facts.COST_OPPORTUNITIES_TOTAL_ANNUAL_GBP.toLocaleString() %>/year. This is not a realised saving until each item is confirmed and approved.</p>
-      <% } %>
+          </tbody>
+        </table>
+      </div>
+      <p class="sc-row-sub">Every posting names the person who made it. A fictional staff member has no real user row, so the display name and the persona are both recorded rather than a foreign key that would be empty for most of the demonstration.</p>
+<% } %>
+
+<% } %>
     </main>
   </div>
+
+<% if (vm && vm.live) { %>
+<script nonce="<%= nonce %>">
+(function () {
+  var csrf = <%- JSON.stringify(csrfToken) %>;
+
+  function post(url, body) {
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf },
+      body: JSON.stringify(body)
+    }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); });
+  }
+
+  // Says what actually happened, including when it failed and why. A form
+  // that silently does nothing on a refusal is how somebody concludes the
+  // demonstration is broken when it is in fact working correctly.
+  function note(el, text, isError) {
+    if (!el) return;
+    el.textContent = text;
+    el.className = 'sc-inline-note' + (isError ? ' sc-inline-note-error' : '');
+    el.hidden = false;
+  }
+
+  function wireDocumentForm(formId, noteId, url, verb) {
+    var form = document.getElementById(formId);
+    if (!form) return;
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var noteEl = document.getElementById(noteId);
+      var btn = form.querySelector('button[type=submit]');
+      if (btn) btn.disabled = true;
+      note(noteEl, 'Posting...', false);
+      post(url, {
+        party: form.querySelector('[name=party]').value,
+        description: form.querySelector('[name=description]').value,
+        accountCode: form.querySelector('[name=accountCode]').value,
+        amount: form.querySelector('[name=amount]').value
+      }).then(function (r) {
+        if (btn) btn.disabled = false;
+        if (!r.ok) return note(noteEl, r.data.error || 'That was refused.', true);
+        note(noteEl, verb + ' ' + r.data.document.ref + ' for ' + r.data.document.party + '. Reloading so every figure on the page reflects it.', false);
+        setTimeout(function () { window.location.reload(); }, 900);
+      }).catch(function () {
+        if (btn) btn.disabled = false;
+        note(noteEl, 'Could not reach the server.', true);
+      });
+    });
+  }
+
+  wireDocumentForm('invoiceForm', 'invoiceNote', '/api/scott/finance/invoice', 'Raised');
+  wireDocumentForm('billForm', 'billNote', '/api/scott/finance/bill', 'Recorded');
+
+  Array.prototype.forEach.call(document.querySelectorAll('.js-categorise'), function (form) {
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var card = form.closest('[data-txn]');
+      var noteEl = card ? card.querySelector('.sc-inline-note') : null;
+      note(noteEl, 'Posting...', false);
+      post('/api/scott/finance/bank/' + form.getAttribute('data-id') + '/categorise', {
+        accountCode: form.querySelector('[name=accountCode]').value
+      }).then(function (r) {
+        if (!r.ok) return note(noteEl, r.data.error || 'That was refused.', true);
+        note(noteEl, 'Explained. ' + r.data.reconciliation.unmatchedCount + ' line(s) left.', false);
+        setTimeout(function () { window.location.reload(); }, 800);
+      }).catch(function () { note(noteEl, 'Could not reach the server.', true); });
+    });
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll('.js-request-payment'), function (btn) {
+    btn.addEventListener('click', function () {
+      var noteEl = document.getElementById('payNote');
+      btn.disabled = true;
+      post('/api/scott/finance/payment-request', { ref: btn.getAttribute('data-ref') }).then(function (r) {
+        btn.disabled = false;
+        if (!r.ok) return note(noteEl, r.data.error || 'That was refused.', true);
+        note(noteEl, 'Release requested for ' + btn.getAttribute('data-ref') + ' and recorded in the approvals queue. Nothing has been paid, and nothing in this system can pay it.', false);
+      }).catch(function () { btn.disabled = false; note(noteEl, 'Could not reach the server.', true); });
+    });
+  });
+
+  var jForm = document.getElementById('journalForm');
+  if (jForm) {
+    jForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var noteEl = document.getElementById('journalNote');
+      var amount = document.getElementById('jAmt1').value;
+      note(noteEl, 'Posting...', false);
+      post('/api/scott/finance/journal', {
+        memo: document.getElementById('jMemo').value,
+        lines: [
+          { accountCode: document.getElementById('jAcc1').value, debit: amount },
+          { accountCode: document.getElementById('jAcc2').value, credit: amount }
+        ]
+      }).then(function (r) {
+        if (!r.ok) return note(noteEl, r.data.error || 'That was refused.', true);
+        note(noteEl, 'Journal ' + r.data.journalId + ' posted.', false);
+        setTimeout(function () { window.location.reload(); }, 900);
+      }).catch(function () { note(noteEl, 'Could not reach the server.', true); });
+    });
+  }
+})();
+</script>
+<% } %>
 </body>
 </html>
