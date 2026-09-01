@@ -2761,17 +2761,52 @@ those 21 are the pre-existing no-`DATABASE_URL` failures measured
 identically at `6cbfe4b` (CRM, erasure, truncated-reply and transient-API
 suites), so this change adds none.
 
-**Not yet done:** nothing has run against a real database, because this
-sandbox has none. The table, the repository functions and the route are
-exercised only by reading; `createBrainCandidate` / `decideBrainCandidate`
-and the boot-time cache load have never executed. Run the seed against a
-throwaway database and put one proposal through the queue before showing
-this to anyone.
+**Will must not see the machinery** (01/09/2026). An invited viewer is
+shown a company that knows things; the queue of facts an AI has proposed
+and a human has yet to approve is Arrington's machinery, not part of the
+fiction, and watching it would undercut the demonstration. So the queue is
+gated on the REAL site role (`admin`/`content`) via
+`canReviewProposedFacts` in `routes/scott.js`, never on the persona or the
+demo clearance: Will's account holds the owner view with full FICTIONAL
+clearance and still sees nothing. The rows are not fetched at all for such
+a viewer, the chat response omits `proposedFacts` entirely, and the decide
+API answers 404 rather than 403, hiding existence like the rest of this
+area. Hiding a button is a layout choice; the API check is the access
+decision.
 
-**Fix the shared database first if this is to be tested on staging.**
-`scott-demo` writes to production's own Postgres (see the note earlier in
-this file), so a feature whose whole job is writing to the brain would be
-writing to live data.
+**Invited-viewer login alert.** `sendLoginNotification` in
+`gapNotifier.js` (that file already holds the authorised Gmail transport,
+so there is no second credential path) emails the demonstration inbox when
+a named account signs in, with the count of facts waiting on approval.
+Watch list is `SCOTT_LOGIN_ALERT_USERNAMES`, default `will`, empty string
+turns it off; Tom's own logins and the fictional staff are silent. Fired
+fire-and-forget from the login route so a mail problem can never slow or
+break a sign-in, and the recipient is the fixed demo inbox rather than the
+`contact.email` CMS row, for the same reason as workspace finding H1.
+
+**Why the alert matters rather than being a nicety:** the brain only
+appears to adapt DURING a visit if somebody approves during the visit.
+Unsupervised adaptation and "it never makes anything up" cannot both be
+true, so the alert is what makes the honest version of the first one
+possible.
+
+**Verified end to end against a real database** (local Postgres 16,
+01/09/2026), not by reading: seed on a genuinely fresh database, then the
+full round trip (assessed, stored pending, absent from the brain,
+approved, second decision correctly refused, present in the brain,
+visible to the owner and NOT to the driver), then a real server on a real
+login. Will's rendered `/scott/gaps` contains no queue heading, no approve
+button and not the proposed value; Tom's contains all three. A direct
+`POST /api/scott/brain-candidates/:id/decide` with a valid CSRF token
+returns 404 for Will and 200 for Tom. The boot line reported
+`Scott brain: 1 approved addition loaded`, and a second seed run on the
+same database was a no-op with the approved rows intact, which is the
+production upgrade path rather than the fresh-install one.
+
+**Still true and unchanged:** `scott-demo` staging writes to production's
+own Postgres (see the note earlier in this file). Nothing here made that
+worse, but a feature whose job is writing to the brain is the wrong one to
+test on staging until that is separated.
 
 ### Testing
 

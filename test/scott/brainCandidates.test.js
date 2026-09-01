@@ -243,6 +243,118 @@ describe('the worker contract', () => {
   });
 });
 
+describe('an invited viewer never sees the machinery', () => {
+  const { canReviewProposedFacts } = require('../../routes/scott');
+  const session = (user, portal) => ({ session: { user, scottPortalUser: portal } });
+
+  test('Tom and Nat can review, an invited client account cannot', () => {
+    assert.equal(canReviewProposedFacts(session({ id: 2, username: 'tom', role: 'content' })), true);
+    assert.equal(canReviewProposedFacts(session({ id: 1, username: 'nat', role: 'admin' })), true);
+    // The whole point: Will's account defaults to the owner view with full
+    // FICTIONAL clearance, and still must not see facts being proposed and
+    // approved. The queue is Arrington's machinery, not part of the company
+    // he is being shown.
+    assert.equal(canReviewProposedFacts(session({ id: 9, username: 'will', role: 'client' })), false);
+  });
+
+  test('a fictional staff login and an anonymous request cannot review', () => {
+    assert.equal(canReviewProposedFacts(session(null, { personaId: 'jo_bell', id: 5 })), false);
+    assert.equal(canReviewProposedFacts({ session: {} }), false);
+  });
+
+  test('the gate reads the real site role, not the fictional persona', () => {
+    // A client account impersonating the owner is still a client account.
+    const willAsOwner = session({ id: 9, username: 'will', role: 'client' });
+    willAsOwner.session.scottImpersonatedPersonaId = 'scott_mercer';
+    assert.equal(canReviewProposedFacts(willAsOwner), false);
+  });
+});
+
+describe('the invited-viewer login alert', () => {
+  const notifier = require('../../lib/scott/gapNotifier');
+  const withEnv = (value, fn) => {
+    const had = Object.prototype.hasOwnProperty.call(process.env, 'SCOTT_LOGIN_ALERT_USERNAMES');
+    const prev = process.env.SCOTT_LOGIN_ALERT_USERNAMES;
+    if (value === undefined) delete process.env.SCOTT_LOGIN_ALERT_USERNAMES;
+    else process.env.SCOTT_LOGIN_ALERT_USERNAMES = value;
+    try { return fn(); } finally {
+      if (had) process.env.SCOTT_LOGIN_ALERT_USERNAMES = prev;
+      else delete process.env.SCOTT_LOGIN_ALERT_USERNAMES;
+    }
+  };
+
+  test('watches will by default and stays silent for Tom and the fictional staff', () => {
+    withEnv(undefined, () => {
+      assert.equal(notifier.shouldAlertOnLogin('will'), true);
+      assert.equal(notifier.shouldAlertOnLogin('Will'), true, 'the login lowercases, so this must too');
+      assert.equal(notifier.shouldAlertOnLogin('tom'), false);
+      assert.equal(notifier.shouldAlertOnLogin('nat'), false);
+      assert.equal(notifier.shouldAlertOnLogin('jo.bell'), false);
+      assert.equal(notifier.shouldAlertOnLogin(''), false);
+      assert.equal(notifier.shouldAlertOnLogin(undefined), false);
+    });
+  });
+
+  test('the watch list is configurable, and an empty value turns it off', () => {
+    withEnv('will, someone.else', () => {
+      assert.deepEqual(notifier.loginAlertUsernames(), ['will', 'someone.else']);
+      assert.equal(notifier.shouldAlertOnLogin('someone.else'), true);
+    });
+    withEnv('', () => {
+      assert.deepEqual(notifier.loginAlertUsernames(), []);
+      assert.equal(notifier.shouldAlertOnLogin('will'), false, 'an empty list must send nothing');
+    });
+  });
+
+  test('an unwatched login sends nothing and says so', async () => {
+    const r = await withEnv(undefined, () => notifier.sendLoginNotification({ username: 'tom' }));
+    assert.equal(r.sent, false);
+    assert.match(r.reason, /not a watched account/);
+  });
+
+  test('with no mail configured it reports that nothing was sent rather than claiming a send', async () => {
+    notifier.__setTransportForTests(null);
+    try {
+      const r = await withEnv(undefined, () => notifier.sendLoginNotification({ username: 'will' }));
+      assert.equal(r.sent, false);
+      assert.match(r.reason, /GMAIL_APP_PASSWORD/);
+    } finally { notifier.__resetTransportForTests(); }
+  });
+
+  test('a watched login sends, and the body names the approval queue', async () => {
+    const sent = [];
+    notifier.__setTransportForTests({ sendMail: async (m) => { sent.push(m); return {}; } });
+    try {
+      const r = await withEnv(undefined, () => notifier.sendLoginNotification({ username: 'will', pendingFacts: 3 }));
+      assert.equal(r.sent, true);
+      assert.equal(sent.length, 1);
+      assert.match(sent[0].subject, /will has just logged in/i);
+      assert.match(sent[0].text, /3 proposed facts are waiting/i);
+      assert.match(sent[0].text, /\/scott\/gaps/);
+      // It must not imply anything was sent to the visitor.
+      assert.match(sent[0].text, /Nothing has been sent to them/i);
+    } finally { notifier.__resetTransportForTests(); }
+  });
+
+  test('an empty queue is said plainly rather than as a number', async () => {
+    const sent = [];
+    notifier.__setTransportForTests({ sendMail: async (m) => { sent.push(m); return {}; } });
+    try {
+      await withEnv(undefined, () => notifier.sendLoginNotification({ username: 'will', pendingFacts: 0 }));
+      assert.match(sent[0].text, /Nothing is waiting/i);
+    } finally { notifier.__resetTransportForTests(); }
+  });
+
+  test('a send failure is reported, never dressed up as a send', async () => {
+    notifier.__setTransportForTests({ sendMail: async () => { throw new Error('smtp refused'); } });
+    try {
+      const r = await withEnv(undefined, () => notifier.sendLoginNotification({ username: 'will', pendingFacts: 1 }));
+      assert.equal(r.sent, false);
+      assert.match(r.reason, /smtp refused/);
+    } finally { notifier.__resetTransportForTests(); }
+  });
+});
+
 describe('shape and provenance', () => {
   test('normalisation accepts snake_case and fills gaps without throwing', () => {
     const c = bc.normaliseCandidate({ fact_key: 'Some Key', fact_value: ' x ', source_label: '07A', gap_id: 4 });

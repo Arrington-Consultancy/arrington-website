@@ -46,6 +46,7 @@
         </div>
       <% } %>
 
+      <% if (canReviewFacts) { %>
       <h2 class="sc-section-title">Proposed facts waiting for a decision</h2>
       <div class="sc-card sc-honesty-card">
         <p class="sc-row-sub"><strong>Nothing here is in the company brain.</strong> A worker that hit a gap may suggest what the missing record should say. The suggestion is checked against the records the company already holds and then it waits. No worker can approve one, and no answer anywhere uses one until a person does.</p>
@@ -95,6 +96,7 @@
             </div>
           <% }); %>
         </div>
+      <% } %>
       <% } %>
     </main>
   </div>

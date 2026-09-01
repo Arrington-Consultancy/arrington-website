@@ -34,7 +34,7 @@ const deepFacts = require('../lib/scott/deepBusinessFacts');
 const contextBuilders = require('../lib/scott/data/contextBuilders');
 const brainGaps = require('../lib/scott/brainGaps');
 const brainCandidates = require('../lib/scott/brainCandidates');
-const { sendGapNotification } = require('../lib/scott/gapNotifier');
+const { sendGapNotification, sendLoginNotification, shouldAlertOnLogin } = require('../lib/scott/gapNotifier');
 
 const router = express.Router();
 
@@ -102,6 +102,28 @@ function viewer(req) {
 
 // Everything a view needs to render the sidebar identity block, the
 // clearance banner and (for Tom only) the demonstration-mode control.
+// Who may see, and decide on, the proposed-fact queue.
+//
+// Deliberately the REAL site role rather than the persona or the demo
+// clearance. An invited viewer browsing the demonstration is shown a
+// company that knows things; the machinery by which it comes to know them
+// is Arrington's, not part of the fiction, and watching a queue of "facts
+// the AI made up that are awaiting approval" would undercut the thing the
+// demonstration is for. An invited account (role 'client') therefore never
+// sees the queue, even on the owner view with full fictional clearance,
+// and a fictional staff login never sees it at all.
+//
+// Enforced on the API as well as the page. Hiding a button is a layout
+// choice; this is an access decision, and an access decision that only
+// exists in a template is not one.
+const FACT_REVIEW_ROLES = ['admin', 'content'];
+
+function canReviewProposedFacts(req) {
+  if (clearance.getPortalUser(req)) return false;
+  const u = req.session && req.session.user;
+  return !!(u && FACT_REVIEW_ROLES.includes(u.role));
+}
+
 function viewerViewModel(req) {
   const v = viewer(req);
   const personaId = clearance.getEffectivePersonaId(req);
@@ -436,9 +458,12 @@ function mountPageRoute(app, generateCsrfToken) {
   app.get('/scott/gaps', noindexHeader, requireScottPageAccess, async (req, res, next) => {
     try {
       const personaId = clearance.getEffectivePersonaId(req);
+      // Not fetched at all for a viewer who may not review them, rather
+      // than fetched and hidden in the template.
+      const mayReviewFacts = canReviewProposedFacts(req);
       const [rows, candidateRows, navCounts] = await Promise.all([
         repo.getBrainGaps({ limit: 100 }),
-        repo.getPendingBrainCandidates({ limit: 100 }),
+        mayReviewFacts ? repo.getPendingBrainCandidates({ limit: 100 }) : Promise.resolve([]),
         repo.getDashboardSummary()
       ]);
       const visible = clearance.filterAndRedact(personaId, null, rows);
@@ -452,6 +477,7 @@ function mountPageRoute(app, generateCsrfToken) {
         ...viewerViewModel(req),
         gaps: visible,
         proposedFacts: visibleCandidates,
+        canReviewFacts: mayReviewFacts,
         describeNotification: brainGaps.describeNotification,
         // Their own queue, so the page answers "what is waiting on me"
         // before it answers "what is open in the company".
@@ -691,6 +717,19 @@ router.post('/scott/login', noindexHeader, scottLoginLimiter, async (req, res) =
       [user.id, 'login', `${user.username} logged in to the Scott AI Demonstration`]
     );
 
+    // Tells Tom a named invited viewer is in the demonstration right now,
+    // with the count of facts waiting on his approval, because the brain
+    // only appears to adapt during a visit if somebody approves during the
+    // visit. Deliberately NOT awaited and it cannot throw: a mail problem
+    // must never slow down or break somebody signing in. Only the accounts
+    // in SCOTT_LOGIN_ALERT_USERNAMES send anything, so Tom's own logins
+    // are silent.
+    if (shouldAlertOnLogin(user.username)) {
+      repo.getPendingBrainCandidates({ limit: 100 })
+        .then((rows) => sendLoginNotification({ username: user.username, pendingFacts: rows.length }))
+        .catch((err) => console.error('Scott login notification could not be prepared:', err.message));
+    }
+
     res.redirect(nextPath);
   } catch (err) {
     console.error('Scott login error:', err);
@@ -895,7 +934,7 @@ function serializeGapRecord(g) {
   };
 }
 
-function serializeTurn(conversationId, turn) {
+function serializeTurn(conversationId, turn, mayReviewFacts = false) {
   return {
     conversationId,
     receptionist: { note: turn.receptionist.note, technicalFailure: turn.receptionist.technicalFailure },
@@ -905,7 +944,12 @@ function serializeTurn(conversationId, turn) {
     // itself: showing an unapproved figure beside a worker's answer is how
     // a reader ends up treating it as one, which is the whole thing this
     // queue exists to prevent.
-    proposedFacts: (turn.candidateRecords || []).map((c) => ({
+    //
+    // Omitted entirely for anyone who may not review the queue, so an
+    // invited viewer's chat response carries no trace of the machinery
+    // (see canReviewProposedFacts). They see a company that knows things,
+    // not a company learning in front of them.
+    proposedFacts: !mayReviewFacts ? [] : (turn.candidateRecords || []).map((c) => ({
       id: c.id,
       domain: c.domain,
       factKey: c.fact_key,
@@ -1010,7 +1054,7 @@ router.post('/api/scott/messages', noindexHeader, requireScottApiAccess, scottCh
     }
 
     const turn = await runScottTurnAndPersist({ conversation, conversationId, userMessage: message, personaId: clearance.getSessionPersonaId(req) });
-    res.json(serializeTurn(conversationId, turn));
+    res.json(serializeTurn(conversationId, turn, canReviewProposedFacts(req)));
   } catch (err) {
     console.error('Scott chat error:', err);
     res.status(500).json({ error: 'Something went wrong. Please try again.' });
@@ -1095,7 +1139,7 @@ router.post('/api/scott/approvals/:id/redraft', noindexHeader, requireScottApiAc
       userMessage: '(Internal note from the team: the previous draft reply needs another attempt — please draft a fresh reply to the customer\'s original message.)',
       personaId: clearance.getSessionPersonaId(req)
     });
-    res.json(serializeTurn(existing.conversation_id, turn));
+    res.json(serializeTurn(existing.conversation_id, turn, canReviewProposedFacts(req)));
   } catch (err) {
     console.error('Scott redraft error:', err);
     res.status(500).json({ error: 'Something went wrong.' });
@@ -1361,6 +1405,13 @@ router.post('/api/scott/brain-candidates/:id/decide', noindexHeader, requireScot
   try {
     const id = parseInt(req.params.id, 10);
     if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid candidate id.' });
+    // The queue is Arrington's machinery, not part of the fiction, so an
+    // invited viewer cannot decide on it however their demo clearance
+    // reads. 404 rather than 403: the same hide-existence reasoning the
+    // rest of this area uses, and an invited viewer has not been told the
+    // queue exists.
+    if (!canReviewProposedFacts(req)) return res.status(404).json({ error: 'Not found.' });
+
     const candidate = await repo.getBrainCandidateById(id);
     if (!candidate) return res.status(404).json({ error: 'Proposed fact not found.' });
 
@@ -1430,4 +1481,4 @@ router.post('/api/scott/brain-candidates/:id/decide', noindexHeader, requireScot
   }
 });
 
-module.exports = { router, mountPageRoute, runScottTurnAndPersist };
+module.exports = { router, mountPageRoute, runScottTurnAndPersist, canReviewProposedFacts };
