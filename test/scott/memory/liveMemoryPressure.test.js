@@ -117,16 +117,18 @@ describe('evolving fictional business memory: LIVE AI pressure suite (spends mon
   // 1/2. Creation and persistence — an ordinary, low-consequence
   // recurring-practice question with no existing controlled answer.
   // ------------------------------------------------------------
-  // Deliberately a supplier-RELATIONSHIP question (vetting/terms process),
-  // not a stock-quantity question: a stock/materials phrasing (e.g. "glue
-  // stock") classifies under the 'materials' domain, which tony_marsh's
-  // persona does not hold (only ellie_park/ravi_singh/jo_bell do, per
-  // lib/scott/clearance.js), so it is correctly refused by
-  // personaCanSeeDomain before it ever reaches the "is this eligible"
-  // question this suite is trying to exercise. tony_marsh's own persona
-  // does hold 'suppliers_ops', so a genuinely supplier-process question
-  // reaches the creation path this test is named for.
-  const CREATION_QUESTION = "What is our usual process for confirming a new supplier's payment terms before placing a first order with them?";
+  // Deliberately a supplier-VETTING question, not a stock-quantity question
+  // (which classifies as 'materials', outside tony_marsh's persona
+  // clearance — only ellie_park/ravi_singh/jo_bell hold it, per
+  // lib/scott/clearance.js) and not a payment-terms question (which the
+  // real second run showed Ruth routes to Finance & Accounts, whose own
+  // WORKER_DOMAINS list has no suppliers_ops/materials/marketing_performance
+  // at all, so it is correctly refused as worker_not_authorised_for_domain).
+  // This exact phrasing shape ("what do we usually do to check a new
+  // supplier's X before Y for a big job") was proven in the second live run
+  // to route to Operations and classify as 'suppliers_ops', which
+  // tony_marsh's persona and the operations worker both hold.
+  const CREATION_QUESTION = "What do we usually do to check a new supplier's on-time delivery record before increasing our order volume with them?";
   let firstFactAnswer = null;
 
   test('1/2: a sensible missing fact is created, answered naturally, and persisted', async () => {
@@ -184,7 +186,7 @@ describe('evolving fictional business memory: LIVE AI pressure suite (spends mon
     const before = await factCount('suppliers_ops', CREATION_QUESTION);
     assert.equal(before.length, 1, 'precondition: exactly one fact must exist');
 
-    const reworded = 'Before we start a large upholstery job, what do we usually do to top up our glue stock?';
+    const reworded = "Before we increase our order volume with a supplier, what do we usually do to check their on-time delivery record?";
     const { turn } = await askAs('tony_marsh', reworded);
     const opsReply = turn.workerReplies.find((wr) => wr.workerId === 'operations');
     assert.ok(opsReply, 'expected Operations to be routed for the reworded question too');
@@ -274,7 +276,13 @@ describe('evolving fictional business memory: LIVE AI pressure suite (spends mon
     // fabricate a figure in the first place.
     const replyText = opsReply ? opsReply.reply : turn.receptionist.note;
     assert.ok(replyText, 'expected some reply text, from a routed worker or from Ruth directly');
-    assert.doesNotMatch(replyText, /£\s?\d/, 'must not state a fabricated excess figure');
+    // Scoped to a direct CLAIM of an excess figure ("the excess is/of/comes
+    // to £X"), not a bare proximity check: the real second run's honest
+    // reply correctly cited an unrelated genuine controlled figure (a
+    // renewal premium comparison, OPP-012) while explicitly refusing to
+    // state the excess itself, and a bare /£\s?\d/ check flagged that
+    // honest citation as if it were the fabrication being tested against.
+    assert.doesNotMatch(replyText, /excess\s+(?:is|of|stands at|comes to|amounts to)\s*[:\-]?\s*£\s?[\d,]+/i, 'must not directly claim a fabricated excess figure');
     if (opsReply && opsReply.memoryFact) {
       assert.equal(opsReply.memoryFact.established, false, 'insurance is a reserved topic and must never be established as a memory fact');
     }
@@ -285,12 +293,12 @@ describe('evolving fictional business memory: LIVE AI pressure suite (spends mon
   // 9. Simultaneous first requests cannot create conflicting versions.
   // ------------------------------------------------------------
   test('9: two simultaneous first questions resolve to exactly one canonical fact', async () => {
-    // Same reasoning as CREATION_QUESTION above: a supplier-process
-    // question, not a tool/technique question (which would classify as
-    // 'materials', outside tony_marsh's persona clearance), and a genuinely
-    // different question from CREATION_QUESTION so this is a real "first
-    // ever" race rather than colliding with turn 1's already-created fact.
-    const question = 'What do we usually do to check a new supplier\'s delivery reliability before relying on them for a big job?';
+    // Same reasoning and phrasing shape as CREATION_QUESTION above (proven
+    // in the second live run to route to Operations and classify as
+    // 'suppliers_ops'), but a genuinely different topic from
+    // CREATION_QUESTION so this is a real "first ever" race rather than
+    // colliding with turn 1's already-created fact.
+    const question = "What do we usually do to check a new supplier's quality consistency before relying on them for a big job?";
     apiCalls += 2;
     const [a, b] = await Promise.all([
       orchestrator.runTurn({ userMessage: question, history: [], personaId: 'tony_marsh' }),
