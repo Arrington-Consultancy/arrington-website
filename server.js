@@ -1247,6 +1247,11 @@ loadPermissions().then(() => {
     // The workspace's own paid suite, same shape, its own flag and its
     // own marker so one can never spend on behalf of the other.
     require('./scripts/workspaceLivePressureRunner').maybeRunWorkspacePressureSuite(require('./db/pool'));
+    // Evolving fictional business memory: same two-step arm/run shape,
+    // its own flags and its own marker, so a run authorised for this
+    // feature can never spend on either of the two suites above.
+    require('./scripts/armScottMemoryLiveTest').armAtBoot(require('./db/pool'));
+    require('./scripts/scottMemoryLiveTestRunner').maybeRunMemoryLiveTest(require('./db/pool'));
   });
 }).catch(err => {
   console.error('Failed to load permissions:', err);
