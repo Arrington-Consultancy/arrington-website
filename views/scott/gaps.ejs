@@ -45,6 +45,57 @@
           <% }); %>
         </div>
       <% } %>
+
+      <h2 class="sc-section-title">Proposed facts waiting for a decision</h2>
+      <div class="sc-card sc-honesty-card">
+        <p class="sc-row-sub"><strong>Nothing here is in the company brain.</strong> A worker that hit a gap may suggest what the missing record should say. The suggestion is checked against the records the company already holds and then it waits. No worker can approve one, and no answer anywhere uses one until a person does.</p>
+        <p class="sc-row-sub">Two kinds of check run before you see it. A <strong>conflict</strong> means it disagrees with something already on record. <strong>Drift</strong> means nothing contradicts it but it does not look like this business: a figure far outside what the company trades, a supplier nobody has heard of, or wording the rest of the records never use.</p>
+      </div>
+
+      <% if (!proposedFacts.length) { %>
+        <div class="sc-card sc-empty">Nothing proposed, or nothing in records you are cleared for. Same as above, these two read identically on purpose.</div>
+      <% } else { %>
+        <div class="sc-list">
+          <% proposedFacts.forEach(function (c) { %>
+            <div class="sc-card sc-gap-card">
+              <div class="sc-row-head">
+                <strong><%= c.domain %> / <%= c.fact_key %></strong>
+                <span class="sc-msg-tag sc-msg-tag-<%= c.verdict === 'blocked' ? 'certainty' : 'evidence' %>"><%= c.verdict === 'blocked' ? 'Conflicts with the records' : (c.verdict === 'review' ? 'Needs a look' : 'No conflicts found') %></span>
+              </div>
+              <p class="sc-row-sub"><strong>Proposed:</strong> <%= c.fact_value %></p>
+              <p class="sc-row-sub"><strong>Would be filed as:</strong> <%= c.source_label || 'no source named' %><% if (c.proposed_by_worker_id) { %>, suggested by <%= c.proposed_by_worker_id %><% } %></p>
+
+              <% var conflicts = Array.isArray(c.conflict_flags) ? c.conflict_flags : []; %>
+              <% var drift = Array.isArray(c.drift_flags) ? c.drift_flags : []; %>
+              <% if (conflicts.length) { %>
+                <p class="sc-row-sub"><strong>Conflicts:</strong></p>
+                <ul class="sc-row-sub"><% conflicts.forEach(function (f) { %><li><%= f.detail %></li><% }); %></ul>
+              <% } %>
+              <% if (drift.length) { %>
+                <p class="sc-row-sub"><strong>Drift:</strong></p>
+                <ul class="sc-row-sub"><% drift.forEach(function (f) { %><li><%= f.detail %></li><% }); %></ul>
+              <% } %>
+              <% if (!conflicts.length && !drift.length) { %>
+                <p class="sc-row-sub">Nothing flagged. It still needs you to say it is right before it goes in.</p>
+              <% } %>
+
+              <% if (canSee(c.domain || 'finance_full')) { %>
+                <form class="js-fact-decide" data-candidate="<%= c.id %>">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <label class="sc-row-sub" for="fact-note-<%= c.id %>">Why is this right for the business, or why are you throwing it out?</label>
+                  <textarea class="sc-gap-note" id="fact-note-<%= c.id %>" rows="2"></textarea>
+                  <div class="sc-gap-actions">
+                    <button type="submit" data-approved="true">Approve into the brain</button>
+                    <button type="submit" data-approved="false">Throw it out</button>
+                  </div>
+                </form>
+              <% } else { %>
+                <p class="sc-row-sub">Deciding this is outside your clearance.</p>
+              <% } %>
+            </div>
+          <% }); %>
+        </div>
+      <% } %>
     </main>
   </div>
   <script nonce="<%= nonce %>">
@@ -75,6 +126,46 @@
           if (!res.ok) { out.textContent = res.d.error || 'Could not close this gap.'; return; }
           out.className = 'sc-gap-done';
           out.textContent = pressed ? 'Closed. The source is recorded as corrected.' : 'Dismissed. The source was not changed.';
+          form.querySelector('.sc-gap-actions').remove();
+        })
+        .catch(function () { out.textContent = 'Could not reach the server.'; });
+    });
+
+    // Proposed facts. Separate pressed-button state from the gap handler
+    // above, so approving a fact and closing a gap can never be confused
+    // for one another by a stale variable.
+    var factPressed = null;
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest('.js-fact-decide .sc-gap-actions button');
+      if (btn) factPressed = btn.getAttribute('data-approved') === 'true';
+    });
+    document.addEventListener('submit', function (e) {
+      var form = e.target.closest('.js-fact-decide');
+      if (!form) return;
+      e.preventDefault();
+      var note = form.querySelector('.sc-gap-note').value.trim();
+      var out = form.querySelector('.sc-gap-error') || document.createElement('p');
+      out.className = 'sc-gap-error';
+      if (!form.contains(out)) form.appendChild(out);
+      out.textContent = '';
+      fetch('/api/scott/brain-candidates/' + form.getAttribute('data-candidate') + '/decide', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': form.querySelector('input[name=_csrf]').value },
+        body: JSON.stringify({ approved: factPressed === true, note: note })
+      }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+        .then(function (res) {
+          if (!res.ok) { out.textContent = res.d.error || 'Could not record that decision.'; return; }
+          out.className = 'sc-gap-done';
+          if (!factPressed) {
+            out.textContent = 'Thrown out. Nothing was added to the brain.';
+          } else if (res.d.brainReloaded === false) {
+            // Approved in the register but not yet readable by the
+            // workers. Said plainly rather than reported as a clean
+            // success, because those are different states.
+            out.textContent = 'Approved and recorded, but the workers have not picked it up yet. It will load on the next restart.';
+          } else {
+            out.textContent = 'Approved. It is in the company brain now and the workers can use it.';
+          }
           form.querySelector('.sc-gap-actions').remove();
         })
         .catch(function () { out.textContent = 'Could not reach the server.'; });

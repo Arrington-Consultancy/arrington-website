@@ -514,6 +514,61 @@ CREATE TABLE IF NOT EXISTS scott_brain_gaps (
 CREATE INDEX IF NOT EXISTS idx_scott_brain_gaps_status ON scott_brain_gaps (status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_scott_brain_gaps_responsible ON scott_brain_gaps (responsible_persona_id, status);
 
+-- Proposed brain facts (gap-driven authoring, 01/09/2026).
+--
+-- A gap says a fact is missing. A row here is a worker's proposal of what
+-- that fact should be, and it is INERT: nothing reads this table into a
+-- worker's context until status = 'approved', which only a human decision
+-- sets (see decideBrainCandidate in lib/scott/data/repository.js). The
+-- assessment in lib/scott/brainCandidates.js cannot approve anything; it
+-- records what its conflict and drift checks found, in the two flag
+-- columns, so a reviewer sees the reasoning rather than a bare verdict.
+--
+-- domain is NOT NULL and validated against the clearance domains before
+-- insert, because an approved fact is access-controlled by exactly the
+-- same rule as every other record (persona AND worker, narrowest wins).
+-- A fact with a domain the clearance model does not know would sit outside
+-- every control on the system, which is why an unknown domain is the one
+-- drift finding that blocks rather than queues.
+--
+-- Placed after scott_brain_gaps deliberately: the foreign key below
+-- references it, and on a genuinely fresh database the statements run in
+-- file order. Getting that backwards is what crashed the Scott v0.2
+-- release on production for 14 minutes (PR #113) while every already
+-- seeded database carried on working, because CREATE TABLE IF NOT EXISTS
+-- silently skipped the ordering problem everywhere except the one place
+-- the schema ran from scratch.
+CREATE TABLE IF NOT EXISTS scott_brain_candidates (
+    id SERIAL PRIMARY KEY,
+    gap_id INTEGER REFERENCES scott_brain_gaps(id) ON DELETE SET NULL,
+    conversation_id INTEGER,
+    domain VARCHAR(60) NOT NULL,
+    fact_key VARCHAR(120) NOT NULL,
+    fact_value TEXT NOT NULL,
+    -- Fictional provenance, e.g. "07A Finance & Accounts". A fact with no
+    -- named source can still be proposed, but it is held for review, so
+    -- nothing enters the brain without somebody saying where it came from.
+    source_label VARCHAR(200) NOT NULL DEFAULT '',
+    proposed_by_worker_id VARCHAR(30) NOT NULL DEFAULT '',
+    verdict VARCHAR(20) NOT NULL DEFAULT 'review' CHECK (verdict IN ('admissible', 'review', 'blocked')),
+    drift_flags JSONB NOT NULL DEFAULT '[]'::jsonb,
+    conflict_flags JSONB NOT NULL DEFAULT '[]'::jsonb,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'superseded')),
+    decided_by_user_id INTEGER,
+    decided_by_name VARCHAR(120) NOT NULL DEFAULT '',
+    decided_by_persona_id VARCHAR(40) NOT NULL DEFAULT '',
+    -- Required by the route on both approve and reject. A decision with no
+    -- stated reason is how a queue gets cleared without anything being
+    -- thought about, the same reasoning that makes a Brain Gap dismissal a
+    -- separate status from a resolution rather than the same one.
+    decision_note TEXT NOT NULL DEFAULT '',
+    decided_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_scott_brain_candidates_status ON scott_brain_candidates (status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_scott_brain_candidates_domain ON scott_brain_candidates (domain, status);
+
 -- Where a fictional staff member's Brain Gap notification is actually
 -- delivered. They are fictional and have no mailbox, so inventing an
 -- address for them would make every send bounce and the "delivery result"

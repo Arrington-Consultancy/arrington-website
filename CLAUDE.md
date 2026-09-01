@@ -2680,6 +2680,99 @@ fixed an honesty bug in `describeNotification` ("failed after a retry"
 when zero attempts were made; the sentence is now built from the
 recorded attempt count).
 
+### Proposed brain facts: gap-driven authoring (added 01/09/2026)
+
+The other half of the Brain Gap loop. A gap said a record was missing and
+then nothing filled it, because the brain is a static file
+(`deepBusinessFacts.js`, ~1,500 lines transcribed from Drive), so closing
+a hole meant Tom hand-editing code. For a demonstration whose premise is
+owner dependency, the enrichment path ran entirely through the owner.
+
+A worker may now PROPOSE what the missing record should say. **It is not
+self-learning and must not become it.** A proposal is inert: it is
+assessed, queued, and enters the brain only when a human approves it on
+`/scott/gaps`. `assessCandidate()` cannot return "approved" at all - the
+verdicts are `admissible`, `review`, `blocked`, where admissible means
+"no flags raised", never "let it in" - and a test sweeps candidate shapes
+asserting no verdict admits anything.
+
+**Why not free-running memory**, since this was the obvious ask: Scott's
+most demonstrable property is nine people giving consistently different
+but non-contradictory answers about one company. A model writing its own
+facts breaks that silently, in front of a prospect, by doing the exact
+thing the demo exists to prove it will not do. It is also unfileable -
+every fact carries a clearance domain because a human decided which
+controlled document it came from, and a self-authored fact has no source,
+so it files by guess, which is how a finance figure reaches the driver.
+
+**Two classes of check**, both deterministic, in `lib/scott/brainCandidates.js`
+(pure: no database, no clock). CONFLICT asks whether it contradicts what
+the company already holds (`duplicate_key`, `pending_duplicate`,
+`figure_contradiction`) and BLOCKS. DRIFT asks whether it is believable
+for this company (`unknown_domain`, `scale_implausible`, `unknown_entity`,
+`register`, `unsourced`, `scale_unchecked`) and sends to review, because
+plenty of legitimate new facts look unfamiliar. `unknown_domain` is the
+one drift finding that blocks: a domain the clearance model does not know
+cannot be filtered by it, so the fact would sit outside every access
+control on the system.
+
+**The believability envelope is derived from the fiction, not hardcoded**,
+so it grows as the brain does. Worth knowing what that cost: the first
+version took the maximum of anything money-shaped, which is the GBP 10m
+employers' liability cover, and against that ceiling a proposed GBP 4m
+contract passed as unremarkable. The anchor is annual turnover and sales
+run rate only (GBP 565,000), with a single figure allowed to reach twice
+it. With no turnover on record the check does not run and says so
+(`scale_unchecked`) rather than passing silently, because silence and a
+pass must not look the same.
+
+**Approved facts join the same list the static records are in**
+(`allDeepFactRecords()`), held in an in-memory cache refreshed on each
+approval, the same pattern as `middleware/permissions.js`. They carry a
+`domain` like every other record, so `clearance.filterAndRedact` governs
+them unchanged: no second access model. The cache is empty until
+`loadApprovedFacts()` runs at boot, which is the safe direction - the
+worst case is a worker not yet seeing an approved addition, never an
+unapproved proposal being treated as fact. The approval route reports
+whether the reload actually happened, so "approved and live" and
+"approved but the workers cannot see it yet" are different sentences.
+
+**Worker contract:** `factProposal` sits alongside `gap` and `escalation`,
+validated separately, and is **only valid alongside a gap** - without that
+tie it becomes a general write path into the brain. The prompt tells the
+worker a proposal is a suggestion to a person, that the reply must not
+state the proposed value as known, and never to raise a gap and then
+answer from the thing it proposed to fill it.
+
+**Review UI** on `/scott/gaps`, clearance-filtered by the same rule as the
+gaps themselves (a proposal quotes the evidence it would add, so an
+unfiltered queue would be a way round every other control). Deciding
+needs clearance for the fact's own domain (reusing `personaCanResolveGap`,
+same question, same shape) and a written reason on both approve and
+reject. A blocked proposal can still be approved by a human who has read
+the conflict and decided the new fact supersedes the old one: the checks
+exist to make a person look, not to overrule one.
+
+**Tests:** `test/scott/brainCandidates.test.js`, 29, every check exercised
+in both directions (caught when it should be, and NOT flagged on real
+staff, real suppliers and ordinary plain English), plus the contract
+tests, verified red against `6cbfe4b`. Full suite 485 pass, 21 fail, and
+those 21 are the pre-existing no-`DATABASE_URL` failures measured
+identically at `6cbfe4b` (CRM, erasure, truncated-reply and transient-API
+suites), so this change adds none.
+
+**Not yet done:** nothing has run against a real database, because this
+sandbox has none. The table, the repository functions and the route are
+exercised only by reading; `createBrainCandidate` / `decideBrainCandidate`
+and the boot-time cache load have never executed. Run the seed against a
+throwaway database and put one proposal through the queue before showing
+this to anyone.
+
+**Fix the shared database first if this is to be tested on staging.**
+`scott-demo` writes to production's own Postgres (see the note earlier in
+this file), so a feature whose whole job is writing to the brain would be
+writing to live data.
+
 ### Testing
 
 `node --test` covers it (`test/scott/*.test.js`). Beyond unit tests, the

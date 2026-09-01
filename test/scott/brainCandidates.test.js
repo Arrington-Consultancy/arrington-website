@@ -1,0 +1,273 @@
+// Scott AI Demonstration — proposed brain facts.
+//
+// Two properties matter more than the individual checks, and both are
+// asserted directly rather than inferred from a passing case elsewhere:
+//
+//   1. No assessment can admit a fact. The verdicts describe what the
+//      checks found; only a human decision puts anything in the brain.
+//   2. Every check is exercised in BOTH directions. A rule that only ever
+//      forbids is satisfied by a function that flags everything, and a
+//      queue that flags legitimate facts is one nobody reads. So each
+//      case that must be caught is paired with one that must not.
+
+const { describe, test } = require('node:test');
+const assert = require('node:assert');
+
+const bc = require('../../lib/scott/brainCandidates');
+const clearance = require('../../lib/scott/clearance');
+
+const CANON = bc.allCanonRecords();
+const PROFILE = bc.deriveWorldProfile();
+
+function candidate(over = {}) {
+  return {
+    domain: 'finance_full',
+    factKey: 'september_turnover_forecast',
+    factValue: 'Forecast revenue for September 2026 is GBP 44,000.',
+    sourceLabel: '07A Finance & Accounts',
+    proposedByWorkerId: 'finance_accounts',
+    ...over
+  };
+}
+
+const assess = (c, opts = {}) => bc.assessCandidate(c, { canon: CANON, ...opts });
+
+describe('a proposal can never admit itself', () => {
+  test('no candidate shape produces a verdict that puts a fact in the brain', () => {
+    const shapes = [
+      candidate(),
+      candidate({ domain: 'nonsense_domain' }),
+      candidate({ factValue: '' }),
+      candidate({ sourceLabel: '' }),
+      candidate({ factValue: 'A contract worth GBP 9,000,000.' }),
+      candidate({ factValue: 'Northern Loom Supplies Ltd took over.' }),
+      {},
+      null,
+      { domain: 'finance_full' }
+    ];
+    shapes.forEach((s) => {
+      const r = assess(s);
+      assert.ok(bc.VERDICTS.includes(r.verdict), `unexpected verdict ${r.verdict}`);
+      assert.notEqual(r.verdict, 'approved');
+    });
+    assert.ok(!bc.VERDICTS.includes('approved'), 'the verdict vocabulary must not contain approved');
+  });
+
+  test('a clean candidate still says a person has to approve it', () => {
+    const r = assess(candidate());
+    assert.equal(r.verdict, 'admissible');
+    assert.match(r.summary, /needs a person to approve it/i);
+  });
+});
+
+describe('conflict: does it contradict what the company already holds', () => {
+  const held = {
+    domain: 'finance_full',
+    factKey: 'september_turnover_forecast',
+    factValue: 'Forecast revenue for September 2026 is GBP 41,000.'
+  };
+
+  test('same key, different value, is blocked', () => {
+    const r = assess(candidate(), { canon: CANON.concat([held]) });
+    assert.equal(r.verdict, 'blocked');
+    assert.ok(r.conflictFlags.some((f) => f.code === 'duplicate_key'));
+  });
+
+  test('same key, SAME value, is not a conflict', () => {
+    const same = { ...held, factValue: candidate().factValue };
+    const r = assess(candidate(), { canon: CANON.concat([same]) });
+    assert.equal(r.conflictFlags.length, 0, 'restating a fact the brain already holds is not a contradiction');
+    assert.equal(r.verdict, 'admissible');
+  });
+
+  test('the same key in a DIFFERENT domain is not a conflict', () => {
+    const elsewhere = { ...held, domain: 'kpi_trend' };
+    const r = assess(candidate(), { canon: CANON.concat([elsewhere]) });
+    assert.equal(r.conflictFlags.length, 0);
+  });
+
+  test('a figure that disagrees with a held figure is reported as a figure clash', () => {
+    const r = assess(candidate(), { canon: CANON.concat([held]) });
+    assert.ok(r.conflictFlags.some((f) => f.code === 'figure_contradiction'));
+    assert.match(r.summary, /41,000/);
+  });
+
+  test('a second proposal for the same key blocks rather than queueing a contradiction', () => {
+    const other = candidate({ factValue: 'Forecast revenue for September 2026 is GBP 39,500.' });
+    const r = assess(candidate(), { pending: [other] });
+    assert.equal(r.verdict, 'blocked');
+    assert.ok(r.conflictFlags.some((f) => f.code === 'pending_duplicate'));
+  });
+
+  test('an identical pending proposal is not treated as contradicting itself', () => {
+    const r = assess(candidate(), { pending: [candidate()] });
+    assert.equal(r.conflictFlags.length, 0);
+  });
+});
+
+describe('drift: is it believable for this company', () => {
+  test('an unknown clearance domain blocks, because the fact could not be access-controlled', () => {
+    const r = assess(candidate({ domain: 'made_up_domain' }));
+    assert.equal(r.verdict, 'blocked');
+    assert.ok(r.driftFlags.some((f) => f.code === 'unknown_domain'));
+  });
+
+  test('every real clearance domain is accepted', () => {
+    Object.keys(clearance.DOMAIN_LABELS).forEach((d) => {
+      const r = assess(candidate({ domain: d, factKey: `probe_${d}` }));
+      assert.ok(!r.driftFlags.some((f) => f.code === 'unknown_domain'), `${d} should be a known domain`);
+    });
+  });
+
+  test('a figure far beyond annual turnover is sent to review, not blocked', () => {
+    const r = assess(candidate({ factValue: 'A new contract worth GBP 4,000,000.' }));
+    assert.equal(r.verdict, 'review');
+    assert.ok(r.driftFlags.some((f) => f.code === 'scale_implausible'));
+  });
+
+  test('an ordinary trading figure is not flagged', () => {
+    const r = assess(candidate({ domain: 'jobs_ops', factKey: 'large_job', factValue: 'A refit billed at GBP 18,500.' }));
+    assert.equal(r.driftFlags.length, 0, 'a plausible job value must not reach the queue');
+  });
+
+  test('the anchor is trading turnover, not the largest money figure on record', () => {
+    // Regression: the first version took the maximum of anything
+    // money-shaped, which is the employers' liability cover of GBP 10m, and
+    // waved a GBP 4m contract through as unremarkable.
+    assert.equal(PROFILE.annualTradingGbp, 565000);
+    assert.ok(PROFILE.moneyCeilingGbp < 10000000, 'an insurance cover limit must not set the trading envelope');
+  });
+
+  test('with no turnover on record the size is reported as unchecked rather than passed', () => {
+    const empty = bc.deriveWorldProfile([]);
+    assert.equal(empty.scaleCheckable, false);
+    const r = bc.assessCandidate(candidate({ factValue: 'Worth GBP 900.' }), { canon: [], profile: empty });
+    assert.ok(r.driftFlags.some((f) => f.code === 'scale_unchecked'));
+    assert.match(r.summary, /not checked against anything/i);
+  });
+
+  test('a negative amount is flagged, whichever side of the symbol the sign is on', () => {
+    assert.deepEqual(bc.extractMoneyFigures('an adjustment of £-2,000'), [-2000]);
+    assert.deepEqual(bc.extractMoneyFigures('an adjustment of -£2,000'), [-2000]);
+    ['An adjustment of £-2,000 was posted.', 'An adjustment of -£2,000 was posted.'].forEach((v) => {
+      const r = assess(candidate({ factValue: v }));
+      assert.ok(r.driftFlags.some((f) => f.code === 'scale_implausible'), `not flagged: ${v}`);
+    });
+  });
+
+  test('an ordinary positive amount is still read as positive', () => {
+    assert.deepEqual(bc.extractMoneyFigures('billed at GBP 18,500'), [18500]);
+    assert.deepEqual(bc.extractMoneyFigures('billed at £1,234.56'), [1234.56]);
+  });
+
+  test('an invented company is flagged', () => {
+    const r = assess(candidate({ domain: 'suppliers_ops', factKey: 'new_supplier', factValue: 'Northern Loom Supplies Ltd now supplies yarn.' }));
+    assert.equal(r.verdict, 'review');
+    assert.ok(r.driftFlags.some((f) => f.code === 'unknown_entity'));
+  });
+
+  test('people and suppliers the company really has are NOT flagged', () => {
+    const r = assess(candidate({
+      domain: 'suppliers_ops',
+      factKey: 'delivery_note',
+      factValue: 'Tony Marsh confirmed South Devon Foam & Webbing Ltd delivered late.'
+    }));
+    assert.ok(!r.driftFlags.some((f) => f.code === 'unknown_entity'), 'real staff and suppliers must pass');
+  });
+
+  test('house style is enforced on the fact text', () => {
+    const r = assess(candidate({ factValue: 'A seamless and transformative result.' }));
+    assert.ok(r.driftFlags.some((f) => f.code === 'register'));
+    const dash = assess(candidate({ factValue: 'Revenue rose — slightly.' }));
+    assert.ok(dash.driftFlags.some((f) => f.code === 'register'));
+  });
+
+  test('ordinary plain English is not mistaken for house-style breach', () => {
+    const r = assess(candidate({ factValue: 'Revenue rose slightly in September against a flat August.' }));
+    assert.ok(!r.driftFlags.some((f) => f.code === 'register'));
+  });
+
+  test('a fact with no named source is held for review', () => {
+    const r = assess(candidate({ sourceLabel: '' }));
+    assert.ok(r.driftFlags.some((f) => f.code === 'unsourced'));
+  });
+});
+
+describe('the worker contract', () => {
+  const { validateWorkerReply, buildWorkerSystemPrompt } = require('../../lib/scott/orchestrator');
+  const { getWorker } = require('../../lib/scott/workers');
+
+  const gap = { type: 'missing', missing: 'a monthly forecast', whyItMatters: 'asked for one', domain: 'finance_full', workCanContinue: true };
+  const base = { reply: 'There is no forecast on record.', certainty: 'UNPROVEN', writeback: null, escalation: null, refused: false };
+  const proposal = { domain: 'finance_full', factKey: 'september_forecast', factValue: 'GBP 44,000.', sourceLabel: '07A' };
+
+  test('a proposal alongside a gap is accepted', () => {
+    const r = validateWorkerReply({ ...base, gap, factProposal: proposal });
+    assert.equal(r.valid, true, r.errors && r.errors.join('; '));
+  });
+
+  test('a proposal WITHOUT a gap is refused, so it cannot become a general write path into the brain', () => {
+    const r = validateWorkerReply({ ...base, gap: null, factProposal: proposal });
+    assert.equal(r.valid, false);
+    assert.ok(r.errors.some((e) => /only valid alongside a gap/i.test(e)));
+  });
+
+  test('a proposal with no named source is refused at the contract, before it reaches the queue', () => {
+    const r = validateWorkerReply({ ...base, gap, factProposal: { ...proposal, sourceLabel: '' } });
+    assert.equal(r.valid, false);
+    assert.ok(r.errors.some((e) => /sourceLabel/.test(e)));
+  });
+
+  test('each required field of a proposal is actually required', () => {
+    ['domain', 'factKey', 'factValue'].forEach((field) => {
+      const partial = { ...proposal };
+      delete partial[field];
+      const r = validateWorkerReply({ ...base, gap, factProposal: partial });
+      assert.equal(r.valid, false, `${field} should be required`);
+    });
+  });
+
+  test('omitting a proposal entirely is still a valid reply', () => {
+    assert.equal(validateWorkerReply({ ...base, gap }).valid, true);
+    assert.equal(validateWorkerReply({ ...base, gap, factProposal: null }).valid, true);
+  });
+
+  test('the prompt tells the worker a proposal is not an answer', () => {
+    const prompt = buildWorkerSystemPrompt(getWorker('finance_accounts'));
+    assert.match(prompt, /factProposal/);
+    assert.match(prompt, /SUGGESTION TO A PERSON/i);
+    assert.match(prompt, /must NOT state the proposed value/i);
+    // The instruction that stops the loop closing on itself: raise a gap,
+    // propose a fill, then answer from the thing you just proposed.
+    assert.match(prompt, /Never both raise a gap and then answer from the thing you proposed/i);
+  });
+});
+
+describe('shape and provenance', () => {
+  test('normalisation accepts snake_case and fills gaps without throwing', () => {
+    const c = bc.normaliseCandidate({ fact_key: 'Some Key', fact_value: ' x ', source_label: '07A', gap_id: 4 });
+    assert.equal(c.factKey, 'some_key');
+    assert.equal(c.factValue, 'x');
+    assert.equal(c.gapId, 4);
+    assert.doesNotThrow(() => bc.normaliseCandidate(null));
+  });
+
+  test('an approved fact carries a domain, so the existing clearance filter governs it', () => {
+    const rec = bc.toBrainRecord({
+      domain: 'finance_full',
+      fact_key: 'september_turnover_forecast',
+      fact_value: 'GBP 44,000.',
+      source_label: '07A',
+      decided_by_name: 'Scott Mercer'
+    });
+    assert.equal(rec.domain, 'finance_full');
+
+    // The point of the shape: no second access model. A finance fact
+    // reaches the owner and does not reach the driver, decided by the same
+    // function every other record goes through.
+    const owner = clearance.filterByClearance('scott_mercer', 'finance_accounts', [rec]);
+    const driver = clearance.filterByClearance('mike_evans', 'finance_accounts', [rec]);
+    assert.equal(owner.length, 1, 'the owner view should see an approved finance fact');
+    assert.equal(driver.length, 0, 'the narrowest persona must not see it');
+  });
+});

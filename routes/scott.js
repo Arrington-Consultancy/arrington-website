@@ -33,6 +33,7 @@ const { checkReleaseGate } = require('../lib/scott/qualityGate');
 const deepFacts = require('../lib/scott/deepBusinessFacts');
 const contextBuilders = require('../lib/scott/data/contextBuilders');
 const brainGaps = require('../lib/scott/brainGaps');
+const brainCandidates = require('../lib/scott/brainCandidates');
 const { sendGapNotification } = require('../lib/scott/gapNotifier');
 
 const router = express.Router();
@@ -435,14 +436,22 @@ function mountPageRoute(app, generateCsrfToken) {
   app.get('/scott/gaps', noindexHeader, requireScottPageAccess, async (req, res, next) => {
     try {
       const personaId = clearance.getEffectivePersonaId(req);
-      const [rows, navCounts] = await Promise.all([
+      const [rows, candidateRows, navCounts] = await Promise.all([
         repo.getBrainGaps({ limit: 100 }),
+        repo.getPendingBrainCandidates({ limit: 100 }),
         repo.getDashboardSummary()
       ]);
       const visible = clearance.filterAndRedact(personaId, null, rows);
+      // Proposed facts go through the SAME filter as the gaps above, and
+      // for the same reason: a proposal quotes the evidence it would add,
+      // so an unfiltered queue would be a way round every other control on
+      // the system. A finance proposal must be as invisible to the driver
+      // as the finance record itself.
+      const visibleCandidates = clearance.filterAndRedact(personaId, null, candidateRows);
       res.render('scott/gaps', {
         ...viewerViewModel(req),
         gaps: visible,
+        proposedFacts: visibleCandidates,
         describeNotification: brainGaps.describeNotification,
         // Their own queue, so the page answers "what is waiting on me"
         // before it answers "what is open in the company".
@@ -778,6 +787,7 @@ async function runScottTurnAndPersist({ conversation, conversationId, userMessag
   // sentence (see brainGaps.describeNotification and the prompt rule
   // forbidding a worker from claiming it).
   const gapRecords = [];
+  const candidateRecords = [];
   for (const wr of turn.workerReplies) {
     if (!wr.gap || wr.technicalFailure) continue;
     const plan = brainGaps.planGap(wr.gap, {
@@ -810,8 +820,36 @@ async function runScottTurnAndPersist({ conversation, conversationId, userMessag
       conversationId
     });
     gapRecords.push(record);
+
+    // A proposed fill for the gap just recorded, if the worker offered
+    // one. Assessed rather than trusted: the conflict and drift checks run
+    // against the brain as it stands right now, the verdict and both flag
+    // lists are stored on the row as evidence of what was found, and the
+    // row lands 'pending' whatever they say. Nothing on this path can put
+    // a fact into the brain; only the approval route can, and only when a
+    // person clicks it.
+    if (wr.factProposal) {
+      const pending = (await repo.getPendingBrainCandidates()).map((row) => ({
+        domain: row.domain, factKey: row.fact_key, factValue: row.fact_value
+      }));
+      const assessment = brainCandidates.assessCandidate(
+        { ...wr.factProposal, gapId: record.id, proposedByWorkerId: wr.workerId },
+        { canon: contextBuilders.allDeepFactRecords(), pending }
+      );
+      const candidate = await repo.createBrainCandidate(assessment, {
+        conversationId, gapId: record.id, workerId: wr.workerId
+      });
+      await repo.addActivity({
+        actor: wr.workerId,
+        eventType: 'brain_fact_proposed',
+        summary: `Proposed a fill for ${candidate.domain}/${candidate.fact_key} on gap #${record.id}: ${assessment.verdict}. Not in the brain unless a person approves it.`,
+        conversationId
+      });
+      candidateRecords.push(candidate);
+    }
   }
   turn.gapRecords = gapRecords;
+  turn.candidateRecords = candidateRecords;
 
   return turn;
 }
@@ -862,6 +900,18 @@ function serializeTurn(conversationId, turn) {
     conversationId,
     receptionist: { note: turn.receptionist.note, technicalFailure: turn.receptionist.technicalFailure },
     gaps: (turn.gapRecords || []).map(serializeGapRecord),
+    // Proposed facts are reported with their verdict so the interface can
+    // say a suggestion was queued. Deliberately NOT the proposed value
+    // itself: showing an unapproved figure beside a worker's answer is how
+    // a reader ends up treating it as one, which is the whole thing this
+    // queue exists to prevent.
+    proposedFacts: (turn.candidateRecords || []).map((c) => ({
+      id: c.id,
+      domain: c.domain,
+      factKey: c.fact_key,
+      verdict: c.verdict,
+      status: c.status
+    })),
     workerReplies: turn.workerReplies.map((wr) => ({
       workerId: wr.workerId,
       characterName: wr.worker.characterName,
@@ -1294,6 +1344,88 @@ router.post('/api/scott/gaps/:id/resolve', noindexHeader, requireScottApiAccess,
     res.json({ ok: true, gap: serializeGapRecord(updated) });
   } catch (err) {
     console.error('Scott gap resolve error:', err);
+    res.status(500).json({ error: 'Something went wrong.' });
+  }
+});
+
+// Approve or reject a proposed brain fact. This is the ONLY route that can
+// put a fact into the company brain, and it cannot run unattended: it needs
+// a logged-in identity, clearance for the fact's own domain, and a written
+// reason on both answers.
+//
+// Clearance reuses personaCanResolveGap rather than a rule written for
+// this route, because a candidate row carries a `domain` exactly as a gap
+// row does and the question is the same question. A second rule here would
+// be a second access model to keep in step, which is how they drift apart.
+router.post('/api/scott/brain-candidates/:id/decide', noindexHeader, requireScottApiAccess, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid candidate id.' });
+    const candidate = await repo.getBrainCandidateById(id);
+    if (!candidate) return res.status(404).json({ error: 'Proposed fact not found.' });
+
+    const personaId = clearance.getEffectivePersonaId(req);
+    if (!clearance.personaCanResolveGap(personaId, candidate)) {
+      return res.status(403).json({ error: clearance.actionDeniedNote('gap_resolve') });
+    }
+
+    const approved = req.body?.approved === true || req.body?.approved === 'true';
+    const note = sanitizeHtml(String(req.body?.note || ''), { allowedTags: [], allowedAttributes: {} }).trim();
+    // Required on both answers, same reasoning as closing a gap: a fact
+    // entering the company's own record with nothing said about why is
+    // indistinguishable from one nobody read.
+    if (note.length < 10) {
+      return res.status(400).json({ error: 'Say why this is right for the business, or why you are throwing it out. At least a sentence.' });
+    }
+
+    const v = viewer(req);
+    const updated = await repo.decideBrainCandidate(id, {
+      approved,
+      note,
+      decider: { realUserId: v.realUserId, personaId, displayName: v.displayName }
+    });
+    // Null means it was already decided. Said honestly rather than
+    // reported as a success, so a second click cannot read as a second
+    // decision on the same proposal.
+    if (!updated) return res.status(409).json({ error: 'That proposal has already been decided.' });
+
+    // The brain is read from memory, so an approval that did not reach the
+    // cache would be a fact that is approved in the register and absent
+    // from every answer. Awaited, and a failure is surfaced rather than
+    // swallowed, because those two states must never look the same.
+    let reloaded = null;
+    if (approved) {
+      try {
+        reloaded = await contextBuilders.loadApprovedFacts();
+      } catch (err) {
+        console.error('Scott brain: approved fact stored but the cache reload failed:', err.message);
+      }
+    }
+
+    await repo.addActivity({
+      actor: 'user',
+      eventType: approved ? 'brain_fact_approved' : 'brain_fact_rejected',
+      summary: approved
+        ? `${v.displayName} approved ${updated.domain}/${updated.fact_key} into the company brain: ${note}`
+        : `${v.displayName} threw out a proposed fact for ${updated.domain}/${updated.fact_key}: ${note}`
+    });
+
+    res.json({
+      ok: true,
+      candidate: {
+        id: updated.id,
+        domain: updated.domain,
+        factKey: updated.fact_key,
+        status: updated.status,
+        verdict: updated.verdict
+      },
+      // Reported so the caller can tell "approved and live" from "approved
+      // but the workers cannot see it yet".
+      brainReloaded: approved ? reloaded !== null : null,
+      approvedFactCount: contextBuilders.approvedFactCount()
+    });
+  } catch (err) {
+    console.error('Scott brain candidate decide error:', err);
     res.status(500).json({ error: 'Something went wrong.' });
   }
 });
