@@ -563,6 +563,15 @@ CREATE TABLE IF NOT EXISTS scott_brain_candidates (
     -- separate status from a resolution rather than the same one.
     decision_note TEXT NOT NULL DEFAULT '',
     decided_at TIMESTAMPTZ,
+    -- An estimate rather than a record: reasoned from the company's own
+    -- figures and what a business this size typically has, because the
+    -- demonstration company is fiction and a fiction with holes in it
+    -- reads as an empty system rather than an honest one. Carried through
+    -- into worker context so a later answer builds on the same number
+    -- instead of producing a second one, and so the worker can say it is
+    -- an estimate rather than quoting it as a filed figure.
+    estimated BOOLEAN NOT NULL DEFAULT false,
+    basis TEXT NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

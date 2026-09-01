@@ -232,14 +232,152 @@ describe('the worker contract', () => {
     assert.equal(validateWorkerReply({ ...base, gap, factProposal: null }).valid, true);
   });
 
-  test('the prompt tells the worker a proposal is not an answer', () => {
+  test('the prompt asks for a reasoned estimate and still requires it to be labelled', () => {
+    // This replaces an earlier test that pinned the opposite policy, when
+    // a proposal was a suggestion for a person rather than the answer
+    // being given. The rule changed deliberately (Scott is fiction, and a
+    // fiction full of holes reads as an empty system), so the test that
+    // pinned the old rule had to change with it rather than be worked
+    // around. What must NOT change is that an estimate is visibly an
+    // estimate, which is what this now asserts.
     const prompt = buildWorkerSystemPrompt(getWorker('finance_accounts'));
     assert.match(prompt, /factProposal/);
-    assert.match(prompt, /SUGGESTION TO A PERSON/i);
-    assert.match(prompt, /must NOT state the proposed value/i);
-    // The instruction that stops the loop closing on itself: raise a gap,
-    // propose a fill, then answer from the thing you just proposed.
-    assert.match(prompt, /Never both raise a gap and then answer from the thing you proposed/i);
+    assert.match(prompt, /as an estimate and not as a filed figure/i);
+    assert.match(prompt, /"estimated": true/);
+    assert.match(prompt, /basis/i);
+    // The company holds it afterwards: that is the whole point.
+    assert.match(prompt, /the next question that touches the same thing will see it/i);
+    // And the one hole it must still admit to.
+    assert.match(prompt, /A guess with no basis is worse than an admitted hole/i);
+  });
+
+  test('an estimate must declare a basis, enforced at the contract', () => {
+    const withEstimate = (extra) => validateWorkerReply({
+      ...base, gap, factProposal: { ...proposal, ...extra }
+    });
+    assert.equal(withEstimate({ estimated: true, basis: 'typical for this turnover' }).valid, true);
+    const noBasis = withEstimate({ estimated: true });
+    assert.equal(noBasis.valid, false);
+    assert.ok(noBasis.errors.some((e) => /basis/.test(e)));
+    // A non-estimate does not need one.
+    assert.equal(withEstimate({ estimated: false }).valid, true);
+    assert.equal(withEstimate({ estimated: 'yes' }).valid, false, 'estimated must be a real boolean');
+  });
+});
+
+describe('autofill: what may enter the fiction without a person', () => {
+  const on = { enabled: true };
+  const clean = () => assess(candidate());
+
+  test('off unless the variable is exactly true, so it can be stopped without a deploy', () => {
+    const had = Object.prototype.hasOwnProperty.call(process.env, 'SCOTT_BRAIN_AUTOFILL');
+    const prev = process.env.SCOTT_BRAIN_AUTOFILL;
+    try {
+      delete process.env.SCOTT_BRAIN_AUTOFILL;
+      assert.equal(bc.isAutofillEnabled(), false);
+      assert.equal(bc.autofillDecision(clean()).autofill, false);
+      process.env.SCOTT_BRAIN_AUTOFILL = 'yes';
+      assert.equal(bc.isAutofillEnabled(), false, 'only the exact string true arms it');
+      process.env.SCOTT_BRAIN_AUTOFILL = 'true';
+      assert.equal(bc.isAutofillEnabled(), true);
+      assert.equal(bc.autofillDecision(clean()).autofill, true);
+    } finally {
+      if (had) process.env.SCOTT_BRAIN_AUTOFILL = prev;
+      else delete process.env.SCOTT_BRAIN_AUTOFILL;
+    }
+  });
+
+  test('a clean estimate goes in', () => {
+    const d = bc.autofillDecision(clean(), { ...on, estimated: true, basis: 'typical for this turnover' });
+    assert.equal(d.autofill, true);
+  });
+
+  test('anything that contradicts a record or an earlier estimate is refused', () => {
+    const held = { domain: 'finance_full', factKey: 'september_turnover_forecast', factValue: 'It is GBP 41,000.' };
+    const a = assess(candidate(), { canon: CANON.concat([held]) });
+    const d = bc.autofillDecision(a, on);
+    assert.equal(d.autofill, false, 'consistency is the whole reason this is worth doing');
+    assert.match(d.reason, /disagrees with something already on record/i);
+  });
+
+  test('an unknown clearance domain is refused, so an invented HR fact cannot leak', () => {
+    const d = bc.autofillDecision(assess(candidate({ domain: 'made_up' })), on);
+    assert.equal(d.autofill, false);
+    assert.match(d.reason, /not a clearance domain/i);
+  });
+
+  test('a figure the wrong size for this company is refused', () => {
+    const d = bc.autofillDecision(assess(candidate({ factValue: 'A contract worth GBP 4,000,000.' })), on);
+    assert.equal(d.autofill, false);
+    assert.match(d.reason, /twice the company's annual turnover/i);
+  });
+
+  test('a size that could not be judged is refused, because unchecked is not the same as fine', () => {
+    const empty = bc.deriveWorldProfile([]);
+    const a = bc.assessCandidate(candidate({ factValue: 'Worth GBP 900.' }), { canon: [], profile: empty });
+    assert.equal(bc.autofillDecision(a, on).autofill, false);
+  });
+
+  test('an estimate with no stated basis is refused', () => {
+    const d = bc.autofillDecision(clean(), { ...on, estimated: true, basis: '  ' });
+    assert.equal(d.autofill, false);
+    assert.match(d.reason, /assertion, not an estimate/i);
+  });
+
+  test('cosmetic drift does NOT stop the fiction growing', () => {
+    // Inventing a supplier is what inventing a supplier looks like, and a
+    // register slip is a tone problem rather than a coherence one. Both
+    // stay recorded on the row; neither blocks.
+    const newSupplier = assess(candidate({
+      domain: 'suppliers_ops', factKey: 'new_supplier', factValue: 'Northern Loom Supplies Ltd now supplies yarn.'
+    }));
+    assert.equal(newSupplier.verdict, 'review');
+    assert.equal(bc.autofillDecision(newSupplier, { ...on, estimated: true, basis: 'typical second supplier' }).autofill, true);
+  });
+
+  test('every blocking code is a real drift code, so a typo cannot silently stop blocking', () => {
+    const real = new Set(['unknown_domain', 'scale_implausible', 'scale_unchecked', 'unknown_entity', 'register', 'unsourced', 'empty_value']);
+    bc.AUTOFILL_BLOCKING_DRIFT.forEach((c) => assert.ok(real.has(c), `${c} is not a drift code this module emits`));
+  });
+
+  test('an unassessed object is refused rather than waved through', () => {
+    assert.equal(bc.autofillDecision(null, on).autofill, false);
+    assert.equal(bc.autofillDecision({}, on).autofill, false);
+  });
+});
+
+describe('an estimate is recalled as an estimate', () => {
+  test('the brain record carries the marker and the basis', () => {
+    const rec = bc.toBrainRecord({
+      domain: 'marketing_performance', fact_key: 'next_month_ad_budget',
+      fact_value: 'About GBP 4,460 plus VAT.', source_label: 'Estimated',
+      estimated: true, basis: 'typical ad spend for a business of this turnover'
+    });
+    assert.equal(rec.estimated, true);
+    assert.match(rec.basis, /typical ad spend/);
+  });
+
+  test('a real record carries no estimate marker at all', () => {
+    const rec = bc.toBrainRecord({ domain: 'finance_full', fact_key: 'k', fact_value: 'v', estimated: false });
+    assert.equal(rec.estimated, undefined, 'a filed record must not be labelled an estimate');
+    assert.equal(rec.basis, undefined);
+  });
+
+  test('the prompt tells the worker to reuse an estimate rather than make a second one', () => {
+    const { buildWorkerSystemPrompt } = require('../../lib/scott/orchestrator');
+    const { getWorker } = require('../../lib/scott/workers');
+    const prompt = buildWorkerSystemPrompt(getWorker('finance_accounts'));
+    assert.match(prompt, /Never estimate a figure a record already answers/i);
+    assert.match(prompt, /Never contradict an estimate the company already holds/i);
+    assert.match(prompt, /Set "certainty" to LIKELY/i);
+    assert.match(prompt, /Never invent a named person/i);
+  });
+
+  test('the governance preamble no longer forbids what the contract now asks for', () => {
+    const gov = require('fs').readFileSync(require.resolve('../../lib/scott/governance.js'), 'utf8');
+    assert.ok(!/Never fill a gap by inference/.test(gov), 'the old blanket prohibition would override the new instruction');
+    assert.match(gov, /Never present a guess AS the record/i, 'the part worth keeping must survive');
+    assert.match(gov, /reasoned estimate/i);
   });
 });
 

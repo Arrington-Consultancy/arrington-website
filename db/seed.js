@@ -5049,6 +5049,27 @@ async function seed() {
     await db.query(`ALTER TABLE scott_portal_users
       ADD COLUMN IF NOT EXISTS notify_email VARCHAR(255) NOT NULL DEFAULT ''`);
     console.log('Scott AI Demonstration: Brain Gap register verified.');
+  }
+
+  // Proposed brain facts: estimate columns (01/09/2026).
+  //
+  // Added here rather than only in schema.sql because the table itself
+  // shipped a few hours earlier, so every already-deployed database has it
+  // WITHOUT these two columns, and CREATE TABLE IF NOT EXISTS silently
+  // skips the whole statement including the new columns. That is the exact
+  // shape of the ordering bug that crash-looped the Scott v0.2 release, and
+  // it stays invisible on a fresh database, which is where it would
+  // otherwise be tested. ALTER ... IF NOT EXISTS is a no-op on a database
+  // that already has them.
+  {
+    await db.query(`ALTER TABLE scott_brain_candidates
+      ADD COLUMN IF NOT EXISTS estimated BOOLEAN NOT NULL DEFAULT false`);
+    await db.query(`ALTER TABLE scott_brain_candidates
+      ADD COLUMN IF NOT EXISTS basis TEXT NOT NULL DEFAULT ''`);
+    console.log('Scott AI Demonstration: proposed-fact estimate columns verified.');
+  }
+
+  {
 
     // Quality release gate (doc 24 review, finding F2). The mutable job
     // lifecycle gained quality_check / rework / ready_for_return, so the
