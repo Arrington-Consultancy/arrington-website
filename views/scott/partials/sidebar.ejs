@@ -27,7 +27,9 @@
     // built and reviewed. PINNED_NAV_KEYS drives the split, so the
     // single source of truth for path/label stays DATA_PAGES in
     // routes/scott.js - nothing is duplicated here.
-    var PINNED_NAV_KEYS = ['finance', 'social'];
+    // Banking added 01/09/2026, placed directly above Social Media per
+    // Tom's request. Order here is display order.
+    var PINNED_NAV_KEYS = ['finance', 'banking', 'social'];
     var allDataPages = (typeof dataPages !== 'undefined' ? dataPages : []);
     var pinnedPages = allDataPages.filter(function (p) { return PINNED_NAV_KEYS.indexOf(p.nav) !== -1; });
   %>

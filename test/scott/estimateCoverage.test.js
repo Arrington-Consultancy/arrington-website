@@ -166,7 +166,8 @@ describe('estimate coverage: structural guards (free)', () => {
     ROUTABLE_WORKER_IDS.forEach((id) => {
       const p = buildWorkerSystemPrompt(WORKERS[id]);
       assert.match(p, /ESTIMATING WHERE THERE IS NO RECORD/, `${id} never receives the estimate rules`);
-      assert.match(p, /A TOTAL is not a private detail/, `${id} does not get the aggregate rule`);
+      assert.match(p, /ORDINARY MANAGEMENT FIGURES/, `${id} does not get the management-figure rule`);
+      assert.match(p, /adverse or intimate characterisation/, `${id} does not get the limit on that rule`);
     });
   });
 });

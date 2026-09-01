@@ -34,6 +34,7 @@ const deepFacts = require('../lib/scott/deepBusinessFacts');
 const contextBuilders = require('../lib/scott/data/contextBuilders');
 const brainGaps = require('../lib/scott/brainGaps');
 const brainCandidates = require('../lib/scott/brainCandidates');
+const banking = require('../lib/scott/banking');
 const { sendGapNotification, sendLoginNotification, shouldAlertOnLogin } = require('../lib/scott/gapNotifier');
 
 const router = express.Router();
@@ -339,6 +340,11 @@ const DATA_PAGES = [
   { path: '/scott/finance', view: 'scott/finance', nav: 'finance', label: 'Finance' },
   { path: '/scott/quality', view: 'scott/quality', nav: 'quality', label: 'Quality Control' },
   { path: '/scott/marketing', view: 'scott/marketing', nav: 'marketing', label: 'Marketing & Reviews' },
+  // Banking sits directly above Social Media, per Tom's request. It holds
+  // no banking credential and connects to nothing: see lib/scott/banking.js
+  // for why a "generic login that works with most banks" is not a thing
+  // that exists, and what this demonstrates instead.
+  { path: '/scott/banking', view: 'scott/banking', nav: 'banking', label: 'Banking' },
   { path: '/scott/social', view: 'scott/social', nav: 'social', label: 'Social Media' },
   { path: '/scott/assets', view: 'scott/assets', nav: 'assets', label: 'Assets & Maintenance' },
   { path: '/scott/premises', view: 'scott/premises', nav: 'premises', label: 'Premises & Facilities' },
@@ -592,6 +598,11 @@ function mountPageRoute(app, generateCsrfToken) {
           ...viewerViewModel(req),
           navCounts,
           facts: deepFacts,
+          // Banking's connection state and refusal list are behaviour
+          // rather than records, so they are passed here rather than
+          // spread into the fact set. Harmless on every other page.
+          connection: banking.bankConnectionState(),
+          refusedActions: banking.REFUSED_ACTIONS,
           brain: buildBrainViewModel(clearance.getEffectivePersonaId(req)),
           // Passed to every data page so any of them can host the chat
           // widget. Social does: Bob Fletcher owns that record, and the

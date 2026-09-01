@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Banking | Scott's Armchair &amp; Knitting Service</title>
+  <meta name="robots" content="noindex, nofollow">
+  <%- include('partials/styles') %>
+</head>
+<body class="scott-body">
+  <div class="sc-shell">
+    <%- include('partials/sidebar', { active: 'banking', navCounts: navCounts }) %>
+    <main class="sc-main">
+      <% if (typeof isImpersonating !== 'undefined' && isImpersonating) { %>
+        <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
+      <% } %>
+      <div class="sc-page-header">
+        <div>
+          <h1 class="sc-h">Banking</h1>
+          <p>Accounts, committed payments and the controls around them. Viewing as <strong><%= persona.name %></strong> (<%= persona.role %>).</p>
+        </div>
+      </div>
+
+      <div class="sc-card sc-honesty-card">
+        <p class="sc-row-sub"><strong>No bank is connected, and none can be.</strong> <%= connection.explanation %></p>
+        <p class="sc-row-sub">Real bank data reaches a system like this through Open Banking: an FCA-authorised provider, with the consent step happening on the bank's own website. There is no shared login across banks, and a system that asked you for your banking password would be doing something you should refuse. The figures below are <%= connection.figuresBelowAre %>.</p>
+      </div>
+
+      <div class="sc-card sc-honesty-card">
+        <p class="sc-row-sub"><strong>What this system will never do, whoever asks.</strong> These are refused in the code itself rather than controlled by a permission somebody could widen later, and no connector holds a payment scope, so there is no token here that could carry them out.</p>
+        <ul class="sc-row-sub">
+          <% refusedActions.forEach(function (a) { %><li><%= a.replace(/_/g, ' ') %></li><% }); %>
+        </ul>
+        <p class="sc-row-sub sc-honesty">A request for any of these goes to the human approval queue, where it is recorded and executes nothing.</p>
+      </div>
+
+      <% if (canSee('finance_full')) { %>
+        <h2 class="sc-section-title">Accounts</h2>
+        <div class="sc-list">
+          <% facts.BANK_ACCOUNTS.forEach(function (a) { %>
+            <div class="sc-card">
+              <div class="sc-row-head"><strong><%= a.name %></strong> <span class="sc-row-sub"><%= a.accountNumberMasked %></span></div>
+              <p class="sc-row-sub"><%= a.bank %></p>
+              <p class="sc-row-sub">Balance <strong>GBP <%= a.balanceGbp.toLocaleString('en-GB') %></strong><% if (a.availableGbp) { %>, available GBP <%= a.availableGbp.toLocaleString('en-GB') %> including GBP <%= a.includesOverdraftHeadroomGbp.toLocaleString('en-GB') %> of undrawn overdraft<% } %>. As at <%= a.asOf %>.</p>
+              <% if (a.purpose) { %><p class="sc-row-sub"><%= a.purpose %></p><% } %>
+            </div>
+          <% }); %>
+        </div>
+
+        <h2 class="sc-section-title">Committed payments</h2>
+        <div class="sc-list">
+          <% facts.SCHEDULED_PAYMENTS.forEach(function (p) { %>
+            <div class="sc-card">
+              <div class="sc-row-head"><strong><%= p.payee %></strong> <span class="sc-msg-tag sc-msg-tag-evidence"><%= p.status %></span></div>
+              <p class="sc-row-sub"><%= p.reference %>. GBP <%= p.amountGbp.toLocaleString('en-GB') %> due <%= p.dueDate %> by <%= p.method %>.</p>
+            </div>
+          <% }); %>
+        </div>
+
+        <h2 class="sc-section-title">Recent movement</h2>
+        <div class="sc-card">
+          <% facts.RECENT_TRANSACTIONS.forEach(function (t) { %>
+            <p class="sc-row-sub"><%= t.date %> &nbsp; <%= t.description %> &nbsp; <strong>GBP <%= t.amountGbp.toLocaleString('en-GB') %></strong></p>
+          <% }); %>
+        </div>
+      <% } else if (canSee('finance_summary_ops')) { %>
+        <h2 class="sc-section-title">What you can see</h2>
+        <div class="sc-card">
+          <p class="sc-row-sub">Supplier payments this week: <strong><%= facts.PAYMENT_CAPACITY_SUMMARY.supplierPaymentsThisWeek %></strong></p>
+          <p class="sc-row-sub">Wages run covered: <strong><%= facts.PAYMENT_CAPACITY_SUMMARY.wagesRunCovered ? 'yes' : 'no' %></strong></p>
+          <p class="sc-row-sub">Any payment on hold: <strong><%= facts.PAYMENT_CAPACITY_SUMMARY.anyPaymentOnHold ? 'yes' : 'no' %></strong></p>
+          <p class="sc-row-sub sc-honesty"><%= facts.PAYMENT_CAPACITY_SUMMARY.note %></p>
+        </div>
+      <% } else { %>
+        <div class="sc-card sc-empty">Nothing here is in your clearance. That is the intended answer, not a fault: banking sits with the owner and the finance role, and this page reads the same rule as every other record in the company.</div>
+      <% } %>
+
+      <% if (canSee('director_position')) { %>
+        <h2 class="sc-section-title">The owner's own exposure</h2>
+        <div class="sc-card">
+          <p class="sc-row-sub">Personal guarantee given: <strong><%= facts.OWNER_BANKING_EXPOSURE.personalGuaranteeGiven ? 'yes' : 'no' %></strong>, against the <%= facts.OWNER_BANKING_EXPOSURE.guaranteeAgainst %>, limit GBP <%= facts.OWNER_BANKING_EXPOSURE.guaranteeLimitGbp.toLocaleString('en-GB') %>.</p>
+          <p class="sc-row-sub">Director's loan account: GBP <%= facts.OWNER_BANKING_EXPOSURE.directorsLoanAccountGbp.toLocaleString('en-GB') %> owed to Scott.</p>
+          <p class="sc-row-sub sc-honesty"><%= facts.OWNER_BANKING_EXPOSURE.note %></p>
+        </div>
+      <% } %>
+
+      <h2 class="sc-section-title">Controls</h2>
+      <div class="sc-list">
+        <% facts.BANKING_CONTROLS.forEach(function (c) { %>
+          <% if (canSee(c.domain)) { %>
+            <div class="sc-card">
+              <div class="sc-row-head"><strong><%= c.control %></strong></div>
+              <p class="sc-row-sub"><%= c.rule %></p>
+            </div>
+          <% } %>
+        <% }); %>
+      </div>
+
+      <%- include('partials/chat-widget', { workersById: workersById, aiEnabled: aiEnabled, csrfToken: csrfToken, initialConversationId: null, initialMessages: [] }) %>
+    </main>
+  </div>
+</body>
+</html>

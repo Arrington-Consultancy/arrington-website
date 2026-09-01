@@ -526,15 +526,25 @@ describe('an aggregate is not a private detail', () => {
   const { buildWorkerSystemPrompt } = require('../../lib/scott/orchestrator');
   const { getWorker, WORKERS } = require('../../lib/scott/workers');
 
-  test('the prompt distinguishes a total from an individual, in both directions', () => {
+  test('the prompt draws the line at adverse characterisation, not at named individuals', () => {
+    // Revised 01/09/2026. The first version of this rule split on
+    // aggregate versus individual, and Sheila Kemp correctly generalised
+    // it into refusing to estimate one person's remaining holiday. That
+    // was my rule being wrong, not her following it badly: the
+    // prohibition came from real-world privacy and these people do not
+    // exist. The line that actually matters is ordinary management
+    // figures (estimate them, named person or not) against inventing
+    // something adverse about a named colleague (do not).
     const p = buildWorkerSystemPrompt(getWorker('finance_accounts'));
-    assert.match(p, /A TOTAL is not a private detail/);
+    assert.match(p, /ORDINARY MANAGEMENT FIGURES/);
     assert.match(p, /monthly wage bill/i);
-    assert.match(p, /live disciplinary/i);
-    assert.match(p, /holiday the team has left/i);
-    // The half that must survive: aggregates yes, named individuals no.
-    assert.match(p, /Aggregate freely, embroider nobody/);
-    assert.match(p, /do not do is invent a named individual's salary/i);
+    assert.match(p, /how much holiday a particular person has left/i);
+    assert.match(p, /no privacy to protect/i);
+    // The explicit correction of the behaviour that prompted this.
+    assert.match(p, /"I will not estimate that for a named person" is the wrong answer/i);
+    // And the half that must survive.
+    assert.match(p, /do NOT invent is an adverse or intimate characterisation/);
+    assert.match(p, /deciding WHICH named person is in an adverse one is not/);
   });
 
   test('no worker spec tells a worker to refuse rather than estimate', () => {
