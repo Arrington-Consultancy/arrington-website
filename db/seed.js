@@ -4821,6 +4821,49 @@ async function seed() {
     console.log(result.seeded ? 'Scott AI Demonstration: fictional dataset seeded.' : 'Scott AI Demonstration: fictional dataset already present, skipped.');
   }
 
+  // Scott AI Demonstration — grant Will's account access (01/09/2026).
+  // Production evidence (Railway access logs, 00:52-00:53 UTC) showed a
+  // real, valid login for 'will' hitting the "valid login, not invited"
+  // branch of POST /scott/login, then GET /scott 404ing per
+  // lib/scott/access.js's documented "logged in but not granted"
+  // behaviour. Tom confirmed the account and asked for it to be granted
+  // through the site's existing page_access mechanism — the same one the
+  // admin panel's Page access control uses (routes/admin.js PUT
+  // /page-access/:pageId) — so this performs the identical grant (one
+  // additive page_access row, never a delete-and-reinsert of the whole
+  // page's access list, so no other grantee is touched) and writes the
+  // matching audit_log entry in the same shape that route writes.
+  // Idempotent: the existing page_access row is itself the guard.
+  {
+    const { rows: pageRows } = await db.query('SELECT id, slug FROM pages WHERE slug = $1', [SCOTT_PAGE_SLUG]);
+    const { rows: willRows } = await db.query(`SELECT id FROM users WHERE username = 'will'`);
+    if (pageRows.length && willRows.length) {
+      const pageId = pageRows[0].id;
+      const willId = willRows[0].id;
+      const { rows: existing } = await db.query(
+        'SELECT 1 FROM page_access WHERE page_id = $1 AND user_id = $2',
+        [pageId, willId]
+      );
+      if (existing.length === 0) {
+        await db.query(
+          'INSERT INTO page_access (page_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+          [pageId, willId]
+        );
+        const { rows: tomRows } = await db.query(`SELECT id FROM users WHERE username = 'tom'`);
+        const actorId = tomRows.length ? tomRows[0].id : willId;
+        await db.query(
+          'INSERT INTO audit_log (user_id, action, section_key, detail) VALUES ($1, $2, $3, $4)',
+          [actorId, 'page_access_update', pageRows[0].slug, `Page access granted to 'will' for "${pageRows[0].slug}", requested by Tom Arrington, applied via seed migration (01/09/2026).`]
+        );
+        console.log("Scott AI Demonstration: page access granted to 'will'.");
+      } else {
+        console.log("Scott AI Demonstration: 'will' already has page access, skipping.");
+      }
+    } else {
+      console.log("Scott AI Demonstration: page-access grant for 'will' skipped (page or user not found yet).");
+    }
+  }
+
   // Scott AI Demonstration — lead capture columns (28/08/2026). Adds the
   // public lead-form intake path: customer_email on scott_enquiries, and
   // the 'superseded' writeback status (used by "Redraft" — the old draft is
