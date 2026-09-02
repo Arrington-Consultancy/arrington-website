@@ -13,6 +13,7 @@
        that asks it to unlock. */
     .wsu-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
     .wsu-card { width: 100%; max-width: 420px; }
+    .wsu-logo { display: block; width: 170px; height: auto; margin: 0 0 1.35rem; }
     .wsu-card h1 { font-size: 1.15rem; margin: 0 0 0.4rem; }
     .wsu-card p { color: var(--ws-muted); font-size: 0.88rem; margin: 0 0 1rem; }
     .wsu-card .ws-form-row { flex-direction: column; align-items: stretch; }
@@ -23,6 +24,7 @@
 <body class="ws-body">
   <div class="wsu-wrap">
     <div class="ws-card wsu-card">
+      <img src="/img/logo-nav.webp?v=20260817" alt="Arrington Consultancy" class="wsu-logo" width="400" height="145">
       <h1>Unlock the workspace</h1>
       <% if (!configured) { %>
         <p>This environment has no workspace passphrase set, so the workspace cannot be opened here. Set <code>WORKSPACE_ACCESS_PASSPHRASE</code> on the service and redeploy.</p>

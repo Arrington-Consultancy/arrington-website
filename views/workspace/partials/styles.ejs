@@ -23,7 +23,14 @@
     width: 230px; flex-shrink: 0; background: var(--ws-panel);
     border-right: 1px solid var(--ws-border); padding: 1.2rem 0.9rem;
   }
-  .ws-brand { font-weight: 700; letter-spacing: 0.04em; font-size: 0.95rem; margin: 0 0.4rem 0.2rem; }
+  /* The public site is branded and the workspace was not, so crossing from
+     the login page into here dropped from a real logo to bold text. Same
+     mark as the site nav, sized down and quieter: this is an internal tool,
+     not a marketing page. */
+  .ws-brand { display: block; margin: 0 0.4rem 0.2rem; text-decoration: none; color: inherit; }
+  .ws-brand:hover { text-decoration: none; }
+  .ws-brand-logo { display: block; width: 150px; height: auto; margin-bottom: 0.55rem; }
+  .ws-brand-line { display: block; font-weight: 700; letter-spacing: 0.04em; font-size: 0.95rem; color: var(--ws-text); }
   .ws-brand small { display: block; color: var(--ws-muted); font-weight: 400; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; }
   .ws-nav { margin-top: 1.1rem; display: flex; flex-direction: column; gap: 2px; }
   .ws-nav a {
