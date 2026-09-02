@@ -23,6 +23,7 @@ const whereToStart = require('./routes/whereToStart');
 const productGuide = require('./routes/productGuide');
 const scott = require('./routes/scott');
 const workspace = require('./routes/workspace');
+const { hasWorkspaceAccess } = require('./lib/workspace/access');
 const { publishedArticles, findBySlug: findUsefulThinkingArticle } = require('./lib/usefulThinkingArticles');
 const { getSiteShellData } = require('./lib/navShell');
 const { SITE_KEY: TURNSTILE_SITE_KEY } = require('./lib/turnstile');
@@ -659,6 +660,29 @@ const authedWriteLimiter = rateLimit({
 
 // Routes
 app.use(authRoutes);
+// The public footer's "Staff Login" link points here rather than straight at
+// /login, so one link lands each person where they actually belong without
+// the public HTML naming an internal path.
+//
+// Why not simply link to /login?next=/workspace: that is the disclosure
+// governance finding F2 removed (see lib/workspace/access.js). A workspace
+// path handed to anonymous visitors tells a scanner the area exists, and in
+// the site footer it would be republished to every visitor and every crawler
+// on every page. The destination is decided here instead, after
+// authentication, and only ever named in a redirect to the person it is for.
+//
+// This grants nothing. hasWorkspaceAccess() is the existing exported identity
+// check (enable flag AND CMS role AND clearance AND owner binding); it
+// deliberately excludes the passphrase leg, which is a session fact.
+// /workspace re-runs all three gates itself, so a cleared but locked session
+// still lands on /workspace/unlock, and anyone sent here who should not be in
+// the workspace gets exactly the 404 they would get by typing the path.
+app.get('/staff', (req, res) => {
+  if (!req.session.user) return res.redirect('/login?next=/staff');
+  if (hasWorkspaceAccess(req.session.user)) return res.redirect('/workspace');
+  return res.redirect('/');
+});
+
 app.use('/api/content', authedWriteLimiter, contentRoutes);
 app.use('/api/admin', authedWriteLimiter, adminRoutes);
 // Public lead capture (contact/booking form + gated PDF downloads) — no
