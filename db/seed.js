@@ -5132,6 +5132,85 @@ async function seed() {
     if (!written && !skipped.length) console.log('Scott AI Demonstration: no authored company records to add.');
   }
 
+  // ------------------------------------------------------------
+  // Scott: Banking & Accounting - the opening books (01/09/2026)
+  // ------------------------------------------------------------
+  // Turns 07A's summary figures into the postings that would have produced
+  // them, so the workspace runs on a real double-entry ledger while every
+  // controlled figure still comes out exactly as 07A states it. Nothing
+  // here restates a canon number: the generator in
+  // lib/scott/finance/seedLedger.js derives all of it, and a test asserts
+  // the derived monthly profit and loss reproduces 07A month by month.
+  //
+  // Guarded on the ledger being empty, not on a marker row, because the
+  // ledger IS the state: once a single journal exists, this database has
+  // books and a second seed would post the whole year again. Anything a
+  // user does in the workspace therefore survives every redeploy, which is
+  // the entire point of the area.
+  {
+    const finRepo = require('../lib/scott/finance/repository');
+    const seedLedger = require('../lib/scott/finance/seedLedger');
+    const financeState = require('../lib/scott/finance/state');
+    const facts = require('../lib/scott/deepBusinessFacts');
+
+    if (await finRepo.isSeeded()) {
+      console.log('Scott Banking & Accounting: ledger already has postings, leaving it alone.');
+    } else {
+      const canon = {
+        finance: facts.FINANCE_SUMMARY,
+        director: facts.DIRECTOR_POSITION,
+        tax: facts.TAX_POSITION,
+        borrowing: facts.BORROWING_SCHEDULE,
+        equipment: facts.EQUIPMENT_REGISTER
+      };
+      const journals = seedLedger.buildLedgerSeed(canon);
+      const asOf = journals[journals.length - 1].date;
+
+      // Posted through the same postJournal every user action uses, so the
+      // opening books are validated by exactly the rule that will validate
+      // everything posted afterwards. A seed with its own private insert
+      // is a seed that can create a state the application cannot.
+      const posted = [];
+      for (const j of journals) {
+        posted.push({ journal: j, id: await finRepo.postJournal(j, { postedBy: 'opening records' }) });
+      }
+
+      for (const d of seedLedger.buildSalesDocuments(facts.FINANCE_SUMMARY, asOf)) await finRepo.insertDocument(d);
+      for (const d of seedLedger.buildPurchaseDocuments(facts.FINANCE_SUMMARY, asOf)) await finRepo.insertDocument(d);
+
+      // The bank statement. Explained lines carry the id of the journal
+      // that explains them; the four unexplained ones carry none, so the
+      // Reconciliation screen opens with real work on it and the statement
+      // genuinely disagrees with the ledger until somebody does it.
+      for (const t of seedLedger.buildBankStatement(journals)) {
+        const match = t.matched
+          ? posted.find((p) => p.journal.date === t.date && p.journal.memo === t.description)
+          : null;
+        await finRepo.insertBankTransaction({ ...t, matchedJournalId: match ? match.id : null });
+      }
+
+      await financeState.load();
+      const s = financeState.snapshot();
+      console.log(
+        `Scott Banking & Accounting: opening books posted, ${posted.length} journals, ` +
+        `${s.documents.length} documents, ${s.bank.filter((t) => !t.matchedJournalId).length} bank lines awaiting categorisation.`
+      );
+    }
+    // Loaded on every boot, seeded or not: the AI reads the live ledger
+    // through this cache, and an unloaded cache means Nigel answers from
+    // the superseded snapshot instead.
+    await financeState.load();
+    if (financeState.isLive()) {
+      const reports = require('../lib/scott/finance/reports');
+      const { formatGbp } = require('../lib/scott/finance/ledger');
+      const tb = reports.trialBalance(financeState.snapshot().lines);
+      console.log(
+        `Scott Banking & Accounting: ledger made up to ${financeState.asOf()}, ` +
+        `trial balance ${formatGbp(tb.debitPence)} ${tb.balances ? 'and it balances' : 'DOES NOT BALANCE'}.`
+      );
+    }
+  }
+
   {
 
     // Quality release gate (doc 24 review, finding F2). The mutable job

@@ -2815,6 +2815,140 @@ own Postgres (see the note earlier in this file). Nothing here made that
 worse, but a feature whose job is writing to the brain is the wrong one to
 test on staging until that is separated.
 
+### Banking & Accounting (added 01/09/2026)
+
+**The Finance and Banking nav items are gone, replaced by one area at
+`/scott/finance` with thirteen tabs**: Overview, Bank Accounts,
+Transactions, Reconciliation, Sales & Invoices, Bills & Expenses,
+Cashflow, Profit & Loss, Balance Sheet, VAT, Reports, Finance AI (Nigel)
+and Approvals & Audit. `/scott/banking` 302s into the bank accounts tab so
+an existing link still lands somewhere sensible. Built on Tom's approval of
+31/08-01/09/2026.
+
+**It is a working set of books, not another dashboard.** `lib/scott/finance/`
+holds a real double-entry ledger: `chartOfAccounts.js` (33 accounts, each
+carrying a clearance `domain`), `ledger.js` (posting builders and
+validation, money in integer pence), `reports.js` (every report as a
+projection over journal lines), `seedLedger.js`, `repository.js`,
+`state.js` and `viewModel.js`. Four tables: `scott_fin_journals`,
+`scott_fin_journal_lines`, `scott_fin_documents`,
+`scott_fin_bank_transactions`. The chart of accounts stays in code because
+it is structure rather than state.
+
+**Nothing is stored as a figure.** The P&L, balance sheet, VAT return, aged
+debtors, cashflow and trial balance are all computed from the same journal
+lines, which is why they cannot disagree with each other. Raising an
+invoice moves the sales figure, the debtor total, the VAT liability and the
+balance sheet in one posting, with no code saying so.
+
+**The seed derives from 07A rather than restating it.** `seedLedger.js`
+turns the controlled record's summary figures into the postings that would
+have produced them, and solves backwards for the figures that must be
+solved: the opening bank balance, the opening loan principals and the
+opening director's loan are whatever makes the closing balances equal what
+canon states. Proven by test: the derived monthly P&L reproduces all five
+months of 07A exactly, and the bank, VAT reserve, debtor, creditor,
+director's loan, term loan and equipment finance balances all land on canon
+to the penny, with the sales and purchase sub-ledgers agreeing with their
+control accounts. **Do not hardcode a canon figure in the seed.** A seed
+that states 31400 beside a canon record stating 31400 is two facts
+pretending to be one, and they come apart the first time either moves.
+
+**Guarded on the ledger being empty, not on a marker row**, because the
+ledger IS the state. Once a database has postings, the seed leaves it
+alone, so anything a user does in the workspace survives every redeploy.
+Verified over three consecutive seeds on a fresh database.
+
+**The live ledger is authoritative for the AI, which is the point of the
+area.** `state.js` derives eight domain-tagged records from the postings,
+cached and refreshed on every write, joining the same list
+`allDeepFactRecords()` builds from the static brain and the approved-fact
+queue, filtered by the same `clearance.filterAndRedact`. 07A's `cash`,
+`debtors` and `creditors` sections are **substituted out by object
+identity** once the ledger is live, so Nigel cannot quote the opening
+snapshot as though it were current; the rest of 07A (targets, run rate,
+management-account history, watchpoints) is untouched because none of it
+moves when a transaction is posted. Verified end to end: an invoice raised
+by Chloe moved the debtor book from GBP 31,400 to GBP 32,900 and a bank
+line categorised by Scott moved the bank and the unexplained count, and
+both were still there, and still what the AI reads, after a full process
+restart.
+
+**Clearance, and what it demonstrates.** No new domain was invented, so this
+area grants nobody anything they could not already see.
+
+| Persona | Tabs | Can do |
+|---|---|---|
+| Scott Mercer | all 13 | everything: reconcile, record bills, post journals, request payment release |
+| Chloe Reed | Overview, Sales & Invoices, Finance AI, Approvals & Audit | raise a sales invoice |
+| Tony Marsh | Overview, Finance AI | nothing; sees payment capacity with no balance on it |
+| Everyone else | none | nothing |
+
+`ACTION_DOMAINS` gains `invoice_create` (`invoice_status`), and
+`bill_record`, `bank_categorise`, `receipt_allocate`, `journal_post` and
+`payment_request` (all `finance_full`), plus
+`writeback_payment_release` (`finance_full`) so a payment approval needs
+somebody who can see the position it would be paid from.
+
+**Coding to an account is not reading it, and conflating the two broke the
+area once.** Chloe must pick a service line for every invoice and must
+never see turnover, so the sales-invoice form and its endpoint check the
+account's GROUP but not its domain (`requireVisible: false`). Every other
+form checks both, because there the person posting is also being shown the
+position they are posting into. The group restriction is what stops an
+invoice being coded to the director's loan account.
+
+**Money is refused by construction, unchanged.** `banking.js` still refuses
+eight actions by throwing rather than returning false, and the only route
+that touches payment writes a request into the approvals queue and executes
+nothing. No bank connector, no credential, no card, no payment rail, no
+Stripe object and no Arrington banking data is anywhere in this area.
+
+**Three defects found by testing rather than by reading**, all fixed at
+source and each now pinned by a case: the Bills tab showed Chloe a trade
+creditors control total her clearance excludes (found by a canary sweep of
+all 13 rendered tabs as all 8 personas); the coding-versus-reading conflation
+above left the one person who raises invoices unable to raise one; and
+`clearance.personaCanAct` resolved prototype-borne action names through
+`Object.prototype`, so a persona holding `'*'` was told they could perform
+`constructor` (the same shape as workspace governance finding T3;
+`ACTION_DOMAINS` is now null-prototype with a `hasOwn` guard).
+
+**Two contradictions inside the controlled record itself**, surfaced rather
+than papered over, and **both need a human decision from Tom**:
+
+1. **07A's VAT working estimate does not reconcile with its own turnover.**
+   It gives GBP 8,750 for a quarter, against a ledger that computes
+   materially more from the same monthly accounts, and the reserve
+   (GBP 9,400) is set at roughly the estimate. The VAT tab shows the
+   computed figure, the reserve and the shortfall, framed as the company
+   under-reserving, which is a believable and commercially interesting
+   finding rather than a defect. Nothing in canon was edited.
+2. **07A's two largest named debtors exceed the ageing bucket they both fall
+   in.** Moorland Holiday Lets (GBP 3,600 at 43 days) and Devon Hearth Cafe
+   Group (GBP 1,950 at 36 days) come to GBP 5,550 against a stated 31-to-60
+   day total of GBP 5,100. The named invoices are honoured exactly, the
+   other three buckets are exactly as stated, and the GBP 450 comes out of
+   the current bucket, which 07A does not itemise.
+
+**`banking.js`'s figures are deleted from the company brain.** They were
+authored on 01/09/2026 as illustrative detail and contradicted 07A beside
+them: bank GBP 24,680.50 against GBP 41,800, VAT reserve GBP 18,240 against
+GBP 9,400, and a VAT quarter disagreeing with `TAX_POSITION`. Both sets
+were tagged into the brain, so which figure a worker quoted depended on
+which record it was handed. `BANKING_CONTROLS` stays: those are rules, not
+figures.
+
+**Tests:** `test/scott/financeLedger.test.js` (22) and
+`test/scott/financeClearance.test.js` (16). Every clearance case carries a
+positive control, because a test that only asserts absence passes against a
+system that shows nobody anything.
+
+**Material new authority routed to Governance:** the write actions above are
+the first time a human action in Scott changes the company's financial
+state, which the v0.2 approved scope did not cover. See
+`review/scott-banking-accounting-governance-submission-2026-09-01.md`.
+
 ### Testing
 
 `node --test` covers it (`test/scott/*.test.js`). Beyond unit tests, the
