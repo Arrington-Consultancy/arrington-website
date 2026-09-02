@@ -2930,6 +2930,21 @@
             border-bottom-color: var(--text-bright);
         }
 
+        /* Staff Login is functional, not editorial, so it reads as a
+           distinct control rather than another footer-copy link -
+           brighter and weighted, but still restrained enough to sit
+           beside Privacy/Useful Thinking without looking like a CTA. */
+        .footer-links a.footer-link-staff {
+            color: var(--text);
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .footer-links a.footer-link-staff:hover {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
         /* ---- PAGE MENU ---- */
         .page-menu {
             position: fixed;
