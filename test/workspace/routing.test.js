@@ -145,9 +145,10 @@ test('every other lane still answers its own single-topic trigger', () => {
 
 test('a question naming another lane keeps that lane, even when it also says opportunity', async () => {
   // This is why the word sits in a trailing rule instead of the third
-  // one. opportunity_builder is the only lane below it carrying a
-  // confidential ceiling, so pre-empting brain_keeper, social_content
-  // or ai_workspace with it would raise the ceiling for those question
+  // one. Five of the six lanes after that rule are capped at
+  // 'commercial' (governance_assurance is the exception), so pre-empting
+  // brain_keeper, social_content_builder or ai_workspace_builder with a
+  // confidential-ceiling lane would raise the ceiling for those question
   // classes: task necessity is a permission leg, and widening it is
   // exactly what this change is not allowed to do.
   const cases = [
@@ -174,22 +175,29 @@ test('a question naming another lane keeps that lane, even when it also says opp
 });
 
 test('the strong opportunity keywords keep their original high precedence', () => {
-  // 'pipeline' and 'proposal' stayed in the third rule and have always
-  // pre-empted the later lanes. That behaviour is untouched by this
-  // change, and pinning it stops a future tidy-up from moving them into
-  // the trailing rule and quietly changing routing.
+  // 'pipeline', 'proposal' and 'leads' stayed in the third rule and have
+  // always pre-empted the later lanes. That behaviour is untouched by
+  // this change, and pinning it stops a future tidy-up from moving them
+  // into the trailing rule and quietly changing routing.
   assert.equal(routeToLane('What does governance say about the pipeline?'), 'opportunity_builder');
   assert.equal(routeToLane('Which Drive document holds the proposal?'), 'opportunity_builder');
+
+  // Pinned deliberately as a known limit, not as an endorsement: the
+  // trailing placement stops this change ADDING an instance of the
+  // ceiling pre-emption, and does not remove the pre-existing ones. The
+  // same sentence with 'leads' instead of 'opportunities' still reaches
+  // a confidential-ceiling lane. Out of scope for a bounded fix to one
+  // word; flagged for its own decision.
+  assert.equal(routeToLane('Draft a LinkedIn post about the leads we won'), 'opportunity_builder');
 });
 
 test('a question about opportunities leaves the general context, and so loses finance', async () => {
-  // The one real consequence, recorded rather than glossed. lanes.js
-  // holds 'finance' at least privilege: governance_assurance is the only
-  // lane granted it, so for every other lane the general no-lane context
-  // is the only route to it. A question that now routes therefore cannot
-  // see finance records. That follows from the least-privilege decision,
-  // surfaced here rather than created here, and the repair is not to
-  // hand finance to this lane.
+  // The one real consequence, and a cost this change imposes rather than
+  // one it merely reveals. lanes.js holds 'finance' at least privilege:
+  // governance_assurance is the only lane granted it, so for every other
+  // lane the general no-lane context is the only route to it. This
+  // question used to reach that context and see the banking records, and
+  // now does not. The repair is not to hand finance to this lane.
   const { LANES, laneById } = require('../../lib/workspace/lanes');
   assert.deepEqual(
     LANES.filter((l) => l.sourceClasses.includes('finance')).map((l) => l.id),
