@@ -18,6 +18,7 @@ const {
   ELEVENTH_PUBLISHED_ARTICLE,
   TWELFTH_PUBLISHED_ARTICLE,
   THIRTEENTH_PUBLISHED_ARTICLE,
+  FOURTEENTH_PUBLISHED_ARTICLE,
   buildUsefulThinkingPageOrder
 } = require('../lib/usefulThinkingSeed');
 const { ARTICLES: UT_ARTICLES } = require('../lib/usefulThinkingArticles');
@@ -2965,6 +2966,102 @@ async function seed() {
       );
 
       console.log(`Useful Thinking: 13th article published (${a14}, ${THIRTEENTH_PUBLISHED_ARTICLE.slug}).`);
+    }
+  }
+
+  // Migration: fourteenth Useful Thinking article, "The Most Expensive
+  // Person Doing the Job Might Be You" (03/09/2026), from the controlled
+  // Google Drive document of the same name (Drive id
+  // 1k5JFUiIkASvOy6cpCwIhbCMZnt6cyAL1HldVhWsjKNk), which carries Tom's
+  // own status line: "TOM-APPROVED USEFUL THINKING ARTICLE. Ready for
+  // Website & Hosting worker publication."
+  //
+  // Reproduced verbatim from the public-facing portion only. The Drive
+  // doc's "INTERNAL NOTES - NOT FOR PUBLICATION" block (status line,
+  // buyer-language note, divider) is excluded, exactly as for every
+  // previous article; the public text starts at "There is a frustrating
+  // irony". All 24 paragraphs were diffed against the Drive original
+  // before this migration was written and matched character for
+  // character.
+  //
+  // Preserved deliberately and NOT softened, per the publication
+  // instruction: the named 4Com reference, the "slightly shit hand"
+  // line, and the closing "wrong fucking job" line. No accident or coma
+  // material appears in the approved text and none was reintroduced.
+  //
+  // Publication instruction referenced a "Website Worker Handover 05"
+  // that could not be found in Drive: handovers 01, 02 and 03 exist,
+  // there is no 04 or 05, and neither the phrase nor this article's
+  // title appears anywhere in the Website & Hosting Worker Handoff Log.
+  // The article itself carries its own publication authorisation, and
+  // the workflow below is copied from the thirteen articles before it
+  // rather than invented, but anything Handover 05 would have specified
+  // beyond that (a Commercial Gaps Review mapping, internal links, a
+  // hero image) has been left at the established default and reported
+  // rather than guessed.
+  //
+  // Idempotent: guarded on the page not existing yet.
+  {
+    const { rows: existingArticle15 } = await db.query(
+      'SELECT slug FROM pages WHERE slug = $1',
+      [FOURTEENTH_PUBLISHED_ARTICLE.slug]
+    );
+    if (existingArticle15.length === 0) {
+      const a15 = FOURTEENTH_PUBLISHED_ARTICLE.instanceId;
+      const bodyParagraphs15 = [
+          'There is a frustrating irony in business that the bigger and more successful you become, the easier it can be to save money.',
+          'Some of that is obvious. Economies of scale are hardly a revelation. If you\'re buying more cars, spending more on insurance or putting more money through a card processor, people tend to become a bit more interested in what you have to say. What I hadn\'t really appreciated until my own business grew was that there is another advantage which has nothing to do with buying power.',
+          'You have time to go looking.',
+          'For years I was working ridiculous hours. At times probably close to 100 a week. I was perfectly capable of doing it and, if I\'m honest, there was probably a period when I thought that was evidence I was doing a good job. The business was growing, customers were being looked after, wages were being paid and I was across almost everything.',
+          'The problem with being across almost everything is that you\'re usually too busy to get the fine-tooth comb out and really start looking for the little buggers that bite in the night.',
+          'A supplier sends an invoice and you pay it. The insurance renewal comes in and you deal with it. The phones work, so the phone contract can wait. None of those things are screaming at you in the same way as a driver not turning up, a customer complaining or somebody needing a decision right now. You can spend the entire week being incredibly busy and still not touch the things that might actually make the biggest commercial difference.',
+          'Telecoms taught me that lesson rather painfully.',
+          'I\'d signed the taxi company up with 4Com. Foolishly, as it turned out. It started perfectly well and then about a year later our telephone costs seemed to come out of nowhere at around £1,200 a month. I objected, fairly enthusiastically, and was effectively met with a shrug and pointed towards a document carrying my signature. The problem was that it was a document I didn\'t remember ever seeing or having specifically pointed out to me.',
+          'I was told, in various ways, that the contract was ironclad.',
+          'Fortunately by this stage the business had grown and my own job had changed. Work I had once tried to carry myself was now spread across other people, which meant I could do something that would have been almost impossible a few years earlier.',
+          'I spent a month being the customer I would occasionally have cold, sweaty dreams about. The one where you start picturing the shovel and that quiet spot in the garden.',
+          'If you\'ve been in business long enough, you know what hurts a business. You know where the pressure points are because you\'ve spent years trying to protect your own company from exactly the same things. And that can make an MD a particularly bad customer to rip off.',
+          'I gathered evidence. I learnt far more about contract law and telecoms companies than I ever wanted to know. I employed a telecoms expert, joined and helped a group of other customers who were unhappy with the company\'s practices, spoke to the BBC and left reviews pretty much everywhere I reasonably could.',
+          'Eventually, they let me walk away completely free.',
+          'The replacement telecoms cost was around £350 a month. So the difference was about £850 every month, or just over £10,000 a year.',
+          'The funny thing is that spending a month arguing about a telephone contract could easily look like a ridiculous use of a Managing Director\'s time. I think the opposite is true. Spending my time doing jobs somebody else could do perfectly well, and in many cases better than me, while quietly paying an extra £10,000 a year because I didn\'t have time to challenge it would have been ridiculous.',
+          'And telecoms wasn\'t unique. As the business grew I had the time to properly look at insurance, vehicles, card processing and suppliers generally. Sometimes we moved. Sometimes we didn\'t need to because finding a credible alternative was enough to bring an existing supplier back to the negotiating table. Fuel was unfortunately different. However successful the taxi company became, OPEC remained surprisingly unwilling to take my call.',
+          'This is where I think smaller owner run businesses get dealt a slightly shit hand. The business that desperately needs to save £10,000 is often the one whose owner has the least time to find it. Then the business gets bigger, perhaps reaches the point where £10,000 isn\'t quite as important as it once was, and suddenly it has both the buying power and the management capacity to go hunting for it.',
+          'It compounds.',
+          'There wasn\'t one genius decision that made my company successful. There were thousands of little ones, and quite a few bad ones mixed in for good measure. A slightly better insurance deal. A cost questioned instead of automatically accepted. A member of staff listened to. A process changed. A supplier challenged. Ten grand saved on the phones. None of them transforms a business on Tuesday afternoon, but pile enough of them on top of each other for ten or twenty years and you end up somewhere very different.',
+          'The trap is thinking that because you\'re working harder than anybody else, you must also be doing the most valuable work.',
+          'I certainly fell into that one. There were periods when I was effectively doing the work of three people. Later those jobs were spread between three people and, annoyingly, done better. It left me concentrating on the things I was actually good at: the bigger decisions, significant expenditure, company direction and finding those little commercial differences that move the whole thing forward.',
+          'It turns out being indispensable isn\'t necessarily something to be proud of.',
+          'Sometimes it just means you\'ve given the most expensive person in the company the wrong fucking job.'
+      ].map((p) => `<p>${p}</p>`).join('');
+
+      const indexSummary15 = 'Twenty years of ridiculous hours, and a telephone contract that quietly cost an extra £10,000 a year because there was never time to challenge it. On why the businesses that most need to find savings are often the ones whose owners have the least time to look for them.';
+
+      const a15Rows = [
+        [`${a15}.label`, 'USEFUL THINKING'],
+        [`${a15}.heading`, FOURTEENTH_PUBLISHED_ARTICLE.title],
+        [`${a15}.index_summary`, indexSummary15],
+        [`${a15}.body`, bodyParagraphs15],
+        [`${a15}.related_text`, ''],
+        [`${a15}.related_link`, ''],
+        [`${a15}.image`, '']
+      ];
+      for (const [key, value] of a15Rows) {
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [key, value]
+        );
+      }
+
+      const { rows: maxSortRows15 } = await db.query('SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM pages');
+      await db.query(
+        `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav, meta_description)
+         VALUES ($1, $2, $3, $4::jsonb, '[]'::jsonb, '[]'::jsonb, false, $5)
+         ON CONFLICT (slug) DO NOTHING`,
+        [FOURTEENTH_PUBLISHED_ARTICLE.slug, FOURTEENTH_PUBLISHED_ARTICLE.title, maxSortRows15[0].max_sort + 1, JSON.stringify([a15]), indexSummary15]
+      );
+
+      console.log(`Useful Thinking: 14th article published (${a15}, ${FOURTEENTH_PUBLISHED_ARTICLE.slug}).`);
     }
   }
 
