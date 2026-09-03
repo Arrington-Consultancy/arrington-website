@@ -23,8 +23,15 @@ const RECORDS = [
   { record_key: 'live-commercial-opportunities', source_class: 'opportunity', sensitivity: 'confidential', doc_status: 'current', title: 'Live opportunities' },
   { record_key: 'project-pembroke-street', source_class: 'opportunity', sensitivity: 'confidential', doc_status: 'current', title: 'Pembroke Street' },
   { record_key: 'technical-state-production', source_class: 'technical_state', sensitivity: 'commercial', doc_status: 'current', title: 'Production state' },
-  { record_key: 'project-scott-demonstration', source_class: 'project', sensitivity: 'commercial', doc_status: 'current', title: 'Scott pointer' }
+  { record_key: 'project-scott-demonstration', source_class: 'project', sensitivity: 'commercial', doc_status: 'current', title: 'Scott pointer' },
+  // Finance is in the fixture on purpose. Without it, a test named
+  // "keeps finance" asserts routing and nothing else, and would stay
+  // green if the general context stopped carrying finance entirely.
+  { record_key: 'finance-summary', source_class: 'finance', sensitivity: 'confidential', doc_status: 'current', title: 'Bank position' },
+  { record_key: 'workspace-source-map', source_class: 'control_pack', sensitivity: 'commercial', doc_status: 'current', title: 'Source map' }
 ];
+
+const FINANCE_KEY = 'finance-summary';
 
 const OPPORTUNITY_KEYS = ['live-commercial-opportunities', 'project-pembroke-street'];
 
@@ -191,16 +198,13 @@ test('the strong opportunity keywords keep their original high precedence', () =
   assert.equal(routeToLane('Draft a LinkedIn post about the leads we won'), 'opportunity_builder');
 });
 
-test('a money question keeps the general context, and therefore keeps finance', async () => {
-  // The consequence the opportunity rule introduced, now repaired. Before
-  // the tail guard, "where are the opportunities to reduce our recurring
-  // costs?" was captured by the opportunity rule and lost the banking
-  // records, because lanes.js grants 'finance' to governance_assurance
-  // alone and the general context is its only other route.
+test('a money question keeps the general context, and the finance record really reaches the prompt', async () => {
+  // The consequence the opportunity rule introduced, now repaired, and
+  // asserted on the CONTEXT rather than on the lane id alone: an earlier
+  // version of this test checked only routing, so it would have stayed
+  // green if the general context had stopped carrying finance at all.
   //
-  // The repair is a no-lane rule, NOT a new source class on any lane. The
-  // assertions below pin both halves, so a future "fix" that hands
-  // finance to a lane fails here rather than passing quietly.
+  // The repair is a no-lane rule, NOT a new source class on any lane.
   const { LANES, laneById } = require('../../lib/workspace/lanes');
   assert.deepEqual(
     LANES.filter((l) => l.sourceClasses.includes('finance')).map((l) => l.id),
@@ -208,24 +212,46 @@ test('a money question keeps the general context, and therefore keeps finance', 
     'finance reached another lane; that is a worker-permission change and not what this fix was allowed to do'
   );
   assert.ok(!laneById('opportunity_builder').sourceClasses.includes('finance'));
+  assert.ok(orchestrator.GENERAL_SOURCE_CLASSES.includes('finance'));
 
-  for (const q of [
-    'Where are the opportunities to reduce our recurring costs?',
-    'What is our bank balance?',
-    'How much did we spend last month?',
-    'What do our overheads look like?'
-  ]) {
-    assert.equal(routeToLane(q), null, `a money question must keep the general context: ${q}`);
-  }
+  await withStubbedRecords(async () => {
+    for (const q of [
+      'Where are the opportunities to reduce our recurring costs?',
+      'What is our bank balance?',
+      'How much did we spend last month?',
+      'What do our overheads look like?'
+    ]) {
+      assert.equal(routeToLane(q), null, `a money question must keep the general context: ${q}`);
+      const keys = keysOf(await buildLaneContext({ clearanceId: 'owner_admin', laneId: routeToLane(q) }));
+      assert.ok(keys.includes(FINANCE_KEY), `the finance record must reach the prompt for: ${q}`);
+    }
 
-  // A money question that names a specific lane still goes to that lane.
-  assert.equal(routeToLane('What does governance say about our costs?'), 'governance_assurance');
+    // A money question naming governance goes to the one lane that holds
+    // finance, so nothing is lost there either. This is why that rule is
+    // ordered above the money rule.
+    const govLane = routeToLane('Show me the audits of our spending');
+    assert.equal(govLane, 'governance_assurance');
+    const govKeys = keysOf(await buildLaneContext({ clearanceId: 'owner_admin', laneId: govLane }));
+    assert.ok(govKeys.includes(FINANCE_KEY), 'the governance lane holds finance, so a money question there keeps it');
+  });
+});
 
-  // Positive control on the outcome, not just the routing: the general
-  // context really does carry finance, so the assertions above are about
-  // something real.
-  assert.ok(orchestrator.GENERAL_SOURCE_CLASSES.includes('finance'),
-    'the general context must actually carry finance, or the routing assertions above prove nothing');
+test('the money-and-opportunity trade is real, and both halves are pinned', async () => {
+  // Stated plainly rather than only in a comment. A question naming money
+  // AND opportunities keeps finance and loses the opportunity records,
+  // because the general context has no 'opportunity' source class.
+  // Neither context dominates the other. The genuinely correct repair is
+  // a finance lane, or finance granted to more than one lane, and both
+  // are worker-permission changes reserved to Tom.
+  await withStubbedRecords(async () => {
+    const q = 'Which opportunities will improve our margins?';
+    assert.equal(routeToLane(q), null);
+    const keys = keysOf(await buildLaneContext({ clearanceId: 'owner_admin', laneId: routeToLane(q) }));
+    assert.ok(keys.includes(FINANCE_KEY), 'the half we chose: finance is kept');
+    for (const key of OPPORTUNITY_KEYS) {
+      assert.ok(!keys.includes(key), `the half we paid: ${key} is not in the general context`);
+    }
+  });
 });
 
 test('the missed plurals now route, and the confidential lanes gain none of them by precedence', () => {
@@ -271,6 +297,22 @@ test('the missed plurals now route, and the confidential lanes gain none of them
   for (const [q, laneId] of notPreEmpted) {
     assert.equal(routeToLane(q), laneId, `the tail must not pre-empt a specific lane: ${q}`);
   }
+
+  // The governance plurals move a question that used to get the general
+  // context into the one lane that reads every source class. That is a
+  // widening of the task-necessity leg, so it is measured rather than
+  // assumed: the lane is the correct owner of the word, and the human
+  // clearance leg still gates every record it returns.
+  return withStubbedRecords(async () => {
+    const general = keysOf(await buildLaneContext({ clearanceId: 'owner_admin', laneId: null }));
+    const gov = keysOf(await buildLaneContext({ clearanceId: 'owner_admin', laneId: routeToLane('Show me the audits') }));
+    assert.ok(gov.length > general.length, 'expected the governance lane to be the wider context here');
+    // ...and a reader without the confidential ceiling still gets nothing
+    // confidential out of it, which is the property that matters.
+    const restricted = await buildLaneContext({ clearanceId: 'ws_restricted', laneId: routeToLane('Show me the audits') });
+    assert.ok(restricted.every((r) => r.sensitivity === 'standard'),
+      'the widened lane must still be gated by human clearance');
+  });
 });
 
 test('no tail rule can take a question from a lane that already wins it', () => {
