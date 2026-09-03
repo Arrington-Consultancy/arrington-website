@@ -359,3 +359,88 @@ test('the Scott demonstration is untouched by this change', () => {
   // own fictional dataset.
   assert.equal(routeToLane('Tell me about the Scott demonstration'), 'ai_demonstration_builder');
 });
+
+test('rules one to nine are byte-identical to the base, so the money rule stays sound', () => {
+  // Structural, and the reason it exists: an earlier attempt repaired the
+  // seven commercial-ceiling lanes IN PLACE, which defeated the money
+  // rule ("what do our servers cost?" left the general context for
+  // website_hosting, which holds no finance) and pre-empted later lanes
+  // ("draft a LinkedIn post about our campaigns" left
+  // social_content_builder for google_ads). The money rule is only sound
+  // as a tail-only device if the rules above it genuinely do not change.
+  //
+  // Asserted by behaviour rather than by reading the source: every
+  // subject that reached a lane before must still reach the same lane,
+  // and every question that reached NO lane before must still reach no
+  // lane unless a tail rule is the thing that claims it.
+  const unchanged = [
+    ['google ads campaign', 'google_ads'],
+    ['website deploy', 'website_hosting'],
+    ['the pipeline', 'opportunity_builder'],
+    ['drive archive', 'brain_keeper'],
+    ['the constitution', 'governance_assurance'],
+    ['linkedin', 'social_content_builder'],
+    ['shortlist', 'ai_recommendation_visibility'],
+    ['scott demonstration', 'ai_demonstration_builder'],
+    ['workspace control pack', 'ai_workspace_builder']
+  ];
+  for (const [q, laneId] of unchanged) {
+    assert.equal(routeToLane(q), laneId, `a rule above the tail changed: ${q}`);
+  }
+});
+
+test('a money question naming a tail subject keeps finance rather than the lane', async () => {
+  // The first regression, pinned. Each of these names a subject whose
+  // PLURAL is repaired in the tail, and each is a money question. The
+  // money rule sits above every commercial tail rule precisely so the
+  // banking record survives.
+  await withStubbedRecords(async () => {
+    for (const q of [
+      'What do our servers cost?',
+      'How much do our domains cost?',
+      'What are the costs of our campaigns?',
+      'How much did the demonstrations cost?'
+    ]) {
+      assert.equal(routeToLane(q), null, `a money question must keep the general context: ${q}`);
+      const keys = keysOf(await buildLaneContext({ clearanceId: 'owner_admin', laneId: routeToLane(q) }));
+      assert.ok(keys.includes(FINANCE_KEY), `the finance record must survive: ${q}`);
+    }
+  });
+});
+
+test('no tail plural pre-empts a lane that already wins the question', () => {
+  // The second regression, pinned, and generalised past the three
+  // examples that found it: every repaired tail subject is combined with
+  // every earlier lane's own subject, and the earlier lane must win.
+  const earlier = [
+    ['linkedin', 'social_content_builder'],
+    ['google ads', 'google_ads'],
+    ['website deploy', 'website_hosting'],
+    ['the constitution', 'governance_assurance'],
+    ['scott demonstration', 'ai_demonstration_builder']
+  ];
+  const tailSubjects = [
+    'campaigns', 'websites', 'domains', 'servers', 'archives', 'shortlists',
+    'demonstrations', 'workspaces', 'control packs', 'opportunities',
+    'prospects', 'proposals', 'permissions', 'audits'
+  ];
+  for (const [subject, laneId] of earlier) {
+    for (const tail of tailSubjects) {
+      const combined = `${subject} and ${tail}`;
+      assert.equal(routeToLane(combined), laneId,
+        `a tail plural pre-empted a lane that already wins: "${combined}"`);
+    }
+  }
+});
+
+test('the exported general source classes cannot be mutated by a caller', () => {
+  // It was exported live and unfrozen, which is the exact hazard the
+  // adjacent comment cites as the reason ROUTING_RULES is withheld: a
+  // reviewer pushed 'opportunity' onto it and the confidential
+  // opportunity record appeared in the no-lane context process-wide.
+  assert.ok(Object.isFrozen(orchestrator.GENERAL_SOURCE_CLASSES));
+  assert.throws(() => { orchestrator.GENERAL_SOURCE_CLASSES.push('opportunity'); });
+  assert.deepEqual([...orchestrator.GENERAL_SOURCE_CLASSES],
+    ['authority', 'strategy', 'worker_register', 'finance'],
+    'the general context changed; the no-lane system prompt names these classes and must be revisited');
+});

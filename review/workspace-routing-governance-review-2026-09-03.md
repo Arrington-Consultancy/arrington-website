@@ -57,7 +57,7 @@ human approval boundary, or the effective-context rule.
 
 ## The findings, and what happened to each
 
-Reviewers raised eleven findings across five passes. Four were
+Reviewers raised fifteen findings across six passes. Six were
 behavioural; the rest were statements that outran the code, which is the
 defect class this chain has recorded repeatedly.
 
@@ -113,7 +113,40 @@ or finance granted to more than one lane. Both are worker-permission
 changes reserved to Tom. Both halves of the trade are now pinned by test
 so it cannot drift unnoticed.
 
-### A5 to A11. Statements that outran the code (all corrected)
+### A5. The in-place plural repair defeated the money rule and pre-empted lanes (behavioural, corrected)
+
+The cleanup first repaired the seven commercial-ceiling lanes in place,
+reasoning that a lane which cannot reach `confidential` cannot leak by
+winning a question earlier. That reasoning was wrong twice over, and a
+reviewer measured both:
+
+1. It defeated the money rule. "What do our servers cost?" moved from the
+   general context to `website_hosting`, which holds no finance class, so
+   the banking record stopped reaching the prompt for a cost question.
+   The money rule is only sound as a tail-only device if the rules above
+   it genuinely do not change, and the comment asserting they were
+   untouched was false of that very diff.
+2. It pre-empted later lanes anyway. "Draft a LinkedIn post about our
+   campaigns" left `social_content_builder` for `google_ads`, which reads
+   more source classes. Task necessity is a permission leg whatever the
+   ceiling, so widening it at `commercial` is still widening it.
+
+**Corrected** by making the treatment uniform: every inflection repair
+now lives in the tail, and rules one to nine are byte-identical to the
+base, asserted by test. This is the third time in this change that a
+plausible local repair turned out to widen the task-necessity leg, and
+the pattern is worth keeping: in a first-match-wins router, moving a word
+earlier is a permission decision, not a formatting one.
+
+### A6. A live, mutable export (behavioural, corrected)
+
+`GENERAL_SOURCE_CLASSES` was exported unfrozen. A reviewer pushed
+`'opportunity'` onto it and the confidential opportunity record appeared
+in the no-lane context process-wide. That is the exact hazard the
+adjacent comment cites as the reason `ROUTING_RULES` is withheld.
+Frozen, with a test.
+
+### A7 to A15. Statements that outran the code (all corrected)
 
 Seven findings were claims in comments or test names that were not true
 of the code beneath them, including a test named "no other lane changed
@@ -134,9 +167,13 @@ to ignore the records the change exists to preserve.
 
 ## Evidence
 
-- **Red-then-green.** Five of the fourteen routing tests were watched
-  failing against the base orchestrator at `533dd5e` and passing after.
-  A test that has not been seen red is not evidence.
+- **Red-then-green, against two heads.** Six of the eighteen routing
+  tests were watched failing against the base orchestrator at `533dd5e`
+  and passing after. Three of them were additionally watched failing
+  against the intermediate head that carried the A5 and A6 regressions,
+  which is the stronger control: they catch the specific defect they were
+  written for, not merely the absence of the whole feature. A test that
+  has not been seen red is not evidence.
 - **Two structural tests, not example-based.** Example-based checks in
   this very file passed while the property they were named for was false,
   twice. One test now asserts that no tail rule can take a question from
@@ -151,7 +188,11 @@ to ignore the records the change exists to preserve.
   process that requires the orchestrator and nothing else. Reading the
   test process's own `require.cache` was rejected as proving nothing
   under per-file isolation and failing spuriously under a shared one.
-- **Suites.** Workspace 197 tests, 195 pass, 0 fail, 2 skipped (the two
+- **Rules one to nine untouched, proved rather than asserted.** The nine
+  original rules are byte-identical to `533dd5e`, and a behavioural test
+  pins that every subject reaching a lane before still reaches the same
+  lane.
+- **Suites.** Workspace 202 tests, 200 pass, 0 fail, 2 skipped (the two
   gated suites). Scott 411 pass, 0 fail, 0 skipped. Guards
   (`noEmDashes`, `gatedSuites`, `gatedSuiteScan`) 11 pass, 0 fail.
 
