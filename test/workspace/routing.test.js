@@ -52,6 +52,25 @@ function withStubbedRecords(fn) {
 
 const keysOf = (records) => records.map((r) => r.record_key);
 
+// The tail probes, at module scope so the assertions and the guard that
+// validates them read the same array. A hand-copied second list drifted
+// within one commit of being written.
+const VIA_COMMERCIAL_TAIL = [
+  ['How are the campaigns doing?', 'google_ads'],
+  ['Are our domains all valid?', 'website_hosting'],
+  ['Which websites do we run?', 'website_hosting'],
+  ['Are the servers healthy?', 'website_hosting'],
+  ['Show me the archives', 'brain_keeper'],
+  ['Draft some published posts', 'social_content_builder'],
+  ['Which shortlists are we on?', 'ai_recommendation_visibility'],
+  ['Tell me about the demonstrations', 'ai_demonstration_builder'],
+  ['Where are the control packs?', 'ai_workspace_builder']
+];
+const VIA_CONFIDENTIAL_TAIL = [
+  ['What are our prospects?', 'opportunity_builder'],
+  ['Which proposals are outstanding?', 'opportunity_builder']
+];
+
 test('an ordinary question about opportunities reaches the Opportunity Builder lane', () => {
   // The defect: the rule read /\b(opportunit|...)\b/i, so the stem had to
   // be followed by a word boundary and "opportunity"/"opportunities"
@@ -214,28 +233,13 @@ test('the missed plurals now route, and the confidential lanes gain none of them
   // cannot leak by winning earlier. That reasoning was measured wrong
   // twice (it defeated the money rule and it pre-empted later lanes), so
   // do not reinstate it: the test below forbids exactly that edit.
-  const viaCommercialTail = [
-    ['How are the campaigns doing?', 'google_ads'],
-    ['Are our domains all valid?', 'website_hosting'],
-    ['Which websites do we run?', 'website_hosting'],
-    ['Are the servers healthy?', 'website_hosting'],
-    ['Show me the archives', 'brain_keeper'],
-    ['Draft some published posts', 'social_content_builder'],
-    ['Which shortlists are we on?', 'ai_recommendation_visibility'],
-    ['Tell me about the demonstrations', 'ai_demonstration_builder'],
-    ['Where are the control packs?', 'ai_workspace_builder']
-  ];
-  for (const [q, laneId] of viaCommercialTail) {
+  for (const [q, laneId] of VIA_COMMERCIAL_TAIL) {
     assert.equal(routeToLane(q), laneId, `plural should route: ${q}`);
   }
 
   // The confidential-ceiling lanes are in the same tail, and route the
   // same way: when nothing else wants the question...
-  const viaTail = [
-    ['What are our prospects?', 'opportunity_builder'],
-    ['Which proposals are outstanding?', 'opportunity_builder'],
-  ];
-  for (const [q, laneId] of viaTail) {
+  for (const [q, laneId] of VIA_CONFIDENTIAL_TAIL) {
     assert.equal(routeToLane(q), laneId, `tail plural should route: ${q}`);
   }
 
@@ -513,7 +517,7 @@ test('every rule is pinned to its exact pattern and flags, not merely re-probed'
     'google_ads::i::\\bcampaigns\\b',
     'ai_workspace_builder::i::\\b(workspaces|control packs|brain gap standards|acceptance plans|implementation briefs)\\b',
     'website_hosting::i::\\b(websites|deploys|domains|servers|checkouts|seo tags)\\b',
-    'opportunity_builder::i::\\b(opportunit(?:y|ies)(?! costs?\\b)|prospects|proposals|commercial conversations)\\b'
+    'opportunity_builder::i::\\b(opportunit(?:y(?![-\\s]cost)|ies)|prospects|proposals|commercial conversations)\\b'
   ]);
 });
 
@@ -711,24 +715,24 @@ test('an ambiguous plural is not repaired into a confidential lane', () => {
   assert.equal(routeToLane('Which proposals are outstanding?'), 'opportunity_builder');
 });
 
-test('every viaCommercialTail probe really is answered by a tail rule', () => {
-  // The list's comment claims each entry exercises the tail. One did not:
-  // "what is in the workspace control packs?" matched head rule nine's
-  // bare word "workspace", so it stayed green with the tail
+test('every tail probe really is answered by a tail rule, checked against the arrays themselves', () => {
+  // The guard on the probes. One entry used to be answered by head rule
+  // nine's bare word "workspace", so it stayed green with the tail
   // ai_workspace_builder rule deleted and proved nothing about it.
   //
-  // Checked against the table rather than by eye: for each probe, no head
-  // rule may match it, and some tail rule must.
+  // A first version of this guard re-listed the probes by hand, which is
+  // the same mistake one layer along: the copy had already drifted (it
+  // was missing the domains probe) and restoring the bad entry to the
+  // real array left every test green. It now reads the SAME arrays the
+  // assertions use, so a probe cannot be added without being checked.
   const table = orchestrator.__routingTableForTests;
   const head = table.filter((r) => !r.tail).map((r) => new RegExp(r.source, r.flags));
   const tail = table.filter((r) => r.tail).map((r) => new RegExp(r.source, r.flags));
-  for (const q of [
-    'How are the campaigns doing?', 'Which websites do we run?', 'Are the servers healthy?',
-    'Show me the archives', 'Draft some published posts', 'Which shortlists are we on?',
-    'Tell me about the demonstrations', 'Where are the control packs?',
-    'What are our prospects?', 'Which proposals are outstanding?'
-  ]) {
-    assert.ok(!head.some((re) => re.test(q)), `a head rule already answers this probe, so it proves nothing about the tail: ${q}`);
+  const probes = [...VIA_COMMERCIAL_TAIL, ...VIA_CONFIDENTIAL_TAIL];
+  assert.ok(probes.length >= tail.length, 'fewer probes than tail rules');
+  for (const [q] of probes) {
+    assert.ok(!head.some((re) => re.test(q)),
+      `a head rule already answers this probe, so it proves nothing about the tail: ${q}`);
     assert.ok(tail.some((re) => re.test(q)), `no tail rule answers this probe: ${q}`);
   }
 });
@@ -745,8 +749,22 @@ test('opportunity cost is a finance term, not a pipeline reference', () => {
   ]) {
     assert.equal(routeToLane(q), null, `a fixed finance term must not reach the opportunity lane: ${q}`);
   }
-  // The lookahead must not swallow ordinary use.
-  for (const q of ['What commercial opportunities are live right now?', 'Is there any opportunity worth chasing?', 'opportunities', 'opportunity']) {
+  // The hyphen and the -ing form are the same fixed term.
+  for (const q of ['What is the opportunity-cost of pausing?', 'opportunity costing', 'the opportunity costs are high']) {
+    assert.equal(routeToLane(q), null, `the fixed term in another shape must not route: ${q}`);
+  }
+  // The exclusion must not swallow ordinary use, and it hangs off the
+  // SINGULAR branch only because English separates the two senses by
+  // number: "opportunity cost" is the fixed noun phrase, "opportunities
+  // cost" is a plural noun and a verb. A first attempt put the lookahead
+  // after the whole group and blocked the verb sense too, so the two
+  // questions below stopped routing, losing the opportunity records for
+  // exactly the kind of question this change exists to route.
+  for (const q of [
+    'What commercial opportunities are live right now?', 'Is there any opportunity worth chasing?',
+    'opportunities', 'opportunity',
+    'Which opportunities cost us the most to pursue?', 'How much do these opportunities cost?'
+  ]) {
     assert.equal(routeToLane(q), 'opportunity_builder', `ordinary use must still route: ${q}`);
   }
 });
