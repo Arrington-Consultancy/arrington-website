@@ -306,14 +306,15 @@ test('the exported general source classes cannot be mutated by a caller', () => 
 });
 
 
-test('deleting the dead stem from rule three changed no routing', () => {
-  // The stem 'opportunit' could never match either real spelling, which
-  // is why the obvious phrasing reached no lane. It was not literally
-  // unmatchable: it matched the bare non-word "opportunit" and shapes
-  // like "opportunit-led", which nobody types, and an earlier version of
-  // this comment overclaimed by calling it provably dead. Both halves are
-  // pinned: the subjects rule three really does own still route to it,
-  // and both real spellings still route via the tail.
+test('deleting the stem from rule three changed no routing a person would produce', () => {
+  // The stem could never match either real spelling, which is why the
+  // obvious phrasing reached no lane. It was NOT unmatchable, and this
+  // test is titled for what it actually establishes: "opportunit" and
+  // "opportunit-led" did reach the lane before and reach no lane now.
+  // Neither is a phrase a person produces, so the change is neutral for
+  // real input and is not neutral in the absolute. Both halves of what
+  // matters are pinned: the subjects rule three really does own still
+  // route to it, and both real spellings still route via the tail.
   for (const q of ['Any new leads?', 'that prospect', 'the pipeline', 'the proposal', 'ivybridge', 'icabbi']) {
     assert.equal(routeToLane(q), 'opportunity_builder', `rule three lost a subject it owns: ${q}`);
   }
@@ -473,7 +474,7 @@ test('the tail is ordered narrowest lane first, derived from lanes.js rather tha
   assert.equal(routeToLane('opportunities and permissions'), 'opportunity_builder');
 });
 
-test('the head rules are pinned to their exact patterns, not merely re-probed', () => {
+test('every rule is pinned to its exact pattern and flags, not merely re-probed', () => {
   // A test that only re-runs probes stays green when a keyword is ADDED:
   // putting 'deployment' into rule two would move "is the deployment
   // healthy?" out of the general context and into website_hosting, losing
@@ -484,8 +485,15 @@ test('the head rules are pinned to their exact patterns, not merely re-probed', 
   // and a rule that lost 'i' would pass too, because every probe in this
   // file is lowercase. If a rule legitimately needs to change, this fails
   // and the change gets read.
-  const head = orchestrator.__routingTableForTests.slice(0, 9);
-  assert.deepEqual(head.map((r) => `${r.laneId}::${r.flags}::${r.source}`), [
+  const table = orchestrator.__routingTableForTests;
+  // Every rule, head AND tail. An earlier version pinned only the head,
+  // which left the tail open to both hazards this test exists for:
+  // adding 'deployment' to the tail website_hosting rule moved "is the
+  // deployment healthy?" out of the general context and lost the finance
+  // record with every test green, and a 'g' flag on the tail campaigns
+  // rule made routeToLane alternate google_ads / null / google_ads on
+  // identical input, also with every test green.
+  assert.deepEqual(table.map((r) => `${r.laneId}::${r.flags}::${r.source}`), [
     'google_ads::i::\\b(google ads|paid (ads|advertising|media)|ppc|adwords|campaign|cost per (lead|click)|conversion tracking)\\b',
     'website_hosting::i::\\b(website|hosting|deploy|railway|github|domain|dns|cms|server|stripe|checkout|seo tag)\\b',
     'opportunity_builder::i::\\b(lead(s)?\\b|prospect|pipeline|proposal|commercial conversation|ivybridge|icabbi)\\b',
@@ -494,6 +502,15 @@ test('the head rules are pinned to their exact patterns, not merely re-probed', 
     'social_content_builder::i::\\b(linkedin|social (content|post|media)|story bank|published post)\\b',
     'ai_recommendation_visibility::i::\\b(ai (visibility|recommendation)|cited by ai|chatgpt recommend|shortlist)\\b',
     'ai_demonstration_builder::i::\\b(scott|demonstration|armchair|knitting|fictional)\\b',
-    'ai_workspace_builder::i::\\b(workspace|control pack|brain gap standard|acceptance plan|implementation brief)\\b'
+    'ai_workspace_builder::i::\\b(workspace|control pack|brain gap standard|acceptance plan|implementation brief)\\b',
+    'social_content_builder::i::\\b(social posts|story banks|published posts)\\b',
+    'ai_demonstration_builder::i::\\b(demonstrations|armchairs)\\b',
+    'ai_recommendation_visibility::i::\\b(shortlists|ai recommendations)\\b',
+    'brain_keeper::i::\\b(archives|handoff standards|document statuses)\\b',
+    'google_ads::i::\\bcampaigns\\b',
+    'ai_workspace_builder::i::\\b(workspaces|control packs|brain gap standards|acceptance plans|implementation briefs)\\b',
+    'website_hosting::i::\\b(websites|deploys|domains|servers|checkouts|seo tags)\\b',
+    'opportunity_builder::i::\\b(opportunit(?:y|ies)|prospects|pipelines|proposals|commercial conversations)\\b',
+    'governance_assurance::i::\\b(permissions|clearances|audits|rulebooks|stop decisions)\\b'
   ]);
 });
