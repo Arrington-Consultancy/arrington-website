@@ -17,6 +17,8 @@
 <div class="ws-card">
   <h2>Upload an ANNA statement</h2>
   <p class="ws-body-text">In the ANNA app, type <strong>"Get an account statement"</strong>, choose a period (a single month, or your full history since the account opened), and choose <strong>CSV</strong>. Upload that file below. Re-uploading a period you have already imported is safe: matching transactions are recognised and not duplicated.</p>
+  <p class="ws-meta">The statement export lives in the ANNA app rather than on this page, because ANNA publishes no developer API for a third party to pull it: <a href="https://anna.money/" target="_blank" rel="noopener noreferrer">open ANNA</a> and sign in there. Nothing on this page ever holds your ANNA login.</p>
+  <p class="ws-meta">Until a statement is imported, the Company Brain holds no banking data at all, so asking the Workspace about costs will honestly tell you it has nothing on file rather than estimating.</p>
   <form id="wsAnnaImportForm" class="ws-form-row">
     <input class="ws-input" type="file" id="wsAnnaCsvFile" accept=".csv,text/csv">
     <button class="ws-btn" type="submit">Import statement</button>
