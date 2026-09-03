@@ -1222,8 +1222,13 @@ remains available, built exactly as before, but now explicitly optional
 adopts Xero for its own accounting independent of this Workspace, that
 connector is already there.
 
-**Rebuilt on the same branch,
-`feature/arrington-workspace-finance-anna-xero`, still not merged:**
+**Rebuilt on branch `feature/arrington-workspace-finance-anna-xero`,
+which IS now merged and live.** It reached `main` in merge `72d28d8` and
+shipped with the production deploy of 03/09/2026, so `/workspace/finance`
+is a real page in the Workspace nav ("Finance") today, not a candidate.
+Two paragraphs below used to say the branch was never merged or deployed
+and were simply not updated when it landed; they are corrected in place.
+Nothing about the design changed, only the claim about where it lives.
 
 - `lib/workspace/finance/registry.js` - two providers now.
   `anna_statement_csv` has no `credentialEnv` at all and
@@ -1285,7 +1290,9 @@ connector is already there.
   `('anna_statement_csv', 'xero')` on both the accounts and
   transactions tables (`VARCHAR(20)` -> `VARCHAR(30)` to fit the longer
   id); new `recurring_estimated BOOLEAN` column. Rewritten in place
-  rather than migrated, since this branch was never merged or deployed.
+  rather than migrated. That was safe when written, because the branch
+  had not yet been merged or deployed; it has been since, so a further
+  change to those columns needs a real migration rather than a rewrite.
 - `routes/workspace.js` / `views/workspace/finance.ejs` - the primary
   flow is now a file upload ("Upload an ANNA statement": an
   `<input type=file>`, read client-side with `FileReader.readAsText()`,
