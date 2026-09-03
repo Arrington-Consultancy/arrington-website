@@ -171,8 +171,9 @@ reviewer measured both:
 
 **Corrected** by making the treatment uniform: every inflection repair
 now lives in the tail, and rules one to nine route exactly as they did at
-the base, asserted by test. The only edit to them is the deletion of one
-unable to match either real spelling alternative that could never match.
+the base for any question a person would produce, asserted by test. The
+only edit to them is the deletion of the `opportunit` stem, which could
+not match either real spelling.
 
 **What this did NOT correct, stated because an earlier draft of this
 record implied otherwise and contradicted A4.** Moving the repairs to the
@@ -215,7 +216,7 @@ to ignore the records the change exists to preserve.
 
 ## Evidence
 
-- **Red-then-green, and mutation-tested.** Of the nineteen routing tests,
+- **Red-then-green, and mutation-tested.** Of the twenty-one routing tests,
   six were watched failing against the base orchestrator at `533dd5e` and
   passing after. Others were watched failing against the intermediate
   heads that carried the regressions they were written for, which is the
@@ -274,9 +275,15 @@ failing suite is not evidence of a defect until its cause is established.
   unverified here. This sandbox cannot reach the live domain, and a real
   call is Tom's spend.
 - **No production verification.** The change is not on `main`.
-- **The remaining vocabulary gaps.** "deployment" still reaches no lane,
-  because it is a new keyword rather than an inflection, and adding
-  vocabulary widens which questions route. Left for a separate decision.
+- **The remaining vocabulary gaps, now named rather than gestured at.**
+  Five governance words (permissions, clearances, audits, rulebooks, stop
+  decisions) are deliberately unrepaired, for the truncation reason
+  above. Two inflections of head keywords still reach no lane, "brain
+  indexes" and "chatgpt recommends", and were not repaired because the
+  claim being made is that what IS repaired lives in the tail, not that
+  the class is exhausted. "deployment" reaches no lane because it is new
+  vocabulary rather than an inflection, and adding vocabulary widens which
+  questions route. All left for a separate decision.
 
 ---
 

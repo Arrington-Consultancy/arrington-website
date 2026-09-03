@@ -228,9 +228,6 @@ test('the missed plurals now route, and the confidential lanes gain none of them
     ['What are our prospects?', 'opportunity_builder'],
     ['Which proposals are outstanding?', 'opportunity_builder'],
     ['How are the pipelines looking?', 'opportunity_builder'],
-    ['What permissions does the content role have?', 'governance_assurance'],
-    ['Show me the audits', 'governance_assurance'],
-    ['Which clearances exist?', 'governance_assurance']
   ];
   for (const [q, laneId] of viaTail) {
     assert.equal(routeToLane(q), laneId, `tail plural should route: ${q}`);
@@ -240,7 +237,6 @@ test('the missed plurals now route, and the confidential lanes gain none of them
   // is the property that keeps the repair inside least privilege.
   const notPreEmpted = [
     ['Draft a LinkedIn post about our prospects', 'social_content_builder'],
-    ['Draft a LinkedIn post about our audits', 'social_content_builder'],
     ['Which Drive document holds the proposals?', 'brain_keeper'],
     ['Is the website deploy blocked by permissions?', 'website_hosting']
   ];
@@ -248,21 +244,17 @@ test('the missed plurals now route, and the confidential lanes gain none of them
     assert.equal(routeToLane(q), laneId, `the tail must not pre-empt a specific lane: ${q}`);
   }
 
-  // The governance plurals move a question that used to get the general
-  // context into the one lane that reads every source class. That is a
-  // widening of the task-necessity leg, so it is measured rather than
-  // assumed: the lane is the correct owner of the word, and the human
-  // clearance leg still gates every record it returns.
-  return withStubbedRecords(async () => {
-    const general = keysOf(await buildLaneContext({ clearanceId: 'owner_admin', laneId: null }));
-    const gov = keysOf(await buildLaneContext({ clearanceId: 'owner_admin', laneId: routeToLane('Show me the audits') }));
-    assert.ok(gov.length > general.length, 'expected the governance lane to be the wider context here');
-    // ...and a reader without the confidential ceiling still gets nothing
-    // confidential out of it, which is the property that matters.
-    const restricted = await buildLaneContext({ clearanceId: 'ws_restricted', laneId: routeToLane('Show me the audits') });
-    assert.ok(restricted.every((r) => r.sensitivity === 'standard'),
-      'the widened lane must still be gated by human clearance');
-  });
+  // The governance plurals are NOT repaired, and this pins the decision.
+  // Routing them to governance_assurance would have been the correct
+  // owner of the words, but that lane reads all eight source classes and
+  // its context overflows MAX_CONTEXT_RECORDS, so buildLaneContext's
+  // blind slice drops the alphabetically-last classes. Measured on a full
+  // record set, "which clearances exist?" lost worker_register entirely,
+  // which the general context keeps. A widening that also truncates the
+  // answer is not a repair.
+  for (const q of ['Which clearances exist?', 'Show me the audits', 'What permissions does the content role have?']) {
+    assert.equal(routeToLane(q), null, `governance plurals must still reach the general context: ${q}`);
+  }
 });
 
 
@@ -402,7 +394,7 @@ const HEAD_SUBJECTS = [
 ];
 const TAIL_SUBJECTS = [
   'campaigns', 'websites', 'archives', 'social posts', 'shortlists',
-  'demonstrations', 'workspaces', 'opportunities', 'permissions'
+  'demonstrations', 'workspaces', 'opportunities'
 ];
 
 test('the probe lists cover every rule in the real table, so no rule can escape the checks below', () => {
@@ -412,10 +404,15 @@ test('the probe lists cover every rule in the real table, so no rule can escape 
   // tests green while inverting routing. Coverage is now asserted against
   // the table itself rather than assumed.
   const table = orchestrator.__routingTableForTests;
-  const head = table.slice(0, 9);
-  const tail = table.slice(9);
+  const head = table.filter((r) => !r.tail);
+  const tail = table.filter((r) => r.tail);
 
+  // Derived from the table's own flag, never a hardcoded index: an
+  // earlier version sliced at 9, which made the length assertions below
+  // unconditionally true and would have classified a newly added head
+  // rule as the first tail rule, quietly dropping it from the checks.
   assert.equal(head.length + tail.length, table.length);
+  assert.ok(head.length > 0 && tail.length > 0);
   assert.equal(HEAD_SUBJECTS.length, head.length, 'a head rule has no probe');
   assert.equal(TAIL_SUBJECTS.length, tail.length, 'a tail rule has no probe');
 
@@ -451,7 +448,7 @@ test('the tail is ordered narrowest lane first, derived from lanes.js rather tha
   // which contradicted that: "draft social posts about our campaigns"
   // reached google_ads rather than social_content_builder.
   const { laneById, SENSITIVITY_ORDER } = require('../../lib/workspace/lanes');
-  const tail = orchestrator.__routingTableForTests.slice(9);
+  const tail = orchestrator.__routingTableForTests.filter((r) => r.tail);
   // Ceiling outranks breadth. Ordered by breadth alone,
   // opportunity_builder (four classes, confidential) preceded
   // website_hosting (five classes, commercial), so "which proposals
@@ -471,7 +468,7 @@ test('the tail is ordered narrowest lane first, derived from lanes.js rather tha
     'a confidential tail lane pre-empted a commercial one');
   // And the behaviour that ordering exists for.
   assert.equal(routeToLane('Draft social posts about our campaigns'), 'social_content_builder');
-  assert.equal(routeToLane('opportunities and permissions'), 'opportunity_builder');
+  assert.equal(routeToLane('opportunities and websites'), 'website_hosting');
 });
 
 test('every rule is pinned to its exact pattern and flags, not merely re-probed', () => {
@@ -510,8 +507,7 @@ test('every rule is pinned to its exact pattern and flags, not merely re-probed'
     'google_ads::i::\\bcampaigns\\b',
     'ai_workspace_builder::i::\\b(workspaces|control packs|brain gap standards|acceptance plans|implementation briefs)\\b',
     'website_hosting::i::\\b(websites|deploys|domains|servers|checkouts|seo tags)\\b',
-    'opportunity_builder::i::\\b(opportunit(?:y|ies)|prospects|pipelines|proposals|commercial conversations)\\b',
-    'governance_assurance::i::\\b(permissions|clearances|audits|rulebooks|stop decisions)\\b'
+    'opportunity_builder::i::\\b(opportunit(?:y|ies)|prospects|pipelines|proposals|commercial conversations)\\b'
   ]);
 });
 
