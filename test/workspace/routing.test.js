@@ -307,11 +307,13 @@ test('the exported general source classes cannot be mutated by a caller', () => 
 
 
 test('deleting the dead stem from rule three changed no routing', () => {
-  // The stem 'opportunit' could never match, so removing it is
-  // behaviour-neutral, and leaving it invited someone to trust rule three
-  // and delete the tail entry. Both halves pinned: the subjects rule
-  // three really does own still route to it, and both spellings of the
-  // word still route via the tail.
+  // The stem 'opportunit' could never match either real spelling, which
+  // is why the obvious phrasing reached no lane. It was not literally
+  // unmatchable: it matched the bare non-word "opportunit" and shapes
+  // like "opportunit-led", which nobody types, and an earlier version of
+  // this comment overclaimed by calling it provably dead. Both halves are
+  // pinned: the subjects rule three really does own still route to it,
+  // and both real spellings still route via the tail.
   for (const q of ['Any new leads?', 'that prospect', 'the pipeline', 'the proposal', 'ivybridge', 'icabbi']) {
     assert.equal(routeToLane(q), 'opportunity_builder', `rule three lost a subject it owns: ${q}`);
   }
@@ -447,13 +449,25 @@ test('the tail is ordered narrowest lane first, derived from lanes.js rather tha
   // An earlier version ordered the commercial group by register order,
   // which contradicted that: "draft social posts about our campaigns"
   // reached google_ads rather than social_content_builder.
-  const { laneById } = require('../../lib/workspace/lanes');
+  const { laneById, SENSITIVITY_ORDER } = require('../../lib/workspace/lanes');
   const tail = orchestrator.__routingTableForTests.slice(9);
-  const widths = tail.map((r) => laneById(r.laneId).sourceClasses.length);
-  for (let i = 1; i < widths.length; i += 1) {
-    assert.ok(widths[i] >= widths[i - 1],
-      `tail rule ${i} (${tail[i].laneId}, ${widths[i]} classes) is wider than the one before it (${tail[i - 1].laneId}, ${widths[i - 1]})`);
+  // Ceiling outranks breadth. Ordered by breadth alone,
+  // opportunity_builder (four classes, confidential) preceded
+  // website_hosting (five classes, commercial), so "which proposals
+  // relate to our websites?" reached the confidential lane. Fewer classes
+  // is not narrower if one of them is confidential.
+  const rank = (laneId) => {
+    const lane = laneById(laneId);
+    return [SENSITIVITY_ORDER.indexOf(lane.sensitivityCeiling), lane.sourceClasses.length];
+  };
+  for (let i = 1; i < tail.length; i += 1) {
+    const [prevCeiling, prevWidth] = rank(tail[i - 1].laneId);
+    const [ceiling, width] = rank(tail[i].laneId);
+    assert.ok(ceiling > prevCeiling || (ceiling === prevCeiling && width >= prevWidth),
+      `tail rule ${i} (${tail[i].laneId}) outranks the one before it (${tail[i - 1].laneId}) on ceiling then breadth`);
   }
+  assert.equal(routeToLane('Which proposals relate to our websites?'), 'website_hosting',
+    'a confidential tail lane pre-empted a commercial one');
   // And the behaviour that ordering exists for.
   assert.equal(routeToLane('Draft social posts about our campaigns'), 'social_content_builder');
   assert.equal(routeToLane('opportunities and permissions'), 'opportunity_builder');
@@ -464,18 +478,22 @@ test('the head rules are pinned to their exact patterns, not merely re-probed', 
   // putting 'deployment' into rule two would move "is the deployment
   // healthy?" out of the general context and into website_hosting, losing
   // the finance record, with every probe still passing. The head rules
-  // are therefore pinned literally. If one legitimately needs to change,
-  // this fails and the change gets read.
+  // are therefore pinned literally, FLAGS INCLUDED: a rule rewritten with
+  // 'g' would pass a source-only pin while making pattern.test() stateful
+  // through lastIndex, so routing would differ between identical calls;
+  // and a rule that lost 'i' would pass too, because every probe in this
+  // file is lowercase. If a rule legitimately needs to change, this fails
+  // and the change gets read.
   const head = orchestrator.__routingTableForTests.slice(0, 9);
-  assert.deepEqual(head.map((r) => `${r.laneId}::${r.source}`), [
-    'google_ads::\\b(google ads|paid (ads|advertising|media)|ppc|adwords|campaign|cost per (lead|click)|conversion tracking)\\b',
-    'website_hosting::\\b(website|hosting|deploy|railway|github|domain|dns|cms|server|stripe|checkout|seo tag)\\b',
-    'opportunity_builder::\\b(lead(s)?\\b|prospect|pipeline|proposal|commercial conversation|ivybridge|icabbi)\\b',
-    'brain_keeper::\\b(drive|brain (index|structure|maintenance)|document status|superseded|archive|handoff standard)\\b',
-    'governance_assurance::\\b(governance|assurance|constitution|permission|clearance|audit|stop decision|compliance|rulebook)\\b',
-    'social_content_builder::\\b(linkedin|social (content|post|media)|story bank|published post)\\b',
-    'ai_recommendation_visibility::\\b(ai (visibility|recommendation)|cited by ai|chatgpt recommend|shortlist)\\b',
-    'ai_demonstration_builder::\\b(scott|demonstration|armchair|knitting|fictional)\\b',
-    'ai_workspace_builder::\\b(workspace|control pack|brain gap standard|acceptance plan|implementation brief)\\b'
+  assert.deepEqual(head.map((r) => `${r.laneId}::${r.flags}::${r.source}`), [
+    'google_ads::i::\\b(google ads|paid (ads|advertising|media)|ppc|adwords|campaign|cost per (lead|click)|conversion tracking)\\b',
+    'website_hosting::i::\\b(website|hosting|deploy|railway|github|domain|dns|cms|server|stripe|checkout|seo tag)\\b',
+    'opportunity_builder::i::\\b(lead(s)?\\b|prospect|pipeline|proposal|commercial conversation|ivybridge|icabbi)\\b',
+    'brain_keeper::i::\\b(drive|brain (index|structure|maintenance)|document status|superseded|archive|handoff standard)\\b',
+    'governance_assurance::i::\\b(governance|assurance|constitution|permission|clearance|audit|stop decision|compliance|rulebook)\\b',
+    'social_content_builder::i::\\b(linkedin|social (content|post|media)|story bank|published post)\\b',
+    'ai_recommendation_visibility::i::\\b(ai (visibility|recommendation)|cited by ai|chatgpt recommend|shortlist)\\b',
+    'ai_demonstration_builder::i::\\b(scott|demonstration|armchair|knitting|fictional)\\b',
+    'ai_workspace_builder::i::\\b(workspace|control pack|brain gap standard|acceptance plan|implementation brief)\\b'
   ]);
 });

@@ -215,13 +215,21 @@ to ignore the records the change exists to preserve.
 
 ## Evidence
 
-- **Red-then-green, against two heads.** Six of the eighteen routing
-  tests were watched failing against the base orchestrator at `533dd5e`
-  and passing after. Three of them were additionally watched failing
-  against the intermediate head that carried the A5 and A6 regressions,
-  which is the stronger control: they catch the specific defect they were
-  written for, not merely the absence of the whole feature. A test that
-  has not been seen red is not evidence.
+- **Red-then-green, and mutation-tested.** Of the nineteen routing tests,
+  six were watched failing against the base orchestrator at `533dd5e` and
+  passing after. Others were watched failing against the intermediate
+  heads that carried the regressions they were written for, which is the
+  stronger control: they catch the specific defect, not merely the absence
+  of the whole feature.
+  The four structural guards were additionally MUTATION-TESTED against
+  the exact attacks reviewers used to defeat their predecessors: hoisting
+  a tail rule to the top of the table (now fails four tests), adding a
+  keyword to a head rule (fails one), rewriting a head rule with the `g`
+  flag, which makes `pattern.test()` stateful and routing
+  non-deterministic (fails four), and ordering the tail by breadth while
+  ignoring the sensitivity ceiling (fails one). A test that has not been
+  seen red is not evidence, and a guard that has not been attacked is not
+  a guard.
 - **Four structural tests, and a guard on the guards.** Example-based
   checks in this very file passed while the property they were named for
   was false, three times. The current set is derived from the real rule
