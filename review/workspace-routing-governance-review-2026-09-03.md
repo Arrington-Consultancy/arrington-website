@@ -51,17 +51,37 @@ rule and risk annex.
 | Unnecessary complexity | One structure added: a low-precedence tail. Justified below; it exists to avoid a permission widening, not for elegance. |
 
 One qualification, stated because the criteria table would otherwise
-overstate the verdict. The tail routes some questions that previously
-reached the general context into a lane, and for the two
-confidential-ceiling lanes that is a wider context than the general one:
-"show me the audits" moves from a four-class general context to
-`governance_assurance`, which reads every source class. No lane gained a
-permission, no human clearance changed, and the clearance leg still gates
-every record returned, which a test asserts with a positive control. But
-task necessity is a permission leg, and routing a question to a wider
-lane widens it. That is the correct owner of the word "audits", so it is
-recorded as a deliberate and bounded consequence rather than claimed to
-be no change at all.
+overstate the verdict, and stated at its real width rather than only in
+the finance shape four review rounds discussed.
+
+`buildLaneContext` applies NO sensitivity ceiling on the no-lane path and
+applies the lane's ceiling on every other. So routing a question into any
+of the seven commercial-ceiling tail lanes silently drops every
+CONFIDENTIAL record it would otherwise have seen, in any source class.
+Finance keeps surfacing because it is granted to a single lane, but it is
+not special: a confidential strategy record, in a class every lane reads,
+behaves identically. Measured, pinned by test with a positive control,
+and recorded here rather than left as a finance footnote.
+
+No lane gained a permission and no human clearance changed. But task
+necessity is a permission leg, and routing a question to a lane changes
+what it may see, in both directions: wider in subject matter, narrower in
+sensitivity.
+
+**The governance plurals were dropped rather than shipped for the related
+reason.** Repairing permissions, clearances, audits, rulebooks and stop
+decisions into `governance_assurance` would have been the correct owner
+of those words, but that lane reads all eight source classes and its
+context overflows `MAX_CONTEXT_RECORDS`; `buildLaneContext` truncates with
+a blind slice and `listRecords` orders by `source_class` ascending, so the
+alphabetically-last classes are dropped. Measured on the real 29-record
+snapshot, that lane reaches 28 records against a cap of 24, and "which
+clearances exist?" lost `worker_register` entirely, which the general
+context keeps. A widening that also truncates the answer is not a repair.
+Those five words route exactly as they did at the base, and a test
+asserts it. The lanes the tail does route into were measured for the same
+hazard: the widest reach 23 against the cap of 24, under it by one record,
+which is worth re-measuring before the snapshot grows.
 
 **No STOP condition identified.** No breach of the Constitution, the
 human approval boundary, or the effective-context rule.
@@ -220,7 +240,7 @@ to ignore the records the change exists to preserve.
 
 ## Evidence
 
-- **Red-then-green, and mutation-tested.** Of the twenty-one routing tests,
+- **Red-then-green, and mutation-tested.** Of the twenty-three routing tests,
   six were watched failing against the base orchestrator at `533dd5e` and
   passing after. Others were watched failing against the intermediate
   heads that carried the regressions they were written for, which is the
@@ -262,8 +282,12 @@ to ignore the records the change exists to preserve.
   deletion of the dead `opportunit` stem, which could never match and
   whose presence invited someone to trust that rule, delete the tail
   entry, and silently reinstate the original defect.
-- **Suites.** Workspace 204 tests, 202 pass, 0 fail, 2 skipped (the two
-  gated suites). Scott 411 pass, 0 fail, 0 skipped. Guards
+- **Suites.** Measured with `DATABASE_URL` set: workspace 207 tests, 205
+  pass, 0 fail, 2 skipped (the two gated suites); Scott 411 pass, 0 fail;
+  guards 11 pass, 0 fail. Without a database the workspace suite reports
+  fewer tests and one more skip, because three suites gate on it, and the
+  repository's 21 pre-existing CRM and erasure failures appear; those are
+  identical on `main` and this branch adds none. Scott 411 pass, 0 fail, 0 skipped. Guards
   (`noEmDashes`, `gatedSuites`, `gatedSuiteScan`) 11 pass, 0 fail.
 
 One caution worth recording: a mid-session Postgres outage produced 20

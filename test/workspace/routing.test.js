@@ -28,8 +28,15 @@ const RECORDS = [
   // "keeps finance" asserts routing and nothing else, and would stay
   // green if the general context stopped carrying finance entirely.
   { record_key: 'finance-summary', source_class: 'finance', sensitivity: 'confidential', doc_status: 'current', title: 'Bank position' },
-  { record_key: 'workspace-source-map', source_class: 'control_pack', sensitivity: 'commercial', doc_status: 'current', title: 'Source map' }
+  { record_key: 'workspace-source-map', source_class: 'control_pack', sensitivity: 'commercial', doc_status: 'current', title: 'Source map' },
+  // A confidential record in a class EVERY lane reads. Without it no test
+  // could catch the general form of the trade: the no-lane context
+  // applies no sensitivity ceiling, so routing into any
+  // commercial-ceiling lane silently drops this, not just finance.
+  { record_key: 'strategy-confidential', source_class: 'strategy', sensitivity: 'confidential', doc_status: 'current', title: 'Confidential strategy' }
 ];
+
+const CONFIDENTIAL_STRATEGY_KEY = 'strategy-confidential';
 
 const FINANCE_KEY = 'finance-summary';
 
@@ -600,4 +607,37 @@ test('the no-lane system prompt the model actually receives names no source clas
     if (prev.key === undefined) delete process.env.ANTHROPIC_API_KEY; else process.env.ANTHROPIC_API_KEY = prev.key;
     if (prev.flag === undefined) delete process.env.ENABLE_WORKSPACE_AI; else process.env.ENABLE_WORKSPACE_AI = prev.flag;
   }
+});
+
+test('routing into a commercial-ceiling lane drops every confidential record, not only finance', async () => {
+  // The general form of the trade, which four rounds of review discussed
+  // only in its finance shape. buildLaneContext applies no sensitivity
+  // ceiling on the no-lane path and applies the lane's ceiling on every
+  // other, so a confidential record in a class the lane reads is silently
+  // dropped the moment a question routes.
+  //
+  // Finance keeps surfacing because it is granted to a single lane, but
+  // it is not special: a confidential STRATEGY record, in a class every
+  // lane reads, behaves identically. Pinned so the cost is stated at its
+  // real width and so it fails if the ceiling model changes.
+  const { laneById } = require('../../lib/workspace/lanes');
+  await withStubbedRecords(async () => {
+    const general = keysOf(await buildLaneContext({ clearanceId: 'owner_admin', laneId: null }));
+    assert.ok(general.includes(CONFIDENTIAL_STRATEGY_KEY),
+      'positive control: the no-lane context applies no ceiling, so it carries the confidential record');
+
+    for (const rule of orchestrator.__routingTableForTests.filter((r) => r.tail)) {
+      const lane = laneById(rule.laneId);
+      if (lane.sensitivityCeiling !== 'commercial') continue;
+      const keys = keysOf(await buildLaneContext({ clearanceId: 'owner_admin', laneId: rule.laneId }));
+      assert.ok(!keys.includes(CONFIDENTIAL_STRATEGY_KEY),
+        `${rule.laneId} unexpectedly kept a confidential record; the ceiling model changed`);
+    }
+
+    // And concretely, on a question the tail newly routes.
+    assert.equal(routeToLane('How are the campaigns doing?'), 'google_ads');
+    const ads = keysOf(await buildLaneContext({ clearanceId: 'owner_admin', laneId: 'google_ads' }));
+    assert.ok(!ads.includes(CONFIDENTIAL_STRATEGY_KEY));
+    assert.ok(!ads.includes(FINANCE_KEY));
+  });
 });
