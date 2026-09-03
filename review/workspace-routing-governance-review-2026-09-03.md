@@ -78,9 +78,18 @@ of those words, but that lane reads all eight source classes and its
 context overflows `MAX_CONTEXT_RECORDS`; `buildLaneContext` truncates with
 a blind slice and `listRecords` orders by `source_class` ascending, so the
 alphabetically-last classes are dropped. Measured on the real 29-record
-snapshot, that lane reaches 28 records against a cap of 24, and "which
-clearances exist?" lost `worker_register` entirely, which the general
-context keeps. A widening that also truncates the answer is not a repair.
+snapshot, that lane reaches 28 records against a cap of 24 and loses the
+overflow off the alphabetical end, which is `worker_register`.
+
+**Corrected 03/09/2026, by re-measuring rather than re-reading.** This
+said the lane "lost `worker_register` entirely". It does not: the class
+sorts last, so the cap falls inside it, and 3 of its 8 records survive
+while 5 are dropped. The finding stands and the severity is unchanged,
+because a lane silently answering from five-eighths of the worker
+register is the same defect as one answering from none of it, and the
+reader cannot tell either has happened. Only the word "entirely" was
+wrong, and it was wrong in the direction that made the finding sound
+worse. A widening that also truncates the answer is not a repair.
 Those five words route exactly as they did at the base, and a test
 asserts it. The lanes the tail does route into were measured for the same
 hazard, because the distinction has to be a measurement rather than a
