@@ -66,9 +66,13 @@ const VIA_COMMERCIAL_TAIL = [
   ['Tell me about the demonstrations', 'ai_demonstration_builder'],
   ['Where are the control packs?', 'ai_workspace_builder']
 ];
+// The confidential tail rule carries exactly the one word Tom approved.
+// See the orchestrator comment: it is the only confidential-ceiling rule
+// in the tail, so any question whose own vocabulary was not repaired
+// falls past every commercial rule and lands on it.
 const VIA_CONFIDENTIAL_TAIL = [
-  ['What are our prospects?', 'opportunity_builder'],
-  ['Which proposals are outstanding?', 'opportunity_builder']
+  ['What commercial opportunities are live right now?', 'opportunity_builder'],
+  ['opportunities', 'opportunity_builder']
 ];
 
 test('an ordinary question about opportunities reaches the Opportunity Builder lane', () => {
@@ -246,8 +250,8 @@ test('the missed plurals now route, and the confidential lanes gain none of them
   // ...and never take a question from a lane that already wins it. This
   // is the property that keeps the repair inside least privilege.
   const notPreEmpted = [
-    ['Draft a LinkedIn post about our prospects', 'social_content_builder'],
-    ['Which Drive document holds the proposals?', 'brain_keeper'],
+    ['Draft a LinkedIn post about the opportunities we won', 'social_content_builder'],
+    ['Which Drive document holds the opportunity record?', 'brain_keeper'],
     ['Is the website deploy blocked by permissions?', 'website_hosting']
   ];
   for (const [q, laneId] of notPreEmpted) {
@@ -517,7 +521,7 @@ test('every rule is pinned to its exact pattern and flags, not merely re-probed'
     'google_ads::i::\\bcampaigns\\b',
     'ai_workspace_builder::i::\\b(workspaces|control packs|brain gap standards|acceptance plans|implementation briefs)\\b',
     'website_hosting::i::\\b(websites|deploys|domains|servers|checkouts|seo tags)\\b',
-    'opportunity_builder::i::\\b(opportunit(?:y(?![-\\s]cost)|ies)|prospects|proposals|commercial conversations)\\b'
+    'opportunity_builder::i::\\bopportunit(?:y(?![\\s-]*cost)|ies)\\b'
   ]);
 });
 
@@ -711,8 +715,7 @@ test('an ambiguous plural is not repaired into a confidential lane', () => {
   // commercial-pipeline question still routes.
   assert.equal(routeToLane('What is in the pipeline?'), 'opportunity_builder');
   // And the unambiguous siblings still route via the tail.
-  assert.equal(routeToLane('What are our prospects?'), 'opportunity_builder');
-  assert.equal(routeToLane('Which proposals are outstanding?'), 'opportunity_builder');
+  assert.equal(routeToLane('opportunities'), 'opportunity_builder');
 });
 
 test('every tail probe really is answered by a tail rule, checked against the arrays themselves', () => {
@@ -749,8 +752,8 @@ test('opportunity cost is a finance term, not a pipeline reference', () => {
   ]) {
     assert.equal(routeToLane(q), null, `a fixed finance term must not reach the opportunity lane: ${q}`);
   }
-  // The hyphen and the -ing form are the same fixed term.
-  for (const q of ['What is the opportunity-cost of pausing?', 'opportunity costing', 'the opportunity costs are high']) {
+  // The hyphen, the double space and the -ing form are the same term.
+  for (const q of ['What is the opportunity-cost of pausing?', 'opportunity costing', 'the opportunity costs are high', 'opportunity  cost']) {
     assert.equal(routeToLane(q), null, `the fixed term in another shape must not route: ${q}`);
   }
   // The exclusion must not swallow ordinary use, and it hangs off the
@@ -766,5 +769,37 @@ test('opportunity cost is a finance term, not a pipeline reference', () => {
     'Which opportunities cost us the most to pursue?', 'How much do these opportunities cost?'
   ]) {
     assert.equal(routeToLane(q), 'opportunity_builder', `ordinary use must still route: ${q}`);
+  }
+});
+
+test('the confidential tail rule carries only the approved word', () => {
+  // The lesson of the whole change, pinned so it cannot be undone by a
+  // well-meaning vocabulary repair. opportunity_builder is the only
+  // confidential-ceiling rule in the tail, so any question whose own
+  // vocabulary was not repaired falls past every commercial rule and
+  // lands on it. Earlier versions carried 'prospects', 'proposals' and
+  // 'commercial conversations' here, and "what proposals has the brain
+  // keeper archived?" reached no lane at the base and reached this lane,
+  // gaining both confidential opportunity records.
+  const tail = orchestrator.__routingTableForTests.filter((r) => r.tail);
+  const { laneById } = require('../../lib/workspace/lanes');
+  const confidential = tail.filter((r) => laneById(r.laneId).sensitivityCeiling === 'confidential');
+  assert.equal(confidential.length, 1, 'a second confidential lane gained a tail rule');
+  assert.equal(confidential[0].laneId, 'opportunity_builder');
+  assert.ok(/^\\bopportunit/.test(confidential[0].source),
+    'the confidential tail rule gained vocabulary beyond the approved word');
+
+  // Words whose plurals are NOT repaired keep the general context, which
+  // is the safe direction: they route as they did at the base.
+  for (const q of [
+    'What proposals has the brain keeper archived?',
+    'What are our prospects?',
+    'Which proposals are outstanding?'
+  ]) {
+    assert.equal(routeToLane(q), null, `an unrepaired plural must keep the general context: ${q}`);
+  }
+  // Their singulars are head keywords and are untouched.
+  for (const q of ['that prospect', 'the proposal', 'a commercial conversation']) {
+    assert.equal(routeToLane(q), 'opportunity_builder', `a head singular regressed: ${q}`);
   }
 });

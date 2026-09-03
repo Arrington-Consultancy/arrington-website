@@ -246,7 +246,7 @@ to ignore the records the change exists to preserve.
 
 ## Evidence
 
-- **Red-then-green, and mutation-tested.** Of the twenty-seven routing tests,
+- **Red-then-green, and mutation-tested.** Of the twenty-eight routing tests,
   six were watched failing against the base orchestrator at `533dd5e` and
   passing after. Others were watched failing against the intermediate
   heads that carried the regressions they were written for, which is the
@@ -303,6 +303,36 @@ failing suite is not evidence of a defect until its cause is established.
 
 ---
 
+## The finding that shaped the final candidate
+
+Five review rounds each found a different word whose plural, repaired
+into `opportunity_builder`, took a question that did not belong there:
+`pipelines` (infrastructure), `opportunity cost` (a fixed finance term),
+`campaigns` (email and social, not only paid), and then `proposals`
+arriving from a brain-keeper question. Each fix was correct and each
+exposed the next.
+
+That is not a run of unlucky words. **Vocabulary cannot decide which lane
+a question belongs to when the lanes differ in sensitivity ceiling.**
+`opportunity_builder` is the only confidential-ceiling rule in the tail,
+so any question whose own vocabulary was not repaired falls past every
+commercial rule and lands on it. The narrowest-first ordering cannot help,
+because it only orders the lanes whose vocabulary exists.
+
+So the confidential tail rule was narrowed to exactly the word Tom
+approved, and nothing else. The commercial-ceiling rules keep their
+repairs, because a question landing in the wrong COMMERCIAL lane costs
+subject matter, not confidentiality. `prospects`, `proposals`,
+`commercial conversations` and `pipelines` route exactly as they did at
+the base: their singulars reach the lane, their plurals reach the general
+context. That is an unrepaired inflection, not a regression, and it is
+recorded as remaining work rather than bought at this price.
+
+This is the same conclusion the money guard reached two sections above,
+arrived at independently: an enumeration cannot decide a question's
+meaning, and each round of widening buys one more edge case and one more
+review cycle.
+
 ## Recorded for separate work, outside this scope
 
 - **`LANES` is exported live and unfrozen** from `orchestrator.js`, and
@@ -341,7 +371,8 @@ failing suite is not evidence of a defect until its cause is established.
 - **The remaining vocabulary gaps, now named rather than gestured at.**
   Five governance words (permissions, clearances, audits, rulebooks, stop
   decisions) are deliberately unrepaired, for the truncation reason
-  above, and `pipelines` is deliberately unrepaired, and `opportunity cost`
+  above. So are `prospects`, `proposals`, `commercial conversations` and
+  `pipelines`, for the reason in the next section, and `pipelines` is deliberately unrepaired, and `opportunity cost`
   excluded by lookahead, because both are ambiguous: an infrastructure question ("our deployment pipelines")
   would have gained two confidential opportunity records. That is the one
   direction the tail's ceiling ordering cannot guard, since the general
