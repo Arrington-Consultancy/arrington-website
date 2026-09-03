@@ -1172,6 +1172,23 @@ already.**
 
    The function is `syncFromLeads`, not `syncContactsFromLeads`.
 
+### Every workspace screen smoke-tested (03/09/2026)
+
+All twelve screens fetched over real HTTP as `tom`, logged in and
+unlocked, against a freshly seeded throwaway database: `/workspace`,
+`/chat`, `/brain`, `/opportunities`, `/projects`, `/contacts`,
+`/social`, `/finance`, `/workforce`, `/approvals`, `/gaps`,
+`/activity`. All 200, no error page, **no `style="` attribute anywhere**
+(the CSP trap that has bitten the Finance view twice), nothing rendering
+`undefined` or `NaN`. The brain was unseeded in that environment, so
+this proves the pages render, not that they render real data.
+
+Worth knowing for the next person who greps: `/workspace/opportunities`
+and `/workspace/projects` are registered through `classPage(...)` in
+`routes/workspace.js`, not the `page(...)` helper the other ten use. A
+search for `page('/workspace` finds ten routes against twelve nav links
+and looks exactly like two broken nav items. They are not broken.
+
 ### Ruth failing on broad questions (fixed 03/09/2026)
 
 Tom asked Ruth "so where can we make some money? where are the gaps in
