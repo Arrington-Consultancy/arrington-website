@@ -955,10 +955,12 @@ candidate's pre-release state rather than corrected line by line.
   involved). `/workspace` is reachable at
   `https://www.arringtonconsultancy.com/workspace` for Tom's own login
   only, landing on `/workspace/unlock` until the passphrase is entered.
-  **Workspace AI is still off** (`ENABLE_WORKSPACE_AI` unset) — the
-  screens load but Ask Ruth and the AI-backed views won't answer until
-  that flag plus `ANTHROPIC_API_KEY` (already present, 108 chars) are
-  both live. The fast rollback for any workspace-specific concern is
+  **Workspace AI is now ON** (corrected 03/09/2026). The boot log of
+  production deployment `e0850aae` reads `Workspace AI:
+  ANTHROPIC_API_KEY present (108 chars); ENABLE_WORKSPACE_AI='true'`, so
+  Ask Ruth answers for real and every question spends money. This
+  paragraph said the flag was unset and was simply not updated when it
+  was turned on. The fast rollback for any workspace-specific concern is
   still unsetting `ENABLE_ARRINGTON_AI_WORKSPACE`, which returns to the
   fully-inert state with no code change.
 - Y1 and Y2 (both LOW, from the eighteenth review) are unchanged, per
@@ -1118,6 +1120,77 @@ unseeded brain rather than an empty one. Rebuild with
 **Workspace AI** is gated on its own flag (`ENABLE_WORKSPACE_AI`) plus
 `ANTHROPIC_API_KEY`, separate from every other AI switch on the site.
 Currently OFF in staging.
+
+### Ruth failing on broad questions (fixed 03/09/2026)
+
+Tom asked Ruth "so where can we make some money? where are the gaps in
+what we are doing?" on production and got **"Model reply broke the
+contract twice: no JSON object in reply"**. Reproduced exactly with a
+stubbed client before anything was changed, which is what identified it:
+the model was not writing bad JSON, it was writing correct JSON that did
+not fit in `max_tokens: 1500`, so the reply stopped mid-object and
+`parseReply`'s `/\{[\s\S]*\}/` found no closing brace. The corrective
+retry then asked it to "reply again with ONLY the JSON object" **at the
+same 1500 tokens**, so the second attempt failed identically. Both calls
+asked for the same room, which is the whole defect.
+
+`stop_reason` is read now rather than discarded. A cut-off reply raises
+the ceiling (1500, 3000, 4096, bounded) and carries a brevity
+instruction, because more room alone only invites a longer answer. A
+cut-off reply the model does not mark is caught by the shape of the text
+instead: a contract failure whose braces or strings never close is an
+object that ran out of room, not one written wrongly. A reply that will
+not fit at any ceiling now names that as the cause.
+
+**Scott already had this fix and the Workspace did not inherit it.** The
+Workspace orchestrator was adapted from Scott's orchestrator SHAPE, and
+Scott learned the same lesson live on 01/09/2026 (see the truncation
+comments in `lib/scott/orchestrator.js`). The logic is written
+independently in `lib/workspace/orchestrator.js` rather than imported,
+because the firewall between the two systems is asserted by test and a
+shared module would be a real edge between them. Only the lesson is
+reused. Worth knowing generally: a fix proven in one of these two
+orchestrators is worth checking against the other by hand, because
+nothing makes them travel together.
+
+`test/workspace/truncatedReply.test.js`, 7 tests, five watched red
+against the pre-fix head. The two that stay green are deliberate: a
+genuinely malformed reply must still get the schema correction and still
+report a contract failure, and a reply that arrives correctly first time
+must still cost exactly one call at 1500 tokens.
+
+### What the Company Brain can and cannot answer (03/09/2026)
+
+Worth stating plainly, because the three obvious commercial questions
+land in three different places and only one of them works today.
+
+The snapshot holds **29 records**: authority 5, control_pack 9,
+worker_register 8, opportunity 3, project 2, strategy 1,
+technical_state 1, **finance 0**.
+
+- **Wasted costs.** `GENERAL_SOURCE_CLASSES` includes `finance`, so a
+  cost question asked in ordinary words reaches the banking data. There
+  is none: the finance record is written by `syncFinanceSummaryRecord()`
+  when an ANNA statement is imported, and nothing has been imported. The
+  brain will say it has nothing on file, correctly.
+- **Missed revenue.** There is no source class for leads or enquiries at
+  all. `/workspace/contacts` reads `lib/crm/contacts` directly and Ruth
+  reads `lib/workspace/repo`; they are different data. Ruth cannot see a
+  single lead. Closing this means a new source class, which is a scope
+  decision for Tom, not a bug.
+- **Earning options.** The 3 `opportunity` records are real, but
+  `opportunity` is NOT in `GENERAL_SOURCE_CLASSES`, so they are reached
+  only through the `opportunity_builder` lane. Tom's actual phrasing
+  ("where can we make some money") matches no routing keyword, so it got
+  the authority and worker-register documents instead. Saying
+  "opportunities" reaches them.
+
+The finance/opportunity trade is the same escalation recorded in
+`review/workspace-routing-governance-review-2026-09-03.md`: no single
+question can currently reach both the banking data and the opportunity
+records, because the lane that holds one excludes the other. Granting
+`finance` to `opportunity_builder` would fix it and is a worker
+permission change, so it is Tom's plus the governed route.
 
 ### Social media control area (30/08/2026)
 
