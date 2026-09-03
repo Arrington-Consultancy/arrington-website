@@ -1121,6 +1121,57 @@ unseeded brain rather than an empty one. Rebuild with
 `ANTHROPIC_API_KEY`, separate from every other AI switch on the site.
 Currently OFF in staging.
 
+### Running the workspace adversarial gate (first clean run 03/09/2026)
+
+`test/workspace/adversarialApi.test.js` is the release gate that skips
+silently in a bare `npm test`, so it has to be run by hand. Run on
+03/09/2026 against the three fixes of that day: **10 of 10, zero
+skipped**, which is the first run with nothing reported NOT EXECUTABLE.
+
+The recipe, because rediscovering it costs an hour:
+
+```bash
+sudo -u postgres psql -c "CREATE DATABASE ws_adv OWNER arrington;"
+export DATABASE_URL=postgres://arrington:...@localhost:5432/ws_adv
+export SESSION_SECRET=adv-secret-local-only
+export NAT_PASSWORD=... TOM_PASSWORD=...          # first seed only
+export ENABLE_ARRINGTON_AI_WORKSPACE=true
+export WORKSPACE_OWNER_USERNAME=tom WORKSPACE_OWNER_USER_ID=2
+export WORKSPACE_ACCESS_PASSPHRASE=...
+node db/seed.js && PORT=3999 node server.js &
+# then, with WORKSPACE_TEST_BASE_URL / _TOM_PASSWORD / _OTHER_USER /
+# _OTHER_PASSWORD / _PASSPHRASE set:
+node --test test/workspace/adversarialApi.test.js
+```
+
+`WORKSPACE_OWNER_USER_ID` is 2 on a freshly seeded database (nat=1,
+tom=2), and the boot line prints the real ids for that database, so read
+it rather than assuming.
+
+**Two traps, both hit on 03/09/2026 despite the first being written down
+already.**
+
+1. **The login limiter (5 per 15 min per IP) makes a re-run look like a
+   security regression.** Checks 1 to 3 keep passing (they are anonymous)
+   while 4 to 8 all fail, which reads exactly like the access gates
+   having broken. They have not: Tom simply cannot log in any more.
+   **Restart the server between runs**, and treat "the anonymous checks
+   pass and every authenticated one fails" as the limiter's signature
+   rather than a finding.
+2. **The erasure check needs a contact to exist**, and a fresh database
+   has none, so it reports NOT EXECUTABLE and the security property it
+   covers goes unverified. It is not a check that can be left skipped:
+   erasure is destructive and irreversible. Make it executable by seeding
+   one lead and building a contact from it:
+
+   ```bash
+   psql -d ws_adv -c "INSERT INTO leads (kind, name, email, message)
+     VALUES ('contact','Adversarial Probe','probe@example.invalid','probe');"
+   node -e "require('./lib/crm/contacts').syncFromLeads().then(console.log)"
+   ```
+
+   The function is `syncFromLeads`, not `syncContactsFromLeads`.
+
 ### Ruth failing on broad questions (fixed 03/09/2026)
 
 Tom asked Ruth "so where can we make some money? where are the gaps in
