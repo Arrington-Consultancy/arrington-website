@@ -43,12 +43,25 @@ rule and risk annex.
 | Criterion | Finding |
 |---|---|
 | AI changing its own authority, scope or permissions | None. No worker specification, permission map or clearance rule is touched by this change. |
-| Consequential permission expansion without approval | None in the released candidate. One was attempted and caught: see A2 below. |
+| Consequential permission expansion without approval | None in the released candidate. Three were attempted and caught by review: A1, A2 and A5. |
 | A material change designed, implemented and solely validated by the same process | Avoided. Five independent passes; all four of the reviewers' behavioural findings were acted on. |
 | Circular AI evidence used as proof | Avoided. Every behavioural claim is backed by a red-then-green test or a measured probe, not by assertion. |
 | Cross-project contamination | None. Scott is unreachable from the routing path, measured in a child process; the Scott suite is 411 pass, 0 fail. |
 | Website, repository, deployment or production write permissions | None granted. The change is two files, and it is not on `main`. |
 | Unnecessary complexity | One structure added: a low-precedence tail. Justified below; it exists to avoid a permission widening, not for elegance. |
+
+One qualification, stated because the criteria table would otherwise
+overstate the verdict. The tail routes some questions that previously
+reached the general context into a lane, and for the two
+confidential-ceiling lanes that is a wider context than the general one:
+"show me the audits" moves from a four-class general context to
+`governance_assurance`, which reads every source class. No lane gained a
+permission, no human clearance changed, and the clearance leg still gates
+every record returned, which a test asserts with a positive control. But
+task necessity is a permission leg, and routing a question to a wider
+lane widens it. That is the correct owner of the word "audits", so it is
+recorded as a deliberate and bounded consequence rather than claimed to
+be no change at all.
 
 **No STOP condition identified.** No breach of the Constitution, the
 human approval boundary, or the effective-context rule.
@@ -94,28 +107,49 @@ The cost is a real inconsistency: singular and plural now sit on
 different precedence. That is the safe direction, and resolving it means
 moving live behaviour, which is its own decision.
 
-### A3. The money rule was ordered wrongly against its own comment (behavioural, corrected)
+### A3. The money guard, and why it was removed rather than fixed again (behavioural, resolved)
 
-The no-lane money rule was placed above the tail lane rules while its
-comment said it sat below. A reviewer showed "show me the audits of our
-spending" reaching no lane, while the singular reached
-`governance_assurance`.
+A no-lane rule was added to keep money questions in the general context,
+which besides `governance_assurance` is the only place `finance` can be
+read. Four successive review rounds attacked it. The first found it
+ordered above the rules it claimed to sit below. The next three each
+found more money words it did not know: revenue, budget, income, price,
+expenses, costing, then "how much are the campaigns?", "what did we pay
+for", "spent", "fees", "cheapest".
 
-**Corrected** by ordering the tail on a stated principle rather than by
-habit: **do not route a money question into a lane that cannot see
-finance.** `lanes.js` grants `finance` to `governance_assurance` alone,
-so that lane sits above the money rule and the opportunity tail below it.
+**It was removed, not widened a fifth time.** Matching the shape of a
+question by enumeration is an arms race this codebase has already
+recorded as unwinnable elsewhere, and the rule was defending a property
+that never held: on the base commit "what are our hosting costs?" already
+reached `website_hosting`, which holds no finance class. Rules one to
+nine have always been able to take a money question away from finance. A
+guard covering only the tail implied a protection the router does not
+have.
 
-### A4. A trade that was half-documented (recorded, both halves now tested)
+What replaced it is a statement of the real property, pinned by test:
+**any question that routes to a lane loses finance unless that lane is
+`governance_assurance`.** See A4 for the decision that follows.
 
-A question naming money AND opportunities keeps finance and loses the
-opportunity records, because the general context has no `opportunity`
-source class. Neither context dominates the other.
+### A4. The finance trade, and the decision it needs from Tom (recorded, tested, escalated)
 
-**Not fixed, and deliberately so.** The correct repair is a finance lane,
-or finance granted to more than one lane. Both are worker-permission
-changes reserved to Tom. Both halves of the trade are now pinned by test
-so it cannot drift unnoticed.
+`lanes.js` grants `finance` to `governance_assurance` alone, deliberately
+and at least privilege. So the general no-lane context is the only other
+route to the banking records, and every question that routes to any other
+lane loses them.
+
+This change does not create that trade. It does make it more visible,
+because repairing the inflection defect means more questions route at
+all. Measured: "how much are the campaigns?", "what did we pay for the
+domains?", "what do our servers cost?" moved from the general context to
+a topical lane. Each gains that lane's subject matter and loses the
+banking record. Neither context dominates the other.
+
+**This is the one item that cannot be resolved inside the approved
+scope,** and it is escalated rather than worked around. The repair is a
+finance lane, or finance granted to more than one lane, and both are
+worker-permission changes reserved to Tom. A test asserts finance still
+reaches exactly one lane, so the moment either is taken, the notes that
+depend on it fail rather than going stale.
 
 ### A5. The in-place plural repair defeated the money rule and pre-empted lanes (behavioural, corrected)
 
@@ -199,7 +233,7 @@ to ignore the records the change exists to preserve.
   deletion of the dead `opportunit` stem, which could never match and
   whose presence invited someone to trust that rule, delete the tail
   entry, and silently reinstate the original defect.
-- **Suites.** Workspace 202 tests, 200 pass, 0 fail, 2 skipped (the two
+- **Suites.** Workspace 204 tests, 202 pass, 0 fail, 2 skipped (the two
   gated suites). Scott 411 pass, 0 fail, 0 skipped. Guards
   (`noEmDashes`, `gatedSuites`, `gatedSuiteScan`) 11 pass, 0 fail.
 
@@ -224,9 +258,14 @@ failing suite is not evidence of a defect until its cause is established.
 
 ## Verdict
 
-**No STOP condition. No permission, clearance, authority or Scott change.
-All four behavioural findings corrected and pinned; the one trade that
-cannot be resolved inside this scope is recorded with both halves under
-test and routed to Tom.**
+**No STOP condition. No lane permission, human clearance, worker
+authority or Scott change. Every behavioural finding across six review
+passes was corrected and pinned by a test watched red beforehand.**
+
+**Two items are recorded rather than fixed, and both are Tom's:** the
+finance trade in A4, which needs a finance lane or a wider grant; and the
+task-necessity widening noted above, where a question naming a
+confidential lane's subject now reaches that lane instead of the general
+context.
 
 The production merge remains the human gate and is not taken here.

@@ -198,61 +198,7 @@ test('the strong opportunity keywords keep their original high precedence', () =
   assert.equal(routeToLane('Draft a LinkedIn post about the leads we won'), 'opportunity_builder');
 });
 
-test('a money question keeps the general context, and the finance record really reaches the prompt', async () => {
-  // The consequence the opportunity rule introduced, now repaired, and
-  // asserted on the CONTEXT rather than on the lane id alone: an earlier
-  // version of this test checked only routing, so it would have stayed
-  // green if the general context had stopped carrying finance at all.
-  //
-  // The repair is a no-lane rule, NOT a new source class on any lane.
-  const { LANES, laneById } = require('../../lib/workspace/lanes');
-  assert.deepEqual(
-    LANES.filter((l) => l.sourceClasses.includes('finance')).map((l) => l.id),
-    ['governance_assurance'],
-    'finance reached another lane; that is a worker-permission change and not what this fix was allowed to do'
-  );
-  assert.ok(!laneById('opportunity_builder').sourceClasses.includes('finance'));
-  assert.ok(orchestrator.GENERAL_SOURCE_CLASSES.includes('finance'));
 
-  await withStubbedRecords(async () => {
-    for (const q of [
-      'Where are the opportunities to reduce our recurring costs?',
-      'What is our bank balance?',
-      'How much did we spend last month?',
-      'What do our overheads look like?'
-    ]) {
-      assert.equal(routeToLane(q), null, `a money question must keep the general context: ${q}`);
-      const keys = keysOf(await buildLaneContext({ clearanceId: 'owner_admin', laneId: routeToLane(q) }));
-      assert.ok(keys.includes(FINANCE_KEY), `the finance record must reach the prompt for: ${q}`);
-    }
-
-    // A money question naming governance goes to the one lane that holds
-    // finance, so nothing is lost there either. This is why that rule is
-    // ordered above the money rule.
-    const govLane = routeToLane('Show me the audits of our spending');
-    assert.equal(govLane, 'governance_assurance');
-    const govKeys = keysOf(await buildLaneContext({ clearanceId: 'owner_admin', laneId: govLane }));
-    assert.ok(govKeys.includes(FINANCE_KEY), 'the governance lane holds finance, so a money question there keeps it');
-  });
-});
-
-test('the money-and-opportunity trade is real, and both halves are pinned', async () => {
-  // Stated plainly rather than only in a comment. A question naming money
-  // AND opportunities keeps finance and loses the opportunity records,
-  // because the general context has no 'opportunity' source class.
-  // Neither context dominates the other. The genuinely correct repair is
-  // a finance lane, or finance granted to more than one lane, and both
-  // are worker-permission changes reserved to Tom.
-  await withStubbedRecords(async () => {
-    const q = 'Which opportunities will improve our margins?';
-    assert.equal(routeToLane(q), null);
-    const keys = keysOf(await buildLaneContext({ clearanceId: 'owner_admin', laneId: routeToLane(q) }));
-    assert.ok(keys.includes(FINANCE_KEY), 'the half we chose: finance is kept');
-    for (const key of OPPORTUNITY_KEYS) {
-      assert.ok(!keys.includes(key), `the half we paid: ${key} is not in the general context`);
-    }
-  });
-});
 
 test('the missed plurals now route, and the confidential lanes gain none of them by precedence', () => {
   // Every inflection repair lives in the low-precedence tail, including
@@ -393,24 +339,6 @@ test('rules one to nine are byte-identical to the base, so the money rule stays 
   }
 });
 
-test('a money question naming a tail subject keeps finance rather than the lane', async () => {
-  // The first regression, pinned. Each of these names a subject whose
-  // PLURAL is repaired in the tail, and each is a money question. The
-  // money rule sits above every commercial tail rule precisely so the
-  // banking record survives.
-  await withStubbedRecords(async () => {
-    for (const q of [
-      'What do our servers cost?',
-      'How much do our domains cost?',
-      'What are the costs of our campaigns?',
-      'How much did the demonstrations cost?'
-    ]) {
-      assert.equal(routeToLane(q), null, `a money question must keep the general context: ${q}`);
-      const keys = keysOf(await buildLaneContext({ clearanceId: 'owner_admin', laneId: routeToLane(q) }));
-      assert.ok(keys.includes(FINANCE_KEY), `the finance record must survive: ${q}`);
-    }
-  });
-});
 
 test('no tail plural pre-empts a lane that already wins the question', () => {
   // The second regression, pinned, and generalised past the three
@@ -449,33 +377,6 @@ test('the exported general source classes cannot be mutated by a caller', () => 
     'the general context changed; the no-lane system prompt names these classes and must be revisited');
 });
 
-test('the money rule is only as good as its vocabulary, so the vocabulary is pinned', async () => {
-  // The rule's principle is "do not route a money question into a lane
-  // that cannot see finance", and a word the rule does not know defeats
-  // it silently. An earlier version omitted revenue, budget, income,
-  // price, expenses and costing, so "how much revenue do our
-  // opportunities bring in?" reached opportunity_builder and the banking
-  // record was dropped from a revenue question.
-  //
-  // Every case below pairs a money word with a TAIL subject, which is the
-  // combination that fails if the vocabulary regresses.
-  await withStubbedRecords(async () => {
-    for (const q of [
-      'How much revenue do our opportunities bring in?',
-      'What is the budget for our campaigns?',
-      'What income do our prospects represent?',
-      'What is the costing for our domains?',
-      'What is the price of our servers?',
-      'What are the expenses on our campaigns?',
-      'What is our expenditure on the workspaces?',
-      'What does the profit and loss say about our proposals?'
-    ]) {
-      assert.equal(routeToLane(q), null, `a money question must keep the general context: ${q}`);
-      const keys = keysOf(await buildLaneContext({ clearanceId: 'owner_admin', laneId: routeToLane(q) }));
-      assert.ok(keys.includes(FINANCE_KEY), `the finance record must survive: ${q}`);
-    }
-  });
-});
 
 test('deleting the dead stem from rule three changed no routing', () => {
   // The stem 'opportunit' could never match, so removing it is
@@ -488,4 +389,67 @@ test('deleting the dead stem from rule three changed no routing', () => {
   }
   assert.equal(routeToLane('opportunity'), 'opportunity_builder');
   assert.equal(routeToLane('opportunities'), 'opportunity_builder');
+});
+
+test('routing to any lane but governance loses finance, which is a property of lanes.js and not of this change', async () => {
+  // The honest statement of the trade, replacing four rounds of trying to
+  // keep money questions out of lanes by enumerating money words. Each
+  // round widened a keyword list and the next found more, and the rule
+  // was defending a property that never held: on the base commit "what
+  // are our hosting costs?" already reached website_hosting, which holds
+  // no finance class.
+  //
+  // The real property is simple and is pinned here: finance is granted to
+  // exactly one lane, so every other lane loses it, and the general
+  // no-lane context is its only other route. This change adds more
+  // questions that route at all, so it makes an existing trade more
+  // visible; it does not create the trade.
+  //
+  // The repair is a finance lane, or finance granted to more than one
+  // lane. Both are worker-permission changes reserved to Tom, and this
+  // test fails the moment either is taken, so the note above cannot go
+  // stale.
+  const { LANES, laneById } = require('../../lib/workspace/lanes');
+  assert.deepEqual(
+    LANES.filter((l) => l.sourceClasses.includes('finance')).map((l) => l.id),
+    ['governance_assurance'],
+    'the set of lanes holding finance changed; the routing notes about the finance trade must be revisited'
+  );
+  assert.ok(orchestrator.GENERAL_SOURCE_CLASSES.includes('finance'));
+
+  await withStubbedRecords(async () => {
+    // The general context has finance...
+    const general = keysOf(await buildLaneContext({ clearanceId: 'owner_admin', laneId: null }));
+    assert.ok(general.includes(FINANCE_KEY));
+
+    // ...governance keeps it...
+    const gov = keysOf(await buildLaneContext({ clearanceId: 'owner_admin', laneId: 'governance_assurance' }));
+    assert.ok(gov.includes(FINANCE_KEY));
+
+    // ...and every other lane loses it, whatever the question said.
+    for (const lane of LANES.filter((l) => l.id !== 'governance_assurance')) {
+      const keys = keysOf(await buildLaneContext({ clearanceId: 'owner_admin', laneId: lane.id }));
+      assert.ok(!keys.includes(FINANCE_KEY), `${lane.id} unexpectedly reads finance`);
+    }
+
+    // Worth stating concretely, because it is the case the reviews kept
+    // returning to: an opportunity question that also names money routes
+    // to the opportunity lane and does not see the banking record.
+    assert.equal(routeToLane('Where are the opportunities to reduce our recurring costs?'), 'opportunity_builder');
+    const oppKeys = keysOf(await buildLaneContext({ clearanceId: 'owner_admin', laneId: 'opportunity_builder' }));
+    assert.ok(!oppKeys.includes(FINANCE_KEY));
+    for (const key of OPPORTUNITY_KEYS) assert.ok(oppKeys.includes(key));
+  });
+});
+
+test('a money question that names no lane still reaches the general context', async () => {
+  // The other half: nothing about this change stops an ordinary money
+  // question getting finance, because it names no lane at all.
+  await withStubbedRecords(async () => {
+    for (const q of ['What is our bank balance?', 'How much did we spend last month?', 'What do our overheads look like?']) {
+      assert.equal(routeToLane(q), null, `expected no lane for: ${q}`);
+      const keys = keysOf(await buildLaneContext({ clearanceId: 'owner_admin', laneId: routeToLane(q) }));
+      assert.ok(keys.includes(FINANCE_KEY), `finance must reach the prompt for: ${q}`);
+    }
+  });
 });
