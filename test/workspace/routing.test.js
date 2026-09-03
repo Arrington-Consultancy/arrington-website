@@ -592,15 +592,28 @@ test('the no-lane system prompt the model actually receives names no source clas
     assert.ok(captured, 'the model was never called, so this guard proved nothing');
     assert.ok(captured.includes(orchestrator.NO_LANE_INSTRUCTION),
       'the no-lane branch did not use NO_LANE_INSTRUCTION');
-    const lower = captured.toLowerCase();
-    // The lane instruction line is the part under test; the governance
-    // rules and reply contract above it are not, so assert on the line.
-    const line = captured.split('\n').find((l) => l.includes('matched no specialist lane')) || '';
+    // Locate the lane instruction STRUCTURALLY, not by its wording. The
+    // system prompt is three sections joined by a blank line and the lane
+    // instruction is the middle one.
+    //
+    // An earlier version searched the captured prompt for a line
+    // containing "matched no specialist lane" and fell back to an empty
+    // string. That re-coupled the guard to the exact wording it exists to
+    // survive: rewording NO_LANE_INSTRUCTION made the loop below iterate
+    // over nothing, and the test stayed green while the prompt named
+    // finance. Both assumptions below fail loudly instead.
+    const sections = captured.split('\n\n');
+    assert.equal(sections.length, 3,
+      'the system prompt is no longer three sections; this guard needs updating');
+    const laneInstruction = sections[1];
+    assert.equal(laneInstruction, orchestrator.NO_LANE_INSTRUCTION,
+      'the middle section is not the lane instruction; this guard needs updating');
+
+    const lower = laneInstruction.toLowerCase();
     for (const cls of orchestrator.GENERAL_SOURCE_CLASSES) {
-      assert.ok(!line.toLowerCase().includes(cls) && !line.toLowerCase().includes(cls.replace('_', ' ')),
+      assert.ok(!lower.includes(cls) && !lower.includes(cls.replace('_', ' ')),
         `the no-lane instruction sent to the model names the '${cls}' source class`);
     }
-    assert.ok(lower.length > 0);
   } finally {
     orchestrator.__resetClientFactoryForTests();
     if (prev.key === undefined) delete process.env.ANTHROPIC_API_KEY; else process.env.ANTHROPIC_API_KEY = prev.key;
