@@ -22,12 +22,12 @@ technical housekeeping and is untouched.
 This is not the Drive-resident ARRINGTON GOVERNANCE & ASSURANCE worker,
 and it does not award that worker's PASS. Nobody should read it as one.
 
-What it is: **twenty independent review passes**, each run in a forked
+What it is: **twenty-one independent review passes**, each run in a forked
 execution with its own context, each of which inspected the candidate
 without having built it, and each of which was given the opportunity to
 attack the change rather than confirm it. Every count in this document
-refers to that same sequence; where an earlier draft said five, six or
-fifteen, it was counting the passes that had happened when that paragraph
+refers to that same sequence; where an earlier draft said five, six,
+fifteen or twenty, it was counting the passes that had happened when that paragraph
 was written and was not updated afterwards. The builder did not grade
 itself: every finding below was raised by a reviewer, and every one was
 either corrected or recorded with a reason.
@@ -47,10 +47,10 @@ rule and risk annex.
 |---|---|
 | AI changing its own authority, scope or permissions | None. No worker specification, permission map or clearance rule is touched by this change. |
 | Consequential permission expansion without approval | None in the released candidate. Three were attempted and caught by review: A1, A2 and A5. |
-| A material change designed, implemented and solely validated by the same process | Avoided. Five independent passes; all four of the reviewers' behavioural findings were acted on. |
+| A material change designed, implemented and solely validated by the same process | Avoided. Twenty-one independent passes. Six numbered findings: five behavioural ones (A1, A2, A3, A5, A6) corrected, one (A4) recorded, tested and escalated to Tom. |
 | Circular AI evidence used as proof | Avoided. Every behavioural claim is backed by a red-then-green test or a measured probe, not by assertion. |
 | Cross-project contamination | None. Scott is unreachable from the routing path, measured in a child process; the Scott suite is 411 pass, 0 fail. |
-| Website, repository, deployment or production write permissions | None granted. The change is two files, and it is not on `main`. |
+| Website, repository, deployment or production write permissions | None granted. The change is three files (`lib/workspace/orchestrator.js`, `test/workspace/routing.test.js` and this record), and it is not on `main`. |
 | Unnecessary complexity | One structure added: a low-precedence tail. Justified below; it exists to avoid a permission widening, not for elegance. |
 
 One qualification, stated because the criteria table would otherwise
@@ -294,13 +294,15 @@ to ignore the records the change exists to preserve.
   deletion of the dead `opportunit` stem, which could never match and
   whose presence invited someone to trust that rule, delete the tail
   entry, and silently reinstate the original defect.
-- **Suites.** Measured with `DATABASE_URL` set: workspace 211 tests, 209
-  pass, 0 fail, 2 skipped (the two gated suites); Scott 411 pass, 0 fail;
-  guards 11 pass, 0 fail. Without a database the workspace suite reports
-  fewer tests and one more skip, because three suites gate on it, and the
-  repository's 21 pre-existing CRM and erasure failures appear; those are
-  identical on `main` and this branch adds none. Scott 411 pass, 0 fail, 0 skipped. Guards
-  (`noEmDashes`, `gatedSuites`, `gatedSuiteScan`) 11 pass, 0 fail.
+- **Suites, measured on the frozen head `f110930` with `DATABASE_URL`
+  set.** Routing 28 tests, 28 pass, 0 fail. Workspace 212 tests, 210
+  pass, 0 fail, 2 skipped, the two skips being the gated adversarial and
+  live-AI suites. Scott 411 tests, 411 pass, 0 fail, 0 skipped. Guards (`noEmDashes`,
+  `gatedSuites`, `gatedSuiteScan`) 11 tests, 11 pass, 0 fail. Without a
+  database the workspace suite reports fewer tests and one more skip,
+  because three suites gate on it, and the repository's 21 pre-existing
+  CRM and erasure failures appear; those are identical on `main` and this
+  branch adds none.
 
 One caution worth recording: a mid-session Postgres outage produced 20
 workspace and 56 Scott failures that had nothing to do with the change.
@@ -394,11 +396,51 @@ review cycle.
 
 ---
 
+## The final confirmatory pass on the frozen head
+
+The convention applied throughout this chain is that a verdict covers the
+exact head it was taken against. The twentieth pass closed three findings
+and therefore changed the head, so a twenty-first pass was run against
+`f110930` itself rather than the verdict being carried forward.
+
+It attacked the two things that commit changed, plus the structure they
+sit in, by mutating the deployed module and watching the suite. Six
+mutations, all caught:
+
+| Mutation | Result |
+|---|---|
+| Append `\|\bprospects\b` to the confidential tail rule's vocabulary | 2 tests fail |
+| Drop the trailing boundary from the cost exclusion, back to `(?![\s-]*cost)` | 3 tests fail |
+| Apply the cost exclusion to both branches instead of the singular | 3 tests fail |
+| Add an eighteenth rule to the tail | 3 tests fail |
+| Move the confidential tail rule to the front of the tail | 4 tests fail |
+| Move an inflection repair out of the tail and into head rule two | 2 tests fail |
+
+The first three matter because they are the twentieth pass's own
+corrections, and a fix is only closed if the test that closed it fails
+when the fix is undone. The last three are the three ways this design can
+be undone by a maintainer who never reads this document: adding a rule
+nobody declared, putting the one confidential-ceiling tail rule ahead of
+the commercial ones and so reversing the ordering the structural finding
+established, and repairing an inflection in a head rule instead of the
+tail, which is A5 exactly. Each is refused by a named test rather than by
+a comment asking them not to.
+
+Nothing behavioural was found. Three counting errors were, all in this
+document: the criteria table still said five passes and four behavioural
+findings, the verdict still said six passes, and the write-permissions
+row said the change is two files when it is three, this record included.
+Corrected above. That is the same class this chain records over and over,
+which is why it is written down rather than quietly fixed.
+
+---
+
 ## Verdict
 
 **No STOP condition. No lane permission, human clearance, worker
-authority or Scott change. Every behavioural finding across six review
-passes was corrected and pinned by a test watched red beforehand.**
+authority or Scott change. Every behavioural finding across twenty-one
+review passes was corrected and pinned by a test watched red
+beforehand.**
 
 **Two items are recorded rather than fixed, and both are Tom's:** the
 finance trade in A4, which needs a finance lane or a wider grant; and the
