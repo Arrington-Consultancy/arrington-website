@@ -126,3 +126,68 @@ test('queuing a consequential action records it and executes nothing', async () 
     repo.addActivity = origActivity;
   }
 });
+
+// ---------------------------------------------------------------
+// The boot status line, added 03/09/2026.
+//
+// Every other workspace subsystem prints one at boot and this one did
+// not, so after four Meta credentials were pasted into Railway there was
+// no way to tell from the log whether the container could see them.
+// ---------------------------------------------------------------
+
+test('an unconfigured deployment says so for every platform', () => {
+  const line = registry.describeSocialStatus({});
+  for (const id of registry.PLATFORM_IDS) {
+    assert.match(line, new RegExp(`${registry.PLATFORMS[id].name}: not connected`));
+  }
+});
+
+test('a fully configured platform is reported present, and never claimed to work', () => {
+  const line = registry.describeSocialStatus({
+    INSTAGRAM_BUSINESS_ACCOUNT_ID: '17841400000000000',
+    INSTAGRAM_ACCESS_TOKEN: 'EAAG' + 'x'.repeat(180)
+  });
+  assert.match(line, /Instagram: credentials present/);
+  // The connector layer's own rule: a credential is never presented as a
+  // retrieval. A token can be present, well formed and rejected by Meta,
+  // so this line must stop short of claiming the connection works.
+  assert.match(line, /not yet proven to work/);
+  assert.doesNotMatch(line, /Instagram: connected\b/);
+});
+
+test('half a credential pair is called incomplete, not connected and not absent', () => {
+  // The state most likely to be hit while pasting values in one at a
+  // time, and the one where "not connected" would be actively
+  // misleading about what is left to do.
+  const line = registry.describeSocialStatus({ INSTAGRAM_ACCESS_TOKEN: 'EAAGxxx' });
+  assert.match(line, /Instagram: INCOMPLETE, missing INSTAGRAM_BUSINESS_ACCOUNT_ID/);
+});
+
+test('an empty or whitespace value counts as absent, matching isConfigured', () => {
+  // Placeholder variables are created empty so they can be pasted into.
+  // If this line disagreed with isConfigured, the boot log and the page
+  // would tell the operator different things.
+  const env = { INSTAGRAM_ACCESS_TOKEN: '   ', INSTAGRAM_BUSINESS_ACCOUNT_ID: '' };
+  assert.match(registry.describeSocialStatus(env), /Instagram: not connected/);
+  assert.equal(registry.isConfigured('instagram', env), false);
+});
+
+test('no part of any credential value is printed', () => {
+  // The reason this project reports lengths rather than prefixes: a
+  // 13-character prefix of a long-prefixed key is several real secret
+  // characters, logged on every boot.
+  const secret = 'EAAGsuperSecretTokenValue12345';
+  const id = '17841400000000000';
+  const line = registry.describeSocialStatus({
+    INSTAGRAM_ACCESS_TOKEN: secret,
+    INSTAGRAM_BUSINESS_ACCOUNT_ID: id
+  });
+  assert.ok(!line.includes(secret), 'the whole token was printed');
+  assert.ok(!line.includes(id), 'the whole account id was printed');
+  for (let n = 4; n <= secret.length; n += 1) {
+    assert.ok(!line.includes(secret.slice(0, n)), `a ${n}-character prefix of the token was printed`);
+  }
+  // And it does report the length, which is the thing that tells an
+  // empty variable from a real one.
+  assert.match(line, new RegExp(`INSTAGRAM_ACCESS_TOKEN ${secret.length} chars`));
+});

@@ -1332,6 +1332,10 @@ loadPermissions().then(() => {
     // guessing. It prints the expected user id, which is not a secret
     // and is the thing you need to see in order to set it, and it never
     // prints any part of the passphrase.
+    // Which social platforms this deployment can actually read, reported
+    // the same way as every other gate above. See describeSocialStatus
+    // for why presence is all it claims.
+    console.log('Workspace social: ' + require('./lib/workspace/social/registry').describeSocialStatus());
     describeWorkspaceAccessConfig()
       .then((line) => console.log('Workspace access: ' + line))
       .catch((err) => console.error('Workspace access: could not be described:', err.message));
