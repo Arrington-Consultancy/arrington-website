@@ -514,3 +514,48 @@ test('every rule is pinned to its exact pattern and flags, not merely re-probed'
     'governance_assurance::i::\\b(permissions|clearances|audits|rulebooks|stop decisions)\\b'
   ]);
 });
+
+test('the accepted finance trade is pinned on the questions that actually pay it', async () => {
+  // The money test above pins questions that name NO lane. This one pins
+  // the other half, which is where the trade is actually paid: a question
+  // whose only lane signal is a tail plural, which also names money.
+  // These reached no rule at the base and so got the general context with
+  // the banking record; they now route and lose it.
+  //
+  // Recorded as accepted and escalated, not fixed, because the repair is
+  // a finance lane or a wider grant and both are worker-permission
+  // changes reserved to Tom. Pinned so the cost stays visible and so the
+  // day the grant changes, this fails and the decision gets re-read.
+  await withStubbedRecords(async () => {
+    for (const [q, laneId] of [
+      ['How much are the campaigns costing us?', 'google_ads'],
+      ['What do our servers cost?', 'website_hosting'],
+      ['How much do our domains cost?', 'website_hosting'],
+      ['What did we pay for the archives?', 'brain_keeper'],
+      ['Where are the opportunities to reduce our recurring costs?', 'opportunity_builder']
+    ]) {
+      assert.equal(routeToLane(q), laneId, `expected the tail plural to win: ${q}`);
+      const keys = keysOf(await buildLaneContext({ clearanceId: 'owner_admin', laneId }));
+      assert.ok(!keys.includes(FINANCE_KEY),
+        `this is the accepted trade: ${laneId} cannot see finance, so ${JSON.stringify(q)} loses it`);
+    }
+  });
+});
+
+test('the no-lane system prompt names no source class, so it cannot hint at one a reader is not cleared for', () => {
+  // It used to enumerate the general context's classes, including
+  // 'finance', to every reader whatever their clearance. Telling a
+  // narrower reader there are "finance records you are cleared for" is
+  // exactly the existence signal this codebase treats as the leak, and
+  // the prose duplicated GENERAL_SOURCE_CLASSES so it could drift from
+  // it. The line now describes only "the records supplied below", which
+  // is true for every reader and cannot go stale.
+  const src = require('node:fs').readFileSync(
+    require('node:path').join(__dirname, '../../lib/workspace/orchestrator.js'), 'utf8');
+  const line = src.split('\n').find((l) => l.includes('matched no specialist lane'));
+  assert.ok(line, 'the no-lane system prompt line moved; this guard needs updating');
+  for (const cls of orchestrator.GENERAL_SOURCE_CLASSES) {
+    assert.ok(!line.toLowerCase().includes(cls.replace('_', ' ')) && !line.toLowerCase().includes(cls),
+      `the no-lane prompt names the '${cls}' source class, which tells every reader it exists`);
+  }
+});

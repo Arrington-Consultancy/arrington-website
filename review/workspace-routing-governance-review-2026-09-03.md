@@ -172,7 +172,7 @@ reviewer measured both:
 **Corrected** by making the treatment uniform: every inflection repair
 now lives in the tail, and rules one to nine route exactly as they did at
 the base, asserted by test. The only edit to them is the deletion of one
-provably dead alternative that could never match.
+unable to match either real spelling alternative that could never match.
 
 **What this did NOT correct, stated because an earlier draft of this
 record implied otherwise and contradicted A4.** Moving the repairs to the
@@ -201,9 +201,9 @@ of the code beneath them, including a test named "no other lane changed
 where it routes" that passed while that was false; a claim that
 `opportunity_builder` was the only confidential lane, when
 `governance_assurance` is too; a claim that finance was granted to no
-lane; an unreachable regex alternative; an export nothing read, handing
-out the live routing table by reference; a reference to an identifier
-that existed nowhere; and a system-prompt line telling the model to
+lane; a regex alternative that could not match either real spelling; an
+export nothing read, handing out the live routing table by reference; a
+reference to an identifier that existed nowhere; and a system-prompt line telling the model to
 answer "from the core authority records only" on the very path now
 deliberately used to carry finance.
 
