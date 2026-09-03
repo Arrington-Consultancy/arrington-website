@@ -82,13 +82,17 @@ exists.
 
 The cleanup then had to repair the same inflection defect in all nine
 rules. Repairing the two confidential-ceiling lanes in place would have
-reproduced A1 exactly, for new phrasings. Their plurals were put in the
-tail instead; the seven commercial-ceiling lanes were fixed in place,
-where no precedence change can expose confidential material.
+reproduced A1 exactly, for new phrasings, so their plurals were put in
+the tail.
+
+At this stage the seven commercial-ceiling lanes were still fixed in
+place, on the reasoning that a lane which cannot reach `confidential`
+cannot leak by winning earlier. **That half was later reverted: see A5.**
+In the released candidate every inflection repair is in the tail.
 
 The cost is a real inconsistency: singular and plural now sit on
-different precedence for those two lanes. That is the safe direction, and
-resolving it means moving live behaviour, which is its own decision.
+different precedence. That is the safe direction, and resolving it means
+moving live behaviour, which is its own decision.
 
 ### A3. The money rule was ordered wrongly against its own comment (behavioural, corrected)
 
@@ -132,8 +136,9 @@ reviewer measured both:
    ceiling, so widening it at `commercial` is still widening it.
 
 **Corrected** by making the treatment uniform: every inflection repair
-now lives in the tail, and rules one to nine are byte-identical to the
-base, asserted by test. This is the third time in this change that a
+now lives in the tail, and rules one to nine route exactly as they did at
+the base, asserted by test. The only edit to them is the deletion of one
+provably dead alternative that could never match. This is the third time in this change that a
 plausible local repair turned out to widen the task-necessity leg, and
 the pattern is worth keeping: in a first-match-wins router, moving a word
 earlier is a permission decision, not a formatting one.
@@ -188,10 +193,12 @@ to ignore the records the change exists to preserve.
   process that requires the orchestrator and nothing else. Reading the
   test process's own `require.cache` was rejected as proving nothing
   under per-file isolation and failing spuriously under a shared one.
-- **Rules one to nine untouched, proved rather than asserted.** The nine
-  original rules are byte-identical to `533dd5e`, and a behavioural test
-  pins that every subject reaching a lane before still reaches the same
-  lane.
+- **Rules one to nine unchanged in behaviour, proved rather than
+  asserted.** A behavioural test pins that every subject reaching a lane
+  before still reaches the same lane. The one textual edit is the
+  deletion of the dead `opportunit` stem, which could never match and
+  whose presence invited someone to trust that rule, delete the tail
+  entry, and silently reinstate the original defect.
 - **Suites.** Workspace 202 tests, 200 pass, 0 fail, 2 skipped (the two
   gated suites). Scott 411 pass, 0 fail, 0 skipped. Guards
   (`noEmDashes`, `gatedSuites`, `gatedSuiteScan`) 11 pass, 0 fail.

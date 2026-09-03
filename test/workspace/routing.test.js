@@ -255,9 +255,13 @@ test('the money-and-opportunity trade is real, and both halves are pinned', asyn
 });
 
 test('the missed plurals now route, and the confidential lanes gain none of them by precedence', () => {
-  // Commercial-ceiling lanes were repaired in place: no confidential
-  // exposure is possible from them, so precedence is not at stake.
-  const inPlace = [
+  // Every inflection repair lives in the low-precedence tail, including
+  // these. An earlier version repaired the commercial-ceiling lanes IN
+  // PLACE on the reasoning that a lane which cannot reach 'confidential'
+  // cannot leak by winning earlier. That reasoning was measured wrong
+  // twice (it defeated the money rule and it pre-empted later lanes), so
+  // do not reinstate it: the test below forbids exactly that edit.
+  const viaCommercialTail = [
     ['How are the campaigns doing?', 'google_ads'],
     ['Are our domains all valid?', 'website_hosting'],
     ['Which websites do we run?', 'website_hosting'],
@@ -268,12 +272,12 @@ test('the missed plurals now route, and the confidential lanes gain none of them
     ['Tell me about the demonstrations', 'ai_demonstration_builder'],
     ['What is in the workspace control packs?', 'ai_workspace_builder']
   ];
-  for (const [q, laneId] of inPlace) {
+  for (const [q, laneId] of viaCommercialTail) {
     assert.equal(routeToLane(q), laneId, `plural should route: ${q}`);
   }
 
-  // The two confidential-ceiling lanes got their plurals in the tail, so
-  // they route when nothing else wants the question...
+  // The confidential-ceiling lanes are in the same tail, and route the
+  // same way: when nothing else wants the question...
   const viaTail = [
     ['What are our prospects?', 'opportunity_builder'],
     ['Which proposals are outstanding?', 'opportunity_builder'],
@@ -443,4 +447,45 @@ test('the exported general source classes cannot be mutated by a caller', () => 
   assert.deepEqual([...orchestrator.GENERAL_SOURCE_CLASSES],
     ['authority', 'strategy', 'worker_register', 'finance'],
     'the general context changed; the no-lane system prompt names these classes and must be revisited');
+});
+
+test('the money rule is only as good as its vocabulary, so the vocabulary is pinned', async () => {
+  // The rule's principle is "do not route a money question into a lane
+  // that cannot see finance", and a word the rule does not know defeats
+  // it silently. An earlier version omitted revenue, budget, income,
+  // price, expenses and costing, so "how much revenue do our
+  // opportunities bring in?" reached opportunity_builder and the banking
+  // record was dropped from a revenue question.
+  //
+  // Every case below pairs a money word with a TAIL subject, which is the
+  // combination that fails if the vocabulary regresses.
+  await withStubbedRecords(async () => {
+    for (const q of [
+      'How much revenue do our opportunities bring in?',
+      'What is the budget for our campaigns?',
+      'What income do our prospects represent?',
+      'What is the costing for our domains?',
+      'What is the price of our servers?',
+      'What are the expenses on our campaigns?',
+      'What is our expenditure on the workspaces?',
+      'What does the profit and loss say about our proposals?'
+    ]) {
+      assert.equal(routeToLane(q), null, `a money question must keep the general context: ${q}`);
+      const keys = keysOf(await buildLaneContext({ clearanceId: 'owner_admin', laneId: routeToLane(q) }));
+      assert.ok(keys.includes(FINANCE_KEY), `the finance record must survive: ${q}`);
+    }
+  });
+});
+
+test('deleting the dead stem from rule three changed no routing', () => {
+  // The stem 'opportunit' could never match, so removing it is
+  // behaviour-neutral, and leaving it invited someone to trust rule three
+  // and delete the tail entry. Both halves pinned: the subjects rule
+  // three really does own still route to it, and both spellings of the
+  // word still route via the tail.
+  for (const q of ['Any new leads?', 'that prospect', 'the pipeline', 'the proposal', 'ivybridge', 'icabbi']) {
+    assert.equal(routeToLane(q), 'opportunity_builder', `rule three lost a subject it owns: ${q}`);
+  }
+  assert.equal(routeToLane('opportunity'), 'opportunity_builder');
+  assert.equal(routeToLane('opportunities'), 'opportunity_builder');
 });
