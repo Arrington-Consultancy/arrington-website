@@ -543,15 +543,24 @@ test('the no-lane system prompt names no source class, so it cannot hint at one 
   // 'finance', to every reader whatever their clearance. Telling a
   // narrower reader there are "finance records you are cleared for" is
   // exactly the existence signal this codebase treats as the leak, and
-  // the prose duplicated GENERAL_SOURCE_CLASSES so it could drift from
-  // it. The line now describes only "the records supplied below", which
-  // is true for every reader and cannot go stale.
-  const src = require('node:fs').readFileSync(
-    require('node:path').join(__dirname, '../../lib/workspace/orchestrator.js'), 'utf8');
-  const line = src.split('\n').find((l) => l.includes('matched no specialist lane'));
-  assert.ok(line, 'the no-lane system prompt line moved; this guard needs updating');
+  // the prose duplicated GENERAL_SOURCE_CLASSES so it could drift.
+  //
+  // Asserted on the exported STRING, not on the line of source that holds
+  // it: an earlier version searched the file for the line containing
+  // "matched no specialist lane", which a reformat or an appended
+  // sentence would have slipped past.
+  const line = orchestrator.NO_LANE_INSTRUCTION;
+  assert.equal(typeof line, 'string');
+  assert.ok(line.length > 0);
+  const lower = line.toLowerCase();
   for (const cls of orchestrator.GENERAL_SOURCE_CLASSES) {
-    assert.ok(!line.toLowerCase().includes(cls.replace('_', ' ')) && !line.toLowerCase().includes(cls),
+    assert.ok(!lower.includes(cls) && !lower.includes(cls.replace('_', ' ')),
       `the no-lane prompt names the '${cls}' source class, which tells every reader it exists`);
   }
+  // And it is genuinely the string the orchestrator uses, not a copy that
+  // could drift from the one in the prompt.
+  const src = require('node:fs').readFileSync(
+    require('node:path').join(__dirname, '../../lib/workspace/orchestrator.js'), 'utf8');
+  assert.ok(/:\s*NO_LANE_INSTRUCTION\s*,/.test(src),
+    'NO_LANE_INSTRUCTION is exported but no longer used to build the system prompt');
 });

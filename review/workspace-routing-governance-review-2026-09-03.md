@@ -269,6 +269,25 @@ failing suite is not evidence of a defect until its cause is established.
 
 ---
 
+## Recorded for separate work, outside this scope
+
+- **`LANES` is exported live and unfrozen** from `orchestrator.js`, and
+  `LANES_BY_ID` shares the same objects, so a caller could push a source
+  class onto a lane and widen the lane permission leg process-wide. This
+  predates the change (the export is present at `533dd5e`) and is not
+  routing, so it was not altered here. It is the same hazard that
+  `GENERAL_SOURCE_CLASSES` was frozen against in this change, and it is
+  worth its own bounded fix.
+- **Five governance words and three head-keyword inflections** remain
+  unrepaired: permissions, clearances, audits, rulebooks, stop decisions
+  (deliberately, for the truncation reason above), plus "brain indexes",
+  "chatgpt recommends" and "deployment".
+- **`MAX_CONTEXT_RECORDS` truncates with a blind slice**, dropping the
+  alphabetically-last source classes first because `listRecords` orders
+  by `source_class` ascending. That is what made the governance repair
+  counter-productive, and it will affect any future decision to route
+  more questions at a wide lane.
+
 ## What is not covered
 
 - **No live model call.** The generation half of Ruth's behaviour is
