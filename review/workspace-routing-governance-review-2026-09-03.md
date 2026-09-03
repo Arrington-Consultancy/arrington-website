@@ -403,6 +403,11 @@ exact head it was taken against. The twentieth pass closed three findings
 and therefore changed the head, so a twenty-first pass was run against
 `f110930` itself rather than the verdict being carried forward.
 
+The commit that records this pass changes only this document. The
+reviewed artefact, `lib/workspace/orchestrator.js` and
+`test/workspace/routing.test.js`, is byte-identical at `f110930` and at
+the branch head, verified by diff, so no twenty-second pass is owed.
+
 It attacked the two things that commit changed, plus the structure they
 sit in, by mutating the deployed module and watching the suite. Six
 mutations, all caught:
