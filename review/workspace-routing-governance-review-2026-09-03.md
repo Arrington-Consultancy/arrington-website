@@ -172,7 +172,16 @@ reviewer measured both:
 **Corrected** by making the treatment uniform: every inflection repair
 now lives in the tail, and rules one to nine route exactly as they did at
 the base, asserted by test. The only edit to them is the deletion of one
-provably dead alternative that could never match. This is the third time in this change that a
+provably dead alternative that could never match.
+
+**What this did NOT correct, stated because an earlier draft of this
+record implied otherwise and contradicted A4.** Moving the repairs to the
+tail fixed the pre-emption of later lanes. It did not, and could not,
+stop a repaired question from losing finance: "what do our servers cost?"
+still moves from the general context to `website_hosting`. That is the
+A4 trade, accepted and escalated, not a defect left unfixed here. The
+two sections describe different halves of the same measurement and must
+be read together. This is the third time in this change that a
 plausible local repair turned out to widen the task-necessity leg, and
 the pattern is worth keeping: in a first-match-wins router, moving a word
 earlier is a permission decision, not a formatting one.
@@ -213,12 +222,19 @@ to ignore the records the change exists to preserve.
   which is the stronger control: they catch the specific defect they were
   written for, not merely the absence of the whole feature. A test that
   has not been seen red is not evidence.
-- **Two structural tests, not example-based.** Example-based checks in
-  this very file passed while the property they were named for was false,
-  twice. One test now asserts that no tail rule can take a question from
-  a lane that already wins it, over every combination of seven earlier
-  subjects and six tail subjects. The other pins that `finance` reaches
-  exactly one lane, so a future "fix" that hands it to another fails.
+- **Four structural tests, and a guard on the guards.** Example-based
+  checks in this very file passed while the property they were named for
+  was false, three times. The current set is derived from the real rule
+  table rather than hand-listed: one test asserts the probe lists cover
+  every rule in the table, so no rule can escape the others; one asserts
+  no tail rule can take a question from a lane that already wins it,
+  across every head subject by every tail subject; one derives the tail's
+  narrowest-first ordering from `lanes.js` rather than restating it; and
+  one pins the nine head rules to their exact patterns, because a test
+  that only re-runs probes stays green when a keyword is added. Both
+  mutations a reviewer used to defeat the previous versions, hoisting a
+  tail rule to the top and adding a keyword to a head rule, were run
+  against the new set and both are caught.
 - **Context, not lane ids.** The clearance and finance tests assert the
   records that actually reach the prompt. The clearance case carries a
   positive control, per this project's rule that a test asserting only

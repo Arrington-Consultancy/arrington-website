@@ -265,26 +265,6 @@ test('the missed plurals now route, and the confidential lanes gain none of them
   });
 });
 
-test('no tail rule can take a question from a lane that already wins it', () => {
-  // Structural rather than example-based, and deliberately not keyed to
-  // where the tail happens to start. The property is: adding a tail
-  // subject to a question that already resolves to a lane must not change
-  // that lane. If a tail rule is ever moved up the list, this fails.
-  const earlierProbes = [
-    'linkedin', 'google ads campaign', 'website deploy', 'drive archives',
-    'workspace control pack', 'the constitution', 'the scott demonstration'
-  ];
-  const tailProbes = ['opportunities', 'prospects', 'permissions', 'our costs', 'proposals', 'audits'];
-  for (const early of earlierProbes) {
-    const alone = routeToLane(early);
-    assert.notEqual(alone, null, `probe should resolve to a lane on its own: ${early}`);
-    for (const late of tailProbes) {
-      const combined = `${early} and ${late}`;
-      assert.equal(routeToLane(combined), alone,
-        `a tail subject changed the lane for "${combined}" (alone: ${alone})`);
-    }
-  }
-});
 
 test('the Scott demonstration is untouched by this change', () => {
   // Scott has its own clearance model and its own records. Nothing in
@@ -310,60 +290,8 @@ test('the Scott demonstration is untouched by this change', () => {
   assert.equal(routeToLane('Tell me about the Scott demonstration'), 'ai_demonstration_builder');
 });
 
-test('rules one to nine are byte-identical to the base, so the money rule stays sound', () => {
-  // Structural, and the reason it exists: an earlier attempt repaired the
-  // seven commercial-ceiling lanes IN PLACE, which defeated the money
-  // rule ("what do our servers cost?" left the general context for
-  // website_hosting, which holds no finance) and pre-empted later lanes
-  // ("draft a LinkedIn post about our campaigns" left
-  // social_content_builder for google_ads). The money rule is only sound
-  // as a tail-only device if the rules above it genuinely do not change.
-  //
-  // Asserted by behaviour rather than by reading the source: every
-  // subject that reached a lane before must still reach the same lane,
-  // and every question that reached NO lane before must still reach no
-  // lane unless a tail rule is the thing that claims it.
-  const unchanged = [
-    ['google ads campaign', 'google_ads'],
-    ['website deploy', 'website_hosting'],
-    ['the pipeline', 'opportunity_builder'],
-    ['drive archive', 'brain_keeper'],
-    ['the constitution', 'governance_assurance'],
-    ['linkedin', 'social_content_builder'],
-    ['shortlist', 'ai_recommendation_visibility'],
-    ['scott demonstration', 'ai_demonstration_builder'],
-    ['workspace control pack', 'ai_workspace_builder']
-  ];
-  for (const [q, laneId] of unchanged) {
-    assert.equal(routeToLane(q), laneId, `a rule above the tail changed: ${q}`);
-  }
-});
 
 
-test('no tail plural pre-empts a lane that already wins the question', () => {
-  // The second regression, pinned, and generalised past the three
-  // examples that found it: every repaired tail subject is combined with
-  // every earlier lane's own subject, and the earlier lane must win.
-  const earlier = [
-    ['linkedin', 'social_content_builder'],
-    ['google ads', 'google_ads'],
-    ['website deploy', 'website_hosting'],
-    ['the constitution', 'governance_assurance'],
-    ['scott demonstration', 'ai_demonstration_builder']
-  ];
-  const tailSubjects = [
-    'campaigns', 'websites', 'domains', 'servers', 'archives', 'shortlists',
-    'demonstrations', 'workspaces', 'control packs', 'opportunities',
-    'prospects', 'proposals', 'permissions', 'audits'
-  ];
-  for (const [subject, laneId] of earlier) {
-    for (const tail of tailSubjects) {
-      const combined = `${subject} and ${tail}`;
-      assert.equal(routeToLane(combined), laneId,
-        `a tail plural pre-empted a lane that already wins: "${combined}"`);
-    }
-  }
-});
 
 test('the exported general source classes cannot be mutated by a caller', () => {
   // It was exported live and unfrozen, which is the exact hazard the
@@ -452,4 +380,102 @@ test('a money question that names no lane still reaches the general context', as
       assert.ok(keys.includes(FINANCE_KEY), `finance must reach the prompt for: ${q}`);
     }
   });
+});
+
+// Every subject the tail rules actually repair, derived once and reused,
+// so a probe list cannot silently miss a rule. HEAD_SUBJECTS names one
+// phrase per head rule; TAIL_SUBJECTS one per tail rule. Both are checked
+// for completeness against the real table before they are used.
+const HEAD_SUBJECTS = [
+  ['google ads campaign', 'google_ads'],
+  ['website deploy', 'website_hosting'],
+  ['the pipeline', 'opportunity_builder'],
+  ['drive archive', 'brain_keeper'],
+  ['the constitution', 'governance_assurance'],
+  ['linkedin', 'social_content_builder'],
+  ['shortlist', 'ai_recommendation_visibility'],
+  ['scott demonstration', 'ai_demonstration_builder'],
+  ['workspace control pack', 'ai_workspace_builder']
+];
+const TAIL_SUBJECTS = [
+  'campaigns', 'websites', 'archives', 'social posts', 'shortlists',
+  'demonstrations', 'workspaces', 'opportunities', 'permissions'
+];
+
+test('the probe lists cover every rule in the real table, so no rule can escape the checks below', () => {
+  // The guard on the guards. An earlier version of the pre-emption test
+  // hand-listed tail subjects and missed social_content_builder's
+  // entirely, so hoisting that rule to the top of the table left all
+  // tests green while inverting routing. Coverage is now asserted against
+  // the table itself rather than assumed.
+  const table = orchestrator.__routingTableForTests;
+  const head = table.slice(0, 9);
+  const tail = table.slice(9);
+
+  assert.equal(head.length + tail.length, table.length);
+  assert.equal(HEAD_SUBJECTS.length, head.length, 'a head rule has no probe');
+  assert.equal(TAIL_SUBJECTS.length, tail.length, 'a tail rule has no probe');
+
+  for (const rule of head) {
+    const re = new RegExp(rule.source, rule.flags);
+    assert.ok(HEAD_SUBJECTS.some(([q]) => re.test(q)), `no head probe exercises ${rule.laneId}`);
+  }
+  for (const rule of tail) {
+    const re = new RegExp(rule.source, rule.flags);
+    assert.ok(TAIL_SUBJECTS.some((q) => re.test(q)), `no tail probe exercises ${rule.laneId}`);
+  }
+});
+
+test('no tail rule can take a question from a lane that already wins it', () => {
+  // Every head subject against every tail subject. With the completeness
+  // check above, this covers the whole table, so hoisting any tail rule
+  // fails here.
+  for (const [subject, laneId] of HEAD_SUBJECTS) {
+    assert.equal(routeToLane(subject), laneId, `head probe stopped resolving: ${subject}`);
+    for (const tail of TAIL_SUBJECTS) {
+      const combined = `${subject} and ${tail}`;
+      assert.equal(routeToLane(combined), laneId,
+        `a tail rule pre-empted a head lane: "${combined}"`);
+    }
+  }
+});
+
+test('the tail is ordered narrowest lane first, derived from lanes.js rather than restated', () => {
+  // The ordering rule is that when a question names two tail subjects the
+  // narrower lane wins, because task necessity is a permission leg and
+  // the wider lane winning by accident of register order would widen it.
+  // An earlier version ordered the commercial group by register order,
+  // which contradicted that: "draft social posts about our campaigns"
+  // reached google_ads rather than social_content_builder.
+  const { laneById } = require('../../lib/workspace/lanes');
+  const tail = orchestrator.__routingTableForTests.slice(9);
+  const widths = tail.map((r) => laneById(r.laneId).sourceClasses.length);
+  for (let i = 1; i < widths.length; i += 1) {
+    assert.ok(widths[i] >= widths[i - 1],
+      `tail rule ${i} (${tail[i].laneId}, ${widths[i]} classes) is wider than the one before it (${tail[i - 1].laneId}, ${widths[i - 1]})`);
+  }
+  // And the behaviour that ordering exists for.
+  assert.equal(routeToLane('Draft social posts about our campaigns'), 'social_content_builder');
+  assert.equal(routeToLane('opportunities and permissions'), 'opportunity_builder');
+});
+
+test('the head rules are pinned to their exact patterns, not merely re-probed', () => {
+  // A test that only re-runs probes stays green when a keyword is ADDED:
+  // putting 'deployment' into rule two would move "is the deployment
+  // healthy?" out of the general context and into website_hosting, losing
+  // the finance record, with every probe still passing. The head rules
+  // are therefore pinned literally. If one legitimately needs to change,
+  // this fails and the change gets read.
+  const head = orchestrator.__routingTableForTests.slice(0, 9);
+  assert.deepEqual(head.map((r) => `${r.laneId}::${r.source}`), [
+    'google_ads::\\b(google ads|paid (ads|advertising|media)|ppc|adwords|campaign|cost per (lead|click)|conversion tracking)\\b',
+    'website_hosting::\\b(website|hosting|deploy|railway|github|domain|dns|cms|server|stripe|checkout|seo tag)\\b',
+    'opportunity_builder::\\b(lead(s)?\\b|prospect|pipeline|proposal|commercial conversation|ivybridge|icabbi)\\b',
+    'brain_keeper::\\b(drive|brain (index|structure|maintenance)|document status|superseded|archive|handoff standard)\\b',
+    'governance_assurance::\\b(governance|assurance|constitution|permission|clearance|audit|stop decision|compliance|rulebook)\\b',
+    'social_content_builder::\\b(linkedin|social (content|post|media)|story bank|published post)\\b',
+    'ai_recommendation_visibility::\\b(ai (visibility|recommendation)|cited by ai|chatgpt recommend|shortlist)\\b',
+    'ai_demonstration_builder::\\b(scott|demonstration|armchair|knitting|fictional)\\b',
+    'ai_workspace_builder::\\b(workspace|control pack|brain gap standard|acceptance plan|implementation brief)\\b'
+  ]);
 });
