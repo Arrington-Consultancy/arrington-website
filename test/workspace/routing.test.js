@@ -521,7 +521,7 @@ test('every rule is pinned to its exact pattern and flags, not merely re-probed'
     'google_ads::i::\\bcampaigns\\b',
     'ai_workspace_builder::i::\\b(workspaces|control packs|brain gap standards|acceptance plans|implementation briefs)\\b',
     'website_hosting::i::\\b(websites|deploys|domains|servers|checkouts|seo tags)\\b',
-    'opportunity_builder::i::\\bopportunit(?:y(?![\\s-]*cost)|ies)\\b'
+    'opportunity_builder::i::\\bopportunit(?:y(?![\\s-]*cost(s|ing)?\\b)|ies)\\b'
   ]);
 });
 
@@ -756,6 +756,16 @@ test('opportunity cost is a finance term, not a pipeline reference', () => {
   for (const q of ['What is the opportunity-cost of pausing?', 'opportunity costing', 'the opportunity costs are high', 'opportunity  cost']) {
     assert.equal(routeToLane(q), null, `the fixed term in another shape must not route: ${q}`);
   }
+  // ...and the exclusion must not swallow longer words that merely start
+  // with "cost". An earlier version dropped the trailing boundary to
+  // catch 'costing' and blocked all three of these.
+  for (const q of [
+    'Is this opportunity costly to pursue?',
+    'Is the opportunity costed yet?',
+    'Is there an opportunity Costa Coffee would fund?'
+  ]) {
+    assert.equal(routeToLane(q), 'opportunity_builder', `the exclusion over-reached: ${q}`);
+  }
   // The exclusion must not swallow ordinary use, and it hangs off the
   // SINGULAR branch only because English separates the two senses by
   // number: "opportunity cost" is the fixed noun phrase, "opportunities
@@ -786,7 +796,10 @@ test('the confidential tail rule carries only the approved word', () => {
   const confidential = tail.filter((r) => laneById(r.laneId).sensitivityCeiling === 'confidential');
   assert.equal(confidential.length, 1, 'a second confidential lane gained a tail rule');
   assert.equal(confidential[0].laneId, 'opportunity_builder');
-  assert.ok(/^\\bopportunit/.test(confidential[0].source),
+  // An EXACT match, not a prefix check. An earlier version asserted
+  // /^\\bopportunit/, so appending '|\\bprospects\\b' to the rule left it
+  // green while its own failure message claimed it would catch that.
+  assert.equal(confidential[0].source, '\\bopportunit(?:y(?![\\s-]*cost(s|ing)?\\b)|ies)\\b',
     'the confidential tail rule gained vocabulary beyond the approved word');
 
   // Words whose plurals are NOT repaired keep the general context, which

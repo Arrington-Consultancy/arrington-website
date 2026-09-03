@@ -22,10 +22,13 @@ technical housekeeping and is untouched.
 This is not the Drive-resident ARRINGTON GOVERNANCE & ASSURANCE worker,
 and it does not award that worker's PASS. Nobody should read it as one.
 
-What it is: five independent review passes, each run in a forked
+What it is: **twenty independent review passes**, each run in a forked
 execution with its own context, each of which inspected the candidate
 without having built it, and each of which was given the opportunity to
-attack the change rather than confirm it. The builder did not grade
+attack the change rather than confirm it. Every count in this document
+refers to that same sequence; where an earlier draft said five, six or
+fifteen, it was counting the passes that had happened when that paragraph
+was written and was not updated afterwards. The builder did not grade
 itself: every finding below was raised by a reviewer, and every one was
 either corrected or recorded with a reason.
 
@@ -96,9 +99,11 @@ human approval boundary, or the effective-context rule.
 
 ## The findings, and what happened to each
 
-Reviewers raised fifteen findings across six passes. Six were
-behavioural; the rest were statements that outran the code, which is the
-defect class this chain has recorded repeatedly.
+Reviewers raised findings on every pass. Rather than enumerate all of
+them, the sections below group them: the behavioural ones that changed
+the design, then the much larger class of statements that outran the
+code, which is the defect this chain records over and over. Every one was
+either corrected or recorded with a reason.
 
 ### A1. The first fix widened the task-necessity leg (behavioural, corrected)
 
@@ -225,9 +230,10 @@ in the no-lane context process-wide. That is the exact hazard the
 adjacent comment cites as the reason `ROUTING_RULES` is withheld.
 Frozen, with a test.
 
-### A7 to A15. Statements that outran the code (all corrected)
+### The large class. Statements that outran the code (all corrected)
 
-Seven findings were claims in comments or test names that were not true
+Most findings across the twenty passes were claims in comments, test
+names or this record that were not true
 of the code beneath them, including a test named "no other lane changed
 where it routes" that passed while that was false; a claim that
 `opportunity_builder` was the only confidential lane, when
@@ -305,7 +311,7 @@ failing suite is not evidence of a defect until its cause is established.
 
 ## The finding that shaped the final candidate
 
-Five review rounds each found a different word whose plural, repaired
+Successive review rounds each found another word whose plural, repaired
 into `opportunity_builder`, took a question that did not belong there:
 `pipelines` (infrastructure), `opportunity cost` (a fixed finance term),
 `campaigns` (email and social, not only paid), and then `proposals`
@@ -342,10 +348,13 @@ review cycle.
   routing, so it was not altered here. It is the same hazard that
   `GENERAL_SOURCE_CLASSES` was frozen against in this change, and it is
   worth its own bounded fix.
-- **Five governance words and three head-keyword inflections** remain
-  unrepaired: permissions, clearances, audits, rulebooks, stop decisions
-  (deliberately, for the truncation reason above), plus "brain indexes",
-  "chatgpt recommends" and "deployment".
+- **Unrepaired vocabulary, named rather than gestured at.** Remaining: permissions, clearances, audits, rulebooks, stop decisions
+  (deliberately, for the truncation reason above); `prospects`,
+  `proposals`, `commercial conversations` and `pipelines` (for the
+  confidential-lane reason above); the head-keyword inflections "brain
+  indexes" and "chatgpt recommends"; and "deployment", which is new
+  vocabulary rather than an inflection, so repairing it would widen which
+  questions route rather than fix a miss.
 - **`MAX_CONTEXT_RECORDS` truncates with a blind slice**, dropping the
   alphabetically-last source classes first because `listRecords` orders
   by `source_class` ascending. That is what made the governance repair
