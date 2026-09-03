@@ -80,8 +80,14 @@ clearances exist?" lost `worker_register` entirely, which the general
 context keeps. A widening that also truncates the answer is not a repair.
 Those five words route exactly as they did at the base, and a test
 asserts it. The lanes the tail does route into were measured for the same
-hazard: the widest reach 23 against the cap of 24, under it by one record,
-which is worth re-measuring before the snapshot grows.
+hazard, because the distinction has to be a measurement rather than a
+preference: the widest reach 23 against the cap of 24. Under it, but by
+one record, and the tail now funnels more questions into them, so the
+consequence of crossing it is wider than before. Record count is live
+data and no unit test can assert it; what can be asserted is the thing
+that would push a lane over, a lane gaining a source class, and a test
+pins each tail lane's breadth so that widening fails rather than silently
+consuming the headroom.
 
 **No STOP condition identified.** No breach of the Constitution, the
 human approval boundary, or the effective-context rule.
@@ -240,7 +246,7 @@ to ignore the records the change exists to preserve.
 
 ## Evidence
 
-- **Red-then-green, and mutation-tested.** Of the twenty-three routing tests,
+- **Red-then-green, and mutation-tested.** Of the twenty-four routing tests,
   six were watched failing against the base orchestrator at `533dd5e` and
   passing after. Others were watched failing against the intermediate
   heads that carried the regressions they were written for, which is the
@@ -282,7 +288,7 @@ to ignore the records the change exists to preserve.
   deletion of the dead `opportunit` stem, which could never match and
   whose presence invited someone to trust that rule, delete the tail
   entry, and silently reinstate the original defect.
-- **Suites.** Measured with `DATABASE_URL` set: workspace 207 tests, 205
+- **Suites.** Measured with `DATABASE_URL` set: workspace 208 tests, 206
   pass, 0 fail, 2 skipped (the two gated suites); Scott 411 pass, 0 fail;
   guards 11 pass, 0 fail. Without a database the workspace suite reports
   fewer tests and one more skip, because three suites gate on it, and the

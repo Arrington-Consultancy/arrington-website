@@ -641,3 +641,35 @@ test('routing into a commercial-ceiling lane drops every confidential record, no
     assert.ok(!ads.includes(FINANCE_KEY));
   });
 });
+
+test('no tail lane has grown wide enough to cross the context cap', () => {
+  // The blind slice in buildLaneContext drops the alphabetically-last
+  // source classes when a lane's record set exceeds MAX_CONTEXT_RECORDS.
+  // That is why the governance plurals were declined: measured on the
+  // real 29-record snapshot, governance_assurance reaches 28 against a
+  // cap of 24 and overflows, while the widest lanes the tail does route
+  // into reach 23 and do not.
+  //
+  // Record count is live data and no unit test can assert it. What CAN be
+  // asserted is the thing that would push a lane over: a lane gaining a
+  // source class. Each tail lane's breadth is pinned, so widening one
+  // fails here and the headroom gets re-measured rather than silently
+  // consumed.
+  const { laneById } = require('../../lib/workspace/lanes');
+  assert.equal(orchestrator.MAX_CONTEXT_RECORDS, 24,
+    'the context cap changed; the headroom measurements in orchestrator.js and the review record must be redone');
+  const widths = {};
+  for (const rule of orchestrator.__routingTableForTests.filter((r) => r.tail)) {
+    widths[rule.laneId] = laneById(rule.laneId).sourceClasses.length;
+  }
+  assert.deepEqual(widths, {
+    social_content_builder: 3,
+    ai_demonstration_builder: 4,
+    ai_recommendation_visibility: 4,
+    brain_keeper: 4,
+    google_ads: 4,
+    ai_workspace_builder: 5,
+    website_hosting: 5,
+    opportunity_builder: 4
+  }, 'a tail lane gained or lost a source class; re-measure it against the cap before shipping');
+});
