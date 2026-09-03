@@ -137,12 +137,16 @@ and at least privilege. So the general no-lane context is the only other
 route to the banking records, and every question that routes to any other
 lane loses them.
 
-This change does not create that trade. It does make it more visible,
-because repairing the inflection defect means more questions route at
-all. Measured: "how much are the campaigns?", "what did we pay for the
-domains?", "what do our servers cost?" moved from the general context to
-a topical lane. Each gains that lane's subject matter and loses the
-banking record. Neither context dominates the other.
+This change does not create that trade, but it does ENLARGE it, and an
+earlier draft understated that by calling it merely more visible. At the
+base only head-keyword phrasings lost finance: "what are our hosting
+costs?" did, "what do our servers cost?" did not. The tail plurals bring
+the second kind in. Measured: "how much are the campaigns costing us?",
+"what did we pay for the domains?" and "what do our servers cost?" all
+reached the general context at the base and now route to a lane that
+cannot see finance, so Tom gets a gap where he used to get a costed
+answer. Each gains that lane's subject matter and loses the banking
+record; neither context dominates the other.
 
 **This is the one item that cannot be resolved inside the approved
 scope,** and it is escalated rather than worked around. The repair is a

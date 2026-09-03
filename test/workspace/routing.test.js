@@ -557,10 +557,47 @@ test('the no-lane system prompt names no source class, so it cannot hint at one 
     assert.ok(!lower.includes(cls) && !lower.includes(cls.replace('_', ' ')),
       `the no-lane prompt names the '${cls}' source class, which tells every reader it exists`);
   }
-  // And it is genuinely the string the orchestrator uses, not a copy that
-  // could drift from the one in the prompt.
-  const src = require('node:fs').readFileSync(
-    require('node:path').join(__dirname, '../../lib/workspace/orchestrator.js'), 'utf8');
-  assert.ok(/:\s*NO_LANE_INSTRUCTION\s*,/.test(src),
-    'NO_LANE_INSTRUCTION is exported but no longer used to build the system prompt');
+});
+
+test('the no-lane system prompt the model actually receives names no source class', async () => {
+  // The stronger half, and the reason the grep above is not enough. A
+  // reviewer demonstrated the bypass: inline the literal back into
+  // askWorkspace and write the export longhand, and the constant reaches
+  // no prompt while every test stays green. So this captures the REAL
+  // system string through the injectable client factory and asserts on
+  // what the model is actually sent.
+  const prev = { key: process.env.ANTHROPIC_API_KEY, flag: process.env.ENABLE_WORKSPACE_AI };
+  process.env.ANTHROPIC_API_KEY = 'test-key-not-used';
+  process.env.ENABLE_WORKSPACE_AI = 'true';
+  let captured = null;
+  orchestrator.__setClientFactoryForTests(() => ({
+    messages: {
+      create: async ({ system }) => {
+        captured = system;
+        return { content: [{ type: 'text', text: JSON.stringify({ answer: 'ok', provenance: [], escalation: null, gap: null }) }] };
+      }
+    }
+  }));
+  try {
+    await withStubbedRecords(async () => {
+      // A question that matches no rule, so the no-lane branch is taken.
+      await orchestrator.askWorkspace({ clearanceId: 'owner_admin', question: 'What is the brand voice?' });
+    });
+    assert.ok(captured, 'the model was never called, so this guard proved nothing');
+    assert.ok(captured.includes(orchestrator.NO_LANE_INSTRUCTION),
+      'the no-lane branch did not use NO_LANE_INSTRUCTION');
+    const lower = captured.toLowerCase();
+    // The lane instruction line is the part under test; the governance
+    // rules and reply contract above it are not, so assert on the line.
+    const line = captured.split('\n').find((l) => l.includes('matched no specialist lane')) || '';
+    for (const cls of orchestrator.GENERAL_SOURCE_CLASSES) {
+      assert.ok(!line.toLowerCase().includes(cls) && !line.toLowerCase().includes(cls.replace('_', ' ')),
+        `the no-lane instruction sent to the model names the '${cls}' source class`);
+    }
+    assert.ok(lower.length > 0);
+  } finally {
+    orchestrator.__resetClientFactoryForTests();
+    if (prev.key === undefined) delete process.env.ANTHROPIC_API_KEY; else process.env.ANTHROPIC_API_KEY = prev.key;
+    if (prev.flag === undefined) delete process.env.ENABLE_WORKSPACE_AI; else process.env.ENABLE_WORKSPACE_AI = prev.flag;
+  }
 });
