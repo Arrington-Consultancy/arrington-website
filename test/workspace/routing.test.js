@@ -223,7 +223,7 @@ test('the missed plurals now route, and the confidential lanes gain none of them
     ['Draft some published posts', 'social_content_builder'],
     ['Which shortlists are we on?', 'ai_recommendation_visibility'],
     ['Tell me about the demonstrations', 'ai_demonstration_builder'],
-    ['What is in the workspace control packs?', 'ai_workspace_builder']
+    ['Where are the control packs?', 'ai_workspace_builder']
   ];
   for (const [q, laneId] of viaCommercialTail) {
     assert.equal(routeToLane(q), laneId, `plural should route: ${q}`);
@@ -513,7 +513,7 @@ test('every rule is pinned to its exact pattern and flags, not merely re-probed'
     'google_ads::i::\\bcampaigns\\b',
     'ai_workspace_builder::i::\\b(workspaces|control packs|brain gap standards|acceptance plans|implementation briefs)\\b',
     'website_hosting::i::\\b(websites|deploys|domains|servers|checkouts|seo tags)\\b',
-    'opportunity_builder::i::\\b(opportunit(?:y|ies)|prospects|proposals|commercial conversations)\\b'
+    'opportunity_builder::i::\\b(opportunit(?:y|ies)(?! costs?\\b)|prospects|proposals|commercial conversations)\\b'
   ]);
 });
 
@@ -709,4 +709,44 @@ test('an ambiguous plural is not repaired into a confidential lane', () => {
   // And the unambiguous siblings still route via the tail.
   assert.equal(routeToLane('What are our prospects?'), 'opportunity_builder');
   assert.equal(routeToLane('Which proposals are outstanding?'), 'opportunity_builder');
+});
+
+test('every viaCommercialTail probe really is answered by a tail rule', () => {
+  // The list's comment claims each entry exercises the tail. One did not:
+  // "what is in the workspace control packs?" matched head rule nine's
+  // bare word "workspace", so it stayed green with the tail
+  // ai_workspace_builder rule deleted and proved nothing about it.
+  //
+  // Checked against the table rather than by eye: for each probe, no head
+  // rule may match it, and some tail rule must.
+  const table = orchestrator.__routingTableForTests;
+  const head = table.filter((r) => !r.tail).map((r) => new RegExp(r.source, r.flags));
+  const tail = table.filter((r) => r.tail).map((r) => new RegExp(r.source, r.flags));
+  for (const q of [
+    'How are the campaigns doing?', 'Which websites do we run?', 'Are the servers healthy?',
+    'Show me the archives', 'Draft some published posts', 'Which shortlists are we on?',
+    'Tell me about the demonstrations', 'Where are the control packs?',
+    'What are our prospects?', 'Which proposals are outstanding?'
+  ]) {
+    assert.ok(!head.some((re) => re.test(q)), `a head rule already answers this probe, so it proves nothing about the tail: ${q}`);
+    assert.ok(tail.some((re) => re.test(q)), `no tail rule answers this probe: ${q}`);
+  }
+});
+
+test('opportunity cost is a finance term, not a pipeline reference', () => {
+  // Same ambiguity hazard as 'pipelines', which this rule declined, and
+  // which this word slipped past until a review found it. The phrase
+  // reached no lane at the base; routing it to opportunity_builder would
+  // gain confidential opportunity records the question does not need and
+  // lose the finance record it does.
+  for (const q of [
+    'What is the opportunity cost of pausing the Pembroke work?',
+    'What are the opportunity costs here?'
+  ]) {
+    assert.equal(routeToLane(q), null, `a fixed finance term must not reach the opportunity lane: ${q}`);
+  }
+  // The lookahead must not swallow ordinary use.
+  for (const q of ['What commercial opportunities are live right now?', 'Is there any opportunity worth chasing?', 'opportunities', 'opportunity']) {
+    assert.equal(routeToLane(q), 'opportunity_builder', `ordinary use must still route: ${q}`);
+  }
 });

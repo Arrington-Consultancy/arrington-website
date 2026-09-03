@@ -246,7 +246,7 @@ to ignore the records the change exists to preserve.
 
 ## Evidence
 
-- **Red-then-green, and mutation-tested.** Of the twenty-five routing tests,
+- **Red-then-green, and mutation-tested.** Of the twenty-seven routing tests,
   six were watched failing against the base orchestrator at `533dd5e` and
   passing after. Others were watched failing against the intermediate
   heads that carried the regressions they were written for, which is the
@@ -288,7 +288,7 @@ to ignore the records the change exists to preserve.
   deletion of the dead `opportunit` stem, which could never match and
   whose presence invited someone to trust that rule, delete the tail
   entry, and silently reinstate the original defect.
-- **Suites.** Measured with `DATABASE_URL` set: workspace 209 tests, 207
+- **Suites.** Measured with `DATABASE_URL` set: workspace 211 tests, 209
   pass, 0 fail, 2 skipped (the two gated suites); Scott 411 pass, 0 fail;
   guards 11 pass, 0 fail. Without a database the workspace suite reports
   fewer tests and one more skip, because three suites gate on it, and the
@@ -341,8 +341,8 @@ failing suite is not evidence of a defect until its cause is established.
 - **The remaining vocabulary gaps, now named rather than gestured at.**
   Five governance words (permissions, clearances, audits, rulebooks, stop
   decisions) are deliberately unrepaired, for the truncation reason
-  above, and `pipelines` is deliberately unrepaired because it is
-  ambiguous: an infrastructure question ("our deployment pipelines")
+  above, and `pipelines` is deliberately unrepaired, and `opportunity cost`
+  excluded by lookahead, because both are ambiguous: an infrastructure question ("our deployment pipelines")
   would have gained two confidential opportunity records. That is the one
   direction the tail's ceiling ordering cannot guard, since the general
   context has no ceiling at all. Two inflections of head keywords still reach no lane, "brain
