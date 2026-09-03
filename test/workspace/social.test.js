@@ -45,7 +45,13 @@ const JUSTIFIED_MANAGE_SCOPES = {
 test('no connector declares a write or publish scope: least privilege on the token itself', () => {
   registry.PLATFORM_IDS.forEach((p) => {
     registry.PLATFORMS[p].readScopes.forEach((scope) => {
-      assert.doesNotMatch(scope, /publish|write|w_|\.write\b/,
+      // `w_` is anchored to the start. LinkedIn's write scopes are
+      // w_organization_social and friends, so the prefix is the signal.
+      // Unanchored it matched any scope containing "w_" anywhere, which
+      // on 03/09/2026 rejected pages_show_list for the "w_" inside
+      // "show_list" - a read scope failing a write test on a substring
+      // of an English word.
+      assert.doesNotMatch(scope, /publish|write|^w_|\.write\b/,
         `${p} declares ${scope}, which grants more than reading`);
       if (/manage|modify|delete|comment/i.test(scope)) {
         assert.ok(JUSTIFIED_MANAGE_SCOPES[scope],
@@ -53,6 +59,43 @@ test('no connector declares a write or publish scope: least privilege on the tok
       }
     });
   });
+});
+
+test('the write-scope pattern still catches a real write scope, and does not catch a read one', () => {
+  // Pins the fix above in both directions. A pattern loosened to clear a
+  // false positive is worth nothing unless it still rejects the thing it
+  // was written for.
+  const writeShaped = ['w_organization_social', 'w_member_social', 'pages_publish_content', 'user.write'];
+  const readShaped = ['pages_show_list', 'pages_read_engagement', 'read_insights', 'tweet.read'];
+  const pattern = /publish|write|^w_|\.write\b/;
+  for (const scope of writeShaped) {
+    assert.match(scope, pattern, `${scope} is a write scope and would now pass the check`);
+  }
+  for (const scope of readShaped) {
+    assert.doesNotMatch(scope, pattern, `${scope} is a read scope and is being rejected`);
+  }
+});
+
+test('mutation scopes are declared apart from read scopes, and Facebook is the only platform holding any', () => {
+  // The structural point of the split: readScopes is what the
+  // least-privilege test guards, and it must not quietly grow write
+  // scopes. Holding a mutation scope is not permission to use it; see
+  // lib/workspace/social/mutations.js for what actually gates that.
+  for (const id of registry.PLATFORM_IDS) {
+    const p = registry.PLATFORMS[id];
+    assert.ok(Array.isArray(p.mutationScopes), `${id} does not declare mutationScopes, even as an empty list`);
+    for (const scope of p.readScopes) {
+      assert.ok(!p.mutationScopes.includes(scope), `${id} lists ${scope} as both a read and a mutation scope`);
+    }
+  }
+  assert.deepEqual(registry.PLATFORMS.instagram.mutationScopes, [], 'Instagram is configured for reading only');
+  assert.deepEqual(registry.PLATFORMS.linkedin.mutationScopes, []);
+  assert.deepEqual(registry.PLATFORMS.x.mutationScopes, []);
+  assert.deepEqual(
+    registry.PLATFORMS.facebook.mutationScopes,
+    ['pages_manage_posts', 'pages_manage_engagement', 'pages_manage_metadata'],
+    'the Facebook mutation scopes should match the Meta app exactly, no more'
+  );
 });
 
 test('every justified exception is actually in use, so the list cannot become a standing permission to add more', () => {

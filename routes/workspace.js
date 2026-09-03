@@ -32,6 +32,7 @@ const socialRepo = require('../lib/workspace/social/repo');
 const socialActions = require('../lib/workspace/social/actions');
 const socialMemory = require('../lib/workspace/social/memory');
 const socialSync = require('../lib/workspace/social/sync');
+const socialMutations = require('../lib/workspace/social/mutations');
 const receptionist = require('../lib/workspace/receptionist');
 const financeRepo = require('../lib/workspace/finance/repo');
 const financeRegistry = require('../lib/workspace/finance/registry');
@@ -795,6 +796,46 @@ router.post('/api/workspace/social/sync', requireWorkspaceApiAccess, writeLimite
     });
     res.json({ ok: true, results });
   } catch (err) { next(err); }
+});
+
+// Carry out an action on Meta that a person has already approved.
+//
+// Added 03/09/2026 on Tom's instruction that the workspace be
+// technically capable of the configured Meta permissions without
+// holding autonomous authority to use them. Every gate is in
+// lib/workspace/social/mutations.js and none of them is here, so this
+// route cannot be the place someone accidentally relaxes one: it hands
+// over an approval id and the module decides.
+//
+// It takes an approval id and nothing that could stand in for one. No
+// AI path reaches it, ENABLE_SOCIAL_MUTATIONS is off by default, the
+// approval is re-read from the database, an approval decided by
+// 'workspace_ai' is refused, and each approval is spent once.
+router.post('/api/workspace/social/mutate', requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
+  try {
+    if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'commercial')) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    const { approvalId, operation } = req.body || {};
+    const ops = {
+      publish_post: () => socialMutations.publishPagePost({ approvalId, message: req.body.message, link: req.body.link }),
+      reply_comment: () => socialMutations.replyToComment({ approvalId, commentId: req.body.commentId, message: req.body.message }),
+      hide_comment: () => socialMutations.hideComment({ approvalId, commentId: req.body.commentId, hidden: req.body.hidden !== false }),
+      update_metadata: () => socialMutations.updatePageMetadata({ approvalId, fields: req.body.fields || {} })
+    };
+    if (!Object.prototype.hasOwnProperty.call(ops, String(operation))) {
+      return res.status(400).json({ error: `unknown operation. One of: ${Object.keys(ops).join(', ')}` });
+    }
+    const result = await ops[String(operation)]();
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    // A refusal is the expected answer here, not a server fault, and
+    // the operator needs to read why.
+    if (err && (err.name === 'MutationRefused' || err.name === 'MetaApiError')) {
+      return res.status(400).json({ error: err.message, kind: err.kind || 'refused' });
+    }
+    next(err);
+  }
 });
 
 router.post('/api/workspace/finance/sync', requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {

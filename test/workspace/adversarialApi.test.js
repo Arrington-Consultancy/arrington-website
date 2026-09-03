@@ -43,7 +43,9 @@ const APIS = [
   // external API with a real credential, so an unauthenticated caller
   // being able to trigger it would be worse than a read of our own
   // tables: it would spend somebody else's rate limit against our token.
-  ['/api/workspace/social/sync', {}]
+  ['/api/workspace/social/sync', {}],
+  // The one endpoint that can change something outside this system.
+  ['/api/workspace/social/mutate', { approvalId: 1, operation: 'publish_post', message: 'probe' }]
 ];
 
 // A tiny cookie-jar fetch, so a session can be carried between calls.

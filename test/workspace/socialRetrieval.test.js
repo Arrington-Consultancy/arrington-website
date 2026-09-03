@@ -309,3 +309,300 @@ test('a post id is checked before it is built into a request path', async () => 
   }
   assert.equal(calls.length, 1, 'a refused id still reached the network');
 });
+
+// ---------------------------------------------------------------
+// Failure taxonomy.
+//
+// "Sync failed" tells an operator nothing they can act on. "The token
+// expired" tells them exactly what to do, and is a different action
+// from "we are being throttled, wait". Each kind is classified from
+// Meta's own error codes and carried through to what gets recorded.
+// ---------------------------------------------------------------
+
+function metaError(body, status = 400) { return { ok: false, status, body: { error: body } }; }
+
+test('an expired token is classified as expiry, and is not retryable', async () => {
+  stubFetch(() => metaError({ message: 'Error validating access token: Session has expired', code: 190, type: 'OAuthException' }));
+  await assert.rejects(() => meta.fetchPageProfile({ pageId: PAGE_ID, token: TOKEN }), (err) => {
+    assert.equal(err.kind, meta.ERROR_KINDS.EXPIRED);
+    assert.equal(err.retryable, false, 'waiting will not fix an expired token');
+    return true;
+  });
+});
+
+test('a permission the app was not granted is classified as denial, not as a broken sync', async () => {
+  stubFetch(() => metaError({ message: '(#200) Requires pages_read_engagement permission', code: 200, type: 'OAuthException' }));
+  await assert.rejects(() => meta.fetchPagePosts({ pageId: PAGE_ID, token: TOKEN }), (err) => {
+    assert.equal(err.kind, meta.ERROR_KINDS.DENIED);
+    assert.equal(err.retryable, false);
+    return true;
+  });
+});
+
+test('throttling is classified as rate limiting, and IS retryable', async () => {
+  // The one failure kind where doing nothing but waiting is the correct
+  // response, which is why it is distinguished from the others.
+  stubFetch(() => metaError({ message: '(#4) Application request limit reached', code: 4 }, 400));
+  await assert.rejects(() => meta.fetchPageProfile({ pageId: PAGE_ID, token: TOKEN }), (err) => {
+    assert.equal(err.kind, meta.ERROR_KINDS.RATE_LIMITED);
+    assert.equal(err.retryable, true);
+    return true;
+  });
+});
+
+test('an HTTP 429 with no body code is still rate limiting', async () => {
+  stubFetch(() => ({ ok: false, status: 429, body: {} }));
+  await assert.rejects(() => meta.fetchPageProfile({ pageId: PAGE_ID, token: TOKEN }), (err) => {
+    assert.equal(err.kind, meta.ERROR_KINDS.RATE_LIMITED);
+    return true;
+  });
+});
+
+test('a malformed reply is classified as malformed rather than guessed at', async () => {
+  stubFetch(() => ({ ok: true, status: 200, body: 'not json at all' }));
+  await assert.rejects(() => meta.fetchPageProfile({ pageId: PAGE_ID, token: TOKEN }), (err) => {
+    assert.equal(err.kind, meta.ERROR_KINDS.MALFORMED);
+    return true;
+  });
+});
+
+test('an unreachable API is its own kind, and is retryable', async () => {
+  meta.__setFetchForTests(async () => { throw new Error('fetch failed'); });
+  await assert.rejects(() => meta.fetchPageProfile({ pageId: PAGE_ID, token: TOKEN }), (err) => {
+    assert.equal(err.kind, meta.ERROR_KINDS.UNREACHABLE);
+    assert.equal(err.retryable, true);
+    return true;
+  });
+});
+
+test('insights that come back missing are absent, not zero', async () => {
+  // Meta omits a metric it will not serve rather than failing the call.
+  // Recording the omission as 0 would be a fabricated measurement.
+  stubFetch(() => ok({ data: [{ name: 'page_impressions', values: [{ value: 12 }] }] }));
+  const insights = await meta.fetchPageInsights({ pageId: PAGE_ID, token: TOKEN });
+  assert.equal(insights.page_impressions, 12);
+  assert.equal(insights.page_fans, undefined, 'a metric Meta did not return was invented');
+});
+
+test('the page list never returns the per-page access tokens Meta includes', async () => {
+  // /me/accounts hands back a live credential per page. Keeping it would
+  // put a token somewhere nothing needs one.
+  stubFetch(() => ok({ data: [{ id: PAGE_ID, name: 'Arrington', category: 'Consulting', access_token: TOKEN }] }));
+  const pages = await meta.fetchPageList({ token: TOKEN });
+  assert.equal(pages.length, 1);
+  assert.ok(!('access_token' in pages[0]), 'a page access token was carried out of the client');
+  assert.ok(!JSON.stringify(pages).includes(TOKEN));
+});
+
+// ---------------------------------------------------------------
+// Mutations: capable, but not authorised.
+// ---------------------------------------------------------------
+
+const mutations = require('../../lib/workspace/social/mutations');
+
+test('with the flag off, nothing can be changed on Meta at all', async () => {
+  const calls = stubFetch(() => ok({ id: 'x' }));
+  await assert.rejects(
+    () => mutations.publishPagePost({ approvalId: 1, message: 'hello', env: { ...CONFIGURED } }),
+    /not enabled/
+  );
+  assert.equal(calls.length, 0, 'a request reached Meta with mutations disabled');
+});
+
+test('the mutation gate refuses every unauthorised shape, and allows only the authorised one', () => {
+  const on = { ENABLE_SOCIAL_MUTATIONS: 'true' };
+  const refuse = [
+    ['flag off', {}, { approvalId: 1, status: 'approved', approvedBy: 'tom' }],
+    ['no approval at all', on, null],
+    ['approval still open', on, { approvalId: 1, status: 'open', approvedBy: 'tom' }],
+    ['approval declined', on, { approvalId: 1, status: 'declined', approvedBy: 'tom' }],
+    ['nobody named as approver', on, { approvalId: 1, status: 'approved', approvedBy: '' }],
+    ['approved by the AI itself', on, { approvalId: 1, status: 'approved', approvedBy: 'workspace_ai' }]
+  ];
+  for (const [name, env, approval] of refuse) {
+    assert.throws(
+      () => meta.assertMutationAuthorised('page_publish_post', approval, env),
+      undefined,
+      `the gate allowed: ${name}`
+    );
+  }
+  assert.ok(meta.assertMutationAuthorised('page_publish_post', { approvalId: 1, status: 'approved', approvedBy: 'tom' }, on),
+    'a genuine human approval was refused, so the gate blocks everything and proves nothing');
+});
+
+test('an endpoint that is not an approved mutation cannot be called even with a valid approval', () => {
+  assert.throws(
+    () => meta.assertMutationAuthorised('page_delete_post', { approvalId: 1, status: 'approved', approvedBy: 'tom' }, { ENABLE_SOCIAL_MUTATIONS: 'true' }),
+    /not on the mutation allowlist/
+  );
+});
+
+test('deletion is not on the mutation allowlist at any level', () => {
+  // What is absent matters as much as what is present. Hiding a comment
+  // is reversible and is offered; deleting one is not offered at all.
+  for (const endpoint of meta.MUTATION_ALLOWLIST) {
+    assert.doesNotMatch(endpoint, /delete|remove/i, `${endpoint} is a destructive capability`);
+  }
+});
+
+test('autonomous callers are still refused by construction, unchanged', () => {
+  // The mutation path is new; this rule is not, and must not have been
+  // relaxed to make room for it.
+  const actions = require('../../lib/workspace/social/actions');
+  assert.throws(() => actions.assertAutonomousAllowed('facebook', 'publish'), actions.ConsequentialActionError);
+  assert.throws(() => actions.assertAutonomousAllowed('facebook', 'reply_publicly'), /consequential external action/);
+});
+
+// ---------------------------------------------------------------
+// Partial failure, and what the database ends up believing.
+// ---------------------------------------------------------------
+
+test('one platform failing does not stop the other, and each reports its own truth', needsDb, async () => {
+  // The case that matters when two connectors share one Meta app: an
+  // Instagram problem must not present as a Facebook problem.
+  stubFetch((url) => {
+    if (/\/insights/.test(url)) return ok({ data: [] });
+    if (url.includes(IG_ID)) return metaError({ message: 'Instagram account not linked', code: 100 });
+    if (/\/comments/.test(url)) return ok({ data: [] });
+    if (/\/posts/.test(url)) return ok({ data: [] });
+    return ok({ id: PAGE_ID, name: 'Arrington', followers_count: 11 });
+  });
+  const results = await sync.syncAll(CONFIGURED);
+  const byPlatform = Object.fromEntries(results.map((r) => [r.platform, r.outcome]));
+  assert.equal(byPlatform.facebook, 'ok', 'a healthy platform was dragged down by the failing one');
+  assert.equal(byPlatform.instagram, 'failed');
+
+  const fb = await stateOf('facebook');
+  const ig = await stateOf('instagram');
+  assert.equal(fb.freshness.state, 'fresh');
+  assert.equal(ig.freshness.state, 'sync_failed');
+});
+
+test('insights failing alone is partial: the posts are still real, the metrics are not there', needsDb, async () => {
+  // read_insights can be granted on the app and still refused for a
+  // particular Page. Losing the metrics must not discard the content.
+  const unique = `${PAGE_ID}_${Date.now()}9`;
+  stubFetch((url) => {
+    if (/\/insights/.test(url)) return metaError({ message: '(#200) Insights permission required', code: 200 });
+    if (/\/comments/.test(url)) return ok({ data: [] });
+    if (/\/posts/.test(url)) return ok({ data: [{ id: unique, message: 'still here', created_time: '2026-09-01T10:00:00+0000' }] });
+    return ok({ id: PAGE_ID, name: 'Arrington', followers_count: 11 });
+  });
+  const result = await sync.syncPlatform('facebook', CONFIGURED);
+  assert.equal(result.outcome, 'partial');
+  assert.match(result.detail, /insights/);
+  const posts = await repo.listPosts({ platform: 'facebook', limit: 200 });
+  assert.ok(posts.some((p) => p.external_id === unique), 'the posts were lost because the metrics failed');
+});
+
+test('a rate-limited sync records the throttling rather than a vague failure', needsDb, async () => {
+  stubFetch(() => metaError({ message: '(#4) Application request limit reached', code: 4 }));
+  const result = await sync.syncPlatform('facebook', CONFIGURED);
+  assert.equal(result.outcome, 'failed');
+  const state = await stateOf('facebook');
+  assert.match(state.lastError, /request limit reached/,
+    'the operator cannot tell throttling from a broken connector');
+});
+
+test('an approval is verified against the database, not against what the caller claims', needsDb, async () => {
+  // The property that makes the gate meaningful: a caller cannot assert
+  // its own authorisation. It supplies an id, and the row decides.
+  const workspaceRepo = require('../../lib/workspace/repo');
+  const open = await workspaceRepo.createApproval({
+    title: 'probe: publish a post', detail: 'probe', actionClass: 4,
+    sensitivity: 'commercial', requestedBy: 'workspace_ai'
+  });
+  await assert.rejects(
+    () => mutations.loadGrantedApproval(open.id),
+    /is "open"/,
+    'an undecided approval was treated as granted'
+  );
+  await assert.rejects(() => mutations.loadGrantedApproval(999999999), /does not exist/);
+  await assert.rejects(() => mutations.loadGrantedApproval('not-a-number'), /valid approval id/);
+});
+
+test('an approval granted by the AI itself is refused at the database level too', needsDb, async () => {
+  const workspaceRepo = require('../../lib/workspace/repo');
+  const a = await workspaceRepo.createApproval({
+    title: 'probe: self-approved', detail: 'probe', actionClass: 4,
+    sensitivity: 'commercial', requestedBy: 'workspace_ai'
+  });
+  await workspaceRepo.decideApproval(a.id, { decision: 'approved', decidedBy: 'workspace_ai', note: 'probe' });
+  await assert.rejects(() => mutations.loadGrantedApproval(a.id), /not granted by a person/);
+});
+
+test('a human-granted approval loads, so the refusals above are not refusing everything', needsDb, async () => {
+  // The positive control. Every test above asserts an absence, and a
+  // gate that refuses everything would pass all of them.
+  const workspaceRepo = require('../../lib/workspace/repo');
+  const a = await workspaceRepo.createApproval({
+    title: 'probe: human approved', detail: 'probe', actionClass: 4,
+    sensitivity: 'commercial', requestedBy: 'workspace_ai'
+  });
+  await workspaceRepo.decideApproval(a.id, { decision: 'approved', decidedBy: 'tom', note: 'probe' });
+  const row = await mutations.loadGrantedApproval(a.id);
+  assert.equal(row.status, 'approved');
+  assert.equal(row.decided_by, 'tom');
+});
+
+test('an approved action executes once, and the same approval cannot be spent twice', needsDb, async () => {
+  // The whole mutation path, end to end, with Meta stubbed: a person
+  // approves, the action is carried out, and the approval is then used
+  // up. Without the second half an approved row would be a standing
+  // licence to repeat the action, which is not what approving it meant.
+  const workspaceRepo = require('../../lib/workspace/repo');
+  const a = await workspaceRepo.createApproval({
+    title: 'probe: publish once', detail: 'probe', actionClass: 4,
+    sensitivity: 'commercial', requestedBy: 'workspace_ai'
+  });
+  await workspaceRepo.decideApproval(a.id, { decision: 'approved', decidedBy: 'tom', note: 'go ahead' });
+
+  const calls = stubFetch(() => ok({ id: `${PAGE_ID}_111` }));
+  const env = { ...CONFIGURED, ENABLE_SOCIAL_MUTATIONS: 'true' };
+
+  const first = await mutations.publishPagePost({ approvalId: a.id, message: 'A real post', env });
+  assert.equal(first.ok, true);
+  assert.equal(first.approvedBy, 'tom');
+  assert.equal(calls.length, 1, 'the post was not actually sent');
+  assert.equal(calls[0].opts.method, 'POST');
+  assert.ok(!calls[0].url.includes(TOKEN), 'the token was put in the mutation URL');
+  assert.equal(calls[0].opts.headers.Authorization, `Bearer ${TOKEN}`);
+
+  await assert.rejects(
+    () => mutations.publishPagePost({ approvalId: a.id, message: 'A real post', env }),
+    /already been carried out/,
+    'one approval authorised the same action twice'
+  );
+  assert.equal(calls.length, 1, 'a second request reached Meta on a spent approval');
+});
+
+test('an empty post or reply is refused before it reaches Meta', needsDb, async () => {
+  const workspaceRepo = require('../../lib/workspace/repo');
+  const a = await workspaceRepo.createApproval({
+    title: 'probe: empty', detail: 'probe', actionClass: 4, sensitivity: 'commercial', requestedBy: 'workspace_ai'
+  });
+  await workspaceRepo.decideApproval(a.id, { decision: 'approved', decidedBy: 'tom', note: 'ok' });
+  const calls = stubFetch(() => ok({}));
+  const env = { ...CONFIGURED, ENABLE_SOCIAL_MUTATIONS: 'true' };
+  await assert.rejects(() => mutations.publishPagePost({ approvalId: a.id, message: '   ', env }), /no message/);
+  await assert.rejects(() => mutations.replyToComment({ approvalId: a.id, commentId: `${PAGE_ID}_1`, message: '', env }), /empty reply/);
+  await assert.rejects(() => mutations.updatePageMetadata({ approvalId: a.id, fields: { nonsense: 'x' }, env }), /no changeable metadata/);
+  assert.equal(calls.length, 0);
+});
+
+test('a failed mutation is recorded as failed and does not consume the approval', needsDb, async () => {
+  // A network failure must not silently burn the person's decision.
+  const workspaceRepo = require('../../lib/workspace/repo');
+  const a = await workspaceRepo.createApproval({
+    title: 'probe: fails then works', detail: 'probe', actionClass: 4, sensitivity: 'commercial', requestedBy: 'workspace_ai'
+  });
+  await workspaceRepo.decideApproval(a.id, { decision: 'approved', decidedBy: 'tom', note: 'ok' });
+  const env = { ...CONFIGURED, ENABLE_SOCIAL_MUTATIONS: 'true' };
+
+  stubFetch(() => metaError({ message: '(#4) Application request limit reached', code: 4 }));
+  await assert.rejects(() => mutations.publishPagePost({ approvalId: a.id, message: 'retry me', env }), /request limit/);
+
+  stubFetch(() => ok({ id: `${PAGE_ID}_222` }));
+  const second = await mutations.publishPagePost({ approvalId: a.id, message: 'retry me', env });
+  assert.equal(second.ok, true, 'a throttled attempt burned the approval, so the person must approve again');
+});
