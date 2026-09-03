@@ -234,7 +234,6 @@ test('the missed plurals now route, and the confidential lanes gain none of them
   const viaTail = [
     ['What are our prospects?', 'opportunity_builder'],
     ['Which proposals are outstanding?', 'opportunity_builder'],
-    ['How are the pipelines looking?', 'opportunity_builder'],
   ];
   for (const [q, laneId] of viaTail) {
     assert.equal(routeToLane(q), laneId, `tail plural should route: ${q}`);
@@ -514,7 +513,7 @@ test('every rule is pinned to its exact pattern and flags, not merely re-probed'
     'google_ads::i::\\bcampaigns\\b',
     'ai_workspace_builder::i::\\b(workspaces|control packs|brain gap standards|acceptance plans|implementation briefs)\\b',
     'website_hosting::i::\\b(websites|deploys|domains|servers|checkouts|seo tags)\\b',
-    'opportunity_builder::i::\\b(opportunit(?:y|ies)|prospects|pipelines|proposals|commercial conversations)\\b'
+    'opportunity_builder::i::\\b(opportunit(?:y|ies)|prospects|proposals|commercial conversations)\\b'
   ]);
 });
 
@@ -672,4 +671,29 @@ test('no tail lane has grown wide enough to cross the context cap', () => {
     website_hosting: 5,
     opportunity_builder: 4
   }, 'a tail lane gained or lost a source class; re-measure it against the cap before shipping');
+});
+
+test('an ambiguous plural is not repaired into a confidential lane', () => {
+  // 'pipelines' is the case that shows the one direction the tail's
+  // ceiling ordering cannot guard. Ordering protects a lane from being
+  // pre-empted by a WIDER one, but the general no-lane context sits
+  // outside that: it has no sensitivity ceiling at all, so moving a
+  // question out of it and into any lane is a change the ordering never
+  // sees.
+  //
+  // "How are our deployment pipelines?" and "what about our CI
+  // pipelines?" reached no lane at the base. Repairing the plural into
+  // opportunity_builder would have handed an infrastructure question two
+  // confidential opportunity records while losing technical_state. The
+  // word is ambiguous in a way "prospects" and "proposals" are not, so it
+  // is left alone.
+  for (const q of ['How are our deployment pipelines?', 'What about our CI pipelines?', 'How are the pipelines looking?']) {
+    assert.equal(routeToLane(q), null, `an ambiguous plural must not reach a confidential lane: ${q}`);
+  }
+  // The singular is a head keyword and keeps its behaviour, so a genuine
+  // commercial-pipeline question still routes.
+  assert.equal(routeToLane('What is in the pipeline?'), 'opportunity_builder');
+  // And the unambiguous siblings still route via the tail.
+  assert.equal(routeToLane('What are our prospects?'), 'opportunity_builder');
+  assert.equal(routeToLane('Which proposals are outstanding?'), 'opportunity_builder');
 });

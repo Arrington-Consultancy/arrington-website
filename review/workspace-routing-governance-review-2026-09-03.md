@@ -246,7 +246,7 @@ to ignore the records the change exists to preserve.
 
 ## Evidence
 
-- **Red-then-green, and mutation-tested.** Of the twenty-four routing tests,
+- **Red-then-green, and mutation-tested.** Of the twenty-five routing tests,
   six were watched failing against the base orchestrator at `533dd5e` and
   passing after. Others were watched failing against the intermediate
   heads that carried the regressions they were written for, which is the
@@ -288,7 +288,7 @@ to ignore the records the change exists to preserve.
   deletion of the dead `opportunit` stem, which could never match and
   whose presence invited someone to trust that rule, delete the tail
   entry, and silently reinstate the original defect.
-- **Suites.** Measured with `DATABASE_URL` set: workspace 208 tests, 206
+- **Suites.** Measured with `DATABASE_URL` set: workspace 209 tests, 207
   pass, 0 fail, 2 skipped (the two gated suites); Scott 411 pass, 0 fail;
   guards 11 pass, 0 fail. Without a database the workspace suite reports
   fewer tests and one more skip, because three suites gate on it, and the
@@ -321,6 +321,16 @@ failing suite is not evidence of a defect until its cause is established.
   by `source_class` ascending. That is what made the governance repair
   counter-productive, and it will affect any future decision to route
   more questions at a wide lane.
+- **That truncation is a live honesty problem today, independent of this
+  change.** `governance_assurance` is already reachable from unchanged
+  head keywords ("governance", "constitution", "compliance"), it already
+  measures 28 records against the cap of 24, and the prompt tells the
+  model the supplied records are "the only facts available to you" while
+  no gap is raised about the ones the slice removed. This change neither
+  causes nor worsens it, and declining the governance plurals avoids
+  adding traffic to it, but it is worth its own fix: either a
+  clearance-aware selection instead of a blind slice, or a gap raised
+  when truncation occurs.
 
 ## What is not covered
 
@@ -331,7 +341,11 @@ failing suite is not evidence of a defect until its cause is established.
 - **The remaining vocabulary gaps, now named rather than gestured at.**
   Five governance words (permissions, clearances, audits, rulebooks, stop
   decisions) are deliberately unrepaired, for the truncation reason
-  above. Two inflections of head keywords still reach no lane, "brain
+  above, and `pipelines` is deliberately unrepaired because it is
+  ambiguous: an infrastructure question ("our deployment pipelines")
+  would have gained two confidential opportunity records. That is the one
+  direction the tail's ceiling ordering cannot guard, since the general
+  context has no ceiling at all. Two inflections of head keywords still reach no lane, "brain
   indexes" and "chatgpt recommends", and were not repaired because the
   claim being made is that what IS repaired lives in the tail, not that
   the class is exhausted. "deployment" reaches no lane because it is new
