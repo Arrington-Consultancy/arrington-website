@@ -1189,6 +1189,97 @@ and `/workspace/projects` are registered through `classPage(...)` in
 search for `page('/workspace` finds ten routes against twelve nav links
 and looks exactly like two broken nav items. They are not broken.
 
+### Meta connectors: the real ones (03/09/2026)
+
+**Before.** The social area had a registry, a schema, four platform
+definitions, a permission model, a page, a governance record and no code
+that called an API. `FACEBOOK_PAGE_ACCESS_TOKEN` and
+`INSTAGRAM_ACCESS_TOKEN` appeared only as names inside `credentialEnv`;
+nothing read their values. `startSyncRun`/`finishSyncRun` existed and
+were called by nothing but their own tests. A correctly pasted token
+produced an empty page permanently, and CLAUDE.md's "connected to
+nothing yet" was more literal than it read. Found while trying to test
+the Facebook connector on Tom's behalf, which is when it became clear
+there was not one.
+
+**After.** `lib/workspace/social/metaClient.js` (Graph API v21.0 HTTP
+client), `lib/workspace/social/sync.js` (retrieval and truthful run
+recording), `lib/workspace/social/mutations.js` (approved external
+actions), plus `repo.upsertPost`/`upsertEngagement`, a `Sync now`
+control, `POST /api/workspace/social/sync` and
+`POST /api/workspace/social/mutate`.
+
+**Reads, matching the Meta app "Arrington Consultancy Social":** Page
+list, profile, metadata, posts, post comments and Page/post insights;
+Instagram profile, media, and account/media insights. Insights are
+requested AFTER the content on purpose, because `read_insights` can be
+granted on the app and still refused for a particular Page or metric;
+losing the metrics must not discard the posts. A metric Meta omits stays
+absent rather than being written as zero.
+
+**Instagram comments are still not fetched.** The only scope exposing
+them also confers moderation (finding F5). Not requesting the scope was
+only half that promise; a test now asserts the endpoint is never called.
+
+**Failure taxonomy.** Meta's codes are classified into `token_expired`,
+`permission_denied`, `rate_limited`, `malformed_response` and
+`unreachable`, each marked retryable or not, each carried into what is
+recorded. Waiting fixes throttling and never fixes an expired token, and
+an operator should not have to guess which they have.
+
+**Mutations, and what actually changed.** The approval queue used to
+hold records that EXECUTED NOTHING: a person approved a row and then did
+the action on the platform themselves. The workspace can now carry out a
+Page post, a comment reply, hiding a comment and a metadata change. That
+is a real expansion of this system's authority and is recorded as one.
+
+Four gates, all required at once:
+
+1. `ENABLE_SOCIAL_MUTATIONS` exactly `'true'`, unset by default, so
+   merging is inert (the same pattern as the workspace flag itself).
+2. The endpoint is on a four-item allowlist. **Deletion is not on it at
+   any level**, and a test asserts that.
+3. An approval id is supplied, and the row is **re-read from the
+   database** rather than believed from the caller, so nothing can
+   assert its own authorisation.
+4. The approval was granted by a named person. An approval decided by
+   `workspace_ai` is refused explicitly.
+
+An approval is spent once (guarded by a `social_mutation_executed`
+activity row keyed on `approval:<id>`), because otherwise one approved
+row is a standing licence to repeat the action. A failed attempt does
+not consume it, so a throttled publish does not force a person to
+approve again.
+
+**Unchanged, deliberately:** `actions.js` still THROWS for autonomous
+callers and its tests are untouched. `readScopes` still holds no write
+scope, and the test guarding that still guards exactly what it guarded,
+because the three manage scopes live in a separate `mutationScopes`
+field. Instagram declares an empty mutation list rather than no list: an
+empty list is a statement, an absent field is an oversight.
+
+**A test bug fixed rather than worked around:** the write-scope pattern
+matched `w_` anywhere, so `pages_show_list` failed a write-scope test on
+a substring of the word "show_list". Anchored to `^w_`, the prefix
+LinkedIn write scopes actually use, and pinned in both directions.
+
+**Tests:** `test/workspace/socialRetrieval.test.js`, 44, covering
+success, expiry, permission denial, rate limiting, malformed replies,
+unreachability, partial platform failure, the mutation gate in every
+refusing shape plus a positive control, spend-once, and that no token
+reaches a URL or an error message. Both new endpoints are in the
+adversarial gate, which passes 10/10 with nothing skipped.
+
+**NOT connected.** No live Meta call has been made. This sandbox cannot
+reach Meta, so the first real request is Tom's, and nothing here should
+be read as evidence the credentials work.
+
+**Governance:** the mutation capability is a material connector-permission
+change. The v0.1 approved scope and finding F3 both excluded autonomous
+publishing; this is not autonomous, but it is new authority and belongs
+at ARRINGTON AI GOVERNANCE & ASSURANCE before `ENABLE_SOCIAL_MUTATIONS`
+is set against the live Page.
+
 ### Ruth failing on broad questions (fixed 03/09/2026)
 
 Tom asked Ruth "so where can we make some money? where are the gaps in
