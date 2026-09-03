@@ -191,24 +191,107 @@ test('the strong opportunity keywords keep their original high precedence', () =
   assert.equal(routeToLane('Draft a LinkedIn post about the leads we won'), 'opportunity_builder');
 });
 
-test('a question about opportunities leaves the general context, and so loses finance', async () => {
-  // The one real consequence, and a cost this change imposes rather than
-  // one it merely reveals. lanes.js holds 'finance' at least privilege:
-  // governance_assurance is the only lane granted it, so for every other
-  // lane the general no-lane context is the only route to it. This
-  // question used to reach that context and see the banking records, and
-  // now does not. The repair is not to hand finance to this lane.
+test('a money question keeps the general context, and therefore keeps finance', async () => {
+  // The consequence the opportunity rule introduced, now repaired. Before
+  // the tail guard, "where are the opportunities to reduce our recurring
+  // costs?" was captured by the opportunity rule and lost the banking
+  // records, because lanes.js grants 'finance' to governance_assurance
+  // alone and the general context is its only other route.
+  //
+  // The repair is a no-lane rule, NOT a new source class on any lane. The
+  // assertions below pin both halves, so a future "fix" that hands
+  // finance to a lane fails here rather than passing quietly.
   const { LANES, laneById } = require('../../lib/workspace/lanes');
   assert.deepEqual(
     LANES.filter((l) => l.sourceClasses.includes('finance')).map((l) => l.id),
     ['governance_assurance'],
-    'the set of lanes holding finance changed; the note in orchestrator.js about this consequence must be revisited'
+    'finance reached another lane; that is a worker-permission change and not what this fix was allowed to do'
   );
-  assert.ok(
-    !laneById('opportunity_builder').sourceClasses.includes('finance'),
-    'the opportunity lane must not have been handed finance to paper over this'
-  );
-  assert.equal(routeToLane('Where are the opportunities to reduce our recurring costs?'), 'opportunity_builder');
+  assert.ok(!laneById('opportunity_builder').sourceClasses.includes('finance'));
+
+  for (const q of [
+    'Where are the opportunities to reduce our recurring costs?',
+    'What is our bank balance?',
+    'How much did we spend last month?',
+    'What do our overheads look like?'
+  ]) {
+    assert.equal(routeToLane(q), null, `a money question must keep the general context: ${q}`);
+  }
+
+  // A money question that names a specific lane still goes to that lane.
+  assert.equal(routeToLane('What does governance say about our costs?'), 'governance_assurance');
+
+  // Positive control on the outcome, not just the routing: the general
+  // context really does carry finance, so the assertions above are about
+  // something real.
+  assert.ok(orchestrator.GENERAL_SOURCE_CLASSES.includes('finance'),
+    'the general context must actually carry finance, or the routing assertions above prove nothing');
+});
+
+test('the missed plurals now route, and the confidential lanes gain none of them by precedence', () => {
+  // Commercial-ceiling lanes were repaired in place: no confidential
+  // exposure is possible from them, so precedence is not at stake.
+  const inPlace = [
+    ['How are the campaigns doing?', 'google_ads'],
+    ['Are our domains all valid?', 'website_hosting'],
+    ['Which websites do we run?', 'website_hosting'],
+    ['Are the servers healthy?', 'website_hosting'],
+    ['Show me the archives', 'brain_keeper'],
+    ['Draft some published posts', 'social_content_builder'],
+    ['Which shortlists are we on?', 'ai_recommendation_visibility'],
+    ['Tell me about the demonstrations', 'ai_demonstration_builder'],
+    ['What is in the workspace control packs?', 'ai_workspace_builder']
+  ];
+  for (const [q, laneId] of inPlace) {
+    assert.equal(routeToLane(q), laneId, `plural should route: ${q}`);
+  }
+
+  // The two confidential-ceiling lanes got their plurals in the tail, so
+  // they route when nothing else wants the question...
+  const viaTail = [
+    ['What are our prospects?', 'opportunity_builder'],
+    ['Which proposals are outstanding?', 'opportunity_builder'],
+    ['How are the pipelines looking?', 'opportunity_builder'],
+    ['What permissions does the content role have?', 'governance_assurance'],
+    ['Show me the audits', 'governance_assurance'],
+    ['Which clearances exist?', 'governance_assurance']
+  ];
+  for (const [q, laneId] of viaTail) {
+    assert.equal(routeToLane(q), laneId, `tail plural should route: ${q}`);
+  }
+
+  // ...and never take a question from a lane that already wins it. This
+  // is the property that keeps the repair inside least privilege.
+  const notPreEmpted = [
+    ['Draft a LinkedIn post about our prospects', 'social_content_builder'],
+    ['Draft a LinkedIn post about our audits', 'social_content_builder'],
+    ['Which Drive document holds the proposals?', 'brain_keeper'],
+    ['Is the website deploy blocked by permissions?', 'website_hosting']
+  ];
+  for (const [q, laneId] of notPreEmpted) {
+    assert.equal(routeToLane(q), laneId, `the tail must not pre-empt a specific lane: ${q}`);
+  }
+});
+
+test('no tail rule can take a question from a lane that already wins it', () => {
+  // Structural rather than example-based, and deliberately not keyed to
+  // where the tail happens to start. The property is: adding a tail
+  // subject to a question that already resolves to a lane must not change
+  // that lane. If a tail rule is ever moved up the list, this fails.
+  const earlierProbes = [
+    'linkedin', 'google ads campaign', 'website deploy', 'drive archives',
+    'workspace control pack', 'the constitution', 'the scott demonstration'
+  ];
+  const tailProbes = ['opportunities', 'prospects', 'permissions', 'our costs', 'proposals', 'audits'];
+  for (const early of earlierProbes) {
+    const alone = routeToLane(early);
+    assert.notEqual(alone, null, `probe should resolve to a lane on its own: ${early}`);
+    for (const late of tailProbes) {
+      const combined = `${early} and ${late}`;
+      assert.equal(routeToLane(combined), alone,
+        `a tail subject changed the lane for "${combined}" (alone: ${alone})`);
+    }
+  }
 });
 
 test('the Scott demonstration is untouched by this change', () => {
