@@ -31,6 +31,7 @@ const { askWorkspace, isWorkspaceAIEnabled, routeToLane } = require('../lib/work
 const socialRepo = require('../lib/workspace/social/repo');
 const socialActions = require('../lib/workspace/social/actions');
 const socialMemory = require('../lib/workspace/social/memory');
+const socialSync = require('../lib/workspace/social/sync');
 const receptionist = require('../lib/workspace/receptionist');
 const financeRepo = require('../lib/workspace/finance/repo');
 const financeRegistry = require('../lib/workspace/finance/registry');
@@ -769,6 +770,33 @@ router.post('/api/workspace/finance/anna/import', requireWorkspaceApiAccess, wri
 // sync - there is nothing to poll). No scheduled sync exists yet in v1;
 // every retrieval today is either the automatic first sync after
 // connecting Xero, or triggered here by Tom.
+// Retrieve from the connected social platforms. Added 03/09/2026 with
+// lib/workspace/social/sync.js: until then the social area had no code
+// that could fetch anything, so a correctly configured connector stayed
+// empty forever.
+//
+// This is a READ that writes only to our own tables. It cannot publish,
+// reply, delete or spend: the client it calls has no function that
+// would, and the token carries no scope that would allow it. Same
+// clearance and rate limit as every other workspace write endpoint.
+router.post('/api/workspace/social/sync', requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
+  try {
+    if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'commercial')) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    const results = await socialSync.syncAll();
+    const summary = results
+      .map((r) => `${r.platform}: ${r.outcome}${r.itemsWritten ? ` (${r.itemsWritten} item(s))` : ''}`)
+      .join('; ');
+    await repo.addActivity({
+      actor: req.session.user.username,
+      eventType: 'social_synced',
+      summary: `Social retrieval attempted. ${summary}`
+    });
+    res.json({ ok: true, results });
+  } catch (err) { next(err); }
+});
+
 router.post('/api/workspace/finance/sync', requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
   try {
     if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'confidential')) {

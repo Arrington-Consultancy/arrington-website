@@ -25,6 +25,12 @@
 
 <div class="ws-card">
   <h2>Connectors</h2>
+  <p class="ws-body-text">Retrieval is manual and read-only: it fetches the account profile, recent posts and (on Facebook) comments awaiting a reply. It never publishes, replies, deletes or spends. Pressing it twice is safe, because items are matched on their platform id and updated rather than duplicated.</p>
+  <form id="wsSocialSync" class="ws-form-row">
+    <button class="ws-btn" type="submit">Sync now</button>
+  </form>
+  <p class="ws-meta" id="wsSocialSyncResult" hidden></p>
+  <p class="ws-note-error" id="wsSocialSyncError" hidden></p>
   <div class="ws-table-wrap">
   <table class="ws-table">
     <tr><th>Platform</th><th>State</th><th>Last retrieval</th><th>Followers</th></tr>
@@ -232,6 +238,48 @@
         err.hidden = false;
       }
     });
+
+    // Manual retrieval. Reports what actually happened per platform,
+    // including 'skipped' for the ones with no credentials, because a
+    // silent success on an unconfigured connector is exactly the
+    // ambiguity this area exists to remove.
+    var syncForm = document.getElementById('wsSocialSync');
+    var syncOut = document.getElementById('wsSocialSyncResult');
+    var syncErr = document.getElementById('wsSocialSyncError');
+    if (syncForm) {
+      syncForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var btn = syncForm.querySelector('button');
+        btn.disabled = true;
+        var previous = btn.textContent;
+        btn.textContent = 'Retrieving...';
+        syncErr.hidden = true;
+        syncOut.hidden = true;
+        try {
+          var r = await fetch('/api/workspace/social/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf },
+            body: '{}'
+          });
+          var data = await r.json();
+          if (!r.ok) {
+            syncErr.textContent = data.error || 'That did not work.';
+            syncErr.hidden = false;
+          } else {
+            syncOut.textContent = data.results.map(function (x) {
+              return x.platform + ': ' + x.outcome + (x.detail ? ' - ' + x.detail : '');
+            }).join(' | ') + ' Reload to see the retrieved items.';
+            syncOut.hidden = false;
+          }
+        } catch (ex) {
+          syncErr.textContent = 'Network problem: ' + ex.message;
+          syncErr.hidden = false;
+        } finally {
+          btn.disabled = false;
+          btn.textContent = previous;
+        }
+      });
+    }
   })();
 </script>
 

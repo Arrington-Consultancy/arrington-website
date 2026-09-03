@@ -38,7 +38,12 @@ const APIS = [
   ['/api/workspace/contacts/1/erase', { confirmEmail: 'x@y.test', reason: 'probe' }],
   ['/api/workspace/gaps/1/resolve', { note: 'probe', sourceCorrected: true }],
   ['/api/workspace/approvals/1/decide', { decision: 'approved' }],
-  ['/api/workspace/social/request-action', { platform: 'linkedin', action: 'publish', summary: 'probe' }]
+  ['/api/workspace/social/request-action', { platform: 'linkedin', action: 'publish', summary: 'probe' }],
+  // Added 03/09/2026 with the social retrieval layer. It reaches an
+  // external API with a real credential, so an unauthenticated caller
+  // being able to trigger it would be worse than a read of our own
+  // tables: it would spend somebody else's rate limit against our token.
+  ['/api/workspace/social/sync', {}]
 ];
 
 // A tiny cookie-jar fetch, so a session can be carried between calls.
