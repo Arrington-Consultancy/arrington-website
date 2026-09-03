@@ -15,6 +15,16 @@ ceilings, human clearance rules, worker authority or Scott behaviour. The
 stale `claude-3-5-sonnet-20241022` predeploy diagnostic is separate
 technical housekeeping and is untouched.
 
+**Searched for on 03/09/2026 and not found.** A repository-wide search
+for that model id, and for `claude-3` in any form, matches nothing in
+this codebase except this paragraph. Every model reference in the
+running code is `claude-sonnet-5`, in `lib/workspace/orchestrator.js`
+and `lib/scott/orchestrator.js`. So the item is either already resolved
+or lives outside the repository, in a Railway variable or a tool Tom was
+looking at, and it cannot be actioned from here. Recorded as closed on
+this side rather than carried indefinitely as an open task nobody can
+work on.
+
 ---
 
 ## What independence this record does and does not claim
