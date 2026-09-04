@@ -1242,6 +1242,34 @@ still have something to say.
 Drive write-back: "WEBSITE AND HOSTING WRITE-BACK (CLOSED) - Useful
 Thinking article published and live-verified, 4 September 2026".
 
+### Fifteenth Useful Thinking article published (04/09/2026)
+
+"The Little Things You Have to Give Up", live and verified at
+`https://www.arringtonconsultancy.com/useful-thinking/the-little-things-you-have-to-give-up`.
+Instance `article__16`.
+
+Published through the existing three-part workflow: a constant in
+`lib/usefulThinkingSeed.js`, a register entry in
+`lib/usefulThinkingArticles.js`, and a guarded idempotent migration in
+`db/seed.js`. All 25 paragraphs were diffed character for character
+against Drive before the migration was written. Personal disclosure
+wording (nicotine, Texas Hold'em, "don't get caught", "come out in the
+wash", manager observations, "And turn your chair around.") is preserved
+exactly as written — not softened, not paraphrased.
+
+**No handover document found.** Two consecutive articles (14th and 15th)
+cited handover documents that do not exist in the Website and Hosting
+Worker Handoff Log. Both articles carry their own approval and the
+established workflow is authoritative. Two in two days is a pattern; it
+is a record-keeping gap rather than an error in publication.
+
+Commercial Gaps Review mapping left unset (no hero image, no internal
+links) following the precedent of the previous two articles.
+
+Drive write-back: "WEBSITE AND HOSTING WRITE-BACK (CLOSED) - Useful
+Thinking article 'The Little Things You Have to Give Up' published and
+live-verified, 4 September 2026".
+
 ### Meta connectors: the real ones (03/09/2026)
 
 **Before.** The social area had a registry, a schema, four platform
