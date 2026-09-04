@@ -1189,6 +1189,59 @@ and `/workspace/projects` are registered through `classPage(...)` in
 search for `page('/workspace` finds ten routes against twelve nav links
 and looks exactly like two broken nav items. They are not broken.
 
+### Fourteenth Useful Thinking article published (04/09/2026)
+
+"The Most Expensive Person Doing the Job Might Be You", live and
+verified at
+`https://www.arringtonconsultancy.com/useful-thinking/the-most-expensive-person-doing-the-job-might-be-you`.
+Instance `article__15`, from the controlled Drive document
+`1k5JFUiIkASvOy6cpCwIhbCMZnt6cyAL1HldVhWsjKNk`.
+
+Published through the existing three-part workflow, unchanged: a
+constant in `lib/usefulThinkingSeed.js`, a register entry in
+`lib/usefulThinkingArticles.js` (which is what puts it in the library
+index, since the index is rendered from that register rather than
+seeded), and a guarded idempotent migration in `db/seed.js`. All 24
+paragraphs were diffed character for character against Drive before the
+migration was written. The 4Com reference and the closing line are Tom's
+approved wording and are preserved exactly.
+
+**Two things worth knowing for the next article.**
+
+**A superseded deployment's database writes still count.** Two Railway
+deployments raced from one push against the same production database.
+The first (`d0ebbb12`) ran the seed, published the article and logged it
+at 23:31:42Z; it was then marked REMOVED as a *deployment* because the
+second superseded it. The second, and every deploy since, correctly
+logged nothing, because the guard found the page already present. The
+absence of the "14th article published" line on the serving deployment
+looked exactly like a failed publication and is not one. Check the
+superseded deployment's logs before concluding a seeded migration did
+not run.
+
+**A headless screenshot is not a mobile check.** `chrome --headless
+--window-size=390,844` renders at desktop layout width and crops, which
+looks precisely like a responsive defect. Real device emulation
+(`isMobile: true`) showed zero horizontal overflow. The control that
+settled it was screenshotting an existing published article the same
+way and getting the identical crop.
+
+**Handover 05 could not be found.** The publication instruction cited
+"Website Worker Handover 05"; handovers 01, 02 and 03 exist, there is no
+04 or 05, and neither the phrase nor the article title appears anywhere
+in the Website and Hosting Worker Handoff Log. The article carries its
+own approval, so publication proceeded, and Tom has since classified the
+gap as a historical record-keeping issue rather than a blocker. Recorded
+in Drive as "RECORD GAP - Website Worker Handover 05 not found".
+Consequently the Commercial Gaps Review mapping was left unset
+(`missed_opportunities` is still free and would plausibly fit), with no
+hero image and no internal links, all following the previous article's
+precedent. Those three are the only places a recovered Handover 05 would
+still have something to say.
+
+Drive write-back: "WEBSITE AND HOSTING WRITE-BACK (CLOSED) - Useful
+Thinking article published and live-verified, 4 September 2026".
+
 ### Meta connectors: the real ones (03/09/2026)
 
 **Before.** The social area had a registry, a schema, four platform
