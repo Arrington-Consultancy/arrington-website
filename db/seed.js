@@ -19,6 +19,7 @@ const {
   TWELFTH_PUBLISHED_ARTICLE,
   THIRTEENTH_PUBLISHED_ARTICLE,
   FOURTEENTH_PUBLISHED_ARTICLE,
+  FIFTEENTH_PUBLISHED_ARTICLE,
   buildUsefulThinkingPageOrder
 } = require('../lib/usefulThinkingSeed');
 const { ARTICLES: UT_ARTICLES } = require('../lib/usefulThinkingArticles');
@@ -3062,6 +3063,103 @@ async function seed() {
       );
 
       console.log(`Useful Thinking: 14th article published (${a15}, ${FOURTEENTH_PUBLISHED_ARTICLE.slug}).`);
+    }
+  }
+
+  // Migration: fifteenth Useful Thinking article, "The Little Things You
+  // Have to Give Up" (04/09/2026), from the controlled Google Drive
+  // document of the same name (Drive id
+  // 1TKK6daYMUhHkxttollqY_o-Ewya9OYPzzakJlHqoaas), which carries Tom's
+  // own status line: "TOM-APPROVED USEFUL THINKING ARTICLE. Ready for
+  // Website & Hosting worker publication."
+  //
+  // Reproduced verbatim from the public-facing portion only. The Drive
+  // doc's "INTERNAL NOTES - NOT FOR PUBLICATION" block is excluded, as
+  // for every previous article; the public text starts at "If you've
+  // built a successful business". The 25 paragraphs were extracted
+  // programmatically from the Drive content rather than retyped, then
+  // diffed against a second independent read of the same document.
+  //
+  // PERSONAL DISCLOSURE CONTROL, carried here from the Drive document's
+  // own internal notes so it travels with the code: the nicotine and
+  // younger Texas Hold'em references are approved personal disclosure,
+  // confirmed explicitly by Tom. They must not be removed, softened or
+  // generalised. The same applies to "don't get caught", "come out in
+  // the wash", the observations about managers being lost, and the
+  // closing line "And turn your chair around." Anyone editing this copy
+  // later should treat all of it as deliberate.
+  //
+  // The very short one-line paragraphs ("I'll just have one.",
+  // "Obviously.", "Of course not.") are the piece's rhythm and are each
+  // their own <p>, exactly as in Drive. Do not merge them.
+  //
+  // No handover document was found for this article; see the register
+  // entry in lib/usefulThinkingArticles.js for that record gap and what
+  // was consequently left undecided.
+  //
+  // Idempotent: guarded on the page not existing yet.
+  {
+    const { rows: existingArticle16 } = await db.query(
+      'SELECT slug FROM pages WHERE slug = $1',
+      [FIFTEENTH_PUBLISHED_ARTICLE.slug]
+    );
+    if (existingArticle16.length === 0) {
+      const a16 = FIFTEENTH_PUBLISHED_ARTICLE.instanceId;
+      const bodyParagraphs16 = [
+          'If you\'ve built a successful business, there\'s a reasonable chance you\'re quite good at controlling things.',
+          'That\'s hardly a character flaw. It\'s your money, your reputation and usually your arse on the line if something goes wrong. You make a decision, it works. You spot something somebody else missed. You question an invoice, change a process or make a call that saves the company money. Every time it happens, you get another little bit of evidence that says: See. This is why I need to keep an eye on everything.',
+          'The problem is that when the business grows, the little things you became good at controlling are often the first things you have to give up if you want your life back.',
+          'And I found that surprisingly difficult.',
+          'I\'ve fought a couple of little addictions in my life. Nicotine, and perhaps in my much younger days a bit too much Texas Hold\'em. I\'m not suggesting controlling a business belongs in the same medical category, but I recognise the pull.',
+          'I\'ll just have one.',
+          'I\'ll just have a quick flutter.',
+          'I\'ll just have a quick look.',
+          'That last one is dangerous for a business owner.',
+          'You can employ a manager you genuinely trust, give them responsibility and tell everyone they\'re in charge. Then spend the next six months metaphorically leaning over their shoulder with one eye on what they\'re doing.',
+          'You\'re not interfering. You\'re just looking.',
+          'Obviously.',
+          'The trouble is, from the other side of the desk, looking can feel an awful lot like a lack of trust. I\'ve seen this happen several times over the years. Good managers given responsibility by owners who could never quite give them the space that was supposed to come with it. You can tell somebody you trust them as often as you like. If your behaviour says otherwise, they\'ll believe your behaviour.',
+          'Some very good managers have been lost that way.',
+          'For me, the answer wasn\'t some great revelation about learning to let go. It was clear boundaries and a proper split of responsibilities. If something belonged to somebody else, it belonged to them.',
+          'Did I always manage not to look?',
+          'Of course not.',
+          'My rule with cheating was fairly simple: don\'t get caught.',
+          'Things tend to come out in the wash anyway. If somebody made a mistake, we\'d deal with it. A little friendly advice for next time, perhaps a correction, and move on. If you\'ve got a good manager and those conversations are rare, no harm, no foul.',
+          'If you\'re correcting them constantly, you\'ve probably got a different problem. That\'s a different article and, to be honest, I\'m not entirely sure how to write that one yet.',
+          'The occasional mistake is part of handing over responsibility. You don\'t need to be watching for every one of them.',
+          'But if you employ good people, give them responsibility, watch them constantly, frustrate them until they leave and then decide their departure proves you can\'t rely on anyone, you\'ve created your own evidence.',
+          'The little things matter when you\'re building a business. I still believe that.',
+          'There just comes a point where you have to trust someone else to look at them.',
+          'And turn your chair around.'
+      ].map((p) => `<p>${p}</p>`).join('');
+
+      const indexSummary16 = 'Nicotine, a bit too much Texas Hold\'em in his younger days, and "I\'ll just have a quick look." On why the little things you became good at controlling are the first ones you have to give up, and what watching a good manager too closely actually costs you.';
+
+      const a16Rows = [
+        [`${a16}.label`, 'USEFUL THINKING'],
+        [`${a16}.heading`, FIFTEENTH_PUBLISHED_ARTICLE.title],
+        [`${a16}.index_summary`, indexSummary16],
+        [`${a16}.body`, bodyParagraphs16],
+        [`${a16}.related_text`, ''],
+        [`${a16}.related_link`, ''],
+        [`${a16}.image`, '']
+      ];
+      for (const [key, value] of a16Rows) {
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [key, value]
+        );
+      }
+
+      const { rows: maxSortRows16 } = await db.query('SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM pages');
+      await db.query(
+        `INSERT INTO pages (slug, title, sort_order, section_order, hidden_sections, deleted_sections, show_in_nav, meta_description)
+         VALUES ($1, $2, $3, $4::jsonb, '[]'::jsonb, '[]'::jsonb, false, $5)
+         ON CONFLICT (slug) DO NOTHING`,
+        [FIFTEENTH_PUBLISHED_ARTICLE.slug, FIFTEENTH_PUBLISHED_ARTICLE.title, maxSortRows16[0].max_sort + 1, JSON.stringify([a16]), indexSummary16]
+      );
+
+      console.log(`Useful Thinking: 15th article published (${a16}, ${FIFTEENTH_PUBLISHED_ARTICLE.slug}).`);
     }
   }
 
