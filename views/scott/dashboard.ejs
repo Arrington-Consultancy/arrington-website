@@ -36,14 +36,14 @@
             <%
               var activePersonaId = (typeof isImpersonating !== 'undefined' && isImpersonating) ? personaId : '';
             %>
-            <button class="sc-persona-chip sc-persona-chip-owner<%= activePersonaId === '' ? ' active' : '' %>" data-persona-id="">
+            <button class="sc-persona-chip sc-persona-chip-owner<%= (activePersonaId === '' || activePersonaId === 'scott_mercer') ? ' active' : '' %>" data-persona-id="">
               <div class="sc-persona-chip-dot">SM</div>
               <div>
                 <div class="sc-persona-chip-name">Scott Mercer</div>
                 <div class="sc-persona-chip-role">Owner &middot; <span class="sc-persona-chip-code">07Q</span></div>
               </div>
             </button>
-            <% Object.keys(personas).forEach(function (id) { var p = personas[id]; %>
+            <% Object.keys(personas).filter(function (id) { return id !== 'scott_mercer'; }).forEach(function (id) { var p = personas[id]; %>
             <button class="sc-persona-chip<%= activePersonaId === id ? ' active' : '' %>" data-persona-id="<%= id %>">
               <div class="sc-persona-chip-dot"><%= p.code.substring(0,2) %></div>
               <div>
