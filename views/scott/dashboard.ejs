@@ -73,11 +73,70 @@
         <div class="sc-suggestions-wrap">
           <div class="sc-suggestions-label">Ask Ruth</div>
           <div class="sc-suggestions-row">
-            <button class="sc-suggestion-chip">Where are we losing money we&rsquo;re not tracking?</button>
-            <button class="sc-suggestion-chip">Which jobs are at risk this week?</button>
-            <button class="sc-suggestion-chip">What does Scott see that Tony doesn&rsquo;t?</button>
-            <button class="sc-suggestion-chip">Show me the commercial leakage opportunities</button>
-            <button class="sc-suggestion-chip">Is there anything that needs my approval today?</button>
+            <%
+              var _personaSuggestions = {
+                scott_mercer: [
+                  "Where are we losing money we're not tracking?",
+                  "Which jobs are at risk this week?",
+                  "Show me the commercial leakage opportunities",
+                  "Is there anything that needs my approval today?",
+                  "What does Tony see that the team doesn't?"
+                ],
+                tony_marsh: [
+                  "What jobs are at risk of missing their promised date?",
+                  "Is capacity tight this week?",
+                  "Which customers have overdue returns?",
+                  "What stock issues could slow us down?",
+                  "Are there any jobs waiting on materials?"
+                ],
+                chloe_reed: [
+                  "Which enquiries are waiting on a quote?",
+                  "Do we have any overdue invoices?",
+                  "What's in the active pipeline this week?",
+                  "Are there any complaints that need a follow-up?",
+                  "Which customers haven't heard from us recently?"
+                ],
+                leah_morgan: [
+                  "What's my first knitting job this morning?",
+                  "Have my new knitting needles arrived yet?",
+                  "What's the wool supply like for this week?",
+                  "Are any of my jobs running late?",
+                  "What yarn do I need for the jobs on the board?"
+                ],
+                ellie_park: [
+                  "What are my jobs for today?",
+                  "Are there any jobs waiting on materials?",
+                  "Which repairs are due to go out this week?",
+                  "Is there anything blocked on the workshop floor?",
+                  "What's next in the repair queue?"
+                ],
+                ravi_singh: [
+                  "What are my assigned jobs today?",
+                  "Are there any quality checks I need to complete?",
+                  "What jobs are waiting on my attention?",
+                  "Is there anything I need to flag before I start?",
+                  "Which jobs are due out this week?"
+                ],
+                jo_bell: [
+                  "What knitting work is assigned to me today?",
+                  "Is the yarn I need in stock?",
+                  "Are any of my jobs running behind?",
+                  "What's next on my list after the current job?",
+                  "Have we had any new knitting jobs come in?"
+                ],
+                mike_evans: [
+                  "What am I driving today?",
+                  "Where is my first delivery today?",
+                  "Are there any collections I need to pick up on my route?",
+                  "Is the van ready to go?",
+                  "Has anything changed on today's schedule?"
+                ]
+              };
+              var _chips = _personaSuggestions[personaId] || _personaSuggestions['scott_mercer'];
+              _chips.forEach(function (chip) {
+            %>
+            <button class="sc-suggestion-chip"><%- chip %></button>
+            <% }); %>
           </div>
         </div>
 
