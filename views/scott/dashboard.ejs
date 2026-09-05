@@ -288,7 +288,7 @@
         </div>
       </div>
       <div class="sc-welcome-foot">
-        <button class="sc-btn sc-btn-primary sc-welcome-dismiss" id="scWelcomeDismiss">Start exploring</button>
+        <a href="#" class="sc-btn sc-btn-primary sc-welcome-dismiss" id="scWelcomeDismiss">Start exploring</a>
         <a href="/scott/team" class="sc-welcome-skip">How does the team work?</a>
       </div>
     </div>
@@ -305,7 +305,8 @@
       }
     } catch (e) {}
     if (dismiss) {
-      dismiss.addEventListener('click', function () {
+      dismiss.addEventListener('click', function (e) {
+        e.preventDefault();
         overlay.hidden = true;
         try { sessionStorage.setItem('sc-welcome-seen', '1'); } catch (e) {}
       });
