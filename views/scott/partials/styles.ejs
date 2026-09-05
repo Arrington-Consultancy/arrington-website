@@ -809,9 +809,10 @@
   .sc-fin-note { margin-top: 0.8rem; }
 
   /* ── Welcome overlay (first-session orientation, dismissed to sessionStorage) ── */
-  .sc-welcome-overlay { position: fixed; inset: 0; z-index: 500; display: flex; align-items: flex-start; justify-content: center; padding: 24px; background: rgba(21, 35, 29, 0.85); backdrop-filter: blur(6px); overflow-y: auto; }
-  @media (min-height: 700px) { .sc-welcome-overlay { align-items: center; } }
-  .sc-welcome-card { background: var(--sc-cream); border-radius: 12px; max-width: 620px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; }
+  /* overflow-y is on the CARD, not the overlay — iOS Safari swallows touch
+     events on children of fixed elements with overflow-y:auto/scroll */
+  .sc-welcome-overlay { position: fixed; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(21, 35, 29, 0.85); backdrop-filter: blur(6px); overflow: hidden; }
+  .sc-welcome-card { background: var(--sc-cream); border-radius: 12px; max-width: 620px; width: 100%; max-height: calc(100dvh - 48px); overflow-y: auto; -webkit-overflow-scrolling: touch; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
   .sc-welcome-head { background: var(--sc-forest); color: #fff; padding: 28px 32px 24px; }
   .sc-welcome-head h2 { font-family: 'Playfair Display', serif; font-size: 1.45rem; font-weight: 500; margin: 0 0 0.4rem; line-height: 1.25; }
   .sc-welcome-head p { font-size: 0.88rem; opacity: 0.82; margin: 0; line-height: 1.5; }
