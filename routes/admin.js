@@ -1039,11 +1039,11 @@ router.get('/demo-viewers', requireCapability('view_activity'), async (req, res)
     const { rows: convRows } = await db.query(
       `SELECT sc.id, sc.user_id, sc.persona_id, sc.title, sc.created_at,
               json_agg(
-                json_build_object('content', sm.content, 'created_at', sm.created_at)
+                json_build_object('sender', sm.sender, 'content', sm.content, 'worker_id', sm.worker_id, 'created_at', sm.created_at)
                 ORDER BY sm.created_at ASC
               ) FILTER (WHERE sm.id IS NOT NULL) as messages
        FROM scott_conversations sc
-       LEFT JOIN scott_messages sm ON sm.conversation_id = sc.id AND sm.sender = 'user'
+       LEFT JOIN scott_messages sm ON sm.conversation_id = sc.id AND sm.sender IN ('user', 'worker')
        WHERE sc.user_id = ANY($1)
        GROUP BY sc.id, sc.user_id, sc.persona_id, sc.title, sc.created_at
        ORDER BY sc.created_at DESC`,

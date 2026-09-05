@@ -899,6 +899,18 @@
     font-style: italic;
     margin-top: 0.2rem;
 }
+.cms-demo-answer {
+    color: #a8c4b8;
+    margin-top: 0.15rem;
+    font-size: 0.85em;
+    line-height: 1.4;
+}
+.cms-demo-answer-label {
+    font-style: normal;
+    font-weight: 600;
+    color: #7aab98;
+    margin-right: 0.3em;
+}
 
 /* ---- THEME SELECTOR ---- */
 .cms-theme-section {

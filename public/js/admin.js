@@ -994,9 +994,13 @@
                             hour: '2-digit', minute: '2-digit'
                         });
                         const persona = escapeHtml(conv.persona_id || 'unknown');
-                        const msgs = (conv.messages || []).map(m =>
-                            `<div class="cms-demo-question">"${escapeHtml(m.content)}"</div>`
-                        ).join('');
+                        const msgs = (conv.messages || []).map(m => {
+                            if (m.sender === 'user') {
+                                return `<div class="cms-demo-question">"${escapeHtml(m.content)}"</div>`;
+                            }
+                            const workerLabel = m.worker_id ? escapeHtml(m.worker_id) : 'AI';
+                            return `<div class="cms-demo-answer"><span class="cms-demo-answer-label">${workerLabel}:</span> ${escapeHtml(m.content)}</div>`;
+                        }).join('');
                         return `<div class="cms-demo-conv">
                             <span class="log-time">${convDate}</span> &mdash;
                             <span class="log-action">${persona}</span>
