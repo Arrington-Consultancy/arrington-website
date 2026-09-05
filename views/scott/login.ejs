@@ -8,12 +8,62 @@
   <%- include('partials/styles') %>
 </head>
 <body class="scott-body">
-  <div class="sc-login-wrap">
-    <div class="sc-login-card">
+  <div class="sc-login-wrap-wide">
+    <!-- Left panel: demo context -->
+    <div class="sc-login-demo-panel">
+      <div class="sc-login-demo-brand">
+        <div class="sc-brand-mark">SA</div>
+        <div>
+          <strong>Scott's Armchair &amp; Knitting Co.</strong>
+          <span>A governed AI workforce demonstration</span>
+        </div>
+      </div>
+      <h1>A real AI team running a fictional company</h1>
+      <p class="sc-login-demo-sub">This is a live demonstration of a multi-worker AI system. Nine workers — each with their own name, speciality and clearance level — run this fictional business. You can switch between different staff members and watch what each one can and cannot see.</p>
+
+      <div class="sc-login-people">
+        <div class="sc-login-person">
+          <div class="sc-login-person-dot sc-dot-person-scott">SC</div>
+          <div>
+            <div class="sc-login-person-name">Scott Mercer</div>
+            <div class="sc-login-person-role">Owner · Full access · Clearance 07Q</div>
+          </div>
+        </div>
+        <div class="sc-login-person">
+          <div class="sc-login-person-dot sc-dot-person-tony">TM</div>
+          <div>
+            <div class="sc-login-person-name">Tony Marsh</div>
+            <div class="sc-login-person-role">Operations manager · Limited financial view</div>
+          </div>
+        </div>
+        <div class="sc-login-person">
+          <div class="sc-login-person-dot sc-dot-person-chloe">CR</div>
+          <div>
+            <div class="sc-login-person-name">Chloe Reed</div>
+            <div class="sc-login-person-role">Sales &amp; marketing · Customer data only</div>
+          </div>
+        </div>
+        <div class="sc-login-person">
+          <div class="sc-login-person-dot sc-dot-person-mike">ME</div>
+          <div>
+            <div class="sc-login-person-name">Mike Evans</div>
+            <div class="sc-login-person-role">Workshop driver · Narrowest clearance</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sc-login-cred-hint">
+        <strong>Invited viewer access</strong>
+        Sign in with the credentials you were given. Once inside, use the viewer switcher on the dashboard to step into different roles — the system rebuilds its answers around each person's clearance in real time.
+      </div>
+    </div>
+
+    <!-- Right panel: sign-in form -->
+    <div class="sc-login-form-panel">
       <div class="sc-login-head">
         <div class="sc-brand-mark">SA</div>
-        <h1 class="sc-h">Scott's Armchair &amp; Knitting Service</h1>
-        <p>Company system, invited access only</p>
+        <h2>Sign in to the portal</h2>
+        <p>Invited access only</p>
       </div>
       <div class="sc-login-body">
         <% if (error) { %>
@@ -32,7 +82,7 @@
           </div>
           <button type="submit" class="sc-btn sc-btn-primary sc-login-submit">Sign in</button>
         </form>
-        <p class="sc-login-foot">A demonstration built on the real Arrington Consultancy website. Scott's Armchair &amp; Knitting Service is a fictional business used to show a governed AI team in action.</p>
+        <p class="sc-login-foot">Scott's Armchair &amp; Knitting Service is a fictional business. This demonstration is built on the real Arrington Consultancy website.</p>
       </div>
     </div>
   </div>

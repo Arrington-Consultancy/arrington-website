@@ -19,6 +19,11 @@
           <h1 class="sc-h">Company Brain</h1>
           <p>Everything the company holds, in one place. Viewing as <strong><%= persona.name %></strong> (<%= persona.role %>), Clearance <%= persona.code %>.</p>
         </div>
+        <% if (canImpersonate) { %>
+        <div>
+          <a href="/scott/compare" class="sc-btn sc-btn-outline">Compare access by role &rarr;</a>
+        </div>
+        <% } %>
       </div>
 
       <div class="sc-card sc-proposed-note">

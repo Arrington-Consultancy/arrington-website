@@ -33,10 +33,21 @@
             <p class="sc-row-sub"><strong><%= facts.IMPROVEMENT_CONTROL_PRINCIPLE.realisedOnly %></strong></p>
           </div>
 
+          <div class="sc-leakage-hero">
+            <div class="sc-leakage-hero-label">Commercial leakage opportunity</div>
+            <div>
+              <span class="sc-leakage-num">£<%= facts.IMPROVEMENT_TOTALS.envelopeLowGbp.toLocaleString() %></span>
+              <span class="sc-leakage-sep">to</span>
+              <span class="sc-leakage-num">£<%= facts.IMPROVEMENT_TOTALS.envelopeHighGbp.toLocaleString() %></span>
+              <span class="sc-leakage-unit">/year</span>
+            </div>
+            <div class="sc-leakage-zero">Realised so far<span class="sc-leakage-zero-dot">·</span>£0 &mdash; nothing approved and measured yet</div>
+          </div>
+
           <div class="sc-stat-grid">
-            <div class="sc-card sc-stat"><div class="sc-stat-label">Opportunities open to you</div><div class="sc-stat-value"><%= visible.length %></div></div>
-            <div class="sc-card sc-stat"><div class="sc-stat-label">Opportunity envelope</div><div class="sc-stat-value sc-stat-value-sm">£<%= facts.IMPROVEMENT_TOTALS.envelopeLowGbp.toLocaleString() %> to £<%= facts.IMPROVEMENT_TOTALS.envelopeHighGbp.toLocaleString() %></div><div class="sc-stat-sub">a year, before overlap</div></div>
-            <div class="sc-card sc-stat"><div class="sc-stat-label">Realised so far</div><div class="sc-stat-value">£0</div><div class="sc-stat-sub">nothing approved and measured yet</div></div>
+            <div class="sc-card sc-stat"><div class="sc-stat-label">Opportunities visible to you</div><div class="sc-stat-value"><%= visible.length %></div></div>
+            <div class="sc-card sc-stat"><div class="sc-stat-label">Total in register</div><div class="sc-stat-value"><%= facts.IMPROVEMENT_REGISTER.length %></div></div>
+            <div class="sc-card sc-stat"><div class="sc-stat-label">Clearance</div><div class="sc-stat-value sc-stat-value-sm"><%= persona.code %></div><div class="sc-stat-sub"><%= persona.role %></div></div>
           </div>
 
           <div class="sc-card sc-honesty-card">

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compare Access | Scott's Armchair &amp; Knitting Service</title>
+  <meta name="robots" content="noindex, nofollow">
+  <%- include('partials/styles') %>
+</head>
+<body class="scott-body">
+  <div class="sc-shell">
+    <%- include('partials/sidebar', { active: '', navCounts: navCounts }) %>
+    <main class="sc-main">
+      <% if (typeof isImpersonating !== 'undefined' && isImpersonating) { %>
+        <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
+      <% } %>
+      <div class="sc-page-header">
+        <div>
+          <h1 class="sc-h">Compare access by role</h1>
+          <p>Every person in this company holds a different window into the same data. This is the clearance model made visible.</p>
+        </div>
+        <div>
+          <a href="/scott/brain" class="sc-btn sc-btn-outline">&larr; Company Brain</a>
+        </div>
+      </div>
+
+      <div class="sc-card sc-proposed-note">
+        <strong>What you are looking at.</strong> Each column is one person. Each row is one area of company data. A green dot means that person can read from that area; a grey crossed-out entry means they cannot. This is not policy — it is what the system actually enforces on every page, every search result and every AI answer.
+      </div>
+
+      <div class="sc-compare-grid">
+        <% compareData.forEach(function (col) { %>
+          <div class="sc-compare-col">
+            <div class="sc-compare-col-head">
+              <div class="sc-persona-name"><%= col.persona.name %></div>
+              <div class="sc-persona-role"><%= col.persona.role %></div>
+              <span class="sc-clearance-badge"><%= col.persona.code %></span>
+            </div>
+            <div class="sc-compare-col-body">
+              <% allDomains.forEach(function (domain) {
+                   var has = col.visibleDomains.indexOf(domain) !== -1;
+                   var label = domainLabels[domain] || domain;
+              %>
+                <div class="sc-compare-domain">
+                  <span class="sc-compare-domain-dot <%= has ? 'has' : 'none' %>"></span>
+                  <span class="sc-compare-domain-name <%= has ? '' : 'none' %>"><%= label %></span>
+                </div>
+              <% }); %>
+            </div>
+          </div>
+        <% }); %>
+      </div>
+
+      <h2 class="sc-section-title">How this works</h2>
+      <div class="sc-card">
+        <p class="sc-compare-body-p">
+          <strong>Three legs, narrowest wins.</strong> Whether a piece of information reaches someone depends on three things simultaneously: their own clearance (which domains they hold), the worker they are asking (each worker has its own permitted scope), and whether the question actually needs that information to be answered. All three must permit it, and the system enforces the narrowest of the three — not the most permissive.
+        </p>
+        <p class="sc-compare-body-p">
+          <strong>Filtering happens before the prompt is built.</strong> Restricted information never reaches the AI model in the first place. It is not shown to the model and then redacted from the output — it is removed from the context before any generation happens. A worker cannot accidentally reveal something by rephrasing it.
+        </p>
+        <p class="sc-compare-body-p">
+          <strong>Counts are computed after filtering.</strong> When the system says "3 records", that is 3 records this person can see, not 3 of however many exist. The existence and size of restricted areas are not exposed through result counts.
+        </p>
+      </div>
+
+      <div class="sc-card sc-card-top">
+        <h3 class="sc-compare-sub-h">Switch the view</h3>
+        <p class="sc-compare-body-p-sm">Use the persona switcher on the dashboard to step into any of these roles and navigate the system exactly as they would — the same pages, the same search results, the same AI answers. Switch back to see the difference in place.</p>
+        <a href="/scott" class="sc-btn sc-btn-primary">Go to dashboard &rarr;</a>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

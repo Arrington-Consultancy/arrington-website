@@ -21,6 +21,37 @@
         </div>
       </div>
 
+      <%
+        var ruth = workers.find(function (w) { return w.id === 'receptionist'; });
+        var specialists = workers.filter(function (w) { return w.id !== 'receptionist'; });
+      %>
+
+      <h2 class="sc-section-title">The team</h2>
+      <div class="sc-worker-map">
+        <% if (ruth) { %>
+        <div class="sc-worker-map-centre">
+          <div class="sc-worker-map-centre-avatar"><%= ruth.initials %></div>
+          <div>
+            <div class="sc-worker-map-centre-name"><%= ruth.characterName %></div>
+            <div class="sc-worker-map-centre-role"><%= ruth.displayRole %></div>
+            <div class="sc-worker-map-centre-desc"><%= ruth.tagline %></div>
+          </div>
+        </div>
+        <% } %>
+        <div class="sc-worker-map-spokes">
+          <% specialists.forEach(function (w) { %>
+            <div class="sc-worker-spoke">
+              <div class="sc-worker-spoke-avatar sc-avatar-<%= w.id %>"><%= w.initials %></div>
+              <div>
+                <div class="sc-worker-spoke-name"><%= w.characterName %></div>
+                <div class="sc-worker-spoke-role"><%= w.displayRole %></div>
+                <div class="sc-worker-spoke-scope"><%= w.tagline %></div>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+      </div>
+
       <div class="sc-card sc-honesty-card">
         <p class="sc-row-sub"><strong>One question, one route.</strong> Every question goes to Ruth, the receptionist, who decides which specialists own it and in what order. A question about taking on a job at a price goes to Operations for capacity and Commercial for the number, and you see each reply separately, under its own name.</p>
         <p class="sc-row-sub"><strong>Different people get different answers.</strong> Every record in the company carries a clearance. The team answers with what the signed-in person is allowed to see and nothing more, and the same applies to search, the records pages and the AI's own working notes. A knitting operative asking for the bank balance is refused; the owner is not.</p>
@@ -29,25 +60,9 @@
         <p class="sc-row-sub"><strong>Uncertainty is labelled.</strong> Replies carry their own confidence: certain, likely, or unproven. An unproven answer says so instead of dressing up.</p>
       </div>
 
-      <h2 class="sc-section-title">The team</h2>
-      <div class="sc-colleagues">
-        <% workers.forEach(function (w) { %>
-          <div class="sc-card sc-colleague">
-            <div class="sc-colleague-head">
-              <div class="sc-avatar sc-avatar-<%= w.id %>"><%= w.initials %></div>
-              <div>
-                <div class="sc-colleague-name"><%= w.characterName %></div>
-                <div class="sc-colleague-role"><%= w.displayRole %></div>
-              </div>
-            </div>
-            <p class="sc-colleague-tagline"><%= w.tagline %></p>
-          </div>
-        <% }); %>
-      </div>
-
       <% if (typeof proposedWorkers !== 'undefined' && proposedWorkers.length) { %>
       <h2 class="sc-section-title">Proposed team (not yet active)</h2>
-      <p class="sc-proposed-note">Built and ready, but not part of the live demonstration. These three specialists remain proposed until an independent governance review has passed and Tom Arrington has explicitly activated them. Ruth cannot route any question to them.</p>
+      <p class="sc-proposed-note">Built and ready, but not part of the live demonstration. These specialists remain proposed until an independent governance review has passed and Tom Arrington has explicitly activated them. Ruth cannot route any question to them.</p>
       <div class="sc-colleagues sc-colleagues-proposed">
         <% proposedWorkers.forEach(function (w) { %>
           <div class="sc-card sc-colleague sc-colleague-proposed">

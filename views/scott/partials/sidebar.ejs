@@ -97,12 +97,16 @@
   // page body (the dashboard hero), which is parsed AFTER this script
   // runs. A direct getElementById here would find nothing and leave the
   // switcher silently dead.
-  document.addEventListener('change', function (e) {
-    if (!e.target || e.target.id !== 'scPersonaSelect') return;
+  // Persona chip switcher — delegated click handler so it works whether
+  // the chips are on the dashboard or any other page that includes them.
+  document.addEventListener('click', function (e) {
+    var chip = e.target.closest('.sc-persona-chip[data-persona-id]');
+    if (!chip) return;
+    var personaId = chip.dataset.personaId || null;
     fetch('/api/scott/impersonate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-csrf-token': <%- JSON.stringify(csrfToken) %> },
-      body: JSON.stringify({ personaId: e.target.value || null })
+      body: JSON.stringify({ personaId: personaId })
     }).then(function () { window.location.reload(); });
   });
 })();

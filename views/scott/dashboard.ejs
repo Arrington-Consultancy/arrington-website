@@ -24,29 +24,37 @@
       <section class="sc-stage">
         <div class="sc-stage-topbar">
           <span class="sc-stage-kicker">A fictional company run by a governed AI team &middot; a working demonstration by Arrington Consultancy</span>
-          <span class="sc-stage-viewer">
-            <% if (canImpersonate) { %>
-              <label for="scPersonaSelect">Viewing as</label>
-              <%
-                // Seniority is shown beside every name so the point of the
-                // demonstration reads without explanation: these are eight
-                // different jobs at different levels, and what each one can
-                // see differs because of that. The role strings come from
-                // PERSONAS in lib/scott/clearance.js (07Q's own wording) —
-                // not restated here, so a role can never drift between the
-                // dropdown, the banners and the clearance rules themselves.
-              %>
-              <select id="scPersonaSelect">
-                <option value="">Scott Mercer, owner view</option>
-                <% Object.keys(personas).forEach(function (id) { %>
-                  <option value="<%= id %>" <%= (typeof isImpersonating !== 'undefined' && isImpersonating && id === personaId) ? 'selected' : '' %>><%= personas[id].name %> &middot; <%= personas[id].role %> &middot; Clearance <%= personas[id].code %></option>
-                <% }); %>
-              </select>
-            <% } else { %>
-              <span class="sc-stage-viewer-fixed"><%= persona.name %> &middot; <%= persona.role %> &middot; Clearance <%= persona.code %></span>
-            <% } %>
-          </span>
+          <% if (!canImpersonate) { %>
+            <span class="sc-stage-viewer-fixed"><%= persona.name %> &middot; <%= persona.role %> &middot; Clearance <%= persona.code %></span>
+          <% } %>
         </div>
+
+        <% if (canImpersonate) { %>
+        <div class="sc-persona-chips-wrap">
+          <div class="sc-persona-chips-label">Switch viewpoint</div>
+          <div class="sc-persona-chips-row">
+            <%
+              var activePersonaId = (typeof isImpersonating !== 'undefined' && isImpersonating) ? personaId : '';
+            %>
+            <button class="sc-persona-chip sc-persona-chip-owner<%= activePersonaId === '' ? ' active' : '' %>" data-persona-id="">
+              <div class="sc-persona-chip-dot">SM</div>
+              <div>
+                <div class="sc-persona-chip-name">Scott Mercer</div>
+                <div class="sc-persona-chip-role">Owner &middot; <span class="sc-persona-chip-code">07Q</span></div>
+              </div>
+            </button>
+            <% Object.keys(personas).forEach(function (id) { var p = personas[id]; %>
+            <button class="sc-persona-chip<%= activePersonaId === id ? ' active' : '' %>" data-persona-id="<%= id %>">
+              <div class="sc-persona-chip-dot"><%= p.code.substring(0,2) %></div>
+              <div>
+                <div class="sc-persona-chip-name"><%= p.name %></div>
+                <div class="sc-persona-chip-role"><%= p.role %> &middot; <span class="sc-persona-chip-code"><%= p.code %></span></div>
+              </div>
+            </button>
+            <% }); %>
+          </div>
+        </div>
+        <% } %>
 
         <div class="sc-stage-ruth">
           <div class="sc-stage-avatar"><span><%= ruth.initials %></span></div>
@@ -60,6 +68,17 @@
 
         <div class="sc-stage-chat">
           <%- include('partials/chat-widget', { workersById: workersById, csrfToken: csrfToken, aiEnabled: aiEnabled, heroFocus: true, heroMode: true }) %>
+        </div>
+
+        <div class="sc-suggestions-wrap">
+          <div class="sc-suggestions-label">Ask Ruth</div>
+          <div class="sc-suggestions-row">
+            <button class="sc-suggestion-chip">Where are we losing money we&rsquo;re not tracking?</button>
+            <button class="sc-suggestion-chip">Which jobs are at risk this week?</button>
+            <button class="sc-suggestion-chip">What does Scott see that Tony doesn&rsquo;t?</button>
+            <button class="sc-suggestion-chip">Show me the commercial leakage opportunities</button>
+            <button class="sc-suggestion-chip">Is there anything that needs my approval today?</button>
+          </div>
         </div>
 
         <div class="sc-team-strip" aria-label="The specialists Ruth routes to">
@@ -252,5 +271,63 @@
       </div>
     </main>
   </div>
+
+  <!-- First-session welcome overlay (sessionStorage-gated, hidden once dismissed) -->
+  <div class="sc-welcome-overlay" id="scWelcomeOverlay" hidden>
+    <div class="sc-welcome-card">
+      <div class="sc-welcome-head">
+        <div class="sc-brand-mark">SA</div>
+        <h2>Welcome to Scott&rsquo;s Armchair &amp; Knitting Service</h2>
+        <p>A live demonstration of a real AI workforce in a fictional company. Nine workers &mdash; each with their own name, speciality and clearance level &mdash; run this business. You are the operator.</p>
+      </div>
+      <div class="sc-welcome-body">
+        <div class="sc-welcome-steps">
+          <div class="sc-welcome-step"><span class="sc-welcome-step-num">1</span><div><strong>Ask Ruth a question</strong><br>Type anything in the chat. Ruth reads your question, decides which specialist to consult, and gives you a governed answer.</div></div>
+          <div class="sc-welcome-step"><span class="sc-welcome-step-num">2</span><div><strong>Switch viewpoint</strong><br>Use the persona chips above the chat to see the system through different eyes. Tony sees less than Scott. Mike sees less than Tony. Every permission boundary is real.</div></div>
+          <div class="sc-welcome-step"><span class="sc-welcome-step-num">3</span><div><strong>Explore the records</strong><br>Use the left-hand menu to open any area. The same clearance rules apply everywhere &mdash; the same question, the same data, different answers depending on who is signed in.</div></div>
+        </div>
+      </div>
+      <div class="sc-welcome-foot">
+        <button class="sc-btn sc-btn-primary sc-welcome-dismiss" id="scWelcomeDismiss">Start exploring</button>
+        <a href="/scott/team" class="sc-welcome-skip">How does the team work?</a>
+      </div>
+    </div>
+  </div>
+
+  <script nonce="<%= nonce %>">
+  (function () {
+    var overlay = document.getElementById('scWelcomeOverlay');
+    var dismiss = document.getElementById('scWelcomeDismiss');
+    if (!overlay) return;
+    try {
+      if (!sessionStorage.getItem('sc-welcome-seen')) {
+        overlay.hidden = false;
+      }
+    } catch (e) {}
+    if (dismiss) {
+      dismiss.addEventListener('click', function () {
+        overlay.hidden = true;
+        try { sessionStorage.setItem('sc-welcome-seen', '1'); } catch (e) {}
+      });
+    }
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay) {
+        overlay.hidden = true;
+        try { sessionStorage.setItem('sc-welcome-seen', '1'); } catch (e) {}
+      }
+    });
+  })();
+
+  // Suggestion chips — fill and submit the Ruth chat input
+  document.querySelectorAll('.sc-suggestion-chip').forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      var inp = document.getElementById('scChatInput');
+      var form = inp && inp.closest('form');
+      if (!inp) return;
+      inp.value = chip.textContent.trim();
+      if (form) form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+  });
+  </script>
 </body>
 </html>

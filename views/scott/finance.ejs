@@ -48,6 +48,29 @@
 
 <% if (vm.tab === 'overview') { %>
   <% if (canSee('finance_full')) { %>
+      <div class="sc-fin-exec-bar">
+        <div class="sc-fin-exec-stat">
+          <div class="sc-fin-exec-stat-label">Current account</div>
+          <div class="sc-fin-exec-stat-val"><%= f(vm.cash.currentPence) %></div>
+          <div class="sc-fin-exec-stat-sub">as of last statement</div>
+        </div>
+        <div class="sc-fin-exec-divider"></div>
+        <div class="sc-fin-exec-stat">
+          <div class="sc-fin-exec-stat-label">Turnover &mdash; <%= vm.latestMonthLabel %></div>
+          <div class="sc-fin-exec-stat-val"><%= f(vm.pl.turnover.totalPence) %></div>
+        </div>
+        <div class="sc-fin-exec-divider"></div>
+        <div class="sc-fin-exec-stat">
+          <div class="sc-fin-exec-stat-label">Gross margin</div>
+          <div class="sc-fin-exec-stat-val"><%= vm.pl.grossMarginPct %>%</div>
+        </div>
+        <div class="sc-fin-exec-divider"></div>
+        <div class="sc-fin-exec-stat">
+          <div class="sc-fin-exec-stat-label">Operating profit</div>
+          <div class="sc-fin-exec-stat-val"><%= f(vm.pl.operatingProfitPence) %></div>
+          <div class="sc-fin-exec-stat-sub"><%= vm.pl.operatingMarginPct %>% of turnover</div>
+        </div>
+      </div>
       <div class="sc-stat-grid">
         <div class="sc-card sc-stat"><div class="sc-stat-label">Business current account</div><div class="sc-stat-value"><%= f(vm.cash.currentPence) %></div></div>
         <div class="sc-card sc-stat"><div class="sc-stat-label">VAT &amp; tax reserve</div><div class="sc-stat-value"><%= f(vm.cash.reservePence) %></div></div>

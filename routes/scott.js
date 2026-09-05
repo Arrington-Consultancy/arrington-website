@@ -728,6 +728,31 @@ function mountPageRoute(app, generateCsrfToken) {
     }
   });
 
+  // Compare access — side-by-side persona clearance comparison for demos.
+  app.get('/scott/compare', noindexHeader, requireScottPageAccess, async (req, res, next) => {
+    try {
+      const navCounts = await repo.getDashboardSummary();
+      const allDomains = Object.keys(clearance.DOMAIN_LABELS).sort();
+      const compareData = Object.keys(clearance.PERSONAS).map(function (id) {
+        const persona = clearance.PERSONAS[id];
+        const visibleDomains = allDomains.filter(function (d) {
+          return clearance.personaCanSeeDomain(id, d);
+        });
+        return { id, persona, visibleDomains };
+      });
+      res.render('scott/compare', {
+        ...viewerViewModel(req),
+        navCounts,
+        compareData,
+        allDomains,
+        domainLabels: clearance.DOMAIN_LABELS,
+        csrfToken: generateCsrfToken(req, res)
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // Public — no requireScottPageAccess. A prospective (fictional) customer
   // filling this in has no invitation and no account; this is the one
   // Scott route deliberately reachable by anyone with the link, same
