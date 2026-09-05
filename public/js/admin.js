@@ -960,6 +960,63 @@
         }
     };
 
+    // Demo viewers panel: shows when invited client users (Phil, Will, etc.)
+    // logged in and what Scott AI questions they asked. All user-supplied
+    // content (usernames, conversation content) passed through escapeHtml.
+    const demoViewersEntries = document.getElementById('cmsDemoViewersEntries');
+    detailLoaders['cmsDemoViewersDetail'] = async () => {
+        if (!demoViewersEntries) return;
+        demoViewersEntries.innerHTML = '<span class="cms-log-loading">Loading...</span>';
+        try {
+            const res = await fetch('/api/admin/demo-viewers', {
+                headers: { 'X-CSRF-Token': csrfToken }
+            });
+            const data = await res.json();
+            if (!data.viewers || data.viewers.length === 0) {
+                demoViewersEntries.innerHTML = '<span class="cms-log-empty">No demo viewers yet.</span>';
+                return;
+            }
+            demoViewersEntries.innerHTML = data.viewers.map(viewer => {
+                const lastLogin = viewer.logins.length
+                    ? new Date(viewer.logins[0]).toLocaleDateString('en-GB', {
+                        day: '2-digit', month: 'short', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit'
+                      })
+                    : 'Never logged in';
+                const loginCount = viewer.logins.length;
+                const convCount = viewer.conversations.length;
+
+                let convHtml = '';
+                if (viewer.conversations.length > 0) {
+                    convHtml = viewer.conversations.map(conv => {
+                        const convDate = new Date(conv.created_at).toLocaleDateString('en-GB', {
+                            day: '2-digit', month: 'short', year: 'numeric',
+                            hour: '2-digit', minute: '2-digit'
+                        });
+                        const persona = escapeHtml(conv.persona_id || 'unknown');
+                        const msgs = (conv.messages || []).map(m =>
+                            `<div class="cms-demo-question">"${escapeHtml(m.content)}"</div>`
+                        ).join('');
+                        return `<div class="cms-demo-conv">
+                            <span class="log-time">${convDate}</span> &mdash;
+                            <span class="log-action">${persona}</span>
+                            ${msgs}
+                        </div>`;
+                    }).join('');
+                }
+
+                return `<div class="cms-log-entry">
+                    <span class="log-user">${escapeHtml(viewer.username)}</span><br>
+                    <span class="log-action">Last login: ${lastLogin}</span>
+                    <span class="log-time"> &middot; ${loginCount} login${loginCount !== 1 ? 's' : ''}, ${convCount} conversation${convCount !== 1 ? 's' : ''}</span>
+                    ${convHtml}
+                </div>`;
+            }).join('');
+        } catch (err) {
+            demoViewersEntries.innerHTML = '<span class="cms-log-error">Failed to load demo viewers.</span>';
+        }
+    };
+
     // ---- CSP VIOLATIONS (admin only) ----
     function escapeHtml(s) {
         return String(s)

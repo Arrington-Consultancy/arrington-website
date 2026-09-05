@@ -90,6 +90,7 @@
                 <button class="cms-admin-action cms-detail-trigger" data-detail="cmsLogDetail">Activity log</button>
                 <button class="cms-admin-action cms-detail-trigger" data-detail="cmsLeadsDetail">Leads &amp; bookings</button>
                 <button class="cms-admin-action cms-detail-trigger" data-detail="cmsWebhookLogDetail">Webhook log</button>
+                <button class="cms-admin-action cms-detail-trigger" data-detail="cmsDemoViewersDetail">Demo viewers</button>
                 <% } %>
                 <% if (capabilities.view_csp) { %>
                 <button class="cms-admin-action cms-detail-trigger" data-detail="cmsCspDetail">CSP violations</button>
@@ -122,6 +123,10 @@
             <div class="cms-detail-pane cms-hidden" id="cmsWebhookLogDetail">
                 <div class="cms-detail-title">Webhook log</div>
                 <div id="cmsWebhookLogEntries">Loading...</div>
+            </div>
+            <div class="cms-detail-pane cms-hidden" id="cmsDemoViewersDetail">
+                <div class="cms-detail-title">Demo viewers</div>
+                <div id="cmsDemoViewersEntries">Loading...</div>
             </div>
             <% } %>
 

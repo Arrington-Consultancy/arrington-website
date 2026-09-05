@@ -1017,6 +1017,53 @@ router.get('/webhook-log', requireCapability('view_activity'), async (req, res) 
   }
 });
 
+// Demo viewer activity: logins and Scott AI conversations for client users.
+// Useful for knowing when an invited prospect (Phil, Will, etc.) signed in
+// and what questions caught their eye, without needing server log access.
+router.get('/demo-viewers', requireCapability('view_activity'), async (req, res) => {
+  try {
+    const { rows: users } = await db.query(
+      `SELECT id, username, created_at FROM users WHERE role = 'client' ORDER BY created_at DESC`
+    );
+    if (users.length === 0) return res.json({ viewers: [] });
+
+    const userIds = users.map(u => u.id);
+
+    const { rows: logins } = await db.query(
+      `SELECT user_id, created_at FROM audit_log
+       WHERE action = 'login' AND user_id = ANY($1)
+       ORDER BY created_at DESC`,
+      [userIds]
+    );
+
+    const { rows: convRows } = await db.query(
+      `SELECT sc.id, sc.user_id, sc.persona_id, sc.title, sc.created_at,
+              json_agg(
+                json_build_object('content', sm.content, 'created_at', sm.created_at)
+                ORDER BY sm.created_at ASC
+              ) FILTER (WHERE sm.id IS NOT NULL) as messages
+       FROM scott_conversations sc
+       LEFT JOIN scott_messages sm ON sm.conversation_id = sc.id AND sm.sender = 'user'
+       WHERE sc.user_id = ANY($1)
+       GROUP BY sc.id, sc.user_id, sc.persona_id, sc.title, sc.created_at
+       ORDER BY sc.created_at DESC`,
+      [userIds]
+    );
+
+    const viewers = users.map(u => ({
+      username: u.username,
+      account_created: u.created_at,
+      logins: logins.filter(l => l.user_id === u.id).map(l => l.created_at),
+      conversations: convRows.filter(c => c.user_id === u.id)
+    }));
+
+    res.json({ viewers });
+  } catch (err) {
+    console.error('Demo viewers error:', err);
+    res.status(500).json({ error: 'Failed to load demo viewers' });
+  }
+});
+
 // Records that an earlier paid Commercial Review (sourcePurchaseId) credits
 // a later paid Full Commercial Review (targetPurchaseId), when the
 // automatic email match at checkout time didn't catch it (different
