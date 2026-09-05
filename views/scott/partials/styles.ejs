@@ -826,6 +826,9 @@
   .sc-welcome-skip { font-size: 0.8rem; color: var(--sc-text-muted); background: none; border: none; cursor: pointer; padding: 0; text-decoration: underline; }
   .sc-welcome-dismiss { background: var(--sc-forest); color: #fff; border: none; border-radius: var(--sc-radius-sm); padding: 0.55rem 1.2rem; font-weight: 600; font-size: 0.88rem; cursor: pointer; min-height: 44px; }
   .sc-welcome-dismiss:hover { background: var(--sc-forest-dark); }
+  /* .sc-welcome-overlay declares display:flex; without this the hidden
+     attribute is overridden by the class and the overlay never disappears. */
+  .sc-welcome-overlay[hidden] { display: none !important; }
   @media (max-width: 640px) { .sc-welcome-head, .sc-welcome-body { padding: 20px; } .sc-welcome-head h2 { font-size: 1.2rem; } .sc-welcome-foot { padding: 16px 20px 20px; } }
 
   /* ── Persona chip switcher ── */
