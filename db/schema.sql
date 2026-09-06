@@ -974,6 +974,13 @@ CREATE TABLE IF NOT EXISTS workspace_finance_accounts (
     last_sync_outcome VARCHAR(20) NOT NULL DEFAULT 'never' CHECK (last_sync_outcome IN ('never', 'ok', 'partial', 'failed')),
     last_error TEXT NOT NULL DEFAULT '',
     stale_after_hours INTEGER NOT NULL DEFAULT 24,
+    -- Where the data on this row actually came from, in words a person
+    -- can check: for anna_statement_csv the controlled source file, its
+    -- Drive id and the date it was taken (added 06/09/2026 so the Company
+    -- Brain's finance evidence names its source rather than just a
+    -- provider). Overwritten by every import, because provenance
+    -- describes the CURRENT data, never an earlier upload's.
+    source_provenance TEXT NOT NULL DEFAULT '',
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

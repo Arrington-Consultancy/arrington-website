@@ -36,6 +36,7 @@
       From <%= headlineBalance.name %><% if (headlineBalance.balanceAsOf) { %>, as of <%= new Date(headlineBalance.balanceAsOf).toUTCString() %><% } %>.
       <% if (headlineBalance.provider === 'anna_statement_csv') { %>This is the balance as of the last imported statement, not a live balance.<% } %>
     </p>
+    <% if (headlineBalance.sourceProvenance) { %><p class="ws-meta">Source: <%= headlineBalance.sourceProvenance %></p><% } %>
   <% } %>
 </div>
 

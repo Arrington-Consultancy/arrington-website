@@ -1485,6 +1485,53 @@ is built staging-first and credential-gated, and the expansion is being
 routed to Governance and Assurance as a controlled change rather than
 treated as self-approved.
 
+### Controlled ANNA statement ingest into the finance lane (06/09/2026)
+
+Tom's instruction: ingest the controlled Drive source **ARRINGTON ANNA
+TRANSACTIONS - 13 APRIL TO 5 SEPTEMBER 2026.csv** (Drive id
+`1jj2SibObcIBxXqY8wO3ytIFrKxbqIsXU`, 69 rows, latest-row balance £590.43)
+into the Company Brain's finance lane, keep its provenance, and leave the
+open standing-order / scheduled-payment / future-direct-debit Brain Gap
+open, because a statement export does not contain that data.
+
+**How it lands:** `scripts/ingestAnnaCsv.js`, wired into `db/seed.js`
+after the workspace snapshot ingest, armed by `RUN_ANNA_CSV_INGEST=<run
+label>` plus `ANNA_CSV_B64` (the file, base64, set as a Railway variable
+for one deploy and removed afterwards: real bank data, never in code, git,
+Drive chat or a log line) and `ANNA_CSV_SOURCE_NAME` / `_SOURCE_ID` /
+`_SOURCE_DATE` for provenance. Optional `ANNA_CSV_EXPECT_ROWS` / `_FROM` /
+`_TO` / `_BALANCE_PENCE` are checked against what the parser finds and the
+ingest REFUSES to write on any mismatch, so a wrong file cannot land. Spent
+once per label (marker: `workspace_activity` row `finance_anna_ingested`,
+subject `anna-ingest:<label>`). It uses the same parser and the same
+`recordCsvImport` as the Finance page's upload, then reads
+`finance.summary` back by key and lists the open gaps before and after,
+naming any that closed (none should). No transaction row is ever logged.
+
+**A parser defect found by this file and fixed:** the closing balance was
+taken from the LAST printed row of the latest date. ANNA exports newest
+first, so with two rows on 5 September that was the earlier one (£627.99)
+rather than the latest (£590.43). `closingBalance()` in
+`annaStatementCsv.js` now uses the file's own date direction to pick the
+right row on a tied day, falling back to the running-balance arithmetic
+for a single-day file, and to the old behaviour only when neither fits.
+Pinned in `test/workspace/annaCsvIngest.test.js`.
+
+**Provenance is persisted, not just logged:** new column
+`workspace_finance_accounts.source_provenance` (added by an idempotent
+`ALTER` in the seed), written on every CSV import (a page upload records
+"Manual upload by <user>"), surfaced on the Finance page under the balance,
+and carried into `finance.summary`'s body, `source_ref` and `meta.source`.
+The summary body also now states in words that it holds transactions that
+have happened only and lists no standing orders, scheduled payments or
+future direct debits, so Ruth cannot read the gap as filled.
+
+Verified locally on a fresh Postgres before the PR: three seed passes
+(plain, armed, armed again), 69 rows 2026-04-13 to 2026-09-05, balance
+59043 pence, the seeded standing-order gap still open, the second armed
+pass reporting "already spent". Production confirmation is by the deploy
+log lines prefixed `ANNA CSV ingest:`.
+
 ### Zoho Invoice connector, reads and writes (06/09/2026, live)
 
 Arrington's real invoicing is Zoho Invoice, EU data centre, organisation
