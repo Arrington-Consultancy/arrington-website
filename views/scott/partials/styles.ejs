@@ -809,26 +809,27 @@
   .sc-fin-note { margin-top: 0.8rem; }
 
   /* ── Welcome overlay (first-session orientation, dismissed to sessionStorage) ── */
-  /* overflow-y is on the CARD, not the overlay — iOS Safari swallows touch
-     events on children of fixed elements with overflow-y:auto/scroll */
+  /* iOS Safari swallows touch events on buttons inside ANY scrollable container.
+     Fix: card is a flex column with overflow:hidden; only .sc-welcome-body scrolls;
+     the footer (with the button) is flex-shrink:0 and never inside a scroll region. */
   .sc-welcome-overlay { position: fixed; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(21, 35, 29, 0.85); backdrop-filter: blur(6px); overflow: hidden; }
-  .sc-welcome-card { background: var(--sc-cream); border-radius: 12px; max-width: 620px; width: 100%; max-height: calc(100dvh - 48px); overflow-y: auto; -webkit-overflow-scrolling: touch; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
-  .sc-welcome-head { background: var(--sc-forest); color: #fff; padding: 28px 32px 24px; }
+  .sc-welcome-card { background: var(--sc-cream); border-radius: 12px; max-width: 620px; width: 100%; max-height: calc(100dvh - 48px); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+  .sc-welcome-head { flex-shrink: 0; background: var(--sc-forest); color: #fff; padding: 28px 32px 24px; }
   .sc-welcome-head h2 { font-family: 'Playfair Display', serif; font-size: 1.45rem; font-weight: 500; margin: 0 0 0.4rem; line-height: 1.25; }
   .sc-welcome-head p { font-size: 0.88rem; opacity: 0.82; margin: 0; line-height: 1.5; }
-  .sc-welcome-body { padding: 24px 32px; }
+  .sc-welcome-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 24px 32px; }
   .sc-welcome-steps { list-style: none; margin: 0 0 20px; padding: 0; display: flex; flex-direction: column; gap: 12px; }
   .sc-welcome-steps li { display: flex; gap: 12px; align-items: flex-start; font-size: 0.88rem; line-height: 1.45; color: var(--sc-text); }
   .sc-welcome-steps li strong { display: block; font-weight: 600; color: var(--sc-forest-dark); }
   .sc-welcome-step-num { flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; background: var(--sc-forest); color: #fff; font-size: 0.72rem; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 2px; }
-  .sc-welcome-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 32px 24px; border-top: 1px solid var(--sc-border); }
+  .sc-welcome-foot { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 32px 24px; border-top: 1px solid var(--sc-border); }
   .sc-welcome-skip { font-size: 0.8rem; color: var(--sc-text-muted); background: none; border: none; cursor: pointer; padding: 0; text-decoration: underline; }
-  .sc-welcome-dismiss { background: var(--sc-forest); color: #fff; border: none; border-radius: var(--sc-radius-sm); padding: 0.55rem 1.2rem; font-weight: 600; font-size: 0.88rem; cursor: pointer; }
+  .sc-welcome-dismiss { background: var(--sc-forest); color: #fff; border: none; border-radius: var(--sc-radius-sm); padding: 0.55rem 1.2rem; font-weight: 600; font-size: 0.88rem; cursor: pointer; min-height: 44px; }
   .sc-welcome-dismiss:hover { background: var(--sc-forest-dark); }
   /* .sc-welcome-overlay declares display:flex; without this the hidden
      attribute is overridden by the class and the overlay never disappears. */
   .sc-welcome-overlay[hidden] { display: none !important; }
-  @media (max-width: 640px) { .sc-welcome-head, .sc-welcome-body { padding: 20px; } .sc-welcome-head h2 { font-size: 1.2rem; } }
+  @media (max-width: 640px) { .sc-welcome-head, .sc-welcome-body { padding: 20px; } .sc-welcome-head h2 { font-size: 1.2rem; } .sc-welcome-foot { padding: 16px 20px 20px; } }
 
   /* ── Persona chip switcher ── */
   .sc-persona-chips-wrap { margin: 1.2rem 0 1.8rem; }
