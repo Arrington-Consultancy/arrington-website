@@ -41,6 +41,7 @@ const financeRecurring = require('../lib/workspace/finance/recurring');
 const financeAnnaCsv = require('../lib/workspace/finance/annaStatementCsv');
 const financeSync = require('../lib/workspace/finance/sync');
 const xeroClient = require('../lib/workspace/finance/xeroClient');
+const zohoInvoiceClient = require('../lib/workspace/finance/zohoInvoiceClient');
 const { encryptToken, tokenCryptoConfigured } = require('../lib/workspace/finance/tokenCrypto');
 const crm = require('../lib/crm/contacts');
 const erasure = require('../lib/crm/erasure');
@@ -275,6 +276,7 @@ function mountPageRoute(app, generateCsrfToken) {
         tokenCryptoReady: false,
         moneyActionsNeverBuilt: financeRegistry.MONEY_ACTION_CLASS_NEVER_BUILT,
         period: null, summary: null, periodPresets: [], recurringGroups: [], trend: [],
+        zoho: { configured: false, invoices: [], payments: [], error: '' },
         csrfToken: generateCsrfToken(req, res)
       });
     }
@@ -300,6 +302,23 @@ function mountPageRoute(app, generateCsrfToken) {
       // screen.
       financeRepo.listTransactions({ limit: 5000 })
     ]);
+    // Zoho Invoice (read-only): fetched live when the three env vars are
+    // set. A failed call is reported on the page, never thrown, so a Zoho
+    // outage cannot take the rest of the Finance page down with it.
+    const zoho = { configured: financeRegistry.isConfigured('zoho_invoice'), invoices: [], payments: [], error: '' };
+    if (zoho.configured) {
+      try {
+        const token = await zohoInvoiceClient.getAccessToken();
+        const [invoices, payments] = await Promise.all([
+          zohoInvoiceClient.getInvoices(token),
+          zohoInvoiceClient.getPayments(token)
+        ]);
+        zoho.invoices = invoices.slice(0, 100);
+        zoho.payments = payments.slice(0, 100);
+      } catch (err) {
+        zoho.error = String(err && err.message ? err.message : err).slice(0, 300);
+      }
+    }
     res.render('workspace/finance', {
       ...viewer(req),
       counts: await navCounts(clearanceId),
@@ -318,6 +337,7 @@ function mountPageRoute(app, generateCsrfToken) {
       periodPresets: financeAccounting.PERIOD_PRESETS,
       recurringGroups: financeRecurring.detectRecurringGroups(allTransactions),
       trend: financeAccounting.monthlyTrend(allTransactions, 12),
+      zoho,
       formatPence: financeRepo.formatPence,
       csrfToken: generateCsrfToken(req, res)
     });
@@ -383,6 +403,53 @@ function mountPageRoute(app, generateCsrfToken) {
         summary: `Finance sync (${result.outcome}): ${result.detail}`
       });
       res.redirect('/workspace/finance');
+    } catch (err) { next(err); }
+  });
+
+  // Zoho Invoice OAuth: same pattern as Xero, except the callback renders
+  // the refresh token once for Tom to copy into Railway rather than
+  // storing it in the database. No DB upsert on this side.
+  app.get('/workspace/finance/zoho/connect', requireWorkspacePageAccess, (req, res) => {
+    if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'confidential')) return res.redirect('/workspace/finance');
+    // Only the client id and secret are needed to START the consent flow;
+    // the refresh token is what the flow produces, so requiring it here
+    // would make the connector impossible to connect for the first time.
+    const clientReady = ['ZOHO_INVOICE_CLIENT_ID', 'ZOHO_INVOICE_CLIENT_SECRET'].every((k) => !!(process.env[k] && String(process.env[k]).trim()));
+    if (!clientReady) return res.redirect('/workspace/finance?connectError=' + encodeURIComponent('Set ZOHO_INVOICE_CLIENT_ID and ZOHO_INVOICE_CLIENT_SECRET in Railway before connecting.'));
+    const state = crypto.randomBytes(24).toString('hex');
+    req.session.zohoOAuthState = state;
+    res.redirect(zohoInvoiceClient.buildAuthorizeUrl(state));
+  });
+
+  app.get('/workspace/finance/zoho/callback', requireWorkspacePageAccess, async (req, res, next) => {
+    try {
+      if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'confidential')) return res.redirect('/workspace/finance');
+      const expectedState = req.session.zohoOAuthState;
+      delete req.session.zohoOAuthState;
+      if (req.query.error) {
+        return res.redirect(`/workspace/finance?connectError=${encodeURIComponent(`Zoho declined the connection: ${req.query.error}`)}`);
+      }
+      if (!expectedState || req.query.state !== expectedState) {
+        return res.redirect(`/workspace/finance?connectError=${encodeURIComponent('That connection attempt could not be verified (state mismatch). Start again from the Finance page.')}`);
+      }
+      if (typeof req.query.code !== 'string' || !req.query.code) {
+        return res.redirect(`/workspace/finance?connectError=${encodeURIComponent('Zoho did not return an authorisation code.')}`);
+      }
+      const tokens = await zohoInvoiceClient.exchangeCodeForTokens(req.query.code);
+      const nonce = res.locals.nonce || '';
+      // Render the refresh token once. Tom copies it, sets
+      // ZOHO_INVOICE_REFRESH_TOKEN in Railway, and redeploys.
+      // This page is never cached and never logs the token value.
+      res.setHeader('Cache-Control', 'no-store');
+      res.send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Zoho Invoice connected</title>
+<style nonce="${nonce}">body{font-family:system-ui,sans-serif;max-width:640px;margin:4rem auto;padding:0 1.5rem}
+code{background:#f4f4f4;padding:.25rem .5rem;border-radius:4px;word-break:break-all;display:block;margin:1rem 0;font-size:.9rem}
+.note{color:#555;font-size:.9rem;margin-top:2rem}</style></head>
+<body><h1>Zoho Invoice connected</h1>
+<p>Copy the refresh token below and set it as <strong>ZOHO_INVOICE_REFRESH_TOKEN</strong> in Railway, then redeploy. This token will not be shown again.</p>
+<code>${tokens.refresh_token ? String(tokens.refresh_token).replace(/</g, '&lt;').replace(/>/g, '&gt;') : '(no refresh_token in response: check the Zoho app settings)'}</code>
+<p class="note">Once you have copied the token and set the Railway variable, close this page and redeploy. The Finance page will show Zoho Invoice data after the next deploy.</p>
+<p><a href="/workspace/finance">Back to Finance</a></p></body></html>`);
     } catch (err) { next(err); }
   });
 

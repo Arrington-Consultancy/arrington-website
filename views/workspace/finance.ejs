@@ -143,7 +143,7 @@
         <td class="ws-meta"><%= t.reference %></td>
         <td class="ws-meta"><%= t.category %></td>
         <td class="ws-meta"><%= t.is_recurring ? 'yes' : '' %></td>
-        <td class="ws-meta"><%= t.provider === 'anna_statement_csv' ? 'ANNA' : 'Xero' %></td>
+        <td class="ws-meta"><%= t.provider === 'anna_statement_csv' ? 'ANNA' : (t.provider === 'zoho_invoice' ? 'Zoho Invoice' : 'Xero') %></td>
       </tr>
     <% }) %>
   </table>
@@ -152,9 +152,73 @@
 </div>
 
 <div class="ws-card">
-  <h2>Invoices and receipts</h2>
-  <p class="ws-empty">Not yet available. ANNA's invoicing and receipt-capture features live inside the ANNA app itself; no evidenced export route for that data (separate from the bank statement) has been found. This is an open item, not something guessed at or built without a real source.</p>
+  <h2>Invoices and payments (Zoho Invoice)</h2>
+  <p class="ws-meta">Read-only, from Arrington's Zoho Invoice account (EU data centre, organisation 20119226503). Invoices and customer payments only: Zoho Invoice is an invoicing tool, not a bank account, so it contributes nothing to the balance, cashflow or recurring-cost figures above.</p>
+  <% if (!zoho.configured) { %>
+    <p class="ws-empty">Not connected. Set <code>ZOHO_INVOICE_CLIENT_ID</code> and <code>ZOHO_INVOICE_CLIENT_SECRET</code> in Railway, then use the connection controls at the bottom of this page.</p>
+  <% } else if (zoho.error) { %>
+    <p class="ws-note-error">Zoho Invoice could not be read: <%= zoho.error %></p>
+  <% } else { %>
+    <h3 class="ws-h-inline">Invoices (<%= zoho.invoices.length %>)</h3>
+    <% if (zoho.invoices.length === 0) { %>
+      <p class="ws-empty">No invoices returned.</p>
+    <% } else { %>
+    <div class="ws-table-wrap">
+    <table class="ws-table">
+      <tr><th>Number</th><th>Customer</th><th>Date</th><th>Due</th><th>Status</th><th>Total</th><th>Balance</th></tr>
+      <% zoho.invoices.forEach(function (inv) { %>
+        <tr>
+          <td><%= inv.invoice_number %></td>
+          <td><%= inv.customer_name %></td>
+          <td class="ws-meta"><%= inv.date %></td>
+          <td class="ws-meta"><%= inv.due_date %></td>
+          <td class="ws-meta"><%= inv.status %></td>
+          <td><%= inv.currency_symbol || '' %><%= Number(inv.total || 0).toFixed(2) %></td>
+          <td class="<%= Number(inv.balance) > 0 ? 'ws-amount-out' : 'ws-meta' %>"><%= inv.currency_symbol || '' %><%= Number(inv.balance || 0).toFixed(2) %></td>
+        </tr>
+      <% }) %>
+    </table>
+    </div>
+    <% } %>
+    <h3 class="ws-h-inline">Customer payments (<%= zoho.payments.length %>)</h3>
+    <% if (zoho.payments.length === 0) { %>
+      <p class="ws-empty">No payments returned.</p>
+    <% } else { %>
+    <div class="ws-table-wrap">
+    <table class="ws-table">
+      <tr><th>Date</th><th>Customer</th><th>Invoice(s)</th><th>Mode</th><th>Amount</th></tr>
+      <% zoho.payments.forEach(function (p) { %>
+        <tr>
+          <td class="ws-meta"><%= p.date %></td>
+          <td><%= p.customer_name %></td>
+          <td class="ws-meta"><%= p.invoice_numbers || '' %></td>
+          <td class="ws-meta"><%= p.payment_mode || '' %></td>
+          <td class="ws-amount-in"><%= p.currency_symbol || '' %><%= Number(p.amount || 0).toFixed(2) %></td>
+        </tr>
+      <% }) %>
+    </table>
+    </div>
+    <% } %>
+  <% } %>
 </div>
+
+<details class="ws-card">
+  <summary class="ws-summary"><h2 class="ws-h-inline">Zoho Invoice connection</h2></summary>
+  <p class="ws-meta">One-time setup. The refresh token is held in Railway as <code>ZOHO_INVOICE_REFRESH_TOKEN</code>, never in this database. Read-only scopes: invoices, payments, contacts.</p>
+  <% if (zoho.configured) { %>
+    <p class="ws-body-text">Connected. All three Railway variables are set.</p>
+    <p class="ws-meta">To reconnect (for example after revoking the token in Zoho), run the consent step again and replace the Railway variable with the new token.</p>
+    <a class="ws-btn ws-btn-quiet" href="/workspace/finance/zoho/connect">Reconnect Zoho Invoice</a>
+  <% } else { %>
+    <p class="ws-body-text">Not connected.</p>
+    <ol class="ws-meta">
+      <li>Set <code>ZOHO_INVOICE_CLIENT_ID</code> and <code>ZOHO_INVOICE_CLIENT_SECRET</code> in Railway and redeploy.</li>
+      <li>Click Connect below and authorise in Zoho.</li>
+      <li>Copy the refresh token shown once, set it as <code>ZOHO_INVOICE_REFRESH_TOKEN</code> in Railway, and redeploy.</li>
+    </ol>
+    <a class="ws-btn ws-btn-quiet" href="/workspace/finance/zoho/connect">Connect Zoho Invoice</a>
+  <% } %>
+</details>
 
 <details class="ws-card">
   <summary class="ws-summary"><h2 class="ws-h-inline">Optional: Xero (not required, not connected by default)</h2></summary>
