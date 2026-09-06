@@ -175,6 +175,16 @@ async function seed() {
   }
   console.log(`Commercial Gaps Review recovery columns verified${needsReference.length ? ` (backfilled ${needsReference.length} short reference(s))` : ''}.`);
 
+  // Migration: widen workspace_finance_accounts provider CHECK to include zoho_invoice
+  await db.query(`
+    DO $$ BEGIN
+      ALTER TABLE workspace_finance_accounts DROP CONSTRAINT IF EXISTS workspace_finance_accounts_provider_check;
+      ALTER TABLE workspace_finance_accounts ADD CONSTRAINT workspace_finance_accounts_provider_check
+        CHECK (provider IN ('anna_statement_csv', 'xero', 'zoho_invoice'));
+    EXCEPTION WHEN others THEN NULL;
+    END $$;
+  `);
+
   // Migrate users CHECK constraint to include 'client' role
   await db.query(`
     DO $$ BEGIN

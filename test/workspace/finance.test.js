@@ -17,11 +17,23 @@ const accounting = require('../../lib/workspace/finance/accounting');
 const csvParser = require('../../lib/workspace/finance/annaStatementCsv');
 const recurring = require('../../lib/workspace/finance/recurring');
 
-test('two providers exist: anna_statement_csv (primary) and xero (optional)', () => {
-  assert.deepEqual(registry.PROVIDER_IDS, ['anna_statement_csv', 'xero']);
+test('three providers exist: anna_statement_csv (primary), xero and zoho_invoice (both optional)', () => {
+  assert.deepEqual(registry.PROVIDER_IDS, ['anna_statement_csv', 'xero', 'zoho_invoice']);
   assert.equal(registry.PRIMARY_PROVIDER_ID, 'anna_statement_csv');
   assert.equal(registry.PROVIDERS.anna_statement_csv.primary, true);
   assert.equal(registry.PROVIDERS.xero.primary, false);
+  assert.equal(registry.PROVIDERS.zoho_invoice.primary, false);
+});
+
+test('Zoho Invoice is configured only when all three env vars are set, and contributes no balance or transactions', () => {
+  assert.equal(registry.isConfigured('zoho_invoice', {}), false);
+  assert.equal(registry.isConfigured('zoho_invoice', { ZOHO_INVOICE_CLIENT_ID: 'a', ZOHO_INVOICE_CLIENT_SECRET: 'b' }), false,
+    'without the refresh token nothing can be read, so it is not configured');
+  assert.equal(registry.isConfigured('zoho_invoice', { ZOHO_INVOICE_CLIENT_ID: 'a', ZOHO_INVOICE_CLIENT_SECRET: 'b', ZOHO_INVOICE_REFRESH_TOKEN: 'c' }), true);
+  const s = registry.PROVIDERS.zoho_invoice.supports;
+  assert.equal(s.balance, false);
+  assert.equal(s.transactions, false);
+  assert.equal(s.invoices, true);
 });
 
 test('the primary route needs no credential and is always configured', () => {
@@ -63,9 +75,16 @@ test('the finance module exposes no function that performs or prepares a money-m
   assert.deepEqual(performing, [], `these look like they move money: ${performing.join(', ')}`);
 });
 
-test('no scope declared by either connector grants more than reading', () => {
+test('no scope declared by any connector grants more than reading', () => {
+  // Zoho's scopes end in an explicit .READ / .CREATE / .UPDATE / .DELETE
+  // verb, so for Zoho the verb is the test. Xero's are named by object,
+  // where 'payments' and 'bank-feeds' are write-capable and must not appear.
   registry.PROVIDER_IDS.forEach((p) => {
     registry.PROVIDERS[p].readScopes.forEach((scope) => {
+      if (/^ZohoInvoice\./.test(scope)) {
+        assert.match(scope, /\.READ$/, `${p} declares ${scope}, which is not a read scope`);
+        return;
+      }
       assert.doesNotMatch(scope, /\.write\b|payments|bank-feeds/i,
         `${p} declares ${scope}, which grants more than reading`);
     });
