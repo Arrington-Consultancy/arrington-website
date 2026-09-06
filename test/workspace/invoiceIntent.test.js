@@ -29,6 +29,12 @@ test('a name before the address is used as the customer; pence and other amount 
   assert.equal(r.draft.date, '2026-10-01');
 });
 
+test('a thousands separator is read as thousands, and a decimal comma as pence', () => {
+  assert.equal(intent.parse('send an invoice to a@b.co £1,250 for x', { today: TODAY }).draft.amount, 1250);
+  assert.equal(intent.parse('send an invoice to a@b.co £12,500.50 for x', { today: TODAY }).draft.amount, 12500.5);
+  assert.equal(intent.parse('send an invoice to a@b.co £9,99 for x', { today: TODAY }).draft.amount, 9.99);
+});
+
 test('an ordinary question is not an invoice request', () => {
   for (const q of ['where are we losing money?', 'show me last month', 'what invoices are overdue?']) {
     assert.equal(intent.parse(q, { today: TODAY }).matched, false, q);
