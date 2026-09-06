@@ -55,6 +55,21 @@
                 <button type="button" class="sc-btn sc-btn-reject" data-action="reject" data-id="<%= w.id %>">Reject</button>
               </div>
             </div>
+          <% } else if (w.intent_type === 'invoice_raise') { %>
+            <div class="sc-card sc-approval-card" data-approval-id="<%= w.id %>">
+              <div class="sc-approval-row">
+                <div>
+                  <div class="sc-row-sub sc-approval-meta">
+                    Invoice drafted by <strong><%= workers[w.proposing_worker_id] ? workers[w.proposing_worker_id].characterName : w.proposing_worker_id %></strong> from the chat &middot; issuing it posts to the sales ledger
+                  </div>
+                  <div class="sc-approval-summary"><%= String(w.summary).split('\n')[0] %></div>
+                </div>
+                <div class="sc-approval-actions">
+                  <button type="button" class="sc-btn sc-btn-approve" data-action="agree" data-id="<%= w.id %>">Issue invoice</button>
+                  <button type="button" class="sc-btn sc-btn-reject" data-action="reject" data-id="<%= w.id %>">Reject</button>
+                </div>
+              </div>
+            </div>
           <% } else { %>
             <div class="sc-card sc-approval-card" data-approval-id="<%= w.id %>">
               <div class="sc-approval-row">

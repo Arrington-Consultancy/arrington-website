@@ -42,6 +42,7 @@ const financeVm = require('../lib/scott/finance/viewModel');
 const financeLedger = require('../lib/scott/finance/ledger');
 const chartOfAccounts = require('../lib/scott/finance/chartOfAccounts');
 const demoInvoice = require('../lib/scott/finance/demoInvoice');
+const invoiceIntent = require('../lib/scott/finance/invoiceIntent');
 const { sendGapNotification, sendLoginNotification, shouldAlertOnLogin } = require('../lib/scott/gapNotifier');
 
 const router = express.Router();
@@ -1233,7 +1234,49 @@ router.post('/api/scott/messages', noindexHeader, requireScottApiAccess, scottCh
       conversationId = conversation.id;
     }
 
-    const turn = await runScottTurnAndPersist({ conversation, conversationId, userMessage: message, personaId: clearance.getSessionPersonaId(req) });
+    // "Send an invoice to X £Y for Z" (06/09/2026): read deterministically,
+    // drafted into Approvals under Nigel's name, issued into the ledger only
+    // when a person holding invoice_create says so. No model is asked to
+    // infer a figure, and Nigel gains no authority: the draft is a record
+    // that executes nothing. Anything short of a complete sentence, or a
+    // persona without sales-ledger clearance, goes to the AI turn as before
+    // (where Nigel asks for what is missing, or refuses).
+    const personaId = clearance.getSessionPersonaId(req);
+    const intent = invoiceIntent.parse(message, { today: new Date(`${financeState.asOf()}T00:00:00Z`) });
+    if (intent.matched && intent.complete && clearance.personaCanSeeDomain(clearance.getEffectivePersonaId(req), 'invoice_status')) {
+      await repo.addMessage({ conversationId, sender: 'user', content: message });
+      const writeback = await repo.createWriteback({
+        conversationId,
+        proposingWorkerId: 'finance_accounts',
+        intentType: 'invoice_raise',
+        summary: invoiceIntent.encode(intent.draft, { sourceRef: `conversation:${conversationId}` }),
+        requiresApproval: true
+      });
+      const net = intent.draft.netPounds.toFixed(2);
+      const note = 'That is one for Nigel Preece in Finance & Accounts.';
+      const reply = `Drafted: a sales invoice to ${intent.draft.customer} for £${net} before VAT, "${intent.draft.description}", dated ${intent.draft.date}. I do not issue invoices myself. It is in Approvals now for Scott or Chloe to issue; nothing is posted to the books until one of them does.`;
+      await repo.addMessage({ conversationId, sender: 'worker', workerId: 'receptionist', content: note });
+      await repo.addMessage({ conversationId, sender: 'worker', workerId: 'finance_accounts', content: reply, certainty: 'CERTAIN' });
+      const turn = {
+        receptionist: { note, technicalFailure: false },
+        workerReplies: [{
+          workerId: 'finance_accounts',
+          worker: getWorker('finance_accounts'),
+          reply,
+          certainty: 'CERTAIN',
+          escalation: { to: 'scott_mercer', reason: 'Issuing an invoice is a human action: approve it in Approvals.' },
+          writeback: { record: 'invoice_raise', summary: `Invoice draft #${writeback.id} waiting in Approvals.` },
+          refused: false,
+          technicalFailure: false
+        }],
+        gapRecords: [],
+        candidateRecords: [],
+        entities: null
+      };
+      return res.json({ ...serializeTurn(conversationId, turn, canReviewProposedFacts(req)), invoiceDraft: { writebackId: writeback.id } });
+    }
+
+    const turn = await runScottTurnAndPersist({ conversation, conversationId, userMessage: message, personaId });
     res.json(serializeTurn(conversationId, turn, canReviewProposedFacts(req)));
   } catch (err) {
     console.error('Scott chat error:', err);
@@ -1273,7 +1316,10 @@ router.post('/api/scott/approvals/:id/decide', noindexHeader, requireScottApiAcc
     if (!existing || existing.status !== 'pending_approval') return res.status(404).json({ error: 'Not found or already decided.' });
     const WRITEBACK_ACTIONS = Object.assign(Object.create(null), {
       customer_reply_draft: 'writeback_customer_reply',
-      payment_release_request: 'writeback_payment_release'
+      payment_release_request: 'writeback_payment_release',
+      // Issuing a chat-drafted invoice needs the same authority as raising
+      // one on the Sales tab: Scott or Chloe, never a worker.
+      invoice_raise: 'invoice_create'
     });
     const action = WRITEBACK_ACTIONS[existing.intent_type] || 'writeback_other';
     if (!clearance.personaCanAct(clearance.getEffectivePersonaId(req), action)) {
@@ -1283,6 +1329,44 @@ router.post('/api/scott/approvals/:id/decide', noindexHeader, requireScottApiAcc
     const decider = decidedByIdentity(req);
     const writeback = await repo.decideWriteback(id, decision, decider, editedText);
     if (!writeback) return res.status(404).json({ error: 'Not found or already decided.' });
+
+    // Approving an invoice draft IS the human act of issuing it: post the
+    // sales invoice to the ledger exactly as the Sales tab form does, from
+    // the machine-readable line the person just read and approved. A
+    // failure after approval is recorded as exactly that, never as issued.
+    if (decision === 'approve' && existing.intent_type === 'invoice_raise') {
+      const draft = invoiceIntent.decode(existing.summary);
+      if (!draft) return res.status(409).json({ error: 'That draft could not be read back, so nothing was posted.', writeback });
+      try {
+        const actor = financeActor(req);
+        const accountCode = /knit|yarn|wool/i.test(draft.description) ? '4010' : (/collect|deliver|return/i.test(draft.description) ? '4020' : '4030');
+        if (!canPostTo(req, accountCode, ['turnover'], { requireVisible: false })) return res.status(403).json({ error: 'That is not a sales account you can post to.', writeback });
+        const documentDate = draft.date;
+        const d = new Date(`${documentDate}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + 30);
+        const dueDate = d.toISOString().slice(0, 10);
+        const amountPence = financeLedger.toPence(draft.netPounds);
+        const ref = await finRepo.nextDocumentRef('sales');
+        const vatPence = financeLedger.vatOnNet(amountPence);
+        const journal = financeLedger.salesInvoiceJournal({ date: documentDate, ref, customer: draft.customer, lines: [{ accountCode, netPence: amountPence, vatable: true }] });
+        const doc = await finRepo.createDocumentWithJournal(
+          { kind: 'sales', ref, party: draft.customer, description: draft.description, accountCode, documentDate, dueDate,
+            netPence: amountPence, vatPence, grossPence: amountPence + vatPence, paidPence: 0, status: 'open' },
+          journal,
+          { postedBy: actor.name, personaId: actor.personaId }
+        );
+        await financeState.refresh();
+        await repo.addActivity({
+          actor: 'user',
+          eventType: 'finance_invoice_raised',
+          summary: `${actor.name} issued invoice ${ref} to ${draft.customer} for ${financeLedger.formatGbp(doc.grossPence)}, drafted by Nigel Preece from the chat (approval #${id}).`
+        });
+        return res.json({ ok: true, writeback, invoice: doc });
+      } catch (err) {
+        console.error('Scott invoice issue after approval failed:', err);
+        await repo.addActivity({ actor: 'user', eventType: 'finance_invoice_issue_failed', summary: `Approval #${id} was approved but the invoice could not be posted: ${err.validation ? err.message : 'ledger error'}.` });
+        return res.status(500).json({ error: 'Approved, but the invoice could not be posted to the ledger. Nothing was issued.', writeback });
+      }
+    }
     res.json({ ok: true, writeback });
   } catch (err) {
     console.error('Scott approval decide error:', err);

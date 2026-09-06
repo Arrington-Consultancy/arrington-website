@@ -42,6 +42,7 @@ const financeAnnaCsv = require('../lib/workspace/finance/annaStatementCsv');
 const financeSync = require('../lib/workspace/finance/sync');
 const xeroClient = require('../lib/workspace/finance/xeroClient');
 const zohoInvoiceClient = require('../lib/workspace/finance/zohoInvoiceClient');
+const invoiceIntent = require('../lib/workspace/finance/invoiceIntent');
 const { encryptToken, tokenCryptoConfigured } = require('../lib/workspace/finance/tokenCrypto');
 const crm = require('../lib/crm/contacts');
 const erasure = require('../lib/crm/erasure');
@@ -669,6 +670,42 @@ router.post('/api/workspace/ask', requireWorkspaceApiAccess, askLimiter, async (
       if (!conversation) return res.status(404).json({ error: 'Conversation not found.' });
     }
 
+    // "Send an invoice to <email> £<amount> for <job> as of today"
+    // (06/09/2026). Read deterministically, never by the model: a draft
+    // that will become a real Zoho invoice emailed to a real address is
+    // built from the typed sentence and nothing else. The draft goes into
+    // Decisions & approvals as a record; a separate route, gated on the
+    // approval being granted by a named person and spent once, is the
+    // only thing that creates and emails it. Ruth is not involved: no
+    // lane read a record, so no handoff note is written.
+    const intent = clearanceCanSeeSensitivity(clearanceId, 'confidential') ? invoiceIntent.parse(question) : { matched: false };
+    if (intent.matched) {
+      let answer;
+      let invoiceDraft = null;
+      if (!intent.complete) {
+        answer = `I can draft that invoice, but I need ${intent.missing.join(', and ')}. For example: "send an invoice to name@example.com £500 for commercial review as of today".`;
+      } else if (!financeRegistry.isConfigured('zoho_invoice') || !zohoInvoiceClient.writesEnabled()) {
+        answer = `I read that as ${invoiceIntent.describe(intent.draft)}, but Zoho Invoice writes are switched off in this environment, so no draft was raised.`;
+      } else {
+        const approval = await repo.createApproval({
+          title: `Zoho invoice: ${invoiceIntent.describe(intent.draft)}`,
+          detail: JSON.stringify({ kind: 'zoho_invoice_draft', draft: intent.draft, typed: question }),
+          actionClass: 2,
+          sensitivity: 'confidential',
+          requestedBy: username
+        });
+        invoiceDraft = { approvalId: approval.id, summary: invoiceIntent.describe(intent.draft), draft: intent.draft };
+        answer = `Drafted: invoice ${invoiceDraft.summary}. Nothing has been created or sent. It is waiting as approval #${approval.id}: approve it and it will be created in Zoho Invoice and emailed to ${intent.draft.customerEmail} from your Zoho account.`;
+        await repo.addActivity({ actor: username, eventType: 'zoho_invoice_drafted', subject: `approval:${approval.id}`, summary: `Drafted a Zoho invoice from Ask Ruth: ${invoiceDraft.summary} (approval #${approval.id}).` });
+      }
+      if (!conversation) {
+        conversation = await repo.createConversation({ ownerUsername: username, clearance: clearanceId, laneId: '', title: question.slice(0, 120) });
+      }
+      await repo.addMessage({ conversationId: conversation.id, role: 'user', content: question, laneId: '' });
+      await repo.addMessage({ conversationId: conversation.id, role: 'assistant', content: answer, laneId: '', provenance: [] });
+      return res.json({ ok: true, conversationId: conversation.id, laneId: null, laneName: null, answer, provenance: [], gap: null, escalation: null, receptionist: null, invoiceDraft });
+    }
+
     const result = await askWorkspace({ clearanceId, question, laneId: forcedLaneId });
     if (!result.ok) {
       return res.status(503).json({ error: result.errors.join(' ') });
@@ -955,6 +992,114 @@ router.post('/api/workspace/finance/sync', requireWorkspaceApiAccess, writeLimit
 // separate flag in the body, confirmed in the browser, because the
 // draft stays private to Zoho and the email is what reaches a customer.
 // An invoice asks for money; nothing here moves any.
+// The one function that creates (and optionally emails) a Zoho invoice.
+// Both human paths go through it: the Finance page form, and the
+// approved-draft route below. It assumes the caller has already applied
+// the gates (workspace access, confidential clearance, writes flag,
+// configured connector); it applies the validation and the record-keeping.
+async function createAndSendZohoInvoice({ actor, customerId = '', customerEmail = '', customerName = '', description, amount, dueDate = '', notes = '', send = false }) {
+  const token = await zohoInvoiceClient.getAccessToken();
+  customerId = String(customerId || '').trim();
+  customerEmail = String(customerEmail || '').trim();
+  customerName = String(customerName || '').trim();
+  let createdCustomer = false;
+  if (!customerId) {
+    // Reuse a customer Zoho already holds for this email, so a retry
+    // after a failed invoice (or a name typed twice) does not create a
+    // second contact for the same person.
+    const wanted = customerEmail.toLowerCase();
+    let existing = null;
+    if (wanted) {
+      try {
+        existing = (await zohoInvoiceClient.getContacts(token)).find((c) => String(c.email || '').toLowerCase() === wanted) || null;
+      } catch (_) { existing = null; }
+    }
+    if (existing) {
+      customerId = existing.contact_id;
+      customerName = existing.contact_name || customerName;
+    } else {
+      const contact = await zohoInvoiceClient.createContact(token, { name: customerName, email: customerEmail });
+      customerId = contact.contact_id;
+      customerName = contact.contact_name || customerName;
+      createdCustomer = true;
+      await repo.addActivity({ actor, eventType: 'zoho_customer_created', summary: `Created Zoho Invoice customer "${customerName}".` });
+    }
+  }
+
+  const invoice = await zohoInvoiceClient.createInvoice(token, { customerId, description, amountPounds: amount, dueDate, notes });
+  await repo.addActivity({
+    actor,
+    eventType: 'zoho_invoice_created',
+    summary: `Created Zoho invoice ${invoice.invoice_number} for ${invoice.customer_name || customerName}, ${invoice.currency_symbol || '£'}${invoice.total} (draft).`
+  });
+
+  let sent = false;
+  let sendError = '';
+  if (send === true) {
+    const to = customerEmail || invoice.email || (invoice.contact_persons_details || []).map((p) => p.email).find(Boolean) || '';
+    try {
+      await zohoInvoiceClient.emailInvoice(token, invoice.invoice_id, to);
+      sent = true;
+      await repo.addActivity({ actor, eventType: 'zoho_invoice_emailed', summary: `Emailed Zoho invoice ${invoice.invoice_number} to the customer.` });
+    } catch (err) {
+      sendError = String(err && err.message ? err.message : err).slice(0, 300);
+      await repo.addActivity({ actor, eventType: 'zoho_invoice_email_failed', summary: `Zoho invoice ${invoice.invoice_number} was created but could not be emailed: ${sendError}` });
+    }
+  }
+  return { invoiceNumber: invoice.invoice_number, invoiceId: invoice.invoice_id, total: invoice.total, createdCustomer, sent, sendError };
+}
+
+function zohoWriteError(err, res, next) {
+  if (err && err.name === 'ZohoWritesDisabledError') return res.status(400).json({ error: err.message });
+  if (err && /^(A |The |Zoho Invoice API )/.test(String(err.message))) return res.status(400).json({ error: String(err.message).slice(0, 300) });
+  return next(err);
+}
+
+// Carry out a Zoho invoice draft that a person has approved in Decisions
+// & approvals (the drafts come from Ask Ruth, see /api/workspace/ask).
+// Same discipline as the social mutations gate: the approval is re-read
+// from the database rather than believed from the caller, it must have
+// been decided by a named person (never 'workspace_ai'), and it is spent
+// once, guarded by an activity row keyed on the approval id. The draft
+// that is executed is the one stored on the approval row, which is what
+// the person read, not whatever arrives in the request body.
+router.post('/api/workspace/finance/zoho/invoice/execute', requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
+  try {
+    if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'confidential')) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    if (!zohoInvoiceClient.writesEnabled()) {
+      return res.status(400).json({ error: `Creating invoices is switched off (${zohoInvoiceClient.WRITES_FLAG} is not 'true').` });
+    }
+    if (!financeRegistry.isConfigured('zoho_invoice')) return res.status(400).json({ error: 'Zoho Invoice is not connected.' });
+    const approvalId = parseInt(req.body && req.body.approvalId, 10);
+    if (!Number.isInteger(approvalId)) return res.status(400).json({ error: 'An approval id is required.' });
+    const approval = await repo.getApproval(approvalId);
+    if (!approval) return res.status(404).json({ error: 'Approval not found.' });
+    if (approval.status !== 'approved') return res.status(409).json({ error: `Approval #${approvalId} is ${approval.status}, not approved. Nothing was sent.` });
+    if (!approval.decided_by || approval.decided_by === 'workspace_ai') return res.status(403).json({ error: 'That approval was not decided by a named person. Nothing was sent.' });
+    let payload = null;
+    try { payload = JSON.parse(approval.detail || ''); } catch (_) { payload = null; }
+    if (!payload || payload.kind !== 'zoho_invoice_draft' || !payload.draft) return res.status(409).json({ error: 'That approval is not a Zoho invoice draft.' });
+    const spent = await db.query(
+      `SELECT 1 FROM workspace_activity WHERE event_type = 'zoho_invoice_executed' AND subject = $1 LIMIT 1`,
+      [`approval:${approvalId}`]
+    );
+    if (spent.rows.length) return res.status(409).json({ error: `Approval #${approvalId} has already been carried out. Nothing was sent again.` });
+
+    const actor = req.session.user.username;
+    const d = payload.draft;
+    const result = await createAndSendZohoInvoice({
+      actor, customerEmail: d.customerEmail, customerName: d.customerName, description: d.description, amount: d.amount, send: true
+    });
+    await repo.addActivity({
+      actor, eventType: 'zoho_invoice_executed', subject: `approval:${approvalId}`,
+      summary: `Carried out approval #${approvalId} (decided by ${approval.decided_by}): Zoho invoice ${result.invoiceNumber} created${result.sent ? ' and emailed' : ', email FAILED: ' + result.sendError}.`
+    });
+    res.json({ ok: true, approvalId, ...result });
+  } catch (err) { zohoWriteError(err, res, next); }
+});
+
 router.post('/api/workspace/finance/zoho/invoice', requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
   try {
     if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'confidential')) {
@@ -967,73 +1112,14 @@ router.post('/api/workspace/finance/zoho/invoice', requireWorkspaceApiAccess, wr
       return res.status(400).json({ error: 'Zoho Invoice is not connected.' });
     }
     const body = req.body || {};
-    const actor = req.session.user.username;
-    const token = await zohoInvoiceClient.getAccessToken();
-
-    // Customer: an existing contact id, or a new name + email.
-    let customerId = typeof body.customerId === 'string' ? body.customerId.trim() : '';
-    let customerEmail = typeof body.customerEmail === 'string' ? body.customerEmail.trim() : '';
-    let customerName = typeof body.customerName === 'string' ? body.customerName.trim() : '';
-    let createdCustomer = false;
-    if (!customerId) {
-      // Reuse a customer Zoho already holds for this email, so a retry
-      // after a failed invoice (or a name typed twice) does not create
-      // a second contact for the same person.
-      const wanted = customerEmail.toLowerCase();
-      let existing = null;
-      if (wanted) {
-        try {
-          existing = (await zohoInvoiceClient.getContacts(token)).find((c) => String(c.email || '').toLowerCase() === wanted) || null;
-        } catch (_) { existing = null; }
-      }
-      if (existing) {
-        customerId = existing.contact_id;
-        customerName = existing.contact_name || customerName;
-      } else {
-        const contact = await zohoInvoiceClient.createContact(token, { name: customerName, email: customerEmail });
-        customerId = contact.contact_id;
-        customerName = contact.contact_name || customerName;
-        createdCustomer = true;
-        await repo.addActivity({ actor, eventType: 'zoho_customer_created', summary: `Created Zoho Invoice customer "${customerName}".` });
-      }
-    }
-
-    const invoice = await zohoInvoiceClient.createInvoice(token, {
-      customerId,
-      description: body.description,
-      amountPounds: body.amount,
-      dueDate: body.dueDate,
-      notes: body.notes
+    const result = await createAndSendZohoInvoice({
+      actor: req.session.user.username,
+      customerId: body.customerId, customerEmail: body.customerEmail, customerName: body.customerName,
+      description: body.description, amount: body.amount, dueDate: body.dueDate, notes: body.notes,
+      send: body.send === true
     });
-    await repo.addActivity({
-      actor,
-      eventType: 'zoho_invoice_created',
-      summary: `Created Zoho invoice ${invoice.invoice_number} for ${invoice.customer_name || customerName}, ${invoice.currency_symbol || '£'}${invoice.total} (draft).`
-    });
-
-    let sent = false;
-    let sendError = '';
-    if (body.send === true) {
-      // The email address to send to: the one typed for a new customer,
-      // or the one Zoho holds for an existing one (the client only
-      // accepts a valid address, so an existing customer with no email
-      // on file gets a clear error rather than a silent non-send).
-      const to = customerEmail || invoice.email || (invoice.contact_persons_details || []).map((p) => p.email).find(Boolean) || '';
-      try {
-        await zohoInvoiceClient.emailInvoice(token, invoice.invoice_id, to);
-        sent = true;
-        await repo.addActivity({ actor, eventType: 'zoho_invoice_emailed', summary: `Emailed Zoho invoice ${invoice.invoice_number} to the customer.` });
-      } catch (err) {
-        sendError = String(err && err.message ? err.message : err).slice(0, 300);
-        await repo.addActivity({ actor, eventType: 'zoho_invoice_email_failed', summary: `Zoho invoice ${invoice.invoice_number} was created but could not be emailed: ${sendError}` });
-      }
-    }
-    res.json({ ok: true, invoiceNumber: invoice.invoice_number, invoiceId: invoice.invoice_id, total: invoice.total, createdCustomer, sent, sendError });
-  } catch (err) {
-    if (err && err.name === 'ZohoWritesDisabledError') return res.status(400).json({ error: err.message });
-    if (err && /^(A |The |Zoho Invoice API )/.test(String(err.message))) return res.status(400).json({ error: String(err.message).slice(0, 300) });
-    next(err);
-  }
+    res.json({ ok: true, ...result });
+  } catch (err) { zohoWriteError(err, res, next); }
 });
 
 // Disconnecting forgets the credential; the synced transaction history
