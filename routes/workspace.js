@@ -276,7 +276,7 @@ function mountPageRoute(app, generateCsrfToken) {
         tokenCryptoReady: false,
         moneyActionsNeverBuilt: financeRegistry.MONEY_ACTION_CLASS_NEVER_BUILT,
         period: null, summary: null, periodPresets: [], recurringGroups: [], trend: [],
-        zoho: { configured: false, invoices: [], payments: [], error: '' },
+        zoho: { configured: false, invoices: [], payments: [], error: '', invoicesError: '', paymentsError: '' },
         csrfToken: generateCsrfToken(req, res)
       });
     }
@@ -305,19 +305,24 @@ function mountPageRoute(app, generateCsrfToken) {
     // Zoho Invoice (read-only): fetched live when the three env vars are
     // set. A failed call is reported on the page, never thrown, so a Zoho
     // outage cannot take the rest of the Finance page down with it.
-    const zoho = { configured: financeRegistry.isConfigured('zoho_invoice'), invoices: [], payments: [], error: '' };
+    // Invoices and payments are fetched independently: a scope or
+    // permission problem on one endpoint must not hide the other's data.
+    // `error` is the credential-level failure (no token at all);
+    // `invoicesError` / `paymentsError` are per-endpoint.
+    const zoho = { configured: financeRegistry.isConfigured('zoho_invoice'), invoices: [], payments: [], error: '', invoicesError: '', paymentsError: '' };
     if (zoho.configured) {
+      const errText = (err) => String(err && err.message ? err.message : err).slice(0, 300);
       try {
         const token = await zohoInvoiceClient.getAccessToken();
-        const [invoices, payments] = await Promise.all([
+        const [inv, pay] = await Promise.allSettled([
           zohoInvoiceClient.getInvoices(token),
           zohoInvoiceClient.getPayments(token)
         ]);
-        zoho.invoices = invoices.slice(0, 100);
-        zoho.payments = payments.slice(0, 100);
-        console.log(`Zoho Invoice read: ${invoices.length} invoice(s), ${payments.length} payment(s).`);
+        if (inv.status === 'fulfilled') zoho.invoices = inv.value.slice(0, 100); else zoho.invoicesError = errText(inv.reason);
+        if (pay.status === 'fulfilled') zoho.payments = pay.value.slice(0, 100); else zoho.paymentsError = errText(pay.reason);
+        console.log(`Zoho Invoice read: invoices ${zoho.invoicesError ? 'FAILED: ' + zoho.invoicesError : zoho.invoices.length}; payments ${zoho.paymentsError ? 'FAILED: ' + zoho.paymentsError : zoho.payments.length}.`);
       } catch (err) {
-        zoho.error = String(err && err.message ? err.message : err).slice(0, 300);
+        zoho.error = errText(err);
         console.error(`Zoho Invoice read FAILED: ${zoho.error}`);
       }
     }
