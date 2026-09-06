@@ -1334,6 +1334,17 @@ loadPermissions().then(() => {
           : `WORKSPACE_FINANCE_TOKEN_KEY ${tokenKeyRaw ? `set but malformed (length ${String(tokenKeyRaw).length}, expected 64 hex chars)` : 'not set (fine unless Xero is connected later)'}`,
         `Zoho Invoice: ${financeRegistry.isConfigured('zoho_invoice') ? 'CONFIGURED' : 'not configured'} (${zohoVars.join('; ')})`
       ].join(' | '));
+      // One real read at boot, so a bad or revoked Zoho credential shows
+      // up in the deploy log rather than only on the Finance page. Never
+      // awaited: a slow or unreachable Zoho must not delay the app
+      // starting, and its error text carries no token (pinned by test).
+      if (financeRegistry.isConfigured('zoho_invoice')) {
+        const zohoClient = require('./lib/workspace/finance/zohoInvoiceClient');
+        zohoClient.getAccessToken()
+          .then((token) => zohoClient.getInvoices(token))
+          .then((invoices) => console.log(`Zoho Invoice probe: credential accepted, ${invoices.length} invoice(s) on the first page.`))
+          .catch((err) => console.error(`Zoho Invoice probe FAILED: ${err && err.message ? err.message : err}`));
+      }
     }
     // Governance finding F1 (Tom's decision, 31/08/2026): the workspace
     // now has three gates, and two of them are Railway variables that
