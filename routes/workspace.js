@@ -276,7 +276,7 @@ function mountPageRoute(app, generateCsrfToken) {
         tokenCryptoReady: false,
         moneyActionsNeverBuilt: financeRegistry.MONEY_ACTION_CLASS_NEVER_BUILT,
         period: null, summary: null, periodPresets: [], recurringGroups: [], trend: [],
-        zoho: { configured: false, invoices: [], payments: [], error: '', invoicesError: '', paymentsError: '' },
+        zoho: { configured: false, writesEnabled: false, invoices: [], payments: [], contacts: [], error: '', invoicesError: '', paymentsError: '', contactsError: '' },
         csrfToken: generateCsrfToken(req, res)
       });
     }
@@ -309,17 +309,25 @@ function mountPageRoute(app, generateCsrfToken) {
     // permission problem on one endpoint must not hide the other's data.
     // `error` is the credential-level failure (no token at all);
     // `invoicesError` / `paymentsError` are per-endpoint.
-    const zoho = { configured: financeRegistry.isConfigured('zoho_invoice'), invoices: [], payments: [], error: '', invoicesError: '', paymentsError: '' };
+    const zoho = {
+      configured: financeRegistry.isConfigured('zoho_invoice'),
+      writesEnabled: zohoInvoiceClient.writesEnabled(),
+      invoices: [], payments: [], contacts: [], error: '', invoicesError: '', paymentsError: '', contactsError: ''
+    };
     if (zoho.configured) {
       const errText = (err) => String(err && err.message ? err.message : err).slice(0, 300);
       try {
         const token = await zohoInvoiceClient.getAccessToken();
-        const [inv, pay] = await Promise.allSettled([
+        const [inv, pay, con] = await Promise.allSettled([
           zohoInvoiceClient.getInvoices(token),
-          zohoInvoiceClient.getPayments(token)
+          zohoInvoiceClient.getPayments(token),
+          // The customer list feeds the create-invoice form, so it is
+          // only fetched when that form can be shown.
+          zoho.writesEnabled ? zohoInvoiceClient.getContacts(token) : Promise.resolve([])
         ]);
         if (inv.status === 'fulfilled') zoho.invoices = inv.value.slice(0, 100); else zoho.invoicesError = errText(inv.reason);
         if (pay.status === 'fulfilled') zoho.payments = pay.value.slice(0, 100); else zoho.paymentsError = errText(pay.reason);
+        if (con.status === 'fulfilled') zoho.contacts = con.value.slice(0, 200); else zoho.contactsError = errText(con.reason);
         console.log(`Zoho Invoice read: invoices ${zoho.invoicesError ? 'FAILED: ' + zoho.invoicesError : zoho.invoices.length}; payments ${zoho.paymentsError ? 'FAILED: ' + zoho.paymentsError : zoho.payments.length}.`);
       } catch (err) {
         zoho.error = errText(err);
@@ -925,6 +933,88 @@ router.post('/api/workspace/finance/sync', requireWorkspaceApiAccess, writeLimit
     });
     res.json({ ok: true, ...result });
   } catch (err) { next(err); }
+});
+
+// Create a customer (optional), create a draft invoice, and optionally
+// email it to the customer, all in Zoho Invoice. Added 06/09/2026 on
+// Tom's instruction: "create a customer, invoice the amount and the job
+// and send it to them, without leaving the workspace".
+//
+// This is the first write into a financial system from the workspace,
+// so the gates are deliberate and all of them are enforced in
+// lib/workspace/finance/zohoInvoiceClient.js rather than only here:
+// ENABLE_ZOHO_INVOICE_WRITES must be 'true' (every write throws
+// otherwise, before any network call), the token must carry the CREATE
+// scopes (a read-only token is refused by Zoho), and the only caller is
+// this route, which a logged-in, unlocked, confidential-cleared human
+// reaches through the form. No AI path reaches it. Sending is a
+// separate flag in the body, confirmed in the browser, because the
+// draft stays private to Zoho and the email is what reaches a customer.
+// An invoice asks for money; nothing here moves any.
+router.post('/api/workspace/finance/zoho/invoice', requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
+  try {
+    if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'confidential')) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    if (!zohoInvoiceClient.writesEnabled()) {
+      return res.status(400).json({ error: `Creating invoices is switched off (${zohoInvoiceClient.WRITES_FLAG} is not 'true').` });
+    }
+    if (!financeRegistry.isConfigured('zoho_invoice')) {
+      return res.status(400).json({ error: 'Zoho Invoice is not connected.' });
+    }
+    const body = req.body || {};
+    const actor = req.session.user.username;
+    const token = await zohoInvoiceClient.getAccessToken();
+
+    // Customer: an existing contact id, or a new name + email.
+    let customerId = typeof body.customerId === 'string' ? body.customerId.trim() : '';
+    let customerEmail = typeof body.customerEmail === 'string' ? body.customerEmail.trim() : '';
+    let customerName = typeof body.customerName === 'string' ? body.customerName.trim() : '';
+    let createdCustomer = false;
+    if (!customerId) {
+      const contact = await zohoInvoiceClient.createContact(token, { name: customerName, email: customerEmail });
+      customerId = contact.contact_id;
+      customerName = contact.contact_name || customerName;
+      createdCustomer = true;
+      await repo.addActivity({ actor, eventType: 'zoho_customer_created', summary: `Created Zoho Invoice customer "${customerName}".` });
+    }
+
+    const invoice = await zohoInvoiceClient.createInvoice(token, {
+      customerId,
+      description: body.description,
+      amountPounds: body.amount,
+      dueDate: body.dueDate,
+      notes: body.notes
+    });
+    await repo.addActivity({
+      actor,
+      eventType: 'zoho_invoice_created',
+      summary: `Created Zoho invoice ${invoice.invoice_number} for ${invoice.customer_name || customerName}, ${invoice.currency_symbol || '£'}${invoice.total} (draft).`
+    });
+
+    let sent = false;
+    let sendError = '';
+    if (body.send === true) {
+      // The email address to send to: the one typed for a new customer,
+      // or the one Zoho holds for an existing one (the client only
+      // accepts a valid address, so an existing customer with no email
+      // on file gets a clear error rather than a silent non-send).
+      const to = customerEmail || invoice.email || (invoice.contact_persons_details || []).map((p) => p.email).find(Boolean) || '';
+      try {
+        await zohoInvoiceClient.emailInvoice(token, invoice.invoice_id, to);
+        sent = true;
+        await repo.addActivity({ actor, eventType: 'zoho_invoice_emailed', summary: `Emailed Zoho invoice ${invoice.invoice_number} to the customer.` });
+      } catch (err) {
+        sendError = String(err && err.message ? err.message : err).slice(0, 300);
+        await repo.addActivity({ actor, eventType: 'zoho_invoice_email_failed', summary: `Zoho invoice ${invoice.invoice_number} was created but could not be emailed: ${sendError}` });
+      }
+    }
+    res.json({ ok: true, invoiceNumber: invoice.invoice_number, invoiceId: invoice.invoice_id, total: invoice.total, createdCustomer, sent, sendError });
+  } catch (err) {
+    if (err && err.name === 'ZohoWritesDisabledError') return res.status(400).json({ error: err.message });
+    if (err && /^(A |The |Zoho Invoice API )/.test(String(err.message))) return res.status(400).json({ error: String(err.message).slice(0, 300) });
+    next(err);
+  }
 });
 
 // Disconnecting forgets the credential; the synced transaction history

@@ -91,6 +91,20 @@ test('no scope declared by any connector grants more than reading', () => {
   });
 });
 
+test('Zoho write scopes are CREATE only, flag-gated, and no other provider declares any write scope', () => {
+  registry.PROVIDER_IDS.forEach((p) => {
+    const ws = registry.PROVIDERS[p].writeScopes || [];
+    if (p !== 'zoho_invoice') assert.deepEqual(ws, [], `${p} must declare no write scope`);
+  });
+  const z = registry.PROVIDERS.zoho_invoice;
+  assert.deepEqual(z.writeScopes, ['ZohoInvoice.contacts.CREATE', 'ZohoInvoice.invoices.CREATE']);
+  z.writeScopes.forEach((s) => assert.doesNotMatch(s, /UPDATE|DELETE|fullaccess/i));
+  assert.equal(z.writesFlag, 'ENABLE_ZOHO_INVOICE_WRITES');
+  // An invoice asks for money; it moves none. The never-built list is untouched.
+  ['payment_initiation', 'transfer', 'beneficiary_creation', 'card_control', 'change_account_settings']
+    .forEach((a) => assert.equal(registry.connectorMayDo('zoho_invoice', a), false));
+});
+
 test('Xero remains an unconfigured connector until both env vars are set; ANNA CSV is unaffected by env', () => {
   assert.equal(registry.isConfigured('xero', {}), false);
   assert.equal(registry.isConfigured('xero', { XERO_CLIENT_ID: 'abc' }), false, 'a partial credential is not a credential');

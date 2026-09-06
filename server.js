@@ -1332,7 +1332,8 @@ loadPermissions().then(() => {
         keyConfigured
           ? 'WORKSPACE_FINANCE_TOKEN_KEY set (64-char hex, needed only if Xero is ever connected)'
           : `WORKSPACE_FINANCE_TOKEN_KEY ${tokenKeyRaw ? `set but malformed (length ${String(tokenKeyRaw).length}, expected 64 hex chars)` : 'not set (fine unless Xero is connected later)'}`,
-        `Zoho Invoice: ${financeRegistry.isConfigured('zoho_invoice') ? 'CONFIGURED' : 'not configured'} (${zohoVars.join('; ')})`
+        `Zoho Invoice: ${financeRegistry.isConfigured('zoho_invoice') ? 'CONFIGURED' : 'not configured'} (${zohoVars.join('; ')})`,
+        `Zoho Invoice writes (create customer/invoice, email invoice): ${process.env.ENABLE_ZOHO_INVOICE_WRITES === 'true' ? 'ENABLED (human-initiated only; the token must have been issued with the flag on)' : "off (ENABLE_ZOHO_INVOICE_WRITES is not 'true'); reads unaffected"}`
       ].join(' | '));
       // One real read at boot, so a bad or revoked Zoho credential shows
       // up in the deploy log rather than only on the Finance page. Never
