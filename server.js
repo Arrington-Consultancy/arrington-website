@@ -1317,12 +1317,22 @@ loadPermissions().then(() => {
       const xeroConfigured = financeRegistry.isConfigured('xero');
       const keyConfigured = tokenCryptoConfigured();
       const tokenKeyRaw = process.env.WORKSPACE_FINANCE_TOKEN_KEY;
+      // Zoho: report each variable separately, by presence and length
+      // only, so an empty or whitespace-only value in Railway is
+      // distinguishable from a real one without ever printing it.
+      const zohoVars = ['ZOHO_INVOICE_CLIENT_ID', 'ZOHO_INVOICE_CLIENT_SECRET', 'ZOHO_INVOICE_REFRESH_TOKEN'].map((k) => {
+        const raw = process.env[k];
+        if (raw === undefined) return `${k} not set`;
+        if (!String(raw).trim()) return `${k} EMPTY`;
+        return `${k} set (length ${String(raw).trim().length})`;
+      });
       console.log('Workspace finance: ' + [
         'primary route: ANNA statement CSV upload, always available, no configuration needed',
         xeroConfigured ? 'optional Xero: XERO_CLIENT_ID/XERO_CLIENT_SECRET set' : 'optional Xero: not configured (this is fine; Xero is never required)',
         keyConfigured
           ? 'WORKSPACE_FINANCE_TOKEN_KEY set (64-char hex, needed only if Xero is ever connected)'
-          : `WORKSPACE_FINANCE_TOKEN_KEY ${tokenKeyRaw ? `set but malformed (length ${String(tokenKeyRaw).length}, expected 64 hex chars)` : 'not set (fine unless Xero is connected later)'}`
+          : `WORKSPACE_FINANCE_TOKEN_KEY ${tokenKeyRaw ? `set but malformed (length ${String(tokenKeyRaw).length}, expected 64 hex chars)` : 'not set (fine unless Xero is connected later)'}`,
+        `Zoho Invoice: ${financeRegistry.isConfigured('zoho_invoice') ? 'CONFIGURED' : 'not configured'} (${zohoVars.join('; ')})`
       ].join(' | '));
     }
     // Governance finding F1 (Tom's decision, 31/08/2026): the workspace
