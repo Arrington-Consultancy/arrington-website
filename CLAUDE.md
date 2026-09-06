@@ -1485,6 +1485,77 @@ is built staging-first and credential-gated, and the expansion is being
 routed to Governance and Assurance as a controlled change rather than
 treated as self-approved.
 
+### Zoho Invoice connector, reads and writes (06/09/2026, live)
+
+Arrington's real invoicing is Zoho Invoice, EU data centre, organisation
+`20119226503`. The workspace Finance page reads it and, since the same
+day, can create a customer, create a draft invoice and email it, without
+leaving the workspace. Live and verified end to end: INV-000003 was
+created from the form, emailed by Zoho, and the branded PDF arrived.
+
+**Files.** `lib/workspace/finance/zohoInvoiceClient.js` (OAuth against
+`accounts.zoho.eu`, API on `www.zohoapis.eu/invoice/v3`, reads plus three
+writes), registry entry `zoho_invoice` in `lib/workspace/finance/registry.js`,
+routes in `routes/workspace.js` (`/workspace/finance/zoho/connect`,
+`/callback`, `POST /api/workspace/finance/zoho/invoice`), the card and
+form in `views/workspace/finance.ejs`, tests in
+`test/workspace/zohoInvoiceClient.test.js` (write surface exact, flag
+gating with zero network calls, request shapes, no token in any error).
+Governance record: `review/zoho-invoice-writes-governance-submission-2026-09-06.md`.
+
+**Railway variables** (all on `arrington-prototype`, production):
+`ZOHO_INVOICE_CLIENT_ID`, `ZOHO_INVOICE_CLIENT_SECRET`,
+`ZOHO_INVOICE_REFRESH_TOKEN` (the credential; lives ONLY in Railway, never
+in the database, code or chat), and `ENABLE_ZOHO_INVOICE_WRITES` (exactly
+`true` to allow writes; unset or anything else is read-only). The boot log
+line `Workspace finance:` reports each variable by presence and length and
+whether writes are on, and a boot probe makes one real read and logs
+`Zoho Invoice probe: credential accepted, N invoice(s)` or the failure.
+
+**Connecting or rotating the token.** Logged in as tom and unlocked,
+visit `/workspace/finance/zoho/connect`, approve in Zoho, copy the token
+from the callback page's code block into `ZOHO_INVOICE_REFRESH_TOKEN`,
+save; Railway redeploys. `prompt=consent` is set so every reconnect issues
+a fresh token. Start the flow in Safari, not from inside the Zoho app,
+or the callback lands in a different browser session and reports a
+"state mismatch"; that banner also appears harmlessly if the callback
+page is reopened after the one-time state was spent. The token's scopes
+are fixed at issue: a token issued while writes were off is read-only
+and needs a reconnect after the flag is turned on.
+
+**Writes are gated in the client, not only the route.** With the flag
+off every write throws before any network call and consent asks for read
+scopes only. Scopes are CREATE only (`contacts.CREATE`,
+`invoices.CREATE`; emailing sits under invoices.CREATE); no UPDATE,
+DELETE, void, mark-paid, record-payment or fullaccess, pinned by test.
+Human-initiated only (no AI path reaches the route). Sending is a
+separate confirmed step, and every action is written to
+`workspace_activity`. `MONEY_ACTION_CLASS_NEVER_BUILT` is unchanged: an
+invoice asks for money and moves none. Rollback: unset the flag.
+
+**Five things that went wrong on the day, each now defended in code, worth
+knowing in order:** (1) the connect route required the refresh token
+before it could exist; it needs only the client id and secret now.
+(2) Railway stored the token with a trailing newline, so Zoho answered
+`invalid_code`; every credential read is trimmed. (3) The old host
+`invoice.zoho.eu/api/v3` with the org id only in a header answered 200
+with no `invoices` array, so a full account read as empty; the current
+host and `organization_id` as a query parameter fixed it. (4) The
+payments scope was mis-named (`payments.READ` is not a Zoho scope;
+`customerpayments.READ` is), giving 401 on one endpoint, and one shared
+`Promise.all` let that hide the invoices; endpoints are read independently
+with per-endpoint errors. (5) A due date before today is refused by Zoho;
+the client refuses it first in plain words, the date input is bounded,
+and a retry reuses the customer already created for that email rather
+than making a second one.
+
+**Security note, recorded rather than hidden:** two refresh tokens were
+pasted into the chat on 06/09/2026 before the rule against it landed.
+Both were superseded by reconnects (the live token was issued after the
+writes flag went on). Tom should revoke the earlier grants in Zoho
+(accounts.zoho.eu, Security, Connected Apps) so only the current one
+remains.
+
 ### Business banking: read-only, ANNA-first (01/09/2026, reworked ANNA-first same day)
 
 **Superseded the same day it was written.** The original build (below,
