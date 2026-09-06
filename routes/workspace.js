@@ -411,7 +411,11 @@ function mountPageRoute(app, generateCsrfToken) {
   // storing it in the database. No DB upsert on this side.
   app.get('/workspace/finance/zoho/connect', requireWorkspacePageAccess, (req, res) => {
     if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'confidential')) return res.redirect('/workspace/finance');
-    if (!financeRegistry.isConfigured('zoho_invoice')) return res.redirect('/workspace/finance?connectError=' + encodeURIComponent('Set ZOHO_INVOICE_CLIENT_ID and ZOHO_INVOICE_CLIENT_SECRET in Railway before connecting.'));
+    // Only the client id and secret are needed to START the consent flow;
+    // the refresh token is what the flow produces, so requiring it here
+    // would make the connector impossible to connect for the first time.
+    const clientReady = ['ZOHO_INVOICE_CLIENT_ID', 'ZOHO_INVOICE_CLIENT_SECRET'].every((k) => !!(process.env[k] && String(process.env[k]).trim()));
+    if (!clientReady) return res.redirect('/workspace/finance?connectError=' + encodeURIComponent('Set ZOHO_INVOICE_CLIENT_ID and ZOHO_INVOICE_CLIENT_SECRET in Railway before connecting.'));
     const state = crypto.randomBytes(24).toString('hex');
     req.session.zohoOAuthState = state;
     res.redirect(zohoInvoiceClient.buildAuthorizeUrl(state));
