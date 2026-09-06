@@ -189,14 +189,16 @@ test('API reads go to invoice.zoho.eu/api/v3 with the Zoho-oauthtoken header and
     assert.deepEqual(contacts, [{ contact_id: 'C1' }]);
 
     const [inv, pay, con] = f.calls.map((c) => new URL(c.url));
-    assert.equal(inv.origin + inv.pathname, 'https://invoice.zoho.eu/api/v3/invoices');
+    assert.equal(inv.origin + inv.pathname, 'https://www.zohoapis.eu/invoice/v3/invoices');
     assert.equal(inv.searchParams.get('status'), 'unpaid');
     assert.equal(inv.searchParams.get('per_page'), '200');
-    assert.equal(pay.origin + pay.pathname, 'https://invoice.zoho.eu/api/v3/customerpayments');
+    assert.equal(pay.origin + pay.pathname, 'https://www.zohoapis.eu/invoice/v3/customerpayments');
     assert.equal(pay.searchParams.get('page'), '2');
-    assert.equal(con.origin + con.pathname, 'https://invoice.zoho.eu/api/v3/contacts');
+    assert.equal(con.origin + con.pathname, 'https://www.zohoapis.eu/invoice/v3/contacts');
 
-    f.calls.forEach(({ init }) => {
+    f.calls.forEach(({ init, url }) => {
+      // organization_id is required on every request as a query parameter.
+      assert.equal(new URL(url).searchParams.get('organization_id'), '20119226503');
       assert.equal(init.method, undefined, 'every call is a GET: this client can only read');
       assert.equal(init.headers.Authorization, 'Zoho-oauthtoken tok');
       assert.equal(init.headers['X-com-zoho-invoice-organizationid'], '20119226503');
