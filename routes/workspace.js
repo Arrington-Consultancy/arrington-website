@@ -315,8 +315,10 @@ function mountPageRoute(app, generateCsrfToken) {
         ]);
         zoho.invoices = invoices.slice(0, 100);
         zoho.payments = payments.slice(0, 100);
+        console.log(`Zoho Invoice read: ${invoices.length} invoice(s), ${payments.length} payment(s).`);
       } catch (err) {
         zoho.error = String(err && err.message ? err.message : err).slice(0, 300);
+        console.error(`Zoho Invoice read FAILED: ${zoho.error}`);
       }
     }
     res.render('workspace/finance', {
