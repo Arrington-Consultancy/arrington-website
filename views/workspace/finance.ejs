@@ -160,7 +160,9 @@
     <p class="ws-note-error">Zoho Invoice could not be read: <%= zoho.error %></p>
   <% } else { %>
     <h3 class="ws-h-inline">Invoices (<%= zoho.invoices.length %>)</h3>
-    <% if (zoho.invoices.length === 0) { %>
+    <% if (zoho.invoicesError) { %>
+      <p class="ws-note-error">Invoices could not be read: <%= zoho.invoicesError %></p>
+    <% } else if (zoho.invoices.length === 0) { %>
       <p class="ws-empty">No invoices returned.</p>
     <% } else { %>
     <div class="ws-table-wrap">
@@ -181,7 +183,9 @@
     </div>
     <% } %>
     <h3 class="ws-h-inline">Customer payments (<%= zoho.payments.length %>)</h3>
-    <% if (zoho.payments.length === 0) { %>
+    <% if (zoho.paymentsError) { %>
+      <p class="ws-note-error">Payments could not be read: <%= zoho.paymentsError %><% if (/401/.test(zoho.paymentsError)) { %> This usually means the stored token was issued without the customer payments scope: reconnect Zoho below to issue a new one.<% } %></p>
+    <% } else if (zoho.payments.length === 0) { %>
       <p class="ws-empty">No payments returned.</p>
     <% } else { %>
     <div class="ws-table-wrap">
