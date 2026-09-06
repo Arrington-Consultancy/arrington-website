@@ -185,6 +185,10 @@ async function seed() {
     END $$;
   `);
 
+  // Migration (06/09/2026): provenance of the data on a finance account
+  // row, so the Company Brain's finance summary can name its source.
+  await db.query("ALTER TABLE workspace_finance_accounts ADD COLUMN IF NOT EXISTS source_provenance TEXT NOT NULL DEFAULT ''");
+
   // Migrate users CHECK constraint to include 'client' role
   await db.query(`
     DO $$ BEGIN
@@ -5508,6 +5512,16 @@ async function seed() {
   // and the boot continues, because a brain that cannot refresh must say
   // so rather than take the website down.
   await require('../lib/workspace/ingest').ingestWorkspaceSnapshot(require('../lib/workspace/repo'));
+  // One-shot ingest of a controlled ANNA statement CSV into the finance
+  // lane, armed by RUN_ANNA_CSV_INGEST=<run label> plus the file itself in
+  // ANNA_CSV_B64, spent once per label. Refuses to write if the file does
+  // not match the stated expectations. Never fatal: a refused or failed
+  // ingest is logged and the boot continues. See the script's header.
+  try {
+    await require('../scripts/ingestAnnaCsv').runAnnaCsvIngest(db);
+  } catch (err) {
+    console.error('ANNA CSV ingest failed (boot continues):', err.message);
+  }
   // Contacts (CRM): rebuild from the lead history. Idempotent, and it
   // populates from everything already captured rather than starting
   // empty on the day it was switched on. Never fatal: a contact index
