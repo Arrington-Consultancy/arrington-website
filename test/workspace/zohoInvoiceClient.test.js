@@ -52,7 +52,7 @@ test.beforeEach(() => client.clearTokenCache());
 
 test('fixed EU endpoints, fixed canonical redirect URI, read-only scopes only', () => {
   assert.equal(client.CANONICAL_REDIRECT_URI, 'https://www.arringtonconsultancy.com/workspace/finance/zoho/callback');
-  assert.deepEqual(client.READ_SCOPES, ['ZohoInvoice.invoices.READ', 'ZohoInvoice.payments.READ', 'ZohoInvoice.contacts.READ']);
+  assert.deepEqual(client.READ_SCOPES, ['ZohoInvoice.invoices.READ', 'ZohoInvoice.customerpayments.READ', 'ZohoInvoice.contacts.READ']);
   client.READ_SCOPES.forEach((s) => assert.match(s, /\.READ$/));
   assert.deepEqual(registry.PROVIDERS.zoho_invoice.readScopes, client.READ_SCOPES,
     'the registry must declare exactly the scopes the client requests');
