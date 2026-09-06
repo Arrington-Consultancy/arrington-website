@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invoice <%= invoice.ref %> (demonstration) | Scott's Armchair &amp; Knitting Service</title>
+  <meta name="robots" content="noindex, nofollow">
+  <%- include('partials/styles') %>
+</head>
+<body class="scott-body">
+  <div class="sc-shell">
+    <%- include('partials/sidebar', { active: 'finance', navCounts: navCounts }) %>
+    <main class="sc-main">
+      <% if (typeof isImpersonating !== 'undefined' && isImpersonating) { %>
+        <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
+      <% } %>
+      <div class="sc-page-header">
+        <div>
+          <h1 class="sc-h">Invoice <%= invoice.ref %></h1>
+          <p><a href="/scott/finance/sales">Back to Sales &amp; Invoices</a>. Viewing as <strong><%= persona.name %></strong> (<%= persona.role %>).</p>
+        </div>
+      </div>
+
+      <div class="sc-demo-banner" role="note"><%= invoice.demoLabel %></div>
+
+      <div class="sc-card sc-invoice">
+        <div class="sc-invoice-head">
+          <div>
+            <div class="sc-invoice-company"><%= invoice.company.tradingName %></div>
+            <div class="sc-row-sub"><%= invoice.company.legalName %></div>
+            <% invoice.company.addressLines.forEach(function (l) { %><div class="sc-row-sub"><%= l %></div><% }); %>
+            <div class="sc-row-sub">Company number <%= invoice.company.companyNumber %></div>
+            <div class="sc-row-sub"><%= invoice.company.vatNote %></div>
+          </div>
+          <div class="sc-invoice-title">
+            <div class="sc-invoice-word">INVOICE</div>
+            <div class="sc-invoice-ref"><%= invoice.ref %></div>
+            <div class="sc-row-sub">Balance due</div>
+            <div class="sc-invoice-due"><%= invoice.format(invoice.balanceDuePence) %></div>
+            <span class="sc-pill sc-pill-warn"><%= invoice.statusLabel %></span>
+          </div>
+        </div>
+
+        <div class="sc-invoice-meta">
+          <div>
+            <div class="sc-stat-label">Bill to</div>
+            <div><strong><%= invoice.customer.name %></strong></div>
+            <div class="sc-row-sub"><%= invoice.customer.contact %></div>
+            <% invoice.customer.addressLines.forEach(function (l) { %><div class="sc-row-sub"><%= l %></div><% }); %>
+            <div class="sc-row-sub">Your reference: <%= invoice.customer.reference %></div>
+          </div>
+          <div>
+            <table class="sc-invoice-dates">
+              <tr><td>Invoice date</td><td class="num"><%= invoice.issueDate %></td></tr>
+              <tr><td>Terms</td><td class="num"><%= invoice.terms %></td></tr>
+              <tr><td>Due date</td><td class="num"><%= invoice.dueDate %></td></tr>
+              <tr><td>Status</td><td class="num"><%= invoice.statusLabel %></td></tr>
+            </table>
+          </div>
+        </div>
+
+        <div class="sc-table-wrap">
+          <table class="sc-table">
+            <thead><tr><th>#</th><th>Description</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">VAT</th><th class="num">Amount</th></tr></thead>
+            <tbody>
+            <% invoice.lines.forEach(function (l, i) { %>
+              <tr>
+                <td><%= i + 1 %></td>
+                <td><%= l.description %></td>
+                <td class="num"><%= l.quantity %></td>
+                <td class="num"><%= invoice.format(l.unitNetPence) %></td>
+                <td class="num"><%= l.vatable ? invoice.vatRatePercent + '%' : 'no VAT' %></td>
+                <td class="num"><%= invoice.format(l.netPence) %></td>
+              </tr>
+            <% }); %>
+            </tbody>
+          </table>
+        </div>
+
+        <table class="sc-invoice-totals">
+          <tr><td>Sub total (net)</td><td class="num"><%= invoice.format(invoice.netPence) %></td></tr>
+          <tr><td>VAT at <%= invoice.vatRatePercent %>%</td><td class="num"><%= invoice.format(invoice.vatPence) %></td></tr>
+          <tr class="sc-invoice-total"><td>Total</td><td class="num"><%= invoice.format(invoice.grossPence) %></td></tr>
+          <tr class="sc-invoice-total"><td>Balance due</td><td class="num"><%= invoice.format(invoice.balanceDuePence) %></td></tr>
+        </table>
+
+        <p class="sc-row-sub sc-invoice-notes"><%= invoice.notes %></p>
+
+        <div class="sc-invoice-actions">
+          <button type="button" class="sc-btn sc-btn-primary" disabled aria-disabled="true" title="<%= invoice.demoLabel %>">Send / issue invoice</button>
+          <span class="sc-pill sc-pill-warn"><%= invoice.demoLabel %></span>
+        </div>
+        <p class="sc-row-sub sc-fin-note">Sending or issuing this invoice is permanently disabled, by construction rather than by a setting: there is no route in the demonstration that can send it, and nothing here reaches Arrington's own invoicing, accounting, any real customer, any real email address or any payment system. The rest of the document is realistic fictional data for Scott's Armchair &amp; Knitting Service so the demonstration feels complete.</p>
+      </div>
+
+      <div class="sc-card">
+        <p class="sc-row-sub"><%= invoice.company.fictionNote %>. The customer, the address and the reference are from the demonstration's own controlled records.</p>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
