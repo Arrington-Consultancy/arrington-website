@@ -158,7 +158,12 @@
     <p class="ws-empty">Not connected. Set <code>ZOHO_INVOICE_CLIENT_ID</code> and <code>ZOHO_INVOICE_CLIENT_SECRET</code> in Railway, then use the connection controls at the bottom of this page.</p>
   <% } else if (zoho.error) { %>
     <p class="ws-note-error">Zoho Invoice could not be read: <%= zoho.error %></p>
+    <p class="ws-meta">Attempted <%= zoho.readAt ? new Date(zoho.readAt).toUTCString() : 'just now' %>. Nothing is cached: this page reads Zoho live on every load, so reloading retries.</p>
   <% } else { %>
+    <p class="ws-meta">
+      <span class="ws-badge ws-badge-<%= (zoho.invoicesError || zoho.paymentsError) ? 'failed' : 'fresh' %>"><%= (zoho.invoicesError || zoho.paymentsError) ? 'partial' : 'live' %></span>
+      Read live from Zoho at <%= zoho.readAt ? new Date(zoho.readAt).toUTCString() : 'page load' %>: invoices <%= zoho.invoicesError ? 'FAILED' : 'ok' %>, payments <%= zoho.paymentsError ? 'FAILED' : 'ok' %>. Nothing is stored or cached here; reload to read again.
+    </p>
     <h3 class="ws-h-inline">Invoices (<%= zoho.invoices.length %>)</h3>
     <% if (zoho.invoicesError) { %>
       <p class="ws-note-error">Invoices could not be read: <%= zoho.invoicesError %></p>
