@@ -41,6 +41,7 @@ const financeReports = require('../lib/scott/finance/reports');
 const financeVm = require('../lib/scott/finance/viewModel');
 const financeLedger = require('../lib/scott/finance/ledger');
 const chartOfAccounts = require('../lib/scott/finance/chartOfAccounts');
+const demoInvoice = require('../lib/scott/finance/demoInvoice');
 const { sendGapNotification, sendLoginNotification, shouldAlertOnLogin } = require('../lib/scott/gapNotifier');
 
 const router = express.Router();
@@ -696,6 +697,27 @@ function mountPageRoute(app, generateCsrfToken) {
   };
   app.get('/scott/finance', noindexHeader, requireScottPageAccess, financeHandler);
   app.get('/scott/finance/:tab', noindexHeader, requireScottPageAccess, financeHandler);
+
+  // The one demonstration invoice (06/09/2026). A document to look at,
+  // rendered from a pure constant in lib/scott/finance/demoInvoice.js:
+  // not a ledger row, not a posting, not a Zoho object, not an email.
+  // Gated on the same domain as the Sales & Invoices tab. There is no
+  // POST for it anywhere, which is what keeps SEND / ISSUE disabled by
+  // construction rather than by a button attribute.
+  app.get('/scott/finance/invoice/demo', noindexHeader, requireScottPageAccess, async (req, res, next) => {
+    try {
+      const personaId = clearance.getEffectivePersonaId(req);
+      if (!clearance.personaCanSeeDomain(personaId, 'invoice_status')) return res.redirect(302, '/scott/finance');
+      const navCounts = await repo.getDashboardSummary();
+      res.render('scott/finance-invoice-demo', {
+        ...viewerViewModel(req),
+        navCounts,
+        invoice: demoInvoice.build(),
+        aiEnabled: isScottAIEnabled(),
+        csrfToken: generateCsrfToken(req, res)
+      });
+    } catch (err) { next(err); }
+  });
 
   // The old Banking tab. Kept as a redirect rather than deleted: a link
   // somebody already has should land on the bank accounts, not a 404.

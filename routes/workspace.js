@@ -276,7 +276,7 @@ function mountPageRoute(app, generateCsrfToken) {
         tokenCryptoReady: false,
         moneyActionsNeverBuilt: financeRegistry.MONEY_ACTION_CLASS_NEVER_BUILT,
         period: null, summary: null, periodPresets: [], recurringGroups: [], trend: [],
-        zoho: { configured: false, writesEnabled: false, invoices: [], payments: [], contacts: [], error: '', invoicesError: '', paymentsError: '', contactsError: '' },
+        zoho: { configured: false, writesEnabled: false, invoices: [], payments: [], contacts: [], error: '', invoicesError: '', paymentsError: '', contactsError: '', readAt: null },
         csrfToken: generateCsrfToken(req, res)
       });
     }
@@ -312,11 +312,15 @@ function mountPageRoute(app, generateCsrfToken) {
     const zoho = {
       configured: financeRegistry.isConfigured('zoho_invoice'),
       writesEnabled: zohoInvoiceClient.writesEnabled(),
-      invoices: [], payments: [], contacts: [], error: '', invoicesError: '', paymentsError: '', contactsError: ''
+      invoices: [], payments: [], contacts: [], error: '', invoicesError: '', paymentsError: '', contactsError: '',
+      // Freshness is simple and truthful here: there is no stored copy of
+      // Zoho data, every page load reads Zoho live, so "as of" is now.
+      readAt: null
     };
     if (zoho.configured) {
       const errText = (err) => String(err && err.message ? err.message : err).slice(0, 300);
       try {
+        zoho.readAt = new Date();
         const token = await zohoInvoiceClient.getAccessToken();
         const [inv, pay, con] = await Promise.allSettled([
           zohoInvoiceClient.getInvoices(token),
