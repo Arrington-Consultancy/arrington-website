@@ -50,6 +50,13 @@
     <button class="ws-btn" type="submit" id="wsAskBtn">Ask</button>
     <p class="ws-note-error" id="wsAskError" hidden></p>
   </form>
+  <p class="ws-meta">Try one of these. Tapping fills the box so you can change it before asking; nothing is sent until you press Ask, and an invoice is never created or emailed until you approve the draft.</p>
+  <div class="ws-form-row" id="wsSuggestions">
+    <button class="ws-btn ws-btn-quiet" type="button" data-q="Send an invoice to tomarrington@outlook.com £500 for mini commercial review as of today">Send an invoice: £500 for a mini commercial review</button>
+    <button class="ws-btn ws-btn-quiet" type="button" data-q="Where are we losing money we are not tracking?">Where are we losing money?</button>
+    <button class="ws-btn ws-btn-quiet" type="button" data-q="What opportunities are on file, and which is closest to money?">Which opportunity is closest to money?</button>
+    <button class="ws-btn ws-btn-quiet" type="button" data-q="Which invoices in Zoho are unpaid or overdue?">Which invoices are unpaid?</button>
+  </div>
 </div>
 
 <div class="ws-card">
@@ -139,6 +146,16 @@
         }
       });
     }
+
+    // Suggestions fill the box rather than sending: an ask costs money and
+    // an invoice sentence is consequential, so the person always sees the
+    // exact words before they go.
+    document.querySelectorAll('#wsSuggestions button[data-q]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        form.question.value = b.getAttribute('data-q');
+        form.question.focus();
+      });
+    });
 
     form.addEventListener('submit', async function (e) {
       e.preventDefault();

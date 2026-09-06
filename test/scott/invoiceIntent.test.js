@@ -25,6 +25,16 @@ test('"send an invoice for me" is an invoice request with everything missing, so
   assert.deepEqual(r.missing, ['the customer', 'the amount before VAT', 'what the invoice is for']);
 });
 
+test('the dashboard suggestion sentences parse completely, thousands separator included', () => {
+  const a = intent.parse('Send an invoice to Moorland Holiday Lets £850 for two wingback chairs re-upholstered', { today: TODAY });
+  assert.equal(a.complete, true, JSON.stringify(a.missing));
+  const b = intent.parse('Send an invoice to Devon Hearth Cafe Group £1,250 for six chairs and knitted arm covers', { today: TODAY });
+  assert.equal(b.complete, true, JSON.stringify(b.missing));
+  assert.equal(b.draft.customer, 'Devon Hearth Cafe Group');
+  assert.equal(b.draft.netPounds, 1250);
+  assert.equal(b.draft.description, 'Six chairs and knitted arm covers');
+});
+
 test('ordinary finance questions are not invoice requests', () => {
   for (const q of ['what is the debtor book?', 'which invoices are overdue', 'raise the VAT question with Nigel']) {
     assert.equal(intent.parse(q, { today: TODAY }).matched, false, q);
