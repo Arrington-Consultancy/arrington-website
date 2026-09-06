@@ -230,8 +230,9 @@
     </div>
     <div class="ws-form-row">
       <input class="ws-input ws-input-narrow" type="number" name="amount" id="wsZohoAmount" placeholder="Amount (£)" min="0.01" step="0.01" max="1000000" inputmode="decimal" required>
-      <input class="ws-input ws-input-narrow" type="date" name="dueDate" id="wsZohoDueDate" title="Due date (optional)">
+      <input class="ws-input ws-input-narrow" type="date" name="dueDate" id="wsZohoDueDate" title="Due date (optional; today or later)" min="<%= new Date().toISOString().slice(0, 10) %>">
     </div>
+    <p class="ws-meta">Due date is optional; leave it blank to use your Zoho default terms. If set, it must be today or later.</p>
     <div class="ws-form-row">
       <input class="ws-input" type="text" name="notes" id="wsZohoNotes" placeholder="Notes to the customer (optional)" maxlength="1000">
     </div>

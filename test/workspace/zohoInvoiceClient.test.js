@@ -338,6 +338,10 @@ test('createInvoice refuses a non-positive, absurd or non-numeric amount, a miss
       }
       await assert.rejects(() => client.createInvoice('tok', { customerId: '', description: 'Job', amountPounds: 1 }), /customer is required/);
       await assert.rejects(() => client.createInvoice('tok', { customerId: 'C', description: '  ', amountPounds: 1 }), /description of the job/);
+      // A due date before today is refused here, in plain words, rather
+      // than by Zoho's "Due date should be after invoice date" 400.
+      await assert.rejects(() => client.createInvoice('tok', { customerId: 'C', description: 'Job', amountPounds: 1, dueDate: '2020-01-01' }), /due date must be today/);
+      await assert.rejects(() => client.createInvoice('tok', { customerId: 'C', description: 'Job', amountPounds: 1, dueDate: 'next week' }), /must be a date/);
     });
     assert.equal(f.calls.length, 0);
   } finally { f.restore(); }

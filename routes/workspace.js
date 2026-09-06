@@ -972,11 +972,26 @@ router.post('/api/workspace/finance/zoho/invoice', requireWorkspaceApiAccess, wr
     let customerName = typeof body.customerName === 'string' ? body.customerName.trim() : '';
     let createdCustomer = false;
     if (!customerId) {
-      const contact = await zohoInvoiceClient.createContact(token, { name: customerName, email: customerEmail });
-      customerId = contact.contact_id;
-      customerName = contact.contact_name || customerName;
-      createdCustomer = true;
-      await repo.addActivity({ actor, eventType: 'zoho_customer_created', summary: `Created Zoho Invoice customer "${customerName}".` });
+      // Reuse a customer Zoho already holds for this email, so a retry
+      // after a failed invoice (or a name typed twice) does not create
+      // a second contact for the same person.
+      const wanted = customerEmail.toLowerCase();
+      let existing = null;
+      if (wanted) {
+        try {
+          existing = (await zohoInvoiceClient.getContacts(token)).find((c) => String(c.email || '').toLowerCase() === wanted) || null;
+        } catch (_) { existing = null; }
+      }
+      if (existing) {
+        customerId = existing.contact_id;
+        customerName = existing.contact_name || customerName;
+      } else {
+        const contact = await zohoInvoiceClient.createContact(token, { name: customerName, email: customerEmail });
+        customerId = contact.contact_id;
+        customerName = contact.contact_name || customerName;
+        createdCustomer = true;
+        await repo.addActivity({ actor, eventType: 'zoho_customer_created', summary: `Created Zoho Invoice customer "${customerName}".` });
+      }
     }
 
     const invoice = await zohoInvoiceClient.createInvoice(token, {
