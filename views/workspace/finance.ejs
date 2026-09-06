@@ -206,6 +206,50 @@
   <% } %>
 </div>
 
+<% if (zoho.configured && zoho.writesEnabled) { %>
+<div class="ws-card" id="wsZohoCreateCard">
+  <h2>Create and send an invoice</h2>
+  <p class="ws-meta">Creates the invoice in Zoho Invoice under organisation 20119226503. "Save as draft" keeps it private in Zoho; "Save and send" emails it to the customer from your Zoho account using your default invoice email. Every action is recorded in the Activity log. Nothing here can move money.</p>
+  <% if (zoho.contactsError) { %><p class="ws-note-error">Existing customers could not be loaded: <%= zoho.contactsError %>. You can still create a new customer below.</p><% } %>
+  <form id="wsZohoInvoiceForm">
+    <div class="ws-form-row">
+      <label class="ws-meta" for="wsZohoCustomer">Customer</label>
+      <select class="ws-input" id="wsZohoCustomer" name="customerId">
+        <option value="">New customer (enter details below)</option>
+        <% zoho.contacts.forEach(function (c) { %>
+          <option value="<%= c.contact_id %>"><%= c.contact_name %><% if (c.email) { %> (<%= c.email %>)<% } %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="ws-form-row" id="wsZohoNewCustomerFields">
+      <input class="ws-input" type="text" name="customerName" id="wsZohoCustomerName" placeholder="Customer or company name" maxlength="200" autocomplete="organization">
+      <input class="ws-input" type="email" name="customerEmail" id="wsZohoCustomerEmail" placeholder="Customer email (where the invoice is sent)" maxlength="200" autocomplete="email">
+    </div>
+    <div class="ws-form-row">
+      <input class="ws-input" type="text" name="description" id="wsZohoDescription" placeholder="The job, as it should read on the invoice" maxlength="500" required>
+    </div>
+    <div class="ws-form-row">
+      <input class="ws-input ws-input-narrow" type="number" name="amount" id="wsZohoAmount" placeholder="Amount (£)" min="0.01" step="0.01" max="1000000" inputmode="decimal" required>
+      <input class="ws-input ws-input-narrow" type="date" name="dueDate" id="wsZohoDueDate" title="Due date (optional)">
+    </div>
+    <div class="ws-form-row">
+      <input class="ws-input" type="text" name="notes" id="wsZohoNotes" placeholder="Notes to the customer (optional)" maxlength="1000">
+    </div>
+    <div class="ws-form-row">
+      <button class="ws-btn ws-btn-quiet" type="submit" data-send="false">Save as draft</button>
+      <button class="ws-btn" type="submit" data-send="true">Save and send</button>
+    </div>
+  </form>
+  <p class="ws-note-error" id="wsZohoInvoiceError" hidden></p>
+  <p class="ws-meta" id="wsZohoInvoiceResult" hidden></p>
+</div>
+<% } else if (zoho.configured) { %>
+<div class="ws-card">
+  <h2>Create and send an invoice</h2>
+  <p class="ws-empty">Switched off. Set <code>ENABLE_ZOHO_INVOICE_WRITES=true</code> in Railway, redeploy, then reconnect Zoho below so the token carries the create scopes. Until then this area is read-only.</p>
+</div>
+<% } %>
+
 <details class="ws-card">
   <summary class="ws-summary"><h2 class="ws-h-inline">Zoho Invoice connection</h2></summary>
   <p class="ws-meta">One-time setup. The refresh token is held in Railway as <code>ZOHO_INVOICE_REFRESH_TOKEN</code>, never in this database. Read-only scopes: invoices, payments, contacts.</p>
@@ -328,6 +372,62 @@
         }
       });
     }
+    // Create (and optionally send) a Zoho invoice. Sending reaches a real
+    // customer, so it is confirmed in the browser as a separate step.
+    var zohoForm = document.getElementById('wsZohoInvoiceForm');
+    if (zohoForm) {
+      var zohoErr = document.getElementById('wsZohoInvoiceError');
+      var zohoOut = document.getElementById('wsZohoInvoiceResult');
+      var customerSel = document.getElementById('wsZohoCustomer');
+      var newFields = document.getElementById('wsZohoNewCustomerFields');
+      function syncCustomerFields() { newFields.hidden = !!customerSel.value; }
+      customerSel.addEventListener('change', syncCustomerFields);
+      syncCustomerFields();
+      var sendMode = false;
+      zohoForm.querySelectorAll('button[type="submit"]').forEach(function (b) {
+        b.addEventListener('click', function () { sendMode = b.getAttribute('data-send') === 'true'; });
+      });
+      zohoForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        zohoErr.hidden = true; zohoOut.hidden = true;
+        var payload = {
+          customerId: customerSel.value,
+          customerName: document.getElementById('wsZohoCustomerName').value,
+          customerEmail: document.getElementById('wsZohoCustomerEmail').value,
+          description: document.getElementById('wsZohoDescription').value,
+          amount: document.getElementById('wsZohoAmount').value,
+          dueDate: document.getElementById('wsZohoDueDate').value,
+          notes: document.getElementById('wsZohoNotes').value,
+          send: sendMode
+        };
+        if (!payload.customerId && (!payload.customerName.trim() || !payload.customerEmail.trim())) {
+          zohoErr.textContent = 'Choose an existing customer or enter a name and email for a new one.'; zohoErr.hidden = false; return;
+        }
+        if (sendMode) {
+          var who = payload.customerId ? customerSel.options[customerSel.selectedIndex].text : payload.customerEmail;
+          if (!window.confirm('Send this invoice for £' + Number(payload.amount || 0).toFixed(2) + ' to ' + who + ' now? This emails the customer from your Zoho account.')) return;
+        }
+        var btns = zohoForm.querySelectorAll('button');
+        btns.forEach(function (b) { b.disabled = true; });
+        try {
+          var r = await fetch('/api/workspace/finance/zoho/invoice', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf },
+            body: JSON.stringify(payload)
+          });
+          var data = await r.json();
+          if (!r.ok) { zohoErr.textContent = data.error || 'That did not work.'; zohoErr.hidden = false; btns.forEach(function (b) { b.disabled = false; }); return; }
+          var msg = 'Invoice ' + data.invoiceNumber + ' created' + (data.createdCustomer ? ' (new customer added)' : '') + (data.sent ? ' and sent.' : (sendMode ? ', but the email failed: ' + (data.sendError || 'unknown error') + '. It is saved as a draft in Zoho.' : ' as a draft.'));
+          zohoOut.textContent = msg + ' Reloading...';
+          zohoOut.hidden = false;
+          setTimeout(function () { window.location.reload(); }, 1500);
+        } catch (ex) {
+          zohoErr.textContent = 'Network problem: ' + ex.message; zohoErr.hidden = false;
+          btns.forEach(function (b) { b.disabled = false; });
+        }
+      });
+    }
+
     wire('wsFinanceSync', '/api/workspace/finance/sync', null);
     wire('wsFinanceDisconnect', '/api/workspace/finance/disconnect', 'Disconnect Xero? Synced transaction history is kept; the credential is removed.', { provider: 'xero' });
   })();

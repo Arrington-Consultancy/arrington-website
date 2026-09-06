@@ -228,10 +228,157 @@ test('an API error surfaces Zoho\'s message and status, and never the access tok
   } finally { f.restore(); }
 });
 
-test('the client exposes no write, create, update, delete or send function', () => {
+// ---- Writes: exactly three, all CREATE-class, all flag-gated ----------
+
+test('the write surface is exactly createContact, createInvoice and emailInvoice: nothing updates, deletes, voids or pays', () => {
   const surface = Object.keys(client);
-  const writing = surface.filter((k) => /^(create|update|delete|send|pay|record|mark|void|write|email)/i.test(k));
-  assert.deepEqual(writing, [], `these look like they could change Zoho data: ${writing.join(', ')}`);
+  // 'write' is not in this pattern because WRITE_SCOPES / WRITES_FLAG /
+  // writesEnabled are the gate's own names, not actions; the exact list
+  // below is the real guard.
+  const writing = surface.filter((k) => /^(create|update|delete|send|pay|record|mark|void|email)/i.test(k)).sort();
+  assert.deepEqual(writing, ['createContact', 'createInvoice', 'emailInvoice']);
+  assert.equal(typeof client.writesEnabled, 'function');
+  assert.deepEqual(client.WRITE_SCOPES, ['ZohoInvoice.contacts.CREATE', 'ZohoInvoice.invoices.CREATE']);
+  client.WRITE_SCOPES.forEach((s) => assert.match(s, /\.CREATE$/, `${s} is not a CREATE scope`));
+  assert.equal(client.WRITE_SCOPES.some((s) => /UPDATE|DELETE|fullaccess/i.test(s)), false);
+  assert.deepEqual(registry.PROVIDERS.zoho_invoice.writeScopes, client.WRITE_SCOPES, 'the registry must declare exactly the write scopes the client requests');
+  assert.equal(registry.PROVIDERS.zoho_invoice.writesFlag, client.WRITES_FLAG);
+});
+
+test('with the flag off, every write throws before any network call, and consent asks for read scopes only', async () => {
+  const f = stubFetch([]);
+  const saved = process.env.ENABLE_ZOHO_INVOICE_WRITES;
+  delete process.env.ENABLE_ZOHO_INVOICE_WRITES;
+  try {
+    assert.equal(client.writesEnabled(), false);
+    assert.deepEqual(client.requestedScopes(), client.READ_SCOPES);
+    await withEnv(FAKE, async () => {
+      const url = new URL(client.buildAuthorizeUrl('s'));
+      assert.equal(url.searchParams.get('scope'), client.READ_SCOPES.join(','));
+      await assert.rejects(() => client.createContact('tok', { name: 'A', email: 'a@example.com' }), client.ZohoWritesDisabledError);
+      await assert.rejects(() => client.createInvoice('tok', { customerId: '1', description: 'Job', amountPounds: 10 }), client.ZohoWritesDisabledError);
+      await assert.rejects(() => client.emailInvoice('tok', '1', 'a@example.com'), client.ZohoWritesDisabledError);
+    });
+    assert.equal(f.calls.length, 0, 'a disabled write must not touch the network');
+  } finally {
+    f.restore();
+    if (saved === undefined) delete process.env.ENABLE_ZOHO_INVOICE_WRITES; else process.env.ENABLE_ZOHO_INVOICE_WRITES = saved;
+  }
+});
+
+test('only the exact string "true" enables writes', () => {
+  ['1', 'yes', 'TRUE', 'True', ' true', 'on', ''].forEach((v) => assert.equal(client.writesEnabled({ ENABLE_ZOHO_INVOICE_WRITES: v }), false, JSON.stringify(v)));
+  assert.equal(client.writesEnabled({ ENABLE_ZOHO_INVOICE_WRITES: 'true' }), true);
+  assert.deepEqual(client.requestedScopes({ ENABLE_ZOHO_INVOICE_WRITES: 'true' }), [...client.READ_SCOPES, ...client.WRITE_SCOPES]);
+});
+
+async function withWrites(fn) {
+  const saved = process.env.ENABLE_ZOHO_INVOICE_WRITES;
+  process.env.ENABLE_ZOHO_INVOICE_WRITES = 'true';
+  try { return await fn(); } finally {
+    if (saved === undefined) delete process.env.ENABLE_ZOHO_INVOICE_WRITES; else process.env.ENABLE_ZOHO_INVOICE_WRITES = saved;
+  }
+}
+
+test('createContact POSTs a customer with a primary contact email to /contacts with organization_id', async () => {
+  const f = stubFetch([{ status: 201, json: { code: 0, contact: { contact_id: 'C9', contact_name: 'Acme Ltd' } } }]);
+  try {
+    await withWrites(async () => {
+      const c = await client.createContact('tok', { name: ' Acme Ltd ', email: 'bill@acme.example' });
+      assert.equal(c.contact_id, 'C9');
+      const { url, init } = f.calls[0];
+      const u = new URL(url);
+      assert.equal(u.origin + u.pathname, 'https://www.zohoapis.eu/invoice/v3/contacts');
+      assert.equal(u.searchParams.get('organization_id'), '20119226503');
+      assert.equal(init.method, 'POST');
+      assert.equal(init.headers['Content-Type'], 'application/json');
+      assert.equal(init.headers.Authorization, 'Zoho-oauthtoken tok');
+      const body = JSON.parse(init.body);
+      assert.equal(body.contact_name, 'Acme Ltd');
+      assert.equal(body.contact_type, 'customer');
+      assert.deepEqual(body.contact_persons, [{ email: 'bill@acme.example', is_primary_contact: true }]);
+    });
+  } finally { f.restore(); }
+});
+
+test('createContact refuses a missing name or a malformed email without calling Zoho', async () => {
+  const f = stubFetch([]);
+  try {
+    await withWrites(async () => {
+      await assert.rejects(() => client.createContact('tok', { name: '', email: 'a@b.co' }), /customer name is required/);
+      await assert.rejects(() => client.createContact('tok', { name: 'X', email: 'not-an-email' }), /valid customer email/);
+    });
+    assert.equal(f.calls.length, 0);
+  } finally { f.restore(); }
+});
+
+test('createInvoice POSTs one line item at the given amount, quantity 1, and returns the draft', async () => {
+  const f = stubFetch([{ status: 201, json: { code: 0, invoice: { invoice_id: 'I1', invoice_number: 'INV-000003', status: 'draft', total: 250 } } }]);
+  try {
+    await withWrites(async () => {
+      const inv = await client.createInvoice('tok', { customerId: 'C9', description: 'Commercial review, September', amountPounds: '250.00', dueDate: '2026-09-30', notes: ' Thanks ' });
+      assert.equal(inv.invoice_number, 'INV-000003');
+      const { url, init } = f.calls[0];
+      assert.equal(new URL(url).pathname, '/invoice/v3/invoices');
+      const body = JSON.parse(init.body);
+      assert.equal(body.customer_id, 'C9');
+      assert.deepEqual(body.line_items, [{ name: 'Commercial review, September', description: 'Commercial review, September', rate: 250, quantity: 1 }]);
+      assert.equal(body.due_date, '2026-09-30');
+      assert.equal(body.notes, 'Thanks');
+    });
+  } finally { f.restore(); }
+});
+
+test('createInvoice refuses a non-positive, absurd or non-numeric amount, a missing customer, and a missing description', async () => {
+  const f = stubFetch([]);
+  try {
+    await withWrites(async () => {
+      for (const amountPounds of [0, -5, 'abc', 1000001, NaN]) {
+        await assert.rejects(() => client.createInvoice('tok', { customerId: 'C', description: 'Job', amountPounds }), /positive number of pounds/, String(amountPounds));
+      }
+      await assert.rejects(() => client.createInvoice('tok', { customerId: '', description: 'Job', amountPounds: 1 }), /customer is required/);
+      await assert.rejects(() => client.createInvoice('tok', { customerId: 'C', description: '  ', amountPounds: 1 }), /description of the job/);
+    });
+    assert.equal(f.calls.length, 0);
+  } finally { f.restore(); }
+});
+
+test('emailInvoice POSTs to /invoices/{id}/email with the recipient list and nothing else reaches the customer', async () => {
+  const f = stubFetch([{ status: 200, json: { code: 0, message: 'Your invoice has been sent.' } }]);
+  try {
+    await withWrites(async () => {
+      const r = await client.emailInvoice('tok', 'I1', 'bill@acme.example');
+      assert.equal(r.ok, true);
+      const { url, init } = f.calls[0];
+      assert.equal(new URL(url).pathname, '/invoice/v3/invoices/I1/email');
+      assert.equal(init.method, 'POST');
+      assert.deepEqual(JSON.parse(init.body), { to_mail_ids: ['bill@acme.example'], send_from_org_email_id: true });
+      await assert.rejects(() => client.emailInvoice('tok', 'I1', 'nope'), /valid recipient email/);
+      await assert.rejects(() => client.emailInvoice('tok', '', 'a@b.co'), /invoice id is required/);
+    });
+  } finally { f.restore(); }
+});
+
+test('a write that Zoho refuses surfaces the message and never the access token', async () => {
+  const f = stubFetch([{ status: 401, json: { code: 57, message: 'You are not authorized to perform this operation' } }]);
+  try {
+    await withWrites(async () => {
+      await assert.rejects(() => client.createInvoice('secret-tok', { customerId: 'C', description: 'Job', amountPounds: 1 }), (err) => {
+        assert.match(err.message, /\/invoices failed \(401\): You are not authorized/);
+        assert.doesNotMatch(err.message, /secret-tok/);
+        return true;
+      });
+    });
+  } finally { f.restore(); }
+});
+
+test('a 200 reply carrying a non-zero Zoho code is treated as a failure, not a success', async () => {
+  const f = stubFetch([{ status: 200, json: { code: 1002, message: 'Invalid value passed for customer_id' } }]);
+  try {
+    await withWrites(async () => {
+      await assert.rejects(() => client.createInvoice('tok', { customerId: 'bad', description: 'Job', amountPounds: 1 }), /Invalid value passed for customer_id/);
+    });
+  } finally { f.restore(); }
 });
 
 test('the registry\'s Zoho credentialEnv is exactly the three variables the client reads', () => {
