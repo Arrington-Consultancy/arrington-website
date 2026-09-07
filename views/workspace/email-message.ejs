@@ -1,0 +1,78 @@
+<%- include('partials/shell-top', { pageTitle: 'Email', active: 'email' }) %>
+
+<p class="ws-meta"><a href="/workspace/email">Back to the inbox</a></p>
+
+<% if (error) { %>
+  <h1 class="ws-h">Message</h1>
+  <div class="ws-card"><p class="ws-note-error">Gmail could not be read: <%= error %></p><p class="ws-meta">Nothing is cached; reloading retries.</p></div>
+<% } else { %>
+  <h1 class="ws-h"><%= message.subject || '(no subject)' %></h1>
+  <div class="ws-card">
+    <dl class="ws-mail-head ws-meta">
+      <div><dt>From</dt><dd><%= message.from || '(unknown)' %></dd></div>
+      <div><dt>To</dt><dd><%= message.to || '' %></dd></div>
+      <% if (message.cc) { %><div><dt>Cc</dt><dd><%= message.cc %></dd></div><% } %>
+      <div><dt>Date</dt><dd><%= message.date ? new Date(message.date).toUTCString() : '' %></dd></div>
+    </dl>
+    <% if (!message.bodyText) { %>
+      <p class="ws-empty">This message has no readable text (it may be an attachment only, or an image-only email). Gmail still holds the full message.</p>
+    <% } else { %>
+      <% if (message.bodySource === 'text/html') { %><p class="ws-meta">Shown as plain text, converted from the sender's formatted email. Images and attachments are not fetched.</p><% } %>
+      <div class="ws-mail-body"><%= message.bodyText %></div>
+    <% } %>
+    <p class="ws-meta">Read live from Gmail just now. Nothing on this page is stored, and message bodies never enter the Company Brain.</p>
+  </div>
+
+  <% if (sendEnabled) { %>
+  <div class="ws-card">
+    <h2>Reply</h2>
+    <p class="ws-meta">Goes to <strong><%= message.replyAddress || '(no sender address)' %></strong> as "<%= /^re:/i.test(message.subject || '') ? message.subject : 'Re: ' + (message.subject || '(no subject)') %>", in the same conversation, from your own account. The original is quoted underneath your text. You write it, you press send, and it is recorded in the Activity log.</p>
+    <% if (!message.replyAddress) { %>
+      <p class="ws-empty">There is no sender address on this message to reply to.</p>
+    <% } else { %>
+    <form id="wsEmailReplyForm">
+      <input type="hidden" name="messageId" value="<%= message.id %>">
+      <div class="ws-form-row">
+        <textarea class="ws-input" name="text" placeholder="Your reply" maxlength="20000" rows="8" required></textarea>
+      </div>
+      <div class="ws-form-row">
+        <button class="ws-btn" type="submit">Send reply</button>
+      </div>
+    </form>
+    <p class="ws-note-error" id="wsEmailReplyError" hidden></p>
+    <p class="ws-meta" id="wsEmailReplyResult" hidden></p>
+    <% } %>
+  </div>
+  <% } else { %>
+  <div class="ws-card">
+    <h2>Reply</h2>
+    <p class="ws-empty">Sending is switched off (<code>ENABLE_GMAIL_SEND</code> is not <code>true</code>), so this message can be read here but not replied to from here.</p>
+  </div>
+  <% } %>
+
+  <script nonce="<%= nonce %>">
+    (function () {
+      var form = document.getElementById('wsEmailReplyForm');
+      if (!form) return;
+      var csrf = document.querySelector('meta[name="csrf-token"]').content;
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var to = <%- JSON.stringify(message.replyAddress || '') %>;
+        if (!window.confirm('Send this reply to ' + to + ' now from your Gmail account?')) return;
+        var btn = form.querySelector('button'); var err = document.getElementById('wsEmailReplyError'); var out = document.getElementById('wsEmailReplyResult');
+        err.hidden = true; out.hidden = true; btn.disabled = true;
+        try {
+          var r = await fetch('/api/workspace/email/gmail/reply', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf }, body: JSON.stringify({ messageId: form.messageId.value, text: form.text.value }) });
+          var d = await r.json();
+          if (!r.ok) throw new Error(d.error || 'That did not work.');
+          out.textContent = 'Reply sent to ' + d.to + ' (Gmail message id ' + d.id + ').';
+          out.hidden = false;
+          form.reset();
+        } catch (ex) { err.textContent = 'Not sent: ' + ex.message; err.hidden = false; }
+        btn.disabled = false;
+      });
+    })();
+  </script>
+<% } %>
+
+<%- include('partials/shell-bottom') %>

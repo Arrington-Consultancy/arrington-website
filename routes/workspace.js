@@ -523,6 +523,34 @@ code{background:#f4f4f4;padding:.25rem .5rem;border-radius:4px;word-break:break-
     });
   });
 
+  // One message in full (07/09/2026, Tom: "read full emails and reply").
+  // Read live from Gmail on each view, never stored, never written to the
+  // Brain. The id is validated to Gmail's own alphabet before it reaches
+  // a URL. Confidential clearance, same as the inbox.
+  page('/workspace/email/message/:id', async (req, res) => {
+    const clearanceId = req.workspaceClearance;
+    if (!clearanceCanSeeSensitivity(clearanceId, 'confidential')) return render404(req, res);
+    const id = String(req.params.id || '');
+    if (!/^[A-Za-z0-9_-]{1,64}$/.test(id)) return render404(req, res);
+    if (!gmailClient.isConfigured()) return res.redirect('/workspace/email');
+    const errText = (err) => String(err && err.message ? err.message : err).slice(0, 300);
+    let message = null;
+    let error = '';
+    try {
+      const token = await gmailClient.getAccessToken();
+      message = await gmailClient.getMessageFull(token, id);
+    } catch (err) {
+      error = errText(err);
+    }
+    res.render('workspace/email-message', {
+      ...viewer(req),
+      counts: await navCounts(clearanceId),
+      message, error, id,
+      sendEnabled: gmailClient.sendEnabled(),
+      csrfToken: generateCsrfToken(req, res)
+    });
+  });
+
   // Gmail OAuth: same shape as Zoho. The callback renders the refresh
   // token once for Tom to copy into Railway; nothing is stored here.
   app.get('/workspace/email/gmail/connect', requireWorkspacePageAccess, (req, res) => {
@@ -1194,6 +1222,52 @@ router.post('/api/workspace/email/gmail/send', requireWorkspaceApiAccess, writeL
       summary: `Sent an email from ${profile.emailAddress} to ${to}: "${subject.slice(0, 120)}".`
     });
     res.json({ ok: true, id: result.id, threadId: result.threadId, to });
+  } catch (err) {
+    if (err && err.name === 'GmailSendDisabledError') return res.status(400).json({ error: err.message });
+    if (err && /^(A |The |Gmail API |Google token )|GMAIL_REFRESH_TOKEN/.test(String(err.message))) return res.status(400).json({ error: String(err.message).slice(0, 300) });
+    next(err);
+  }
+});
+
+// Email: reply to one message, in its thread. The original is re-read
+// from Gmail by id so the recipient, subject and threading headers come
+// from the message itself, never from the request body. Same gates as a
+// fresh send: flag, confidential clearance, a person pressing the button.
+router.post('/api/workspace/email/gmail/reply', requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
+  try {
+    if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'confidential')) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    if (!gmailClient.sendEnabled()) return res.status(400).json({ error: `Sending email is switched off (${gmailClient.SEND_FLAG} is not 'true').` });
+    if (!gmailClient.isConfigured()) return res.status(400).json({ error: 'Gmail is not connected.' });
+    const messageId = String((req.body && req.body.messageId) || '');
+    if (!/^[A-Za-z0-9_-]{1,64}$/.test(messageId)) return res.status(400).json({ error: 'A message id is required.' });
+    const text = String((req.body && req.body.text) || '').slice(0, 20000);
+    if (!text.trim()) return res.status(400).json({ error: 'The reply is empty.' });
+    const token = await gmailClient.getAccessToken();
+    const [profile, original] = await Promise.all([gmailClient.getProfile(token), gmailClient.getMessageFull(token, messageId)]);
+    if (!profile.emailAddress) return res.status(502).json({ error: 'Gmail did not report the sending address; nothing was sent.' });
+    if (!original.replyAddress) return res.status(400).json({ error: 'That message has no sender address to reply to.' });
+    const subject = /^re:/i.test(original.subject || '') ? original.subject : `Re: ${original.subject || '(no subject)'}`;
+    const quoted = original.bodyText
+      ? `\n\nOn ${original.date ? original.date.toUTCString() : 'an earlier date'}, ${original.from} wrote:\n${original.bodyText.split('\n').map((l) => `> ${l}`).join('\n')}`
+      : '';
+    const result = await gmailClient.sendMessage(token, {
+      from: profile.emailAddress,
+      to: original.replyAddress,
+      subject,
+      text: `${text}${quoted}`,
+      inReplyTo: original.messageId,
+      references: original.references,
+      threadId: original.threadId
+    });
+    await repo.addActivity({
+      actor: req.session.user.username,
+      eventType: 'email_replied',
+      subject: `gmail:${result.id}`,
+      summary: `Replied from ${profile.emailAddress} to ${original.replyAddress} in thread "${String(original.subject || '').slice(0, 120)}".`
+    });
+    res.json({ ok: true, id: result.id, threadId: result.threadId, to: original.replyAddress, subject });
   } catch (err) {
     if (err && err.name === 'GmailSendDisabledError') return res.status(400).json({ error: err.message });
     if (err && /^(A |The |Gmail API |Google token )|GMAIL_REFRESH_TOKEN/.test(String(err.message))) return res.status(400).json({ error: String(err.message).slice(0, 300) });

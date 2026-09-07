@@ -1,7 +1,7 @@
 <%- include('partials/shell-top', { pageTitle: 'Email', active: 'email' }) %>
 
 <h1 class="ws-h">Email</h1>
-<p class="ws-sub">Your own Gmail inbox, read live through the Gmail API. Nothing on this page is stored unless you press "Update the Company Brain", and even then only headers and one-line previews reach the Brain, never message bodies.</p>
+<p class="ws-sub">Your own Gmail inbox, read live through the Gmail API. Open a subject to read the message in full and reply to it. Nothing on these pages is stored unless you press "Update the Company Brain", and even then only headers and one-line previews reach the Brain, never message bodies.</p>
 
 <% if (!permitted) { %>
   <div class="ws-card"><p class="ws-empty">Your clearance does not include correspondence. Nothing here is shown to you, and the counts above are not computed for you.</p></div>
@@ -38,7 +38,7 @@
         <tr class="<%= m.unread ? 'ws-row-unread' : '' %>">
           <td class="ws-meta"><%= m.date ? new Date(m.date).toISOString().slice(0, 16).replace('T', ' ') : '' %></td>
           <td><%= m.from %></td>
-          <td><%= m.subject || '(no subject)' %></td>
+          <td><a href="/workspace/email/message/<%= encodeURIComponent(m.id) %>"><%= m.subject || '(no subject)' %></a></td>
           <td class="ws-meta"><%= m.snippet %></td>
         </tr>
       <% }) %>

@@ -1,7 +1,7 @@
 # Gmail connector in the Arrington AI Workspace: governance submission (07/09/2026)
 
-**Status:** built; reads live once Tom sets the credentials; sending
-flag-gated and OFF by default. Presented to ARRINGTON AI GOVERNANCE &
+**Status:** built and LIVE the same day on Tom's decision: reads and the
+send flag are both on in production (see CLAUDE.md for the evidence). Presented to ARRINGTON AI GOVERNANCE &
 ASSURANCE as a controlled change, because the approved v0.1 source map
 excluded email and this adds it. Tom's instruction (07/09/2026): "I'm going
 to create a Gmail api we can use directly in Arrington Workspace, set
@@ -21,9 +21,10 @@ from it when a person asks.
 | Send a message | `POST /messages/send` | `gmail.send` | `ENABLE_GMAIL_SEND=true` AND a token issued with that scope AND a human confirms |
 
 Not added, by construction and pinned by test: modify, delete, labels,
-settings, compose or insert, drafts, or the full-mailbox scope. No message
-body is ever fetched: listing requests `format=metadata` with four headers,
-and the only other content is Google's own one-line snippet.
+settings, compose or insert, drafts, or the full-mailbox scope. The inbox
+listing requests `format=metadata` with four headers plus Google's own
+one-line snippet; a message body is fetched only when a person opens that
+one message (see the addendum below), and never stored.
 
 ## Gates (enforced in `lib/workspace/email/gmailClient.js`, not only in the route)
 
@@ -36,11 +37,12 @@ and the only other content is Google's own one-line snippet.
    send even if the flag is turned on later without a reconnect.
 3. Workspace access (flag, owner binding, passphrase unlock) plus
    `confidential` clearance on every email surface, page and API alike.
-4. Human-initiated only. The single caller of `sendMessage` is
-   `POST /api/workspace/email/gmail/send`, reached through the form on
-   `/workspace/email` after a browser confirmation. No AI path, no worker
-   and no lane reaches it; a test asserts the Ask Ruth route touches
-   nothing in the Gmail client.
+4. Human-initiated only. `sendMessage` has exactly two callers, pinned
+   by test: `POST /api/workspace/email/gmail/send` (the form on
+   `/workspace/email`) and `POST /api/workspace/email/gmail/reply` (the
+   form on a message page), each after a browser confirmation. No AI
+   path, no worker and no lane reaches either; a test asserts the Ask
+   Ruth route touches nothing in the Gmail client.
 5. Every send and every Brain update is written to `workspace_activity`.
 
 ## What reaches the Company Brain
@@ -57,6 +59,25 @@ worker lane. Only `governance_assurance` (which reads every source class by
 design) and Tom's own general questions via `GENERAL_SOURCE_CLASSES` reach
 it. Granting it to a lane is a worker permission change reserved to Tom and
 the governed route.
+
+## Addendum, same day: full message reads and replies
+
+Tom's follow-on instruction: "now we need to be able to read full emails
+and reply to them." Two additions, both inside the scopes already
+requested:
+
+| Action | Gmail call | Scope | Gate |
+|---|---|---|---|
+| Read one message in full | `GET /messages/{id}?format=full` | `gmail.readonly` | credentials set, confidential clearance |
+| Reply in the thread | `POST /messages/send` with `threadId`, `In-Reply-To`, `References` | `gmail.send` | the same four gates as a fresh send |
+
+The body is read for display on `/workspace/email/message/:id` only. It
+is not stored, and it does not enter the Brain record, which is still
+headers and snippets. A reply's recipient, subject and threading headers
+are taken from the original message re-read by id on the server; the
+request supplies only the message id and the reply text, so a caller
+cannot redirect a reply. The original text is quoted under the reply,
+as any mail client does. Attachments and images are never fetched.
 
 ## Why this is a material change
 

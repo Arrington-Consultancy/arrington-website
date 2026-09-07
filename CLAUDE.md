@@ -1616,6 +1616,26 @@ page), and the first send after the flag was refused because the token
 had been issued read-only before the flag, so a reconnect was needed.
 Google returns `snippet` HTML-escaped; decoded in the client (PR #160).
 
+**Reading a message in full and replying (07/09/2026, same day, Tom:
+"now we need to be able to read full emails and reply to them").** Each
+inbox subject links to `/workspace/email/message/:id`, which reads the
+message live with `format=full` and shows its text: the `text/plain`
+part when there is one, otherwise the `text/html` part with tags
+stripped (`extractBody` / `stripHtml` in the client, pure and tested).
+Attachments and images are never fetched. Bodies are read for display
+only: nothing is stored, and the Brain record stays headers and
+snippets. The reply form on that page posts to
+`POST /api/workspace/email/gmail/reply` with only the message id and
+the text; the route re-reads the original from Gmail and takes the
+recipient (Reply-To, else From), the subject (`Re:` prefixed once) and
+the threading headers (`In-Reply-To`, `References`, Gmail `threadId`)
+from the message itself, so the request body cannot choose who the
+reply goes to (pinned by test). The original is quoted under the reply.
+Same gates as a fresh send: the flag, confidential clearance, a person
+pressing the button, a browser confirmation, an `email_replied` activity
+row. `sendMessage` now has exactly two callers, the send route and the
+reply route, and the test pins that number.
+
 ### Zoho Invoice connector, reads and writes (06/09/2026, live)
 
 Arrington's real invoicing is Zoho Invoice, EU data centre, organisation
