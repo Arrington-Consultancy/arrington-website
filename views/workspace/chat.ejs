@@ -114,13 +114,16 @@
       card.appendChild(modeLine);
       const hint = document.createElement('div');
       hint.className = 'ws-prov';
-      hint.textContent = 'Change it by typing: "change it to £600", "make it for website build", "' + (isSend ? 'leave it in drafts' : 'send it') + '", or "cancel that".';
+      hint.textContent = draft.incomplete
+        ? 'Incomplete: still needs ' + (draft.missing || []).join(', and ') + '. Type it on its own, for example "for a test". It cannot be approved until complete.'
+        : 'Change it by typing: "change it to £600", "make it for website build", "' + (isSend ? 'leave it in drafts' : 'send it') + '", or "cancel that".';
       card.appendChild(hint);
       const row = document.createElement('div');
       row.className = 'ws-form-row';
       const go = document.createElement('button');
       go.className = 'ws-btn'; go.type = 'button';
       go.textContent = isSend ? 'Approve, create and email' : 'Approve and create draft in Zoho';
+      if (draft.incomplete) go.hidden = true;
       const drop = document.createElement('button');
       drop.className = 'ws-btn ws-btn-quiet'; drop.type = 'button'; drop.textContent = 'Discard';
       const out = document.createElement('div');

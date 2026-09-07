@@ -184,3 +184,16 @@ stub's log showing the history and pending line arriving on every model
 turn. Full suite 955/956 on the same database; the one failure is the
 Zoho authorize-URL test reacting to the dummy Zoho variables in the
 shell, green without them.
+
+### Same day, second sentence: the trigger widened, incomplete drafts kept
+
+Tom then typed "create a test email for £2455 and send to
+tomarrington@outlook.com", which never says "invoice", so it went to the
+model and was refused as an email request. Now a sentence with an
+amount, an email address and a create/send verb is read as an invoice
+request (deterministic, still behind the card), and an incomplete draft
+is kept as a pending action so the missing part can be typed on its own.
+An incomplete draft cannot be approved (decide route) or carried out
+(execute route): both recompute what is missing from the stored draft.
+No new authority: the same approval leg, a person, a confirmation, the
+flag, spent once. Pinned in the same two test files.

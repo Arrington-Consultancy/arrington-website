@@ -1685,7 +1685,20 @@ starts a new row when the pending one was only found by falling back to
 another conversation (`viaConversation`). Found by the Playwright pass,
 where a leftover draft from an earlier run swallowed a fresh sentence.
 
-**Tests.** `test/workspace/pendingAction.test.js` (13: the two failing
+**Widened the same afternoon (Tom's second sentence, "create a test
+email for £2455 and send to tomarrington@outlook.com", which never says
+"invoice" and was refused as an email request).** A sentence carrying
+an amount, an email address and a create/send verb is now read as an
+invoice too, and a sentence-initial "send"/"email" means create and
+send. An INCOMPLETE draft (fields missing) is kept as a pending action
+so the missing piece can be typed on its own ("for a test", or just
+"a test" when only the job is missing); the card and the approvals page
+mark it incomplete with no approve control, and both the decide route
+(approving) and the execute route refuse it until `missingFor(draft)`
+is empty. `missingFor` is computed from the stored draft every time,
+never trusted from a flag.
+
+**Tests.** `test/workspace/pendingAction.test.js` (14: the two failing
 sentences, the follow-ups Tom listed, pass-through of ordinary
 questions, the prompt the model receives, route order, execute reads
 the mode) and `test/workspace/pendingActionFlow.test.js` (the original

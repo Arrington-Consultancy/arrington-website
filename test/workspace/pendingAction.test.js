@@ -109,6 +109,34 @@ test('the mode of a fresh sentence: send or email means create and send, anythin
   assert.equal(intent.parse('send an invoice to a@b.co £5 for x but leave it in drafts').mode, 'draft_only');
 });
 
+test("Tom's second sentence: an amount and an address with a send verb is an invoice, kept incomplete until the job is named", () => {
+  const parsed = intent.parse('create a test email for £2455 and send to tomarrington@outlook.com', { today: TODAY });
+  assert.equal(parsed.matched, true);
+  assert.equal(parsed.complete, false);
+  assert.deepEqual(parsed.missing, ['what it is for (for example "for commercial review")']);
+  assert.equal(parsed.draft.customerEmail, 'tomarrington@outlook.com');
+  assert.equal(parsed.draft.amount, 2455);
+  assert.equal(parsed.draft.description, '', 'the trailing "and send to" is not the job');
+  assert.equal(parsed.mode, 'create_and_send');
+  // Sentence-initial "send" is create and send even without the word invoice.
+  assert.equal(intent.parse('send £300 to bob@example.com for a review').mode, 'create_and_send');
+  // Still not an invoice: no amount, or no address, or a question about email.
+  assert.equal(intent.parse('how many unread emails do I have?').matched, false);
+  assert.equal(intent.parse('email bob@example.com about the meeting').matched, false);
+  assert.equal(intent.parse('we spent £300 on ads').matched, false);
+
+  // The incomplete draft is pending: a bare phrase, or "for X", fills the job.
+  const inc = pending({ mode: 'create_and_send', incomplete: true, draft: { ...pending().draft, amount: 2455, description: '' } });
+  assert.deepEqual(r('for a test', inc), { matched: true, op: 'amend', changes: { description: 'A test' } });
+  assert.deepEqual(r('a test', inc), { matched: true, op: 'amend', changes: { description: 'A test' } });
+  assert.deepEqual(r('website build please', inc), { matched: true, op: 'amend', changes: { description: 'Website build' } });
+  assert.deepEqual(r('where are we losing money?', inc), { matched: false }, 'a question is never a job name');
+  assert.deepEqual(r('cancel that', inc), { matched: true, op: 'cancel' });
+  assert.match(pa.describePending(inc), /INCOMPLETE invoice .* Still needs what it is for/);
+  // A complete draft does not treat a bare phrase as a change.
+  assert.deepEqual(r('a test'), { matched: false });
+});
+
 test('the resolver is pure and shares nothing with Scott', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', '..', 'lib', 'workspace', 'finance', 'pendingAction.js'), 'utf8').replace(/^\s*\/\/.*$/gm, '');
   assert.doesNotMatch(src, /require\((?!'\.\/invoiceIntent')/);
@@ -199,6 +227,10 @@ test('the ask route resolves a pending action BEFORE the invoice parser, and the
   assert.match(execBody, /send: mode === 'create_and_send'/);
   assert.match(execBody, /payload\.mode === 'create_and_send'/, 'the mode comes from the stored row, not the request');
   assert.doesNotMatch(execBody, /req\.body\.mode/);
+  assert.match(execBody, /invoiceIntent\.missingFor\(payload\.draft\)/, 'an incomplete draft is refused at execution');
+  const decideIdx = routes.indexOf("router.post('/api/workspace/approvals/:id/decide'");
+  const decideBody = routes.slice(decideIdx, routes.indexOf('router.post(', decideIdx + 10));
+  assert.match(decideBody, /current\.incomplete/, 'an incomplete draft cannot be approved');
 
   // Nothing here touches Gmail, and no autonomous send exists.
   assert.doesNotMatch(askBody, /gmailClient|sendMessage/);
