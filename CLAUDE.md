@@ -1601,10 +1601,20 @@ expansion of the approved v0.1 source map (which excluded email) and is
 routed to Governance and Assurance as a controlled change; see the
 submission in `review/`.
 
-**Not proven from this sandbox:** no live Google call has been made
-(Google's hosts are egress-blocked here). The first real request is the
-boot probe after Tom sets the variables, which logs `Gmail probe:
-credential accepted for <address>` or the failure.
+**LIVE, both halves, 07/09/2026.** Reads: production deploy `460f0cca`
+logged `Gmail probe: credential accepted for tom@arringtonconsultancy.com,
+1979 message(s) in the mailbox` and the Email page rendered the inbox
+live (67 unread of 1539). Sending: Tom set `ENABLE_GMAIL_SEND=true`,
+reconnected so the token carried the send scope, and sent a test from
+the form to his own Outlook address; the page reported Google's message
+id `1a07b92cb74b2d77`. So the connector is read AND send in production,
+on Tom's decision. Two things that went wrong on the day, both on the
+Google side and both now written into the page's Connection panel: the
+first Connect failed with `redirect_uri_mismatch` because the redirect
+URI had not been added to the OAuth client (the exact string is on the
+page), and the first send after the flag was refused because the token
+had been issued read-only before the flag, so a reconnect was needed.
+Google returns `snippet` HTML-escaped; decoded in the client (PR #160).
 
 ### Zoho Invoice connector, reads and writes (06/09/2026, live)
 
