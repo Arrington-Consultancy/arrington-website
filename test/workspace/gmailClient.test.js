@@ -108,6 +108,13 @@ test('reads use format=metadata with only the four headers, and a message summar
   } finally { f.restore(); }
 });
 
+test("Google's HTML-escaped snippet is decoded to plain text", () => {
+  assert.equal(client.decodeEntities('we&#39;ll reply &lt;tom@example.com&gt; &amp; more &quot;soon&quot; &#x41;'), 'we\'ll reply <tom@example.com> & more "soon" A');
+  assert.equal(client.decodeEntities('no entities here'), 'no entities here');
+  assert.equal(client.decodeEntities('&unknown; stays'), '&unknown; stays');
+  assert.equal(client.decodeEntities(undefined), '');
+});
+
 test('one failed message costs one row, not the listing', async () => {
   const f = stubFetch([
     { status: 200, json: { messages: [{ id: 'a' }, { id: 'b' }] } },
