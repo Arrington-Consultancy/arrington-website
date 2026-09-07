@@ -147,7 +147,9 @@ function invoiceModeLabel(mode) {
 }
 
 function invoiceApprovalTitle(payload) {
-  return `Zoho invoice (${invoiceModeLabel(payload.mode)}): ${invoiceIntent.describe(payload.draft)}`;
+  const missing = invoiceIntent.missingFor(payload.draft || {});
+  const state = missing.length ? 'incomplete, ' : '';
+  return `Zoho invoice (${state}${invoiceModeLabel(payload.mode)}): ${invoiceIntent.describe(payload.draft)}`;
 }
 
 // The shape every chat reply and the approvals page work from. Built
@@ -165,6 +167,10 @@ function pendingFromRow(row) {
     conversationId: Number.isInteger(payload.conversationId) ? payload.conversationId : null,
     mode: payload.kind === 'zoho_invoice_draft' ? (payload.mode === 'create_and_send' ? 'create_and_send' : 'draft_only') : null,
     draft: payload.draft || null,
+    // Computed from the stored draft every time, never trusted from a
+    // flag: an incomplete draft cannot be approved or carried out.
+    missing: payload.kind === 'zoho_invoice_draft' ? invoiceIntent.missingFor(payload.draft || {}) : [],
+    incomplete: payload.kind === 'zoho_invoice_draft' ? invoiceIntent.missingFor(payload.draft || {}).length > 0 : false,
     revisions: Array.isArray(payload.revisions) ? payload.revisions : [],
     payload
   };
@@ -192,6 +198,8 @@ function invoiceCardData(pending) {
     approvalId: pending.id,
     status: pending.status,
     mode: pending.mode,
+    incomplete: pending.incomplete,
+    missing: pending.missing,
     summary: invoiceIntent.describe(pending.draft),
     draft: pending.draft
   };
@@ -940,6 +948,7 @@ router.post('/api/workspace/ask', requireWorkspaceApiAccess, askLimiter, async (
           return replyDeterministic(`${pendingAction.describePending(pending)} That action has no fields that can be changed from here; decide it in Decisions & approvals or say "cancel that".`, null);
         }
         if (follow.op === 'confirm') {
+          if (pending.incomplete) return replyDeterministic(`${pendingAction.describePending(pending)} Give me the missing part first, for example "for a test".`, invoiceCardData(pending));
           return replyDeterministic(`Nothing is carried out from a typed sentence. ${pendingAction.describePending(pending)} Press "Approve, create and email" on the card or in Decisions & approvals to carry it out, or say "leave it in drafts" to change your mind.`, invoiceCardData(pending));
         }
         if (follow.op === 'set_mode') {
@@ -966,7 +975,8 @@ router.post('/api/workspace/ask', requireWorkspaceApiAccess, askLimiter, async (
           if (follow.mode && follow.mode !== pending.mode) parts.push(`mode to ${invoiceModeLabel(follow.mode)}`);
           const revised = await reviseInvoiceApproval(pending, { changes: c, mode: follow.mode || null, note: parts.join(', ') });
           if (!revised) return replyDeterministic(`Approval #${pending.id} is no longer open, so it cannot be changed.`, null);
-          return replyDeterministic(`Updated approval #${pending.id}: ${parts.join(', ')}. ${pendingAction.describePending(revised)}`, invoiceCardData(revised));
+          const nowComplete = pending.incomplete && !revised.incomplete ? ' That completes it: approve it on the card or in Decisions & approvals.' : '';
+          return replyDeterministic(`Updated approval #${pending.id}: ${parts.join(', ')}. ${pendingAction.describePending(revised)}${nowComplete}`, invoiceCardData(revised));
         }
       }
     }
@@ -985,7 +995,9 @@ router.post('/api/workspace/ask', requireWorkspaceApiAccess, askLimiter, async (
     const intent = confidential ? invoiceIntent.parse(question) : { matched: false };
     if (intent.matched) {
       const pendingNote = pending && pending.kind === 'zoho_invoice_draft' ? ` ${pendingAction.describePending(pending)}` : '';
-      if (!intent.complete) {
+      if (!intent.complete && !intent.draft.customerEmail && intent.draft.amount == null) {
+        // Nothing usable was read: say what a full sentence looks like
+        // rather than keeping an empty draft around.
         return replyDeterministic(`I can draft that invoice, but I need ${intent.missing.join(', and ')}. For example: "send an invoice to name@example.com £500 for commercial review as of today".${pendingNote}`, invoiceCardData(pending));
       }
       if (!financeRegistry.isConfigured('zoho_invoice') || !zohoInvoiceClient.writesEnabled()) {
@@ -1003,6 +1015,13 @@ router.post('/api/workspace/ask', requireWorkspaceApiAccess, askLimiter, async (
         requestedBy: username
       });
       const created = pendingFromRow(approval);
+      if (!intent.complete) {
+        // Kept as a pending action so the missing piece can be typed on
+        // its own ("for a test") instead of the whole sentence again. It
+        // cannot be approved or carried out until it is complete.
+        await repo.addActivity({ actor: username, eventType: 'zoho_invoice_drafted', subject: `approval:${approval.id}`, summary: `Drafted an INCOMPLETE Zoho invoice from Ask Ruth: ${invoiceIntent.describe(intent.draft)} (approval #${approval.id}, needs ${intent.missing.join(', ')}).` });
+        return replyDeterministic(`I read that as an invoice ${invoiceIntent.describe(intent.draft)} (${invoiceModeLabel(intent.mode)}). I still need ${intent.missing.join(', and ')}: reply with it on its own, for example "for a test". It is waiting as approval #${approval.id} and cannot be approved until it is complete. Say "cancel that" to drop it.`, invoiceCardData(created));
+      }
       const modeSentence = intent.mode === 'create_and_send'
         ? `approve it and it will be created in Zoho Invoice and emailed to ${intent.draft.customerEmail} from your Zoho account`
         : 'approve it and it will be created as a draft in Zoho Invoice only, with nothing emailed; say "send it" if you want it emailed on approval';
@@ -1108,6 +1127,12 @@ router.post('/api/workspace/approvals/:id/decide', requireWorkspaceApiAccess, wr
     const decision = req.body.decision === 'approved' ? 'approved' : req.body.decision === 'declined' ? 'declined' : null;
     if (!Number.isInteger(id) || !decision) return res.status(400).json({ error: 'A decision of approved or declined is required.' });
     const note = typeof req.body.note === 'string' ? req.body.note.trim().slice(0, 2000) : '';
+    if (decision === 'approved') {
+      const current = pendingFromRow(await repo.getApproval(id));
+      if (current && current.kind === 'zoho_invoice_draft' && current.incomplete) {
+        return res.status(409).json({ error: `Approval #${id} is an incomplete invoice draft (still needs ${current.missing.join(', and ')}). Complete it in Ask Ruth before approving.` });
+      }
+    }
     const row = await repo.decideApproval(id, { decision, decidedBy: req.session.user.username, note });
     if (!row) return res.status(409).json({ error: 'This approval is not open. A decided approval stays decided.' });
     await repo.addActivity({ actor: req.session.user.username, eventType: 'approval_decided', summary: `Approval #${id} ${decision}: ${row.title}` });
@@ -1526,6 +1551,8 @@ router.post('/api/workspace/finance/zoho/invoice/execute', requireWorkspaceApiAc
     let payload = null;
     try { payload = JSON.parse(approval.detail || ''); } catch (_) { payload = null; }
     if (!payload || payload.kind !== 'zoho_invoice_draft' || !payload.draft) return res.status(409).json({ error: 'That approval is not a Zoho invoice draft.' });
+    const stillMissing = invoiceIntent.missingFor(payload.draft);
+    if (stillMissing.length) return res.status(409).json({ error: `Approval #${approvalId} is an incomplete invoice draft (still needs ${stillMissing.join(', and ')}). Nothing was created.` });
     const spent = await db.query(
       `SELECT 1 FROM workspace_activity WHERE event_type = 'zoho_invoice_executed' AND subject = $1 LIMIT 1`,
       [`approval:${approvalId}`]

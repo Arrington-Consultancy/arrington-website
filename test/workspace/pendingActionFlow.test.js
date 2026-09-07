@@ -163,6 +163,50 @@ test('pending-action follow-ups in Ask Ruth', { skip: configured ? false : 'set 
     assert.match(approvals, /Cancelled from Ask Ruth/);
   });
 
+  await t.test("Tom's second sentence drafts a complete test invoice to send, in one go", async () => {
+    const r0 = await ask('create a test email for £2455 and send to tomarrington@outlook.com', { fresh: true });
+    conversationId = r0.data.conversationId;
+    assert.equal(r0.status, 200, JSON.stringify(r0.data));
+    assert.doesNotMatch(r0.data.answer, /can't create or send|don't perform actions/i);
+    const d0 = r0.data.invoiceDraft;
+    assert.equal(d0.incomplete, false);
+    assert.equal(d0.mode, 'create_and_send');
+    assert.match(d0.summary, /£2455\.00 to tomarrington <tomarrington@outlook\.com> for "Test"/);
+    const r0c = await ask('cancel that');
+    assert.match(r0c.data.answer, new RegExp(`Cancelled approval #${d0.approvalId}`));
+  });
+
+  await t.test('a sentence with no job anywhere is kept incomplete, completed by "for a test", then approvable', async () => {
+    const r1 = await ask('send £2455 to tomarrington@outlook.com', { fresh: true });
+    conversationId = r1.data.conversationId;
+    assert.equal(r1.status, 200, JSON.stringify(r1.data));
+    assert.match(r1.data.answer, /I read that as an invoice £2455\.00 to tomarrington/);
+    assert.match(r1.data.answer, /I still need what it is for/);
+    const inc = r1.data.invoiceDraft;
+    assert.equal(inc.incomplete, true);
+    assert.equal(inc.mode, 'create_and_send');
+    // Cannot be approved or carried out while incomplete.
+    const tryApprove = await tom.go(`/api/workspace/approvals/${inc.approvalId}/decide`, { method: 'POST', headers: { 'x-csrf-token': csrf }, body: { decision: 'approved' } });
+    assert.equal(tryApprove.status, 409);
+    const tryExecute = await tom.go('/api/workspace/finance/zoho/invoice/execute', { method: 'POST', headers: { 'x-csrf-token': csrf }, body: { approvalId: inc.approvalId } });
+    assert.equal(tryExecute.status, 409);
+    const approvals = await (await tom.go('/workspace/approvals')).text();
+    assert.match(approvals, /incomplete<\/span>/);
+    const rowStart = approvals.indexOf('Zoho invoice (incomplete');
+    const rowEnd = approvals.indexOf('</div>\n<% }) %>', rowStart) > 0 ? approvals.indexOf('</div>\n<% }) %>', rowStart) : approvals.indexOf('ws-card', rowStart + 200);
+    const row = approvals.slice(rowStart, rowEnd > rowStart ? rowEnd : rowStart + 3000);
+    assert.doesNotMatch(row, /Approve, create and email|Approve only/, 'no approve control on an incomplete row');
+    assert.match(row, /Decline/);
+    // The missing piece on its own completes the same row.
+    const r2 = await ask('for a test');
+    assert.equal(r2.data.invoiceDraft.approvalId, inc.approvalId);
+    assert.equal(r2.data.invoiceDraft.incomplete, false);
+    assert.match(r2.data.invoiceDraft.summary, /£2455\.00 to tomarrington <tomarrington@outlook\.com> for "A test"/);
+    assert.match(r2.data.answer, /That completes it/);
+    const r3 = await ask('cancel that');
+    assert.match(r3.data.answer, new RegExp(`Cancelled approval #${inc.approvalId}`));
+  });
+
   await t.test('a fresh conversation with nothing pending is not affected', async () => {
     const r = await ask('change it to £600', { fresh: true });
     assert.ok(r.status === 503 || (r.status === 200 && !/Updated approval/.test(r.data.answer)), JSON.stringify(r.data));
