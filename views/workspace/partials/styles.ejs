@@ -90,6 +90,8 @@
   .ws-msg-user { background: var(--ws-panel-2); align-self: flex-end; }
   .ws-msg-assistant { background: var(--ws-panel); border: 1px solid var(--ws-border); align-self: flex-start; }
   .ws-msg .ws-meta { margin-top: 0.35rem; }
+  .ws-draft-card { border-color: var(--ws-amber); }
+  .ws-pending-line { margin: 0 0 0.6rem; }
   .ws-prov { font-size: 0.75rem; color: var(--ws-muted); }
   /* Wide content scrolls inside its own box; the page body never
      scrolls sideways. */
@@ -98,6 +100,10 @@
   .ws-table-wrap table.ws-table { min-width: 520px; }
   table.ws-table th, table.ws-table td { text-align: left; padding: 0.45rem 0.6rem; border-top: 1px solid var(--ws-border); vertical-align: top; }
   table.ws-table th { border-top: 0; color: var(--ws-muted); text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.07em; }
+  .ws-mail-body { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.55; }
+  .ws-mail-head dt { display: inline; font-weight: 600; }
+  .ws-mail-head dd { display: inline; margin: 0 0 0 .35rem; }
+  .ws-mail-head div { margin: .2rem 0; }
   .ws-row-unread td { font-weight: 600; }
   .ws-amount-in { color: var(--ws-green); font-variant-numeric: tabular-nums; }
   .ws-amount-out { color: var(--ws-red); font-variant-numeric: tabular-nums; }

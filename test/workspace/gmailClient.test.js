@@ -108,6 +108,13 @@ test('reads use format=metadata with only the four headers, and a message summar
   } finally { f.restore(); }
 });
 
+test("Google's HTML-escaped snippet is decoded to plain text", () => {
+  assert.equal(client.decodeEntities('we&#39;ll reply &lt;tom@example.com&gt; &amp; more &quot;soon&quot; &#x41;'), 'we\'ll reply <tom@example.com> & more "soon" A');
+  assert.equal(client.decodeEntities('no entities here'), 'no entities here');
+  assert.equal(client.decodeEntities('&unknown; stays'), '&unknown; stays');
+  assert.equal(client.decodeEntities(undefined), '');
+});
+
 test('one failed message costs one row, not the listing', async () => {
   const f = stubFetch([
     { status: 200, json: { messages: [{ id: 'a' }, { id: 'b' }] } },
@@ -185,18 +192,75 @@ test('the Brain record is bounded, confidential, headers-only, and in the email 
 test('the routes: send only in its own route, no AI path, both API routes behind the confidential check', () => {
   const routes = fs.readFileSync(path.join(__dirname, '..', '..', 'routes', 'workspace.js'), 'utf8');
   const sendCalls = routes.match(/gmailClient\.sendMessage\(/g) || [];
-  assert.equal(sendCalls.length, 1, 'exactly one caller of sendMessage');
+  assert.equal(sendCalls.length, 2, 'exactly two callers of sendMessage: the send route and the reply route');
   const sendRouteIdx = routes.indexOf("router.post('/api/workspace/email/gmail/send'");
+  const replyRouteIdx = routes.indexOf("router.post('/api/workspace/email/gmail/reply'");
+  assert.ok(replyRouteIdx > 0);
+  const replyBody = routes.slice(replyRouteIdx, routes.indexOf('function zohoWriteError'));
+  assert.match(replyBody, /gmailClient\.getMessageFull\(token, messageId\)/, 'the reply re-reads the original by id');
+  assert.match(replyBody, /to: original\.replyAddress/, 'the recipient comes from the original, not the request');
+  assert.match(replyBody, /threadId: original\.threadId/);
+  assert.doesNotMatch(replyBody, /req\.body\.to|req\.body\.subject/, 'the request body cannot choose the recipient or subject');
   const askIdx = routes.indexOf("router.post('/api/workspace/ask'");
   assert.ok(sendRouteIdx > 0 && askIdx > 0);
   const askBody = routes.slice(askIdx, routes.indexOf('router.post(', askIdx + 10));
   assert.doesNotMatch(askBody, /gmailClient|sendMessage/, 'Ask Ruth reaches no email send path');
-  for (const route of ["router.post('/api/workspace/email/gmail/sync'", "router.post('/api/workspace/email/gmail/send'"]) {
+  for (const route of ["router.post('/api/workspace/email/gmail/sync'", "router.post('/api/workspace/email/gmail/send'", "router.post('/api/workspace/email/gmail/reply'"]) {
     const idx = routes.indexOf(route);
     assert.ok(idx > 0, route);
     assert.match(routes.slice(idx, idx + 400), /clearanceCanSeeSensitivity\(req\.workspaceClearance, 'confidential'\)/);
   }
   assert.match(routes.slice(sendRouteIdx, sendRouteIdx + 800), /gmailClient\.sendEnabled\(\)/);
+});
+
+test('a full message yields plain text from text/plain first, then stripped html, at any nesting depth', () => {
+  const b = (t) => Buffer.from(t).toString('base64url');
+  const nested = { mimeType: 'multipart/mixed', parts: [{ mimeType: 'multipart/alternative', parts: [
+    { mimeType: 'text/plain', body: { data: b('Hi Tom,\r\nplain here') } },
+    { mimeType: 'text/html', body: { data: b('<p>Hi <b>Tom</b></p>') } }
+  ] }, { mimeType: 'application/pdf', body: { attachmentId: 'x' } }] };
+  assert.deepEqual(client.extractBody(nested), { text: 'Hi Tom,\nplain here', source: 'text/plain' });
+  const htmlOnly = { mimeType: 'text/html', body: { data: b('<html><style>p{color:red}</style><body><p>Hello&nbsp;there</p><br><div>Line two</div><script>x()</script></body></html>') } };
+  assert.deepEqual(client.extractBody(htmlOnly), { text: 'Hello there\n\nLine two', source: 'text/html' });
+  assert.deepEqual(client.extractBody({ mimeType: 'image/png', body: { attachmentId: 'y' } }), { text: '', source: 'none' });
+  assert.deepEqual(client.extractBody(undefined), { text: '', source: 'none' });
+});
+
+test('getMessageFull asks for format=full and reads the reply address from Reply-To before From', async () => {
+  const b = (t) => Buffer.from(t).toString('base64url');
+  const f = stubFetch([{ status: 200, json: { id: 'm9', threadId: 't9', labelIds: ['INBOX'], internalDate: '1757200000000', payload: {
+    mimeType: 'text/plain', body: { data: b('Body text') },
+    headers: [{ name: 'From', value: 'Jane <jane@example.com>' }, { name: 'Reply-To', value: 'replies@example.com' }, { name: 'Subject', value: 'Quote' }, { name: 'Message-ID', value: '<abc@mail.example.com>' }, { name: 'References', value: '<prev@mail.example.com>' }]
+  } } }]);
+  try {
+    const m = await client.getMessageFull('at', 'm9');
+    assert.equal(new URL(f.calls[0].url).searchParams.get('format'), 'full');
+    assert.equal(m.bodyText, 'Body text');
+    assert.equal(m.replyAddress, 'replies@example.com');
+    assert.equal(m.messageId, '<abc@mail.example.com>');
+    assert.equal(m.references, '<prev@mail.example.com>');
+    assert.equal(m.threadId, 't9');
+  } finally { f.restore(); }
+});
+
+test('a reply carries In-Reply-To and References and the Gmail threadId, so it files in the conversation', async () => {
+  const f = stubFetch([{ status: 200, json: { id: 'r1', threadId: 't9' } }]);
+  try {
+    await client.sendMessage('at', { from: 'tom@example.com', to: 'jane@example.com', subject: 'Re: Quote', text: 'Thanks', inReplyTo: '<abc@mail.example.com>', references: '<prev@mail.example.com>', threadId: 't9' }, { ENABLE_GMAIL_SEND: 'true' });
+    const body = JSON.parse(f.calls[0].init.body);
+    assert.equal(body.threadId, 't9');
+    const decoded = Buffer.from(body.raw, 'base64url').toString('utf8');
+    assert.match(decoded, /\r\nIn-Reply-To: <abc@mail\.example\.com>\r\n/);
+    assert.match(decoded, /\r\nReferences: <prev@mail\.example\.com> <abc@mail\.example\.com>\r\n/);
+  } finally { f.restore(); }
+  // A fresh send carries neither header and no threadId.
+  const g = stubFetch([{ status: 200, json: { id: 's1' } }]);
+  try {
+    await client.sendMessage('at', { from: 'tom@example.com', to: 'jane@example.com', subject: 'New', text: 'Hello' }, { ENABLE_GMAIL_SEND: 'true' });
+    const body = JSON.parse(g.calls[0].init.body);
+    assert.equal(body.threadId, undefined);
+    assert.doesNotMatch(Buffer.from(body.raw, 'base64url').toString('utf8'), /In-Reply-To|References/);
+  } finally { g.restore(); }
 });
 
 test('the client and the Brain record share nothing with Scott', () => {

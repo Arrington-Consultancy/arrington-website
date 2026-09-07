@@ -104,3 +104,83 @@ Workspace: unset `ENABLE_ZOHO_INVOICE_WRITES` (drafts still queue as
 records; execution refuses). Scott: reject the draft in Approvals; or
 revert the commit, which removes the branch and the decide extension
 together.
+
+## Addendum (07/09/2026): pending actions, follow-ups and two invoice modes
+
+Tom's live report on 07/09/2026: after Ruth drafted approval #1, the
+follow-up "Create it as a draft in Zoho Invoice only. Do not email it or
+send it to the customer" was answered with the canned "I need the
+customer email address, amount and what it is for", and "I want the
+invoice sitting in drafts" was answered from Gmail evidence. Two causes,
+both in the code: the invoice parser ran on every message with no notion
+of an approval already waiting, so a sentence with "create" and
+"invoice" in it was a new, empty invoice; and the model was handed the
+bare question with no conversation history and no open approvals, so
+"drafts" matched the one record that mentioned email. A third gap sat
+behind both: the execute route always emailed, so there was no
+draft-only action to ask for.
+
+**What changed.**
+
+1. **A pending-action resolver runs BEFORE the invoice parser**
+   (`lib/workspace/finance/pendingAction.js`, pure). When an open
+   approval exists (this conversation's own, else the owner's most
+   recent open invoice draft), the sentence is read against it:
+   `cancel`, `set_mode` (draft only / create and send), `amend` (new
+   amount, customer, description or date, read by the SAME deterministic
+   extractors as the original sentence, `invoiceIntent.extractFields`),
+   `show`, and `confirm`. A sentence it does not recognise is passed on
+   unchanged. **The model changes nothing**: every write to an approval
+   is in the deterministic branches of the ask route, which return before
+   the model is called, pinned by test.
+2. **Two invoice modes on the row.** The approval payload carries
+   `mode: 'draft_only' | 'create_and_send'`. A fresh "send" or "email"
+   sentence is create-and-send; "create", "raise", "make" or "issue" is
+   draft only (the reversible default). The execute route reads the mode
+   from the stored row and passes `send: false` for a draft, using the
+   same `createAndSendZohoInvoice` the Finance page form already used.
+   "Draft" in an invoice context always means a Zoho Invoice draft; the
+   reply says so in words.
+3. **One row, revised in place.** `repo.updateOpenApproval` rewrites the
+   open row's title and payload with a revision note; a decided row is
+   never touched. No superseded duplicates enter the queue.
+4. **Visible everywhere.** Every deterministic reply restates the pending
+   action (id, fields, mode, "not yet created"). The chat card shows the
+   mode and offers "Approve and create draft in Zoho" or "Approve, create
+   and email" with a matching browser confirmation; it is re-rendered on
+   reload. Decisions & approvals shows a mode badge, the draft, the
+   matching approve control, and a mode switch
+   (`POST /api/workspace/approvals/:id/invoice-mode`, mode only; fields
+   cannot be edited there).
+5. **The model is told the context.** `askWorkspace` now takes a bounded
+   history (last 6 turns, 600 characters each) and one server-built
+   sentence describing the pending action, both in the user content.
+   The system prompt keeps its three-section shape and gains one rule:
+   the pending line is a server fact, the workspace handles changes to it,
+   and the model never supplies or guesses a customer, an amount or a
+   description. Context, not records: no leg of the permission model
+   moves, because the history is the owner's own words and the pending
+   line is built from a row already checked against the owner's
+   clearance.
+
+**Authority, stated plainly.** No new authority. A typed "send it" on a
+row already set to send is answered "nothing is carried out from a typed
+sentence" and points at the approve control; execution still needs a
+named person, a browser confirmation, the flag, and is spent once.
+Cancelling from chat declines the row, which is the safe direction. No
+Gmail scope, route or send path is touched (pinned: the ask route
+references no Gmail client). Scott is untouched.
+
+**Evidence.** `test/workspace/pendingAction.test.js` (Tom's two failing
+sentences, the follow-ups he listed, ordinary questions passed through,
+the prompt the model actually receives, the route order and the execute
+route reading the mode from the row) and
+`test/workspace/pendingActionFlow.test.js` (the original sequence and
+the amend/cancel/draft/send follow-ups end to end over HTTP against a
+running server, gated like the adversarial suite and declared in
+`test/gatedSuites.test.js`). Run on 07/09/2026 against a freshly seeded
+local database with a stub model at `ANTHROPIC_BASE_URL`: 9/9, with the
+stub's log showing the history and pending line arriving on every model
+turn. Full suite 955/956 on the same database; the one failure is the
+Zoho authorize-URL test reacting to the dummy Zoho variables in the
+shell, green without them.

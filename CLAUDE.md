@@ -1601,10 +1601,100 @@ expansion of the approved v0.1 source map (which excluded email) and is
 routed to Governance and Assurance as a controlled change; see the
 submission in `review/`.
 
-**Not proven from this sandbox:** no live Google call has been made
-(Google's hosts are egress-blocked here). The first real request is the
-boot probe after Tom sets the variables, which logs `Gmail probe:
-credential accepted for <address>` or the failure.
+**LIVE, both halves, 07/09/2026.** Reads: production deploy `460f0cca`
+logged `Gmail probe: credential accepted for tom@arringtonconsultancy.com,
+1979 message(s) in the mailbox` and the Email page rendered the inbox
+live (67 unread of 1539). Sending: Tom set `ENABLE_GMAIL_SEND=true`,
+reconnected so the token carried the send scope, and sent a test from
+the form to his own Outlook address; the page reported Google's message
+id `1a07b92cb74b2d77`. So the connector is read AND send in production,
+on Tom's decision. Two things that went wrong on the day, both on the
+Google side and both now written into the page's Connection panel: the
+first Connect failed with `redirect_uri_mismatch` because the redirect
+URI had not been added to the OAuth client (the exact string is on the
+page), and the first send after the flag was refused because the token
+had been issued read-only before the flag, so a reconnect was needed.
+Google returns `snippet` HTML-escaped; decoded in the client (PR #160).
+
+**Reading a message in full and replying (07/09/2026, same day, Tom:
+"now we need to be able to read full emails and reply to them").** Each
+inbox subject links to `/workspace/email/message/:id`, which reads the
+message live with `format=full` and shows its text: the `text/plain`
+part when there is one, otherwise the `text/html` part with tags
+stripped (`extractBody` / `stripHtml` in the client, pure and tested).
+Attachments and images are never fetched. Bodies are read for display
+only: nothing is stored, and the Brain record stays headers and
+snippets. The reply form on that page posts to
+`POST /api/workspace/email/gmail/reply` with only the message id and
+the text; the route re-reads the original from Gmail and takes the
+recipient (Reply-To, else From), the subject (`Re:` prefixed once) and
+the threading headers (`In-Reply-To`, `References`, Gmail `threadId`)
+from the message itself, so the request body cannot choose who the
+reply goes to (pinned by test). The original is quoted under the reply.
+Same gates as a fresh send: the flag, confidential clearance, a person
+pressing the button, a browser confirmation, an `email_replied` activity
+row. `sendMessage` now has exactly two callers, the send route and the
+reply route, and the test pins that number.
+
+### Ask Ruth: pending actions, follow-ups and two invoice modes (07/09/2026)
+
+Tom's live report: after Ruth drafted invoice approval #1, "Create it as
+a draft in Zoho Invoice only. Do not email it or send it to the
+customer" got the canned "I need the customer email address, amount and
+what it is for", and "I want the invoice sitting in drafts" was answered
+from Gmail evidence (his Outlook test email). Three defects, all in
+code: the invoice parser ran on every message with no notion of a
+pending approval, so "create ... invoice" was a new empty invoice; the
+model got the bare question with no history and no open approvals, so
+"drafts" matched the one record mentioning email; and the execute route
+always emailed, so draft-only did not exist.
+
+**Now.** `lib/workspace/finance/pendingAction.js` (pure) runs BEFORE
+the parser in `/api/workspace/ask` whenever an open approval exists
+(this conversation's own, else the owner's most recent open invoice
+draft) and reads the sentence against it: `cancel`, `set_mode`,
+`amend`, `show`, `confirm`. Amendments use the SAME deterministic
+extractors as the original sentence (`invoiceIntent.extractFields`), so
+the model never supplies a customer, amount or description. The
+approval payload carries `mode: 'draft_only' | 'create_and_send'`
+("send"/"email" sentences send; "create"/"raise"/"make" are draft only,
+the reversible default) plus `conversationId` and a `revisions` list;
+`repo.updateOpenApproval` revises the one open row in place rather than
+adding a duplicate. The execute route reads the mode from the stored
+row and passes `send: false` for a draft. "Draft" in an invoice context
+always means a Zoho Invoice draft and the reply says so. Every
+deterministic reply restates the pending action; the chat card (also
+rendered on reload) and the approvals page show the mode, offer
+"Approve and create draft in Zoho" or "Approve, create and email", and
+the approvals page can switch the mode
+(`POST /api/workspace/approvals/:id/invoice-mode`, mode only).
+
+**The model is now told the context.** `askWorkspace` takes `history`
+(last 6 turns, 600 chars each, `MAX_HISTORY_TURNS` / `MAX_HISTORY_CHARS`)
+and `pendingAction` (one server-built sentence), both in the user
+content; the system prompt keeps its three sections (the routing guard
+counts them) and gains one rule about never claiming or inventing
+anything for a pending action. A typed "send it" on a row already set
+to send is answered "nothing is carried out from a typed sentence":
+execution still needs a named person, a browser confirmation, the flag,
+and is spent once. No Gmail path is touched; Scott is untouched.
+
+**A subtlety worth keeping:** a complete new invoice sentence for the
+same customer revises the row when it is THIS conversation's draft, and
+starts a new row when the pending one was only found by falling back to
+another conversation (`viaConversation`). Found by the Playwright pass,
+where a leftover draft from an earlier run swallowed a fresh sentence.
+
+**Tests.** `test/workspace/pendingAction.test.js` (13: the two failing
+sentences, the follow-ups Tom listed, pass-through of ordinary
+questions, the prompt the model receives, route order, execute reads
+the mode) and `test/workspace/pendingActionFlow.test.js` (the original
+sequence plus amend/cancel/draft/send end to end over HTTP; gated like
+the adversarial suite, declared in `test/gatedSuites.test.js`). Both
+run on 07/09/2026 against a fresh local database with a stub model at
+`ANTHROPIC_BASE_URL=http://127.0.0.1:4999`, whose log confirmed the
+history and pending line arrive on every model turn. Governance
+addendum in `review/chat-drafted-invoices-governance-submission-2026-09-06.md`.
 
 ### Zoho Invoice connector, reads and writes (06/09/2026, live)
 
