@@ -112,12 +112,18 @@ test('the mode of a fresh sentence: send or email means create and send, anythin
 test("Tom's second sentence: an amount and an address with a send verb is an invoice, kept incomplete until the job is named", () => {
   const parsed = intent.parse('create a test email for £2455 and send to tomarrington@outlook.com', { today: TODAY });
   assert.equal(parsed.matched, true);
-  assert.equal(parsed.complete, false);
-  assert.deepEqual(parsed.missing, ['what it is for (for example "for commercial review")']);
+  assert.equal(parsed.complete, true, JSON.stringify(parsed.missing));
   assert.equal(parsed.draft.customerEmail, 'tomarrington@outlook.com');
   assert.equal(parsed.draft.amount, 2455);
-  assert.equal(parsed.draft.description, '', 'the trailing "and send to" is not the job');
+  assert.equal(parsed.draft.description, 'Test', 'the job comes from "a test email"; the trailing "and send to" is not the job');
   assert.equal(parsed.mode, 'create_and_send');
+  assert.equal(intent.parse('create a test invoice for £2455 and send to tomarrington@outlook.com').draft.description, 'Test');
+  assert.equal(intent.parse('send the website build invoice to bob@example.com £999').draft.description, 'Website build');
+  assert.equal(intent.parse('raise an invoice to a@b.co £5').draft.description, '', 'an article alone is not a job');
+  // Without a job anywhere the draft is incomplete and asks for it.
+  const bare = intent.parse('send £2455 to tomarrington@outlook.com');
+  assert.equal(bare.complete, false);
+  assert.deepEqual(bare.missing, ['what it is for (for example "for commercial review")']);
   // Sentence-initial "send" is create and send even without the word invoice.
   assert.equal(intent.parse('send £300 to bob@example.com for a review').mode, 'create_and_send');
   // Still not an invoice: no amount, or no address, or a question about email.

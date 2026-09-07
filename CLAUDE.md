@@ -1690,7 +1690,11 @@ email for £2455 and send to tomarrington@outlook.com", which never says
 "invoice" and was refused as an email request).** A sentence carrying
 an amount, an email address and a create/send verb is now read as an
 invoice too, and a sentence-initial "send"/"email" means create and
-send. An INCOMPLETE draft (fields missing) is kept as a pending action
+send. When there is no "for ..." phrase, the job is read from the
+owner's words before "invoice"/"email" ("create a TEST email" gives
+"Test"; an article or a clause such as "it as a draft in Zoho" never
+does), so Tom's sentence drafts a complete test invoice to send in one
+turn. An INCOMPLETE draft (fields missing) is kept as a pending action
 so the missing piece can be typed on its own ("for a test", or just
 "a test" when only the job is missing); the card and the approvals page
 mark it incomplete with no approve control, and both the decide route
