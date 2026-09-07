@@ -43,6 +43,7 @@ const financeSync = require('../lib/workspace/finance/sync');
 const xeroClient = require('../lib/workspace/finance/xeroClient');
 const zohoInvoiceClient = require('../lib/workspace/finance/zohoInvoiceClient');
 const invoiceIntent = require('../lib/workspace/finance/invoiceIntent');
+const pendingAction = require('../lib/workspace/finance/pendingAction');
 const gmailClient = require('../lib/workspace/email/gmailClient');
 const emailSummary = require('../lib/workspace/email/summary');
 const { encryptToken, tokenCryptoConfigured } = require('../lib/workspace/finance/tokenCrypto');
@@ -121,6 +122,93 @@ async function navCounts(clearanceId) {
   const visibleGaps = gaps.filter((g) => clearanceCanSeeSensitivity(clearanceId, g.sensitivity));
   const visibleApprovals = approvals.filter((a) => clearanceCanSeeSensitivity(clearanceId, a.sensitivity));
   return { openGaps: visibleGaps.length, openApprovals: visibleApprovals.length };
+}
+
+// --- Pending actions (approvals raised from Ask Ruth) ------------------
+//
+// An approval row is the record of an action waiting on a person. Until
+// 07/09/2026 nothing ever read one back into the conversation, so a
+// follow-up ("change it to £600", "leave it in drafts") was either
+// misread as a brand new request or handed to the model with no idea
+// an action existed. These helpers give a chat turn the pending action
+// it is most likely about: the most recent open approval raised from
+// THIS conversation, else the asker's most recent open invoice draft.
+
+function parseApprovalPayload(row) {
+  if (!row || !row.detail) return null;
+  try {
+    const p = JSON.parse(row.detail);
+    return p && typeof p === 'object' && typeof p.kind === 'string' ? p : null;
+  } catch (_) { return null; }
+}
+
+function invoiceModeLabel(mode) {
+  return mode === 'create_and_send' ? 'create and send' : 'draft only';
+}
+
+function invoiceApprovalTitle(payload) {
+  return `Zoho invoice (${invoiceModeLabel(payload.mode)}): ${invoiceIntent.describe(payload.draft)}`;
+}
+
+// The shape every chat reply and the approvals page work from. Built
+// from the stored row only, never from the request.
+function pendingFromRow(row) {
+  const payload = parseApprovalPayload(row);
+  if (!payload) return null;
+  return {
+    id: row.id,
+    kind: payload.kind,
+    status: row.status,
+    title: row.title,
+    sensitivity: row.sensitivity,
+    requestedBy: row.requested_by,
+    conversationId: Number.isInteger(payload.conversationId) ? payload.conversationId : null,
+    mode: payload.kind === 'zoho_invoice_draft' ? (payload.mode === 'create_and_send' ? 'create_and_send' : 'draft_only') : null,
+    draft: payload.draft || null,
+    revisions: Array.isArray(payload.revisions) ? payload.revisions : [],
+    payload
+  };
+}
+
+async function findPendingAction({ username, clearanceId, conversationId = null }) {
+  const open = await repo.listApprovals({ status: 'open' });
+  const visible = open
+    .filter((a) => clearanceCanSeeSensitivity(clearanceId, a.sensitivity))
+    .map(pendingFromRow)
+    .filter(Boolean);
+  if (conversationId) {
+    const inConversation = visible.find((p) => p.conversationId === conversationId);
+    if (inConversation) return { ...inConversation, viaConversation: true };
+  }
+  const fallback = visible.find((p) => p.kind === 'zoho_invoice_draft' && p.requestedBy === username);
+  return fallback ? { ...fallback, viaConversation: false } : null;
+}
+
+// What the chat page and the ask reply hand to the card. Nothing beyond
+// the draft the person will approve.
+function invoiceCardData(pending) {
+  if (!pending || pending.kind !== 'zoho_invoice_draft') return null;
+  return {
+    approvalId: pending.id,
+    status: pending.status,
+    mode: pending.mode,
+    summary: invoiceIntent.describe(pending.draft),
+    draft: pending.draft
+  };
+}
+
+// The bounded history handed to the model: the last few turns, each cut
+// short, so a follow-up can be understood without the owner restating
+// it. Context only; the records remain the only source of facts.
+const HISTORY_TURNS = 6;
+const HISTORY_CHARS = 600;
+async function recentHistory(conversationId) {
+  if (!conversationId) return [];
+  const rows = await repo.listMessages(conversationId);
+  return rows
+    .filter((m) => m.role === 'user' || m.role === 'assistant')
+    .slice(-HISTORY_TURNS)
+    .map((m) => ({ role: m.role, content: String(m.content || '').slice(0, HISTORY_CHARS) }));
 }
 
 function withFreshness(records) {
@@ -633,7 +721,9 @@ code{background:#f4f4f4;padding:.25rem .5rem;border-radius:4px;word-break:break-
     res.render('workspace/approvals', {
       ...viewer(req),
       counts: await navCounts(clearanceId),
-      approvals: all.filter((a) => clearanceCanSeeSensitivity(clearanceId, a.sensitivity)),
+      approvals: all
+        .filter((a) => clearanceCanSeeSensitivity(clearanceId, a.sensitivity))
+        .map((a) => ({ ...a, invoice: invoiceCardData(pendingFromRow(a)) })),
       csrfToken: generateCsrfToken(req, res)
     });
   });
@@ -693,7 +783,14 @@ code{background:#f4f4f4;padding:.25rem .5rem;border-radius:4px;word-break:break-
       if (active && !clearanceCovers(clearanceId, active.clearance)) active = null;
       if (active) messages = await repo.listMessages(active.id);
     }
+    // The action this conversation is waiting on, if any, so the card is
+    // there on reload and not only on the turn that created it.
+    const pending = clearanceCanSeeSensitivity(clearanceId, 'confidential')
+      ? await findPendingAction({ username, clearanceId, conversationId: active ? active.id : null })
+      : null;
     res.render('workspace/chat', {
+      pendingInvoice: invoiceCardData(pending),
+      pendingLine: pending ? pendingAction.describePending(pending) : '',
       receptionist,
       ...viewer(req),
       counts: await navCounts(req.workspaceClearance),
@@ -789,43 +886,138 @@ router.post('/api/workspace/ask', requireWorkspaceApiAccess, askLimiter, async (
       if (!conversation) return res.status(404).json({ error: 'Conversation not found.' });
     }
 
+    // Helpers for the deterministic replies below: they store the turn
+    // and answer without a model, and without Ruth (no lane read a
+    // record, so there is no handoff note to write).
+    const confidential = clearanceCanSeeSensitivity(clearanceId, 'confidential');
+    async function replyDeterministic(answer, invoiceDraft) {
+      if (!conversation) {
+        conversation = await repo.createConversation({ ownerUsername: username, clearance: clearanceId, laneId: '', title: question.slice(0, 120) });
+      }
+      await repo.addMessage({ conversationId: conversation.id, role: 'user', content: question, laneId: '' });
+      await repo.addMessage({ conversationId: conversation.id, role: 'assistant', content: answer, laneId: '', provenance: [] });
+      return res.json({ ok: true, conversationId: conversation.id, laneId: null, laneName: null, answer, provenance: [], gap: null, escalation: null, receptionist: null, invoiceDraft: invoiceDraft || null });
+    }
+    async function reviseInvoiceApproval(pending, { changes = {}, mode = null, note }) {
+      const payload = pending.payload;
+      const draft = { ...payload.draft, ...changes };
+      const nextMode = mode || payload.mode;
+      payload.draft = draft;
+      payload.mode = nextMode;
+      payload.revisions = [...(payload.revisions || []), { at: new Date().toISOString(), by: username, note, typed: question.slice(0, 300) }];
+      const row = await repo.updateOpenApproval(pending.id, { title: invoiceApprovalTitle(payload), detail: JSON.stringify(payload) });
+      if (!row) return null;
+      await repo.addActivity({ actor: username, eventType: 'zoho_invoice_amended', subject: `approval:${pending.id}`, summary: `Approval #${pending.id} revised from Ask Ruth: ${note}.` });
+      return pendingFromRow(row);
+    }
+
+    // The action this conversation is waiting on, if any (07/09/2026).
+    // A follow-up is interpreted against it BEFORE the invoice parser
+    // runs, because "create it as a draft" and "don't send it" are
+    // sentences about the pending draft, not new requests, and the
+    // parser cannot tell the difference on its own. Deterministic, like
+    // the parser: the model never changes a field or a mode.
+    const pending = confidential
+      ? await findPendingAction({ username, clearanceId, conversationId: conversation ? conversation.id : null })
+      : null;
+    if (pending) {
+      const follow = pendingAction.resolve(question, pending);
+      if (follow.matched) {
+        const isInvoice = pending.kind === 'zoho_invoice_draft';
+        if (follow.op === 'cancel') {
+          const row = await repo.decideApproval(pending.id, { decision: 'declined', decidedBy: username, note: `Cancelled from Ask Ruth: "${question.slice(0, 200)}"` });
+          if (!row) return replyDeterministic(`Approval #${pending.id} is no longer open, so there was nothing to cancel.`, null);
+          await repo.addActivity({ actor: username, eventType: 'approval_decided', summary: `Approval #${pending.id} declined: ${row.title}` });
+          return replyDeterministic(`Cancelled approval #${pending.id} (${pending.title}). Nothing was created or sent.`, isInvoice ? { approvalId: pending.id, status: 'declined' } : null);
+        }
+        if (follow.op === 'show') {
+          const how = isInvoice
+            ? ' To change it, say for example "change it to £600", "make it for website build", "leave it in drafts", "send it", or "cancel that". To carry it out, approve it on the card or in Decisions & approvals.'
+            : ' To withdraw it, say "cancel that"; to decide it, use Decisions & approvals.';
+          return replyDeterministic(pendingAction.describePending(pending) + how, invoiceCardData(pending));
+        }
+        if (!isInvoice) {
+          return replyDeterministic(`${pendingAction.describePending(pending)} That action has no fields that can be changed from here; decide it in Decisions & approvals or say "cancel that".`, null);
+        }
+        if (follow.op === 'confirm') {
+          return replyDeterministic(`Nothing is carried out from a typed sentence. ${pendingAction.describePending(pending)} Press "Approve, create and email" on the card or in Decisions & approvals to carry it out, or say "leave it in drafts" to change your mind.`, invoiceCardData(pending));
+        }
+        if (follow.op === 'set_mode') {
+          if (follow.mode === pending.mode) {
+            return replyDeterministic(`It is already set that way. ${pendingAction.describePending(pending)}`, invoiceCardData(pending));
+          }
+          const revised = await reviseInvoiceApproval(pending, { mode: follow.mode, note: `mode changed to ${invoiceModeLabel(follow.mode)}` });
+          if (!revised) return replyDeterministic(`Approval #${pending.id} is no longer open, so it cannot be changed.`, null);
+          const said = follow.mode === 'draft_only'
+            ? 'Understood: it will be created as a draft in Zoho Invoice only and nothing will be emailed. "Draft" here means a Zoho Invoice draft, not an email draft.'
+            : 'Understood: when approved it will be created in Zoho Invoice and emailed to the customer.';
+          return replyDeterministic(`${said} ${pendingAction.describePending(revised)}`, invoiceCardData(revised));
+        }
+        if (follow.op === 'amend') {
+          const c = follow.changes;
+          if (c.customerEmail && !invoiceIntent.EMAIL_RE.test(c.customerEmail)) return replyDeterministic('That does not look like an email address, so nothing was changed.', invoiceCardData(pending));
+          if (c.amount != null && !(c.amount > 0)) return replyDeterministic('The amount has to be more than zero, so nothing was changed.', invoiceCardData(pending));
+          const parts = [];
+          if (c.amount != null) parts.push(`amount to £${c.amount.toFixed(2)}`);
+          if (c.customerEmail) parts.push(`customer to ${c.customerName || c.customerEmail} <${c.customerEmail}>`);
+          else if (c.customerName) parts.push(`customer name to ${c.customerName}`);
+          if (c.description) parts.push(`description to "${c.description}"`);
+          if (c.date) parts.push(`date to ${c.date}`);
+          if (follow.mode && follow.mode !== pending.mode) parts.push(`mode to ${invoiceModeLabel(follow.mode)}`);
+          const revised = await reviseInvoiceApproval(pending, { changes: c, mode: follow.mode || null, note: parts.join(', ') });
+          if (!revised) return replyDeterministic(`Approval #${pending.id} is no longer open, so it cannot be changed.`, null);
+          return replyDeterministic(`Updated approval #${pending.id}: ${parts.join(', ')}. ${pendingAction.describePending(revised)}`, invoiceCardData(revised));
+        }
+      }
+    }
+
     // "Send an invoice to <email> £<amount> for <job> as of today"
     // (06/09/2026). Read deterministically, never by the model: a draft
     // that will become a real Zoho invoice emailed to a real address is
     // built from the typed sentence and nothing else. The draft goes into
     // Decisions & approvals as a record; a separate route, gated on the
     // approval being granted by a named person and spent once, is the
-    // only thing that creates and emails it. Ruth is not involved: no
-    // lane read a record, so no handoff note is written.
-    const intent = clearanceCanSeeSensitivity(clearanceId, 'confidential') ? invoiceIntent.parse(question) : { matched: false };
+    // only thing that creates and emails it. Since 07/09/2026 the sentence
+    // also fixes the MODE: "send" or "email" means create and email,
+    // anything else means a Zoho draft only, and the owner can change
+    // either afterwards with a follow-up. Ruth is not involved: no lane
+    // read a record, so no handoff note is written.
+    const intent = confidential ? invoiceIntent.parse(question) : { matched: false };
     if (intent.matched) {
-      let answer;
-      let invoiceDraft = null;
+      const pendingNote = pending && pending.kind === 'zoho_invoice_draft' ? ` ${pendingAction.describePending(pending)}` : '';
       if (!intent.complete) {
-        answer = `I can draft that invoice, but I need ${intent.missing.join(', and ')}. For example: "send an invoice to name@example.com £500 for commercial review as of today".`;
-      } else if (!financeRegistry.isConfigured('zoho_invoice') || !zohoInvoiceClient.writesEnabled()) {
-        answer = `I read that as ${invoiceIntent.describe(intent.draft)}, but Zoho Invoice writes are switched off in this environment, so no draft was raised.`;
-      } else {
-        const approval = await repo.createApproval({
-          title: `Zoho invoice: ${invoiceIntent.describe(intent.draft)}`,
-          detail: JSON.stringify({ kind: 'zoho_invoice_draft', draft: intent.draft, typed: question }),
-          actionClass: 2,
-          sensitivity: 'confidential',
-          requestedBy: username
-        });
-        invoiceDraft = { approvalId: approval.id, summary: invoiceIntent.describe(intent.draft), draft: intent.draft };
-        answer = `Drafted: invoice ${invoiceDraft.summary}. Nothing has been created or sent. It is waiting as approval #${approval.id}: approve it and it will be created in Zoho Invoice and emailed to ${intent.draft.customerEmail} from your Zoho account.`;
-        await repo.addActivity({ actor: username, eventType: 'zoho_invoice_drafted', subject: `approval:${approval.id}`, summary: `Drafted a Zoho invoice from Ask Ruth: ${invoiceDraft.summary} (approval #${approval.id}).` });
+        return replyDeterministic(`I can draft that invoice, but I need ${intent.missing.join(', and ')}. For example: "send an invoice to name@example.com £500 for commercial review as of today".${pendingNote}`, invoiceCardData(pending));
+      }
+      if (!financeRegistry.isConfigured('zoho_invoice') || !zohoInvoiceClient.writesEnabled()) {
+        return replyDeterministic(`I read that as ${invoiceIntent.describe(intent.draft)}, but Zoho Invoice writes are switched off in this environment, so no draft was raised.`, null);
       }
       if (!conversation) {
         conversation = await repo.createConversation({ ownerUsername: username, clearance: clearanceId, laneId: '', title: question.slice(0, 120) });
       }
-      await repo.addMessage({ conversationId: conversation.id, role: 'user', content: question, laneId: '' });
-      await repo.addMessage({ conversationId: conversation.id, role: 'assistant', content: answer, laneId: '', provenance: [] });
-      return res.json({ ok: true, conversationId: conversation.id, laneId: null, laneName: null, answer, provenance: [], gap: null, escalation: null, receptionist: null, invoiceDraft });
+      const payload = { kind: 'zoho_invoice_draft', mode: intent.mode, draft: intent.draft, typed: question, conversationId: conversation.id, revisions: [] };
+      const approval = await repo.createApproval({
+        title: invoiceApprovalTitle(payload),
+        detail: JSON.stringify(payload),
+        actionClass: 2,
+        sensitivity: 'confidential',
+        requestedBy: username
+      });
+      const created = pendingFromRow(approval);
+      const modeSentence = intent.mode === 'create_and_send'
+        ? `approve it and it will be created in Zoho Invoice and emailed to ${intent.draft.customerEmail} from your Zoho account`
+        : 'approve it and it will be created as a draft in Zoho Invoice only, with nothing emailed; say "send it" if you want it emailed on approval';
+      await repo.addActivity({ actor: username, eventType: 'zoho_invoice_drafted', subject: `approval:${approval.id}`, summary: `Drafted a Zoho invoice from Ask Ruth: ${invoiceIntent.describe(intent.draft)} (approval #${approval.id}, ${invoiceModeLabel(intent.mode)}).` });
+      return replyDeterministic(`Drafted: invoice ${invoiceIntent.describe(intent.draft)}. Nothing has been created or sent. It is waiting as approval #${approval.id} (${invoiceModeLabel(intent.mode)}): ${modeSentence}. You can say "change it to £600", "leave it in drafts" or "cancel that" before approving.`, invoiceCardData(created));
     }
 
-    const result = await askWorkspace({ clearanceId, question, laneId: forcedLaneId });
+    // Everything else goes to the model, which since 07/09/2026 is told
+    // the recent turns of this conversation and the action it is waiting
+    // on, so "what was that for again?" is answerable. It still performs
+    // nothing: the deterministic paths above are the only ones that
+    // touch an approval.
+    const history = await recentHistory(conversation ? conversation.id : null);
+    const pendingLine = pending ? pendingAction.describePending(pending) : null;
+    const result = await askWorkspace({ clearanceId, question, laneId: forcedLaneId, history, pendingAction: pendingLine });
     if (!result.ok) {
       return res.status(503).json({ error: result.errors.join(' ') });
     }
@@ -889,7 +1081,8 @@ router.post('/api/workspace/ask', requireWorkspaceApiAccess, askLimiter, async (
         laneId: result.laneId || null,
         recordCount: result.provenanceKeys.length,
         gapRaised: !!result.gap
-      })
+      }),
+      invoiceDraft: invoiceCardData(pending)
     });
   } catch (err) { next(err); }
 });
@@ -919,6 +1112,32 @@ router.post('/api/workspace/approvals/:id/decide', requireWorkspaceApiAccess, wr
     if (!row) return res.status(409).json({ error: 'This approval is not open. A decided approval stays decided.' });
     await repo.addActivity({ actor: req.session.user.username, eventType: 'approval_decided', summary: `Approval #${id} ${decision}: ${row.title}` });
     res.json({ ok: true, approval: row });
+  } catch (err) { next(err); }
+});
+
+// Switch an open Zoho invoice draft between "draft only" and "create and
+// send" from the approvals page (07/09/2026). The fields of the draft are
+// NOT editable here: the customer, amount and description come only from
+// what the owner typed into Ask Ruth, read by the deterministic parser.
+// Same revision-in-place as a chat follow-up, so one row stays one row.
+router.post('/api/workspace/approvals/:id/invoice-mode', requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
+  try {
+    if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'confidential')) return res.status(404).json({ error: 'Not found' });
+    const id = parseInt(req.params.id, 10);
+    const mode = req.body.mode === 'create_and_send' ? 'create_and_send' : req.body.mode === 'draft_only' ? 'draft_only' : null;
+    if (!Number.isInteger(id) || !mode) return res.status(400).json({ error: 'A mode of draft_only or create_and_send is required.' });
+    const row = await repo.getApproval(id);
+    const pending = pendingFromRow(row);
+    if (!pending || pending.kind !== 'zoho_invoice_draft') return res.status(409).json({ error: 'That approval is not a Zoho invoice draft.' });
+    if (pending.status !== 'open') return res.status(409).json({ error: 'This approval is not open. A decided approval stays decided.' });
+    const username = req.session.user.username;
+    const payload = pending.payload;
+    payload.mode = mode;
+    payload.revisions = [...(payload.revisions || []), { at: new Date().toISOString(), by: username, note: `mode changed to ${invoiceModeLabel(mode)}`, typed: '' }];
+    const updated = await repo.updateOpenApproval(id, { title: invoiceApprovalTitle(payload), detail: JSON.stringify(payload) });
+    if (!updated) return res.status(409).json({ error: 'This approval is not open. A decided approval stays decided.' });
+    await repo.addActivity({ actor: username, eventType: 'zoho_invoice_amended', subject: `approval:${id}`, summary: `Approval #${id} revised from Decisions & approvals: mode changed to ${invoiceModeLabel(mode)}.` });
+    res.json({ ok: true, approval: updated, invoice: invoiceCardData(pendingFromRow(updated)) });
   } catch (err) { next(err); }
 });
 
@@ -1315,14 +1534,23 @@ router.post('/api/workspace/finance/zoho/invoice/execute', requireWorkspaceApiAc
 
     const actor = req.session.user.username;
     const d = payload.draft;
+    // The MODE is read from the stored row, like the draft: "draft only"
+    // creates the invoice in Zoho and emails nothing, "create and send"
+    // creates and emails it. Until 07/09/2026 this line always sent,
+    // so there was no way to review an invoice in Zoho before it went
+    // out, whatever the owner had typed.
+    const mode = payload.mode === 'create_and_send' ? 'create_and_send' : 'draft_only';
     const result = await createAndSendZohoInvoice({
-      actor, customerEmail: d.customerEmail, customerName: d.customerName, description: d.description, amount: d.amount, send: true
+      actor, customerEmail: d.customerEmail, customerName: d.customerName, description: d.description, amount: d.amount, send: mode === 'create_and_send'
     });
+    const outcome = mode === 'create_and_send'
+      ? (result.sent ? ' and emailed to the customer' : ', email FAILED: ' + result.sendError)
+      : ' as a draft in Zoho Invoice (draft only, nothing emailed)';
     await repo.addActivity({
       actor, eventType: 'zoho_invoice_executed', subject: `approval:${approvalId}`,
-      summary: `Carried out approval #${approvalId} (decided by ${approval.decided_by}): Zoho invoice ${result.invoiceNumber} created${result.sent ? ' and emailed' : ', email FAILED: ' + result.sendError}.`
+      summary: `Carried out approval #${approvalId} (decided by ${approval.decided_by}, ${invoiceModeLabel(mode)}): Zoho invoice ${result.invoiceNumber} created${outcome}.`
     });
-    res.json({ ok: true, approvalId, ...result });
+    res.json({ ok: true, approvalId, mode, ...result });
   } catch (err) { zohoWriteError(err, res, next); }
 });
 

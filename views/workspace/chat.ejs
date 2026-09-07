@@ -21,6 +21,7 @@
 <% } %>
 
 <div class="ws-card">
+  <% if (pendingLine) { %><p class="ws-note ws-pending-line"><%= pendingLine %></p><% } %>
   <div class="ws-chat-thread" id="wsThread">
     <% messages.forEach(function (m) { %>
       <div class="ws-msg ws-msg-<%= m.role %>">
@@ -87,20 +88,39 @@
       d.scrollIntoView({ block: 'nearest' });
     }
 
-    // A Zoho invoice draft from the sentence just typed. Approving here is
-    // the human decision (recorded in Decisions & approvals); the second
-    // call carries it out. Two calls on purpose: the execute route only
-    // acts on an approval a named person has granted.
+    // A Zoho invoice draft from the sentence typed (or the one this
+    // conversation is still waiting on, when the page is reloaded).
+    // Approving here is the human decision (recorded in Decisions &
+    // approvals); the second call carries it out. Two calls on purpose:
+    // the execute route only acts on an approval a named person has
+    // granted. The card shows the MODE the row is set to, because "draft
+    // only" and "create and email" are different actions, and a revised
+    // row replaces its earlier card so only the live state is shown.
     function draftCard(draft) {
+      thread.querySelectorAll('[data-approval-id="' + draft.approvalId + '"]').forEach(function (old) { old.remove(); });
+      if (draft.status && draft.status !== 'open') return;
+      const isSend = draft.mode === 'create_and_send';
       const card = document.createElement('div');
       card.className = 'ws-msg ws-msg-assistant ws-draft-card';
+      card.dataset.approvalId = draft.approvalId;
       const title = document.createElement('div');
-      title.textContent = 'Invoice draft #' + draft.approvalId + ': ' + draft.summary;
+      title.textContent = 'Pending action, approval #' + draft.approvalId + ': invoice ' + draft.summary;
       card.appendChild(title);
+      const modeLine = document.createElement('div');
+      modeLine.className = 'ws-meta';
+      modeLine.textContent = isSend
+        ? 'Mode: create in Zoho Invoice and email to ' + draft.draft.customerEmail + '. Not yet created.'
+        : 'Mode: draft only. Created in Zoho Invoice as a draft, nothing emailed. Not yet created.';
+      card.appendChild(modeLine);
+      const hint = document.createElement('div');
+      hint.className = 'ws-prov';
+      hint.textContent = 'Change it by typing: "change it to £600", "make it for website build", "' + (isSend ? 'leave it in drafts' : 'send it') + '", or "cancel that".';
+      card.appendChild(hint);
       const row = document.createElement('div');
       row.className = 'ws-form-row';
       const go = document.createElement('button');
-      go.className = 'ws-btn'; go.type = 'button'; go.textContent = 'Approve and send';
+      go.className = 'ws-btn'; go.type = 'button';
+      go.textContent = isSend ? 'Approve, create and email' : 'Approve and create draft in Zoho';
       const drop = document.createElement('button');
       drop.className = 'ws-btn ws-btn-quiet'; drop.type = 'button'; drop.textContent = 'Discard';
       const out = document.createElement('div');
@@ -115,16 +135,23 @@
         return data;
       }
       go.addEventListener('click', async function () {
-        if (!window.confirm('Create this invoice in Zoho and email it to ' + draft.draft.customerEmail + ' now?')) return;
+        const ask = isSend
+          ? 'Create this invoice in Zoho and email it to ' + draft.draft.customerEmail + ' now?'
+          : 'Create this invoice in Zoho Invoice as a DRAFT now? Nothing will be emailed.';
+        if (!window.confirm(ask)) return;
         go.disabled = true; drop.disabled = true;
         out.textContent = 'Approving...';
         try {
-          await post('/api/workspace/approvals/' + draft.approvalId + '/decide', { decision: 'approved', note: 'Approved from Ask Ruth' });
-          out.textContent = 'Approved. Creating and sending...';
+          await post('/api/workspace/approvals/' + draft.approvalId + '/decide', { decision: 'approved', note: 'Approved from Ask Ruth (' + (isSend ? 'create and send' : 'draft only') + ')' });
+          out.textContent = isSend ? 'Approved. Creating and sending...' : 'Approved. Creating the draft...';
           const res = await post('/api/workspace/finance/zoho/invoice/execute', { approvalId: draft.approvalId });
-          out.textContent = 'Invoice ' + res.invoiceNumber + ' created' + (res.createdCustomer ? ' (new customer added)' : '') + (res.sent ? ' and emailed to ' + draft.draft.customerEmail + '.' : ', but the email failed: ' + (res.sendError || 'unknown error') + '. It is saved as a draft in Zoho.');
+          if (res.mode === 'create_and_send') {
+            out.textContent = 'Invoice ' + res.invoiceNumber + ' created' + (res.createdCustomer ? ' (new customer added)' : '') + (res.sent ? ' and emailed to ' + draft.draft.customerEmail + '.' : ', but the email failed: ' + (res.sendError || 'unknown error') + '. It is saved as a draft in Zoho.');
+          } else {
+            out.textContent = 'Invoice ' + res.invoiceNumber + ' created as a draft in Zoho Invoice' + (res.createdCustomer ? ' (new customer added)' : '') + '. Nothing was emailed.';
+          }
         } catch (ex) {
-          out.textContent = 'Not sent: ' + ex.message;
+          out.textContent = 'Not done: ' + ex.message;
           go.disabled = false; drop.disabled = false;
         }
       });
@@ -139,6 +166,8 @@
         }
       });
     }
+    const pendingOnLoad = <%- JSON.stringify(pendingInvoice || null) %>;
+    if (pendingOnLoad) draftCard(pendingOnLoad);
 
     form.addEventListener('submit', async function (e) {
       e.preventDefault();

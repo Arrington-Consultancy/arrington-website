@@ -11,24 +11,36 @@
     <span class="ws-item-title"><%= a.title %></span>
     <span class="ws-badge <%= a.status === 'open' ? 'ws-badge-stale' : (a.status === 'approved' ? 'ws-badge-fresh' : 'ws-badge-failed') %>"><%= a.status %></span>
     <div class="ws-meta">Requested by <%= a.requested_by %> · action class <%= a.action_class %> · <%= new Date(a.created_at).toUTCString() %></div>
-    <% var isZohoDraft = /^Zoho invoice: /.test(a.title || ''); %>
+    <% var inv = a.invoice; var isZohoDraft = !!inv; var isSend = inv && inv.mode === 'create_and_send'; %>
     <% if (a.detail && !isZohoDraft) { %><div class="ws-body-text"><%= a.detail %></div><% } %>
-    <% if (isZohoDraft) { %><div class="ws-meta">A Zoho invoice drafted from Ask Ruth. Approving records the decision; "Approve and send" also carries it out: the invoice is created in Zoho Invoice and emailed to the customer from your Zoho account. Each approval can be carried out once.</div><% } %>
+    <% if (isZohoDraft) { %>
+      <div class="ws-meta">
+        <span class="ws-badge <%= isSend ? 'ws-badge-material' : 'ws-badge-plain' %>"><%= isSend ? 'create and send' : 'draft only' %></span>
+        Invoice <%= inv.summary %>.
+        <%= isSend ? 'On approval it is created in Zoho Invoice and emailed to ' + inv.draft.customerEmail + ' from your Zoho account.' : 'On approval it is created in Zoho Invoice as a draft; nothing is emailed.' %>
+        Each approval can be carried out once. The customer, amount and description come only from what was typed into Ask Ruth; change them there ("change it to £600", "make it for website build").
+      </div>
+    <% } %>
     <% if (a.status !== 'open') { %>
       <div class="ws-meta">Decided by <%= a.decided_by %><%= a.decision_note ? ': ' + a.decision_note : '' %></div>
       <% if (isZohoDraft && a.status === 'approved') { %>
-        <form class="ws-form-row js-zoho-execute-form" data-id="<%= a.id %>">
-          <button class="ws-btn ws-btn-quiet" type="submit">Send now (if not already sent)</button>
+        <form class="ws-form-row js-zoho-execute-form" data-id="<%= a.id %>" data-mode="<%= inv.mode %>">
+          <button class="ws-btn ws-btn-quiet" type="submit"><%= isSend ? 'Create and email now (if not already done)' : 'Create the Zoho draft now (if not already done)' %></button>
         </form>
         <p class="ws-meta js-zoho-execute-out" hidden></p>
       <% } %>
     <% } else { %>
-      <form class="ws-form-row js-decide-form" data-id="<%= a.id %>">
+      <form class="ws-form-row js-decide-form" data-id="<%= a.id %>" data-mode="<%= isZohoDraft ? inv.mode : '' %>">
         <input class="ws-input" type="text" name="note" placeholder="Decision note (optional)" maxlength="2000">
-        <button class="ws-btn <%= isZohoDraft ? 'ws-btn-quiet' : '' %>" type="submit" data-decision="approved"><%= isZohoDraft ? 'Approve only' : 'Approve' %></button>
-        <% if (isZohoDraft) { %><button class="ws-btn" type="submit" data-decision="approved" data-execute="true">Approve and send</button><% } %>
+        <button class="ws-btn <%= isZohoDraft ? 'ws-btn-quiet' : '' %>" type="submit" data-decision="approved"><%= isZohoDraft ? 'Approve only (record the decision)' : 'Approve' %></button>
+        <% if (isZohoDraft) { %><button class="ws-btn" type="submit" data-decision="approved" data-execute="true"><%= isSend ? 'Approve, create and email' : 'Approve and create draft in Zoho' %></button><% } %>
         <button class="ws-btn ws-btn-quiet" type="submit" data-decision="declined">Decline</button>
       </form>
+      <% if (isZohoDraft) { %>
+        <form class="ws-form-row js-invoice-mode-form" data-id="<%= a.id %>" data-next="<%= isSend ? 'draft_only' : 'create_and_send' %>">
+          <button class="ws-btn ws-btn-quiet" type="submit"><%= isSend ? 'Switch to draft only (do not email)' : 'Switch to create and send' %></button>
+        </form>
+      <% } %>
       <p class="ws-note-error js-decide-error" hidden></p>
     <% } %>
   </div>
@@ -43,6 +55,25 @@
       if (!r.ok) throw new Error(data.error || 'That did not work.');
       return data;
     }
+    function describeExecute(res) {
+      if (res.mode === 'create_and_send') return 'Invoice ' + res.invoiceNumber + (res.sent ? ' created and emailed.' : ' created, but the email failed: ' + (res.sendError || 'unknown error'));
+      return 'Invoice ' + res.invoiceNumber + ' created as a draft in Zoho Invoice. Nothing was emailed.';
+    }
+    document.querySelectorAll('.js-invoice-mode-form').forEach(function (form) {
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const err = form.parentElement.querySelector('.js-decide-error');
+        err.hidden = true;
+        form.querySelector('button').disabled = true;
+        try {
+          await post('/api/workspace/approvals/' + form.dataset.id + '/invoice-mode', { mode: form.dataset.next });
+          window.location.reload();
+        } catch (ex) {
+          err.textContent = ex.message; err.hidden = false;
+          form.querySelector('button').disabled = false;
+        }
+      });
+    });
     document.querySelectorAll('.js-decide-form').forEach(function (form) {
       let decision = 'approved';
       let execute = false;
@@ -53,13 +84,14 @@
         e.preventDefault();
         const err = form.parentElement.querySelector('.js-decide-error');
         err.hidden = true;
-        if (execute && !window.confirm('Create this invoice in Zoho and email it to the customer now?')) return;
+        const isSend = form.dataset.mode === 'create_and_send';
+        if (execute && !window.confirm(isSend ? 'Create this invoice in Zoho and email it to the customer now?' : 'Create this invoice in Zoho Invoice as a DRAFT now? Nothing will be emailed.')) return;
         form.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
         try {
           await post('/api/workspace/approvals/' + form.dataset.id + '/decide', { decision: decision, note: form.querySelector('input[name="note"]').value });
           if (execute) {
             const res = await post('/api/workspace/finance/zoho/invoice/execute', { approvalId: Number(form.dataset.id) });
-            window.alert('Invoice ' + res.invoiceNumber + (res.sent ? ' created and emailed.' : ' created, but the email failed: ' + (res.sendError || 'unknown error')));
+            window.alert(describeExecute(res));
           }
           window.location.reload();
         } catch (ex) {
@@ -72,11 +104,12 @@
       form.addEventListener('submit', async function (e) {
         e.preventDefault();
         const out = form.parentElement.querySelector('.js-zoho-execute-out');
-        if (!window.confirm('Create this invoice in Zoho and email it to the customer now?')) return;
+        const isSend = form.dataset.mode === 'create_and_send';
+        if (!window.confirm(isSend ? 'Create this invoice in Zoho and email it to the customer now?' : 'Create this invoice in Zoho Invoice as a DRAFT now? Nothing will be emailed.')) return;
         form.querySelector('button').disabled = true;
         try {
           const res = await post('/api/workspace/finance/zoho/invoice/execute', { approvalId: Number(form.dataset.id) });
-          out.textContent = 'Invoice ' + res.invoiceNumber + (res.sent ? ' created and emailed.' : ' created, but the email failed: ' + (res.sendError || 'unknown error'));
+          out.textContent = describeExecute(res);
         } catch (ex) {
           out.textContent = ex.message;
           form.querySelector('button').disabled = false;

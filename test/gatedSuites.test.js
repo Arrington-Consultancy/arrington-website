@@ -35,6 +35,7 @@ const GATED = [
   { file: 'scott/liveAiPressure.test.js', name: 'Scott live-AI pressure (SPENDS MONEY)', arms: 'RUN_SCOTT_LIVE_AI=true + ANTHROPIC_API_KEY + ENABLE_SCOTT_AI=true' },
   { file: 'scott/estimateCoverage.test.js', name: 'Does every worker actually estimate (SPENDS MONEY)', arms: 'RUN_SCOTT_ESTIMATE_PROBE=<run label> + ANTHROPIC_API_KEY + ENABLE_SCOTT_AI=true + DATABASE_URL' },
   { file: 'workspace/adversarialApi.test.js', name: 'workspace adversarial HTTP', arms: 'WORKSPACE_TEST_BASE_URL + WORKSPACE_TEST_TOM_PASSWORD + WORKSPACE_TEST_PASSPHRASE, against a running server' },
+  { file: 'workspace/pendingActionFlow.test.js', name: 'Ask Ruth pending-action flow over HTTP', arms: 'WORKSPACE_TEST_BASE_URL + WORKSPACE_TEST_TOM_PASSWORD + WORKSPACE_TEST_PASSPHRASE, against a running server with Zoho writes configured' },
   { file: 'workspace/liveAiPressure.test.js', name: 'workspace live-AI pressure (SPENDS MONEY)', arms: 'RUN_WORKSPACE_LIVE_AI=<run label> + ANTHROPIC_API_KEY + ENABLE_WORKSPACE_AI=true' }
 ];
 
@@ -127,6 +128,7 @@ test('what did not run in this invocation is reported', () => {
     // asserted nothing. Reporting a suite as run when half of it stood
     // down is the same dishonesty the alert's rule 4 forbids.
     'workspace/adversarialApi.test.js': !!(env.WORKSPACE_TEST_BASE_URL && env.WORKSPACE_TEST_TOM_PASSWORD && env.WORKSPACE_TEST_PASSPHRASE),
+    'workspace/pendingActionFlow.test.js': !!(env.WORKSPACE_TEST_BASE_URL && env.WORKSPACE_TEST_TOM_PASSWORD && env.WORKSPACE_TEST_PASSPHRASE),
     'workspace/liveAiPressure.test.js': !!(env.RUN_WORKSPACE_LIVE_AI && env.ANTHROPIC_API_KEY && env.ENABLE_WORKSPACE_AI === 'true')
   };
 
