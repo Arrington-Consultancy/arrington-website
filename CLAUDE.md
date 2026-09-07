@@ -1532,6 +1532,80 @@ Verified locally on a fresh Postgres before the PR: three seed passes
 pass reporting "already spent". Production confirmation is by the deploy
 log lines prefixed `ANNA CSV ingest:`.
 
+### Gmail connector: Tom's inbox in the Workspace (07/09/2026)
+
+Tom's instruction: "I'm going to create a Gmail api we can use directly in
+Arrington Workspace, set everything up and I will paste the keys into
+Railway." Built as a connector in the Zoho shape: credentials only in
+Railway, reads always on once configured, sending behind its own flag,
+human-initiated only, no AI path.
+
+**Files.** `lib/workspace/email/gmailClient.js` (OAuth against
+accounts.google.com, API on gmail.googleapis.com/gmail/v1/users/me: profile,
+INBOX counts, message listing with `format=metadata` and four headers, one
+plain-text send), `lib/workspace/email/summary.js` (the bounded Brain
+record), page `/workspace/email` and routes
+`/workspace/email/gmail/connect`, `/callback`,
+`POST /api/workspace/email/gmail/sync`, `POST /api/workspace/email/gmail/send`
+in `routes/workspace.js`, view `views/workspace/email.ejs`, nav link
+"Email" in `views/workspace/partials/shell-top.ejs`, boot line
+`Workspace email:` plus a boot probe in `server.js`, tests in
+`test/workspace/gmailClient.test.js` (13). Governance record:
+`review/gmail-connector-governance-submission-2026-09-07.md`.
+
+**Railway variables** (all on `arrington-prototype`, production):
+`GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN` (the
+credential; Railway only, never code, git, Drive or chat), and
+`ENABLE_GMAIL_SEND` (exactly `true` to allow sending; otherwise read-only).
+Every read is trimmed (the Railway trailing-newline failure mode).
+
+**Google Cloud setup, Tom's action, and the two points that matter.**
+A NEW project, separate from the "Continue with Google" prefill client
+(that one is External and secret-less and must stay so). OAuth consent
+screen user type **Internal** (the Workspace organisation): `gmail.readonly`
+is a restricted scope for External apps and would need Google's security
+assessment, and an External app left in Testing expires refresh tokens after
+seven days; Internal needs neither. Enable the Gmail API. Credentials: OAuth
+client ID, Web application, authorised redirect URI exactly
+`https://www.arringtonconsultancy.com/workspace/email/gmail/callback`.
+Then: set the id and secret in Railway, deploy, visit
+`/workspace/email/gmail/connect` as tom (ordinary browser window, not from
+inside another app), approve, copy the refresh token from the callback page
+into `GMAIL_REFRESH_TOKEN`. `access_type=offline` plus `prompt=consent` are
+set so every reconnect issues a fresh token. A token's scopes are fixed at
+issue: to send, set the flag, redeploy, reconnect.
+
+**Scopes.** Reads: `gmail.readonly` only. Sending: `gmail.send` only, and
+only when the flag is on at consent. Never modify, labels, settings,
+compose/insert or full mailbox; pinned by test. Reads request
+`format=metadata` with From, To, Subject and Date, so no message body is
+ever fetched by the workspace.
+
+**What the page does.** Reads the inbox live on every load (like the Zoho
+card: nothing stored by the page), with the unread count, the 25 most
+recent messages (sender, subject, date, Google's one-line snippet) and a
+Gmail-syntax search box. "Update the Company Brain" writes ONE record,
+`email.summary`: unread count plus the 15 most recent headers and
+snippets, confidential, stale after a day, no bodies. Sending is a plain
+text form (one recipient, subject, message), browser-confirmed, recorded
+in Activity as `email_sent`. Header values are newline-stripped before the
+RFC 822 message is built, so a subject cannot inject a Bcc line; pinned
+by test.
+
+**Brain access, same position as finance.** `email` is a new source
+class in `lib/workspace/lanes.js`, granted to no worker lane, and added to
+`GENERAL_SOURCE_CLASSES` in the orchestrator so only Tom's own general
+questions (and governance_assurance) reach it. Widening it to a lane is a
+worker permission change for Tom plus the governed route. This is an
+expansion of the approved v0.1 source map (which excluded email) and is
+routed to Governance and Assurance as a controlled change; see the
+submission in `review/`.
+
+**Not proven from this sandbox:** no live Google call has been made
+(Google's hosts are egress-blocked here). The first real request is the
+boot probe after Tom sets the variables, which logs `Gmail probe:
+credential accepted for <address>` or the failure.
+
 ### Zoho Invoice connector, reads and writes (06/09/2026, live)
 
 Arrington's real invoicing is Zoho Invoice, EU data centre, organisation

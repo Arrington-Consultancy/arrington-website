@@ -307,7 +307,7 @@ test('the exported general source classes cannot be mutated by a caller', () => 
   assert.ok(Object.isFrozen(orchestrator.GENERAL_SOURCE_CLASSES));
   assert.throws(() => { orchestrator.GENERAL_SOURCE_CLASSES.push('opportunity'); });
   assert.deepEqual([...orchestrator.GENERAL_SOURCE_CLASSES],
-    ['authority', 'strategy', 'worker_register', 'finance'],
+    ['authority', 'strategy', 'worker_register', 'finance', 'email'],
     'the general context changed; the no-lane system prompt names these classes and must be revisited');
 });
 
