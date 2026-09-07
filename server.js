@@ -1347,6 +1347,29 @@ loadPermissions().then(() => {
           .catch((err) => console.error(`Zoho Invoice probe FAILED: ${err && err.message ? err.message : err}`));
       }
     }
+    // Gmail connector (07/09/2026): same reporting discipline as Zoho,
+    // each variable by presence and length only, plus one real read at
+    // boot (never awaited) so a bad or revoked credential shows in the
+    // deploy log. The probe's error text carries no token.
+    {
+      const gmailClient = require('./lib/workspace/email/gmailClient');
+      const gmailVars = gmailClient.ENV_KEYS.map((k) => {
+        const raw = process.env[k];
+        if (raw === undefined) return `${k} not set`;
+        if (!String(raw).trim()) return `${k} EMPTY`;
+        return `${k} set (length ${String(raw).trim().length})`;
+      });
+      console.log('Workspace email: ' + [
+        `Gmail: ${gmailClient.isConfigured() ? 'CONFIGURED' : 'not configured'} (${gmailVars.join('; ')})`,
+        `Gmail sending: ${gmailClient.sendEnabled() ? 'ENABLED (human-initiated only; the token must have been issued with the flag on)' : `off (${gmailClient.SEND_FLAG} is not 'true'); reads unaffected`}`
+      ].join(' | '));
+      if (gmailClient.isConfigured()) {
+        gmailClient.getAccessToken()
+          .then((token) => gmailClient.getProfile(token))
+          .then((profile) => console.log(`Gmail probe: credential accepted for ${profile.emailAddress || '(address not returned)'}, ${profile.messagesTotal ?? '?'} message(s) in the mailbox.`))
+          .catch((err) => console.error(`Gmail probe FAILED: ${err && err.message ? err.message : err}`));
+      }
+    }
     // Governance finding F1 (Tom's decision, 31/08/2026): the workspace
     // now has three gates, and two of them are Railway variables that
     // are easy to get subtly wrong. This line reports each separately,

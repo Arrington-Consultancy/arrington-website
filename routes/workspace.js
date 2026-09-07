@@ -43,6 +43,8 @@ const financeSync = require('../lib/workspace/finance/sync');
 const xeroClient = require('../lib/workspace/finance/xeroClient');
 const zohoInvoiceClient = require('../lib/workspace/finance/zohoInvoiceClient');
 const invoiceIntent = require('../lib/workspace/finance/invoiceIntent');
+const gmailClient = require('../lib/workspace/email/gmailClient');
+const emailSummary = require('../lib/workspace/email/summary');
 const { encryptToken, tokenCryptoConfigured } = require('../lib/workspace/finance/tokenCrypto');
 const crm = require('../lib/crm/contacts');
 const erasure = require('../lib/crm/erasure');
@@ -470,6 +472,95 @@ code{background:#f4f4f4;padding:.25rem .5rem;border-radius:4px;word-break:break-
 <code>${tokens.refresh_token ? String(tokens.refresh_token).replace(/</g, '&lt;').replace(/>/g, '&gt;') : '(no refresh_token in response: check the Zoho app settings)'}</code>
 <p class="note">Once you have copied the token and set the Railway variable, close this page and redeploy. The Finance page will show Zoho Invoice data after the next deploy.</p>
 <p><a href="/workspace/finance">Back to Finance</a></p></body></html>`);
+    } catch (err) { next(err); }
+  });
+
+  // Email (07/09/2026, Tom's instruction). Tom's own Gmail inbox, read
+  // live through the Gmail API on every load, the same way the Finance
+  // page reads Zoho: nothing is stored by the page itself. Real
+  // correspondence, so it sits at the confidential level. The only
+  // writes are the two API routes below: a snapshot into the Company
+  // Brain, and a human-written send, both behind their own checks.
+  page('/workspace/email', async (req, res) => {
+    const clearanceId = req.workspaceClearance;
+    const permitted = clearanceCanSeeSensitivity(clearanceId, 'confidential');
+    const connectError = typeof req.query.connectError === 'string' ? req.query.connectError.slice(0, 300) : '';
+    const notice = typeof req.query.notice === 'string' ? req.query.notice.slice(0, 300) : '';
+    const q = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 200) : '';
+    const gmail = {
+      configured: gmailClient.isConfigured(),
+      sendEnabled: gmailClient.sendEnabled(),
+      canStartConnect: ['GMAIL_CLIENT_ID', 'GMAIL_CLIENT_SECRET'].every((k) => String(process.env[k] || '').trim()),
+      vars: gmailClient.ENV_KEYS.map((k) => `${k} ${String(process.env[k] || '').trim() ? 'set' : 'not set'}`),
+      profile: { emailAddress: '' }, counts: { unread: null, total: null }, messages: [], failed: 0, error: '', readAt: null
+    };
+    const errText = (err) => String(err && err.message ? err.message : err).slice(0, 300);
+    if (permitted && gmail.configured) {
+      gmail.readAt = new Date();
+      try {
+        const token = await gmailClient.getAccessToken();
+        const [profile, counts, inbox] = await Promise.allSettled([
+          gmailClient.getProfile(token),
+          gmailClient.getInboxCounts(token),
+          gmailClient.listInbox(token, { maxResults: 25, q })
+        ]);
+        if (profile.status === 'fulfilled') gmail.profile = profile.value;
+        if (counts.status === 'fulfilled') gmail.counts = counts.value;
+        if (inbox.status === 'fulfilled') { gmail.messages = inbox.value.messages; gmail.failed = inbox.value.failed; }
+        else gmail.error = errText(inbox.reason);
+        if (profile.status === 'rejected' && !gmail.error) gmail.error = errText(profile.reason);
+      } catch (err) {
+        gmail.error = errText(err);
+      }
+    }
+    res.render('workspace/email', {
+      ...viewer(req),
+      counts: await navCounts(clearanceId),
+      permitted, gmail, q, connectError, notice,
+      redirectUri: gmailClient.CANONICAL_REDIRECT_URI,
+      summaryCount: emailSummary.SUMMARY_MESSAGE_COUNT,
+      csrfToken: generateCsrfToken(req, res)
+    });
+  });
+
+  // Gmail OAuth: same shape as Zoho. The callback renders the refresh
+  // token once for Tom to copy into Railway; nothing is stored here.
+  app.get('/workspace/email/gmail/connect', requireWorkspacePageAccess, (req, res) => {
+    if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'confidential')) return res.redirect('/workspace/email');
+    const missing = ['GMAIL_CLIENT_ID', 'GMAIL_CLIENT_SECRET'].filter((k) => !(process.env[k] && String(process.env[k]).trim()));
+    if (missing.length) return res.redirect('/workspace/email?connectError=' + encodeURIComponent(`Cannot start the Gmail connection: ${missing.join(' and ')} ${missing.length === 1 ? 'is' : 'are'} empty in Railway. Fill it in, let Railway redeploy, then try again.`));
+    const state = crypto.randomBytes(24).toString('hex');
+    req.session.gmailOAuthState = state;
+    res.redirect(gmailClient.buildAuthorizeUrl(state));
+  });
+
+  app.get('/workspace/email/gmail/callback', requireWorkspacePageAccess, async (req, res, next) => {
+    try {
+      if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'confidential')) return res.redirect('/workspace/email');
+      const expectedState = req.session.gmailOAuthState;
+      delete req.session.gmailOAuthState;
+      if (req.query.error) {
+        return res.redirect(`/workspace/email?connectError=${encodeURIComponent(`Google declined the connection: ${String(req.query.error).slice(0, 100)}`)}`);
+      }
+      if (!expectedState || req.query.state !== expectedState) {
+        return res.redirect(`/workspace/email?connectError=${encodeURIComponent('That connection attempt could not be verified (state mismatch). Start again from the Email page, in an ordinary browser window.')}`);
+      }
+      if (typeof req.query.code !== 'string' || !req.query.code) {
+        return res.redirect(`/workspace/email?connectError=${encodeURIComponent('Google did not return an authorisation code.')}`);
+      }
+      const tokens = await gmailClient.exchangeCodeForTokens(req.query.code);
+      const nonce = res.locals.nonce || '';
+      const esc = (v) => String(v).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      res.setHeader('Cache-Control', 'no-store');
+      res.send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Gmail connected</title>
+<style nonce="${nonce}">body{font-family:system-ui,sans-serif;max-width:640px;margin:4rem auto;padding:0 1.5rem}
+code{background:#f4f4f4;padding:.25rem .5rem;border-radius:4px;word-break:break-all;display:block;margin:1rem 0;font-size:.9rem}
+.note{color:#555;font-size:.9rem;margin-top:2rem}</style></head>
+<body><h1>Gmail connected</h1>
+<p>Copy the refresh token below and set it as <strong>GMAIL_REFRESH_TOKEN</strong> in Railway. Railway redeploys on its own. This token will not be shown again, and it must not be pasted anywhere else.</p>
+<code>${tokens.refresh_token ? esc(tokens.refresh_token) : '(no refresh_token in response: Google issues one only on a consent it showed; press Connect again and approve)'}</code>
+<p class="note">Scopes granted: ${esc(tokens.scope || '(not reported)')}. Once the Railway variable is set, close this page. The Email page will show the inbox after the next deploy.</p>
+<p><a href="/workspace/email">Back to Email</a></p></body></html>`);
     } catch (err) { next(err); }
   });
 
@@ -1048,6 +1139,67 @@ async function createAndSendZohoInvoice({ actor, customerId = '', customerEmail 
   }
   return { invoiceNumber: invoice.invoice_number, invoiceId: invoice.invoice_id, total: invoice.total, createdCustomer, sent, sendError };
 }
+
+// Email: snapshot the inbox into the Company Brain. A human presses the
+// button; the record is bounded (see lib/workspace/email/summary.js) and
+// always confidential.
+router.post('/api/workspace/email/gmail/sync', requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
+  try {
+    if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'confidential')) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    if (!gmailClient.isConfigured()) return res.status(400).json({ error: 'Gmail is not connected.' });
+    const token = await gmailClient.getAccessToken();
+    const [profile, counts, inbox] = await Promise.all([
+      gmailClient.getProfile(token),
+      gmailClient.getInboxCounts(token),
+      gmailClient.listInbox(token, { maxResults: emailSummary.SUMMARY_MESSAGE_COUNT })
+    ]);
+    const now = new Date();
+    const record = await emailSummary.syncEmailSummaryRecord(repo, { profile, counts, messages: inbox.messages, now });
+    await repo.addActivity({
+      actor: req.session.user.username,
+      eventType: 'email_brain_synced',
+      summary: `Updated the Company Brain from Gmail: ${record.meta.messages} message header(s), ${record.meta.unread === null ? 'unread count unavailable' : `${record.meta.unread} unread`}.`
+    });
+    res.json({ ok: true, messages: record.meta.messages, unread: record.meta.unread, syncedAt: now.toISOString() });
+  } catch (err) {
+    if (err && /^Gmail API |^Google token |GMAIL_REFRESH_TOKEN/.test(String(err.message))) return res.status(502).json({ error: String(err.message).slice(0, 300) });
+    next(err);
+  }
+});
+
+// Email: send one plain-text message from Tom's own Gmail account. Gated
+// in the client (ENABLE_GMAIL_SEND, checked before any network call and
+// again here), human-initiated only, confirmed in the browser, recorded
+// in the Activity log. No AI path reaches this route.
+router.post('/api/workspace/email/gmail/send', requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
+  try {
+    if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'confidential')) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    if (!gmailClient.sendEnabled()) return res.status(400).json({ error: `Sending email is switched off (${gmailClient.SEND_FLAG} is not 'true').` });
+    if (!gmailClient.isConfigured()) return res.status(400).json({ error: 'Gmail is not connected.' });
+    const to = String((req.body && req.body.to) || '').trim().slice(0, 200);
+    const subject = String((req.body && req.body.subject) || '').trim().slice(0, 200);
+    const text = String((req.body && req.body.text) || '').slice(0, 20000);
+    const token = await gmailClient.getAccessToken();
+    const profile = await gmailClient.getProfile(token);
+    if (!profile.emailAddress) return res.status(502).json({ error: 'Gmail did not report the sending address; nothing was sent.' });
+    const result = await gmailClient.sendMessage(token, { from: profile.emailAddress, to, subject, text });
+    await repo.addActivity({
+      actor: req.session.user.username,
+      eventType: 'email_sent',
+      subject: `gmail:${result.id}`,
+      summary: `Sent an email from ${profile.emailAddress} to ${to}: "${subject.slice(0, 120)}".`
+    });
+    res.json({ ok: true, id: result.id, threadId: result.threadId, to });
+  } catch (err) {
+    if (err && err.name === 'GmailSendDisabledError') return res.status(400).json({ error: err.message });
+    if (err && /^(A |The |Gmail API |Google token )|GMAIL_REFRESH_TOKEN/.test(String(err.message))) return res.status(400).json({ error: String(err.message).slice(0, 300) });
+    next(err);
+  }
+});
 
 function zohoWriteError(err, res, next) {
   if (err && err.name === 'ZohoWritesDisabledError') return res.status(400).json({ error: err.message });

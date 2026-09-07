@@ -1,0 +1,147 @@
+<%- include('partials/shell-top', { pageTitle: 'Email', active: 'email' }) %>
+
+<h1 class="ws-h">Email</h1>
+<p class="ws-sub">Your own Gmail inbox, read live through the Gmail API. Nothing on this page is stored unless you press "Update the Company Brain", and even then only headers and one-line previews reach the Brain, never message bodies.</p>
+
+<% if (!permitted) { %>
+  <div class="ws-card"><p class="ws-empty">Your clearance does not include correspondence. Nothing here is shown to you, and the counts above are not computed for you.</p></div>
+<% } else { %>
+
+<% if (connectError) { %><div class="ws-card"><p class="ws-note-error"><%= connectError %></p></div><% } %>
+<% if (notice) { %><div class="ws-card"><p class="ws-meta"><%= notice %></p></div><% } %>
+
+<div class="ws-card">
+  <h2>Inbox</h2>
+  <% if (!gmail.configured) { %>
+    <p class="ws-empty">Not connected. Set <code>GMAIL_CLIENT_ID</code> and <code>GMAIL_CLIENT_SECRET</code> in Railway, let it redeploy, then use the connection controls at the bottom of this page.</p>
+  <% } else if (gmail.error) { %>
+    <p class="ws-note-error">Gmail could not be read: <%= gmail.error %></p>
+    <p class="ws-meta">Attempted <%= gmail.readAt ? new Date(gmail.readAt).toUTCString() : 'just now' %>. Nothing is cached: this page reads Gmail live on every load, so reloading retries. A 401 means the stored token was refused; reconnect below.</p>
+  <% } else { %>
+    <p class="ws-meta">
+      <span class="ws-badge ws-badge-<%= gmail.failed ? 'failed' : 'fresh' %>"><%= gmail.failed ? 'partial' : 'live' %></span>
+      <%= gmail.profile.emailAddress %>, read live at <%= gmail.readAt ? new Date(gmail.readAt).toUTCString() : 'page load' %>.
+      <% if (gmail.counts.unread !== null) { %><strong><%= gmail.counts.unread %> unread</strong><% if (gmail.counts.total !== null) { %> of <%= gmail.counts.total %> in the inbox<% } %>.<% } %>
+      <% if (gmail.failed) { %><%= gmail.failed %> message(s) could not be fetched and are missing below.<% } %>
+    </p>
+    <form class="ws-form-row" method="get" action="/workspace/email">
+      <input class="ws-input" type="text" name="q" value="<%= q %>" placeholder="Search the inbox (Gmail syntax: from:name, subject:word, newer_than:7d)" maxlength="200">
+      <button class="ws-btn ws-btn-quiet" type="submit">Search</button>
+    </form>
+    <% if (gmail.messages.length === 0) { %>
+      <p class="ws-empty">No messages<%= q ? ' matched that search' : ' in the inbox' %>.</p>
+    <% } else { %>
+    <div class="ws-table-wrap">
+    <table class="ws-table">
+      <tr><th>Date</th><th>From</th><th>Subject</th><th>Preview</th></tr>
+      <% gmail.messages.forEach(function (m) { %>
+        <tr class="<%= m.unread ? 'ws-row-unread' : '' %>">
+          <td class="ws-meta"><%= m.date ? new Date(m.date).toISOString().slice(0, 16).replace('T', ' ') : '' %></td>
+          <td><%= m.from %></td>
+          <td><%= m.subject || '(no subject)' %></td>
+          <td class="ws-meta"><%= m.snippet %></td>
+        </tr>
+      <% }) %>
+    </table>
+    </div>
+    <% } %>
+    <form id="wsEmailBrainForm" class="ws-form-row">
+      <button class="ws-btn" type="submit">Update the Company Brain</button>
+      <span class="ws-meta">Writes one snapshot record (unread count, the <%= summaryCount %> most recent senders, subjects and previews) so Ask Ruth can answer questions about what has come in. Confidential; no bodies.</span>
+    </form>
+    <p class="ws-note-error" id="wsEmailBrainError" hidden></p>
+    <p class="ws-meta" id="wsEmailBrainResult" hidden></p>
+  <% } %>
+</div>
+
+<% if (gmail.configured && gmail.sendEnabled) { %>
+<div class="ws-card">
+  <h2>Send an email</h2>
+  <p class="ws-meta">Sends from <%= gmail.profile && gmail.profile.emailAddress ? gmail.profile.emailAddress : 'your Gmail account' %> as plain text. You write it, you press send, and it is recorded in the Activity log. Nothing sends on its own.</p>
+  <form id="wsEmailSendForm">
+    <div class="ws-form-row">
+      <input class="ws-input" type="email" name="to" placeholder="To (one address)" maxlength="200" required autocomplete="off">
+    </div>
+    <div class="ws-form-row">
+      <input class="ws-input" type="text" name="subject" placeholder="Subject" maxlength="200" required>
+    </div>
+    <div class="ws-form-row">
+      <textarea class="ws-input" name="text" placeholder="Message" maxlength="20000" rows="8" required></textarea>
+    </div>
+    <div class="ws-form-row">
+      <button class="ws-btn" type="submit">Send</button>
+    </div>
+  </form>
+  <p class="ws-note-error" id="wsEmailSendError" hidden></p>
+  <p class="ws-meta" id="wsEmailSendResult" hidden></p>
+</div>
+<% } else if (gmail.configured) { %>
+<div class="ws-card">
+  <h2>Send an email</h2>
+  <p class="ws-empty">Switched off. Set <code>ENABLE_GMAIL_SEND=true</code> in Railway, let it redeploy, then reconnect Gmail below so the token carries the send scope. Until then this area is read-only.</p>
+</div>
+<% } %>
+
+<details class="ws-card">
+  <summary>Connection</summary>
+  <p class="ws-meta">Status: <strong><%= gmail.configured ? 'connected' : 'not connected' %></strong>. Credentials: <%= gmail.vars.join('; ') %>.</p>
+  <ol class="ws-meta">
+    <li>In Google Cloud, use a project whose OAuth consent screen is <strong>Internal</strong> (your Workspace organisation), with the Gmail API enabled. Internal avoids Google's restricted-scope review and stops refresh tokens expiring after seven days.</li>
+    <li>Credentials, OAuth client ID, type Web application, authorised redirect URI exactly <code><%= redirectUri %></code>.</li>
+    <li>Set <code>GMAIL_CLIENT_ID</code> and <code>GMAIL_CLIENT_SECRET</code> in Railway and let it redeploy.</li>
+    <li>Press Connect below, approve in Google as the mailbox owner, and copy the refresh token the next page shows once into <code>GMAIL_REFRESH_TOKEN</code> in Railway.</li>
+  </ol>
+  <% if (gmail.canStartConnect) { %>
+    <p><a class="ws-btn" href="/workspace/email/gmail/connect">Connect<%= gmail.configured ? ' again (issues a new token)' : '' %></a></p>
+    <p class="ws-meta">Start this in an ordinary browser window, not from inside another app, or the return leg lands in a different session and reports a state mismatch.</p>
+  <% } else { %>
+    <p class="ws-empty">Connect is unavailable until <code>GMAIL_CLIENT_ID</code> and <code>GMAIL_CLIENT_SECRET</code> are set.</p>
+  <% } %>
+</details>
+
+<script nonce="<%= nonce %>">
+  (function () {
+    var csrf = document.querySelector('meta[name="csrf-token"]').content;
+    async function post(url, body) {
+      var r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf }, body: JSON.stringify(body || {}) });
+      var data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'That did not work.');
+      return data;
+    }
+    var brainForm = document.getElementById('wsEmailBrainForm');
+    if (brainForm) {
+      brainForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var btn = brainForm.querySelector('button'); var err = document.getElementById('wsEmailBrainError'); var out = document.getElementById('wsEmailBrainResult');
+        err.hidden = true; out.hidden = true; btn.disabled = true;
+        try {
+          var d = await post('/api/workspace/email/gmail/sync', {});
+          out.textContent = 'Company Brain updated: ' + d.messages + ' message header(s) and the unread count, recorded at ' + d.syncedAt + '.';
+          out.hidden = false;
+        } catch (ex) { err.textContent = ex.message; err.hidden = false; }
+        btn.disabled = false;
+      });
+    }
+    var sendForm = document.getElementById('wsEmailSendForm');
+    if (sendForm) {
+      sendForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var to = sendForm.to.value.trim();
+        if (!window.confirm('Send this email to ' + to + ' now from your Gmail account?')) return;
+        var btn = sendForm.querySelector('button'); var err = document.getElementById('wsEmailSendError'); var out = document.getElementById('wsEmailSendResult');
+        err.hidden = true; out.hidden = true; btn.disabled = true;
+        try {
+          var d = await post('/api/workspace/email/gmail/send', { to: to, subject: sendForm.subject.value, text: sendForm.text.value });
+          out.textContent = 'Sent to ' + to + ' (Gmail message id ' + d.id + ').';
+          out.hidden = false;
+          sendForm.reset();
+        } catch (ex) { err.textContent = 'Not sent: ' + ex.message; err.hidden = false; }
+        btn.disabled = false;
+      });
+    }
+  })();
+</script>
+
+<% } %>
+
+<%- include('partials/shell-bottom') %>
