@@ -3262,6 +3262,40 @@ own staging isolation) rather than sharing production's.
   changing the password variable alone does nothing on an already-seeded
   database.
 
+**Marc, Ivybridge Taxis (10/09/2026), and a secrets fix on the way.**
+Tom: "I need a login to scott armchairs for Marc, Ivybridge taxis,
+please make one." A real prospective client (the same name already
+matched by the `opportunity_builder` routing keyword in the Workspace,
+`lib/workspace/orchestrator.js` `ROUTING_RULES`), not part of Scott's
+fiction, being given a viewer login the same shape as Will's and
+Phil's: one `client` user row, one additive `page_access` row on the
+Scott synthetic page, one `audit_log` entry attributed to Tom.
+
+**The one thing changed from the Phil precedent: no plaintext
+password anywhere.** Phil's own migration (04/09/2026, below) put his
+password in a code comment, which is still sitting in git history on
+`main` — a real, if low-stakes, breach of the standing "no secrets in
+code, GitHub, Drive or chat" rule. Marc's migration takes the password
+only from a Railway variable Tom sets himself for one deploy, then
+removes, the exact pattern already used for `NAT_PASSWORD`/
+`TOM_PASSWORD`: `SCOTT_GUEST_MARC_PASSWORD` (required; the migration is
+a silent no-op without it, and the boot log says so by name) and
+`SCOTT_GUEST_MARC_USERNAME` (optional, defaults to `marc`). Idempotent
+exactly like Will's and Phil's: user creation is `ON CONFLICT DO
+NOTHING`, and the `page_access` row is its own guard. Verified locally
+end to end against a fresh database: the variable unset is a clean
+no-op naming what is missing; set, it creates the account and grants
+access; set again (a redeploy) it is a no-op the other way, "already
+has page access"; a custom username override works; over real HTTP,
+anonymous `/scott` gets the ordinary invited-guest redirect to
+`/scott/login` (unchanged, per the note below), Marc's login with a
+wrong password stays on the login page, and his correct login reaches
+`/scott` at 200 with real content.
+
+If a future guest account is needed, follow this shape rather than
+Phil's: a new guarded block sourcing username/password from Railway
+variables named for that person, never a value written into the file.
+
 **Real invited viewer: Will (01/09/2026).** A real `users` account
 (`will`, role `client`) hit the "valid login, not invited" branch of
 `POST /scott/login` on production, then `GET /scott` 404'd per
