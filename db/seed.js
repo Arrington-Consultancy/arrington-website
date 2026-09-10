@@ -5073,6 +5073,76 @@ async function seed() {
     }
   }
 
+  // Scott AI Demonstration — create Marc's viewer account and grant access
+  // (10/09/2026). Tom's instruction: "I need a login to scott armchairs
+  // for Marc, Ivybridge taxis, please make one" — a real prospective
+  // client (Ivybridge Taxis; the same name already matched by the
+  // opportunity_builder routing keyword in the Workspace, see
+  // lib/workspace/orchestrator.js's ROUTING_RULES), not part of Scott's
+  // fiction. Same shape as Will's and Phil's accounts (01/09 and
+  // 04/09/2026): one 'client' user row, one additive page_access row on
+  // the Scott synthetic page, one audit_log entry attributed to Tom.
+  //
+  // Unlike Phil's migration, the password is never written to code, git
+  // or chat: it comes only from Railway variables Tom sets himself for
+  // one deploy, the same pattern as NAT_PASSWORD/TOM_PASSWORD. Phil's
+  // own migration put a plaintext password in a code comment, which is
+  // now sitting in git history on main — a real, if low-stakes,
+  // violation of "no secrets in code, GitHub, Drive or chat" that this
+  // migration does not repeat. (Phil was advised in that same comment to
+  // change his password once logged in; nothing here rotates it, that is
+  // Tom's and Phil's to do.)
+  //
+  // Armed by SCOTT_GUEST_MARC_PASSWORD; SCOTT_GUEST_MARC_USERNAME
+  // defaults to 'marc'. Unset: this does nothing, silently, so a bare
+  // deploy is unaffected and the boot log says which variable is
+  // missing rather than staying quiet about it. Idempotent: user
+  // creation is ON CONFLICT DO NOTHING (safe on a redeploy even with
+  // the variable still set) and the page_access row is itself the
+  // guard, same as Will's and Phil's.
+  {
+    const marcPassword = process.env.SCOTT_GUEST_MARC_PASSWORD;
+    if (!marcPassword) {
+      console.log("Scott AI Demonstration: 'marc' account not created (SCOTT_GUEST_MARC_PASSWORD is unset). Set it plus optionally SCOTT_GUEST_MARC_USERNAME in Railway for one deploy, then remove it, the same way NAT_PASSWORD/TOM_PASSWORD are handled.");
+    } else {
+      const marcUsername = (process.env.SCOTT_GUEST_MARC_USERNAME || 'marc').trim().toLowerCase();
+      const { rows: pageRows } = await db.query('SELECT id, slug FROM pages WHERE slug = $1', [SCOTT_PAGE_SLUG]);
+      if (pageRows.length) {
+        const pageId = pageRows[0].id;
+        const hash = await bcrypt.hash(marcPassword, BCRYPT_ROUNDS);
+        await db.query(
+          `INSERT INTO users (username, password_hash, role) VALUES ($1, $2, 'client') ON CONFLICT (username) DO NOTHING`,
+          [marcUsername, hash]
+        );
+        const { rows: marcRows } = await db.query('SELECT id FROM users WHERE username = $1', [marcUsername]);
+        if (marcRows.length) {
+          const marcId = marcRows[0].id;
+          const { rows: existing } = await db.query(
+            'SELECT 1 FROM page_access WHERE page_id = $1 AND user_id = $2',
+            [pageId, marcId]
+          );
+          if (existing.length === 0) {
+            await db.query(
+              'INSERT INTO page_access (page_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+              [pageId, marcId]
+            );
+            const { rows: tomRows } = await db.query(`SELECT id FROM users WHERE username = 'tom'`);
+            const actorId = tomRows.length ? tomRows[0].id : marcId;
+            await db.query(
+              'INSERT INTO audit_log (user_id, action, section_key, detail) VALUES ($1, $2, $3, $4)',
+              [actorId, 'page_access_update', pageRows[0].slug, `Page access granted to '${marcUsername}' for "${pageRows[0].slug}", requested by Tom Arrington, applied via seed migration (10/09/2026). Marc is a prospective client at Ivybridge Taxis.`]
+            );
+            console.log(`Scott AI Demonstration: '${marcUsername}' account created and page access granted.`);
+          } else {
+            console.log(`Scott AI Demonstration: '${marcUsername}' already has page access, skipping.`);
+          }
+        }
+      } else {
+        console.log("Scott AI Demonstration: page-access grant for 'marc' skipped (page not found yet).");
+      }
+    }
+  }
+
   // Scott AI Demonstration — create Phil's viewer account and grant access
   // (04/09/2026). Phil is a director at Babcock, a friend of Tom's, being
   // given access to the Scott demo. Follows the same pattern as Will's
