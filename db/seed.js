@@ -5073,6 +5073,46 @@ async function seed() {
     }
   }
 
+  // Scott AI Demonstration — grant Marc's (already-created) account access
+  // (10/09/2026). Tom created 'marc' himself via the admin panel's Manage
+  // Users (the correct, immediate, no-deploy way to make a login — the
+  // guarded, secret-sourced migration below this comment, from earlier
+  // the same day, is now unnecessary and left inert rather than reused).
+  // Marc then hit the same "valid login, not invited" wall Will did on
+  // 01/09/2026, so this performs the identical grant: one additive
+  // page_access row, one audit_log entry attributed to Tom. No password
+  // is touched here at all, because there is none to touch — the account
+  // already exists. Idempotent: the existing page_access row is the guard.
+  {
+    const { rows: pageRows } = await db.query('SELECT id, slug FROM pages WHERE slug = $1', [SCOTT_PAGE_SLUG]);
+    const { rows: marcRows } = await db.query(`SELECT id FROM users WHERE username = 'marc'`);
+    if (pageRows.length && marcRows.length) {
+      const pageId = pageRows[0].id;
+      const marcId = marcRows[0].id;
+      const { rows: existing } = await db.query(
+        'SELECT 1 FROM page_access WHERE page_id = $1 AND user_id = $2',
+        [pageId, marcId]
+      );
+      if (existing.length === 0) {
+        await db.query(
+          'INSERT INTO page_access (page_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+          [pageId, marcId]
+        );
+        const { rows: tomRows } = await db.query(`SELECT id FROM users WHERE username = 'tom'`);
+        const actorId = tomRows.length ? tomRows[0].id : marcId;
+        await db.query(
+          'INSERT INTO audit_log (user_id, action, section_key, detail) VALUES ($1, $2, $3, $4)',
+          [actorId, 'page_access_update', pageRows[0].slug, `Page access granted to 'marc' for "${pageRows[0].slug}", requested by Tom Arrington, applied via seed migration (10/09/2026). Marc is a prospective client at Ivybridge Taxis.`]
+        );
+        console.log("Scott AI Demonstration: page access granted to 'marc'.");
+      } else {
+        console.log("Scott AI Demonstration: 'marc' already has page access, skipping.");
+      }
+    } else {
+      console.log("Scott AI Demonstration: page-access grant for 'marc' skipped (page or user not found yet).");
+    }
+  }
+
   // Scott AI Demonstration — create Marc's viewer account and grant access
   // (10/09/2026). Tom's instruction: "I need a login to scott armchairs
   // for Marc, Ivybridge taxis, please make one" — a real prospective
