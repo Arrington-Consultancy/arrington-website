@@ -3292,9 +3292,33 @@ anonymous `/scott` gets the ordinary invited-guest redirect to
 wrong password stays on the login page, and his correct login reaches
 `/scott` at 200 with real content.
 
-If a future guest account is needed, follow this shape rather than
-Phil's: a new guarded block sourcing username/password from Railway
-variables named for that person, never a value written into the file.
+**Superseded the same day: Tom correctly pushed back.** "Quality
+control, this is wrong, why are we using a different process?" The
+account-creation migration above (`SCOTT_GUEST_MARC_PASSWORD`) is
+unnecessary: `POST /api/admin/user` (Manage Users) creates a login
+immediately, no deploy, and `GET /api/admin/pages` returns every page
+including the Scott synthetic row unfiltered, so the existing Page
+access panel can grant it too. Tom created `marc` himself via Manage
+Users and hit Will's exact "valid login, not invited" wall. A second,
+grant-only migration (same shape as Will's, no password touched
+because there is none to touch) closed it. Verified end to end against
+a fresh database seeded with a simulated pre-existing `marc` account:
+the grant fires, is idempotent on a rerun, and over real HTTP the
+login (typed with a capital M, matching Tom's own input, which the
+route lowercases) reaches `/scott` at 200.
+
+**The lesson, stated plainly rather than glossed over:** the account-
+creation migration should never have been built. Manage Users already
+does that instantly. It is left in place, inert (it never fires unless
+`SCOTT_GUEST_MARC_PASSWORD` is explicitly set, which it now never
+will be), rather than pulled out mid-conversation for a change nobody
+asked for.
+
+If a future guest needs viewing access, use Manage Users plus Page
+access directly. The grant-only migration shape above is a fallback
+only for a case where the account already exists and its slug/URL
+makes the Page access panel awkward to reach live; it is not the
+normal path.
 
 **Real invited viewer: Will (01/09/2026).** A real `users` account
 (`will`, role `client`) hit the "valid login, not invited" branch of
