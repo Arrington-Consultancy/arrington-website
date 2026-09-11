@@ -13,6 +13,7 @@ const { summarizeForTom } = require('../lib/productGuideAI');
 // Where the visitor's details came from on this submission ('' typed,
 // 'google' the Continue with Google prefill). Only one value is
 // accepted, so a request cannot write arbitrary text into the record.
+const { parseAttribution, describeAttribution } = require('../lib/leadAttribution');
 const signupSource = (body) => (body && body.prefillSource === 'google' ? 'google' : '');
 const sourceLine = (src) => (src === 'google' ? 'Signed up using Continue with Google.' : '');
 
@@ -260,10 +261,11 @@ async function finalizeContact(submission, { name, email, wantsContact, token })
     ? `${result.recommendation.name}${result.recommendation.pricePence ? ` (£${(result.recommendation.pricePence / 100).toLocaleString('en-GB')})` : ' (£0)'}`
     : submission.recommendation_id;
 
+  const attribution = parseAttribution((req.body || {}).attribution);
   db.query(
-    `INSERT INTO leads (kind, name, email, message, signup_source)
-     VALUES ('product_guide', $1, $2, $3, $4)`,
-    [name, email, `Product Guide completed. Recommended: ${recommendationLabel}. Contact requested: ${wantsContact ? 'Yes' : 'No'}.`, signupSource(req.body)]
+    `INSERT INTO leads (kind, name, email, message, signup_source, attribution)
+     VALUES ('product_guide', $1, $2, $3, $4, $5::jsonb)`,
+    [name, email, `Product Guide completed. Recommended: ${recommendationLabel}. Contact requested: ${wantsContact ? 'Yes' : 'No'}.`, signupSource(req.body), JSON.stringify(attribution)]
   ).catch((err) => console.error('Product Guide lead insert failed:', err.message));
 
   if (!transporter) {
@@ -290,6 +292,7 @@ async function finalizeContact(submission, { name, email, wantsContact, token })
       `Name: ${name}`,
       `Email: ${email}`,
       `Wants to be contacted: ${wantsContact ? 'Yes' : 'No'}`,
+      ...describeAttribution(attribution),
       '',
       `RECOMMENDED: ${recommendationLabel}`,
       `Link: ${result.recommendation && result.recommendation.path ? `${SITE_ORIGIN}${result.recommendation.path}` : `${SITE_ORIGIN}/where-to-start`}`,

@@ -5,6 +5,7 @@ const { requireCapability, getPermissionsMatrix, refreshPermissions, ALL_CAPABIL
 const db = require('../db/pool');
 const defaults = require('../db/defaults');
 const themes = require('../db/themes');
+const { attributionSummary } = require('../lib/leadAttribution');
 
 const BCRYPT_ROUNDS = 12;
 
@@ -68,10 +69,12 @@ router.get('/log', requireCapability('view_activity'), async (req, res) => {
 router.get('/leads', requireCapability('view_activity'), async (req, res) => {
   try {
     const { rows } = await db.query(
-      `SELECT id, kind, name, email, phone, message, preferred_time, document, created_at
+      `SELECT id, kind, name, email, phone, message, preferred_time, document, signup_source, attribution, created_at
        FROM leads ORDER BY created_at DESC LIMIT 100`
     );
-    res.json({ leads: rows });
+    // One short "where did this come from" phrase per row, derived here so
+    // the panel never has to interpret the raw attribution object.
+    res.json({ leads: rows.map((r) => ({ ...r, source_summary: attributionSummary(r.attribution) })) });
   } catch (err) {
     console.error('Leads list error:', err);
     res.status(500).json({ error: 'Failed to load leads' });

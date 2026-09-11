@@ -276,7 +276,8 @@
                         consentSaveEmail: document.getElementById('cgr-consent-save-email').checked,
                         consentContact: document.getElementById('cgr-consent-contact').checked,
                         website: document.getElementById('cgr-website-hp').value,
-                        prefillSource: window.__gPrefillSource || ''
+                        prefillSource: window.__gPrefillSource || '',
+                        attribution: window.__leadAttribution ? window.__leadAttribution() : {}
                     })
                 })
                     .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
