@@ -900,6 +900,9 @@
                 });
                 const kindLabel = lead.kind === 'pdf_download' ? 'PDF download'
                     : lead.kind === 'quiz_results' ? 'Dependency quiz'
+                    : lead.kind === 'product_guide' ? 'Product Guide'
+                    : lead.kind === 'market_ready_test' ? 'Market Ready Test'
+                    : lead.kind === 'commercial_gaps' ? 'Commercial Gaps Review'
                     : 'Contact / booking';
                 const parts = [`<span class="log-action">${escapeHtml(kindLabel)}</span><br>`];
                 if (lead.name) parts.push(`<strong>${escapeHtml(lead.name)}</strong> `);
@@ -908,6 +911,11 @@
                 if (lead.preferred_time) parts.push(`Preferred time: ${escapeHtml(lead.preferred_time)}<br>`);
                 if (lead.document) parts.push(`Document: ${escapeHtml(lead.document)}<br>`);
                 if (lead.message) parts.push(`"${escapeHtml(lead.message)}"<br>`);
+                // Where the enquiry came from (campaign / click / referrer /
+                // direct), server-derived; absent on rows captured before
+                // 11/09/2026 or when the browser sent nothing.
+                if (lead.source_summary) parts.push(`Source: ${escapeHtml(lead.source_summary)}${lead.attribution && lead.attribution.landing_page ? ` (landed on ${escapeHtml(lead.attribution.landing_page)})` : ''}<br>`);
+                if (lead.signup_source === 'google') parts.push('Signed up with Google<br>');
                 parts.push(`<span class="log-time">${timeStr}</span>`);
                 return `<div class="cms-log-entry">${parts.join('')}</div>`;
             }).join('');

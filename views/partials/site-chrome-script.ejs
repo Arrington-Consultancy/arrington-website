@@ -18,6 +18,42 @@ document.querySelectorAll('.js-phone-link').forEach(a => {
     a.href = 'tel:' + digits;
 });
 
+// Where this visit came from. Captured once per browser session on the
+// first page seen (landing page, referrer, utm_* and the Google Ads click
+// id) and sent with every form that writes an enquiry, so the source of a
+// lead is a recorded fact. The server allowlists and caps every value
+// (lib/leadAttribution.js). Session storage can be unavailable (private
+// window, blocked site data), so every access is wrapped and a form still
+// submits with nothing attached rather than failing.
+window.__leadAttribution = (function () {
+    const KEY = 'arrLeadAttribution';
+    let cached = null;
+    function fromPage() {
+        const out = {
+            landing_page: (location.pathname + location.search).slice(0, 300),
+            referrer: (document.referrer || '').slice(0, 500),
+            captured_at: new Date().toISOString()
+        };
+        const params = new URLSearchParams(location.search);
+        ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid'].forEach(k => {
+            const v = params.get(k);
+            if (v) out[k] = v.slice(0, 200);
+        });
+        return out;
+    }
+    try {
+        const stored = sessionStorage.getItem(KEY);
+        if (stored) cached = JSON.parse(stored);
+        if (!cached || typeof cached !== 'object' || Array.isArray(cached)) {
+            cached = fromPage();
+            sessionStorage.setItem(KEY, JSON.stringify(cached));
+        }
+    } catch (err) {
+        cached = cached || fromPage();
+    }
+    return function () { return cached || {}; };
+})();
+
 // Google Ads conversion: visitor tapped a phone, email or WhatsApp link.
 // Runs after the reassembly above so the href prefixes are live.
 document.querySelectorAll('a[href^="tel:"], a[href^="mailto:"], a[href^="https://wa.me/"], a[href^="https://api.whatsapp.com/"]').forEach(a => {
@@ -43,6 +79,7 @@ document.querySelectorAll('a[href^="tel:"], a[href^="mailto:"], a[href^="https:/
         e.preventDefault();
         const btn = form.querySelector('button[type="submit"]');
         const data = Object.fromEntries(new FormData(form).entries());
+        data.attribution = window.__leadAttribution ? window.__leadAttribution() : {};
         btn.disabled = true;
         status.textContent = 'Sending...';
         status.classList.remove('lead-form-error');

@@ -4281,6 +4281,42 @@
         a.href = 'tel:' + digits;
     });
 
+    // Where this visit came from. Captured once per browser session on the
+    // first page seen (landing page, referrer, utm_* and the Google Ads click
+    // id) and sent with every form that writes an enquiry, so the source of a
+    // lead is a recorded fact. The server allowlists and caps every value
+    // (lib/leadAttribution.js). Session storage can be unavailable (private
+    // window, blocked site data), so every access is wrapped and a form still
+    // submits with nothing attached rather than failing.
+    window.__leadAttribution = (function () {
+        const KEY = 'arrLeadAttribution';
+        let cached = null;
+        function fromPage() {
+            const out = {
+                landing_page: (location.pathname + location.search).slice(0, 300),
+                referrer: (document.referrer || '').slice(0, 500),
+                captured_at: new Date().toISOString()
+            };
+            const params = new URLSearchParams(location.search);
+            ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid'].forEach(k => {
+                const v = params.get(k);
+                if (v) out[k] = v.slice(0, 200);
+            });
+            return out;
+        }
+        try {
+            const stored = sessionStorage.getItem(KEY);
+            if (stored) cached = JSON.parse(stored);
+            if (!cached || typeof cached !== 'object' || Array.isArray(cached)) {
+                cached = fromPage();
+                sessionStorage.setItem(KEY, JSON.stringify(cached));
+            }
+        } catch (err) {
+            cached = cached || fromPage();
+        }
+        return function () { return cached || {}; };
+    })();
+
     // Google Ads conversion: visitor tapped a phone, email or WhatsApp link.
     // Runs after the reassembly above so the href prefixes are live.
     // The three kinds currently share one Ads conversion label (Ads can't
@@ -4334,6 +4370,7 @@
             e.preventDefault();
             const btn = form.querySelector('button[type="submit"]');
             const data = Object.fromEntries(new FormData(form).entries());
+            data.attribution = window.__leadAttribution ? window.__leadAttribution() : {};
             btn.disabled = true;
             status.textContent = 'Sending...';
             status.classList.remove('lead-form-error');
@@ -4398,6 +4435,7 @@
             const btn = form.querySelector('button[type="submit"]');
             const data = Object.fromEntries(new FormData(form).entries());
             data.doc = currentDoc;
+            data.attribution = window.__leadAttribution ? window.__leadAttribution() : {};
             btn.disabled = true;
             status.textContent = 'One moment...';
             status.classList.remove('lead-form-error');
@@ -4409,8 +4447,17 @@
                 });
                 const result = await res.json();
                 if (!res.ok) throw new Error(result.error || 'Something went wrong.');
+                // A PDF download is not a phone, email or WhatsApp contact, so it
+                // no longer shares that Google Ads conversion label (it did until
+                // 11/09/2026, which inflated the contact count). It counts as an
+                // Ads conversion only when it has a label of its own: set
+                // GOOGLE_ADS_PDF_CONVERSION_LABEL on the service once the
+                // conversion action exists in the Ads account. The GA4 event
+                // fires regardless.
                 if (typeof gtag === 'function') {
-                    gtag('event', 'conversion', { 'send_to': 'AW-18129914078/h_2rCJeH8aYcEN6RgsVD' });
+<% if (googleAdsPdfConversionLabel) { %>
+                    gtag('event', 'conversion', { 'send_to': 'AW-18129914078/<%= googleAdsPdfConversionLabel %>' });
+<% } %>
                     gtag('event', 'document_request_submit', { event_category: 'documents', document_name: currentDoc || 'unknown' });
                 }
                 if (result.url) window.location.href = result.url;

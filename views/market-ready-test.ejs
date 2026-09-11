@@ -682,6 +682,7 @@
                 body: JSON.stringify({
                     website: document.getElementById('mrt-website-hp').value,
                     prefillSource: window.__gPrefillSource || '',
+                    attribution: window.__leadAttribution ? window.__leadAttribution() : {},
                     firstName: state.contact.firstName,
                     lastName: state.contact.lastName,
                     email: state.contact.email,
