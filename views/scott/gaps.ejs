@@ -58,16 +58,32 @@
       <% } else { %>
         <div class="sc-list">
           <% brainChanges.forEach(function (c) { %>
-            <% var admitted = c.status === 'approved'; var retracted = c.status === 'rejected' && /^Retracted by /.test(c.decision_note || ''); %>
+            <%
+              var admitted = c.status === 'approved';
+              var retracted = c.status === 'rejected' && /^Retracted by /.test(c.decision_note || '');
+              // 'superseded' carries two meanings on this table and the
+              // column is what tells them apart: a row pointing FORWARD to
+              // a newer version was corrected by a person, while one with
+              // no forward pointer was simply an identical restatement that
+              // was never added.
+              var replacedBy = c.superseded_by_id;
+              var replaces = c.supersedes_id;
+              var label = admitted ? (c.estimated ? 'Held as an estimate' : 'Held as a record')
+                : retracted ? 'Retracted by a person'
+                : c.status === 'superseded' ? (replacedBy ? 'Corrected, no longer held' : 'Already held, not added')
+                : 'Rejected by the checks';
+            %>
             <div class="sc-card sc-gap-card">
               <div class="sc-row-head">
                 <strong><%= c.domain %> / <%= c.fact_key %></strong>
-                <span class="sc-msg-tag sc-msg-tag-<%= admitted ? 'evidence' : 'certainty' %>"><%= admitted ? (c.estimated ? 'Held as an estimate' : 'Held as a record') : (retracted ? 'Retracted by a person' : (c.status === 'superseded' ? 'Already held, not added' : 'Rejected by the checks')) %></span>
+                <span class="sc-msg-tag sc-msg-tag-<%= admitted ? 'evidence' : 'certainty' %>"><%= label %></span>
               </div>
               <p class="sc-row-sub"><strong><%= admitted ? 'The company now holds:' : 'Proposed:' %></strong> <%= c.fact_value %></p>
               <% if (c.estimated && c.basis) { %><p class="sc-row-sub"><strong>Reasoned from:</strong> <%= c.basis %></p><% } %>
               <p class="sc-row-sub"><strong>Filed as:</strong> <%= c.source_label || 'no source named' %><% if (c.proposed_by_worker_id) { %>, worked out by <%= c.proposed_by_worker_id %><% } %><% if (c.decided_at) { %>, settled <%= new Date(c.decided_at).toLocaleString('en-GB', { timeZone: 'Europe/London' }) %><% } %></p>
               <% if (c.decision_note) { %><p class="sc-row-sub"><strong>Settlement:</strong> <%= c.decision_note %></p><% } %>
+              <% if (replaces) { %><p class="sc-row-sub"><strong>History:</strong> this replaced fact #<%= replaces %>, which stays on the register above with what it used to say.</p><% } %>
+              <% if (replacedBy) { %><p class="sc-row-sub"><strong>History:</strong> superseded by fact #<%= replacedBy %>. The company no longer holds this, and the workers no longer use it.</p><% } %>
 
               <% var drift = Array.isArray(c.drift_flags) ? c.drift_flags : []; %>
               <% if (admitted && drift.length) { %>
@@ -82,6 +98,16 @@
                   <textarea class="sc-gap-note" id="fact-note-<%= c.id %>" rows="2"></textarea>
                   <div class="sc-gap-actions">
                     <button type="submit">Retract from the brain</button>
+                  </div>
+                </form>
+                <form class="js-fact-correct" data-candidate="<%= c.id %>">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <label class="sc-row-sub" for="fact-value-<%= c.id %>">Or change it. What should the company hold instead?</label>
+                  <textarea class="sc-gap-note sc-fact-value" id="fact-value-<%= c.id %>" rows="2"></textarea>
+                  <label class="sc-row-sub" for="fact-why-<%= c.id %>">Why is it changing?</label>
+                  <textarea class="sc-gap-note" id="fact-why-<%= c.id %>" rows="2"></textarea>
+                  <div class="sc-gap-actions">
+                    <button type="submit">Correct it, keeping the history</button>
                   </div>
                 </form>
               <% } else if (admitted) { %>
@@ -122,6 +148,36 @@
           if (!res.ok) { out.textContent = res.d.error || 'Could not close this gap.'; return; }
           out.className = 'sc-gap-done';
           out.textContent = pressed ? 'Closed. The source is recorded as corrected.' : 'Dismissed. The source was not changed.';
+          form.querySelector('.sc-gap-actions').remove();
+        })
+        .catch(function () { out.textContent = 'Could not reach the server.'; });
+    });
+
+    // Correcting a learned fact, which is the one way a held fact changes.
+    // Its own handler, and its own two fields, so a correction can never be
+    // submitted as a retraction by a stale variable.
+    document.addEventListener('submit', function (e) {
+      var form = e.target.closest('.js-fact-correct');
+      if (!form) return;
+      e.preventDefault();
+      var value = form.querySelector('.sc-fact-value').value.trim();
+      var notes = form.querySelectorAll('.sc-gap-note');
+      var why = notes[notes.length - 1].value.trim();
+      var out = form.querySelector('.sc-gap-error') || document.createElement('p');
+      out.className = 'sc-gap-error';
+      if (!form.contains(out)) form.appendChild(out);
+      out.textContent = '';
+      fetch('/api/scott/brain-candidates/' + form.getAttribute('data-candidate') + '/correct', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': form.querySelector('input[name=_csrf]').value },
+        body: JSON.stringify({ factValue: value, note: why })
+      }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+        .then(function (res) {
+          if (!res.ok) { out.textContent = res.d.error || 'Could not change that.'; return; }
+          out.className = 'sc-gap-done';
+          out.textContent = res.d.brainReloaded === false
+            ? 'Changed and recorded, but the workers may still use the old figure until the next restart.'
+            : 'Changed. The company now holds the new figure and the old one is kept on the register.';
           form.querySelector('.sc-gap-actions').remove();
         })
         .catch(function () { out.textContent = 'Could not reach the server.'; });

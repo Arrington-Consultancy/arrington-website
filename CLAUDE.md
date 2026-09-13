@@ -3709,6 +3709,109 @@ fictional company's state without a person). Submission:
 `review/scott-autonomous-evolution-governance-submission-2026-09-13.md`.
 Production merge is Tom's gate.
 
+**Superseded in one respect by the section immediately below**, added the
+same day on Tom's follow-up instruction: settlement still keeps the earlier
+fact against any automatic proposal, but a PERSON can now change a held fact
+through a supersession that keeps both versions, so "no path can overwrite a
+held fact" is true of code and no longer true of the owner.
+
+### Persistent company state: the same answer tomorrow (13/09/2026)
+
+**Tom's second instruction, the same day:** "the main requirement is
+persistence and repeatability. Scott should feel like a real company with a
+remembered state. If someone asks the same factual question tomorrow, the
+answer should be the same unless the underlying fictional company record has
+genuinely changed... changed facts supersede old ones with a clear history;
+financial and staffing figures must remain internally consistent; repeated
+questions should produce the same substantive answer; wording can vary,
+facts cannot... Also close all gaps that are waiting using logic."
+
+**Where the state lives**, so nobody has to infer it: the transcribed and
+authored records in code, every `scott_brain_candidates` row with status
+`approved` (loaded by `contextBuilders.loadApprovedFacts`, merged into
+`allDeepFactRecords`), and the live ledger position. One list, one clearance
+filter. That was already true; the four pieces below are what make it behave
+like memory rather than like a store.
+
+**1. Repeatability has a deterministic backstop.** The prompt already puts
+every held fact in front of the worker and marks an estimate as one, which
+depends on a model following an instruction. Now, before anything is stored,
+each reply carrying a `factProposal` for a key the company already answers
+DIFFERENTLY has the held figure appended to it, quoted from the record
+(`companyState.heldFactFor` / `correctionNote`, applied where a turn is
+persisted). The model's own wording is kept; the fact is the company's. The
+held record is looked up inside the SAME clearance-filtered list that worker
+was given, never the whole brain, so a correction can never quote a record
+the asker cannot see.
+
+**2. Financial and staffing consistency** (`lib/scott/companyState.js`, pure).
+`companyEconomics()` derives turnover, the LATEST month's revenue and
+overheads, the headcount and the staff names from the brain rather than
+stating them, so growing the fiction cannot leave the checks measuring a
+company that no longer exists. `checkConsistency()` raises five conflict
+codes, all of which reject at settlement (`CONSISTENCY_CODES`, reported with
+rule `inconsistent_with_the_books` rather than `earlier_fact_stands`, because
+the cause is different): `monthly_exceeds_revenue`, `annual_exceeds_turnover`,
+`percentage_impossible`, `headcount_mismatch`, `staffing_unknown_person`.
+**Monthly costs are measured against monthly REVENUE, not overheads**: the
+company's own September payroll (GBP 19,200) is larger than its overhead line
+(GBP 18,100), so a tighter check would reject a real figure. The aggregate
+question (do all the invented costs together still fit) stays a judgement in
+the briefing rather than becoming a rule.
+
+**3. Supersession with history.** `scott_brain_candidates` gains
+`supersedes_id` and `superseded_by_id` (idempotent `ALTER`s in `db/seed.js`
+as well as `schema.sql`, since `CREATE TABLE IF NOT EXISTS` never reaches an
+existing database). Nothing is ever overwritten: `repo.supersedeBrainFact`
+writes a NEW approved row pointing back and marks the old one `superseded`
+pointing forward, in one transaction, so the brain holds exactly one version
+and the register holds both. **Only a person can do it** (`POST
+/api/scott/brain-candidates/:id/correct`, same gates as retraction: the real
+site role, clearance for the fact's own domain, a written reason, plus the
+same consistency check a worker's proposal faces). The automatic rule still
+has no path to replace a held fact, which is what makes "the earlier fact
+stands" safe: there is now a governed way to change one. `/scott/gaps` shows
+the chain ("this replaced fact #N", "superseded by fact #N") beside Retract.
+
+**4. Gaps close by logic** (`lib/scott/gapClosure.js`, pure). Four reasons,
+each written onto the row: `filled` (a fact the company learned answers it),
+`already_held` (the answer was on file, so it was never a gap),
+`not_material` (nothing blocked, nothing downstream), `stale` (it blocked
+something, nobody filed the evidence, `STALE_DAYS = 7`). The justification
+for closing rather than accumulating is that the loop is demand-driven: the
+same hole raises a fresh gap the next time a worker hits it, so the register
+shows what is live rather than an archive. **It never sets
+`source_corrected`** and never takes it as a parameter: that column is a
+person's statement that they corrected a controlled record, and no code can
+make it true. An automatic closure is written with `automatic` as the closer
+and reads as "Closed by the company itself" on the register. A turn closes
+only the gaps it just raised; the register-wide sweep runs at boot.
+
+**The briefing reports state, not a queue.** Two new sections: WHAT CHANGED
+IN THE COMPANY'S STATE (each supersession with its old value, new value and
+reason) and GAPS CLOSED BY LOGIC. The rejections section now leads with the
+serious contradictions (`isContradiction`, matched on settlement's own two
+reason strings) and lists ordinary refusals after them. Subject line gains
+the change count.
+
+**Tests.** `test/scott/companyState.test.js` (25: every consistency rule in
+both directions, each paired with a real figure from the company's own
+records that must NOT be refused, plus the economics being derived rather
+than stated), `test/scott/gapClosure.test.js` (18: all four reasons, the
+cases that must stay open, and that no closure can claim a source was
+corrected), `test/scott/brainRepeatability.test.js` (8, needs
+`DATABASE_URL`: the real turn path with a scripted model that deliberately
+answers with a different figure the second time, asserting the visitor's
+reply carries the held one, the contradiction is refused, both gaps close
+for their own reasons, and a person's correction keeps both versions), plus
+the extended boundary suite and six new briefing cases.
+
+**Two real defects the tests found, worth knowing.** The percentage check
+missed "140%." entirely, because the word boundary was anchored after the
+symbol and a full stop is no more a word character than `%` is. And the
+supersession write returned the old row as it had been READ, describing a
+fact as still held a line after it stopped being.
+
 ### Proposed brain facts: gap-driven authoring (added 01/09/2026)
 
 The other half of the Brain Gap loop. A gap said a record was missing and

@@ -5431,7 +5431,14 @@ async function seed() {
       ADD COLUMN IF NOT EXISTS estimated BOOLEAN NOT NULL DEFAULT false`);
     await db.query(`ALTER TABLE scott_brain_candidates
       ADD COLUMN IF NOT EXISTS basis TEXT NOT NULL DEFAULT ''`);
-    console.log('Scott AI Demonstration: proposed-fact estimate columns verified.');
+    // Supersession history (13/09/2026). Added here as well as in
+    // schema.sql for the same reason as the two above: CREATE TABLE IF NOT
+    // EXISTS is skipped on every already-seeded database, so a column added
+    // to the file alone never reaches one. Self-referencing, so the
+    // constraint is added separately and tolerantly.
+    await db.query('ALTER TABLE scott_brain_candidates ADD COLUMN IF NOT EXISTS supersedes_id INTEGER');
+    await db.query('ALTER TABLE scott_brain_candidates ADD COLUMN IF NOT EXISTS superseded_by_id INTEGER');
+    console.log('Scott AI Demonstration: proposed-fact estimate and supersession columns verified.');
   }
 
   // Authored company depth (01/09/2026). Fifteen records covering the
@@ -5538,6 +5545,38 @@ async function seed() {
       console.log(`Scott AI Demonstration: ${pendingRows.length} pending proposed fact(s) settled at boot: ${outcomes.admit} admitted, ${outcomes.reject} rejected, ${outcomes.redundant} already held.`);
     } else {
       console.log('Scott AI Demonstration: no proposed facts pending; settlement is automatic.');
+    }
+
+    // Close the gaps that are waiting, by logic (13/09/2026, Tom's
+    // instruction). The register-wide sweep lives here rather than on a
+    // visitor's message: a turn closes only the gaps it just raised, and
+    // this catches the immaterial and the stale across the whole register,
+    // every boot. The decision is made by the pure lib/scott/gapClosure.js;
+    // nothing here decides anything, and a gap a person has already closed
+    // is untouched by the status guard in the write.
+    const gapClosure = require('../lib/scott/gapClosure');
+    const openGaps = await repo.getOpenBrainGaps({ limit: 200 });
+    if (openGaps.length) {
+      const linked = await repo.getBrainCandidatesForGaps(openGaps.map((g) => g.id));
+      const plan = gapClosure.planClosures(openGaps, { candidates: linked, now: new Date() });
+      // What was actually written, not the first N of what was planned. A
+      // row somebody closed between the read and the write is skipped, and
+      // slicing the plan would then report the wrong reasons for the ones
+      // that did close.
+      const applied = [];
+      for (const c of plan) {
+        const row = await repo.closeBrainGapAutomatically(c.gapId, { status: c.status, note: c.note });
+        if (!row) continue;
+        applied.push(c);
+        await repo.addActivity({
+          actor: 'system',
+          eventType: c.status === 'resolved' ? 'brain_gap_resolved_auto' : 'brain_gap_dismissed_auto',
+          summary: `Gap #${c.gapId} closed at boot by logic (${c.reason}): ${c.note}`
+        });
+      }
+      console.log(`Scott AI Demonstration: ${openGaps.length} open gap(s) read, ${applied.length} closed by logic. ${gapClosure.describeClosures(applied)}`);
+    } else {
+      console.log('Scott AI Demonstration: no gaps waiting.');
     }
   }
 

@@ -4,6 +4,12 @@
   // worker wrote: "Leah Morgan has been emailed" is only ever printed
   // when email_status genuinely reads 'sent'.
   var open = ['open','notified','awaiting_source'].indexOf(g.status) !== -1;
+  // A gap closed by logic and a gap closed by a person are different facts
+  // and must not read the same. 'automatic' is written by
+  // repo.closeBrainGapAutomatically and nowhere else, and that path never
+  // sets source_corrected, so an automatic closure can never present
+  // itself as somebody having corrected a controlled record.
+  var closedByCode = g.resolved_by_name === 'automatic';
 %>
 <div class="sc-card sc-row-card sc-gap-card<%= g.work_can_continue ? '' : ' sc-gap-blocking' %>">
   <div>
@@ -20,8 +26,8 @@
       <% if (g.raised_by_worker_id) { %> &middot; raised by the <%= g.raised_by_worker_id.replace('_', ' ') %> worker<% } %><br>
       <strong>Notification:</strong> <%= describeNotification(g) %>
       <% if (g.email_attempts) { %> (<%= g.email_attempts %> send attempt<%= g.email_attempts === 1 ? '' : 's' %>)<% } %>
-      <% if (g.status === 'resolved') { %><br><strong>Resolved by <%= g.resolved_by_name || 'a person' %>:</strong> <%= g.resolution_note %><% } %>
-      <% if (g.status === 'dismissed') { %><br><strong>Dismissed by <%= g.resolved_by_name || 'a person' %>, source unchanged:</strong> <%= g.resolution_note %><% } %>
+      <% if (g.status === 'resolved') { %><br><strong><%= closedByCode ? 'Closed by the company itself' : ('Resolved by ' + (g.resolved_by_name || 'a person')) %>:</strong> <%= g.resolution_note %><% } %>
+      <% if (g.status === 'dismissed') { %><br><strong><%= closedByCode ? 'Closed by the company itself, source unchanged' : ('Dismissed by ' + (g.resolved_by_name || 'a person') + ', source unchanged') %>:</strong> <%= g.resolution_note %><% } %>
     </div>
     <% if (open && canResolve) { %>
       <form class="sc-gap-form js-gap-resolve" data-gap="<%= g.id %>">

@@ -34,6 +34,8 @@ const deepFacts = require('../lib/scott/deepBusinessFacts');
 const contextBuilders = require('../lib/scott/data/contextBuilders');
 const brainGaps = require('../lib/scott/brainGaps');
 const brainCandidates = require('../lib/scott/brainCandidates');
+const companyState = require('../lib/scott/companyState');
+const gapClosure = require('../lib/scott/gapClosure');
 const banking = require('../lib/scott/banking');
 const finRepo = require('../lib/scott/finance/repository');
 const financeState = require('../lib/scott/finance/state');
@@ -917,6 +919,41 @@ async function runScottTurnAndPersist({ conversation, conversationId, userMessag
     await repo.assignEnquiryIfNew(conversation.related_enquiry_id, turn.workerReplies[0].workerId);
   }
 
+  // REPEATABILITY (13/09/2026). Before anything is stored, reconcile each
+  // reply against what the company already holds.
+  //
+  // A worker proposing a fact for a key the company already answers
+  // differently has produced a second answer to a settled question, which
+  // is precisely the failure Tom's requirement names: "wording can vary,
+  // facts cannot". The proposal is rejected further down by settlement's
+  // first-wins rule; this makes the VISITOR'S answer carry the held figure
+  // too, appended from the record rather than from the model, so tomorrow's
+  // answer states the same fact as today's however it is phrased.
+  //
+  // The held record is looked up inside the SAME clearance-filtered list
+  // this worker was given, never the whole brain: a correction that quoted
+  // a fact the asker cannot see would be a leak dressed as consistency.
+  for (const wr of turn.workerReplies) {
+    if (!wr.factProposal || wr.technicalFailure) continue;
+    try {
+      const proposed = brainCandidates.normaliseCandidate(wr.factProposal);
+      const visible = clearance.filterAndRedact(personaId || null, wr.workerId, contextBuilders.allDeepFactRecords());
+      const held = companyState.heldFactFor(proposed, visible);
+      if (held && String(held.factValue).trim() !== proposed.factValue) {
+        const note = companyState.correctionNote(held);
+        if (note) {
+          wr.reply = `${wr.reply}\n\n${note}`;
+          wr.reconciledToHeldFact = true;
+        }
+      }
+    } catch (err) {
+      // A reply that could not be reconciled is still a reply. The
+      // demonstration must not fail in front of a prospect because its own
+      // consistency check threw.
+      console.error('Scott brain: reply reconciliation failed:', err.message);
+    }
+  }
+
   for (const wr of turn.workerReplies) {
     await repo.addMessage({
       conversationId,
@@ -1083,6 +1120,30 @@ async function runScottTurnAndPersist({ conversation, conversationId, userMessag
   }
   turn.gapRecords = gapRecords;
   turn.candidateRecords = candidateRecords;
+
+  // Close what this turn just answered (13/09/2026). Scoped to the gaps
+  // raised in this turn rather than the whole register: a gap filled by a
+  // fact the company learned a second ago should not still read as waiting
+  // for somebody, and the register-wide sweep for stale and immaterial ones
+  // runs at boot rather than on a visitor's message.
+  if (gapRecords.length) {
+    try {
+      const plan = gapClosure.planClosures(gapRecords, { candidates: candidateRecords, now: new Date() });
+      for (const c of plan) {
+        const closed = await repo.closeBrainGapAutomatically(c.gapId, { status: c.status, note: c.note });
+        if (closed) {
+          await repo.addActivity({
+            actor: 'system',
+            eventType: c.status === 'resolved' ? 'brain_gap_resolved_auto' : 'brain_gap_dismissed_auto',
+            summary: `Gap #${c.gapId} closed by logic (${c.reason}): ${c.note}`,
+            conversationId
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Scott brain: a gap could not be closed automatically:', err.message);
+    }
+  }
 
   return turn;
 }
@@ -2089,6 +2150,97 @@ router.post('/api/scott/brain-candidates/:id/retract', noindexHeader, requireSco
   } catch (err) {
     console.error('Scott brain retract error:', err);
     res.status(500).json({ error: 'Could not retract that fact.' });
+  }
+});
+
+// Correcting a fact the company holds, keeping the history (13/09/2026).
+//
+// The ONLY path that can change a held fact, and it is a person's. The
+// automatic rule deliberately has none: settlement always keeps the earlier
+// fact, so a figure that is genuinely wrong for the business would
+// otherwise only be removable, never correctable. Nothing is overwritten:
+// the old row is marked superseded and points forward, the new one points
+// back, and both stay on the register (repo.supersedeBrainFact).
+//
+// Same gates as retraction, because it is the same question asked in the
+// other direction: the real site role, clearance for the fact's own domain,
+// and a written reason.
+router.post('/api/scott/brain-candidates/:id/correct', noindexHeader, requireScottApiAccess, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid candidate id.' });
+    if (!canReviewProposedFacts(req)) return res.status(404).json({ error: 'Not found.' });
+
+    const candidate = await repo.getBrainCandidateById(id);
+    if (!candidate) return res.status(404).json({ error: 'Fact not found.' });
+
+    const personaId = clearance.getEffectivePersonaId(req);
+    if (!clearance.personaCanResolveGap(personaId, candidate)) {
+      return res.status(403).json({ error: clearance.actionDeniedNote('gap_resolve') });
+    }
+
+    const clean = (v) => sanitizeHtml(String(v || ''), { allowedTags: [], allowedAttributes: {} }).trim();
+    const factValue = clean(req.body?.factValue);
+    const note = clean(req.body?.note);
+    const basis = clean(req.body?.basis);
+    if (!factValue) return res.status(400).json({ error: 'Say what the fact should be.' });
+    if (factValue === String(candidate.fact_value || '').trim()) {
+      return res.status(400).json({ error: 'That is what the company already holds, so there is nothing to change.' });
+    }
+    if (note.length < 10) {
+      return res.status(400).json({ error: 'Say why it is changing. At least a sentence.' });
+    }
+
+    // The corrected value is held to the same consistency rule as anything
+    // the company works out for itself: a person may overrule the checks on
+    // plausibility, but a figure that does not fit the company's own books
+    // is refused here as it would be there, with the reason said plainly.
+    const canon = contextBuilders.allDeepFactRecords();
+    const inconsistent = companyState.checkConsistency(
+      { domain: candidate.domain, factKey: candidate.fact_key, factValue },
+      companyState.companyEconomics(canon)
+    );
+    if (inconsistent.length) {
+      return res.status(400).json({ error: `That does not fit the company's own figures: ${inconsistent.map((f) => f.detail).join('; ')}` });
+    }
+
+    const v = viewer(req);
+    let result;
+    try {
+      result = await repo.supersedeBrainFact(id, {
+        factValue,
+        basis: basis || candidate.basis,
+        note,
+        decider: { realUserId: v.realUserId, personaId, displayName: v.displayName }
+      });
+    } catch (err) {
+      console.error('Scott brain correct error:', err.message);
+      return res.status(400).json({ error: 'That correction could not be recorded.' });
+    }
+    if (!result) return res.status(409).json({ error: 'That fact is not in the company brain, so there is nothing to correct.' });
+
+    let reloaded = null;
+    try {
+      reloaded = await contextBuilders.loadApprovedFacts();
+    } catch (err) {
+      console.error('Scott brain: fact corrected but the cache reload failed:', err.message);
+    }
+
+    await repo.addActivity({
+      actor: 'user',
+      eventType: 'brain_fact_superseded',
+      summary: `${v.displayName} corrected ${result.current.domain}/${result.current.fact_key}: "${result.previous.fact_value}" is superseded by "${result.current.fact_value}". ${note}`
+    });
+
+    res.json({
+      ok: true,
+      previous: { id: result.previous.id, status: result.previous.status },
+      current: { id: result.current.id, factValue: result.current.fact_value },
+      brainReloaded: reloaded !== null
+    });
+  } catch (err) {
+    console.error('Scott brain correct error:', err);
+    res.status(500).json({ error: 'Could not correct that fact.' });
   }
 });
 

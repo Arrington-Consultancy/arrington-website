@@ -68,7 +68,7 @@ describe('what the briefing says', () => {
     assert.match(d.text, /next_month_ad_budget/);
     assert.match(d.text, /GBP 4,460/);
     assert.match(d.text, /reasoned from: about one percent of turnover/);
-    assert.match(d.subject, /1 learned, 0 rejected/);
+    assert.match(d.subject, /1 learned, 0 changed, 0 rejected/);
     assert.doesNotMatch(d.subject, /needs you/);
   });
 
@@ -81,12 +81,12 @@ describe('what the briefing says', () => {
     const rejected = [{ domain: 'finance_full', fact_key: 'mystery', fact_value: 'GBP 4,000,000.', status: 'rejected', decided_by_name: 'automatic',
       decision_note: 'Rejected automatically: GBP 4,000,000 is more than twice the company\'s annual turnover (GBP 565,000)' }];
     const d = buildDigest({ added: [], rejected, canon });
-    assert.match(d.text, /REJECTED, COULD NOT BE RECONCILED \(1\)/);
+    assert.match(d.text, /REJECTED, NOT IN THE COMPANY BRAIN \(1\)/);
     assert.match(d.text, /because: GBP 4,000,000 is more than twice/);
-    assert.match(d.text, /not in the company brain/);
+    assert.match(d.text, /not in the company brain/i);
     assert.doesNotMatch(d.text, /WAITING ON YOU/);
     assert.match(d.text, /Nothing needs you/);
-    assert.match(d.subject, /0 learned, 1 rejected/);
+    assert.match(d.subject, /0 learned, 0 changed, 1 rejected/);
   });
 
   test('a system fault is the only thing that reaches NEEDS YOU, and it changes the subject', () => {
@@ -172,5 +172,85 @@ describe('what the briefing says', () => {
     const d = buildDigest({ added: [fact()], canon });
     assert.match(d.text, /SCOTT_BRAIN_AUTOFILL/);
     assert.match(d.text, /\/scott\/gaps/);
+  });
+});
+
+describe('the briefing reports the company\'s state, not a queue (13/09/2026)', () => {
+  const canon = require('../../lib/scott/brainCandidates').allCanonRecords();
+
+  const superseded = [{
+    domain: 'finance_full', fact_key: 'next_month_ad_budget',
+    fact_value: 'GBP 3,900 a month.', previous_value: 'GBP 4,460 a month.',
+    decision_note: 'Corrected by Tom Arrington: the budget was cut in September'
+  }];
+
+  test('a fact the company changed is reported with both versions and the reason', () => {
+    const d = buildDigest({ added: [], superseded, canon });
+    assert.match(d.text, /WHAT CHANGED IN THE COMPANY'S STATE \(1\)/);
+    assert.match(d.text, /was: GBP 4,460 a month\./);
+    assert.match(d.text, /now: GBP 3,900 a month\./);
+    assert.match(d.text, /changed because: the budget was cut in September/);
+    assert.match(d.subject, /0 learned, 1 changed/);
+    assert.equal(d.stats.superseded, 1);
+  });
+
+  test('the old version is described as kept, because it is', () => {
+    const d = buildDigest({ added: [], superseded, canon });
+    assert.match(d.text, /Nothing was overwritten/);
+  });
+
+  test('a serious contradiction leads the rejections, and an ordinary refusal does not', () => {
+    const rejected = [
+      { domain: 'finance_full', fact_key: 'a', fact_value: 'GBP 90,000 a month.',
+        decision_note: "Rejected automatically: it does not fit the company's own figures: GBP 90,000 a month is more than the company's whole monthly revenue" },
+      { domain: 'yarn_stock', fact_key: 'b', fact_value: 'Some yarn.',
+        decision_note: 'Rejected automatically: no source named, so the fact would enter the brain with no provenance' }
+    ];
+    const d = buildDigest({ added: [], rejected, canon });
+    assert.match(d.text, /1 could not be reconciled with what the company already holds or with its own figures/);
+    assert.match(d.text, /1 refused for other reasons/);
+    assert.equal(d.stats.contradictions, 1);
+    // And the contradiction is printed above the ordinary refusal.
+    assert.ok(d.text.indexOf('GBP 90,000 a month.') < d.text.indexOf('Some yarn.'));
+  });
+
+  test('gaps the company closed for itself are reported, with why', () => {
+    const gapsClosed = [{
+      domain: 'yarn_stock', expected_source: '07I Stock & Supply',
+      missing_evidence: 'no current cream yarn count exists',
+      resolution_note: 'Closed automatically: nothing was blocked by this and no job or enquiry was waiting on it.'
+    }];
+    const d = buildDigest({ added: [], gapsClosed, canon });
+    assert.match(d.text, /GAPS CLOSED BY LOGIC \(1\)/);
+    assert.match(d.text, /07I Stock & Supply: no current cream yarn count exists/);
+    assert.match(d.text, /nothing was blocked/);
+    assert.match(d.text, /Nothing here needed a person/);
+    assert.equal(d.stats.gapsClosed, 1);
+  });
+
+  test('a long list of closures is capped, and says how many it did not print', () => {
+    const many = Array.from({ length: 40 }, (_, i) => ({
+      domain: 'yarn_stock', missing_evidence: `closure ${i}`, resolution_note: 'Closed automatically: nothing was blocked'
+    }));
+    const d = buildDigest({ added: [], gapsClosed: many, canon });
+    assert.match(d.text, /GAPS CLOSED BY LOGIC \(40\)/, 'the count is the real one');
+    assert.match(d.text, /and 15 more, all on the register/);
+    assert.ok(d.text.includes('closure 24'));
+    assert.ok(!d.text.includes('closure 25'), 'the list itself is capped');
+    assert.equal(d.stats.gapsClosed, 40);
+  });
+
+  test('a briefing carrying only changes and closures is still worth sending', () => {
+    // The empty-state sentence must not fire when the company genuinely
+    // changed: that would report a real change as "nothing new".
+    const d = buildDigest({ added: [], superseded, gapsClosed: [{ domain: 'x', missing_evidence: 'y' }], canon });
+    assert.doesNotMatch(d.text, /Nothing new\./);
+  });
+
+  test('nothing at all still says so plainly', () => {
+    const d = buildDigest({ added: [], canon });
+    assert.match(d.text, /Nothing new\./);
+    assert.equal(d.stats.superseded, 0);
+    assert.equal(d.stats.gapsClosed, 0);
   });
 });
