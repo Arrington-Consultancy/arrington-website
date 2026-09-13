@@ -555,6 +555,28 @@ Two related pieces landed together, both writing to a new `leads` table (`kind`,
 
 **PDF requests no longer share the contact-click Google Ads label (11/09/2026).** Until this date a successful gated-PDF request fired `AW-18129914078/h_2rCJeH8aYcEN6RgsVD`, the same conversion label as a phone, email or WhatsApp click, so a document download counted as a contact in Google Ads (the Google Ads campaign objective is phone-call leads, so this overstated exactly the number bidding optimises on). The PDF success path now fires an Ads conversion only when `GOOGLE_ADS_PDF_CONVERSION_LABEL` is set on the service (the label part after `AW-18129914078/`, validated to `[A-Za-z0-9_-]` in `server.js` and exposed as `app.locals.googleAdsPdfConversionLabel`); unset, it fires no Ads conversion at all and the GA4 event `document_request_submit` still fires. The boot log reports which. To count PDF downloads in Ads again, Tom creates a separate conversion action in the Ads account (Goals, Conversions, New conversion action, Website, manual event) and sets its label in Railway. Whether the existing actions are Primary or Secondary for bidding is an Ads account setting that no tool in this repo can read; it is checked in the Ads UI under Goals, Conversions, Summary.
 
+**The contact form is the Primary conversion, and already was (13/09/2026).**
+Tom's decision: "Contact form is prime all the way." Checked against the live
+account rather than assumed, and **no change is needed**: over the last 30
+days the action named `Contact` (Google category CONTACT) reports
+`conversions 1, all_conversions 1`, and `phone + email clicks` (category
+SUBMIT_LEAD_FORM) reports `conversions 0, all_conversions 1`. Only Primary
+actions count in `conversions`, so the form is already the action bidding
+optimises on and the click action is already Secondary. **The two names are
+crossed against their Google categories**, which will mislead anyone reading
+the Ads UI later: `Contact` is the FOOTER FORM label
+(`vCKKCKjSna0cEN6RgsVD`, fires only on a successful submit) and
+`phone + email clicks` is the tel/mailto/WhatsApp label
+(`h_2rCJeH8aYcEN6RgsVD`), so the goal called "Submit lead form" is the one
+measuring phone and email clicks. Renaming or recategorising is a tidy-up,
+not a fix, and nothing has been changed. Two things this repo still cannot
+read, so they stay UI checks: a campaign-level conversion-goal override (the
+`Owner Dependency Quiz | Search` campaign has had no conversions of any kind,
+so its own goal config has never been exercised), and the Primary/Secondary
+flag directly. Consequence worth holding onto: bidding now follows form
+submissions rather than calls, which the only recorded win supports, since
+the 4 September Cornwall Handyman enquiry came through the footer form.
+
 **Mail-failure lead check closed (11/09/2026).** The 1 September Gmail credential failure (see the Website & Hosting handoff in Drive) raised the possibility of lead rows stored without a notification email. Tom checked the stored lead records and confirmed on 11/09/2026 that nothing was missing. Recorded in Drive as "WEBSITE AND HOSTING WRITE-BACK (CLOSED) - 1 September mail-failure lead check: no enquiries missed, 11 September 2026".
 
 **Admin view.** Both lead types show up in the admin panel under System → "Leads & bookings" (gated on `view_activity`, same capability as the Activity log — no new capability was added to the permissions matrix to keep this change contained). `GET /api/admin/leads` returns the latest 100, newest first. **Important:** unlike the Activity log's loader (which doesn't escape its fields, safe there only because those values are admin-controlled), the leads loader in `public/js/admin.js` passes every field through the existing `escapeHtml` helper before building the `innerHTML` string, because leads contain raw public-visitor input.
