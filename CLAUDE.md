@@ -3621,6 +3621,94 @@ fixed an honesty bug in `describeNotification` ("failed after a retry"
 when zero attempts were made; the sentence is now built from the
 recorded attempt count).
 
+### Scott evolves on its own: automatic settlement, oversight briefing (13/09/2026)
+
+**Principle changed on Tom's instruction (13/09/2026):** "Scott is supposed
+to be a playable fictional company that evolves on its own while remaining
+internally consistent. Having facts sit waiting for me to approve defeats
+that." The approval queue is gone. The section below this one ("Proposed
+brain facts: gap-driven authoring") describes the design it replaced and is
+kept as the historical record; where it says "not self-learning", "only a
+human decision puts anything in the brain" or "waits for a person", that is
+no longer true. The hard boundary is unchanged and now pinned by test: this
+autonomy exists only inside the fictional Scott company and never touches
+a real Arrington record, permission or action.
+
+**Settle, never queue.** `brainCandidates.settleCandidate(assessment,
+{enabled, estimated, basis})` runs immediately after `assessCandidate` on
+every proposal and returns exactly one of `admit`, `reject` or `redundant`
+(`SETTLEMENT_OUTCOMES`; "pending" is not an outcome). The repository maps
+those to `approved`, `rejected` and `superseded` with `decided_by_name =
+'automatic'` (`repo.settleBrainCandidate`). Rules, all deterministic:
+- **Conflict (`duplicate_key`, `figure_contradiction`, `pending_duplicate`):
+  the earlier fact stands**, whether transcribed, authored or an earlier
+  estimate, and the later proposal is rejected with a reason naming what
+  it disagreed with (`rule: 'earlier_fact_stands'`). No automatic path can
+  overwrite a held fact; that is what a person's retraction is for.
+- **Identical restatement** of a held fact (`assessment.restatesRecord`):
+  `redundant`, status `superseded`, nothing added and nothing reported.
+- **Rejecting drift** (`REJECTING_DRIFT`): `unknown_domain`,
+  `scale_implausible` (including any negative amount), `scale_unchecked`,
+  `empty_value`, `unsourced`. Plus an estimate with no basis.
+- **Cosmetic drift** (`unknown_entity`, `register`) admits, flags kept on
+  the row; new names surface in the briefing as "material changes".
+- **Kill switch** unchanged: `SCOTT_BRAIN_AUTOFILL` must be exactly `true`.
+  Off now means proposals are **rejected** with that reason rather than
+  parked, so switching it off freezes the fiction without building a
+  backlog.
+
+**Live path** (`routes/scott.js`, the gap block in `runScottTurnAndPersist`):
+assess, create row, settle, reload the brain cache on admit. A failure
+INSIDE settlement is a system fault, not a refusal: recorded as
+`brain_settlement_error` (and a cache reload failure as
+`brain_cache_reload_failed`) and it never fails the visitor's turn.
+Activity events: `brain_fact_admitted`, `brain_fact_rejected_auto`,
+`brain_fact_redundant`, `brain_fact_retracted`.
+
+**Oversight, not approval.** `/scott/gaps` (admin/content only, same
+`canReviewProposedFacts` gate, invited viewers still see nothing) now lists
+"What the company has learned": recent admitted, rejected and superseded
+rows with their settlement reason, and a **Retract** form on each admitted
+fact (`POST /api/scott/brain-candidates/:id/retract`, written reason
+required, same per-row clearance rule, status becomes `rejected` with a
+`Retracted by <name>: ...` note, cache reloaded). The old `decide` route
+still exists for any pending row; there are none.
+
+**The evolution briefing** (`lib/scott/evolutionDigest.js`,
+`evolutionBriefing.js`) reports: WHAT IT LEARNED (estimates marked with
+their basis), MATERIAL CHANGES TO THE COMPANY (new names introduced), DO THE
+NUMBERS STILL MAKE SENSE (invented costs against overheads, unchanged),
+REJECTED, COULD NOT BE RECONCILED (with reasons), RETRACTED BY A PERSON,
+and NEEDS YOU, which carries **system faults only**: any row stuck pending
+(should be impossible) and the `ESCALATION_EVENTS`
+(`brain_settlement_error`, `brain_cache_reload_failed`) since the last
+briefing. Otherwise it says "Nothing needs you" in words. Subject:
+`Scott's Armchair & Knitting: N learned, M rejected[, needs you]`. Sends
+nothing when nothing was learned, rejected, retracted or escalated.
+
+**Boot:** `db/seed.js` settles any row still `pending` with the same rule
+(the two rows that were "waiting on you" on production settle as rejected:
+one for a negative amount, one on re-assessment), logs the outcome, and is
+a no-op thereafter. The login alert for invited viewers now says how much
+the company learned in the last seven days rather than counting a queue.
+
+**Tests:** `test/scott/brainSettlementFirewall.test.js` (the boundary:
+settlement code references nothing on the Arrington side, the pure rule
+reads only the kill switch, every settlement write targets a `scott_`
+table, the outcome set has no "pending", escalation events are real and a
+rejection is not one), the rewritten settlement block in
+`test/scott/brainCandidates.test.js` (every input ends in admit/reject/
+redundant with a reason; conflicts resolve first-wins; negative amounts,
+wrong size, unknown domain, empty, unsourced and basis-less estimates
+reject; cosmetic drift admits; redundancy), and
+`test/scott/evolutionBriefing.test.js` (rejections listed with reasons,
+NEEDS YOU only on faults, retractions separate, new names called out).
+
+**Governance:** a change to Scott worker authority (workers now change the
+fictional company's state without a person). Submission:
+`review/scott-autonomous-evolution-governance-submission-2026-09-13.md`.
+Production merge is Tom's gate.
+
 ### Proposed brain facts: gap-driven authoring (added 01/09/2026)
 
 The other half of the Brain Gap loop. A gap said a record was missing and

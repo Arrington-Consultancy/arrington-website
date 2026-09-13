@@ -5497,6 +5497,50 @@ async function seed() {
     if (!written && !skipped.length) console.log('Scott AI Demonstration: no authored company records to add.');
   }
 
+  // Settle anything still pending (13/09/2026). Until this date a proposal
+  // the autofill rule declined sat as 'pending' waiting for a person, and
+  // the briefing listed it as "waiting on you" every day. Settlement is
+  // automatic now: each pending row is re-assessed against the brain as it
+  // stands and admitted, rejected with its reason, or dropped as already
+  // held, by the same settleCandidate the live path uses. Idempotent: on
+  // every later boot there is nothing pending and this does nothing. A
+  // pending row that survives this block is a fault the briefing
+  // escalates, so the count is logged either way.
+  {
+    const brainCandidates = require('../lib/scott/brainCandidates');
+    const contextBuilders = require('../lib/scott/data/contextBuilders');
+    const repo = require('../lib/scott/data/repository');
+    const pendingRows = await repo.getPendingBrainCandidates({ limit: 500 });
+    if (pendingRows.length) {
+      await contextBuilders.loadApprovedFacts();
+      const outcomes = { admit: 0, reject: 0, redundant: 0 };
+      for (const row of pendingRows) {
+        const others = pendingRows.filter((r) => r.id !== row.id && r.status === 'pending')
+          .map((r) => ({ domain: r.domain, factKey: r.fact_key, factValue: r.fact_value }));
+        const assessment = brainCandidates.assessCandidate(
+          { domain: row.domain, factKey: row.fact_key, factValue: row.fact_value, sourceLabel: row.source_label,
+            proposedByWorkerId: row.proposed_by_worker_id, estimated: row.estimated === true, basis: row.basis },
+          { canon: contextBuilders.allDeepFactRecords(), pending: others }
+        );
+        const settlement = brainCandidates.settleCandidate(assessment, { estimated: row.estimated === true, basis: row.basis });
+        const settled = await repo.settleBrainCandidate(row.id, settlement);
+        if (settled) {
+          row.status = settled.status;
+          outcomes[settlement.outcome] += 1;
+          await repo.addActivity({
+            actor: 'system',
+            eventType: settlement.outcome === 'admit' ? 'brain_fact_admitted' : (settlement.outcome === 'reject' ? 'brain_fact_rejected_auto' : 'brain_fact_redundant'),
+            summary: `Settled at boot (was waiting for a person): ${row.domain}/${row.fact_key} ${settlement.outcome === 'admit' ? 'admitted' : settlement.outcome === 'reject' ? 'rejected' : 'already held'}: ${settlement.reason}`
+          });
+          if (settlement.outcome === 'admit') await contextBuilders.loadApprovedFacts();
+        }
+      }
+      console.log(`Scott AI Demonstration: ${pendingRows.length} pending proposed fact(s) settled at boot: ${outcomes.admit} admitted, ${outcomes.reject} rejected, ${outcomes.redundant} already held.`);
+    } else {
+      console.log('Scott AI Demonstration: no proposed facts pending; settlement is automatic.');
+    }
+  }
+
   // ------------------------------------------------------------
   // Scott: Banking & Accounting - the opening books (01/09/2026)
   // ------------------------------------------------------------

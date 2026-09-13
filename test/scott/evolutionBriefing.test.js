@@ -63,25 +63,53 @@ describe('what the briefing says', () => {
   const canon = require('../../lib/scott/brainCandidates').allCanonRecords();
 
   test('it names each addition, its domain and what an estimate rests on', () => {
-    const d = buildDigest({ added: [fact()], queued: [], canon });
+    const d = buildDigest({ added: [fact()], canon });
     assert.match(d.text, /marketing_performance/);
     assert.match(d.text, /next_month_ad_budget/);
     assert.match(d.text, /GBP 4,460/);
     assert.match(d.text, /reasoned from: about one percent of turnover/);
-    assert.match(d.subject, /1 new thing/);
+    assert.match(d.subject, /1 learned, 0 rejected/);
+    assert.doesNotMatch(d.subject, /needs you/);
   });
 
   test('estimates and stated records are counted separately', () => {
-    const d = buildDigest({ added: [fact(), fact({ fact_key: 'k2', estimated: false })], queued: [], canon });
+    const d = buildDigest({ added: [fact(), fact({ fact_key: 'k2', estimated: false })], canon });
     assert.match(d.text, /1 of those are ESTIMATES[\s\S]*1 are stated as records/);
   });
 
-  test('it reports the queue, so items cannot sit in it unmentioned', () => {
-    const queued = [{ domain: 'finance_full', fact_key: 'mystery', fact_value: 'GBP 4,000,000.', conflict_flags: [], drift_flags: [{ code: 'scale_implausible', detail: 'more than twice turnover' }] }];
-    const d = buildDigest({ added: [], queued, canon });
-    assert.match(d.text, /WAITING ON YOU \(1\)/);
-    assert.match(d.text, /held because: more than twice turnover/);
+  test('it is oversight, not an approval queue: rejections are listed with their reason and nothing waits (13/09/2026)', () => {
+    const rejected = [{ domain: 'finance_full', fact_key: 'mystery', fact_value: 'GBP 4,000,000.', status: 'rejected', decided_by_name: 'automatic',
+      decision_note: 'Rejected automatically: GBP 4,000,000 is more than twice the company\'s annual turnover (GBP 565,000)' }];
+    const d = buildDigest({ added: [], rejected, canon });
+    assert.match(d.text, /REJECTED, COULD NOT BE RECONCILED \(1\)/);
+    assert.match(d.text, /because: GBP 4,000,000 is more than twice/);
     assert.match(d.text, /not in the company brain/);
+    assert.doesNotMatch(d.text, /WAITING ON YOU/);
+    assert.match(d.text, /Nothing needs you/);
+    assert.match(d.subject, /0 learned, 1 rejected/);
+  });
+
+  test('a system fault is the only thing that reaches NEEDS YOU, and it changes the subject', () => {
+    const d = buildDigest({ added: [], escalations: ['brain settlement error at 13/09/2026: a proposal could not be settled: connection reset'], canon });
+    assert.match(d.text, /NEEDS YOU \(1\)/);
+    assert.match(d.text, /connection reset/);
+    assert.doesNotMatch(d.text, /Nothing needs you/);
+    assert.match(d.subject, /needs you/);
+  });
+
+  test('a retraction by a person is reported as such, separately from a rejection by the checks', () => {
+    const retracted = [{ domain: 'suppliers_ops', fact_key: 'yarn_supplier', fact_value: 'Northern Loom supplies yarn.', status: 'rejected', decided_by_name: 'Tom', decision_note: 'Retracted by Tom: not a supplier we would use.' }];
+    const d = buildDigest({ added: [], retracted, canon });
+    assert.match(d.text, /RETRACTED BY A PERSON \(1\)/);
+    assert.match(d.text, /Retracted by Tom/);
+    assert.doesNotMatch(d.text, /REJECTED, COULD NOT BE RECONCILED/);
+  });
+
+  test('a new name the company introduced is called out as a material change', () => {
+    const added = [fact({ domain: 'suppliers_ops', fact_key: 'yarn_supplier', fact_value: 'Northern Loom Supplies Ltd now supplies yarn.', drift_flags: [{ code: 'unknown_entity', detail: '"Northern Loom Supplies Ltd" does not appear anywhere else in the company records' }] })];
+    const d = buildDigest({ added, canon });
+    assert.match(d.text, /MATERIAL CHANGES TO THE COMPANY/);
+    assert.match(d.text, /Northern Loom Supplies Ltd/);
   });
 
   test('it does the one sum a per-answer check cannot: invented costs against overheads', () => {
@@ -93,7 +121,7 @@ describe('what the briefing says', () => {
   });
 
   test('with no overheads on record it says the total was not weighed, rather than implying it passed', () => {
-    const d = buildDigest({ added: [fact()], queued: [], canon: [] });
+    const d = buildDigest({ added: [fact()], canon: [] });
     assert.match(d.text, /no overheads figure on record to weigh them against|not checked|no turnover figure/i);
   });
 
@@ -129,19 +157,19 @@ describe('what the briefing says', () => {
       fact({ fact_key: 'a_cost', fact_value: 'A cost of GBP 950 a month.' }),
       fact({ fact_key: 'b_cost', fact_value: 'A cost of GBP 430 a month.' })
     ];
-    const d = buildDigest({ added: costs, queued: [], canon });
+    const d = buildDigest({ added: costs, canon });
     assert.match(d.text, /1,380/);
     assert.match(d.text, /% of the monthly overheads/);
     assert.doesNotMatch(d.text, /no overheads figure on record/);
   });
 
   test('an empty briefing says so plainly rather than padding', () => {
-    const d = buildDigest({ added: [], queued: [], canon });
+    const d = buildDigest({ added: [], canon });
     assert.match(d.text, /Nothing new/);
   });
 
   test('it always says how to stop the behaviour it is reporting on', () => {
-    const d = buildDigest({ added: [fact()], queued: [], canon });
+    const d = buildDigest({ added: [fact()], canon });
     assert.match(d.text, /SCOTT_BRAIN_AUTOFILL/);
     assert.match(d.text, /\/scott\/gaps/);
   });

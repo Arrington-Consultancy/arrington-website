@@ -53,10 +53,11 @@ describe('a proposal can never admit itself', () => {
     assert.ok(!bc.VERDICTS.includes('approved'), 'the verdict vocabulary must not contain approved');
   });
 
-  test('a clean candidate still says a person has to approve it', () => {
+  test('a clean candidate is admissible, and the summary no longer promises a person will look (13/09/2026)', () => {
     const r = assess(candidate());
     assert.equal(r.verdict, 'admissible');
-    assert.match(r.summary, /needs a person to approve it/i);
+    assert.doesNotMatch(r.summary, /needs a person/i);
+    assert.equal(r.restatesRecord, false);
   });
 });
 
@@ -265,84 +266,125 @@ describe('the worker contract', () => {
   });
 });
 
-describe('autofill: what may enter the fiction without a person', () => {
+describe('settlement: every proposal ends somewhere, and nowhere is pending (13/09/2026)', () => {
   const on = { enabled: true };
   const clean = () => assess(candidate());
 
-  test('off unless the variable is exactly true, so it can be stopped without a deploy', () => {
+  test('the kill switch stays: off unless the variable is exactly true, and off means rejected rather than parked', () => {
     const had = Object.prototype.hasOwnProperty.call(process.env, 'SCOTT_BRAIN_AUTOFILL');
     const prev = process.env.SCOTT_BRAIN_AUTOFILL;
     try {
       delete process.env.SCOTT_BRAIN_AUTOFILL;
       assert.equal(bc.isAutofillEnabled(), false);
-      assert.equal(bc.autofillDecision(clean()).autofill, false);
+      const off = bc.settleCandidate(clean());
+      assert.equal(off.outcome, 'reject');
+      assert.match(off.reason, /SCOTT_BRAIN_AUTOFILL is off/);
       process.env.SCOTT_BRAIN_AUTOFILL = 'yes';
       assert.equal(bc.isAutofillEnabled(), false, 'only the exact string true arms it');
       process.env.SCOTT_BRAIN_AUTOFILL = 'true';
       assert.equal(bc.isAutofillEnabled(), true);
-      assert.equal(bc.autofillDecision(clean()).autofill, true);
+      assert.equal(bc.settleCandidate(clean()).outcome, 'admit');
     } finally {
       if (had) process.env.SCOTT_BRAIN_AUTOFILL = prev;
       else delete process.env.SCOTT_BRAIN_AUTOFILL;
     }
   });
 
-  test('a clean estimate goes in', () => {
-    const d = bc.autofillDecision(clean(), { ...on, estimated: true, basis: 'typical for this turnover' });
-    assert.equal(d.autofill, true);
+  test('no input produces anything other than admit, reject or redundant', () => {
+    const inputs = [clean(), assess(candidate({ domain: 'made_up' })), assess(candidate({ factValue: '' })),
+      assess(candidate({ factValue: 'A contract worth GBP 9,000,000.' })), null, {}, undefined];
+    inputs.forEach((a) => {
+      const d = bc.settleCandidate(a, on);
+      assert.ok(bc.SETTLEMENT_OUTCOMES.includes(d.outcome), `unexpected outcome ${d.outcome}`);
+      assert.notEqual(d.outcome, 'pending');
+      assert.ok(typeof d.reason === 'string' && d.reason.length > 10, 'every outcome carries a reason a person can read');
+    });
   });
 
-  test('anything that contradicts a record or an earlier estimate is refused', () => {
+  test('a clean estimate goes in', () => {
+    const d = bc.settleCandidate(clean(), { ...on, estimated: true, basis: 'typical for this turnover' });
+    assert.equal(d.outcome, 'admit');
+  });
+
+  test('a conflict resolves deterministically: the earlier fact stands and the later one is rejected, naming what it disagreed with', () => {
     const held = { domain: 'finance_full', factKey: 'september_turnover_forecast', factValue: 'It is GBP 41,000.' };
     const a = assess(candidate(), { canon: CANON.concat([held]) });
-    const d = bc.autofillDecision(a, on);
-    assert.equal(d.autofill, false, 'consistency is the whole reason this is worth doing');
-    assert.match(d.reason, /disagrees with something already on record/i);
+    const d = bc.settleCandidate(a, on);
+    assert.equal(d.outcome, 'reject', 'consistency is the whole reason this is worth doing');
+    assert.equal(d.rule, 'earlier_fact_stands');
+    assert.match(d.reason, /earlier fact stands/i);
+    assert.match(d.reason, /GBP 41,000/);
   });
 
-  test('an unknown clearance domain is refused, so an invented HR fact cannot leak', () => {
-    const d = bc.autofillDecision(assess(candidate({ domain: 'made_up' })), on);
-    assert.equal(d.autofill, false);
+  test('an identical restatement is neither admitted twice nor rejected: it is redundant', () => {
+    const held = { domain: 'finance_full', factKey: 'september_turnover_forecast', factValue: candidate().factValue };
+    const a = assess(candidate(), { canon: CANON.concat([held]) });
+    assert.equal(a.restatesRecord, true);
+    assert.equal(a.conflictFlags.length, 0);
+    assert.equal(bc.settleCandidate(a, on).outcome, 'redundant');
+  });
+
+  test('a second proposal racing for the same key is rejected, not queued beside the first', () => {
+    const pending = [{ domain: 'finance_full', factKey: 'september_turnover_forecast', factValue: 'It is GBP 39,000.' }];
+    const d = bc.settleCandidate(assess(candidate(), { pending }), on);
+    assert.equal(d.outcome, 'reject');
+  });
+
+  test('an unknown clearance domain is rejected, so an invented HR fact cannot leak', () => {
+    const d = bc.settleCandidate(assess(candidate({ domain: 'made_up' })), on);
+    assert.equal(d.outcome, 'reject');
     assert.match(d.reason, /not a clearance domain/i);
   });
 
-  test('a figure the wrong size for this company is refused', () => {
-    const d = bc.autofillDecision(assess(candidate({ factValue: 'A contract worth GBP 4,000,000.' })), on);
-    assert.equal(d.autofill, false);
+  test('a figure the wrong size for this company is rejected', () => {
+    const d = bc.settleCandidate(assess(candidate({ factValue: 'A contract worth GBP 4,000,000.' })), on);
+    assert.equal(d.outcome, 'reject');
     assert.match(d.reason, /twice the company's annual turnover/i);
   });
 
-  test('a size that could not be judged is refused, because unchecked is not the same as fine', () => {
-    const empty = bc.deriveWorldProfile([]);
-    const a = bc.assessCandidate(candidate({ factValue: 'Worth GBP 900.' }), { canon: [], profile: empty });
-    assert.equal(bc.autofillDecision(a, on).autofill, false);
+  test('a negative amount is rejected, because a minus sign on a fact is not a fact the company can hold', () => {
+    const d = bc.settleCandidate(assess(candidate({ factValue: 'Contribution at risk of GBP -350 a week.' })), on);
+    assert.equal(d.outcome, 'reject');
+    assert.match(d.reason, /negative amount/i);
   });
 
-  test('an estimate with no stated basis is refused', () => {
-    const d = bc.autofillDecision(clean(), { ...on, estimated: true, basis: '  ' });
-    assert.equal(d.autofill, false);
+  test('a size that could not be judged is rejected, because unchecked is not the same as fine', () => {
+    const empty = bc.deriveWorldProfile([]);
+    const a = bc.assessCandidate(candidate({ factValue: 'Worth GBP 900.' }), { canon: [], profile: empty });
+    assert.equal(bc.settleCandidate(a, on).outcome, 'reject');
+  });
+
+  test('an empty value and a missing source are rejected', () => {
+    assert.equal(bc.settleCandidate(assess(candidate({ factValue: '' })), on).outcome, 'reject');
+    assert.equal(bc.settleCandidate(assess(candidate({ sourceLabel: '' })), on).outcome, 'reject');
+  });
+
+  test('an estimate with no stated basis is rejected', () => {
+    const d = bc.settleCandidate(clean(), { ...on, estimated: true, basis: '  ' });
+    assert.equal(d.outcome, 'reject');
     assert.match(d.reason, /assertion, not an estimate/i);
   });
 
   test('cosmetic drift does NOT stop the fiction growing', () => {
     // Inventing a supplier is what inventing a supplier looks like, and a
     // register slip is a tone problem rather than a coherence one. Both
-    // stay recorded on the row; neither blocks.
+    // stay recorded on the row; neither rejects.
     const newSupplier = assess(candidate({
       domain: 'suppliers_ops', factKey: 'new_supplier', factValue: 'Northern Loom Supplies Ltd now supplies yarn.'
     }));
     assert.equal(newSupplier.verdict, 'review');
-    assert.equal(bc.autofillDecision(newSupplier, { ...on, estimated: true, basis: 'typical second supplier' }).autofill, true);
+    assert.equal(bc.settleCandidate(newSupplier, { ...on, estimated: true, basis: 'typical second supplier' }).outcome, 'admit');
   });
 
-  test('every blocking code is a real drift code, so a typo cannot silently stop blocking', () => {
+  test('every rejecting code is a real drift code, so a typo cannot silently stop rejecting', () => {
     const real = new Set(['unknown_domain', 'scale_implausible', 'scale_unchecked', 'unknown_entity', 'register', 'unsourced', 'empty_value']);
-    bc.AUTOFILL_BLOCKING_DRIFT.forEach((c) => assert.ok(real.has(c), `${c} is not a drift code this module emits`));
+    bc.REJECTING_DRIFT.forEach((c) => assert.ok(real.has(c), `${c} is not a drift code this module emits`));
+    assert.ok(!bc.REJECTING_DRIFT.includes('unknown_entity') && !bc.REJECTING_DRIFT.includes('register'), 'cosmetic drift must not reject');
   });
 
-  test('an unassessed object is refused rather than waved through', () => {
-    assert.equal(bc.autofillDecision(null, on).autofill, false);
-    assert.equal(bc.autofillDecision({}, on).autofill, false);
+  test('an unassessed object is rejected rather than waved through', () => {
+    assert.equal(bc.settleCandidate(null, on).outcome, 'reject');
+    assert.equal(bc.settleCandidate({}, on).outcome, 'reject');
   });
 });
 
@@ -459,34 +501,35 @@ describe('the invited-viewer login alert', () => {
     } finally { notifier.__resetTransportForTests(); }
   });
 
-  test('a watched login sends, and the body names the approval queue', async () => {
+  test('a watched login sends, and the body says what the company has learned lately', async () => {
     const sent = [];
     notifier.__setTransportForTests({ sendMail: async (m) => { sent.push(m); return {}; } });
     try {
-      const r = await withEnv(undefined, () => notifier.sendLoginNotification({ username: 'will', pendingFacts: 3 }));
+      const r = await withEnv(undefined, () => notifier.sendLoginNotification({ username: 'will', learnedRecently: 3 }));
       assert.equal(r.sent, true);
       assert.equal(sent.length, 1);
       assert.match(sent[0].subject, /will has just logged in/i);
-      assert.match(sent[0].text, /3 proposed facts are waiting/i);
+      assert.match(sent[0].text, /learned 3 new things in the last seven days/i);
+      assert.doesNotMatch(sent[0].text, /waiting for you to approve/i);
       assert.match(sent[0].text, /\/scott\/gaps/);
       // It must not imply anything was sent to the visitor.
       assert.match(sent[0].text, /Nothing has been sent to them/i);
     } finally { notifier.__resetTransportForTests(); }
   });
 
-  test('an empty queue is said plainly rather than as a number', async () => {
+  test('nothing learned is said plainly rather than as a number', async () => {
     const sent = [];
     notifier.__setTransportForTests({ sendMail: async (m) => { sent.push(m); return {}; } });
     try {
-      await withEnv(undefined, () => notifier.sendLoginNotification({ username: 'will', pendingFacts: 0 }));
-      assert.match(sent[0].text, /Nothing is waiting/i);
+      await withEnv(undefined, () => notifier.sendLoginNotification({ username: 'will', learnedRecently: 0 }));
+      assert.match(sent[0].text, /learned nothing new/i);
     } finally { notifier.__resetTransportForTests(); }
   });
 
   test('a send failure is reported, never dressed up as a send', async () => {
     notifier.__setTransportForTests({ sendMail: async () => { throw new Error('smtp refused'); } });
     try {
-      const r = await withEnv(undefined, () => notifier.sendLoginNotification({ username: 'will', pendingFacts: 1 }));
+      const r = await withEnv(undefined, () => notifier.sendLoginNotification({ username: 'will', learnedRecently: 1 }));
       assert.equal(r.sent, false);
       assert.match(r.reason, /smtp refused/);
     } finally { notifier.__resetTransportForTests(); }
