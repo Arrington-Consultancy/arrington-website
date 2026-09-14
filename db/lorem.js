@@ -177,6 +177,37 @@ const lorem = {
     'row_3_action': 'Improved margin',
     'row_3_client': 'South West aesthetic clinics'
   },
+  // Neutral placeholder, deliberately. Unlike proofstrip (whose whole
+  // point is naming real client work, so its lorem carries real
+  // examples), a new Built proof instance must not arrive pre-filled with
+  // claims about work somebody has not done. The image fields start empty
+  // and the section simply renders no screenshot until a real path is set.
+  builtproof: {
+    'label': 'Lorem ipsum',
+    'heading': 'Lorem ipsum dolor sit amet',
+    'intro': 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore.',
+    'item_1_title': 'Lorem ipsum dolor',
+    'item_1_body': 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore.',
+    'item_1_outcome': 'Lorem ipsum: dolor sit amet consectetur.',
+    'item_1_note': '',
+    'item_1_caption': 'Lorem ipsum',
+    'item_1_image': '',
+    'item_1_image_mobile': '',
+    'item_2_title': 'Consectetur adipiscing elit',
+    'item_2_body': 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore.',
+    'item_2_outcome': 'Lorem ipsum: dolor sit amet consectetur.',
+    'item_2_note': '',
+    'item_2_caption': 'Lorem ipsum',
+    'item_2_image': '',
+    'item_2_image_mobile': '',
+    'item_3_title': 'Sed do eiusmod tempor',
+    'item_3_body': 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore.',
+    'item_3_outcome': 'Lorem ipsum: dolor sit amet consectetur.',
+    'item_3_note': '',
+    'item_3_caption': 'Lorem ipsum',
+    'item_3_image': '',
+    'item_3_image_mobile': ''
+  },
   contact: {
     'label': 'Lorem ipsum',
     'heading': 'Lorem ipsum dolor sit amet',

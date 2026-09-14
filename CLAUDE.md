@@ -3933,3 +3933,123 @@ Two suites need more than `DATABASE_URL`:
 ## Related
 
 - **Generic template** extracted from this project for Nat's brother Ben: `github.com/natparnell/single-page-cms-template` (public, marked as GitHub template repo, scrubbed of Tom-specific content, ships with a `HANDOVER.md` written for a Claude Code agent). Not a fork and has no upstream link to this repo. Nat has an untracked local copy at `~/west-cms-template/` used as the source for the public template.
+
+## Evidence: the Built proof section (14/09/2026)
+
+Tom's brief: the Evidence page proved the commercial thinking through the
+four PDFs, and should also show what Arrington can build and put into use.
+`builtproof` is that second block. It sits BELOW the documents, which are
+unchanged and still lead, because the written commercial judgement is
+still the primary evidence.
+
+**Deliberately not a web-design or software portfolio.** The principle,
+from the brief: sometimes the answer is better control, a clearer
+operating rhythm or a decision that has been put off, and sometimes the
+change only sticks if somebody builds the thing that carries it.
+
+**Three bands, three examples**: Scott (the fictional company), the
+Arrington AI Workspace, World Student Advisors. Each is one full-width
+band, screenshot first, roughly two thirds screenshot to one third words,
+alternating sides. No grid and no gallery: a wall of small screenshots was
+the thing this exists not to be.
+
+**Mobile is designed, not inherited.** Every item carries TWO image
+fields, `item_N_image` and `item_N_image_mobile`, chosen between by a
+`<picture>` source at 720px. This matters more than it sounds: the desktop
+crops are about 1,340px wide, and shown at 390px that is roughly 6px text,
+which is unreadable. The phone crops are about 480px wide at source, so
+the phone shows them at roughly 0.8 scale and the text survives. On mobile
+the image goes full bleed, cancelling the section's own 1.25rem gutter,
+because a gutter around a screenshot at 390px wastes the only width there
+is. **If you replace a screenshot, replace both crops**, and check the
+phone one at 390px rather than assuming the desktop one will shrink.
+
+**Registration**, the usual three-lists-by-hand cost: `VALID_TEMPLATES` in
+`routes/content.js`, `routes/admin.js` and `server.js`; the picker entry in
+`views/partials/add-section-modal.ejs`; a thumbnail at
+`public/img/templates/builtproof.svg`; neutral lorem in `db/lorem.js`; and
+labels plus the short-field heuristic in `public/js/admin.js`.
+`test/builtProofSection.test.js` pins all of it, including that it stays
+OUT of `defaultOrder` and `NEW_PAGE_TEMPLATES` so it is picker-only and can
+never auto-inject itself onto a page.
+
+**Image paths are validated at render**, same as the documents template:
+root-relative, no `..`, image extension only. A path that fails renders
+nothing rather than reaching a `src`. Pinned in both directions.
+
+### The screenshots, and where they come from
+
+`public/img/evidence/`. Regenerate by running the app locally and cropping;
+there is no build step for these.
+
+- **Scott** comes from a normal seeded database. It is fiction by design,
+  so there is no confidentiality question at all, and the page says in
+  words that Scott is a demonstration and not a real client.
+- **The Workspace screenshot is the real interface on invented data.** This
+  is the part worth understanding before changing anything. Screenshotting
+  production would publish real enquiries, real contacts and the real ANNA
+  balance, which the brief forbids. Screenshotting an ordinary dev database
+  produces "No statement uploaded yet" and "0 records", which proves
+  nothing. So `scripts/workspaceDemoData.js` fills a THROWAWAY database
+  with invented Arrington-shaped data, and the real code renders it: the
+  real ANNA import path, the real recurring-cost estimator, the real CRM
+  projection. Only the facts are invented, and every invented address uses
+  `@example.invalid` so a demonstration row can always be told from a real
+  one.
+
+  It is **not wired into `db/seed.js`**, so nothing in the boot path can
+  reach it. It also refuses to run unless three things hold: an exact
+  confirmation phrase in `WORKSPACE_DEMO_CONFIRM`, a `CANONICAL_HOST` that
+  is not the live site, and a target database containing **no lead that is
+  not already demonstration data**. That third one is the guard that
+  actually protects Tom: one genuine enquiry in the database and it stops,
+  whatever the other two say. All three were tested refusing.
+
+  If a Workspace screen needs changing to look good here, change the
+  screen. This must never become a separate demo product.
+
+### Scott Company Brain polish, fixed on the way (14/09/2026)
+
+Fixed because that screen was going to be looked at by a stranger, and
+both defects were invisible from the inside.
+
+**Fifteen domains had no human label**, so the Company Brain rendered raw
+database slugs (`assets_ops`, `vehicle_status` and thirteen narrower ones)
+in a list where every other row read as a sentence. The comment above
+`DOMAIN_LABELS` in `lib/scott/clearance.js` claimed "the Company Brain test
+asserts this map stays complete for every domain in the dataset". **No such
+test existed.** `test/scott/domainLabels.test.js` is that test now, and it
+checks both directions: no domain in use without a label, and no label
+without records behind it.
+
+**The preview line under each area picked `Object.values(rec)[1]`**,
+whichever field happened to be second in the object, so real areas
+previewed as "8", "3750", "SAKS22V" and "Customers". It then cut at exactly
+90 characters with no ellipsis, so longer ones ended mid-word ("public
+marketin", "before a failure oc"). Now in `lib/scott/brainPreview.js`,
+pure and tested: descriptive fields first, then the longest sentence-shaped
+string, a short reference carried as a prefix rather than instead of a
+description, and a word-boundary cut with an ellipsis. It returns nothing
+rather than inventing a summary, and it never chooses WHICH record it
+previews, which is what keeps the preview line out of the clearance model.
+
+### Still open on this section
+
+- **World Student Advisors**: the public homepage only. Tom asked for the
+  Staff Portal, a student-facing tool or an AI screen as well; none is in
+  this repository and none was invented. The band takes it as a drop-in
+  the moment a safe screenshot exists.
+- **The Arrington homepage was deliberately NOT used.** A visitor reading
+  this section is already on the site, so a picture of it proves nothing,
+  and the local seed's hero copy differs from the live copy, so the
+  screenshot would have shown superseded wording.
+- **The clearance comparison screen** (`/scott/compare`, two people side by
+  side, green dots against struck-through greys) is the second strongest
+  artefact in the estate and is not in this version, which runs to three
+  bands. It captures cleanly if a fourth is ever wanted.
+- **The Workspace Finance screen is not strong enough to publish** even
+  fully populated. It opens with five lines of technical explanation about
+  ANNA's developer API, the upload card sits above the balance, the date
+  inputs render `mm/dd/yyyy` on a UK business tool, and the cashflow table
+  leads with empty months. Contacts was used instead. Worth fixing on its
+  own terms rather than for this page.
