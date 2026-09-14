@@ -427,7 +427,12 @@ async function seed() {
             {
               title: '90-Day Action Plan',
               blurb: 'The findings turned into practical actions, owners, deadlines and evidence of completion.',
-              meta: 'PDF, 7 pages',
+              // 14 pages, verified against the file with pdfinfo on
+              // 14/09/2026. This default only reaches a FRESH database
+              // (the insert below is ON CONFLICT DO NOTHING); an existing
+              // deployment holds 'PDF, 7 pages' and is corrected by the
+              // guarded migration further down this file.
+              meta: 'PDF, 14 pages',
               file: '/pdfs/90-day-action-plan.pdf',
               image: '/img/docs/90-day-action-plan.jpg'
             },
@@ -5892,6 +5897,70 @@ async function seed() {
   // the real notification chain in this environment; see the script's
   // header for exactly what it does and does not claim.
   await require('../scripts/scottGapAcceptance').runGapAcceptanceCheck(db);
+
+  // Migration: the 90-Day Action Plan's page count (14/09/2026).
+  //
+  // The document is 14 pages and its caption said 7. Found while checking
+  // the other three downloads during the Enactment Sheet replacement, and
+  // recorded then as a live copy edit rather than fixed, because it was
+  // not part of that change. Tom's instruction of 14/09/2026 closes it:
+  // correct the page count, change nothing else, do not touch the PDF.
+  //
+  // Verified against the file itself before this was written rather than
+  // taken from the note: pdfinfo reports 14 pages for
+  // private/pdfs/90-day-action-plan.pdf. The other three were checked in
+  // the same pass and all three captions are correct (Enactment Sheet 4,
+  // Half-Time Team Talk 4, The Mind That Built the Business 15), so this
+  // is the only row that needs correcting.
+  //
+  // Same shape as the Enactment Sheet migration above, and for the same
+  // reasons: doc_N_meta is LIVE CMS COPY, so editing the default in this
+  // file changes a fresh database and nothing on production. The marker
+  // makes it run once; matching the old value means a CMS edit always
+  // wins; and the row is found via whichever doc_N_file points at this
+  // PDF rather than by matching the caption text, because two documents
+  // now legitimately read 'PDF, 4 pages' and a value-only match is one
+  // careless edit away from rewriting the wrong document.
+  {
+    const ACTION_PLAN_PAGES_MARKER = 'evidence.action_plan_pages_2026-09-14';
+    const OLD_META = 'PDF, 7 pages';
+    const NEW_META = 'PDF, 14 pages';
+
+    const { rows: markerRows } = await db.query(
+      'SELECT 1 FROM content WHERE section_key = $1', [ACTION_PLAN_PAGES_MARKER]
+    );
+
+    if (markerRows.length === 0) {
+      const { rows: fileRows } = await db.query(
+        `SELECT section_key FROM content
+          WHERE section_key ~ '\\.doc_[0-9]+_file$'
+            AND content LIKE '%/90-day-action-plan.pdf'`
+      );
+
+      // Stamped only once there was something to act on, exactly as the
+      // Enactment Sheet migration does: a fresh database has no documents
+      // section at all, so an unconditional stamp would spend the
+      // migration on a database it never reached.
+      if (fileRows.length) {
+        let updated = 0;
+        for (const row of fileRows) {
+          const metaKey = row.section_key.replace(/_file$/, '_meta');
+          const { rowCount } = await db.query(
+            'UPDATE content SET content = $1 WHERE section_key = $2 AND content = $3',
+            [NEW_META, metaKey, OLD_META]
+          );
+          updated += rowCount;
+        }
+        console.log(`90-Day Action Plan page count: ${fileRows.length} document row(s) found, ${updated} updated to '${NEW_META}'.`);
+
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [ACTION_PLAN_PAGES_MARKER, 'true']
+        );
+      }
+    }
+  }
+
 
   // Arrington AI Workspace: ingest the encrypted snapshot into
   // workspace_records. A no-op when WORKSPACE_SNAPSHOT_KEY is unset, and

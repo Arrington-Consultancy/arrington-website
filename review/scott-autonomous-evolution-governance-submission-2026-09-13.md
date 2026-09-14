@@ -1,6 +1,24 @@
 # Scott AI Demonstration: autonomous evolution of the fictional company brain
 
-Governance submission, 13 September 2026. Builder: the Claude Code session on Tom's instruction of 13 September 2026. Status: built on branch `claude/new-session-hbgp04-scott-evolution`, not merged; production merge is Tom's gate.
+Governance submission, 13 September 2026. Builder: the Claude Code session on Tom's instruction of 13 September 2026.
+
+> **STATUS CORRECTION, 14 September 2026.** The line below originally read
+> "built on branch `claude/new-session-hbgp04-scott-evolution`, not merged;
+> production merge is Tom's gate." **That gate has since been passed: Tom
+> approved the merge on 14 September 2026, and the change is merged,
+> deployed and live on production.** Everything from here to the
+> "Post-merge record" heading at the end of this document is the PRE-MERGE
+> PROPOSAL, preserved unaltered as the record of what was put to Tom and
+> what he approved. It is not a description of a pending decision and must
+> not be read as one. The merge and deployment evidence, and the request
+> for independent review, are appended at the end.
+>
+> **This document does not reopen the decision to make Scott autonomous.**
+> That decision is Tom's, it is made, and the independent review requested
+> below is a review of the implementation and its boundary as shipped, not
+> a re-examination of whether the fictional company should evolve.
+
+Status at the time of writing: built on branch `claude/new-session-hbgp04-scott-evolution`, not merged; production merge is Tom's gate.
 
 ## Tom's instruction (verbatim, 13 September 2026)
 
@@ -102,3 +120,117 @@ Unchanged and unextended: `SCOTT_BRAIN_AUTOFILL` set to anything other than `tru
 ## Residual risk, stated
 
 Reconciliation catches the case that can be detected exactly: a worker proposing a fact for a key already held. A worker that contradicts a held figure in prose WITHOUT proposing it as a fact is still only prevented by the prompt. Closing that would mean scanning free text for figures and guessing which record they belong to, which is the class of check this project has repeatedly found does more harm than good. It is recorded here rather than claimed as covered.
+
+
+---
+
+# Post-merge record and request for independent review (14 September 2026)
+
+Appended after the fact. Nothing above this line has been altered except
+the dated status correction at the head, which says so in its own words.
+
+## Decision
+
+Tom approved the merge on 14 September 2026, in writing, as part of a
+combined instruction covering several items. His words on this one:
+
+> "I want Scott's Armchair to become its own believable, persistent
+> fictional company, not a static demo waiting for me to approve every new
+> fact. Scott should remember what has happened, evolve its own company
+> state, reuse established facts consistently, reject contradictions, keep
+> a history when facts genuinely change and remain internally believable
+> over time. This autonomy is intentional. It must remain strictly inside
+> Scott and must never alter or contaminate real Arrington business data."
+
+He confirmed the closure on the same day: "Do not reopen the decision to
+make Scott autonomous."
+
+## What shipped
+
+| | |
+|---|---|
+| Pull request | #165, "Scott evolves on its own, and remembers" |
+| Merge commit on `main` | `a0095005463c429f40d5edb449c9253178af8790` |
+| Merged after | #164 (`2f5bfbe`), which #165 contained; the dependency order was forced, not chosen |
+| Production deployment that ran the migration | `37c9b423-c9af-47d9-ac04-e582b49bb8ae` |
+| Serving deployment at the time of writing | `61f872f4-2d5f-4283-ba1a-6c2ecc5a3a5e`, SUCCESS |
+| Kill switch state on production | `SCOTT_BRAIN_AUTOFILL='true'` — the autonomy is live |
+
+## Evidence that the behaviour is real, not merely deployed
+
+Quoted verbatim from the production start-up log of deployment
+`37c9b423`. These are the three claims worth evidencing, and each is
+evidenced by the system reporting its own work rather than by inspection
+of the code:
+
+- `Scott AI Demonstration: 2 pending proposed fact(s) settled at boot: 1 admitted, 1 rejected, 0 already held.`
+  Those are the two rows this submission predicted would settle (see
+  "Migration" above). They resolved without a person, which is the whole
+  point of the change.
+- `Scott AI Demonstration: 17 open gap(s) read, 17 closed by logic. 17 gaps closed: 3 answered by something the company learned; 14 blocked nothing.`
+  Each closure carries its own reason on the row; none asserts that a
+  source was corrected, which is the one thing an automatic closure must
+  never claim.
+- `Scott brain: 18 approved additions loaded. Estimate autofill ARMED (SCOTT_BRAIN_AUTOFILL='true').`
+  Seventeen before the release, eighteen after: the one admitted fact.
+- `Scott AI Demonstration: proposed-fact estimate and supersession columns verified.` and
+  `Scott evolution briefing: scheduled, every 24h, checked hourly against the database clock.`
+
+**A note on reading that log.** `37c9b423` is marked REMOVED, because a
+second deployment superseded it as a deployment. Its database writes still
+happened, and every deployment since correctly logs nothing because the
+migration found its work already done. A reader checking only the serving
+deployment's log would see silence and could reasonably conclude the
+migration never ran. It did.
+
+## Verification carried out before the merge
+
+- Merged tree on a genuinely fresh database: seed exit 0, then the full
+  suite at **1,098 tests, 1,095 passing, 0 failing**, 3 skipped, plus the
+  seven separately-gated suites that need a running instance or paid AI
+  and are named on every run. The four suites specific to this change
+  (`brainSettlementFirewall`, `companyState`, `brainRepeatability`,
+  `gapClosure`) ran **61 of 61**.
+- **The boundary was checked independently of the change's own test**,
+  because a test written by the same author as the code it guards is weak
+  evidence of exactly the property most worth proving here. Every SQL
+  statement in the new and changed modules was enumerated by hand: every
+  table read or written is `scott_`-prefixed. None of `companyState.js`,
+  `gapClosure.js`, `evolutionDigest.js` or `evolutionBriefing.js` requires
+  anything outside `lib/scott`. The single apparent hit on the word
+  `content` is a column on `scott_messages`, not the Arrington `content`
+  table.
+- Error rate across the release window: the only server error sits inside
+  the sixty seconds of the deployment changeover, with nothing after it.
+
+**Stated rather than glossed:** a passing test suite is not a release gate
+on its own, and is not offered as one. The adversarial suites were not run
+for this release; neither this change nor #164 touches the workspace
+access gates those suites cover. And this build environment cannot reach
+the live site, so every production claim above rests on Railway's
+deployment and start-up logs, never on a page being loaded.
+
+## What is being asked of Governance & Assurance
+
+An independent review of the implementation **as shipped**, not of the
+decision. Specifically:
+
+1. Whether the boundary holds under independent attack: that no automatic
+   path inside the fictional demonstration can read, write or influence
+   any real Arrington record, permission or action, in either direction.
+2. Whether the settlement rule is genuinely terminal and genuinely
+   deterministic: no outcome that waits for a person, no automatic path
+   that overwrites a held fact, no reachable branch that admits something
+   the rules say it rejects.
+3. Whether the honesty properties hold: that an automatic gap closure
+   cannot claim a person corrected a source, and that a supersession
+   cannot be reached by any caller other than a person.
+4. Whether the residual risk recorded above ("a fact that is plausible,
+   sourced, correctly sized and non-conflicting can still be wrong for the
+   business") is bounded acceptably by the briefing and the retract
+   action, given the demonstration's commercial purpose.
+
+The builder does not award itself a verdict, and none is claimed here.
+The rollback, unchanged, is a single Railway variable: `SCOTT_BRAIN_AUTOFILL`
+set to anything other than `true` stops the company learning, with no code
+change and no deployment.

@@ -610,7 +610,9 @@ Gotcha: a PDF downloaded through Chrome carries a `com.apple.quarantine` xattr t
 
 Verified by rebuilding the production state locally (a fixture inserting the real four-document content rows at `PDF, 2 pages`), running the real seed over it, then requesting the document through the actual email gate and comparing the delivered bytes by sha256 against the approved file.
 
-**Known discrepancy, NOT fixed and not part of that change:** `90-day-action-plan.pdf` is 14 pages and its caption says `PDF, 7 pages`. Found while checking the other three downloads were untouched. It is a live copy edit for Tom, not a code fix.
+**That discrepancy is now CLOSED (14/09/2026).** `90-day-action-plan.pdf` is 14 pages and its caption said `PDF, 7 pages`. Corrected on Tom's instruction, page count only, PDF untouched, by a guarded migration in the same shape as the Enactment Sheet one above: marker `evidence.action_plan_pages_2026-09-14`, scoped by whichever `doc_N_file` row points at that PDF rather than by matching the caption text. **That scoping matters more now than it did then:** two of the four documents legitimately read `PDF, 4 pages` (Enactment Sheet and Half-Time Team Talk), so a value-only match is one careless edit from rewriting the wrong row. The `db/seed.js` default was corrected to `PDF, 14 pages` in the same commit so a fresh database and an existing one agree.
+
+All four counts were verified against the files themselves with `pdfinfo` rather than taken from this note: Half-Time Team Talk 4, The Mind That Built the Business 15, 90-Day Action Plan 14, Enactment Sheet 4. Only the one row was wrong. Tested by rebuilding production's exact content rows locally and running the real seed over them: the 90-day row went 7 to 14, **both `PDF, 4 pages` rows were left untouched**, a redeploy was a clean no-op, and a simulated CMS edit (`PDF, 14 pages, updated by Tom`) survived the migration, which is what the old-value guard exists for.
 
 **Path validation.** `doc_N_file` and `doc_N_image` content values are still validated at render time against `^\/[A-Za-z0-9._\-\/]*\.pdf$` and `...\.(jpe?g|png|webp|avif)$` (and rejected if they contain `..`) — this hasn't changed. What changed is what happens with a validated `doc_N_file`: instead of being rendered as a literal `href`, only its basename is extracted and passed to the gated-download flow (see "Lead capture" above). A path that fails validation still renders nothing: the PDF button or the thumbnail simply disappears. Same defence-in-depth approach as the SEO URL fields and the WhatsApp links.
 
@@ -818,6 +820,50 @@ no longer share the contact-click label)"*.
 The schema change is a standalone `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`,
 which is the pattern that actually reaches an existing database — only
 `CREATE TABLE IF NOT EXISTS` is skipped once a table exists.
+
+### PDF downloads stay out of Ads conversions (decided 14/09/2026)
+
+Settled, not an open question. Tom's decision, verbatim: *"Leave PDF
+downloads out of Google Ads conversions. They should still be recorded as
+leads with the person's details, attribution and downloaded document, but
+no separate Ads conversion is required at present."*
+
+So `GOOGLE_ADS_PDF_CONVERSION_LABEL` stays **unset** deliberately. A PDF
+download fires no Ads conversion at all, while still writing a full
+`kind='pdf_download'` lead row carrying the email, which document was
+taken and the `attribution` object. The GA4 `document_request_submit`
+event is unaffected and still fires.
+
+Nothing needs doing to maintain this. The mechanism is kept rather than
+removed because it is how the decision gets reversed if Tom ever wants
+downloads counted: create a conversion action in the Ads account and set
+its label. Do not re-raise this as an open item.
+
+### Unexplained deploy log line (open, non-blocking, 14/09/2026)
+
+Every production deployment logs one line a few seconds before the app
+starts:
+
+```
+Error: model: claude-3-5-sonnet-20241022
+```
+
+**Facts established so far:** that string appears nowhere in this
+repository (checked across all `.js` and `.ejs`); both orchestrators pin
+`MODEL = 'claude-sonnet-5'`; the line is emitted at INFO severity, not
+error; and it is present identically on deployments from well before the
+14/09/2026 releases, so it is not a consequence of any recent change. It
+precedes `[PROD] Arrington CMS running on port 8080`, i.e. before the
+application's own logging begins, which points at the platform or the
+build image rather than the site.
+
+**Tom's instruction, 14/09/2026:** keep it as a non-blocking technical
+investigation item, and *"Do not change production behaviour merely to
+remove the log unless you can identify its actual source and demonstrate
+the change is safe."* That bar has not been met, so nothing has been
+changed. Treat a speculative fix here as out of bounds: the line is
+cosmetic, the site is healthy, and a change made to silence a log whose
+origin is unknown is a change whose blast radius is also unknown.
 
 ### Scott evolves on its own (PR #165, merge `a009500`)
 
