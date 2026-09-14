@@ -491,13 +491,24 @@ app.get('/robots.txt', (req, res) => {
     return res.type('text/plain').send('User-agent: *\nDisallow: /\n');
   }
   res.type('text/plain').send(
-    // /market-ready-test is still unpublished — see routes/marketReadyTest.js
-    // — disallowed here as belt-and-braces on top of its own noindex/nofollow
-    // meta tag, until Tom approves launch. Commercial Gaps Review (routes/
-    // commercialGapsReview.js) was approved for launch 30/07/2026 and is
-    // deliberately no longer listed here; its own per-visitor result pages
-    // stay noindex/nofollow regardless, since those carry one visitor's
-    // private answers rather than being the public tool page.
+    // Corrected 14/09/2026. This comment used to say "/market-ready-test is
+    // still unpublished ... until Tom approves launch", which stopped being
+    // true on 16/08/2026 and was never updated. Only the DISALLOW lines
+    // below were, so the comment and the code three lines under it said
+    // opposite things for a month, and the stale sentence was read back as
+    // evidence that the tool is meant to be unpublished. Tom's position,
+    // restated 14/09/2026: the Market Ready Test is intentionally public
+    // and stays live. It is not disallowed here and it is in sitemap.xml;
+    // routes/marketReadyTest.js and views/market-ready-test.ejs carry the
+    // same record.
+    //
+    // What the two Disallow lines below actually cover, and why: only the
+    // PER-VISITOR RESULT PAGES of the Market Ready Test and the Commercial
+    // Gaps Review (approved for launch 30/07/2026). Those are private
+    // reports about a named business reached by an unguessable token, and
+    // the Market Ready result page carries social share buttons, so a link
+    // a visitor shares must never become an indexed page about their
+    // business. The public tool pages themselves are crawlable.
     `User-agent: *\nAllow: /\nDisallow: /login\nDisallow: /market-ready-test/result/\nDisallow: /commercial-gaps-review/result/\n\nSitemap: ${base}/sitemap.xml\n`
   );
 });
