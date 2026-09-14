@@ -182,6 +182,30 @@
         'filter.closing': 'Closing text',
         'filter.button_text': 'Button text (leave empty to hide button)',
         'filter.button_link': 'Button links to',
+        'builtproof.label': 'Section label (leave empty to hide)',
+        'builtproof.heading': 'Section heading',
+        'builtproof.intro': 'Section intro',
+        'builtproof.item_1_title': 'Example 1: title',
+        'builtproof.item_1_body': 'Example 1: what changed',
+        'builtproof.item_1_outcome': 'Example 1: what the business now has',
+        'builtproof.item_1_note': 'Example 1: small print (optional)',
+        'builtproof.item_1_caption': 'Example 1: screenshot caption',
+        'builtproof.item_1_image': 'Example 1: screenshot path (desktop)',
+        'builtproof.item_1_image_mobile': 'Example 1: screenshot path (mobile crop)',
+        'builtproof.item_2_title': 'Example 2: title',
+        'builtproof.item_2_body': 'Example 2: what changed',
+        'builtproof.item_2_outcome': 'Example 2: what the business now has',
+        'builtproof.item_2_note': 'Example 2: small print (optional)',
+        'builtproof.item_2_caption': 'Example 2: screenshot caption',
+        'builtproof.item_2_image': 'Example 2: screenshot path (desktop)',
+        'builtproof.item_2_image_mobile': 'Example 2: screenshot path (mobile crop)',
+        'builtproof.item_3_title': 'Example 3: title',
+        'builtproof.item_3_body': 'Example 3: what changed',
+        'builtproof.item_3_outcome': 'Example 3: what the business now has',
+        'builtproof.item_3_note': 'Example 3: small print (optional)',
+        'builtproof.item_3_caption': 'Example 3: screenshot caption',
+        'builtproof.item_3_image': 'Example 3: screenshot path (desktop)',
+        'builtproof.item_3_image_mobile': 'Example 3: screenshot path (mobile crop)',
         'proofstrip.label': 'Section label (leave empty to hide)',
         'proofstrip.row_1_action': 'Row 1 action',
         'proofstrip.row_1_client': 'Row 1 client',
@@ -231,6 +255,7 @@
         assessment: 'Assessment',
         filter: 'Filter',
         proofstrip: 'Proof strip',
+        builtproof: 'Built proof',
         contact: 'Contact',
         footer: 'Footer',
         article: 'Useful Thinking article',
@@ -243,6 +268,7 @@
             key.includes('cta') || key.includes('email') || key.includes('phone') ||
             key.includes('_title') || key.includes('_number') ||
             key.includes('_action') || key.includes('_client') ||
+            key.includes('_caption') ||
             key.includes('_price') || key.includes('_name') ||
             key.includes('_file') || key.includes('_image') || key.endsWith('.image') || key.includes('_meta') ||
             key.includes('_link') || key.includes('button_text') ||

@@ -5610,6 +5610,132 @@ async function seed() {
     console.log('Scott AI Demonstration: job lifecycle quality stages verified.');
   }
 
+
+  // Migration: the Built proof section on Evidence (14/09/2026).
+  //
+  // Tom's brief: the Evidence page proves the commercial thinking through
+  // the PDFs, and should also show what Arrington can build and put into
+  // use. This adds that as a second block BELOW the documents, which stay
+  // exactly as they are and keep top billing.
+  //
+  // Deliberately not a web-design or software portfolio. The principle,
+  // from the brief: sometimes the answer is better control, a clearer
+  // operating rhythm or a decision that has been put off, and sometimes
+  // the change only sticks if somebody builds the thing that carries it.
+  //
+  // Copy checked against 00 ARRINGTON BRAND OPERATING SYSTEM before it
+  // was written: UK English, "we", no em dashes, none of the banned
+  // words, no fire metaphors, and the CASE STUDY STANDARD honoured, which
+  // is the one that bites here. Not one line claims a client outcome. The
+  // third line of each example states what exists now, which is a fact
+  // about the present, never a result attributed to the work.
+  //
+  // Guarded on the evidence page existing and having no builtproof
+  // instance, and every row is ON CONFLICT DO NOTHING, so a later CMS
+  // edit always wins and a redeploy never fights it. Same pattern as the
+  // documents migration above.
+  {
+    const { rows: evidencePage } = await db.query(
+      "SELECT id, section_order FROM pages WHERE slug = 'evidence'"
+    );
+
+    if (evidencePage.length) {
+      const order = Array.isArray(evidencePage[0].section_order) ? evidencePage[0].section_order : [];
+      const hasBuiltProof = order.some((id) => /^builtproof(?:__\d+)?$/.test(id));
+
+      if (!hasBuiltProof && order.length) {
+        // Same collision-avoidance helper the other page migrations use:
+        // collect every instance id in use anywhere, plus every content
+        // prefix, before choosing one.
+        const used = new Set();
+        const { rows: allPages } = await db.query('SELECT section_order FROM pages');
+        allPages.forEach((p) => {
+          (Array.isArray(p.section_order) ? p.section_order : []).forEach((id) => used.add(id));
+        });
+        const { rows: prefixes } = await db.query(
+          "SELECT DISTINCT split_part(section_key, '.', 1) AS p FROM content"
+        );
+        prefixes.forEach((r) => used.add(r.p));
+
+        let bpId = null;
+        if (!used.has('builtproof')) bpId = 'builtproof';
+        else {
+          for (let n = 2; n <= 99 && !bpId; n++) {
+            if (!used.has(`builtproof__${n}`)) bpId = `builtproof__${n}`;
+          }
+        }
+
+        if (bpId) {
+          const rows = [
+            [`${bpId}.label`, 'Built and in use'],
+            [`${bpId}.heading`, 'From the thinking to the thing that runs it'],
+            [`${bpId}.intro`, 'The documents above are the commercial work. Sometimes the answer is better control, a clearer operating rhythm or a decision that has been put off. Sometimes the change only sticks if somebody builds the thing that carries it. These are three we have built and use.'],
+
+            // 1. Scott. Leads because it is the clearest to look at and
+            // carries no confidentiality risk of any kind.
+            [`${bpId}.item_1_title`, 'A fictional company we built to show how this works'],
+            [`${bpId}.item_1_body`, 'Explaining controlled AI to a business owner in a meeting rarely lands. So we built a whole company instead. Scott&rsquo;s Armchair and Knitting Service is not a client and never was. Nine named workers run it, each with their own clearance, and the same question gives a different answer depending on who is signed in.'],
+            // Revised on Tom's instruction of 14/09/2026. The earlier draft
+            // said "nothing is invented to fill a gap", which was wrong
+            // about the design: the company is built to evolve. What is
+            // actually true is that a new fact has to survive the checks
+            // and stay consistent with the figures already on file, and
+            // that is what this says.
+            [`${bpId}.item_1_outcome`, 'What it shows: a company that remembers. Ask the same question tomorrow and the answer holds. The company does learn as it goes, and anything new has to agree with the figures already on file before it is kept.'],
+            [`${bpId}.item_1_note`, 'Scott&rsquo;s Armchair and Knitting Service is a demonstration. It is not a real client, and no real client information appears anywhere in it.'],
+            [`${bpId}.item_1_caption`, 'Scott: where the money goes'],
+            [`${bpId}.item_1_image`, '/img/evidence/scott-money-desktop.jpg'],
+            [`${bpId}.item_1_image_mobile`, '/img/evidence/scott-money-mobile.jpg'],
+
+            // 2. Arrington's own workspace.
+            [`${bpId}.item_2_title`, 'We run our own business on one'],
+            [`${bpId}.item_2_body`, 'Enquiries, contacts, the bank statement, the invoicing and the inbox sat in five places, and all five went through Tom. We built one internal workspace that reads them together.'],
+            [`${bpId}.item_2_outcome`, 'What we now have: one place that answers who has been in touch and where they came from, with every consequential action still waiting on a person.'],
+            [`${bpId}.item_2_note`, 'The screen above is our own workspace running on invented data, so no real enquiry, contact or figure appears on this page.'],
+            [`${bpId}.item_2_caption`, 'Arrington: one record per person'],
+            [`${bpId}.item_2_image`, '/img/evidence/workspace-contacts-desktop.jpg'],
+            [`${bpId}.item_2_image_mobile`, '/img/evidence/workspace-contacts-mobile.jpg'],
+
+            // 3. World Student Advisors. Public website only for now; the
+            // Staff Portal screen Tom asked for is not in the repository
+            // and is not invented here.
+            [`${bpId}.item_3_title`, 'A business that needed a site people could act on'],
+            [`${bpId}.item_3_body`, 'World Student Advisors places students with schools and universities worldwide. The site had to explain a free, counsellor-led service to families in several countries, and get a serious enquiry to the right person quickly.'],
+            [`${bpId}.item_3_outcome`, 'What the business now has: a site built around the enquiry rather than around the brochure.'],
+            [`${bpId}.item_3_note`, ''],
+            [`${bpId}.item_3_caption`, 'World Student Advisors'],
+            [`${bpId}.item_3_image`, '/img/wsa/wsa-homepage.jpg'],
+            // No separate phone crop for this one yet: the WSA homepage is
+            // a photographic hero rather than an interface, so it survives
+            // being scaled down in a way the two screenshots above do not.
+            // It gets its own crop when a Staff Portal screen replaces it.
+            [`${bpId}.item_3_image_mobile`, '']
+          ];
+
+          for (const [key, value] of rows) {
+            await db.query(
+              `INSERT INTO content (section_key, content) VALUES ($1, $2)
+               ON CONFLICT (section_key) DO NOTHING`,
+              [key, value]
+            );
+          }
+
+          // Placed after the documents block so the written commercial
+          // evidence still leads, and before whatever closes the page.
+          const docsAt = order.findIndex((id) => /^documents(?:__\d+)?$/.test(id));
+          const nextOrder = order.slice();
+          nextOrder.splice(docsAt >= 0 ? docsAt + 1 : nextOrder.length, 0, bpId);
+
+          await db.query(
+            'UPDATE pages SET section_order = $1::jsonb WHERE slug = $2',
+            [JSON.stringify(nextOrder), 'evidence']
+          );
+          console.log(`Evidence: Built proof section added as ${bpId}, after ${docsAt >= 0 ? order[docsAt] : 'the end of the page'}.`);
+        }
+      }
+    }
+  }
+
   // One-shot Brain Gap acceptance check, gated on
   // RUN_GAP_ACCEPTANCE_CHECK=true and its own already-ran marker. Proves
   // the real notification chain in this environment; see the script's
