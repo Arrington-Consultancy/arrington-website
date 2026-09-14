@@ -89,7 +89,14 @@ test('decision 5: the conversation leads the Commercial Review and direct purcha
     'booking a conversation is not the primary CTA');
 
   // Direct purchase is NOT removed, is still a real form, and is not gated.
-  assert.ok(/id="wtsCheckoutForm" data-offer="commercial_review"/.test(cr), 'the checkout form was removed or rewired');
+  // Matched as two independent facts rather than one exact attribute string:
+  // the form legitimately gained class="wts-form" during the visual pass (it
+  // was missing, so its email field rendered unstyled), and a test that pins
+  // attribute ORDER fails on changes that are not the thing it guards.
+  assert.ok(/id="wtsCheckoutForm"/.test(cr), 'the checkout form was removed');
+  assert.ok(/data-offer="commercial_review"/.test(cr), 'the checkout form was rewired to another offer');
+  assert.ok(/id="wtsCheckoutForm"[^>]*class="wts-form"/.test(cr),
+    'the checkout form lost the wts-form class, so its email field renders unstyled');
   assert.ok(/id="wtsCheckoutSubmit"/.test(cr), 'the checkout submit button was removed');
   assert.ok(/Pay £500 securely/.test(cr), 'the direct payment route lost its button');
 
