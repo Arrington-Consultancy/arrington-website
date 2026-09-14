@@ -161,12 +161,17 @@
             border-bottom: 1px solid var(--border);
         }
         .pg-offer:first-child { border-top: 1px solid var(--border); }
+        /* Grid, not flex (14/09/2026). As a wrapping flex row the price sat on
+           the right beside a short name and dropped onto its own line under a
+           long one, so its position changed from row to row and the column
+           stopped being scannable. Two tracks fix it: the name takes the space
+           that is left and wraps within it, the price keeps its own track and
+           stays top right on every row at every width. */
         .pg-offer-head {
-            display: flex;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
             align-items: baseline;
-            justify-content: space-between;
-            gap: 0.75rem 1.25rem;
-            flex-wrap: wrap;
+            column-gap: 1.25rem;
         }
         .pg-offer-head h3 { font-size: 1.18rem; }
         .pg-offer-price {
