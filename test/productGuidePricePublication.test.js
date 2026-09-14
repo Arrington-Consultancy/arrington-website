@@ -202,3 +202,19 @@ test('the restored list is below the guide, not a barrier beside it', () => {
   const offers = src.indexOf('id="pg-offers"');
   assert.ok(startBtn > -1 && offers > startBtn, 'the offer list must come after the Start button');
 });
+
+test('the price sits in its own column, so its position is the same on every row', () => {
+  // As a wrapping flex row the price sat beside a short name and dropped onto
+  // its own line under a long one, so it moved from row to row and the column
+  // stopped being scannable. Two grid tracks keep it top right at every width:
+  // the name takes what is left and wraps within its own track.
+  const src = fs.readFileSync(VIEW, 'utf8');
+  const rule = src.slice(src.indexOf('.pg-offer-head {'), src.indexOf('.pg-offer-head h3'));
+
+  assert.ok(/display:\s*grid/.test(rule), 'the row head must be a grid, not a wrapping flex row');
+  assert.ok(
+    /grid-template-columns:\s*minmax\(0,\s*1fr\)\s+auto/.test(rule),
+    'the name needs a flexible track it can wrap inside and the price needs its own'
+  );
+  assert.ok(!/flex-wrap/.test(rule), 'flex-wrap is what let the price change rows');
+});
