@@ -16,6 +16,7 @@ const {
   whyText,
   buildResult
 } = require('../lib/productGuide');
+const { OFFERS } = require('../lib/whereToStartOffers');
 
 // A baseline, fully-valid answer set every scenario overrides from.
 function baseAnswers(overrides) {
@@ -295,7 +296,21 @@ describe('Product Guide — hard invariants', () => {
     for (const s of scenarios) {
       const r = buildResult(s);
       assert.ok(r.recommendation.name, `recommendation for ${JSON.stringify(s.whatChange)} did not resolve to a real offer`);
-      assert.ok(typeof r.recommendation.pricePence === 'number');
+
+      // This used to read `typeof r.recommendation.pricePence === 'number'`.
+      // Since 14/09/2026 the RESULT PAYLOAD omits a price the business has
+      // not approved for publication, so a missing key there is correct
+      // rather than a broken offer (see test/productGuidePricePublication.js).
+      //
+      // The property this case is actually named for is unchanged and is
+      // now checked where it belongs: the id resolves to a real catalogue
+      // entry, and that entry still carries a real charged price. That is
+      // a stronger check than the old one, not a weaker one, because it no
+      // longer passes merely because the view happened to be handed a number.
+      const offer = OFFERS[r.recommendation.id];
+      assert.ok(offer, `${r.recommendation.id} is not in the offer catalogue`);
+      assert.strictEqual(typeof offer.pricePence, 'number', `${offer.id} has no charged price`);
+      assert.strictEqual(typeof r.recommendation.priceApproved, 'boolean', `${offer.id} did not declare its price status`);
     }
   });
 });
