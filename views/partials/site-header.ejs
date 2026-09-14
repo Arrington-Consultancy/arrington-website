@@ -29,6 +29,13 @@
       Home as redundant alongside it (22/08/2026). This filters the `main`
       page out of the loop only; it stays a completely normal page row
       otherwise (reorderable, cannot be hidden, etc). */ %>
+<%# Websites and AI was a hardcoded child link under What We Do in both nav
+      loops (desktop and mobile). Removed on Tom's approved decision 1 of
+      14/09/2026: it comes out of the MAIN NAVIGATION only. The page itself is
+      untouched and stays fully live, public, indexed and in the sitemap, and
+      it is still reached from the contextual links on What We Do and from the
+      hero proof link. Do not re-add a nav entry for it without a new
+      decision. %>
 <% const _navLoopPages = navPages.filter((p) => p.slug !== 'main'); %>
 <div class="mobile-menu" id="mobileMenu">
     <% if (_navLoopPages.length > 0) { %>
@@ -38,9 +45,6 @@
                class="<%= _p.slug === currentPage.slug ? 'active' : '' %>">
                 <%= _p.nav_label || _p.title %>
             </a>
-            <% } %>
-            <% if (_p.slug === 'what-we-do') { %>
-            <a href="/websites-and-ai" class="mobile-menu-sublink<%= currentPage.slug === 'websites-and-ai' ? ' active' : '' %>">Websites and AI</a>
             <% } %>
         <% } %>
         <div class="mobile-menu-divider"></div>
@@ -61,9 +65,6 @@
            <% if (canEdit && !_p.hidden && !_p.show_in_nav) { %>title="Out of the main nav (Show in nav is off), but reachable by direct URL and indexed"<% } %>>
             <%= _p.nav_label || _p.title %>
         </a>
-        <% if (_p.slug === 'what-we-do') { %>
-        <a href="/websites-and-ai" class="page-menu-link page-menu-link-child<%= currentPage.slug === 'websites-and-ai' ? ' active' : '' %>">Websites and AI</a>
-        <% } %>
         <% } %>
     </div>
 </div>

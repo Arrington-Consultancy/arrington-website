@@ -860,7 +860,19 @@
                     test: function () {
                         var succession = rows.find(function (r) { return r.category === 'Succession readiness'; });
                         var cash = rows.find(function (r) { return r.category === 'Cash control'; });
-                        return !!((succession && succession.cls === 'red') || (cash && cash.cls === 'red'));
+                        // "Commercial understanding" added 14/09/2026 (decision 9).
+                        // Its question is "if I asked what makes the business the
+                        // most money and what is the biggest drain on its time and
+                        // money, who could give me the right answer?" The controlled
+                        // Useful Thinking Bank records gap 3, "The knowledge that
+                        // existed only in my head", as MATERIALLY FILLED by this
+                        // article, and states the supported quiz conclusion as "the
+                        // business may appear able to continue while commercial
+                        // understanding still sits with one person". That is this
+                        // category almost word for word, which is why it joins this
+                        // trigger rather than earning a separate article.
+                        var commercial = rows.find(function (r) { return r.category === 'Commercial understanding'; });
+                        return !!((succession && succession.cls === 'red') || (cash && cash.cls === 'red') || (commercial && commercial.cls === 'red'));
                     },
                     url: '/useful-thinking/serendipity-is-not-a-system',
                     title: 'Serendipity Is Not a System',
@@ -874,8 +886,53 @@
                     url: '/useful-thinking/some-people-are-worth-the-risk',
                     title: 'Some People Are Worth the Risk',
                     hook: ': on when the answer to dependency risk is more reward, not less reliance.'
+                },
+                // "Every Rule Changes Behaviour" added 14/09/2026 (decision 9),
+                // for "Day-to-day management", whose question is "who keeps the
+                // day-to-day running of the business on track?". The controlled
+                // Useful Thinking Bank records buyer phrase 10, "Do I need
+                // another manager, or is something else wrong?", as a STRONG
+                // THEMATIC FIT with this article as the best existing material,
+                // and the article's own recorded commercial gap is incentive
+                // design, staff structure and operational capacity planning.
+                // Checked last so it is purely additive and cannot displace any
+                // of the three mappings that were already tested and working.
+                {
+                    test: function () {
+                        var r = rows.find(function (r) { return r.category === 'Day-to-day management'; });
+                        return !!(r && r.cls === 'red');
+                    },
+                    url: '/useful-thinking/every-rule-changes-behaviour',
+                    title: 'Every Rule Changes Behaviour',
+                    hook: ': on why structure changes what people actually do, for better and worse.'
                 }
             ];
+            // DELIBERATELY NOT MAPPED, and each for a recorded reason rather
+            // than an oversight:
+            //
+            //   Decision dependency -> "You Can Train, But You Shouldn't Blame"
+            //     is the Bank's approved article for this exact buyer phrase,
+            //     but the controlled Website & Hosting handoff states: "Do not
+            //     silently connect You Can Train to a quiz result without a
+            //     separate editorial decision." That decision has not been
+            //     made, so it is not wired in. The category is not left empty:
+            //     "The Turning That Never Came" already serves it.
+            //
+            //   Freedom from the business -> the Bank marks both matching buyer
+            //     phrases ("I can't take more than a few days off", "Things go
+            //     wrong when I'm not there") OPEN / PARTIAL and says plainly
+            //     that a lived incident "has not yet been identified".
+            //
+            //   Succession readiness (as its own article) -> Bank gap 1 is
+            //     "Story needed" / "REAL STORY STILL NEEDED".
+            //
+            //   Visibility -> the best material is "The Reverse Economy of
+            //     Scale", which the handoff records as HELD UNPUBLISHED. It
+            //     must not be linked from a public quiz result.
+            //
+            // The brief's rule is not to force a recommendation where the
+            // relationship is weak, so these stay unmapped until the editorial
+            // evidence actually exists.
             var relatedEl = document.getElementById('odr-related');
             var relatedLinkEl = document.getElementById('odr-related-link');
             var relatedHookEl = document.getElementById('odr-related-hook');

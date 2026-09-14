@@ -5898,6 +5898,157 @@ async function seed() {
   // header for exactly what it does and does not claim.
   await require('../scripts/scottGapAcceptance').runGapAcceptanceCheck(db);
 
+  // Migration: tighten the homepage "What we do" section (14/09/2026).
+  //
+  // Tom's approved decision 8: shorter, clearer, concrete commercial
+  // language, WITHOUT narrowing Arrington into being solely an owner
+  // dependency consultancy, and preserving the wider commercial position
+  // around control, margin, structure, information flow and owner
+  // independence.
+  //
+  // The section is the `filter` instance on the home page: its label is
+  // literally "What we do". Identified from the committed production
+  // snapshot (handover/live-content-export-2026-07-21.sql) rather than
+  // guessed, because this sandbox cannot read the live database and the
+  // seeded defaults are the pre-copy-review first-person versions that
+  // production stopped using in July.
+  //
+  // What was there ran to 357 characters and described HOW WE BEHAVE ("we
+  // take the time", "we do not come in pointing at what is wrong", "we
+  // listen, look properly"). That is reassurance rather than commercial
+  // language, and "properly" is one of the words the July copy review
+  // specifically flagged as carrying a sentence that a concrete fact
+  // should carry.
+  //
+  // The replacement names the actual subject matter in the first line and
+  // the actual outcome in the second, and deliberately lists control,
+  // structure, margin AND owner independence together so the proposition
+  // stays wide. Checked against the Brand Operating System constraints
+  // this repository records: UK English, "we", no em dashes, none of the
+  // banned words, and no "not X, it is Y" construction.
+  //
+  // EVERY key is guarded on its exact current value, so if Tom has edited
+  // any of these in the CMS since the July snapshot his wording wins and
+  // that key is left alone. A partial match is fine and expected: the log
+  // reports how many of the three actually moved.
+  {
+    const WHAT_WE_DO_MARKER = 'homepage.what_we_do_tightened_2026-09-14';
+    const { rows: markerRows } = await db.query(
+      'SELECT 1 FROM content WHERE section_key = $1', [WHAT_WE_DO_MARKER]
+    );
+
+    if (markerRows.length === 0) {
+      const edits = [
+        {
+          key: 'filter.heading',
+          from: '<strong>We first understand the business, then help the owner see what matters most.</strong>',
+          to: '<strong>We find where the business is losing time and money, and deal with the cause.</strong>'
+        },
+        {
+          key: 'filter.p1',
+          from: '<p>We take the time to understand what the owner has built before suggesting any changes. We do not come in pointing at what is wrong. We listen, look properly, and work out what matters most.</p>',
+          to: '<p>We look at the numbers, the structure, the margin, and how information reaches the owner.</p>'
+        },
+        {
+          key: 'filter.p2',
+          from: '<p>Only then do we look at where time is being lost, where money is being lost, and what will make the biggest difference to both the business and the owner.</p>',
+          to: '<p>The work is better control, clearer structure, stronger margin, and a business that leans less on the owner being in the middle of everything.</p>'
+        }
+      ];
+
+      // Only act at all if this home page actually carries the section.
+      const { rows: presentRows } = await db.query(
+        "SELECT 1 FROM content WHERE section_key = 'filter.label' LIMIT 1"
+      );
+
+      if (presentRows.length) {
+        let updated = 0;
+        for (const e of edits) {
+          const { rowCount } = await db.query(
+            'UPDATE content SET content = $1 WHERE section_key = $2 AND content = $3',
+            [e.to, e.key, e.from]
+          );
+          updated += rowCount;
+        }
+        console.log(`Homepage What we do: ${updated} of ${edits.length} row(s) tightened (a row left alone means it had already been edited in the CMS, which wins).`);
+
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [WHAT_WE_DO_MARKER, 'true']
+        );
+      }
+    }
+  }
+
+
+  // Migration: homepage proof above credentials (14/09/2026).
+  //
+  // Tom's approved decision 3: move properly evidenced commercial outcomes
+  // higher on the homepage, ahead of the Oxford/review credentials.
+  //
+  // This is a REORDER ONLY. It writes no copy, invents no claim and changes
+  // no wording, which is the other half of that decision ("do not invent,
+  // round up, embellish or infer a proof claim"). The case studies already
+  // on the page are the evidenced outcomes; all that changes is that a
+  // visitor meets them before the qualifications rather than after.
+  //
+  // It is deliberately RELATIVE rather than writing a fixed array. The live
+  // homepage order is CMS state that Tom can change at any time, and this
+  // sandbox cannot read production, so hardcoding an order could silently
+  // undo a arrangement he made himself. Instead it finds whatever proof and
+  // credentials instances actually exist and moves the proof to sit
+  // immediately before the credentials, preserving the case studies' own
+  // relative order and leaving every other section exactly where it was.
+  //
+  // If the page has no credentials instance, or no case study, or the proof
+  // is already above the credentials, it changes nothing and says so. The
+  // marker is only stamped once it has actually looked at a real homepage,
+  // matching the documents migrations above.
+  {
+    const PROOF_ORDER_MARKER = 'homepage.proof_above_credentials_2026-09-14';
+    const { rows: markerRows } = await db.query(
+      'SELECT 1 FROM content WHERE section_key = $1', [PROOF_ORDER_MARKER]
+    );
+
+    if (markerRows.length === 0) {
+      const { rows: pageRows } = await db.query(
+        "SELECT section_order FROM pages WHERE slug = 'main'"
+      );
+
+      if (pageRows.length && Array.isArray(pageRows[0].section_order)) {
+        const order = pageRows[0].section_order.slice();
+        const isCredentials = (id) => /^credentials(?:__\d+)?$/.test(id);
+        const isProof = (id) => /^casestudy2?(?:__\d+)?$/.test(id);
+
+        const credIndex = order.findIndex(isCredentials);
+        const proofAfter = credIndex === -1
+          ? []
+          : order.filter((id, i) => i > credIndex && isProof(id));
+
+        if (credIndex === -1) {
+          console.log('Homepage proof order: no credentials section on the home page, nothing to move.');
+        } else if (proofAfter.length === 0) {
+          console.log('Homepage proof order: proof already sits above the credentials, no change.');
+        } else {
+          const remaining = order.filter((id) => !proofAfter.includes(id));
+          const insertAt = remaining.findIndex(isCredentials);
+          remaining.splice(insertAt, 0, ...proofAfter);
+          await db.query(
+            'UPDATE pages SET section_order = $1::jsonb WHERE slug = $2',
+            [JSON.stringify(remaining), 'main']
+          );
+          console.log(`Homepage proof order: moved ${proofAfter.length} proof section(s) above the credentials (${proofAfter.join(', ')}).`);
+        }
+
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [PROOF_ORDER_MARKER, 'true']
+        );
+      }
+    }
+  }
+
+
   // Migration: the 90-Day Action Plan's page count (14/09/2026).
   //
   // The document is 14 pages and its caption said 7. Found while checking
