@@ -101,24 +101,26 @@
         main {
             max-width: 680px;
             margin: 0 auto;
-            padding: calc(var(--site-chrome) + 3rem) 1.5rem 6rem;
-            /* Hold the viewport so the global footer (which carries its own
-               contact form) never crowds into the same visual zone as the
-               question being asked — the brief asks for one obvious primary
-               action per zone, and a second form immediately under the
-               question breaks that on a phone. */
-            min-height: 100vh;
-            /* ...but centre what is in it rather than pinning it to the top
-               (14/09/2026). The intro screen is short, so holding the
-               viewport dumped the whole surplus underneath the button as one
-               dark void, and a visitor reasonably read that as the page
-               having failed to load the guide rather than as the guide
-               waiting behind the button. Centred, the same surplus reads as
-               composition. Content taller than the viewport just flows. */
+            padding: calc(var(--site-chrome) + 3rem) 1.5rem 4rem;
             display: flex;
             flex-direction: column;
             justify-content: center;
         }
+        /* Hold the viewport so the global footer (which carries its own
+           contact form) never crowds into the same visual zone as the
+           question being asked: the brief asks for one obvious primary
+           action per zone, and a second form immediately under the question
+           breaks that on a phone.
+
+           Scoped to the question and result screens (14/09/2026). It used to
+           apply to every screen, and the intro is short, so it left most of
+           a screen empty under the Start button. Centring the content split
+           that surplus but did not remove it, and Tom read the remaining
+           band the same way the first time: as the guide having failed to
+           load rather than as the guide waiting behind a button. The intro
+           has no question to protect, so it now sits to its own height and
+           the footer follows it directly. The class is toggled in show(). */
+        main.pg-hold-viewport { min-height: 100vh; }
         /* Sections are hidden with the `hidden` attribute, and a flex parent
            would otherwise override that and show every screen at once. */
         main > [hidden] { display: none; }
@@ -139,6 +141,55 @@
         }
         .pg-intro-note p { margin: 0; }
         .pg-intro-actions { margin-top: 2.5rem; }
+
+        /* ---- THE OFFER LIST ----
+           Below the guide, never beside it: the guide keeps the page's one
+           primary action and this answers the question a stranger has anyway,
+           which is what Arrington actually sells. Quieter than the guide by
+           design (smaller type, a rule per row, text links rather than
+           buttons) so it reads as a secondary route. */
+        .pg-offers {
+            margin-top: 4.5rem;
+            padding-top: 3rem;
+            border-top: 1px solid var(--border);
+        }
+        .pg-offers-heading { font-size: 1.5rem; margin-bottom: 0.6rem; }
+        .pg-offers-lede { color: var(--text-muted); font-size: 0.98rem; margin-bottom: 2rem; }
+        .pg-offer-list { list-style: none; margin: 0; padding: 0; }
+        .pg-offer {
+            padding: 1.35rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .pg-offer:first-child { border-top: 1px solid var(--border); }
+        .pg-offer-head {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 0.75rem 1.25rem;
+            flex-wrap: wrap;
+        }
+        .pg-offer-head h3 { font-size: 1.18rem; }
+        .pg-offer-price {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.15rem;
+            color: var(--accent);
+            white-space: nowrap;
+        }
+        .pg-offer-kicker { color: var(--text-muted); font-size: 0.95rem; margin: 0.45rem 0 0.7rem; }
+        .pg-offer-link {
+            color: var(--accent);
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+        }
+        .pg-offer-link:hover,
+        .pg-offer-link:focus-visible { border-bottom-color: var(--accent); }
+        .pg-offers-else { margin: 2rem 0 0; font-size: 0.95rem; color: var(--text-muted); }
+        .pg-offers-else a { color: var(--accent); }
+        @media (max-width: 600px) {
+            .pg-offers { margin-top: 3rem; padding-top: 2.25rem; }
+        }
 
         /* ---- QUESTION SCREENS ----
            One question at a time, generous space, no progress bar. The
@@ -392,12 +443,65 @@
             <div class="pg-intro-actions">
                 <button type="button" class="btn btn-primary" id="pg-start">Start the guide</button>
             </div>
-<%# The "Already know what you need? See the options" link was removed on
-    14/09/2026 (Tom). It sat beside the only control on the page and invited
-    a visitor to leave the guide before answering a single question, which is
-    a barrier in front of the thing the page exists to do. /where-to-start is
-    untouched and still live: the result card's CTA leads there, which is the
-    route somebody actually needs it by. %>
+        </section>
+
+        <%
+          // ---- WHAT WE ACTUALLY DO ----
+          //
+          // Restored 14/09/2026. Tom: "earlier we rightly had the products
+          // listed below the AI quiz that said not sure where to start."
+          //
+          // He was right and the regression was mine. The offer list lives on
+          // /where-to-start, which was unlinked from the top nav in August, and
+          // earlier today I removed the one remaining link across to it. The
+          // nav sends people to /product-guide, so the products became
+          // reachable from nowhere and the page read as a button on an empty
+          // screen.
+          //
+          // This is NOT the removed pre-question link coming back. That was
+          // a barrier BESIDE the only control, inviting a visitor to leave
+          // before answering a question. This sits BELOW the guide,
+          // which keeps its place as the primary action, and answers the
+          // obvious question a stranger has: what is it you actually sell.
+          //
+          // Prices follow publicPriceApproved, exactly as the result card
+          // does, so only the free conversation and the £999 build carry a
+          // figure. Nothing is invented to fill the gap for the others. Copy
+          // is the kicker line already published on each offer's own page,
+          // not new wording.
+          const pgOfferList = [
+            { offer: offers.conversation, href: '#conversation', cta: 'Start the conversation',
+              kicker: 'If the right move is not obvious, start here.' },
+            { offer: offers.commercial_review, href: '/where-to-start/commercial-review', cta: 'See what is involved',
+              kicker: 'A clear commercial read on where the next edge may be.' },
+            { offer: offers.website_build, href: '/where-to-start/website-build', cta: 'See what is included',
+              kicker: 'More than pages. A coded website that can start doing useful work.' },
+            { offer: offers.full_commercial_review, href: '/where-to-start/full-commercial-review', cta: 'See what is involved',
+              kicker: 'For owners who want the thinking turned into practical change.' },
+            { offer: offers.full_review_website_build, href: '/where-to-start/full-review-website-build', cta: 'See what is involved',
+              kicker: 'For a business that has outgrown how it presents itself.' }
+          ].filter((row) => row.offer);
+          const pgPrice = (o) => {
+            if (!o.publicPriceApproved) return '';
+            return o.pricePence ? '£' + (o.pricePence / 100).toLocaleString('en-GB') : 'No charge';
+          };
+        %>
+        <section id="pg-offers" class="pg-offers">
+            <h2 class="pg-offers-heading">Or see what we do</h2>
+            <p class="pg-offers-lede">If you already know roughly what you need, these are the pieces of work we take on.</p>
+            <ul class="pg-offer-list">
+                <% pgOfferList.forEach(function (row) { %>
+                <li class="pg-offer">
+                    <div class="pg-offer-head">
+                        <h3><%= row.offer.name %></h3>
+                        <% if (pgPrice(row.offer)) { %><span class="pg-offer-price"><%= pgPrice(row.offer) %></span><% } %>
+                    </div>
+                    <p class="pg-offer-kicker"><%= row.kicker %></p>
+                    <a class="pg-offer-link" href="<%= row.href %>"><%= row.cta %> <span aria-hidden="true">&rarr;</span></a>
+                </li>
+                <% }); %>
+            </ul>
+            <p class="pg-offers-else">Something else? <a href="#conversation">Tell us what is going on</a> and we will say honestly whether we can help.</p>
         </section>
 
         <!-- ---- QUESTIONS ---- -->
@@ -507,10 +611,22 @@
             var elBack = document.getElementById('pg-back');
             var elContinue = document.getElementById('pg-continue');
 
+            var elOffers = document.getElementById('pg-offers');
+
             function show(el) {
                 elIntro.hidden = el !== elIntro;
                 elQuestions.hidden = el !== elQuestions;
                 elResult.hidden = el !== elResult;
+                // The offer list belongs to the intro screen. Once a question
+                // is on screen it would be a second thing to read beside the
+                // one being asked, and the result card already names the
+                // offer it is pointing at.
+                if (elOffers) elOffers.hidden = el !== elIntro;
+                // The viewport hold exists to keep the footer's contact form
+                // away from the question being asked. The intro has no
+                // question to protect, so it sits to its own height instead
+                // of leaving a screen of empty space under the button.
+                document.querySelector('main').classList.toggle('pg-hold-viewport', el !== elIntro);
                 window.scrollTo({ top: 0, behavior: 'auto' });
             }
 
