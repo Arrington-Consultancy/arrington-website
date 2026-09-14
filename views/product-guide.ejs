@@ -108,7 +108,20 @@
                action per zone, and a second form immediately under the
                question breaks that on a phone. */
             min-height: 100vh;
+            /* ...but centre what is in it rather than pinning it to the top
+               (14/09/2026). The intro screen is short, so holding the
+               viewport dumped the whole surplus underneath the button as one
+               dark void, and a visitor reasonably read that as the page
+               having failed to load the guide rather than as the guide
+               waiting behind the button. Centred, the same surplus reads as
+               composition. Content taller than the viewport just flows. */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
+        /* Sections are hidden with the `hidden` attribute, and a flex parent
+           would otherwise override that and show every screen at once. */
+        main > [hidden] { display: none; }
 
         /* ---- INTRO ---- */
         .pg-intro h1 { font-size: clamp(2rem, 5vw, 2.7rem); margin-bottom: 1rem; }
