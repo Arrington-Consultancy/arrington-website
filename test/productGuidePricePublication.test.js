@@ -1,10 +1,15 @@
 // Which prices the Product Guide is allowed to quote (14/09/2026).
 //
-// Tom's decision separated two things that had been one: what the checkout
-// charges, and what the business will publish as a standing price on a new
-// page. £999 is approved for both. £500 is not approved as a published
-// Commercial Review price. £2,500 and £3,400 are conflicting figures awaiting
-// an approval-evidence reconciliation that is its own work item.
+// All five are approved today, so the guide quotes the same figures as the
+// rest of the live site. That was not the first position: £999 alone was
+// approved that morning, and the other three were withheld until Tom pointed
+// out they are already public one click away, which made the guide the only
+// quiet page rather than a careful one.
+//
+// The gate therefore has nothing to withhold at present. These tests still
+// prove it WORKS, by withholding one and checking the figure disappears,
+// because a guard that is only asserted while it has nothing to do is not a
+// guard at all.
 //
 // What these tests guard is the failure that would be invisible: the guide
 // reads pricePence straight from the shared catalogue, so a figure reaches
@@ -30,10 +35,10 @@ const VIEW = path.join(__dirname, '..', 'views', 'product-guide.ejs');
 // catalogue cannot quietly change what this file claims Tom approved.
 const APPROVED_FOR_PUBLICATION = {
   conversation: true,
-  commercial_review: false,
-  full_commercial_review: false,
+  commercial_review: true,
+  full_commercial_review: true,
   website_build: true,
-  full_review_website_build: false
+  full_review_website_build: true
 };
 
 test('the catalogue records exactly the approvals Tom gave', () => {
@@ -52,27 +57,37 @@ test('the charged price is untouched by the publication flag', () => {
   assert.strictEqual(OFFERS.full_review_website_build.pricePence, 340000);
 });
 
-test('a withheld price is absent from the result, not zeroed or substituted', () => {
-  // Zero would render as "£0" and read as free, which is a worse untruth
-  // than saying nothing at all.
-  const answers = { whatChange: 'our margins are all over the place and I do not know why', sixMonths: 'a clearer picture' };
-  const decision = computeRecommendation(answers);
-  const result = buildResult(answers);
-
-  const offer = OFFERS[decision.recommendationId];
-  if (offer.publicPriceApproved) {
-    assert.strictEqual(result.recommendation.pricePence, offer.pricePence);
-  } else {
+test('the gate still removes a price when one is withheld', () => {
+  // Nothing is withheld today, so this withholds one itself and puts it back.
+  // Without this the guard would sit green forever while proving nothing, and
+  // the next genuinely withheld figure would reach the page unnoticed.
+  const offer = OFFERS.commercial_review;
+  const original = offer.publicPriceApproved;
+  const answers = {
+    whatChange: 'our margins are all over the place and I do not know why',
+    sixMonths: 'a clearer picture'
+  };
+  try {
+    offer.publicPriceApproved = false;
+    const r = buildResult(answers);
+    const all = [r.recommendation, ...(r.laterRoutes || [])];
+    const row = all.find((o) => o.id === 'commercial_review');
+    assert.ok(row, 'this probe must actually reach the Commercial Review to prove anything');
+    assert.strictEqual(row.priceApproved, false);
     assert.ok(
-      !('pricePence' in result.recommendation),
-      'a withheld price must be absent from the payload entirely'
+      !('pricePence' in row),
+      'a withheld price must be absent entirely, not zeroed or substituted'
     );
+  } finally {
+    offer.publicPriceApproved = original;
   }
+  assert.strictEqual(OFFERS.commercial_review.publicPriceApproved, original, 'the probe must restore the flag');
 });
 
-test('no unapproved figure reaches any result the guide can produce', () => {
-  // Swept across every recommendation the engine can reach, including the
-  // later-routes list, which is the slot that is easiest to forget.
+test('every approved price reaches the result, across every route the guide can produce', () => {
+  // The positive direction, which is what the current decision rests on: a
+  // price the business has approved must actually appear, or the page is
+  // quietly withholding figures nobody asked it to withhold.
   const probes = [
     { whatChange: 'the website looks dated and does not bring in enquiries', sixMonths: 'a site that works' },
     { whatChange: 'our margins are all over the place', sixMonths: 'to understand the numbers' },
@@ -82,24 +97,18 @@ test('no unapproved figure reaches any result the guide can produce', () => {
     { whatChange: 'everything runs through me and the site needs replacing too', sixMonths: 'less on me' }
   ];
 
-  const withheld = new Set(
-    Object.values(OFFERS).filter((o) => !o.publicPriceApproved).map((o) => o.pricePence)
-  );
-  assert.ok(withheld.size > 0, 'the sweep proves nothing if no price is withheld');
-
   for (const answers of probes) {
     const r = buildResult(answers);
-    for (const offer of [r.recommendation, ...(r.laterRoutes || [])]) {
-      if (!offer) continue;
-      if (offer.priceApproved === true) continue;
-      assert.ok(
-        !('pricePence' in offer),
-        `${offer.id} is not approved for publication but carried a price for ${JSON.stringify(answers.whatChange)}`
-      );
-      assert.ok(
-        !withheld.has(offer.pricePence),
-        `${offer.id} leaked a withheld figure`
-      );
+    for (const row of [r.recommendation, ...(r.laterRoutes || [])]) {
+      if (!row) continue;
+      const offer = OFFERS[row.id];
+      assert.ok(offer, `${row.id} is not in the offer catalogue`);
+      assert.strictEqual(row.priceApproved, offer.publicPriceApproved === true,
+        `${row.id} disagreed with the catalogue about whether its price may be shown`);
+      if (offer.publicPriceApproved) {
+        assert.strictEqual(row.pricePence, offer.pricePence,
+          `${row.id} is approved but its price did not reach the result`);
+      }
     }
   }
 });
