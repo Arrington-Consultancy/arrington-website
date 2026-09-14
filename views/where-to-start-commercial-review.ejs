@@ -124,6 +124,14 @@
            55px book button would read as the payment being discouraged, which
            is not the decision. 48px also clears the 44px touch target. */
         .wts-book-cta, .wts-pay-cta { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; }
+        /* The generic outline button borders on var(--border), which is dim
+           enough that on the near-black ground this read as a disabled box
+           rather than a payment control. Decision 5 keeps direct purchase as a
+           CLEAR secondary route, so it carries the accent at rest. The fill is
+           still what separates it from the primary CTA above, which is the
+           site's existing button language, not a new one. */
+        .wts-pay-cta { border-color: var(--accent); color: var(--accent); }
+        .wts-pay-cta:hover, .wts-pay-cta:focus-visible { background: var(--accent); color: var(--black); }
         .wts-buy-direct { margin-top: 3rem; }
     </style>
 </head>
@@ -177,7 +185,7 @@
         <div class="wts-form-section wts-buy-direct">
             <h2>Already know the review is what you want?</h2>
             <p class="wts-form-note">Pay for it here. Payment is handled securely by Stripe. Card details are never seen by or stored on this site.</p>
-            <form id="wtsCheckoutForm" data-offer="commercial_review">
+            <form id="wtsCheckoutForm" class="wts-form" data-offer="commercial_review">
                 <label for="wtsEmail">Your email</label>
                 <input type="email" id="wtsEmail" name="email" required maxlength="255" autocomplete="email">
                 <div class="wts-website-field" aria-hidden="true">

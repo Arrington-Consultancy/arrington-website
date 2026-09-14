@@ -353,6 +353,35 @@ footer {
     color: var(--accent);
 }
 
+/* Shared minimum for every button on the standalone tool pages
+   (14/09/2026, visual pass).
+
+   There is no shared .btn base in this partial: each standalone page
+   declares its own, and they have drifted apart. Measured across the site
+   the same control renders at four different sizes (font 0.90, 0.92 and
+   0.95rem; radius 3px on the tool pages and 4px on the CMS pages), and the
+   footer enquiry form's Send button came out 45px tall on a CMS page and
+   37px on a tool page. That is the single clearest reason the site can read
+   as separate tools rather than one product.
+
+   This does not unify the whole button, which would change the look of every
+   control on five pages at once and deserves its own pass. It sets the one
+   thing that is a usability fault rather than a taste question: the 44px
+   minimum touch target, which no page's own .btn declares, plus the flex
+   centring that a min-height needs to look right.
+
+   The element-qualified selectors are deliberate. This partial is included
+   BEFORE each page's own <style>, so a bare .btn here would lose the
+   cascade to the page's .btn. a.btn/button.btn carry one more element of
+   specificity and win, without needing !important. */
+a.btn,
+button.btn {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .btn-whatsapp {
     background: #25D366;
     color: #fff;

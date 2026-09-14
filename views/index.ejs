@@ -1952,7 +1952,13 @@
         }
 
         .document-card .btn {
-            display: inline-block;
+            /* inline-flex + min-height so this clears the 44px touch target.
+               It was rendering at 39px, and it is the only control standing
+               between a visitor and the document they came for. */
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 44px;
             padding: 0.7rem 1.6rem;
             font-size: 0.85rem;
         }
