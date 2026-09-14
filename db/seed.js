@@ -5436,7 +5436,14 @@ async function seed() {
       ADD COLUMN IF NOT EXISTS estimated BOOLEAN NOT NULL DEFAULT false`);
     await db.query(`ALTER TABLE scott_brain_candidates
       ADD COLUMN IF NOT EXISTS basis TEXT NOT NULL DEFAULT ''`);
-    console.log('Scott AI Demonstration: proposed-fact estimate columns verified.');
+    // Supersession history (13/09/2026). Added here as well as in
+    // schema.sql for the same reason as the two above: CREATE TABLE IF NOT
+    // EXISTS is skipped on every already-seeded database, so a column added
+    // to the file alone never reaches one. Self-referencing, so the
+    // constraint is added separately and tolerantly.
+    await db.query('ALTER TABLE scott_brain_candidates ADD COLUMN IF NOT EXISTS supersedes_id INTEGER');
+    await db.query('ALTER TABLE scott_brain_candidates ADD COLUMN IF NOT EXISTS superseded_by_id INTEGER');
+    console.log('Scott AI Demonstration: proposed-fact estimate and supersession columns verified.');
   }
 
   // Authored company depth (01/09/2026). Fifteen records covering the
@@ -5500,6 +5507,82 @@ async function seed() {
     if (written) console.log(`Scott AI Demonstration: ${written} authored company record(s) added to the brain.`);
     if (skipped.length) console.log(`Scott AI Demonstration: ${skipped.length} authored record(s) already present or conflicting, left alone: ${skipped.join(', ')}`);
     if (!written && !skipped.length) console.log('Scott AI Demonstration: no authored company records to add.');
+  }
+
+  // Settle anything still pending (13/09/2026). Until this date a proposal
+  // the autofill rule declined sat as 'pending' waiting for a person, and
+  // the briefing listed it as "waiting on you" every day. Settlement is
+  // automatic now: each pending row is re-assessed against the brain as it
+  // stands and admitted, rejected with its reason, or dropped as already
+  // held, by the same settleCandidate the live path uses. Idempotent: on
+  // every later boot there is nothing pending and this does nothing. A
+  // pending row that survives this block is a fault the briefing
+  // escalates, so the count is logged either way.
+  {
+    const brainCandidates = require('../lib/scott/brainCandidates');
+    const contextBuilders = require('../lib/scott/data/contextBuilders');
+    const repo = require('../lib/scott/data/repository');
+    const pendingRows = await repo.getPendingBrainCandidates({ limit: 500 });
+    if (pendingRows.length) {
+      await contextBuilders.loadApprovedFacts();
+      const outcomes = { admit: 0, reject: 0, redundant: 0 };
+      for (const row of pendingRows) {
+        const others = pendingRows.filter((r) => r.id !== row.id && r.status === 'pending')
+          .map((r) => ({ domain: r.domain, factKey: r.fact_key, factValue: r.fact_value }));
+        const assessment = brainCandidates.assessCandidate(
+          { domain: row.domain, factKey: row.fact_key, factValue: row.fact_value, sourceLabel: row.source_label,
+            proposedByWorkerId: row.proposed_by_worker_id, estimated: row.estimated === true, basis: row.basis },
+          { canon: contextBuilders.allDeepFactRecords(), pending: others }
+        );
+        const settlement = brainCandidates.settleCandidate(assessment, { estimated: row.estimated === true, basis: row.basis });
+        const settled = await repo.settleBrainCandidate(row.id, settlement);
+        if (settled) {
+          row.status = settled.status;
+          outcomes[settlement.outcome] += 1;
+          await repo.addActivity({
+            actor: 'system',
+            eventType: settlement.outcome === 'admit' ? 'brain_fact_admitted' : (settlement.outcome === 'reject' ? 'brain_fact_rejected_auto' : 'brain_fact_redundant'),
+            summary: `Settled at boot (was waiting for a person): ${row.domain}/${row.fact_key} ${settlement.outcome === 'admit' ? 'admitted' : settlement.outcome === 'reject' ? 'rejected' : 'already held'}: ${settlement.reason}`
+          });
+          if (settlement.outcome === 'admit') await contextBuilders.loadApprovedFacts();
+        }
+      }
+      console.log(`Scott AI Demonstration: ${pendingRows.length} pending proposed fact(s) settled at boot: ${outcomes.admit} admitted, ${outcomes.reject} rejected, ${outcomes.redundant} already held.`);
+    } else {
+      console.log('Scott AI Demonstration: no proposed facts pending; settlement is automatic.');
+    }
+
+    // Close the gaps that are waiting, by logic (13/09/2026, Tom's
+    // instruction). The register-wide sweep lives here rather than on a
+    // visitor's message: a turn closes only the gaps it just raised, and
+    // this catches the immaterial and the stale across the whole register,
+    // every boot. The decision is made by the pure lib/scott/gapClosure.js;
+    // nothing here decides anything, and a gap a person has already closed
+    // is untouched by the status guard in the write.
+    const gapClosure = require('../lib/scott/gapClosure');
+    const openGaps = await repo.getOpenBrainGaps({ limit: 200 });
+    if (openGaps.length) {
+      const linked = await repo.getBrainCandidatesForGaps(openGaps.map((g) => g.id));
+      const plan = gapClosure.planClosures(openGaps, { candidates: linked, now: new Date() });
+      // What was actually written, not the first N of what was planned. A
+      // row somebody closed between the read and the write is skipped, and
+      // slicing the plan would then report the wrong reasons for the ones
+      // that did close.
+      const applied = [];
+      for (const c of plan) {
+        const row = await repo.closeBrainGapAutomatically(c.gapId, { status: c.status, note: c.note });
+        if (!row) continue;
+        applied.push(c);
+        await repo.addActivity({
+          actor: 'system',
+          eventType: c.status === 'resolved' ? 'brain_gap_resolved_auto' : 'brain_gap_dismissed_auto',
+          summary: `Gap #${c.gapId} closed at boot by logic (${c.reason}): ${c.note}`
+        });
+      }
+      console.log(`Scott AI Demonstration: ${openGaps.length} open gap(s) read, ${applied.length} closed by logic. ${gapClosure.describeClosures(applied)}`);
+    } else {
+      console.log('Scott AI Demonstration: no gaps waiting.');
+    }
   }
 
   // ------------------------------------------------------------

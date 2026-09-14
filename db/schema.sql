@@ -572,6 +572,16 @@ CREATE TABLE IF NOT EXISTS scott_brain_candidates (
     -- an estimate rather than quoting it as a filed figure.
     estimated BOOLEAN NOT NULL DEFAULT false,
     basis TEXT NOT NULL DEFAULT '',
+    -- Supersession history (13/09/2026). A fact the company holds is never
+    -- overwritten: a correction writes a NEW row carrying supersedes_id,
+    -- and the old row is marked superseded with superseded_by_id pointing
+    -- forward. So what the company used to believe, what it believes now,
+    -- who changed it and why are all still readable, and getApprovedBrainFacts
+    -- (status = 'approved') stops returning the old one the moment the new
+    -- one lands. Deliberately self-referencing rather than a separate
+    -- history table: one row per version of a fact is the whole chain.
+    supersedes_id INTEGER REFERENCES scott_brain_candidates(id) ON DELETE SET NULL,
+    superseded_by_id INTEGER REFERENCES scott_brain_candidates(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

@@ -555,6 +555,28 @@ Two related pieces landed together, both writing to a new `leads` table (`kind`,
 
 **PDF requests no longer share the contact-click Google Ads label (11/09/2026).** Until this date a successful gated-PDF request fired `AW-18129914078/h_2rCJeH8aYcEN6RgsVD`, the same conversion label as a phone, email or WhatsApp click, so a document download counted as a contact in Google Ads (the Google Ads campaign objective is phone-call leads, so this overstated exactly the number bidding optimises on). The PDF success path now fires an Ads conversion only when `GOOGLE_ADS_PDF_CONVERSION_LABEL` is set on the service (the label part after `AW-18129914078/`, validated to `[A-Za-z0-9_-]` in `server.js` and exposed as `app.locals.googleAdsPdfConversionLabel`); unset, it fires no Ads conversion at all and the GA4 event `document_request_submit` still fires. The boot log reports which. To count PDF downloads in Ads again, Tom creates a separate conversion action in the Ads account (Goals, Conversions, New conversion action, Website, manual event) and sets its label in Railway. Whether the existing actions are Primary or Secondary for bidding is an Ads account setting that no tool in this repo can read; it is checked in the Ads UI under Goals, Conversions, Summary.
 
+**The contact form is the Primary conversion, and already was (13/09/2026).**
+Tom's decision: "Contact form is prime all the way." Checked against the live
+account rather than assumed, and **no change is needed**: over the last 30
+days the action named `Contact` (Google category CONTACT) reports
+`conversions 1, all_conversions 1`, and `phone + email clicks` (category
+SUBMIT_LEAD_FORM) reports `conversions 0, all_conversions 1`. Only Primary
+actions count in `conversions`, so the form is already the action bidding
+optimises on and the click action is already Secondary. **The two names are
+crossed against their Google categories**, which will mislead anyone reading
+the Ads UI later: `Contact` is the FOOTER FORM label
+(`vCKKCKjSna0cEN6RgsVD`, fires only on a successful submit) and
+`phone + email clicks` is the tel/mailto/WhatsApp label
+(`h_2rCJeH8aYcEN6RgsVD`), so the goal called "Submit lead form" is the one
+measuring phone and email clicks. Renaming or recategorising is a tidy-up,
+not a fix, and nothing has been changed. Two things this repo still cannot
+read, so they stay UI checks: a campaign-level conversion-goal override (the
+`Owner Dependency Quiz | Search` campaign has had no conversions of any kind,
+so its own goal config has never been exercised), and the Primary/Secondary
+flag directly. Consequence worth holding onto: bidding now follows form
+submissions rather than calls, which the only recorded win supports, since
+the 4 September Cornwall Handyman enquiry came through the footer form.
+
 **Mail-failure lead check closed (11/09/2026).** The 1 September Gmail credential failure (see the Website & Hosting handoff in Drive) raised the possibility of lead rows stored without a notification email. Tom checked the stored lead records and confirmed on 11/09/2026 that nothing was missing. Recorded in Drive as "WEBSITE AND HOSTING WRITE-BACK (CLOSED) - 1 September mail-failure lead check: no enquiries missed, 11 September 2026".
 
 **Admin view.** Both lead types show up in the admin panel under System → "Leads & bookings" (gated on `view_activity`, same capability as the Activity log — no new capability was added to the permissions matrix to keep this change contained). `GET /api/admin/leads` returns the latest 100, newest first. **Important:** unlike the Activity log's loader (which doesn't escape its fields, safe there only because those values are admin-controlled), the leads loader in `public/js/admin.js` passes every field through the existing `escapeHtml` helper before building the `innerHTML` string, because leads contain raw public-visitor input.
@@ -3630,6 +3652,197 @@ check's own dry run against an unconfigured mailbox also caught and
 fixed an honesty bug in `describeNotification` ("failed after a retry"
 when zero attempts were made; the sentence is now built from the
 recorded attempt count).
+
+### Scott evolves on its own: automatic settlement, oversight briefing (13/09/2026)
+
+**Principle changed on Tom's instruction (13/09/2026):** "Scott is supposed
+to be a playable fictional company that evolves on its own while remaining
+internally consistent. Having facts sit waiting for me to approve defeats
+that." The approval queue is gone. The section below this one ("Proposed
+brain facts: gap-driven authoring") describes the design it replaced and is
+kept as the historical record; where it says "not self-learning", "only a
+human decision puts anything in the brain" or "waits for a person", that is
+no longer true. The hard boundary is unchanged and now pinned by test: this
+autonomy exists only inside the fictional Scott company and never touches
+a real Arrington record, permission or action.
+
+**Settle, never queue.** `brainCandidates.settleCandidate(assessment,
+{enabled, estimated, basis})` runs immediately after `assessCandidate` on
+every proposal and returns exactly one of `admit`, `reject` or `redundant`
+(`SETTLEMENT_OUTCOMES`; "pending" is not an outcome). The repository maps
+those to `approved`, `rejected` and `superseded` with `decided_by_name =
+'automatic'` (`repo.settleBrainCandidate`). Rules, all deterministic:
+- **Conflict (`duplicate_key`, `figure_contradiction`, `pending_duplicate`):
+  the earlier fact stands**, whether transcribed, authored or an earlier
+  estimate, and the later proposal is rejected with a reason naming what
+  it disagreed with (`rule: 'earlier_fact_stands'`). No automatic path can
+  overwrite a held fact; that is what a person's retraction is for.
+- **Identical restatement** of a held fact (`assessment.restatesRecord`):
+  `redundant`, status `superseded`, nothing added and nothing reported.
+- **Rejecting drift** (`REJECTING_DRIFT`): `unknown_domain`,
+  `scale_implausible` (including any negative amount), `scale_unchecked`,
+  `empty_value`, `unsourced`. Plus an estimate with no basis.
+- **Cosmetic drift** (`unknown_entity`, `register`) admits, flags kept on
+  the row; new names surface in the briefing as "material changes".
+- **Kill switch** unchanged: `SCOTT_BRAIN_AUTOFILL` must be exactly `true`.
+  Off now means proposals are **rejected** with that reason rather than
+  parked, so switching it off freezes the fiction without building a
+  backlog.
+
+**Live path** (`routes/scott.js`, the gap block in `runScottTurnAndPersist`):
+assess, create row, settle, reload the brain cache on admit. A failure
+INSIDE settlement is a system fault, not a refusal: recorded as
+`brain_settlement_error` (and a cache reload failure as
+`brain_cache_reload_failed`) and it never fails the visitor's turn.
+Activity events: `brain_fact_admitted`, `brain_fact_rejected_auto`,
+`brain_fact_redundant`, `brain_fact_retracted`.
+
+**Oversight, not approval.** `/scott/gaps` (admin/content only, same
+`canReviewProposedFacts` gate, invited viewers still see nothing) now lists
+"What the company has learned": recent admitted, rejected and superseded
+rows with their settlement reason, and a **Retract** form on each admitted
+fact (`POST /api/scott/brain-candidates/:id/retract`, written reason
+required, same per-row clearance rule, status becomes `rejected` with a
+`Retracted by <name>: ...` note, cache reloaded). The old `decide` route
+still exists for any pending row; there are none.
+
+**The evolution briefing** (`lib/scott/evolutionDigest.js`,
+`evolutionBriefing.js`) reports: WHAT IT LEARNED (estimates marked with
+their basis), MATERIAL CHANGES TO THE COMPANY (new names introduced), DO THE
+NUMBERS STILL MAKE SENSE (invented costs against overheads, unchanged),
+REJECTED, COULD NOT BE RECONCILED (with reasons), RETRACTED BY A PERSON,
+and NEEDS YOU, which carries **system faults only**: any row stuck pending
+(should be impossible) and the `ESCALATION_EVENTS`
+(`brain_settlement_error`, `brain_cache_reload_failed`) since the last
+briefing. Otherwise it says "Nothing needs you" in words. Subject:
+`Scott's Armchair & Knitting: N learned, M rejected[, needs you]`. Sends
+nothing when nothing was learned, rejected, retracted or escalated.
+
+**Boot:** `db/seed.js` settles any row still `pending` with the same rule
+(the two rows that were "waiting on you" on production settle as rejected:
+one for a negative amount, one on re-assessment), logs the outcome, and is
+a no-op thereafter. The login alert for invited viewers now says how much
+the company learned in the last seven days rather than counting a queue.
+
+**Tests:** `test/scott/brainSettlementFirewall.test.js` (the boundary:
+settlement code references nothing on the Arrington side, the pure rule
+reads only the kill switch, every settlement write targets a `scott_`
+table, the outcome set has no "pending", escalation events are real and a
+rejection is not one), the rewritten settlement block in
+`test/scott/brainCandidates.test.js` (every input ends in admit/reject/
+redundant with a reason; conflicts resolve first-wins; negative amounts,
+wrong size, unknown domain, empty, unsourced and basis-less estimates
+reject; cosmetic drift admits; redundancy), and
+`test/scott/evolutionBriefing.test.js` (rejections listed with reasons,
+NEEDS YOU only on faults, retractions separate, new names called out).
+
+**Governance:** a change to Scott worker authority (workers now change the
+fictional company's state without a person). Submission:
+`review/scott-autonomous-evolution-governance-submission-2026-09-13.md`.
+Production merge is Tom's gate.
+
+**Superseded in one respect by the section immediately below**, added the
+same day on Tom's follow-up instruction: settlement still keeps the earlier
+fact against any automatic proposal, but a PERSON can now change a held fact
+through a supersession that keeps both versions, so "no path can overwrite a
+held fact" is true of code and no longer true of the owner.
+
+### Persistent company state: the same answer tomorrow (13/09/2026)
+
+**Tom's second instruction, the same day:** "the main requirement is
+persistence and repeatability. Scott should feel like a real company with a
+remembered state. If someone asks the same factual question tomorrow, the
+answer should be the same unless the underlying fictional company record has
+genuinely changed... changed facts supersede old ones with a clear history;
+financial and staffing figures must remain internally consistent; repeated
+questions should produce the same substantive answer; wording can vary,
+facts cannot... Also close all gaps that are waiting using logic."
+
+**Where the state lives**, so nobody has to infer it: the transcribed and
+authored records in code, every `scott_brain_candidates` row with status
+`approved` (loaded by `contextBuilders.loadApprovedFacts`, merged into
+`allDeepFactRecords`), and the live ledger position. One list, one clearance
+filter. That was already true; the four pieces below are what make it behave
+like memory rather than like a store.
+
+**1. Repeatability has a deterministic backstop.** The prompt already puts
+every held fact in front of the worker and marks an estimate as one, which
+depends on a model following an instruction. Now, before anything is stored,
+each reply carrying a `factProposal` for a key the company already answers
+DIFFERENTLY has the held figure appended to it, quoted from the record
+(`companyState.heldFactFor` / `correctionNote`, applied where a turn is
+persisted). The model's own wording is kept; the fact is the company's. The
+held record is looked up inside the SAME clearance-filtered list that worker
+was given, never the whole brain, so a correction can never quote a record
+the asker cannot see.
+
+**2. Financial and staffing consistency** (`lib/scott/companyState.js`, pure).
+`companyEconomics()` derives turnover, the LATEST month's revenue and
+overheads, the headcount and the staff names from the brain rather than
+stating them, so growing the fiction cannot leave the checks measuring a
+company that no longer exists. `checkConsistency()` raises five conflict
+codes, all of which reject at settlement (`CONSISTENCY_CODES`, reported with
+rule `inconsistent_with_the_books` rather than `earlier_fact_stands`, because
+the cause is different): `monthly_exceeds_revenue`, `annual_exceeds_turnover`,
+`percentage_impossible`, `headcount_mismatch`, `staffing_unknown_person`.
+**Monthly costs are measured against monthly REVENUE, not overheads**: the
+company's own September payroll (GBP 19,200) is larger than its overhead line
+(GBP 18,100), so a tighter check would reject a real figure. The aggregate
+question (do all the invented costs together still fit) stays a judgement in
+the briefing rather than becoming a rule.
+
+**3. Supersession with history.** `scott_brain_candidates` gains
+`supersedes_id` and `superseded_by_id` (idempotent `ALTER`s in `db/seed.js`
+as well as `schema.sql`, since `CREATE TABLE IF NOT EXISTS` never reaches an
+existing database). Nothing is ever overwritten: `repo.supersedeBrainFact`
+writes a NEW approved row pointing back and marks the old one `superseded`
+pointing forward, in one transaction, so the brain holds exactly one version
+and the register holds both. **Only a person can do it** (`POST
+/api/scott/brain-candidates/:id/correct`, same gates as retraction: the real
+site role, clearance for the fact's own domain, a written reason, plus the
+same consistency check a worker's proposal faces). The automatic rule still
+has no path to replace a held fact, which is what makes "the earlier fact
+stands" safe: there is now a governed way to change one. `/scott/gaps` shows
+the chain ("this replaced fact #N", "superseded by fact #N") beside Retract.
+
+**4. Gaps close by logic** (`lib/scott/gapClosure.js`, pure). Four reasons,
+each written onto the row: `filled` (a fact the company learned answers it),
+`already_held` (the answer was on file, so it was never a gap),
+`not_material` (nothing blocked, nothing downstream), `stale` (it blocked
+something, nobody filed the evidence, `STALE_DAYS = 7`). The justification
+for closing rather than accumulating is that the loop is demand-driven: the
+same hole raises a fresh gap the next time a worker hits it, so the register
+shows what is live rather than an archive. **It never sets
+`source_corrected`** and never takes it as a parameter: that column is a
+person's statement that they corrected a controlled record, and no code can
+make it true. An automatic closure is written with `automatic` as the closer
+and reads as "Closed by the company itself" on the register. A turn closes
+only the gaps it just raised; the register-wide sweep runs at boot.
+
+**The briefing reports state, not a queue.** Two new sections: WHAT CHANGED
+IN THE COMPANY'S STATE (each supersession with its old value, new value and
+reason) and GAPS CLOSED BY LOGIC. The rejections section now leads with the
+serious contradictions (`isContradiction`, matched on settlement's own two
+reason strings) and lists ordinary refusals after them. Subject line gains
+the change count.
+
+**Tests.** `test/scott/companyState.test.js` (25: every consistency rule in
+both directions, each paired with a real figure from the company's own
+records that must NOT be refused, plus the economics being derived rather
+than stated), `test/scott/gapClosure.test.js` (18: all four reasons, the
+cases that must stay open, and that no closure can claim a source was
+corrected), `test/scott/brainRepeatability.test.js` (8, needs
+`DATABASE_URL`: the real turn path with a scripted model that deliberately
+answers with a different figure the second time, asserting the visitor's
+reply carries the held one, the contradiction is refused, both gaps close
+for their own reasons, and a person's correction keeps both versions), plus
+the extended boundary suite and six new briefing cases.
+
+**Two real defects the tests found, worth knowing.** The percentage check
+missed "140%." entirely, because the word boundary was anchored after the
+symbol and a full stop is no more a word character than `%` is. And the
+supersession write returned the old row as it had been READ, describing a
+fact as still held a line after it stopped being.
 
 ### Proposed brain facts: gap-driven authoring (added 01/09/2026)
 

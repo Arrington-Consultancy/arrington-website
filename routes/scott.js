@@ -35,6 +35,8 @@ const deepFacts = require('../lib/scott/deepBusinessFacts');
 const contextBuilders = require('../lib/scott/data/contextBuilders');
 const brainGaps = require('../lib/scott/brainGaps');
 const brainCandidates = require('../lib/scott/brainCandidates');
+const companyState = require('../lib/scott/companyState');
+const gapClosure = require('../lib/scott/gapClosure');
 const banking = require('../lib/scott/banking');
 const finRepo = require('../lib/scott/finance/repository');
 const financeState = require('../lib/scott/finance/state');
@@ -486,7 +488,10 @@ function mountPageRoute(app, generateCsrfToken) {
       const mayReviewFacts = canReviewProposedFacts(req);
       const [rows, candidateRows, navCounts] = await Promise.all([
         repo.getBrainGaps({ limit: 100 }),
-        mayReviewFacts ? repo.getPendingBrainCandidates({ limit: 100 }) : Promise.resolve([]),
+        // Oversight, not a queue (13/09/2026): what the company decided
+        // lately in either direction, so a person can read it and retract
+        // anything that reads wrong.
+        mayReviewFacts ? repo.getRecentBrainChanges({ limit: 60 }) : Promise.resolve([]),
         repo.getDashboardSummary()
       ]);
       const visible = clearance.filterAndRedact(personaId, null, rows);
@@ -499,7 +504,7 @@ function mountPageRoute(app, generateCsrfToken) {
       res.render('scott/gaps', {
         ...viewerViewModel(req),
         gaps: visible,
-        proposedFacts: visibleCandidates,
+        brainChanges: visibleCandidates,
         canReviewFacts: mayReviewFacts,
         describeNotification: brainGaps.describeNotification,
         // Their own queue, so the page answers "what is waiting on me"
@@ -874,8 +879,8 @@ router.post('/scott/login', noindexHeader, scottLoginLimiter, async (req, res) =
     // in SCOTT_LOGIN_ALERT_USERNAMES send anything, so Tom's own logins
     // are silent.
     if (shouldAlertOnLogin(user.username)) {
-      repo.getPendingBrainCandidates({ limit: 100 })
-        .then((rows) => sendLoginNotification({ username: user.username, pendingFacts: rows.length }))
+      repo.getBrainFactsSince(new Date(Date.now() - 7 * 24 * 3600 * 1000))
+        .then((rows) => sendLoginNotification({ username: user.username, learnedRecently: rows.length }))
         .catch((err) => console.error('Scott login notification could not be prepared:', err.message));
     }
 
@@ -916,6 +921,41 @@ async function runScottTurnAndPersist({ conversation, conversationId, userMessag
   // enquiry record itself so the enquiries list shows real state.
   if (conversation.related_enquiry_id && turn.workerReplies.length > 0) {
     await repo.assignEnquiryIfNew(conversation.related_enquiry_id, turn.workerReplies[0].workerId);
+  }
+
+  // REPEATABILITY (13/09/2026). Before anything is stored, reconcile each
+  // reply against what the company already holds.
+  //
+  // A worker proposing a fact for a key the company already answers
+  // differently has produced a second answer to a settled question, which
+  // is precisely the failure Tom's requirement names: "wording can vary,
+  // facts cannot". The proposal is rejected further down by settlement's
+  // first-wins rule; this makes the VISITOR'S answer carry the held figure
+  // too, appended from the record rather than from the model, so tomorrow's
+  // answer states the same fact as today's however it is phrased.
+  //
+  // The held record is looked up inside the SAME clearance-filtered list
+  // this worker was given, never the whole brain: a correction that quoted
+  // a fact the asker cannot see would be a leak dressed as consistency.
+  for (const wr of turn.workerReplies) {
+    if (!wr.factProposal || wr.technicalFailure) continue;
+    try {
+      const proposed = brainCandidates.normaliseCandidate(wr.factProposal);
+      const visible = clearance.filterAndRedact(personaId || null, wr.workerId, contextBuilders.allDeepFactRecords());
+      const held = companyState.heldFactFor(proposed, visible);
+      if (held && String(held.factValue).trim() !== proposed.factValue) {
+        const note = companyState.correctionNote(held);
+        if (note) {
+          wr.reply = `${wr.reply}\n\n${note}`;
+          wr.reconciledToHeldFact = true;
+        }
+      }
+    } catch (err) {
+      // A reply that could not be reconciled is still a reply. The
+      // demonstration must not fail in front of a prospect because its own
+      // consistency check threw.
+      console.error('Scott brain: reply reconciliation failed:', err.message);
+    }
   }
 
   for (const wr of turn.workerReplies) {
@@ -1010,70 +1050,104 @@ async function runScottTurnAndPersist({ conversation, conversationId, userMessag
     gapRecords.push(record);
 
     // A proposed fill for the gap just recorded, if the worker offered
-    // one. Assessed rather than trusted: the conflict and drift checks run
-    // against the brain as it stands right now, the verdict and both flag
-    // lists are stored on the row as evidence of what was found, and the
-    // row lands 'pending' whatever they say. Nothing on this path can put
-    // a fact into the brain; only the approval route can, and only when a
-    // person clicks it.
+    // one. Assessed rather than trusted, then SETTLED by code at once
+    // (13/09/2026): admitted into the brain, rejected with a reason, or
+    // dropped as an identical restatement. Nothing lands pending. The
+    // rule is brainCandidates.settleCandidate; a person's part is
+    // oversight afterwards (the evolution briefing, and retraction on
+    // /scott/gaps), never approval beforehand.
+    //
+    // A failure INSIDE settlement is a system fault, not a refusal. It is
+    // recorded as brain_settlement_error, which the briefing escalates,
+    // and it does not fail the visitor's turn: the worker has already
+    // answered, and a demonstration must not error in front of a prospect
+    // because its own bookkeeping threw.
     if (wr.factProposal) {
-      const pending = (await repo.getPendingBrainCandidates()).map((row) => ({
-        domain: row.domain, factKey: row.fact_key, factValue: row.fact_value
-      }));
-      const assessment = brainCandidates.assessCandidate(
-        { ...wr.factProposal, gapId: record.id, proposedByWorkerId: wr.workerId },
-        { canon: contextBuilders.allDeepFactRecords(), pending }
-      );
-      let candidate = await repo.createBrainCandidate(assessment, {
-        conversationId, gapId: record.id, workerId: wr.workerId
-      });
+      let candidate = null;
+      try {
+        const pending = (await repo.getPendingBrainCandidates()).map((row) => ({
+          domain: row.domain, factKey: row.fact_key, factValue: row.fact_value
+        }));
+        const assessment = brainCandidates.assessCandidate(
+          { ...wr.factProposal, gapId: record.id, proposedByWorkerId: wr.workerId },
+          { canon: contextBuilders.allDeepFactRecords(), pending }
+        );
+        candidate = await repo.createBrainCandidate(assessment, {
+          conversationId, gapId: record.id, workerId: wr.workerId
+        });
 
-      // Autofill: where the rule allows it, the value the worker just
-      // answered with is admitted immediately and the brain cache is
-      // reloaded, so the NEXT question that touches the same thing sees
-      // the same number instead of producing a second one. That
-      // consistency is the entire reason this is worth doing; a company
-      // that estimates twice and differently is worse than one that
-      // admits it does not know.
-      //
-      // The rule is in brainCandidates.autofillDecision and is off unless
-      // SCOTT_BRAIN_AUTOFILL is exactly 'true'. It never admits anything
-      // that conflicts with a record or an earlier estimate, carries an
-      // unknown clearance domain, or is the wrong size for this company.
-      const autofill = brainCandidates.autofillDecision(assessment, {
-        estimated: wr.factProposal.estimated === true,
-        basis: wr.factProposal.basis
-      });
-      let admitted = false;
-      if (autofill.autofill) {
-        const filled = await repo.autofillBrainCandidate(candidate.id, { reason: autofill.reason });
-        if (filled) {
-          candidate = filled;
-          admitted = true;
+        const settlement = brainCandidates.settleCandidate(assessment, {
+          estimated: wr.factProposal.estimated === true,
+          basis: wr.factProposal.basis
+        });
+        const settled = await repo.settleBrainCandidate(candidate.id, settlement);
+        if (settled) candidate = settled;
+
+        if (settlement.outcome === 'admit') {
           // Awaited: an admitted fact that has not reached the cache is
           // invisible to the next question, which is the one thing this
-          // is for. A failure is surfaced, never swallowed into silence.
+          // is for. A failure is recorded as a fault for the briefing,
+          // never swallowed into silence.
           try {
             await contextBuilders.loadApprovedFacts();
           } catch (err) {
             console.error('Scott brain: fact admitted but the cache reload failed:', err.message);
+            await repo.addActivity({
+              actor: 'system',
+              eventType: 'brain_cache_reload_failed',
+              summary: `${candidate.domain}/${candidate.fact_key} was admitted but the workers cannot see it until the next restart: ${err.message}`,
+              conversationId
+            }).catch(() => {});
           }
         }
-      }
 
-      await repo.addActivity({
-        actor: wr.workerId,
-        eventType: admitted ? 'brain_fact_admitted' : 'brain_fact_proposed',
-        summary: admitted
-          ? `${candidate.estimated ? 'Estimated' : 'Recorded'} ${candidate.domain}/${candidate.fact_key} on gap #${record.id} and the company now holds it: ${autofill.reason}`
-          : `Proposed a fill for ${candidate.domain}/${candidate.fact_key} on gap #${record.id}: ${assessment.verdict}. Waiting on a person because ${autofill.reason}`,
-        conversationId
-      });
-      candidateRecords.push(candidate);
+        const eventType = settlement.outcome === 'admit' ? 'brain_fact_admitted'
+          : settlement.outcome === 'reject' ? 'brain_fact_rejected_auto'
+            : 'brain_fact_redundant';
+        const summary = settlement.outcome === 'admit'
+          ? `${candidate.estimated ? 'Estimated' : 'Recorded'} ${candidate.domain}/${candidate.fact_key} on gap #${record.id} and the company now holds it: ${settlement.reason}`
+          : settlement.outcome === 'reject'
+            ? `Rejected ${candidate.domain}/${candidate.fact_key} on gap #${record.id}: ${settlement.reason}`
+            : `${candidate.domain}/${candidate.fact_key} on gap #${record.id} restates what the company already holds; nothing added`;
+        await repo.addActivity({ actor: wr.workerId, eventType, summary, conversationId });
+      } catch (err) {
+        console.error('Scott brain: a proposal could not be settled:', err.message);
+        await repo.addActivity({
+          actor: 'system',
+          eventType: 'brain_settlement_error',
+          summary: `A proposal from ${wr.workerId} on gap #${record.id} could not be settled: ${String(err.message).slice(0, 300)}`,
+          conversationId
+        }).catch(() => {});
+      }
+      if (candidate) candidateRecords.push(candidate);
     }
   }
   turn.gapRecords = gapRecords;
   turn.candidateRecords = candidateRecords;
+
+  // Close what this turn just answered (13/09/2026). Scoped to the gaps
+  // raised in this turn rather than the whole register: a gap filled by a
+  // fact the company learned a second ago should not still read as waiting
+  // for somebody, and the register-wide sweep for stale and immaterial ones
+  // runs at boot rather than on a visitor's message.
+  if (gapRecords.length) {
+    try {
+      const plan = gapClosure.planClosures(gapRecords, { candidates: candidateRecords, now: new Date() });
+      for (const c of plan) {
+        const closed = await repo.closeBrainGapAutomatically(c.gapId, { status: c.status, note: c.note });
+        if (closed) {
+          await repo.addActivity({
+            actor: 'system',
+            eventType: c.status === 'resolved' ? 'brain_gap_resolved_auto' : 'brain_gap_dismissed_auto',
+            summary: `Gap #${c.gapId} closed by logic (${c.reason}): ${c.note}`,
+            conversationId
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Scott brain: a gap could not be closed automatically:', err.message);
+    }
+  }
 
   return turn;
 }
@@ -1139,7 +1213,11 @@ function serializeTurn(conversationId, turn, mayReviewFacts = false) {
       domain: c.domain,
       factKey: c.fact_key,
       verdict: c.verdict,
-      status: c.status
+      status: c.status,
+      // Settled by code (13/09/2026): approved means the company now holds
+      // it, rejected means it was refused with the reason on the row,
+      // superseded means it restated something already held.
+      settledBy: c.decided_by_name || ''
     })),
     workerReplies: turn.workerReplies.map((wr) => ({
       workerId: wr.workerId,
@@ -2023,6 +2101,150 @@ router.post('/api/scott/brain-candidates/:id/decide', noindexHeader, requireScot
   } catch (err) {
     console.error('Scott brain candidate decide error:', err);
     res.status(500).json({ error: 'Something went wrong.' });
+  }
+});
+
+// A person taking a fact back OUT of the company brain (13/09/2026). The
+// one human action in this area now that settlement is automatic. Same
+// gate as the old approval (real site role, never the fictional persona),
+// same clearance rule per row, same requirement for a written reason.
+// Only an approved row can be retracted; the cache is reloaded so the
+// workers stop seeing it, and a reload failure is reported rather than
+// dressed up as done.
+router.post('/api/scott/brain-candidates/:id/retract', noindexHeader, requireScottApiAccess, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid candidate id.' });
+    if (!canReviewProposedFacts(req)) return res.status(404).json({ error: 'Not found.' });
+
+    const candidate = await repo.getBrainCandidateById(id);
+    if (!candidate) return res.status(404).json({ error: 'Fact not found.' });
+
+    const personaId = clearance.getEffectivePersonaId(req);
+    if (!clearance.personaCanResolveGap(personaId, candidate)) {
+      return res.status(403).json({ error: clearance.actionDeniedNote('gap_resolve') });
+    }
+
+    const note = sanitizeHtml(String(req.body?.note || ''), { allowedTags: [], allowedAttributes: {} }).trim();
+    if (note.length < 10) {
+      return res.status(400).json({ error: 'Say why this is wrong for the business. At least a sentence.' });
+    }
+
+    const v = viewer(req);
+    const updated = await repo.retractBrainCandidate(id, {
+      note,
+      decider: { realUserId: v.realUserId, personaId, displayName: v.displayName }
+    });
+    if (!updated) return res.status(409).json({ error: 'That fact is not in the company brain, so there is nothing to retract.' });
+
+    let reloaded = null;
+    try {
+      reloaded = await contextBuilders.loadApprovedFacts();
+    } catch (err) {
+      console.error('Scott brain: fact retracted but the cache reload failed:', err.message);
+    }
+
+    await repo.addActivity({
+      actor: 'user',
+      eventType: 'brain_fact_retracted',
+      summary: `${v.displayName} retracted ${updated.domain}/${updated.fact_key} from the company brain: ${note}`
+    });
+
+    res.json({ ok: true, candidate: { id: updated.id, status: updated.status }, brainReloaded: reloaded !== null });
+  } catch (err) {
+    console.error('Scott brain retract error:', err);
+    res.status(500).json({ error: 'Could not retract that fact.' });
+  }
+});
+
+// Correcting a fact the company holds, keeping the history (13/09/2026).
+//
+// The ONLY path that can change a held fact, and it is a person's. The
+// automatic rule deliberately has none: settlement always keeps the earlier
+// fact, so a figure that is genuinely wrong for the business would
+// otherwise only be removable, never correctable. Nothing is overwritten:
+// the old row is marked superseded and points forward, the new one points
+// back, and both stay on the register (repo.supersedeBrainFact).
+//
+// Same gates as retraction, because it is the same question asked in the
+// other direction: the real site role, clearance for the fact's own domain,
+// and a written reason.
+router.post('/api/scott/brain-candidates/:id/correct', noindexHeader, requireScottApiAccess, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid candidate id.' });
+    if (!canReviewProposedFacts(req)) return res.status(404).json({ error: 'Not found.' });
+
+    const candidate = await repo.getBrainCandidateById(id);
+    if (!candidate) return res.status(404).json({ error: 'Fact not found.' });
+
+    const personaId = clearance.getEffectivePersonaId(req);
+    if (!clearance.personaCanResolveGap(personaId, candidate)) {
+      return res.status(403).json({ error: clearance.actionDeniedNote('gap_resolve') });
+    }
+
+    const clean = (v) => sanitizeHtml(String(v || ''), { allowedTags: [], allowedAttributes: {} }).trim();
+    const factValue = clean(req.body?.factValue);
+    const note = clean(req.body?.note);
+    const basis = clean(req.body?.basis);
+    if (!factValue) return res.status(400).json({ error: 'Say what the fact should be.' });
+    if (factValue === String(candidate.fact_value || '').trim()) {
+      return res.status(400).json({ error: 'That is what the company already holds, so there is nothing to change.' });
+    }
+    if (note.length < 10) {
+      return res.status(400).json({ error: 'Say why it is changing. At least a sentence.' });
+    }
+
+    // The corrected value is held to the same consistency rule as anything
+    // the company works out for itself: a person may overrule the checks on
+    // plausibility, but a figure that does not fit the company's own books
+    // is refused here as it would be there, with the reason said plainly.
+    const canon = contextBuilders.allDeepFactRecords();
+    const inconsistent = companyState.checkConsistency(
+      { domain: candidate.domain, factKey: candidate.fact_key, factValue },
+      companyState.companyEconomics(canon)
+    );
+    if (inconsistent.length) {
+      return res.status(400).json({ error: `That does not fit the company's own figures: ${inconsistent.map((f) => f.detail).join('; ')}` });
+    }
+
+    const v = viewer(req);
+    let result;
+    try {
+      result = await repo.supersedeBrainFact(id, {
+        factValue,
+        basis: basis || candidate.basis,
+        note,
+        decider: { realUserId: v.realUserId, personaId, displayName: v.displayName }
+      });
+    } catch (err) {
+      console.error('Scott brain correct error:', err.message);
+      return res.status(400).json({ error: 'That correction could not be recorded.' });
+    }
+    if (!result) return res.status(409).json({ error: 'That fact is not in the company brain, so there is nothing to correct.' });
+
+    let reloaded = null;
+    try {
+      reloaded = await contextBuilders.loadApprovedFacts();
+    } catch (err) {
+      console.error('Scott brain: fact corrected but the cache reload failed:', err.message);
+    }
+
+    await repo.addActivity({
+      actor: 'user',
+      eventType: 'brain_fact_superseded',
+      summary: `${v.displayName} corrected ${result.current.domain}/${result.current.fact_key}: "${result.previous.fact_value}" is superseded by "${result.current.fact_value}". ${note}`
+    });
+
+    res.json({
+      ok: true,
+      previous: { id: result.previous.id, status: result.previous.status },
+      current: { id: result.current.id, factValue: result.current.fact_value },
+      brainReloaded: reloaded !== null
+    });
+  } catch (err) {
+    console.error('Scott brain correct error:', err);
+    res.status(500).json({ error: 'Could not correct that fact.' });
   }
 });
 
