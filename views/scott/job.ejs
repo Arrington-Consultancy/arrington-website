@@ -106,6 +106,7 @@
           <%- include('partials/chat-widget', { workersById: workersById, csrfToken: csrfToken, aiEnabled: aiEnabled, suggestions: false, relatedJobId: job.id, initialConversationId: initialConversationId, initialMessages: initialMessages }) %>
         </div>
       </div>
+      <%- include('partials/deeper-dive') %>
     </main>
   </div>
   <script nonce="<%= nonce %>">

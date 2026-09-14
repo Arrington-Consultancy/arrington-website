@@ -1,0 +1,43 @@
+<%
+  /*
+    Deeper dive: the closing invitation at the end of every Scott portal
+    screen (14/09/2026, Tom's direction).
+
+    Why it exists: somebody who has spent ten minutes inside a fictional
+    company had no obvious way back to the real one. The portal ended
+    wherever they happened to stop reading. This is that next step.
+
+    Three things it deliberately is not:
+
+    1. It is NOT a Scott offer. Scott is a demonstration of how the work
+       is done, never a product with its own sales process. The CTA goes
+       straight to Arrington's ordinary contact block on the main site
+       (/#conversation, the same global footer every public page uses),
+       so there is one enquiry route and no second funnel to maintain.
+    2. It is NOT gated, counted, tracked or personalised. It is a link.
+    3. It reads no record and takes no props, so it cannot leak anything.
+       Every other block on these pages is clearance-filtered; this one
+       has nothing to filter, which is what keeps it outside the access
+       model entirely rather than being one more thing that has to be
+       checked against a persona.
+
+    Rendered immediately before </main> on every portal screen rather
+    than on the dashboard alone, because "the end of the experience" is
+    wherever the visitor stops, not where the site thinks they should.
+    Excluded from login and the 404 page on purpose: neither is a place
+    somebody has explored from.
+  */
+%>
+<section class="sc-deeper" aria-labelledby="sc-deeper-heading">
+  <div class="sc-deeper-words">
+    <h2 class="sc-deeper-heading" id="sc-deeper-heading">Want to go deeper into Scott&rsquo;s Armchair?</h2>
+    <p>You&rsquo;ve only scratched the surface. Scott&rsquo;s Armchair has customers, staff, vans, suppliers, money coming in and problems that don&rsquo;t always wait politely for Scott.</p>
+    <p>If you&rsquo;d like a deeper dive into Scott&rsquo;s world, the armchairs, the knitting and the business behind it, get in touch.</p>
+  </div>
+  <p class="sc-deeper-cta">
+    <%# The last word and the arrow are held together: at 390px the label
+        wraps, and an arrow alone on its own line reads as a broken button
+        rather than as a direction. %>
+    <a href="/#conversation">Have a deeper dive into Scott&rsquo;s <span class="sc-deeper-nowrap">Armchair <span aria-hidden="true">&rarr;</span></span></a>
+  </p>
+</section>
