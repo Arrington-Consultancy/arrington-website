@@ -434,7 +434,12 @@ async function seed() {
             {
               title: 'Enactment Sheet',
               blurb: 'How the recommendations become operating rules that can actually be followed and checked.',
-              meta: 'PDF, 2 pages',
+              // 4 pages since the replacement public version of 14/09/2026.
+              // This default only reaches a FRESH database (the insert below
+              // is ON CONFLICT DO NOTHING). An existing deployment already
+              // holds 'PDF, 2 pages' in its content row, so the guarded
+              // migration further down is what actually corrects it.
+              meta: 'PDF, 4 pages',
               file: '/pdfs/enactment-sheet.pdf',
               image: '/img/docs/enactment-sheet.jpg'
             }
@@ -5610,6 +5615,69 @@ async function seed() {
     console.log('Scott AI Demonstration: job lifecycle quality stages verified.');
   }
 
+  // Migration: Enactment Sheet page count, 2 pages to 4 (14/09/2026).
+  //
+  // The approved public Enactment Sheet was replaced with a longer version
+  // after a content and presentation QC. The PDF itself is a file in the
+  // repository, so it ships with the deploy; the page count is live CMS
+  // copy in the content table, and the documents seed above uses
+  // ON CONFLICT DO NOTHING, so that default only ever reaches a fresh
+  // database. This is what corrects an existing deployment.
+  //
+  // Scoped by the DOCUMENT, not by the value. 'PDF, 2 pages' looks
+  // distinctive and is not: Half-Time Team Talk already reads 'PDF, 4
+  // pages', so a value-only match would be one careless edit away from
+  // rewriting the wrong row. The meta key is derived from whichever
+  // doc_N_file row actually points at enactment-sheet.pdf, on whichever
+  // documents instance holds it, which is how the other three downloads
+  // are left alone by construction rather than by hoping.
+  //
+  // Guarded twice, the established pattern: a run-once marker, and an
+  // UPDATE that matches the old value exactly, so a CMS edit always wins.
+  {
+    const ENACTMENT_PAGES_MARKER = 'evidence.enactment_sheet_pages_2026-09-14';
+    const OLD_META = 'PDF, 2 pages';
+    const NEW_META = 'PDF, 4 pages';
+
+    const { rows: markerRows } = await db.query(
+      'SELECT 1 FROM content WHERE section_key = $1', [ENACTMENT_PAGES_MARKER]
+    );
+
+    if (markerRows.length === 0) {
+      // Every doc_N_file row naming this PDF, wherever it lives. The path
+      // is matched on its basename so a CMS edit to the leading path (or a
+      // second documents instance elsewhere) is still found.
+      const { rows: fileRows } = await db.query(
+        `SELECT section_key FROM content
+          WHERE section_key ~ '\\.doc_[0-9]+_file$'
+            AND content LIKE '%/enactment-sheet.pdf'`
+      );
+
+      // The marker is stamped only once there was actually something to
+      // act on, matching the What We Do intro trim above. A fresh database
+      // has no documents section at all (that seed is guarded on a page
+      // Tom created by hand), so stamping unconditionally would spend the
+      // migration on a database it never reached, and a documents section
+      // added afterwards would keep the wrong page count for good.
+      if (fileRows.length) {
+        let updated = 0;
+        for (const row of fileRows) {
+          const metaKey = row.section_key.replace(/_file$/, '_meta');
+          const { rowCount } = await db.query(
+            'UPDATE content SET content = $1 WHERE section_key = $2 AND content = $3',
+            [NEW_META, metaKey, OLD_META]
+          );
+          updated += rowCount;
+        }
+        console.log(`Enactment Sheet page count: ${fileRows.length} document row(s) found, ${updated} updated to '${NEW_META}'.`);
+
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [ENACTMENT_PAGES_MARKER, 'true']
+        );
+      }
+    }
+  }
 
   // Migration: the Built proof section on Evidence (14/09/2026).
   //
