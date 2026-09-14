@@ -8,6 +8,7 @@ const themes = require('../db/themes');
 const { getSiteShellData } = require('../lib/navShell');
 const { verifyTurnstileToken, SITE_KEY: TURNSTILE_SITE_KEY } = require('../lib/turnstile');
 const { QUESTIONS, validateAnswers, buildResult, computeRecommendation } = require('../lib/productGuide');
+const { OFFERS } = require('../lib/whereToStartOffers');
 const { summarizeForTom } = require('../lib/productGuideAI');
 
 // Where the visitor's details came from on this submission ('' typed,
@@ -103,6 +104,10 @@ function mountPageRoute(app, generateCsrfToken) {
       res.render('product-guide', {
         theme,
         questions: QUESTIONS,
+        // The offer list rendered under the guide. Same catalogue the Where
+        // to Start pages and the recommendation engine read, so the three can
+        // never disagree about a name, a path or which prices may be shown.
+        offers: OFFERS,
         csrfToken: generateCsrfToken(req, res),
         navPages,
         content,

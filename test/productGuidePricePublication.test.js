@@ -163,3 +163,33 @@ test('the "Already know what you need?" barrier is gone, and /where-to-start is 
     'the result CTA must still lead to the offer page on /where-to-start'
   );
 });
+
+test('the offer list under the guide shows only approved prices', () => {
+  // A second price surface on the same page, added 14/09/2026 when the list
+  // was restored. It renders from the same catalogue, so the same rule has to
+  // hold here or the page contradicts its own result card.
+  const src = fs.readFileSync(VIEW, 'utf8');
+
+  assert.ok(/id="pg-offers"/.test(src), 'the offer list is missing from the page');
+  assert.ok(/const pgPrice/.test(src), 'the list must format prices through one helper');
+  assert.ok(
+    /publicPriceApproved/.test(src),
+    'the list must consult the publication flag rather than printing pricePence'
+  );
+
+  // No figure may be hard-coded into the markup: every price shown has to come
+  // from the catalogue, through the gate.
+  const markup = src.slice(src.indexOf('id="pg-offers"'), src.indexOf('<!-- ---- QUESTIONS ---- -->'));
+  const hardCoded = markup.match(/£[\d,]+/g) || [];
+  assert.deepStrictEqual(hardCoded, [], 'a price is written directly into the offer list markup');
+});
+
+test('the restored list is below the guide, not a barrier beside it', () => {
+  // The removed "Already know what you need?" link sat next to the only
+  // control and invited a visitor to leave before starting. This must stay
+  // after the intro's own action, so the guide keeps the primary action.
+  const src = fs.readFileSync(VIEW, 'utf8');
+  const startBtn = src.indexOf('id="pg-start"');
+  const offers = src.indexOf('id="pg-offers"');
+  assert.ok(startBtn > -1 && offers > startBtn, 'the offer list must come after the Start button');
+});
