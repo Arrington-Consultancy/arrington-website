@@ -958,4 +958,55 @@
   .sc-compare-body-p:last-child { margin-bottom: 0; }
   .sc-compare-body-p-sm { margin: 0 0 0.75rem; font-size: 0.85rem; line-height: 1.6; color: var(--sc-text-muted); }
   .sc-compare-body-p-sm:last-child { margin-bottom: 0; }
+
+  /* ── Deeper dive: closing invitation at the end of every portal screen ──
+     Forest panel rather than the usual cream card, deliberately: it is the
+     one block on these pages that is Arrington talking rather than Scott's
+     company showing its own records, so it should not read as another
+     dashboard card. Sits below the page content with a clear rule above it. */
+  .sc-deeper {
+    margin: 48px 0 0;
+    padding: 26px 28px;
+    background: var(--sc-forest);
+    border-radius: var(--sc-radius);
+    color: var(--sc-cream);
+    /* Words left, action right, rather than a measure-width column with
+       half a band of empty green beside it. Wraps to one column below. */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 28px;
+    flex-wrap: wrap;
+  }
+  .sc-deeper-words { min-width: 0; flex: 1 1 30rem; }
+  .sc-deeper-heading {
+    margin: 0 0 10px;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #fff;
+  }
+  .sc-deeper p { margin: 0 0 0.7rem; font-size: 0.92rem; line-height: 1.65; color: rgba(247, 244, 236, 0.85); max-width: 62ch; }
+  .sc-deeper p:last-child { margin-bottom: 0; }
+  .sc-deeper-cta { margin: 0; flex: 0 0 auto; }
+  .sc-deeper-nowrap { white-space: nowrap; }
+  .sc-deeper-cta a {
+    display: inline-block;
+    padding: 9px 16px;
+    border-radius: var(--sc-radius-sm);
+    background: var(--sc-mustard);
+    color: var(--sc-forest-dark);
+    font-weight: 700;
+    font-size: 0.88rem;
+    text-decoration: none;
+    transition: background 200ms ease;
+  }
+  .sc-deeper-cta a:hover,
+  .sc-deeper-cta a:focus-visible { background: #e8b563; }
+  @media (max-width: 600px) {
+    .sc-deeper { margin-top: 32px; padding: 20px 18px; gap: 18px; }
+    .sc-deeper-heading { font-size: 1.12rem; }
+    .sc-deeper-cta { width: 100%; }
+    .sc-deeper-cta a { display: block; text-align: center; }
+  }
 </style>
