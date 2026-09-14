@@ -118,9 +118,13 @@
         .wts-form-status { font-size: 0.92rem; margin-top: 1rem; }
         .wts-form-status--error { color: #e07a5f; }
         .wts-form-status--ok { color: var(--accent); }
-        .wts-alt-route { margin-top: 1.6rem; font-size: 0.95rem; }
-        .wts-alt-route a { color: var(--text-muted); }
-        .wts-alt-route a:hover { color: var(--accent); }
+        .wts-lead-route { margin-bottom: 1.6rem; max-width: 58ch; }
+        /* Both routes are real buttons of the same height. The difference in
+           weight is the fill, not the size: a 37px tall pay button beside a
+           55px book button would read as the payment being discouraged, which
+           is not the decision. 48px also clears the 44px touch target. */
+        .wts-book-cta, .wts-pay-cta { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; }
+        .wts-buy-direct { margin-top: 3rem; }
     </style>
 </head>
 <body>
@@ -156,9 +160,23 @@
             <p>If you go on to Commercial Review and Implementation or Commercial Review and Website Build, the £<%= (offer.pricePence / 100).toLocaleString('en-GB') %> you pay here is credited in full.</p>
         </div>
 
+        <%# Tom's approved decision 5 of 14/09/2026. For a visitor who is not
+            sure, booking a conversation is the stronger route and now leads
+            this block. Direct purchase is NOT removed and is not gated behind
+            anything new: it keeps its own heading, its own explanation and the
+            same working form, one scroll below, for somebody who already knows
+            what they want. The price, the scope and the checkout are all
+            unchanged. No discount language anywhere: the conversation is free
+            because it is free, and £500 is simply the price. %>
         <div class="wts-form-section">
-            <h2>Start your Commercial Review</h2>
-            <p class="wts-form-note">Payment is handled securely by Stripe. Card details are never seen by or stored on this site.</p>
+            <h2>Not sure this is the right thing for you?</h2>
+            <p class="wts-lead-route">Start with a conversation. Thirty minutes, no charge, and we will say plainly whether a Commercial Review is what the business needs or whether something else is.</p>
+            <a href="/book-a-30-minute-conversation" class="btn btn-primary wts-book-cta">Book a 30 minute conversation</a>
+        </div>
+
+        <div class="wts-form-section wts-buy-direct">
+            <h2>Already know the review is what you want?</h2>
+            <p class="wts-form-note">Pay for it here. Payment is handled securely by Stripe. Card details are never seen by or stored on this site.</p>
             <form id="wtsCheckoutForm" data-offer="commercial_review">
                 <label for="wtsEmail">Your email</label>
                 <input type="email" id="wtsEmail" name="email" required maxlength="255" autocomplete="email">
@@ -166,10 +184,9 @@
                     <label for="wtsWebsite">Leave this field blank</label>
                     <input type="text" id="wtsWebsite" name="website" tabindex="-1" autocomplete="off">
                 </div>
-                <button type="submit" class="btn btn-primary" id="wtsCheckoutSubmit">Pay £500 securely</button>
+                <button type="submit" class="btn btn-outline wts-pay-cta" id="wtsCheckoutSubmit">Pay £500 securely</button>
                 <p class="wts-form-status" id="wtsCheckoutStatus" role="status"></p>
             </form>
-            <p class="wts-alt-route"><a href="/where-to-start#conversation-offer">Not sure? Start with the free conversation &rarr;</a></p>
         </div>
     </main>
 

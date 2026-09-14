@@ -713,6 +713,13 @@
         }
         .pg-teaser-heading { font-size: clamp(1.5rem, 3.2vw, 1.9rem); margin-bottom: 0.9rem; }
         .pg-teaser-body { font-size: 1.02rem; color: var(--text-muted); margin-bottom: 1.75rem; }
+        /* The Product Guide's route out of this block. Quieter than the quiz
+           button on purpose (decision 7: the entry points must not compete
+           equally) but a plainly visible, named link rather than something
+           a visitor has to hunt for. */
+        .pg-teaser-alt { font-size: 0.95rem; color: var(--text-muted); margin: 1.4rem 0 0; }
+        .pg-teaser-alt a { color: var(--text-bright); border-bottom: 1px solid var(--border); }
+        .pg-teaser-alt a:hover, .pg-teaser-alt a:focus-visible { color: var(--accent); border-bottom-color: var(--accent); }
 
         @media (max-width: 600px) {
             .pg-teaser { padding: 3rem 1.5rem; }
@@ -1914,6 +1921,11 @@
             margin-bottom: 0.6rem;
         }
 
+        /* Matches h2 as well as h3 since 14/09/2026: the card title now
+           renders one level below the section heading, so it is an h2 when
+           the documents section is the first on the page. Styling must not
+           depend on which level the outline happened to need. */
+        .document-card h2,
         .document-card h3 {
             font-family: 'DM Serif Display', serif;
             font-size: 1.3rem;
@@ -2453,7 +2465,13 @@
 
         .builtproof-intro { max-width: 640px; margin-bottom: 5rem; }
         .builtproof-heading {
-            font-size: clamp(1.9rem, 4vw, 2.6rem);
+            /* Was clamp(1.9rem, 4vw, 2.6rem), rendering at 41.6px against the
+               site's own .section-heading cap of 35.2px. On Evidence the
+               documents heading is the page's H1, so this H2 came out visually
+               LARGER than the H1 above it and the eye landed on the wrong
+               thing. Brought onto the existing section-heading scale rather
+               than given a size of its own (14/09/2026, decision 10). */
+            font-size: clamp(1.7rem, 3vw, 2.2rem);
             line-height: 1.15;
             margin: 0 0 1.2rem;
             text-wrap: balance;
@@ -3423,21 +3441,42 @@
 </section>
 <% } %>
 
-<% /* Product Guide teaser — homepage only, immediately below the hero,
-      hardcoded (not a CMS section) per the site refinement brief: a
-      strong but secondary entry point, deliberately not competing with
-      the hero's own CTA. Uses the midnight surface so it reads as a
-      distinct, quieter zone rather than another slab of the same navy.
-      Restricted to currentPage.slug === 'main' and the base hero instance
-      so it never appears on other pages that happen to reuse the hero
-      template (Business Consultant Devon, the booking page). */ %>
+<% /* Principal diagnostic route, homepage only, immediately below the hero,
+      hardcoded (not a CMS section) so it lands without depending on CMS
+      state. Uses the midnight surface so it reads as a distinct zone rather
+      than another slab of the same navy. Restricted to
+      currentPage.slug === 'main' and the base hero instance so it never
+      appears on other pages that reuse the hero template (Business
+      Consultant Devon, the booking page).
+
+      CHANGED 14/09/2026 on Tom's approved decisions 2 and 7. This slot used
+      to carry the Product Guide alone. The Owner Dependency Quiz is now the
+      principal diagnostic route and takes the lead here, which is what
+      "promote the existing quiz much higher on the homepage" means in the
+      highest slot available below the hero.
+
+      The Product Guide is NOT demoted out of existence and NOT removed: it
+      keeps its place in the main navigation (decision 1) and keeps a named
+      route in this same block for the visitor who does not know what they
+      need. What changes is the hierarchy between them, per decision 7, so
+      the entry points stop competing equally.
+
+      Two gold buttons do not collide here: the hero's CTA is the principal
+      HUMAN route and this is the principal DIAGNOSTIC route, and the
+      midnight surface separates them.
+
+      Every claim below is the site's own existing, controlled wording from
+      the quiz page itself (a free five minute quiz, no email required to see
+      the result), not a new claim written for this block. The quiz is 32
+      questions, so no question count is stated. */ %>
 <% if (_tpl === 'hero' && _iid === 'hero' && currentPage.slug === 'main') { %>
 <section class="pg-teaser surface-midnight">
     <div class="pg-teaser-inner">
-        <p class="pg-teaser-label">Not sure where to start?</p>
-        <h2 class="pg-teaser-heading">Arrington Product Guide</h2>
-        <p class="pg-teaser-body">Answer a few questions and we will recommend the most sensible next step.</p>
-        <a href="/product-guide" class="btn btn-outline">Use the Product Guide</a>
+        <p class="pg-teaser-label">The quickest place to start</p>
+        <h2 class="pg-teaser-heading">Owner Dependency Quiz</h2>
+        <p class="pg-teaser-body">A free five minute quiz that shows where the business still depends on you, and what that is costing. No email required to see your result.</p>
+        <a href="/owner-dependency-quiz" class="btn btn-primary">Take the quiz</a>
+        <p class="pg-teaser-alt">Not sure what you need? <a href="/product-guide">Use the Product Guide</a>.</p>
     </div>
 </section>
 <% } %>
@@ -3875,7 +3914,10 @@
                 <% if ((content[_k + '.label'] || '').trim()) { %>
                 <p class="section-label"><%- content[_k + '.label'] %></p>
                 <% } %>
-                <% const _hTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %><<%= _hTag %> class="section-heading"><%- content[_k + '.heading'] %></<%= _hTag %>>
+                <% const _hTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %><% /* Card titles sit one level below whatever this section heading
+      rendered as. They were a hardcoded level-3 heading, so when the
+      documents section is first on a page (Evidence) the outline ran
+      h1 then h3 and skipped a level. Fixed 14/09/2026, decision 10. */ %><% const _docTitleTag = _hTag === 'h1' ? 'h2' : 'h3'; %><<%= _hTag %> class="section-heading"><%- content[_k + '.heading'] %></<%= _hTag %>>
                 <% if ((content[_k + '.evidence_intro'] || '').trim()) { %>
                 <p class="evidence-intro"><%- content[_k + '.evidence_intro'] %></p>
                 <% } %>
@@ -3897,7 +3939,7 @@
                 <% } %>
                 <div class="document-body">
                     <div class="document-number"><%= String(_d.n).padStart(2, '0') %></div>
-                    <h3><%- _d.title %></h3>
+                    <<%= _docTitleTag %>><%- _d.title %></<%= _docTitleTag %>>
                     <p><%- _d.blurb %></p>
                     <% if (_d.meta) { %><p class="document-meta"><%= _d.meta %></p><% } %>
                     <% if (_d.file) { %>
