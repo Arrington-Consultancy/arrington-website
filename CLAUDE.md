@@ -786,6 +786,129 @@ set (a live key needs its own `STRIPE_WEBHOOK_SECRET` from the live Dashboard
 webhook, not the sandbox one), refund/cancellation wording, and whether a
 restricted live key can replace a full secret key.
 
+## Shipped 14/09/2026: lead attribution, and Scott evolving on its own
+
+Two changes merged in dependency order on Tom's decision, under the standing
+operating mode for ordinary reversible website work (merge, deploy, inspect
+live, refine, rather than a pre-production approval gate each time).
+
+### Lead attribution and the Ads conversion split (PR #164, merge `2f5bfbe`)
+
+Every enquiry now records where it came from: landing page, referrer, the
+`utm_*` parameters and the Google Ads click id, captured once per browser
+session in `views/partials/site-chrome-script.ejs` and allowlisted and capped
+server-side by `lib/leadAttribution.js` before it reaches the `attribution`
+JSONB column on `leads` (and on `commercial_gaps_reviews`). A PDF download
+still records the person's email, which document they took and the source of
+the enquiry, exactly as before.
+
+**What changed for Google Ads is narrow and was the point of the change.** A
+PDF download used to fire the SAME conversion label as a phone tap, a mailto
+or a WhatsApp click (`AW-18129914078/h_2rCJeH8aYcEN6RgsVD`), so a download
+counted as a contact. It no longer does. It fires a conversion only once it
+has a label of its own, set as `GOOGLE_ADS_PDF_CONVERSION_LABEL`; unset, it
+fires nothing and the boot line says so. Tom's own framing, kept because it is
+the right one: this does not make the original ad click free, it stops the
+download being treated as the contact conversion signal.
+
+Confirmed live from the production boot log of deploy `985a83c9`: *"Google Ads:
+PDF request conversion label not set; PDF requests fire no Ads conversion (they
+no longer share the contact-click label)"*.
+
+The schema change is a standalone `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`,
+which is the pattern that actually reaches an existing database — only
+`CREATE TABLE IF NOT EXISTS` is skipped once a table exists.
+
+### Scott evolves on its own (PR #165, merge `a009500`)
+
+Tom's instruction: Scott's Armchair becomes its own believable, persistent
+fictional company rather than a static demo waiting for him to approve every
+new fact. It should remember what has happened, evolve its own state, reuse
+established facts consistently, reject contradictions, keep a history when
+facts genuinely change, and stay internally believable over time.
+
+Shipped as described in the Scott sections above: every worker proposal is
+settled by code the moment it is made (admitted, rejected or redundant, never
+queued), figures are checked against the company's own books, a fact that
+genuinely changes supersedes the old one with both versions kept, gaps close by
+logic, and the briefing reports state rather than presenting an approval queue.
+
+**The boundary, which is the part to keep honest.** Tom: *"This autonomy is
+intentional. It must remain strictly inside Scott and must never alter or
+contaminate real Arrington business data."* Verified before merge, and not only
+by the branch's own test: every SQL statement in the changed modules was
+enumerated by hand and every table it touches is `scott_`-prefixed, and none of
+`companyState.js`, `gapClosure.js`, `evolutionDigest.js` or
+`evolutionBriefing.js` requires anything outside `lib/scott`. The one apparent
+hit on the word `content` is a column on `scott_messages`, not the Arrington
+`content` table. `test/scott/brainSettlementFirewall.test.js` pins the same
+boundary in both directions.
+
+No automatic path can overwrite a held fact. Only a person can correct one, with
+the real site role, clearance for that fact's own domain, a written reason and
+the same consistency check a worker's proposal faces.
+
+**Rollback is a variable, not a deploy:** `SCOTT_BRAIN_AUTOFILL` set to anything
+other than `true` stops the company learning. It is `true` on production today,
+which is what makes the autonomy live.
+
+### Verification, stated for what it is
+
+Merged tree on a genuinely fresh database: seed exit 0, then **1098 tests, 1095
+pass, 0 fail**, with the seven documented gated suites skipped (they need a
+running instance or paid AI and are named on every run). That is a green
+`npm test`, which this file has said repeatedly is not a release gate on its
+own; the adversarial suites were not run for this pair, and neither change
+touches the workspace access gates they cover.
+
+Live confirmation is by production boot log, as always in this sandbox: it
+cannot reach `arringtonconsultancy.com` or `railway.app`, so a claim that a page
+renders correctly has to come from Tom or from a local rebuild, never from a
+fetch that did not happen.
+
+## Public prices: settled, and not a discount (14/09/2026)
+
+Tom confirmed the current public prices, and confirmed them as settled rather
+than provisional. Nothing here is outstanding, awaiting reconciliation or
+carried as an open commercial item any more:
+
+| Offer | Price |
+|---|---|
+| Commercial Review | £500 |
+| Commercial Review and Implementation | £2,500 |
+| Commercial Review and Website Build | £3,400 |
+| Website Build | £999 |
+| 30 Minute Conversation | free |
+
+**£500 is not a discount.** Tom's instruction, verbatim: *"Do not describe £500
+as a discount, introductory price or 50% offer. It is simply the current public
+price."* No surface may frame it as a reduction from a higher figure, a launch
+rate, or an offer that ends. That is a claim about a price that does not exist.
+
+Both halves live in `lib/whereToStartOffers.js` beside the figures they govern,
+because a rule kept somewhere else is a rule the next person writing an offer
+page never reads. `publicPriceApproved` stays as the mechanism (all five are
+`true`) rather than being deleted: it is where a future withheld price gets
+recorded, and a withheld price must be ABSENT, never substituted or zeroed.
+
+`test/productGuidePricePublication.test.js` pins both: the gate still removes a
+figure when one is withheld (it withholds one itself and puts it back, since
+nothing is withheld today), and no `.ejs` or `.js` file outside `views/scott`
+frames a price as a reduction. That second scan strips comments first, and
+deliberately: the rule has to be written down somewhere and necessarily quotes
+the wording it forbids. Scott is excluded because its fictional sales people run
+their own promotions and that copy is not Arrington's.
+
+**Briefly narrower the same morning**, worth knowing because the mechanism only
+makes sense with it: £999 alone was approved for the Product Guide and the other
+three withheld. Tom asked why only two rows were priced. The answer that settled
+it is that all three were already public one click away, on the pages those rows
+link to, so the guide was the only quiet page rather than a careful one.
+
+**Navigation is unchanged and stays that way** (same decision): the top menu
+keeps Product Guide, Where to Start is NOT added back to it, and
+`/where-to-start` plus every offer page stay live and reachable from the guide.
+
 ## Where to Start refinement pass (14/08/2026)
 
 Renamed the £2,500 offer from "Commercial Review + Implementation" to

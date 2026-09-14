@@ -1,10 +1,11 @@
-// Which prices the Product Guide is allowed to quote (14/09/2026).
+// Which prices the site is allowed to quote, and how (14/09/2026).
 //
-// All five are approved today, so the guide quotes the same figures as the
-// rest of the live site. That was not the first position: £999 alone was
-// approved that morning, and the other three were withheld until Tom pointed
-// out they are already public one click away, which made the guide the only
-// quiet page rather than a careful one.
+// All five are approved and settled: Commercial Review £500, Commercial Review
+// and Implementation £2,500, Commercial Review and Website Build £3,400,
+// Website Build £999, and the conversation free. None of them is outstanding,
+// provisional or awaiting reconciliation. Earlier the same day only £999 was
+// approved for the Product Guide; Tom lifted that once it was clear the other
+// three were already public one click away.
 //
 // The gate therefore has nothing to withhold at present. These tests still
 // prove it WORKS, by withholding one and checking the figure disappears,
@@ -20,6 +21,13 @@
 // They also guard the opposite mistake, which is the more tempting one: a
 // substitute figure, a "from £X", or a zero standing in for a withheld
 // price. An absent price is the honest statement. An invented one is not.
+//
+// And they guard the framing, which is a separate instruction from the
+// figure. Tom, verbatim: "Do not describe £500 as a discount, introductory
+// price or 50% offer. It is simply the current public price." A price the
+// site presents as a reduction is a claim about a higher price that does not
+// exist, so it is pinned across every rendered Arrington surface rather than
+// left to whoever writes the next offer page.
 
 const { test } = require('node:test');
 const assert = require('node:assert');
@@ -217,4 +225,69 @@ test('the price sits in its own column, so its position is the same on every row
     'the name needs a flexible track it can wrap inside and the price needs its own'
   );
   assert.ok(!/flex-wrap/.test(rule), 'flex-wrap is what let the price change rows');
+});
+
+test('no Arrington surface frames a price as a discount or an introductory rate', () => {
+  // Site-wide rather than scoped to one view, because the rule is about how
+  // the business talks about its prices, and the next offer page is exactly
+  // where it would be broken by somebody who never read the catalogue.
+  //
+  // Scott is excluded on purpose: it is a fictional company whose own sales
+  // people run their own promotions, and its copy is not Arrington's.
+  const roots = ['views', 'routes', 'lib'];
+  const banned = [
+    /\bintroductory\b/i,
+    /\blaunch (?:price|rate|offer)\b/i,
+    /\b50%\s*(?:off|offer|discount)/i,
+    /\bhalf[- ]price\b/i,
+    /\b(?:was|normally|usually|instead of|reduced from|down from)\s*£/i,
+    /\blimited[- ]time\b/i
+  ];
+
+  const offenders = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === 'scott' || entry.name === 'node_modules') continue;
+        walk(full);
+        continue;
+      }
+      if (!/\.(ejs|js)$/.test(entry.name)) continue;
+      // Comments are stripped first, and that is the point rather than a
+      // convenience: the rule forbidding this framing has to be WRITTEN
+      // somewhere, and it necessarily quotes the wording it forbids. A
+      // comment reaches no visitor. What matters is what renders.
+      const text = fs.readFileSync(full, 'utf8')
+        .replace(/<%#[\s\S]*?%>/g, '')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+      for (const rx of banned) {
+        const hit = text.match(rx);
+        if (hit) offenders.push(`${path.relative(path.join(__dirname, '..'), full)}: ${hit[0]}`);
+      }
+    }
+  };
+  for (const r of roots) walk(path.join(__dirname, '..', r));
+
+  assert.deepStrictEqual(
+    offenders,
+    [],
+    'a price is framed as a reduction from a higher one; £500 is the current public price, not an offer'
+  );
+});
+
+test('the catalogue records the prices as settled, not as awaiting reconciliation', () => {
+  // The figures were briefly carried as open items. Leaving that language in
+  // place would have the code contradict the decision it is meant to record,
+  // and the next person reading it would reasonably hold a price back again.
+  const src = fs.readFileSync(path.join(__dirname, '..', 'lib', 'whereToStartOffers.js'), 'utf8');
+  assert.ok(
+    !/reconciliation stays open|remains open as its own|unapproved published/.test(src),
+    'the catalogue still describes an approved price as unresolved'
+  );
+  assert.ok(
+    /IS NOT A DISCOUNT/.test(src),
+    'the catalogue must carry the framing rule beside the figures it governs'
+  );
 });
