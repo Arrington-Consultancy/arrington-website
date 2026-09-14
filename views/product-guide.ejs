@@ -126,9 +126,6 @@
         }
         .pg-intro-note p { margin: 0; }
         .pg-intro-actions { margin-top: 2.5rem; }
-        .pg-intro-alt { margin-top: 1.5rem; font-size: 0.95rem; }
-        .pg-intro-alt a { color: var(--text-muted); }
-        .pg-intro-alt a:hover { color: var(--accent); }
 
         /* ---- QUESTION SCREENS ----
            One question at a time, generous space, no progress bar. The
@@ -250,6 +247,10 @@
             margin-bottom: 1.25rem;
         }
         .pg-rec-head h2 { font-size: clamp(1.9rem, 4.5vw, 2.5rem); }
+        /* Explicit rather than relying on the UA sheet: this sits in a flex
+           container, and a later author rule setting display on it would
+           silently un-hide a price that is deliberately withheld. */
+        .pg-rec-price[hidden] { display: none; }
         .pg-rec-price {
             font-family: 'DM Serif Display', serif;
             font-size: clamp(1.8rem, 4vw, 2.3rem);
@@ -378,7 +379,12 @@
             <div class="pg-intro-actions">
                 <button type="button" class="btn btn-primary" id="pg-start">Start the guide</button>
             </div>
-            <p class="pg-intro-alt"><a href="/where-to-start">Already know what you need? See the options &rarr;</a></p>
+<%# The "Already know what you need? See the options" link was removed on
+    14/09/2026 (Tom). It sat beside the only control on the page and invited
+    a visitor to leave the guide before answering a single question, which is
+    a barrier in front of the thing the page exists to do. /where-to-start is
+    untouched and still live: the result card's CTA leads there, which is the
+    route somebody actually needs it by. %>
         </section>
 
         <!-- ---- QUESTIONS ---- -->
@@ -604,9 +610,24 @@
                 });
             }
 
+            // A route whose price is not approved for publication carries no
+            // price line at all, rather than a placeholder or a "from" figure.
+            // The server decides this (lib/whereToStartOffers.js), so the
+            // browser never has to know which figures are contested.
+            function hasPrice(offer) {
+                return offer && offer.priceApproved === true && typeof offer.pricePence === 'number';
+            }
+
             function renderResult(result) {
                 document.getElementById('pg-rec-name').textContent = result.recommendation.name;
-                document.getElementById('pg-rec-price').textContent = formatPrice(result.recommendation.pricePence);
+                var priceEl = document.getElementById('pg-rec-price');
+                if (hasPrice(result.recommendation)) {
+                    priceEl.textContent = formatPrice(result.recommendation.pricePence);
+                    priceEl.hidden = false;
+                } else {
+                    priceEl.textContent = '';
+                    priceEl.hidden = true;
+                }
                 document.getElementById('pg-rec-why').textContent = result.why;
                 document.getElementById('pg-next-text').textContent = result.whatHappensNext;
 
@@ -617,12 +638,17 @@
                 // straight to the conversation form already on this page,
                 // rather than a second hop through /where-to-start.
                 var link = document.getElementById('pg-rec-link');
-                if (result.recommendation.pricePence) {
+                if (result.recommendation.id === 'conversation') {
+                    link.href = '#conversation';
+                    link.textContent = 'Start the conversation';
+                } else if (hasPrice(result.recommendation)) {
                     link.href = result.recommendation.path;
                     link.textContent = 'Continue to ' + result.recommendation.name + ' (' + formatPrice(result.recommendation.pricePence) + ')';
                 } else {
-                    link.href = '#conversation';
-                    link.textContent = 'Start the conversation';
+                    // Same destination, no figure in the label. The offer page
+                    // itself is unchanged and still carries its own detail.
+                    link.href = result.recommendation.path;
+                    link.textContent = 'See ' + result.recommendation.name;
                 }
 
                 var laterWrap = document.getElementById('pg-later');
@@ -633,7 +659,7 @@
                         var li = document.createElement('li');
                         var a = document.createElement('a');
                         a.href = route.path;
-                        a.textContent = route.name + (route.pricePence ? ' (' + formatPrice(route.pricePence) + ')' : '');
+                        a.textContent = route.name + (hasPrice(route) && route.pricePence ? ' (' + formatPrice(route.pricePence) + ')' : '');
                         li.appendChild(a);
                         laterList.appendChild(li);
                     });
