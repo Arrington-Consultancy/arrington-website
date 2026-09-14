@@ -29,6 +29,7 @@ const { SNAPSHOT_LABEL } = require('../lib/scott/config');
 const { requireScottPageAccess, requireScottApiAccess, hasScottAccess } = require('../lib/scott/access');
 const { runTurn, isScottAIEnabled } = require('../lib/scott/orchestrator');
 const clearance = require('../lib/scott/clearance');
+const brainPreview = require('../lib/scott/brainPreview');
 const { checkReleaseGate } = require('../lib/scott/qualityGate');
 const deepFacts = require('../lib/scott/deepBusinessFacts');
 const contextBuilders = require('../lib/scott/data/contextBuilders');
@@ -308,11 +309,14 @@ function buildBrainViewModel(personaId) {
   visible.forEach((r) => visibleCounts.set(r.domain, (visibleCounts.get(r.domain) || 0) + 1));
 
   // An example drawn from a record this reader can already see, so the
-  // preview line cannot itself become the leak.
+  // preview line cannot itself become the leak. `visible.find` is what
+  // provides that and is unchanged; the choice of WHICH field to show
+  // lives in lib/scott/brainPreview.js, which has no access to the full
+  // record set. See that module for what it used to pick and why.
   const exampleFor = (domain) => {
     const rec = visible.find((r) => r.domain === domain);
     if (!rec) return '';
-    return String(rec.ref || rec.name || rec.sku || rec.person || rec.role || Object.values(rec)[1] || '').slice(0, 90);
+    return brainPreview.previewFor(rec);
   };
 
   const allDomains = [...new Set(all.map((r) => r.domain))];
