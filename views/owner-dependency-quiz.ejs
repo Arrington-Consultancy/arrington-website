@@ -1048,6 +1048,7 @@
                     email: email,
                     website: hp,
                     prefillSource: window.__gPrefillSource || '',
+                    attribution: window.__leadAttribution ? window.__leadAttribution() : {},
                     score: lastResult.total,
                     band: lastResult.band.label,
                     resultsText: lastResult.fullResultsText

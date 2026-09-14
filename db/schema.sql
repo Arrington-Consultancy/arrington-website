@@ -1087,6 +1087,15 @@ ALTER TABLE leads ADD COLUMN IF NOT EXISTS signup_source VARCHAR(20) NOT NULL DE
 -- the visitor's details is carried on the review row from the start.
 ALTER TABLE commercial_gaps_reviews ADD COLUMN IF NOT EXISTS signup_source VARCHAR(20) NOT NULL DEFAULT '';
 
+-- Where the enquiry came from (11/09/2026): landing page, referrer, utm_*
+-- and the Google Ads click id, captured in the browser on the first page of
+-- the session and allowlisted server-side (lib/leadAttribution.js). '{}'
+-- when nothing was captured. One JSONB column so a new key never needs
+-- another migration. The Commercial Gaps Review carries it on the review
+-- row for the same reason as signup_source above.
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS attribution JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE commercial_gaps_reviews ADD COLUMN IF NOT EXISTS attribution JSONB NOT NULL DEFAULT '{}'::jsonb;
+
 -- Erasure register (30/08/2026).
 --
 -- Evidence that a specific erasure request was carried out, designed so

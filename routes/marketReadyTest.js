@@ -11,6 +11,7 @@ const { verifyTurnstileToken, SITE_KEY: TURNSTILE_SITE_KEY } = require('../lib/t
 // Where the visitor's details came from on this submission ('' typed,
 // 'google' the Continue with Google prefill). Only one value is
 // accepted, so a request cannot write arbitrary text into the record.
+const { parseAttribution, describeAttribution } = require('../lib/leadAttribution');
 const signupSource = (body) => (body && body.prefillSource === 'google' ? 'google' : '');
 const sourceLine = (src) => (src === 'google' ? 'Signed up using Continue with Google.' : '');
 
@@ -570,10 +571,11 @@ router.post('/api/market-ready-test/submit', assessmentLimiter, async (req, res)
     // Fire-and-forget: also record as a lead (parity with every other lead
     // type) so it surfaces in the existing admin "Leads & bookings" panel,
     // in addition to the full record in market_ready_submissions.
+    const attribution = parseAttribution((req.body || {}).attribution);
     db.query(
-      `INSERT INTO leads (kind, name, email, phone, message, signup_source)
-       VALUES ('market_ready_test', $1, $2, $3, $4, $5)`,
-      [`${firstName} ${lastName}`.trim(), email, phone, `${businessName} — New Owner Ready Score ${report.overall_score}/100 (${report.rating})${consentTomReview ? ' — requested Tom\'s review' : ''}`, signupSource(req.body)]
+      `INSERT INTO leads (kind, name, email, phone, message, signup_source, attribution)
+       VALUES ('market_ready_test', $1, $2, $3, $4, $5, $6::jsonb)`,
+      [`${firstName} ${lastName}`.trim(), email, phone, `${businessName} — New Owner Ready Score ${report.overall_score}/100 (${report.rating})${consentTomReview ? ' — requested Tom\'s review' : ''}`, signupSource(req.body), JSON.stringify(attribution)]
     ).catch(err => console.error('Market Ready Test lead insert failed:', err.message));
 
     // Owner notification — full detail, always sent regardless of consent
@@ -600,6 +602,7 @@ router.post('/api/market-ready-test/submit', assessmentLimiter, async (req, res)
           `Opted into occasional emails: ${consentMarketing ? 'Yes' : 'No'}`,
           `Submitted: ${new Date().toISOString()}`,
           `Result link: ${resultUrl}`,
+          ...describeAttribution(attribution),
           '',
           `New Owner Ready Score: ${report.overall_score}/100 (${report.rating})`,
           '',

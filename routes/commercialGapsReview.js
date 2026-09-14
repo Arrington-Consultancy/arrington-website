@@ -14,6 +14,7 @@ const { verifyTurnstileToken, SITE_KEY: TURNSTILE_SITE_KEY } = require('../lib/t
 // Where the visitor's details came from on this submission ('' typed,
 // 'google' the Continue with Google prefill). Only one value is
 // accepted, so a request cannot write arbitrary text into the record.
+const { parseAttribution, describeAttribution } = require('../lib/leadAttribution');
 const signupSource = (body) => (body && body.prefillSource === 'google' ? 'google' : '');
 const sourceLine = (src) => (src === 'google' ? 'Signed up using Continue with Google.' : '');
 
@@ -252,9 +253,9 @@ router.post('/api/commercial-gaps-review/start', startLimiter, async (req, res) 
     const shortReference = await generateUniqueShortReference('commercial_gaps_reviews', 'short_reference');
     await db.query(
       `INSERT INTO commercial_gaps_reviews
-       (result_token, short_reference, status, name, email, company, location, consent_save_email, consent_contact, transcript, signup_source)
-       VALUES ($1, $2, 'in_progress', $3, $4, $5, $6, $7, $8, '[]'::jsonb, $9)`,
-      [resultToken, shortReference, name, email, company, location, consentSaveEmail, consentContact, signupSource(req.body)]
+       (result_token, short_reference, status, name, email, company, location, consent_save_email, consent_contact, transcript, signup_source, attribution)
+       VALUES ($1, $2, 'in_progress', $3, $4, $5, $6, $7, $8, '[]'::jsonb, $9, $10::jsonb)`,
+      [resultToken, shortReference, name, email, company, location, consentSaveEmail, consentContact, signupSource(req.body), JSON.stringify(parseAttribution(body.attribution))]
     );
 
     const question = firstQuestion();
@@ -310,6 +311,7 @@ async function sendCompletionEmails(review, data, mode) {
       `Consented to being contacted: ${review.consent_contact ? 'Yes' : 'No'}`,
       `AI mode: ${mode}`,
       `Result link: ${resultUrl}`,
+      ...describeAttribution(review.attribution),
       '',
       'PRIVATE BRIEFING (never shown to the visitor)',
       `Company overview: ${tb.company_overview}`,
@@ -428,9 +430,9 @@ async function finalizeReview(review, token) {
     sendCompletionEmails(review, data, mode).catch((err) => console.error('Commercial Gaps Review completion email dispatch failed:', err.message));
 
     db.query(
-      `INSERT INTO leads (kind, name, email, message, signup_source)
-       VALUES ('commercial_gaps', $1, $2, $3, $4)`,
-      [review.name, review.email, `${review.company} — Commercial Gaps Review completed. Primary issue: ${data.primary_issue.split('.')[0]}. Contact permission: ${review.consent_contact ? 'Yes' : 'No'}.`, review.signup_source || '']
+      `INSERT INTO leads (kind, name, email, message, signup_source, attribution)
+       VALUES ('commercial_gaps', $1, $2, $3, $4, $5::jsonb)`,
+      [review.name, review.email, `${review.company} — Commercial Gaps Review completed. Primary issue: ${data.primary_issue.split('.')[0]}. Contact permission: ${review.consent_contact ? 'Yes' : 'No'}.`, review.signup_source || '', JSON.stringify(parseAttribution(review.attribution))]
     ).catch((err) => console.error('Commercial Gaps Review completion lead insert failed:', err.message));
   } catch (err) {
     const failureReason = String((err && err.message) || err).slice(0, 2000);

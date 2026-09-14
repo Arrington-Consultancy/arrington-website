@@ -40,6 +40,20 @@ const isProd = !!process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 'pr
 const googleSigninClientId = (process.env.GOOGLE_SIGNIN_CLIENT_ID || '').trim();
 app.locals.googleSigninClientId = googleSigninClientId;
 
+// Google Ads conversion label for a gated PDF request. Until 11/09/2026 a
+// successful PDF request fired the same conversion label as a phone, email
+// or WhatsApp click, so a document download counted as a contact. It now
+// fires only when it has a label of its own: create the conversion action
+// in the Ads account and set the label part (the text after "AW-.../")
+// here. Unset means PDF requests are not an Ads conversion at all; the GA4
+// event document_request_submit still fires. Validated to the label
+// alphabet so nothing else can reach the rendered script.
+const googleAdsPdfConversionLabel = (process.env.GOOGLE_ADS_PDF_CONVERSION_LABEL || '').trim();
+app.locals.googleAdsPdfConversionLabel = /^[A-Za-z0-9_-]+$/.test(googleAdsPdfConversionLabel) ? googleAdsPdfConversionLabel : '';
+console.log('Google Ads: PDF request conversion label ' + (app.locals.googleAdsPdfConversionLabel
+  ? 'set (' + app.locals.googleAdsPdfConversionLabel.length + ' chars); PDF requests count as their own conversion'
+  : 'not set; PDF requests fire no Ads conversion (they no longer share the contact-click label)'));
+
 // Fail fast if SESSION_SECRET is missing in production — we never want to
 // fall back to a hardcoded dev secret on the real domain.
 if (isProd && !process.env.SESSION_SECRET) {

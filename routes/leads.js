@@ -7,6 +7,7 @@ const nodemailer = require('nodemailer');
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const db = require('../db/pool');
 const { verifyTurnstileToken } = require('../lib/turnstile');
+const { parseAttribution, describeAttribution } = require('../lib/leadAttribution');
 
 const router = express.Router();
 
@@ -136,10 +137,11 @@ router.post('/api/leads', publicFormLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Please enter a valid email address.' });
     }
 
+    const attribution = parseAttribution(body.attribution);
     await db.query(
-      `INSERT INTO leads (kind, name, email, phone, message, preferred_time, signup_source)
-       VALUES ('contact', $1, $2, $3, $4, $5, $6)`,
-      [name, email, phone, message, preferredTime, signupSource(req.body)]
+      `INSERT INTO leads (kind, name, email, phone, message, preferred_time, signup_source, attribution)
+       VALUES ('contact', $1, $2, $3, $4, $5, $6, $7::jsonb)`,
+      [name, email, phone, message, preferredTime, signupSource(req.body), JSON.stringify(attribution)]
     );
 
     res.json({ ok: true });
@@ -152,6 +154,7 @@ router.post('/api/leads', publicFormLimiter, async (req, res) => {
         phone && `Phone: ${phone}`,
         preferredTime && `Preferred time: ${preferredTime}`,
         sourceLine(signupSource(req.body)),
+        ...describeAttribution(attribution),
         message && `Message:\n${message}`
       ].filter(Boolean).join('\n\n'),
       replyTo: email
@@ -182,16 +185,17 @@ router.post('/api/documents/request', publicFormLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Unknown document.' });
     }
 
+    const attribution = parseAttribution(body.attribution);
     await db.query(
-      `INSERT INTO leads (kind, email, document, signup_source) VALUES ('pdf_download', $1, $2, $3)`,
-      [email, doc, signupSource(req.body)]
+      `INSERT INTO leads (kind, email, document, signup_source, attribution) VALUES ('pdf_download', $1, $2, $3, $4::jsonb)`,
+      [email, doc, signupSource(req.body), JSON.stringify(attribution)]
     );
 
     res.json({ ok: true, url: makeDownloadUrl(doc) });
 
     notify({
       subject: `PDF download request: ${doc}`,
-      text: [`Email: ${email}`, `Document: ${doc}`, sourceLine(signupSource(req.body))].filter(Boolean).join('\n'),
+      text: [`Email: ${email}`, `Document: ${doc}`, sourceLine(signupSource(req.body)), ...describeAttribution(attribution)].filter(Boolean).join('\n'),
       replyTo: email
     });
   } catch (err) {
@@ -322,8 +326,8 @@ router.post('/api/quiz/email-results', publicFormLimiter, async (req, res) => {
     }
 
     await db.query(
-      `INSERT INTO leads (kind, email, message, signup_source) VALUES ('quiz_results', $1, $2, $3)`,
-      [email, resultsText, signupSource(req.body)]
+      `INSERT INTO leads (kind, email, message, signup_source, attribution) VALUES ('quiz_results', $1, $2, $3, $4::jsonb)`,
+      [email, resultsText, signupSource(req.body), JSON.stringify(parseAttribution(body.attribution))]
     );
 
     res.json({ ok: true });
