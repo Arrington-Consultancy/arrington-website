@@ -49,7 +49,14 @@
                 <span class="sc-cal-day-num"><%= d.number %></span>
               </header>
               <% if (!d.entries.length) { %>
-                <p class="sc-cal-empty">&mdash;</p>
+                <%
+                  // A middle dot, not an em dash. This is decorative
+                  // rather than prose, but the global no-em-dash rule
+                  // scans rendered copy and does not care about the
+                  // distinction, which is the right call: the exception
+                  // is where the rule starts leaking.
+                %>
+                <p class="sc-cal-empty" aria-hidden="true">&middot;</p>
               <% } %>
               <% d.entries.forEach(function (e) { %>
                 <a class="sc-cal-entry sc-cal-entry-<%= e.kind %><%= e.atRisk ? ' is-risk' : '' %>" href="/scott/jobs/<%= e.ref %>">
