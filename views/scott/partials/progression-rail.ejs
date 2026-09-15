@@ -1,0 +1,66 @@
+<%
+  // The progression rail. Four states, one interface.
+  //
+  // Rendered on every portal page so the visitor is never in a state they
+  // cannot see or leave, and so stepping back is as available as stepping
+  // forward. Every step is clickable from every step: direct jumps are the
+  // normal case, not an edge case, because somebody being shown this will
+  // be asked "what does that one do" out of order.
+  //
+  // It shows what the visitor is being shown. It does not decide what they
+  // may see: that is clearance, in lib/scott/clearance.js, and the rail
+  // cannot reach past it. The furthest right step grants exactly what this
+  // person's clearance already granted.
+  var _lv = (typeof level !== 'undefined') ? level : 1;
+  var _lvls = (typeof levels !== 'undefined') ? levels : [];
+%>
+<nav class="sc-rail" aria-label="How much of the business you are seeing">
+  <div class="sc-rail-intro">
+    <span class="sc-rail-eyebrow">A demonstration in four steps</span>
+    <span class="sc-rail-hint">Move in either direction. Nothing reloads and nothing is lost.</span>
+  </div>
+  <ol class="sc-rail-steps">
+    <% _lvls.forEach(function (st) { %>
+      <li class="sc-rail-step<%= st.id === _lv ? ' is-current' : '' %><%= st.id < _lv ? ' is-done' : '' %>">
+        <%
+          // aria-current is emitted RAW below. The escaping form turns the
+          // quotes into entities, which makes the attribute inert text and
+          // silently costs the rail its only machine-readable statement of
+          // where the visitor is. Caught by test, not by looking at it.
+        %>
+        <button type="button" class="sc-rail-btn" data-level="<%= st.id %>"
+                <%- st.id === _lv ? 'aria-current="step"' : '' %>>
+          <span class="sc-rail-num"><%= st.id %></span>
+          <span class="sc-rail-text">
+            <span class="sc-rail-label"><%= st.label %></span>
+            <span class="sc-rail-sub"><%= st.sub %></span>
+          </span>
+        </button>
+      </li>
+    <% }); %>
+  </ol>
+</nav>
+<script nonce="<%= nonce %>">
+(function () {
+  // A level change is a POST, not a link, for the same reason the persona
+  // switch is: it changes session state, so it goes through CSRF and
+  // through the server's own normaliser rather than being asserted by a
+  // query string. The server answers with the level it actually set, which
+  // is what the page then reloads into — a client that asked for something
+  // invalid finds itself at Level 1 and can see that it did.
+  var token = <%- JSON.stringify(typeof csrfToken !== 'undefined' ? csrfToken : '') %>;
+  Array.prototype.forEach.call(document.querySelectorAll('.sc-rail-btn'), function (btn) {
+    btn.addEventListener('click', function () {
+      var want = parseInt(btn.getAttribute('data-level'), 10);
+      btn.disabled = true;
+      fetch('/api/scott/level', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': token },
+        body: JSON.stringify({ level: want })
+      }).then(function (r) { return r.json(); }).then(function () {
+        window.location.reload();
+      }).catch(function () { btn.disabled = false; });
+    });
+  });
+})();
+</script>

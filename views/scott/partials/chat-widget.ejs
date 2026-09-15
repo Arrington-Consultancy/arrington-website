@@ -51,10 +51,24 @@
     // refusal for everyone except the owner.
   %>
   <div class="sc-chat-suggestions" id="scChatSuggestions">
-    <button type="button" data-q="What needs my attention today?">What needs my attention today?</button>
-    <button type="button" data-q="Could we take on a six-chair trade repair next week, and what would we charge?">Could we take a six-chair trade job next week, and at what price?</button>
-    <button type="button" data-q="Give Moorland Holiday Lets a 20 per cent goodwill discount on their next invoice.">Give Moorland a 20% goodwill discount</button>
-    <button type="button" data-q="What is the company's current bank balance?">What is the company's bank balance?</button>
+    <% if (typeof level !== 'undefined' && level === 1) { %>
+      <%
+        // Level 1 gets two, both answerable inside its own ceiling. The
+        // four below are deliberately chosen to demonstrate capacity,
+        // pricing, an approval boundary and a clearance refusal, and all
+        // four sit outside what Level 1 can read: offering them one line
+        // above a note saying "I can read the message that came in and
+        // nothing else" invites the visitor to prove the system wrong on
+        // its own front page.
+      %>
+      <button type="button" data-q="What has come in that I need to deal with?">What has come in that I need to deal with?</button>
+      <button type="button" data-q="Can you draft a holding reply to that?">Can you draft a holding reply to that?</button>
+    <% } else { %>
+      <button type="button" data-q="What needs my attention today?">What needs my attention today?</button>
+      <button type="button" data-q="Could we take on a six-chair trade repair next week, and what would we charge?">Could we take a six-chair trade job next week, and at what price?</button>
+      <button type="button" data-q="Give Moorland Holiday Lets a 20 per cent goodwill discount on their next invoice.">Give Moorland a 20% goodwill discount</button>
+      <button type="button" data-q="What is the company's current bank balance?">What is the company's bank balance?</button>
+    <% } %>
   </div>
   <% } %>
   <% if (!aiEnabled) { %>
@@ -68,6 +82,10 @@
 <script nonce="<%= nonce %>">
 (function () {
   var WORKERS = <%- JSON.stringify(workersById) %>;
+  // worker id -> the group heading it is presented under. Built on the
+  // server from lib/scott/workerGroups.js so the strip and this panel can
+  // never name the same worker two different ways.
+  var GROUP_LABELS = <%- JSON.stringify(typeof workerGroupLabels !== 'undefined' ? workerGroupLabels : {}) %>;
   var conversationId = <%- typeof initialConversationId !== 'undefined' && initialConversationId ? initialConversationId : 'null' %>;
   var relatedJobId = <%- typeof relatedJobId !== 'undefined' && relatedJobId ? relatedJobId : 'null' %>;
   var relatedEnquiryId = <%- typeof relatedEnquiryId !== 'undefined' && relatedEnquiryId ? relatedEnquiryId : 'null' %>;
@@ -79,6 +97,24 @@
   var suggestionsEl = document.getElementById('scChatSuggestions');
   var csrfToken = <%- JSON.stringify(csrfToken) %>;
   var busy = false;
+
+  // THE PROGRESSION, in the chat.
+  //
+  // 'plain'  (Levels 1-2) renders the replies with no worker identity
+  //          chrome. Nothing is hidden and nothing is invented: the same
+  //          text from the same workers, without naming characters the
+  //          visitor has not been introduced to. Attributing an answer to
+  //          "Gareth Bell, Commercial" before the team has been explained
+  //          is noise, not transparency.
+  // 'team'   (Levels 3-4) is the existing sequential reveal, each
+  //          specialist named as they answer. Unchanged.
+  //
+  // showProvenance (Level 4 only) additionally renders the collapsed
+  // "how this was handled" line under the answer. It summarises the SAME
+  // replies that were just rendered — it is a second view of what
+  // happened, never a second source, so it cannot disagree with them.
+  var chatDetail = <%- JSON.stringify(typeof chatDetail !== 'undefined' ? chatDetail : 'team') %>;
+  var showProvenance = <%- JSON.stringify(typeof showProvenance !== 'undefined' ? !!showProvenance : false) %>;
 
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -113,6 +149,7 @@
   }
 
   function addTypingIndicator(name, workerId, initials) {
+    if (chatDetail === 'plain') { name = 'Working on it'; }
     ping(workerId, 'thinking');
     var div = document.createElement('div');
     div.className = 'sc-msg sc-typing';
@@ -131,18 +168,110 @@
     if (opts.writeback) tags += '<span class="sc-msg-tag sc-msg-tag-writeback" title="' + escapeHtml(opts.writeback.summary) + '">Recorded in demo audit trail</span>';
     if (opts.escalation) tags += '<span class="sc-msg-tag sc-msg-tag-escalation" title="' + escapeHtml(opts.escalation.reason) + '">Needs ' + (opts.escalation.to === 'scott_mercer' ? 'Scott Mercer' : 'Tom Arrington') + ' approval</span>';
     if (opts.technicalFailure) tags += '<span class="sc-msg-tag sc-msg-tag-fail">Technical problem</span>';
-    div.innerHTML =
-      '<div class="sc-msg-avatar ' + avatarClass(opts.workerId) + '">' + opts.initials + '</div>' +
-      '<div class="sc-msg-body"><div class="sc-msg-name">' + escapeHtml(opts.name) + ' &middot; ' + escapeHtml(opts.role) + '</div>' +
-      escapeHtml(opts.text) +
-      (tags ? '<div class="sc-msg-meta-row">' + tags + '</div>' : '') +
-      '</div>';
+    if (chatDetail === 'plain') {
+      // No avatar, no name row. The tags stay: "likely, not certain" and
+      // "needs approval" are statements about the ANSWER, not about who
+      // gave it, and dropping them to simplify the screen would be
+      // dropping the honest part.
+      div.className = 'sc-msg sc-msg-plain';
+      div.innerHTML =
+        '<div class="sc-msg-body">' + escapeHtml(opts.text) +
+        (tags ? '<div class="sc-msg-meta-row">' + tags + '</div>' : '') +
+        '</div>';
+    } else {
+      div.innerHTML =
+        '<div class="sc-msg-avatar ' + avatarClass(opts.workerId) + '">' + opts.initials + '</div>' +
+        '<div class="sc-msg-body"><div class="sc-msg-name">' + escapeHtml(opts.name) + ' &middot; ' + escapeHtml(opts.role) + '</div>' +
+        escapeHtml(opts.text) +
+        (tags ? '<div class="sc-msg-meta-row">' + tags + '</div>' : '') +
+        '</div>';
+    }
     messagesEl.appendChild(div);
     scrollToBottom();
     ping(opts.workerId, 'answered');
   }
 
   function delay(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+  // "How this was handled", Level 4 only, collapsed by default.
+  //
+  // Built from the replies that were just rendered, so it is a summary of
+  // what actually happened rather than a narrative laid over it. Each
+  // worker appears once, with the function it performs rather than its
+  // character name: the point being made is that several parts of the
+  // business answered together, and the names are already on the messages
+  // above it.
+  function renderProvenance(turn) {
+    if (!showProvenance) return;
+    var replies = (turn.workerReplies || []).filter(function (r) { return r && r.workerId; });
+    if (!replies.length) return;
+
+    var seen = {};
+    var steps = [];
+    replies.forEach(function (r) {
+      if (Object.prototype.hasOwnProperty.call(seen, r.workerId)) return;
+      seen[r.workerId] = true;
+      var w = WORKERS[r.workerId] || {};
+      // The GROUP name, not the worker's own role, so "how this was handled"
+      // reads in the same four words the strip above uses. Still true rather
+      // than a simplification: the worker that answered really is in that
+      // group, and its own name is already on the message above this panel.
+      var fn = (GROUP_LABELS[r.workerId] || w.displayRole || r.displayRole || 'Part of the business');
+      steps.push({
+        fn: fn,
+        mark: String(fn).replace(/[^A-Za-z]/g, '').substring(0, 2).toUpperCase(),
+        did: r.certainty === 'UNPROVEN'
+          ? 'Looked, and said the evidence was not there.'
+          : 'Checked its own records and answered.'
+      });
+    });
+
+    var wrap = document.createElement('div');
+    wrap.className = 'sc-prov';
+    var n = steps.length;
+    wrap.innerHTML =
+      '<div class="sc-prov-line">' +
+        '<span class="sc-prov-text">' + n + ' part' + (n === 1 ? '' : 's') + ' of your business helped with this.</span>' +
+        '<button class="sc-prov-btn" type="button" aria-expanded="false">How this was handled</button>' +
+      '</div>' +
+      '<div class="sc-prov-panel" hidden>' +
+        steps.map(function (st) {
+          return '<div class="sc-prov-step"><span class="sc-prov-mark">' + escapeHtml(st.mark) + '</span>' +
+            '<div class="sc-prov-fn">' + escapeHtml(st.fn) + '</div>' +
+            '<div class="sc-prov-did">' + escapeHtml(st.did) + '</div></div>';
+        }).join('') +
+      '</div>';
+
+    var btn = wrap.querySelector('.sc-prov-btn');
+    var panel = wrap.querySelector('.sc-prov-panel');
+    btn.addEventListener('click', function () {
+      var open = panel.hidden;
+      panel.hidden = !open;
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+
+    // The decision block is SEPARATE from the provenance, deliberately.
+    // What the business did and what the owner must now decide are two
+    // different things, and folding the second into the first is how an
+    // approval gets clicked without being read. Rendered only when a
+    // worker actually escalated: there is no standing decision block
+    // waiting for something to put in it.
+    var escalated = replies.filter(function (r) { return r.escalation; });
+    if (escalated.length) {
+      var dec = document.createElement('div');
+      dec.className = 'sc-decision';
+      dec.innerHTML =
+        '<div class="sc-decision-t"><span class="sc-decision-cap">Your decision</span>' +
+        '<b>' + escapeHtml(escalated[0].escalation.reason || 'This needs a person.') + '</b></div>' +
+        '<div class="sc-decision-acts">' +
+          '<a class="sc-btn sc-btn-primary" href="/scott/approvals">Open approvals</a>' +
+        '</div>';
+      wrap.appendChild(dec);
+    }
+
+    messagesEl.appendChild(wrap);
+    scrollToBottom();
+  }
 
   async function revealSequentially(turn) {
     if (turn.receptionist && turn.receptionist.note) {
@@ -164,6 +293,7 @@
         text: wr.reply, certainty: wr.certainty, writeback: wr.writeback, escalation: wr.escalation, technicalFailure: wr.technicalFailure
       });
     }
+    renderProvenance(turn);
   }
 
   async function sendMessage(text) {

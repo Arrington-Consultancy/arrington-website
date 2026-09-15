@@ -1426,6 +1426,24 @@ loadPermissions().then(() => {
     // The workspace's own paid suite, same shape, its own flag and its
     // own marker so one can never spend on behalf of the other.
     require('./scripts/workspaceLivePressureRunner').maybeRunWorkspacePressureSuite(require('./db/pool'));
+    // FREE. Runs the two HTTP suites against THIS deployment, from inside
+    // the container serving it, because the build sandbox has no outbound
+    // route to the staging hostname and a local instance of the same commit
+    // is the same code but not the same deployment. A no-op unless
+    // SCOTT_STAGING_CHECK names a run.
+    //
+    // CHAINED, not concurrent. Both hit this same server from this same
+    // container, so they share an IP with the authed-write rate limiter.
+    // Run together, the suites' POSTs exhausted the window and the probe's
+    // first call was refused, so it asked nothing and reported a failure
+    // that was contention rather than a defect.
+    require('./scripts/scottStagingCheckRunner').maybeRunStagingChecks(require('./db/pool'), { port: PORT })
+      .catch((err) => console.error('Scott staging check: ' + err.message))
+      // SPENDS MONEY. Asks Ruth, live, the questions Level 1 says it cannot
+      // answer, and checks the replies for values only restricted records
+      // hold. A no-op unless SCOTT_LEVEL_ONE_PROBE names a run.
+      .then(() => require('./scripts/scottLevelOneProbe').runLevelOneProbe(require('./db/pool'), { port: PORT }))
+      .catch((err) => console.error('Level 1 probe: ' + err.message));
   });
 }).catch(err => {
   console.error('Failed to load permissions:', err);

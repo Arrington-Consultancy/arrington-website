@@ -11,6 +11,7 @@
   <div class="sc-shell">
     <%- include('partials/sidebar', { active: 'dashboard' }) %>
     <main class="sc-main">
+      <%- include('partials/progression-rail') %>
       <% if (typeof isImpersonating !== 'undefined' && isImpersonating) { %>
         <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
       <% } %>
@@ -29,32 +30,74 @@
           <% } %>
         </div>
 
-        <% if (canImpersonate) { %>
-        <div class="sc-persona-chips-wrap">
-          <div class="sc-persona-chips-label">Switch viewpoint</div>
-          <p class="sc-persona-chips-sub">Switch between staff members and watch what each one can and cannot see. Every member of staff here is fictional; the roles, and the limits on what each may see, are real-world ones.</p>
-          <div class="sc-persona-chips-row">
-            <%
-              var activePersonaId = (typeof isImpersonating !== 'undefined' && isImpersonating) ? personaId : '';
-            %>
-            <button class="sc-persona-chip sc-persona-chip-owner<%= (activePersonaId === '' || activePersonaId === 'scott_mercer') ? ' active' : '' %>" data-persona-id="">
-              <div class="sc-persona-chip-dot">SM</div>
-              <div>
-                <div class="sc-persona-chip-name">Scott Mercer</div>
-                <div class="sc-persona-chip-role">Owner &middot; <span class="sc-persona-chip-code">07Q</span></div>
-              </div>
+        <%
+          // VIEWING AS (15/09/2026). Replaces the strip of eight persona
+          // chips, on Tom's instruction: a row of faces reads as an
+          // organisational chart, and it also put human beings and AI
+          // workers in the same visual register, which they are not.
+          //
+          // The rule this encodes, and it is the reason the two controls
+          // look different rather than a style preference: A PERSON IS
+          // ROUND, A WORKER IS SQUARE. People are named in this control
+          // with circular avatars. The AI workers appear in the team
+          // strip and in provenance with square marks, and the two never
+          // share a row.
+          //
+          // Three people, not eight. The demonstration's point is that
+          // the same question answers differently by who is asking, and
+          // three well-separated clearances make that faster than eight
+          // do. The other five are unchanged, still valid personas, and
+          // still reachable through the API and the compare screen; this
+          // is a control, not a permission list.
+          var VIEWING_IDS = ['scott_mercer', 'chloe_reed', 'mike_evans'];
+          var _activeId = (typeof isImpersonating !== 'undefined' && isImpersonating) ? personaId : 'scott_mercer';
+          function _initials(n) { return n.split(/\s+/).map(function (w) { return w[0]; }).join('').substring(0, 2).toUpperCase(); }
+        %>
+        <% if (canImpersonate && caps.showPersonaSwitch) { %>
+        <div class="sc-viewing">
+          <span class="sc-viewing-label">Viewing as</span>
+          <div class="sc-viewing-ctl">
+            <button type="button" class="sc-viewing-btn" id="scViewingBtn" aria-haspopup="true" aria-expanded="false">
+              <span class="sc-viewing-face"><%= _initials(persona.name) %></span>
+              <span><%= persona.name %> <span class="sc-viewing-role">&middot; <%= persona.role %></span></span>
+              <span class="sc-viewing-caret">&#9662;</span>
             </button>
-            <% Object.keys(personas).filter(function (id) { return id !== 'scott_mercer'; }).forEach(function (id) { var p = personas[id]; %>
-            <button class="sc-persona-chip<%= activePersonaId === id ? ' active' : '' %>" data-persona-id="<%= id %>">
-              <div class="sc-persona-chip-dot"><%= p.code.substring(0,2) %></div>
-              <div>
-                <div class="sc-persona-chip-name"><%= p.name %></div>
-                <div class="sc-persona-chip-role"><%= p.role %> &middot; <span class="sc-persona-chip-code"><%= p.code %></span></div>
-              </div>
-            </button>
-            <% }); %>
+            <div class="sc-viewing-menu" id="scViewingMenu" hidden role="menu">
+              <% VIEWING_IDS.forEach(function (id) { var pp = personas[id]; if (!pp) return; %>
+                <button type="button" class="sc-viewing-opt" role="menuitemradio"
+                        aria-checked="<%= _activeId === id ? 'true' : 'false' %>"
+                        data-persona-id="<%= id === 'scott_mercer' ? '' : id %>">
+                  <span class="sc-viewing-face"><%= _initials(pp.name) %></span>
+                  <span><%= pp.name %> <span class="sc-viewing-role">&middot; <%= pp.role %></span></span>
+                </button>
+              <% }); %>
+            </div>
           </div>
+          <span class="sc-viewing-note">The same question, answered for whoever is asking.</span>
         </div>
+        <script nonce="<%= nonce %>">
+        (function () {
+          // Opens the menu only. The switch itself is the delegated
+          // handler in partials/sidebar.ejs, which posts to
+          // /api/scott/impersonate — one switcher, one code path, so this
+          // control cannot drift from the permission check behind it.
+          var b = document.getElementById('scViewingBtn');
+          var m = document.getElementById('scViewingMenu');
+          if (!b || !m) return;
+          b.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var open = m.hidden;
+            m.hidden = !open;
+            b.setAttribute('aria-expanded', open ? 'true' : 'false');
+          });
+          document.addEventListener('click', function () {
+            if (!m.hidden) { m.hidden = true; b.setAttribute('aria-expanded', 'false'); }
+          });
+          document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && !m.hidden) { m.hidden = true; b.setAttribute('aria-expanded', 'false'); b.focus(); }
+          });
+        })();
+        </script>
         <% } %>
 
         <div class="sc-stage-ruth">
@@ -68,8 +111,32 @@
         <h1 class="sc-stage-h">What do you need help with?</h1>
 
         <div class="sc-stage-chat">
-          <%- include('partials/chat-widget', { workersById: workersById, csrfToken: csrfToken, aiEnabled: aiEnabled, heroFocus: true, heroMode: true }) %>
+          <%
+            // ONE set of starter questions, not two. From Level 2 the
+            // dashboard renders its own persona-specific row below (which
+            // changes with who you are viewing as, and is the better
+            // demonstration), so the widget's generic four are suppressed
+            // rather than stacked under them: ten suggestion buttons above
+            // the fold is the clutter Tom asked to remove. At Level 1 the
+            // dashboard's row is gated off, so the widget's two are the
+            // only ones and it keeps them.
+          %>
+          <%- include('partials/chat-widget', { workersById: workersById, csrfToken: csrfToken, aiEnabled: aiEnabled, heroFocus: true, heroMode: true, chatDetail: caps.chatDetail, showProvenance: caps.showProvenance, suggestions: !caps.showBusinessContext }) %>
         </div>
+
+        <%
+          // The Level 1 ceiling. Generated from the cap in
+          // lib/scott/progression.js, not written next to it: at Level 1
+          // the workers genuinely cannot read the job, the price or the
+          // capacity, so this sentence is a description of the system
+          // rather than a caption on it. If the cap changes, this changes.
+        %>
+        <% if (ceiling) { %>
+        <div class="sc-ceiling">
+          <span class="sc-ceiling-mark" aria-hidden="true">&#9888;</span>
+          <div class="sc-ceiling-body"><strong><%= ceiling.heading %></strong><%= ceiling.body %></div>
+        </div>
+        <% } %>
 
         <%
           var PERSONA_SUGGESTIONS = {
@@ -134,6 +201,15 @@
           };
           var activeSuggestions = PERSONA_SUGGESTIONS[personaId] || PERSONA_SUGGESTIONS["scott_mercer"];
         %>
+        <%
+          // Gated to Level 2 and up. These are business questions — "where
+          // are we losing money", "show me the commercial leakage" — and at
+          // Level 1 they sit directly under a note saying the system can
+          // read the incoming message and nothing else. Offering them there
+          // contradicts the ceiling on the same screen, which is worse than
+          // offering nothing. The chat's own starter prompts remain.
+        %>
+        <% if (caps.showBusinessContext) { %>
         <div class="sc-suggestions-wrap">
           <div class="sc-suggestions-label">Ask Ruth</div>
           <div class="sc-suggestions-row">
@@ -142,22 +218,40 @@
             <% }); %>
           </div>
         </div>
+        <% } %>
 
-        <div class="sc-team-strip" aria-label="The specialists Ruth routes to">
-          <div class="sc-team-lead-in">Ruth routes your question to</div>
-          <div class="sc-team-row">
-            <% specialists.forEach(function (w) { %>
-              <div class="sc-team-chip" data-team-worker="<%= w.id %>">
-                <div class="sc-team-avatar sc-avatar-<%= w.id %>"><%= w.initials %></div>
+        <%
+          // FOUR GROUPS, NOT NINE NAMES (15/09/2026, Tom's instruction).
+          //
+          // This row used to list all eight specialists by character name,
+          // which read as an organisational chart and asked the owner to
+          // learn a staff list before asking a question. It now shows the
+          // four things the business can help with. The specialists are
+          // unchanged underneath: same workers, same routing, same
+          // permissions — a group is a heading, never a pooled clearance
+          // (see lib/scott/workerGroups.js).
+          //
+          // Each group still carries the worker ids it covers, because the
+          // live routing lights (window.scTeamPing) key off the worker that
+          // is actually answering, and the glow has to land on the group
+          // that worker sits in.
+        %>
+        <% if (caps.showTeamStrip) { %>
+        <div class="sc-team-strip" aria-label="What Scott's can help with">
+          <div class="sc-team-lead-in">Ruth passes your question to whichever of these it belongs to</div>
+          <div class="sc-team-row sc-team-row-groups">
+            <% teamGroups.forEach(function (g) { %>
+              <div class="sc-team-chip" data-team-group="<%= g.id %>" data-team-workers="<%= g.workerIds.join(' ') %>">
                 <div class="sc-team-meta">
-                  <div class="sc-team-name"><%= w.characterName %></div>
-                  <div class="sc-team-role"><%= w.displayRole %></div>
+                  <div class="sc-team-name"><%= g.label %></div>
+                  <div class="sc-team-role"><%= g.blurb %></div>
                 </div>
               </div>
             <% }); %>
           </div>
-          <div class="sc-stage-footnote">What you can see, and what the team will agree to do, depends on who is signed in. <a href="/scott/team">How this team works</a>.</div>
+          <div class="sc-stage-footnote">What you can see, and what the team will agree to do, depends on who is signed in. <a href="/scott/team">See the people behind these</a>.</div>
         </div>
+        <% } %>
       </section>
 
       <script nonce="<%= nonce %>">
@@ -166,7 +260,20 @@
       // this just moves the glow around the stage. Presentation only.
       window.scTeamPing = (function () {
         var stage = document.querySelector('.sc-stage');
-        function chip(id) { return document.querySelector('.sc-team-chip[data-team-worker="' + id + '"]'); }
+        // The chips are groups now, not individual workers, so a worker id
+        // resolves to the chip whose data-team-workers list contains it.
+        // Kept as a lookup rather than a second mapping in JS, so the
+        // grouping has exactly one source (lib/scott/workerGroups.js) and
+        // the glow cannot end up on a group the server did not put that
+        // worker in.
+        function chip(id) {
+          var all = document.querySelectorAll('.sc-team-chip[data-team-workers]');
+          for (var i = 0; i < all.length; i++) {
+            var ids = (all[i].getAttribute('data-team-workers') || '').split(' ');
+            if (ids.indexOf(id) !== -1) return all[i];
+          }
+          return null;
+        }
         return function (workerId, state) {
           if (!stage) return;
           if (state === 'idle') {
@@ -190,6 +297,23 @@
       })();
       </script>
 
+      <%
+        // ------------------------------------------------------------
+        // LEVEL 2 AND UP: THE BUSINESS BEHIND THE ANSWER
+        // ------------------------------------------------------------
+        // Everything from here to the deeper-dive invitation is the
+        // company's own state: the pulse numbers, the gap register, the
+        // attention list, recent activity and the snapshot. At Level 1
+        // none of it is on screen, because the whole claim of that state
+        // is that there is one box and one answer.
+        //
+        // Hidden, not removed, and not gated. Every figure below is still
+        // clearance-filtered exactly as it was, and every page it links
+        // to is still registered and still refuses whoever it refused
+        // before. A visitor at Level 1 who types /scott/jobs gets the
+        // jobs page their clearance allows.
+      %>
+      <% if (caps.showBusinessContext) { %>
       <%
         // The pulse: the four numbers an owner actually glances at, big
         // and unboxed. The overdue-money figure is clearance-gated like
@@ -242,13 +366,43 @@
         // than the highest source of truth. Already clearance-filtered
         // server-side, so this loop does no gating of its own.
       %>
+      <%
+        // ------------------------------------------------------------
+        // WHAT SHOULD I DO NEXT
+        // ------------------------------------------------------------
+        // Tom, 15/09/2026: "Advanced should mean more capable, not more
+        // cluttered... Reduce what is presented at once, improve hierarchy
+        // and progressively reveal detail where appropriate."
+        //
+        // Everything below is capped rather than cut. The owner's dashboard
+        // was showing five gaps, ten attention items, twelve activity lines
+        // and six snapshot cards at once — thirty-three things competing to
+        // be read first, which is exactly the state in which none of them
+        // gets read. Now the first two or three of each are on screen and
+        // the rest are one click away, and the counts are stated so nothing
+        // looks smaller than it is.
+        //
+        // Gaps and the attention list stay SEPARATE lists, deliberately,
+        // rather than being merged into one tidier "what needs you". A gap
+        // means a record is wrong, so everything downstream of it is
+        // unreliable; an attention item means a decision is waiting. 07H's
+        // own rule depends on the reader being able to tell those apart,
+        // and a single merged list would quietly throw that away in the
+        // name of simplicity.
+        //
+        // Native <details>, not a JS toggle: the strict CSP makes every
+        // scripted toggle another nonced block to get wrong, and this works
+        // with JavaScript off.
+        var GAPS_SHOWN = 2;
+        var ATTENTION_SHOWN = 3;
+      %>
       <% if (openGaps.length) { %>
         <h2 class="sc-section-title">Needs human input</h2>
         <div class="sc-card sc-honesty-card">
           <p class="sc-row-sub"><strong><%= openGaps.length %> open <%= openGaps.length === 1 ? 'gap' : 'gaps' %> in the records</strong><% if (myGaps.length) { %>, <%= myGaps.length %> waiting on you<% } %>. These are not approvals. Something in a controlled record is missing, out of date or contradictory, and nothing downstream of it can be relied on until a person corrects the source.</p>
         </div>
         <div class="sc-list">
-          <% openGaps.slice(0, 5).forEach(function (g) { %>
+          <% openGaps.slice(0, GAPS_SHOWN).forEach(function (g) { %>
             <div class="sc-card sc-row-card<%= g.work_can_continue ? '' : ' sc-gap-blocking' %>">
               <div>
                 <div class="sc-row-sub">
@@ -266,6 +420,30 @@
             </div>
           <% }); %>
         </div>
+        <% if (openGaps.length > GAPS_SHOWN) { %>
+          <details class="sc-fold">
+            <summary class="sc-fold-summary"><%= openGaps.length - GAPS_SHOWN %> more <%= openGaps.length - GAPS_SHOWN === 1 ? 'gap' : 'gaps' %></summary>
+            <div class="sc-list sc-fold-body">
+              <% openGaps.slice(GAPS_SHOWN).forEach(function (g) { %>
+                <div class="sc-card sc-row-card<%= g.work_can_continue ? '' : ' sc-gap-blocking' %>">
+                  <div>
+                    <div class="sc-row-sub">
+                      <strong><%= g.missing_evidence %></strong><br>
+                      <%= g.why_it_matters %><br>
+                      <strong>Correct or confirm:</strong> <%= g.expected_source || g.domain %>
+                      &middot; <strong>Responsible:</strong> <%= g.responsible_name || 'nobody recorded yet' %><br>
+                      <%= describeNotification(g) %>
+                    </div>
+                  </div>
+                  <div class="sc-row-actions">
+                    <% if (!g.work_can_continue) { %><span class="sc-pill sc-pill-risk">work stopped</span><% } %>
+                    <span class="sc-pill sc-pill-status"><%= g.gap_type %></span>
+                  </div>
+                </div>
+              <% }); %>
+            </div>
+          </details>
+        <% } %>
         <p class="sc-proposed-note"><a href="/scott/gaps">Open the full register</a>. A gap only closes when a person has corrected or confirmed the source, never by an AI worker deciding it no longer matters.</p>
       <% } %>
 
@@ -279,7 +457,7 @@
         </div>
       <% } else { %>
         <div class="sc-list">
-          <% mine.forEach(function (a) { %>
+          <% mine.slice(0, ATTENTION_SHOWN).forEach(function (a) { %>
             <div class="sc-card sc-row-card">
               <div>
                 <div class="sc-row-sub"><%= a.item %><% if (a.action) { %><br><strong>What to do:</strong> <%= a.action %><% } %></div>
@@ -288,10 +466,34 @@
             </div>
           <% }); %>
         </div>
+        <% if (mine.length > ATTENTION_SHOWN) { %>
+          <details class="sc-fold">
+            <summary class="sc-fold-summary"><%= mine.length - ATTENTION_SHOWN %> more waiting on you</summary>
+            <div class="sc-list sc-fold-body">
+              <% mine.slice(ATTENTION_SHOWN).forEach(function (a) { %>
+                <div class="sc-card sc-row-card">
+                  <div>
+                    <div class="sc-row-sub"><%= a.item %><% if (a.action) { %><br><strong>What to do:</strong> <%= a.action %><% } %></div>
+                  </div>
+                  <div class="sc-row-actions"><span class="sc-pill sc-pill-status"><%= a.domain.replace(/_/g, ' ') %></span></div>
+                </div>
+              <% }); %>
+            </div>
+          </details>
+        <% } %>
         <p class="sc-proposed-note"><%= facts.DASHBOARD_SOURCE_RULE.rule %></p>
       <% } %>
 
-      <div class="sc-detail-grid">
+      <%
+        // Reference, not action. Neither of these asks the owner to do
+        // anything, so neither earns permanent space above the fold on a
+        // screen whose job is "what should I do next". Both fold closed and
+        // both say how much is inside, so the page is shorter without
+        // anything having been taken away.
+      %>
+      <details class="sc-fold sc-fold-wide">
+        <summary class="sc-fold-summary">Recent activity and the business snapshot<% if (activity.length) { %> &middot; <%= activity.length %> recent <%= activity.length === 1 ? 'entry' : 'entries' %><% } %></summary>
+      <div class="sc-detail-grid sc-fold-body">
         <div>
           <h2 class="sc-section-title">Recent activity</h2>
           <div class="sc-card sc-activity-card">
@@ -331,6 +533,25 @@
           </div>
         </div>
       </div>
+      </details>
+      <% } %>
+
+      <%
+        // LEVEL 4: Lead Finder. A pointer, not the thing itself — the
+        // work sits on its own page so the dashboard stays calm. Two
+        // conditions, ANDed: the level, and the ordinary clearance check
+        // for commercial_prospecting, which only the owner holds. A
+        // viewer without it never learns the area exists.
+      %>
+      <% if (caps.showLeadFinder && canSee('commercial_prospecting')) { %>
+        <h2 class="sc-section-title">Work nobody asked it to look for</h2>
+        <div class="sc-card sc-honesty-card">
+          <p class="sc-row-sub"><strong>Lead Finder has <%= leadFinderTotal %> opportunities this week.</strong>
+          Some are obvious and public. Some were found by following a change in one record through to who eventually pays for it.
+          Every one carries its source, its reasoning and how confident it is. <a href="/scott/lead-finder">Open Lead Finder</a>.</p>
+        </div>
+      <% } %>
+
       <%- include('partials/deeper-dive') %>
     </main>
   </div>

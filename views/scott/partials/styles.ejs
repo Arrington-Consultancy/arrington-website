@@ -269,7 +269,8 @@
   .sc-msg { display: flex; gap: 9px; max-width: 92%; animation: sc-rise 220ms ease both; }
   @keyframes sc-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
   .sc-msg-user { align-self: flex-end; flex-direction: row-reverse; }
-  .sc-msg-avatar { width: 30px; height: 30px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-family: 'Playfair Display', serif; font-weight: 700; font-size: 12px; color: #fff; flex-shrink: 0; }
+  /* Workers, so square-cornered — see the round/square rule below. */
+  .sc-msg-avatar { width: 30px; height: 30px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'Playfair Display', serif; font-weight: 700; font-size: 12px; color: #fff; flex-shrink: 0; }
   .sc-msg-body { background: #ffffff; border-radius: 12px; padding: 9px 12px; font-size: 13.5px; line-height: 1.45; box-shadow: 0 1px 2px rgba(0,0,0,0.12); }
   .sc-msg-user .sc-msg-body { background: var(--sc-mustard); color: #2b2109; }
   .sc-msg-name { font-size: 11px; font-weight: 700; margin-bottom: 2px; opacity: 0.7; }
@@ -578,8 +579,15 @@
     border-radius: 14px; padding: 10px 16px 10px 10px; min-width: 172px;
     transition: background 240ms ease, border-color 240ms ease, transform 240ms ease, box-shadow 240ms ease;
   }
+  /* A PERSON IS ROUND, A WORKER IS SQUARE (15/09/2026, Tom's rule).
+     Human personas are named in the Viewing-as control with circular
+     avatars; the AI workers Ruth routes to are square-cornered here and
+     in provenance. The two must never read as the same kind of thing,
+     because "human users and virtual AI workers are different concepts
+     and the interface must not blur them" — and a round face beside a
+     round face is precisely that blur. Changed from a 50% radius. */
   .sc-team-chip .sc-team-avatar {
-    width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+    width: 40px; height: 40px; border-radius: 7px; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
     font-size: 13.5px; font-weight: 700; color: #fff;
     transition: box-shadow 240ms ease;
@@ -1009,4 +1017,239 @@
     .sc-deeper-cta { width: 100%; }
     .sc-deeper-cta a { display: block; text-align: center; }
   }
+
+  /* ------------------------------------------------------------
+     THE PROGRESSION RAIL (15/09/2026)
+     ------------------------------------------------------------
+     Deliberately heavy. It is the spine of the demonstration, not a
+     breadcrumb: a visitor who cannot see where they are, or that there is
+     somewhere else to go, is looking at an ordinary dashboard.
+     All four sub-labels stay visible at every step, because the question
+     the rail has to answer without being clicked is "what do the other
+     three do". */
+  .sc-rail {
+    background: var(--sc-forest);
+    border-radius: var(--sc-radius);
+    padding: 18px 20px 20px;
+    margin-bottom: 24px;
+    box-shadow: var(--sc-shadow);
+  }
+  .sc-rail-intro { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; margin-bottom: 14px; }
+  .sc-rail-eyebrow {
+    font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--sc-mustard);
+  }
+  .sc-rail-hint { font-size: 12.5px; color: rgba(255, 255, 255, .55); }
+  .sc-rail-steps {
+    list-style: none; margin: 0; padding: 0;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  }
+  .sc-rail-step { display: flex; }
+  .sc-rail-btn {
+    flex: 1; display: flex; gap: 11px; align-items: flex-start; text-align: left;
+    background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: var(--sc-radius-sm); padding: 12px 13px 13px; cursor: pointer;
+    font-family: inherit; color: rgba(255, 255, 255, .62);
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
+  }
+  .sc-rail-btn:hover { background: rgba(255, 255, 255, .1); color: rgba(255, 255, 255, .85); }
+  .sc-rail-btn:focus-visible { outline: 2px solid var(--sc-mustard); outline-offset: 2px; }
+  .sc-rail-btn[disabled] { cursor: progress; opacity: .6; }
+  .sc-rail-num {
+    width: 25px; height: 25px; flex-shrink: 0; border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 12px; font-weight: 700;
+    background: rgba(255, 255, 255, .1); color: rgba(255, 255, 255, .6);
+  }
+  .sc-rail-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .sc-rail-label { font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+  .sc-rail-sub { font-size: 12.5px; line-height: 1.35; color: rgba(255, 255, 255, .42); }
+  .sc-rail-step.is-done .sc-rail-btn { color: rgba(255, 255, 255, .78); }
+  .sc-rail-step.is-done .sc-rail-num { background: rgba(255, 255, 255, .18); color: #fff; }
+  .sc-rail-step.is-current .sc-rail-btn {
+    background: #fff; border-color: #fff; color: var(--sc-forest);
+  }
+  .sc-rail-step.is-current .sc-rail-num { background: var(--sc-terracotta); color: #fff; }
+  .sc-rail-step.is-current .sc-rail-sub { color: var(--sc-text-muted); }
+
+  /* The Level 1 ceiling. Its whole job is to be believed, so it is
+     styled as a note the system is volunteering rather than as a warning
+     something has gone wrong. */
+  .sc-ceiling {
+    display: flex; gap: 11px; align-items: flex-start;
+    background: #fbf6ec; border: 1px solid #ecdcbf; border-left: 3px solid var(--sc-mustard);
+    border-radius: var(--sc-radius-sm); padding: 13px 15px; margin-top: 16px;
+  }
+  .sc-ceiling-mark { font-size: 15px; line-height: 1.2; }
+  .sc-ceiling-body { font-size: 13px; color: #6b5a33; }
+  .sc-ceiling-body strong { display: block; color: #4e4123; margin-bottom: 2px; }
+
+  /* Viewing as. Replaces the nine-chip strip at Level 3 and up: a person
+     is a person, so they get a round avatar and a named control, and the
+     AI workers keep their square marks elsewhere. The two are never mixed
+     in one row. */
+  .sc-viewing { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+  .sc-viewing-label { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--sc-text-muted); }
+  .sc-viewing-ctl { position: relative; }
+  .sc-viewing-btn {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--sc-cream-panel); border: 1px solid var(--sc-border); border-radius: 30px;
+    padding: 5px 14px 5px 5px; cursor: pointer; font-family: inherit; font-size: 13.5px; color: var(--sc-text);
+  }
+  .sc-viewing-btn:focus-visible { outline: 2px solid var(--sc-forest); outline-offset: 2px; }
+  .sc-viewing-face {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    display: grid; place-items: center; font-size: 11px; font-weight: 700;
+    background: var(--sc-forest); color: #fff;
+  }
+  .sc-viewing-role { color: var(--sc-text-muted); }
+  .sc-viewing-caret { color: var(--sc-text-muted); font-size: 11px; }
+  .sc-viewing-menu {
+    position: absolute; z-index: 40; top: calc(100% + 6px); left: 0; min-width: 260px;
+    background: var(--sc-cream-panel); border: 1px solid var(--sc-border);
+    border-radius: var(--sc-radius-sm); box-shadow: var(--sc-shadow); padding: 5px;
+  }
+  .sc-viewing-opt {
+    display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+    background: none; border: 0; border-radius: var(--sc-radius-sm); padding: 8px 9px;
+    cursor: pointer; font-family: inherit; font-size: 13.5px; color: var(--sc-text);
+  }
+  .sc-viewing-opt:hover { background: var(--sc-cream); }
+  .sc-viewing-opt[aria-checked="true"] { background: #eaf0eb; font-weight: 600; }
+  .sc-viewing-note { font-size: 12.5px; color: var(--sc-text-muted); }
+
+  /* How this was handled. Collapsed by default: the visitor asked a
+     question, not for a report on how it was answered. */
+  .sc-prov { margin-top: 12px; }
+  .sc-prov-line { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .sc-prov-text { font-size: 13px; color: var(--sc-text-muted); }
+  .sc-prov-btn {
+    background: none; border: 0; padding: 0; cursor: pointer; font-family: inherit;
+    font-size: 13px; font-weight: 600; color: var(--sc-terracotta);
+  }
+  .sc-prov-btn:focus-visible { outline: 2px solid var(--sc-terracotta); outline-offset: 3px; border-radius: 3px; }
+  .sc-prov-panel {
+    margin-top: 10px; border: 1px solid var(--sc-border); border-radius: var(--sc-radius-sm);
+    background: var(--sc-cream-panel); padding: 4px 14px;
+  }
+  .sc-prov-step { display: flex; gap: 12px; align-items: flex-start; padding: 11px 0; border-bottom: 1px solid var(--sc-border); }
+  .sc-prov-step:last-child { border-bottom: 0; }
+  .sc-prov-mark {
+    width: 26px; height: 26px; flex-shrink: 0; border-radius: 5px;
+    display: grid; place-items: center; font-size: 10px; font-weight: 700; letter-spacing: .04em;
+    background: #eaf0eb; color: var(--sc-forest);
+  }
+  .sc-prov-fn { font-size: 13.5px; font-weight: 700; color: var(--sc-text); width: 120px; flex-shrink: 0; }
+  .sc-prov-did { font-size: 13px; color: var(--sc-text-muted); flex: 1; }
+
+  /* Your decision. A separate block from the provenance on purpose: what
+     the business did and what the owner must now decide are two different
+     things, and folding the second into the first is how an approval gets
+     clicked without being read. */
+  .sc-decision {
+    margin-top: 12px; background: #fbf6ec; border: 1px solid #ecdcbf;
+    border-radius: var(--sc-radius-sm); padding: 14px 15px;
+    display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;
+  }
+  .sc-decision-t { display: flex; flex-direction: column; gap: 3px; font-size: 14px; color: #453c22; }
+  .sc-decision-cap { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #8a7742; font-weight: 700; }
+  .sc-decision-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* Lead Finder: the Level 4 visual hero. */
+  .sc-lf { background: var(--sc-cream-panel); border: 1px solid var(--sc-border); border-radius: var(--sc-radius); overflow: hidden; box-shadow: var(--sc-shadow); }
+  .sc-lf-top {
+    display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap;
+    padding: 18px 20px; border-bottom: 1px solid var(--sc-border); background: var(--sc-cream);
+  }
+  .sc-lf-count { display: flex; align-items: baseline; gap: 12px; }
+  .sc-lf-n { font-family: 'Playfair Display', Georgia, serif; font-size: 46px; font-weight: 700; color: var(--sc-text); line-height: .95; }
+  .sc-lf-cap { display: flex; flex-direction: column; gap: 1px; }
+  .sc-lf-cap b { font-size: 15px; color: var(--sc-text); }
+  .sc-lf-cap span { font-size: 12.5px; color: var(--sc-text-muted); }
+  .sc-lf-split { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
+  .sc-lf-body { padding: 4px 20px 18px; }
+  .sc-opp { padding: 16px 0; border-bottom: 1px solid var(--sc-border); display: flex; flex-direction: column; gap: 9px; }
+  .sc-opp:last-child { border-bottom: 0; padding-bottom: 4px; }
+  .sc-opp-tag { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--sc-text-muted); }
+  .sc-opp-tag-h { color: var(--sc-terracotta); }
+  .sc-opp-t { font-size: 16px; font-weight: 700; color: var(--sc-text); }
+  .sc-opp-meta { font-size: 13px; color: var(--sc-text-muted); }
+  .sc-mini { display: flex; flex-direction: column; gap: 2px; padding: 2px 0 4px; }
+  .sc-mini-s { font-size: 13.5px; color: var(--sc-text); font-weight: 500; }
+  .sc-mini-a { font-size: 12px; color: #cdb3a6; line-height: 1; }
+  .sc-opp-more {
+    align-self: flex-start; background: none; border: 0; padding: 0; cursor: pointer;
+    font-family: inherit; font-size: 13px; font-weight: 600; color: var(--sc-terracotta);
+  }
+  .sc-opp-more:focus-visible { outline: 2px solid var(--sc-terracotta); outline-offset: 3px; border-radius: 3px; }
+  .sc-ev { border-top: 1px solid var(--sc-border); margin-top: 4px; }
+  .sc-ev-r { display: flex; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--sc-border); align-items: flex-start; }
+  .sc-ev-r:last-child { border-bottom: 0; }
+  .sc-ev-k {
+    width: 140px; flex-shrink: 0; padding-top: 2px;
+    font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--sc-text-muted); font-weight: 700;
+  }
+  .sc-ev-v { flex: 1; font-size: 13.5px; color: var(--sc-text-muted); display: flex; flex-direction: column; gap: 6px; }
+  .sc-ev-step { display: flex; gap: 9px; align-items: flex-start; }
+  .sc-ev-num {
+    width: 17px; height: 17px; border-radius: 50%; flex-shrink: 0; margin-top: 1px;
+    background: #f3e4dc; color: var(--sc-terracotta);
+    display: grid; place-items: center; font-size: 10px; font-weight: 700;
+  }
+
+  @media (max-width: 900px) {
+    .sc-team-row-groups { grid-template-columns: repeat(2, 1fr); }
+    .sc-rail-steps { grid-template-columns: repeat(2, 1fr); }
+    .sc-ev-r { flex-direction: column; gap: 4px; }
+    .sc-ev-k { width: auto; }
+  }
+  @media (max-width: 600px) {
+    .sc-team-row-groups { grid-template-columns: 1fr; }
+    .sc-rail-steps { grid-template-columns: 1fr; }
+    .sc-lf-n { font-size: 38px; }
+  }
+
+
+  /* ------------------------------------------------------------
+     PROGRESSIVE DISCLOSURE (15/09/2026)
+     ------------------------------------------------------------
+     Native <details>, not a scripted toggle. Under this site's strict CSP
+     every scripted toggle is another nonced block to get wrong, and this
+     one keeps working with JavaScript off. The summary always states how
+     much is inside, so folding never makes the company look smaller than
+     it is. */
+  .sc-fold { margin: 10px 0 4px; }
+  .sc-fold-summary {
+    display: inline-flex; align-items: center; gap: 7px;
+    cursor: pointer; list-style: none;
+    font-size: 13px; font-weight: 600; color: var(--sc-terracotta);
+    padding: 5px 0;
+  }
+  .sc-fold-summary::-webkit-details-marker { display: none; }
+  .sc-fold-summary::before {
+    content: '\25b8'; font-size: 11px; transition: transform .15s ease;
+  }
+  .sc-fold[open] > .sc-fold-summary::before { transform: rotate(90deg); }
+  .sc-fold-summary:focus-visible { outline: 2px solid var(--sc-terracotta); outline-offset: 3px; border-radius: 3px; }
+  .sc-fold-body { margin-top: 10px; }
+  .sc-fold-wide { margin-top: 20px; }
+
+  /* Team groups. Four headings instead of eight faces (Tom, 15/09/2026):
+     "the objective is not to demonstrate how many AI workers exist". No
+     avatar at all here — a group is a capability, not a person, and giving
+     it a face would put it back in the same visual register as the human
+     in the Viewing-as control, which is the blur the round/square rule
+     exists to prevent. */
+  /* Four groups, so an explicit 4-up grid rather than a wrapping flex row.
+     Left as flex, the four chips wrapped 3 + 1 and read as "three things,
+     and an afterthought". Collapses to 2x2 on a narrow screen, which is
+     four equal halves rather than a ragged stack. */
+  .sc-team-row-groups {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    max-width: 920px; margin: 0 auto;
+  }
+  .sc-team-chip[data-team-group] { padding: 12px 15px; min-width: 0; }
+  .sc-team-chip[data-team-group] .sc-team-name { font-size: 14.5px; }
+  .sc-team-chip[data-team-group] .sc-team-role { line-height: 1.4; }
+
 </style>

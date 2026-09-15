@@ -29,6 +29,17 @@ const { SNAPSHOT_LABEL } = require('../lib/scott/config');
 const { requireScottPageAccess, requireScottApiAccess, hasScottAccess } = require('../lib/scott/access');
 const { runTurn, isScottAIEnabled } = require('../lib/scott/orchestrator');
 const clearance = require('../lib/scott/clearance');
+const progression = require('../lib/scott/progression');
+const leadFinder = require('../lib/scott/leadFinder');
+const workerGroups = require('../lib/scott/workerGroups');
+
+// worker id -> group heading, computed once at load. A plain map for the
+// browser; it carries no domain, no clearance and no permission, which is
+// what makes it safe to ship to the client at all.
+const WORKER_GROUP_LABELS = workerGroups.GROUPS.reduce((acc, g) => {
+  g.workerIds.forEach((wid) => { acc[wid] = g.label; });
+  return acc;
+}, {});
 const brainPreview = require('../lib/scott/brainPreview');
 const { checkReleaseGate } = require('../lib/scott/qualityGate');
 const deepFacts = require('../lib/scott/deepBusinessFacts');
@@ -136,6 +147,44 @@ function canReviewProposedFacts(req) {
   return !!(u && FACT_REVIEW_ROLES.includes(u.role));
 }
 
+// ------------------------------------------------------------
+// THE PROGRESSION LEVEL
+// ------------------------------------------------------------
+// Which of the four states this visitor is in. Session state, not a
+// database column: it is where somebody has got to in a demonstration,
+// not a fact about the company, and it should not follow them to another
+// browser or outlive the visit.
+//
+// It NEVER widens anything. Every surface it controls is separately
+// clearance-gated where it renders, and the AI context treats it as a
+// third narrowing leg alongside persona and worker. Reading the level off
+// the session and finding it absent or corrupt gives Level 1, the
+// narrowest state, because a level can only take things away.
+function currentLevel(req) {
+  return progression.normaliseLevel(req.session && req.session.scottLevel);
+}
+
+// Dropping below Level 3 puts an impersonating viewer back into their own
+// identity. Not cosmetic: below Level 3 there is no Viewing-as control on
+// screen, so a viewer who switched to Mike Evans at Level 3 and then
+// stepped back would otherwise be stuck inside a persona with no way to
+// leave it and nothing on screen saying they were in one.
+//
+// Safe in the only direction that matters. setImpersonatedPersona is
+// available to a real site admin/content account alone, so the persona it
+// clears is always a borrowed one and what it returns to is that person's
+// own real clearance — never an escalation, and never something a
+// fictional staff login can reach, because clearance.js short-circuits
+// them regardless of what this route does.
+function setLevel(req, value) {
+  const level = progression.normaliseLevel(value);
+  req.session.scottLevel = level;
+  if (level < 3 && clearance.isImpersonating(req)) {
+    clearance.setImpersonatedPersona(req, null);
+  }
+  return level;
+}
+
 function viewerViewModel(req) {
   const v = viewer(req);
   const personaId = clearance.getEffectivePersonaId(req);
@@ -155,7 +204,17 @@ function viewerViewModel(req) {
     // mediating the read.
     field: (record, name) => clearance.fieldValue(personaId, null, record, name),
     deniedNote: clearance.clearanceDeniedNote,
-    dataPages: NAV_PAGES
+    dataPages: NAV_PAGES,
+    // Presentation only. Every page that can host the chat widget needs it,
+    // so it lives here rather than being remembered per route.
+    workerGroupLabels: WORKER_GROUP_LABELS,
+    // The progression, for the rail and for every level-gated surface.
+    // `levels` is the whole register so the rail can render all four
+    // states including the ones ahead of the visitor.
+    level: currentLevel(req),
+    levels: progression.LEVELS,
+    caps: progression.capabilities(currentLevel(req)),
+    ceiling: progression.ceilingNote(currentLevel(req))
   };
 }
 
@@ -445,6 +504,14 @@ function mountPageRoute(app, generateCsrfToken) {
         describeNotification: brainGaps.describeNotification,
         snapshotCards: OPERATING_SNAPSHOT_CARDS,
         snapshotLabel: SNAPSHOT_LABEL,
+        // The headline for the Level 4 Lead Finder pointer. Read from the
+        // module rather than typed into the view, so the dashboard and
+        // the page itself cannot end up claiming different counts.
+        leadFinderTotal: leadFinder.WEEK_TOTAL,
+        // Presentation grouping for the team strip. Derived from the ACTIVE
+        // worker list, so deactivating a worker empties or removes its group
+        // rather than leaving a heading with nothing behind it.
+        teamGroups: workerGroups.activeGroups(ACTIVE_WORKER_IDS.filter((id) => id !== 'receptionist')),
         aiEnabled: isScottAIEnabled(),
         workersById: WORKERS_BY_ID_JSON,
         navCounts: { newEnquiries: summary.newEnquiries, pendingApprovals: summary.pendingApprovals, openGaps: visibleGaps.length },
@@ -637,6 +704,51 @@ function mountPageRoute(app, generateCsrfToken) {
         next(err);
       }
     });
+  });
+
+  // ------------------------------------------------------------
+  // Lead Finder
+  // ------------------------------------------------------------
+  // The Level 4 payload. Two gates, and they are ANDed:
+  //
+  //   clearance  commercial_prospecting, which only the owner persona
+  //              holds. This is the real one. A viewer without it gets
+  //              the ordinary Scott 404 rather than an empty page,
+  //              because "this area exists but is not yours" is itself
+  //              information about how the company prospects.
+  //   level      Level 4. A visitor who has not got there yet is told
+  //              where it lives rather than 404'd, because the area's
+  //              existence is the point of the progression and they are
+  //              two clicks from it.
+  //
+  // Ordered clearance-first on purpose. A viewer who will never be
+  // allowed in must not be able to learn the area exists by reaching
+  // Level 4, and ordering it the other way would have told them.
+  app.get('/scott/lead-finder', noindexHeader, requireScottPageAccess, async (req, res, next) => {
+    try {
+      const personaId = clearance.getEffectivePersonaId(req);
+      if (!clearance.personaCanSeeDomain(personaId, leadFinder.DOMAIN)) {
+        return res.status(404).render('scott/not-found', { ...viewerViewModel(req), kind: 'page', navCounts: {}, csrfToken: generateCsrfToken(req, res) });
+      }
+      const navCounts = await repo.getDashboardSummary();
+      res.render('scott/lead-finder', {
+        ...viewerViewModel(req),
+        navCounts,
+        facts: deepFacts,
+        // Filtered through the ordinary rule even though the gate above
+        // has already answered the same question. Two reasons: the
+        // records carry per-field domains like every other record, and a
+        // page that renders its own data unfiltered is one refactor away
+        // from being the exception that leaks.
+        opportunities: clearance.filterAndRedact(personaId, null, leadFinder.OPPORTUNITIES),
+        leadSummary: leadFinder.summary(),
+        workersById: WORKERS_BY_ID_JSON,
+        aiEnabled: isScottAIEnabled(),
+        csrfToken: generateCsrfToken(req, res)
+      });
+    } catch (err) {
+      next(err);
+    }
   });
 
   // ------------------------------------------------------------
@@ -904,11 +1016,17 @@ router.post('/scott/login', noindexHeader, scottLoginLimiter, async (req, res) =
 // send from this worker; this makes that a server-side gate rather than
 // something resting on the model's own self-reporting, exactly the
 // "structural, not merely prompted" isolation this whole build is for.
-async function runScottTurnAndPersist({ conversation, conversationId, userMessage, personaId }) {
+async function runScottTurnAndPersist({ conversation, conversationId, userMessage, personaId, level }) {
   const history = await repo.getMessages(conversationId);
   await repo.addMessage({ conversationId, sender: 'user', content: userMessage });
 
-  const turn = await runTurn({ userMessage, history, personaId });
+  // The level is the third narrowing leg on the AI's own reading, not a
+  // presentation flag. At Level 1 the workers genuinely cannot read the
+  // job, the price or the capacity, which is what makes the ceiling the
+  // interface shows an honest statement rather than a caption. Undefined
+  // means "narrow nothing", so the lead-intake auto-draft path below is
+  // unchanged.
+  const turn = await runTurn({ userMessage, history, personaId, level });
 
   if (turn.receptionist.note) {
     await repo.addMessage({ conversationId, sender: 'worker', workerId: 'receptionist', content: turn.receptionist.note, technicalFailure: turn.receptionist.technicalFailure });
@@ -1358,7 +1476,7 @@ router.post('/api/scott/messages', noindexHeader, requireScottApiAccess, scottCh
       return res.json({ ...serializeTurn(conversationId, turn, canReviewProposedFacts(req)), invoiceDraft: { writebackId: writeback.id } });
     }
 
-    const turn = await runScottTurnAndPersist({ conversation, conversationId, userMessage: message, personaId });
+    const turn = await runScottTurnAndPersist({ conversation, conversationId, userMessage: message, personaId, level: currentLevel(req) });
     res.json(serializeTurn(conversationId, turn, canReviewProposedFacts(req)));
   } catch (err) {
     console.error('Scott chat error:', err);
@@ -1487,7 +1605,8 @@ router.post('/api/scott/approvals/:id/redraft', noindexHeader, requireScottApiAc
       conversation,
       conversationId: existing.conversation_id,
       userMessage: '(Internal note from the team: the previous draft reply needs another attempt — please draft a fresh reply to the customer\'s original message.)',
-      personaId: clearance.getSessionPersonaId(req)
+      personaId: clearance.getSessionPersonaId(req),
+      level: currentLevel(req)
     });
     res.json(serializeTurn(existing.conversation_id, turn, canReviewProposedFacts(req)));
   } catch (err) {
@@ -1516,6 +1635,29 @@ router.post('/scott/logout', noindexHeader, (req, res) => {
 // straight to this endpoint cannot acquire Scott Mercer's clearance. The
 // 403 below is the ordinary refusal; the security guarantee is in
 // clearance.js, not in this route remembering to check.
+// The progression control. Available to every invited viewer, unlike
+// impersonation, because moving between the four states reveals nothing:
+// each state is a narrower or wider VIEW of what this viewer's clearance
+// already permits, and Level 4 permits exactly what clearance permits and
+// nothing beyond it.
+//
+// An unrecognised value is not an error. progression.normaliseLevel fails
+// closed to Level 1 and the response reports the level actually set, so a
+// caller can never end up believing it is somewhere it is not.
+router.post('/api/scott/level', noindexHeader, requireScottApiAccess, (req, res) => {
+  const requested = req.body && req.body.level;
+  const level = setLevel(req, requested);
+  res.json({
+    ok: true,
+    level,
+    // Reported back so the client does not have to keep its own copy of
+    // the rule, and so a caller can see that a level change reset a
+    // borrowed persona rather than discovering it from the next render.
+    personaId: clearance.getEffectivePersonaId(req),
+    impersonating: clearance.isImpersonating(req)
+  });
+});
+
 router.post('/api/scott/impersonate', noindexHeader, requireScottApiAccess, async (req, res) => {
   const requested = req.body && req.body.personaId;
   const ok = clearance.setImpersonatedPersona(req, requested === undefined ? null : requested);
