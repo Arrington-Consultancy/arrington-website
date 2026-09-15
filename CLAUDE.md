@@ -5216,6 +5216,69 @@ been retitled to **"PENDING INSERTION INTO BRAND OS - PRONOUN RULE (15 SEPT
 2026) - NOT A SEPARATE AUTHORITY"**, so it cannot be mistaken for a rival
 authority while it waits. It is NOT marked incorporated, because it is not.
 
+## Opportunity Builder background prospecting: decided, records NOT yet corrected (15/09/2026)
+
+Tom's decision of 15/09/2026, taken from the open Brain gap on
+`/workspace/gaps`: ARRINGTON OPPORTUNITY BUILDER becomes a continuing
+background prospecting and drafting system. It identifies prospects, researches
+and qualifies them from current evidence, uses only evidenced contact details
+and never an invented one, prepares an evidence-backed prospect record, drafts a
+first approach from that evidence, and puts both in a review queue for Tom. It
+sends nothing. His corrections are retained as governed learning. No separate
+Lead Finder worker.
+
+**Nothing has been built and no permission has been widened.** Tom's instruction
+was explicit: close the governance gap first, then report the next
+implementation step.
+
+**The four controlling Drive records still carry the SUPERSEDED position**, and a
+future session must not act as though they do not:
+
+| Record | Stale line |
+|---|---|
+| Arrington Opportunity Builder Worker Handoff | "Lead Finder is archived; new lead discovery is human led under Tom" plus two more |
+| 01 ARRINGTON CURRENT OPERATING POSITION | "bounded human-led research is allowed within the existing lane" |
+| START HERE. ARRINGTON CONSULTANCY BRAIN INDEX | "New-lead discovery is currently human-led under Tom" |
+| Arrington Consultancy Decision Log | no 15/09 entry yet |
+
+Exact replacement text for all four is in Drive: **"PENDING INSERTION -
+Opportunity Builder background prospecting and drafting decision, 15 September
+2026"** (id `1aDHULjwaVHONxB5GAUAncajjT-sqLxPfTi0wXdn8jOo`). It is marked NOT AN
+AUTHORITY.
+
+**Why they were not corrected directly, which is a standing tooling limit worth
+knowing.** The Drive MCP `update_file` is metadata only, confirmed from its own
+schema ("currently only title and parent_id are supported"), and the Zapier
+Google Docs connection returns zero connections. The only body-write available
+is create-new-and-archive-old, which is genuinely how this handoff was updated
+on 11/09/2026. **It was deliberately NOT used here**, because
+`01 ARRINGTON CURRENT OPERATING POSITION` links to the handoff by file id, so
+superseding would leave a live authority pointing at a document titled ARCHIVED,
+and this session cannot repair that either. Half-correcting a set of records is
+worse than leaving it consistent. Authorising the Zapier Google Docs connection
+once removes the limit permanently, for this and for the Brand OS pronoun rule.
+
+**The Brain gap stays OPEN** and must not be marked "Source corrected" until the
+four records actually are. That sequence was Tom's explicit instruction, and no
+AI path reaches that route anyway: closing a gap needs a logged-in human.
+
+**Two live constraints found in the Decision Log that any implementation must
+respect**, because both are easy to breach by accident:
+
+- **9 September:** AI capability "must not open a cold outreach email", and the
+  approach goes through "a specific business observation, not AI-first selling".
+  The fit test is whether people, sites or information can sensibly be moved off
+  the owner. Turnover bands are withdrawn.
+- **11 September:** 14 researched cold emails were sent with Tom's explicit
+  approval, "specific to that batch", and "every future outbound send still
+  requires Tom's explicit approval". So outreach is already a governed live
+  activity; this decision changes who drafts, not who sends.
+
+The earlier proposal doc (Companies House as the source) is retitled
+**SUPERSEDED 15 Sep 2026 by Tom's decision**. Its source analysis is still the
+best available answer to "where do candidates come from", but it was written
+before the decision and is not an authority.
+
 ## Evidence: the Built proof section (14/09/2026)
 
 Tom's brief: the Evidence page proved the commercial thinking through the
