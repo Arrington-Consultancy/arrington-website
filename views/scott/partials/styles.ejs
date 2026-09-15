@@ -1064,6 +1064,15 @@
   .sc-rail-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
   .sc-rail-label { font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
   .sc-rail-sub { font-size: 12.5px; line-height: 1.35; color: rgba(255, 255, 255, .42); }
+  /* The size of business each step suits. Quieter than the sub-label and
+     set apart by a rule above it, because it answers a different question:
+     the sub says what the workspace HAS, this says who it is FOR. */
+  .sc-rail-org {
+    font-size: 11.5px; line-height: 1.3; letter-spacing: .01em;
+    color: rgba(255, 255, 255, .34);
+    margin-top: 5px; padding-top: 5px;
+    border-top: 1px solid rgba(255, 255, 255, .1);
+  }
   .sc-rail-step.is-done .sc-rail-btn { color: rgba(255, 255, 255, .78); }
   .sc-rail-step.is-done .sc-rail-num { background: rgba(255, 255, 255, .18); color: #fff; }
   .sc-rail-step.is-current .sc-rail-btn {
@@ -1071,6 +1080,8 @@
   }
   .sc-rail-step.is-current .sc-rail-num { background: var(--sc-terracotta); color: #fff; }
   .sc-rail-step.is-current .sc-rail-sub { color: var(--sc-text-muted); }
+  .sc-rail-step.is-current .sc-rail-org { color: var(--sc-sage); border-top-color: var(--sc-border); }
+  .sc-rail-step.is-done .sc-rail-org { color: rgba(255, 255, 255, .45); }
 
   /* The note Level 1 volunteers about itself. It was the "ceiling" until
      15/09/2026, when the knowledge cap it described was removed; the
