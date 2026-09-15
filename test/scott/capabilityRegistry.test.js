@@ -317,6 +317,34 @@ describe('a question is answered; an action without its tool is signposted', () 
     });
   });
 
+  test('the dashboard never suggests a question its own level would signpost', () => {
+    // The owner's suggested questions vary by level (views/scott/dashboard.ejs).
+    // A chip that answers with "I can do that in My Whole Company" is a
+    // dead end offered by the interface itself, which is worse than no
+    // chip: the visitor clicked what they were given and got a signpost.
+    //
+    // Read out of the view rather than restated here, so the two cannot
+    // drift apart. If the extraction ever stops finding them the test
+    // says so rather than passing on an empty list.
+    const src = fs.readFileSync(path.join(__dirname, '..', '..', 'views', 'scott', 'dashboard.ejs'), 'utf8');
+    const block = src.slice(src.indexOf('var OWNER_BY_LEVEL = {'), src.indexOf('var activeSuggestions'));
+    assert.ok(block.length > 100, 'could not find the per-level owner suggestions in the dashboard');
+
+    let found = 0;
+    [2, 3, 4].forEach((lv) => {
+      const part = block.slice(block.indexOf(`${lv}: [`));
+      const questions = (part.slice(0, part.indexOf(']')).match(/"([^"]+)"/g) || []).map((q) => q.slice(1, -1));
+      assert.ok(questions.length >= 3, `level ${lv} has fewer than three suggestions, or the extraction broke`);
+      questions.forEach((q) => {
+        found += 1;
+        const d = registry.detectUnavailable(q, lv, allowAll);
+        assert.equal(d, null,
+          `level ${lv} suggests "${q}", which that level would signpost to ${d && d.levelLabel}`);
+      });
+    });
+    assert.ok(found >= 9, `only ${found} suggestions were checked`);
+  });
+
   test('junk in gets null out rather than an exception', () => {
     [null, undefined, '', '   ', 42, {}, [], true].forEach((v) => {
       assert.equal(registry.detectUnavailable(v, 1, allowAll), null, `${JSON.stringify(v)} threw or matched`);
