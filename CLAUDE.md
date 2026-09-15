@@ -1153,13 +1153,25 @@ database on either branch.
   `create-deployment` call that made a new service instead of targeting
   scott-demo; it has crashed, holds no variables, no domain and no data.
 
-## Scott: SAME BRAIN, MORE TOOLS, BIGGER WORKSPACE (15/09/2026, staging only)
+## Scott: SAME BRAIN, MORE TOOLS, BIGGER WORKSPACE (LIVE, 15/09/2026)
 
 **This reverses the Level 1 knowledge ceiling described in the section above,
-on the same day it shipped.** Branch `claude/scott-progressive-experience`,
-commit `e9e8236`. NOT merged, NOT on production. The section above is left as
-written: it is the accurate record of what production is serving today, and
-where the two disagree this one is the current design.
+on the same day it shipped.** Merged to `main` as `53bdc6c` on Tom's
+instruction ("lets push what you've done live i will play and work out what
+its like while its live"), production deployment `8011b70e` SUCCESS, zero 5xx.
+Live at `/scott`.
+
+**The section above it is now HISTORY, not current state.** It describes the
+build of that morning, including a Level 1 knowledge ceiling that no longer
+exists. It is deliberately left as written rather than edited into agreement:
+it records how the ceiling came to be, that every unit test passed while it
+was false, and that only a live probe found it, and that lesson is worth more
+than the tidiness. Where the two disagree, THIS section is the system.
+
+**Two deployments raced from the one push**, as they always do here:
+`570e1b80` ran the seed and is marked REMOVED, `8011b70e` is serving. The
+superseded deployment's database writes still count. Check it before
+concluding a migration did not run.
 
 Tom settled the model after using the live build: **the four levels are about
 visualisation, workspace size and connected capability, not different
@@ -1210,6 +1222,30 @@ Moving a capability between levels is a one-line edit to a table. That is
 deliberate future-proofing: the four states **may** later become separately
 sold products, so the architecture has to support that without a rebuild. **No
 price is set and none is implied**, and nothing assumes it will happen.
+
+### Four SIZES of business, not four stages (Tom's reframing, same day)
+
+Tom, after seeing it: *"The size of the organisation dictates the workspace
+needed, see different examples."* Each rail step now says who it is for, and
+the intro says in words that these are four examples rather than four stages:
+
+| | | Who it is for |
+|---|---|---|
+| 1 | My Workspace | One person, working alone |
+| 2 | My Business | An owner and a couple of hands |
+| 3 | My Team | A handful of staff, different jobs |
+| 4 | My Whole Company | A full company, everything running |
+
+**This is more than a caption change.** "Four stages" quietly implied Level 1
+was somewhere a business grows out of; a sole trader is not an immature
+company, they just need less on screen. It is also the framing that has to
+hold if these ever become products, because four sizes of business is a
+sentence about who would buy which workspace and four stages of maturity
+never could be.
+
+`orgSize` sits on the level register beside the label, so the rail reads it
+like every other field and moving it is one line. The render is guarded, so a
+register without the field shows the rail rather than the word `undefined`.
 
 ### The allocation (Tom's, 15/09/2026, expected to move)
 
