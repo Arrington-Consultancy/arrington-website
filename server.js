@@ -1406,6 +1406,11 @@ loadPermissions().then(() => {
     // the same way as every other gate above. See describeSocialStatus
     // for why presence is all it claims.
     console.log('Workspace social: ' + require('./lib/workspace/social/registry').describeSocialStatus());
+    // The hours connector (15/09/2026), reported the same way: each gate
+    // separately, the service account by address, the private key by
+    // length only, and the pinned spreadsheet id. It is inert until the
+    // flag is on AND a credential is set, and the line says which.
+    console.log(require('./lib/workspace/hours/sheetsClient').describeStatus());
     describeWorkspaceAccessConfig()
       .then((line) => console.log('Workspace access: ' + line))
       .catch((err) => console.error('Workspace access: could not be described:', err.message));

@@ -46,6 +46,9 @@ const invoiceIntent = require('../lib/workspace/finance/invoiceIntent');
 const pendingAction = require('../lib/workspace/finance/pendingAction');
 const gmailClient = require('../lib/workspace/email/gmailClient');
 const emailSummary = require('../lib/workspace/email/summary');
+// Read-only, inert until its own flag is on. It advises on an invoice and
+// can never alter or send one; see lib/workspace/hours/invoiceCheck.js.
+const hoursService = require('../lib/workspace/hours/service');
 const { encryptToken, tokenCryptoConfigured } = require('../lib/workspace/finance/tokenCrypto');
 const crm = require('../lib/crm/contacts');
 const erasure = require('../lib/crm/erasure');
@@ -899,12 +902,32 @@ router.post('/api/workspace/ask', requireWorkspaceApiAccess, askLimiter, async (
     // record, so there is no handoff note to write).
     const confidential = clearanceCanSeeSensitivity(clearanceId, 'confidential');
     async function replyDeterministic(answer, invoiceDraft) {
+      // The hours check (15/09/2026). Every deterministic reply carrying
+      // an invoice card is a moment Tom is preparing or reviewing that
+      // invoice, so the check runs on all of them: drafting, amending,
+      // switching the mode, asking to see it, and confirming.
+      //
+      // It ADVISES. It cannot alter the draft: the finding is a string
+      // appended to the answer, and nothing on this path writes to the
+      // approval row. It is also never allowed to break the reply, so a
+      // connector fault costs a sentence and not the invoice flow.
+      let hoursNote = '';
+      if (invoiceDraft && invoiceDraft.draft) {
+        try {
+          const finding = await hoursService.invoiceFinding({ draft: invoiceDraft.draft });
+          if (finding && finding.message) hoursNote = `\n\n${finding.message}`;
+        } catch (err) {
+          console.error('Hours check failed:', err && err.message ? err.message : err);
+          hoursNote = '\n\nI could not check this against the hours log, so it has NOT been checked.';
+        }
+      }
+      const finalAnswer = `${answer}${hoursNote}`;
       if (!conversation) {
         conversation = await repo.createConversation({ ownerUsername: username, clearance: clearanceId, laneId: '', title: question.slice(0, 120) });
       }
       await repo.addMessage({ conversationId: conversation.id, role: 'user', content: question, laneId: '' });
-      await repo.addMessage({ conversationId: conversation.id, role: 'assistant', content: answer, laneId: '', provenance: [] });
-      return res.json({ ok: true, conversationId: conversation.id, laneId: null, laneName: null, answer, provenance: [], gap: null, escalation: null, receptionist: null, invoiceDraft: invoiceDraft || null });
+      await repo.addMessage({ conversationId: conversation.id, role: 'assistant', content: finalAnswer, laneId: '', provenance: [] });
+      return res.json({ ok: true, conversationId: conversation.id, laneId: null, laneName: null, answer: finalAnswer, provenance: [], gap: null, escalation: null, receptionist: null, invoiceDraft: invoiceDraft || null });
     }
     async function reviseInvoiceApproval(pending, { changes = {}, mode = null, note }) {
       const payload = pending.payload;

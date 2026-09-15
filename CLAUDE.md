@@ -2545,6 +2545,91 @@ most of the height of a reply. That is honest and it is not what failed,
 and the real fix is the general lane supplying fewer records, which is a
 routing change. Left alone deliberately.
 
+### Hours log connector: BUILT, MERGED, INERT, NOT APPROVED (15/09/2026)
+
+**Do not switch this on.** It is on `main` and it reads nothing. Three
+things must all be true first, and only Tom does any of them: Governance
+& Assurance approves the source expansion, the Google authorisation is
+completed, and `ENABLE_WORKSPACE_HOURS` is explicitly set to `true`.
+Submission: `review/hours-sheet-governance-submission-2026-09-15.md`.
+
+**What it is for.** An invoice was prepared in Ask Ruth at £533 while the
+hours record said £551.33; the gap was exactly one logged row (26 August,
+55 minutes, £18.33). The two records disagreed and nothing could see
+both. **That invoice has since been sent and is out of scope**: nothing
+here reads, alters or revisits it.
+
+**The permission model is the part worth reading.** Pinning a spreadsheet
+id restricts our code, not Google's grant, and `spreadsheets.readonly` on
+Tom's own account is a RESTRICTED scope over EVERY sheet he can open,
+which is the Brain and every client file. So the identity is a **service
+account**, which has no Drive of its own and can read exactly what is
+shared with it. Effective authority is *scope INTERSECT what is shared*,
+and what is shared is one sheet as Viewer. The boundary is an ACL held by
+Google and visible in the sheet's own sharing dialog; revoking is
+unsharing. `drive.file` plus the Picker is also genuinely per-file and is
+the right answer for "let the user choose a file", but it needs an
+interactive grant bound to a user token, which is the wrong shape for a
+server reading one fixed sheet. **DOMAIN-WIDE DELEGATION MUST NEVER BE
+ENABLED on this service account**: it would confer impersonation of every
+user in the Workspace and destroy the whole argument.
+
+**Files.** `lib/workspace/hours/hoursLog.js` (pure: parse, total,
+cross-check), `invoiceCheck.js` (pure: compare, attribute the
+difference), `sheetsClient.js` (service-account JWT, one read-only scope,
+failure taxonomy, pinned id), `service.js` (the honesty rules, where the
+failure modes actually arrive). Source class `hours` in `lanes.js`,
+granted to **no lane**; in `GENERAL_SOURCE_CLASSES` so only Tom's own
+general questions reach it, and the record is `confidential` so the
+clearance leg gates it too. Boot line `Workspace hours:`.
+
+**It advises and never acts.** The check runs on every deterministic
+reply carrying an invoice card and appends a sentence. No module in it
+holds a write path to an approval row, none imports Zoho, and a connector
+fault costs a sentence rather than the invoice flow. Zoho and every
+existing invoice control are untouched.
+
+**What it says, from the real record:** *"Hours log for WSA: 27h 34m at
+£20.00/hour = £551.33 across 22 billable entries. Your draft invoice is
+£533.00, which is £18.33 below the logged total. Difference: £18.33. The
+difference corresponds to the 26/08/2026 55 minute billable entry.
+Nothing has been changed: the figures are both stated so you can decide
+which is right."*
+
+**Three things the tests taught, worth keeping:**
+
+1. **A difference can have more than one explanation.** £30.00 is the 26
+   and 27 August pair AND the 21 and 22 August pair. The first version
+   named whichever the loop reached first, which is a confident wrong
+   answer of exactly the kind this check exists to prevent. Every match
+   is now collected before one is named, and several matches report as
+   ambiguous.
+2. **A client code cannot always be matched.** "WSA" is the initials of
+   the customer NAME, so that works; matching it to the domain
+   `worldstudentadvisors.com` would need to split a run of letters
+   without a dictionary, so it is deliberately NOT matched. Matching the
+   wrong client puts one client's hours against another's invoice, so
+   ambiguity refuses.
+3. **An unreadable row is never reconstructed.** A row with a start and
+   finish but no hours figure is reported and excluded, never inferred as
+   eight hours.
+
+**Tests:** `test/workspace/hoursLog.test.js`, 22, covering every case in
+Tom's list. The fixture carries the real record's dates, hours, rate and
+stated totals so the arithmetic is proved against the sheet the connector
+actually reads; the work descriptions and evidence notes are genericised,
+because they name client deliverables and say which entries are estimates
+rather than stopwatch time, and that does not belong in a repository.
+Five properties watched red against planted defects. Full suite 1306,
+1303 pass, 0 fail. Production behaviour verified unchanged over real HTTP
+with the flag unset: the invoice replies and cards are byte-for-byte what
+they were.
+
+**`test/workspace/routing.test.js`'s general-source-classes assertion is a
+TRIPWIRE and is meant to fail** when a class is added, so the change gets
+revisited. Revisited: `NO_LANE_INSTRUCTION` deliberately does not
+enumerate the classes, so it needed no change.
+
 ### Zoho Invoice connector, reads and writes (06/09/2026, live)
 
 Arrington's real invoicing is Zoho Invoice, EU data centre, organisation
