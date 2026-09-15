@@ -5216,68 +5216,89 @@ been retitled to **"PENDING INSERTION INTO BRAND OS - PRONOUN RULE (15 SEPT
 2026) - NOT A SEPARATE AUTHORITY"**, so it cannot be mistaken for a rival
 authority while it waits. It is NOT marked incorporated, because it is not.
 
-## Opportunity Builder background prospecting: decided, records NOT yet corrected (15/09/2026)
+## Opportunity Builder background prospecting: DECIDED AND WRITTEN INTO DRIVE (15/09/2026)
 
-Tom's decision of 15/09/2026, taken from the open Brain gap on
-`/workspace/gaps`: ARRINGTON OPPORTUNITY BUILDER becomes a continuing
-background prospecting and drafting system. It identifies prospects, researches
-and qualifies them from current evidence, uses only evidenced contact details
-and never an invented one, prepares an evidence-backed prospect record, drafts a
-first approach from that evidence, and puts both in a review queue for Tom. It
-sends nothing. His corrections are retained as governed learning. No separate
-Lead Finder worker.
+Tom's decision of 15/09/2026, taken from the open Brain gap on `/workspace/gaps`:
+ARRINGTON OPPORTUNITY BUILDER becomes a continuing background prospecting and
+drafting system. It identifies prospects, researches and qualifies them from
+current evidence, uses only evidenced contact details and never an invented one,
+prepares an evidence-backed prospect record, drafts a first approach from that
+evidence, and puts both in a review queue for Tom. It sends nothing. His
+corrections are retained as governed learning. No separate Lead Finder worker.
 
-**Nothing has been built and no permission has been widened.** Tom's instruction
-was explicit: close the governance gap first, then report the next
-implementation step.
+**All four controlling records were corrected in place on 15/09/2026**, plus the
+outstanding Brand OS pronoun rule. Every file id, link and heading preserved.
+Each edit was verified by reading the document back.
 
-**The four controlling Drive records still carry the SUPERSEDED position**, and a
-future session must not act as though they do not:
+| Record | Change | Verified |
+|---|---|---|
+| Opportunity Builder Worker Handoff | header date, 3 replacements, new APPROVED BACKGROUND PROSPECTING AND DRAFTING SYSTEM section (17 rules) | yes |
+| 01 ARRINGTON CURRENT OPERATING POSITION | outreach sentence | yes |
+| START HERE. ARRINGTON CONSULTANCY BRAIN INDEX | naming-control line, header date | yes |
+| Arrington Consultancy Decision Log | new dated entry, full template | yes |
+| 00 ARRINGTON BRAND OPERATING SYSTEM | pronoun rule + testimonial carve-out under LANGUAGE RULES | yes |
 
-| Record | Stale line |
-|---|---|
-| Arrington Opportunity Builder Worker Handoff | "Lead Finder is archived; new lead discovery is human led under Tom" plus two more |
-| 01 ARRINGTON CURRENT OPERATING POSITION | "bounded human-led research is allowed within the existing lane" |
-| START HERE. ARRINGTON CONSULTANCY BRAIN INDEX | "New-lead discovery is currently human-led under Tom" |
-| Arrington Consultancy Decision Log | no 15/09 entry yet |
+**Still open, and deliberately so: the Brain gap on `/workspace/gaps` has NOT
+been marked Source corrected.** Closing it needs a logged-in human; no AI path
+reaches that route. Tom presses the button.
 
-Exact replacement text for all four is in Drive: **"PENDING INSERTION -
-Opportunity Builder background prospecting and drafting decision, 15 September
-2026"** (id `1aDHULjwaVHONxB5GAUAncajjT-sqLxPfTi0wXdn8jOo`). It is marked NOT AN
-AUTHORITY.
+### The Zapier account-ID trap, which cost most of a session
 
-**Why they were not corrected directly, which is a standing tooling limit worth
-knowing.** The Drive MCP `update_file` is metadata only, confirmed from its own
-schema ("currently only title and parent_id are supported"), and the Zapier
-Google Docs connection returns zero connections. The only body-write available
-is create-new-and-archive-old, which is genuinely how this handoff was updated
-on 11/09/2026. **It was deliberately NOT used here**, because
-`01 ARRINGTON CURRENT OPERATING POSITION` links to the handoff by file id, so
-superseding would leave a live authority pointing at a document titled ARCHIVED,
-and this session cannot repair that either. Half-correcting a set of records is
-worse than leaving it consistent. Authorising the Zapier Google Docs connection
-once removes the limit permanently, for this and for the Brand OS pronoun rule.
+In-place Google Doc editing needs the Zapier Google Docs connector. The Drive
+MCP `update_file` is metadata only, confirmed from its own schema.
 
-**The Brain gap stays OPEN** and must not be marked "Source corrected" until the
-four records actually are. That sequence was Tom's explicit instruction, and no
-AI path reaches that route anyway: closing a gap needs a logged-in human.
+**The Claude Zapier connector was OAuth-bound to Zapier account `28430776`.
+Tom's own account is `28430716`.** One digit, seventh position. Every auth URL
+the tools generated carried the wrong account, so they 403'd; the MCP config
+page 404'd; and "My servers" looked empty to Tom because the server lived under
+an account he was not in. It also explains why the Google Sheets connection
+recorded as "awaiting one-click authorisation" on 11/09 never completed.
 
-**Two live constraints found in the Decision Log that any implementation must
-respect**, because both are easy to breach by accident:
+**The fix was to disconnect and reconnect the Zapier connector in claude.ai
+while signed into the right Zapier account.** That rebinds it and starts a clean
+server. Diagnose it by calling `manage_zapier_connections` and reading the
+`accountId` out of the returned URL; do not trust the connector reporting itself
+as connected.
+
+The rebind also dropped a World Student Advisors Pipedrive connection that had
+been sitting on the Arrington server since 19/08/2026. Do not reconnect it.
+
+### Two Google Docs behaviours worth knowing before the next edit
+
+Both were established by test rather than assumed, on a scratch document:
+
+- **`\n` is preserved as a real paragraph break** by BOTH `append` and
+  `find_and_replace`. Proved by index arithmetic: markers either side of a
+  newline sit exactly one character apart. So multi-paragraph inserts work in
+  plain text and no HTML is needed.
+- **`find_and_replace` matches long strings within a paragraph**, including a
+  187-character line with punctuation and brackets, and the live documents use
+  **straight apostrophes**, not smart quotes.
+
+Working method that made this safe: `find_text` with `returnAllMatches` to prove
+the target is unique, then replace, then `find_text` the new string to prove it
+landed. `occurrencesChanged` must be exactly 1. The returned `documentTitle` on
+every read is a free check that you are in the document you think you are.
+
+### Two live constraints any implementation must respect
+
+From the Decision Log, both easy to breach by accident:
 
 - **9 September:** AI capability "must not open a cold outreach email", and the
   approach goes through "a specific business observation, not AI-first selling".
-  The fit test is whether people, sites or information can sensibly be moved off
-  the owner. Turnover bands are withdrawn.
+  Fit test is whether people, sites or information can move off the owner.
+  Turnover bands withdrawn.
 - **11 September:** 14 researched cold emails were sent with Tom's explicit
   approval, "specific to that batch", and "every future outbound send still
-  requires Tom's explicit approval". So outreach is already a governed live
-  activity; this decision changes who drafts, not who sends.
+  requires Tom's explicit approval". Outreach is already governed and live; this
+  decision changes who drafts, not who sends.
 
-The earlier proposal doc (Companies House as the source) is retitled
-**SUPERSEDED 15 Sep 2026 by Tom's decision**. Its source analysis is still the
-best available answer to "where do candidates come from", but it was written
-before the decision and is not an authority.
+**Nothing has been built.** No code, no permission widened, no source class
+added. The next implementation step is the evidence layer, not the drafting: a
+prospect record that cannot be written without a company number, a source URL
+and a retrieval date, and a contact detail that cannot be written without the
+page it came from. Companies House finds businesses but publishes no email
+addresses, so the contact detail is the hard half.
 
 ## Evidence: the Built proof section (14/09/2026)
 
