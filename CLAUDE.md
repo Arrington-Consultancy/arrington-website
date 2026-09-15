@@ -720,10 +720,19 @@ System in Drive (see above) is the actual authority and can change
 independently of this file. Check there before relying on this list,
 especially the pronoun rule below, which has changed at least once already.**
 
-- **Pronouns:** "we" in website copy and formal pages; "I" only in personal
-  outreach from Tom; Tom's own story is normally written in third person on
-  the website. (This reversed an earlier "I, not we" convention — confirmed
-  against the Brand OS on 25/07/2026.)
+- **Pronouns (Tom's decision, 15/09/2026):** normal Arrington website and
+  commercial copy uses **"we", not "I"**. First person is **reserved for
+  Useful Thinking**, where it is deliberately Tom's personal voice. "I" also
+  stays right in personal outreach from Tom, and Tom's own story is normally
+  written in third person on the website. (The "we" rule reversed an earlier
+  "I, not we" convention — confirmed against the Brand OS on 25/07/2026. The
+  Useful Thinking carve-out is NEW on 15/09/2026 and is not yet in the Brand
+  OS master: see "Pronouns: the Useful Thinking carve-out" below for what is
+  still Tom's to do.)
+  - **Testimonial quotations are not covered by this.** A client quote is
+    speech, so "Tom listened properly and gave me a clear outside view" on
+    `/what-business-owners-say` is correct as written. The July copy review
+    left quotations unedited for the same reason. Do not "fix" them.
 - **British English** only (programme, organise, colour)
 - UK business language: VAT, the books, fixed overheads, cash flow, gross margin
 - Direct, dry, blunt. No AI cliches (unlocking, empowering, seamless, transformative, journey, potential, synergy)
@@ -4396,6 +4405,84 @@ naive version. Verified by rebuilding the July production state locally from
 it: `casestudy__4` copied to `casestudy__7`, `casestudy2` attached as it
 stands, Evidence and the ads page both unchanged, a redeploy a silent no-op,
 and a simulated CMS reorder by Tom left exactly as he set it.
+
+## Pronouns: the Useful Thinking carve-out (15/09/2026)
+
+Tom's decision, verbatim: *"normal Arrington website/commercial copy must use
+'we', not 'I'. First person is reserved for Useful Thinking where it is
+deliberately Tom's personal voice."*
+
+**This resolves a real gap rather than restating an existing line.** The Brand
+Operating System's LANGUAGE RULES were read directly in Drive before anything
+was written (doc `1YH4eD-azDLHfjJ2B344Fj_9mJeC4j2rafbs3dwjWzNE`, last reviewed
+9 September 2026). It says "Use 'we' on the website and formal Arrington
+Consultancy pages", "Use 'I' in personal outreach from Tom", and that Tom's
+personal story is normally third person. It has **no Useful Thinking
+exemption**, so as written, fifteen published articles in Tom's own first
+person were technically outside the rule. Tom's decision names the exemption.
+
+### What was corrected
+
+The VAT Intervention on the home page, restored the previous day exactly as it
+stood. Two rows, three pronouns, nothing else:
+
+| Row | Was | Now |
+|---|---|---|
+| `casestudy2.intro` | "**I** walked into a business..." | "**We** walked into a business..." |
+| `casestudy2.body` | "**I** didn't just find the error; **I** sat in the room..." | "**We** didn't just find the error; **we** sat in the room..." |
+
+`casestudy2.outcome` already read "We corrected the filing..." and was left
+alone. The heading and label carry no pronoun. Every fact survives: Tristan,
+over a year of mismanaged VAT, eighteen months of data, HMRC, the six-figure
+cash flow collapse.
+
+Applied as a guarded migration (`homepage.vat_intervention_we_voice_2026-09-15`)
+matching each key's exact old value so a CMS edit always wins, plus the same
+correction in `db/defaults.js` so a fresh database and an existing one agree.
+The log distinguishes three outcomes rather than one, because on a fresh
+database zero rows change and that must not read as a failure.
+
+**`test/vatInterventionVoice.test.js`, 5 tests.** The one that earns its place
+does a word-for-word diff of the migration's own from/to pairs and fails if any
+word changed other than `I` to `we`. A voice correction is the easiest possible
+cover for quietly improving a commercial claim, and that test was watched red
+against a planted "a business" to "a thriving business".
+
+### Still first person, reported and deliberately NOT changed
+
+Found by scanning the committed July snapshot. Nothing outside the home page
+was touched, because that is not what the decision asked for.
+
+- **`business-consultant-devon`** carries three first-person rows in the
+  `casestudy` phase bodies ("I was brought into an insolvent Devon business").
+  **This is the one that matters commercially:** it is the Google Ads landing
+  page, so it is where paid traffic arrives. It is `hidden = true`, so it is
+  out of the nav and the sitemap but fully reachable by ad click. A decision
+  for Tom.
+- **`db/defaults.js` holds 20 first-person rows** (`approach.*`,
+  `insights.*`, `filter.*`, `contact.*`, `biography.*`). These are the
+  superseded pre-copy-review originals that production stopped using in July,
+  so they reach a **fresh database only** and no live page. Rewriting them is
+  twenty pieces of brand copy, which per this file's own rule is not something
+  to draft from memory.
+- **`/what-business-owners-say`** has first person inside testimonial
+  quotations. That is **correct and must stay**: a client quote is speech. The
+  July copy review left quotations unedited for the same reason.
+- **Orphaned instances** (`casestudy2__3`, `biography__3` and others) carry
+  first-person copy and render nowhere. `casestudy2__3` is a byte-identical
+  duplicate of the copy just corrected. They matter only because the CMS
+  "Reuse existing" tab lists orphans, which is the one route by which this
+  wording could come back onto a page.
+
+### Reserved to Tom
+
+The amendment to the Brand OS master itself. These tools can create a Drive
+document but not edit an existing one's body in place, and
+`read_file_content` returns a plain-text rendering rather than the real
+document, so writing it back would destroy the master's formatting. The
+amendment is therefore recorded as its own dated document in the Brain folder,
+naming the exact line to insert under LANGUAGE RULES. Inserting it into
+"00 ARRINGTON BRAND OPERATING SYSTEM" is a one-line paste and is Tom's.
 
 ## Evidence: the Built proof section (14/09/2026)
 

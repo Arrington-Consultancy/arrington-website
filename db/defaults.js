@@ -84,8 +84,8 @@ const defaults = {
   // Case Study 2 - Tristan
   'casestudy2.label': 'Case study',
   'casestudy2.heading': 'The VAT Intervention',
-  'casestudy2.intro': 'I walked into a business where the growth was real but the oversight was non-existent. Tristan had built a success, but the back office was a black hole.',
-  'casestudy2.body': 'The VAT had been incorrectly managed for over a year, creating a hidden liability that was threatening to swallow the company\'s entire cash reserve. I didn\'t just find the error; I sat in the room, untangled eighteen months of forensic data, and rebuilt the reconciliation process from scratch.',
+  'casestudy2.intro': 'We walked into a business where the growth was real but the oversight was non-existent. Tristan had built a success, but the back office was a black hole.',
+  'casestudy2.body': 'The VAT had been incorrectly managed for over a year, creating a hidden liability that was threatening to swallow the company\'s entire cash reserve. We didn\'t just find the error; we sat in the room, untangled eighteen months of forensic data, and rebuilt the reconciliation process from scratch.',
   'casestudy2.outcome': 'We corrected the filing, secured the position with HMRC, and saved the business from a <strong>six-figure cash flow collapse</strong>. It wasn\'t about "consultancy". It was about having the stomach to fix the mess the owner was too busy to see.',
 
   // Assessment

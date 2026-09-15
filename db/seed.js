@@ -6332,6 +6332,104 @@ async function seed() {
   }
 
 
+  // Migration: the VAT Intervention into "we" voice (15/09/2026).
+  //
+  // Tom's brand decision, the day after the case study was restored to the
+  // home page: "normal Arrington website/commercial copy must use 'we', not
+  // 'I'. First person is reserved for Useful Thinking where it is
+  // deliberately Tom's personal voice."
+  //
+  // The restored section was attached exactly as it stood, which was right
+  // under the instruction at the time ("use only the existing approved
+  // copy") and left two first-person sentences on the home page. This is the
+  // correction, and it is a PRONOUN CHANGE ONLY.
+  //
+  // What is deliberately NOT touched, because the instruction was to
+  // preserve the facts, the meaning and the evidence exactly:
+  //   - every fact: over a year of mismanaged VAT, eighteen months of data,
+  //     Tristan, HMRC, the six-figure cash flow collapse;
+  //   - the outcome row, which already reads "We corrected the filing...";
+  //   - the heading and label, which carry no pronoun;
+  //   - the other home page case study (casestudy__7), which is third
+  //     person ("Tom took full financial control"), not first. That is the
+  //     approved Evidence-page wording and a different question from this
+  //     one, so changing it would be scope this decision did not open.
+  //
+  // Guarded on the EXACT current value of each key, so a CMS edit always
+  // wins and a partial match is fine: the log says how many of the two
+  // actually moved. Scoped by key rather than by value, and the keys belong
+  // to the base casestudy2 instance, which is the one on the home page.
+  // casestudy2__2 on the Evidence page is a different case study entirely
+  // and could not match these strings anyway.
+  //
+  // KNOWN AND LEFT ALONE: casestudy2__3 is an orphaned, byte-identical
+  // duplicate of this copy sitting on no page. It is a superseded draft, so
+  // it renders nowhere and changing it is not this correction. It is
+  // recorded in CLAUDE.md instead, because the CMS "Reuse existing" tab
+  // does list orphans, and that is the one route by which this first-person
+  // wording could come back.
+  {
+    const WE_VOICE_MARKER = 'homepage.vat_intervention_we_voice_2026-09-15';
+    const REWRITES = [
+      {
+        key: 'casestudy2.intro',
+        from: 'I walked into a business where the growth was real but the oversight was non-existent. Tristan had built a success, but the back office was a black hole.',
+        to: 'We walked into a business where the growth was real but the oversight was non-existent. Tristan had built a success, but the back office was a black hole.'
+      },
+      {
+        key: 'casestudy2.body',
+        from: "The VAT had been incorrectly managed for over a year, creating a hidden liability that was threatening to swallow the company's entire cash reserve. I didn't just find the error; I sat in the room, untangled eighteen months of forensic data, and rebuilt the reconciliation process from scratch.",
+        to: "The VAT had been incorrectly managed for over a year, creating a hidden liability that was threatening to swallow the company's entire cash reserve. We didn't just find the error; we sat in the room, untangled eighteen months of forensic data, and rebuilt the reconciliation process from scratch."
+      }
+    ];
+
+    const { rows: markerRows } = await db.query(
+      'SELECT 1 FROM content WHERE section_key = $1', [WE_VOICE_MARKER]
+    );
+
+    if (markerRows.length === 0) {
+      // Only act once the rows actually exist, so a fresh database that has
+      // not reached this content yet still gets its chance on a later boot.
+      const { rows: presentRows } = await db.query(
+        "SELECT 1 FROM content WHERE section_key = 'casestudy2.intro' LIMIT 1"
+      );
+
+      if (presentRows.length) {
+        let updated = 0;
+        let alreadyCorrect = 0;
+        for (const { key, from, to } of REWRITES) {
+          const { rowCount } = await db.query(
+            'UPDATE content SET content = $1 WHERE section_key = $2 AND content = $3',
+            [to, key, from]
+          );
+          updated += rowCount;
+          if (rowCount === 0) {
+            // Either a fresh database that seeded the corrected default, or a
+            // CMS edit that wins. Those are different facts and the log must
+            // not present one as the other.
+            const { rows: sameRows } = await db.query(
+              'SELECT 1 FROM content WHERE section_key = $1 AND content = $2',
+              [key, to]
+            );
+            if (sameRows.length) alreadyCorrect += 1;
+          }
+        }
+        const untouched = REWRITES.length - updated - alreadyCorrect;
+        console.log(
+          "VAT Intervention voice: " + updated + " row(s) changed to 'we', " +
+          alreadyCorrect + ' already correct, ' + untouched +
+          ' left alone (edited since, so the CMS wins).'
+        );
+
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [WE_VOICE_MARKER, 'true']
+        );
+      }
+    }
+  }
+
+
   // Arrington AI Workspace: ingest the encrypted snapshot into
   // workspace_records. A no-op when WORKSPACE_SNAPSHOT_KEY is unset, and
   // never fatal: an ingest failure records itself as a failed sync run
