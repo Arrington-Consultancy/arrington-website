@@ -134,8 +134,8 @@ async function runLevelOneProbe(db, opts = {}) {
   try {
     if (armed && armed !== 'true' && armed !== 'false') {
       const { rows } = await db.query(
-        "SELECT created_at FROM scott_activity WHERE actor = 'system' AND summary LIKE $1 ORDER BY created_at DESC LIMIT 1",
-        [`${MARKER_EVENT}:${armed}%`]
+        "SELECT created_at FROM scott_activity WHERE event_type = $1 AND summary LIKE $2 ORDER BY created_at DESC LIMIT 1",
+        [MARKER_EVENT, `${armed} %`]
       );
       spentRows = rows;
     }
@@ -151,8 +151,8 @@ async function runLevelOneProbe(db, opts = {}) {
   }
 
   try {
-    await db.query("INSERT INTO scott_activity (actor, summary) VALUES ('system', $1)",
-      [`${MARKER_EVENT}:${decision.label} started ${new Date().toISOString()}`]);
+    await db.query("INSERT INTO scott_activity (actor, event_type, summary) VALUES ('system', $1, $2)",
+      [MARKER_EVENT, `${decision.label} started ${new Date().toISOString()}`]);
   } catch (err) {
     console.error('Level 1 probe: could not write the marker, refusing to run:', err.message);
     return;
@@ -248,8 +248,8 @@ async function runLevelOneProbe(db, opts = {}) {
   leaks.forEach((l) => console.error(`  LEAKED ${l.leaked.join(', ')} on "${l.ask}" (${l.why})`));
 
   try {
-    await db.query("INSERT INTO scott_activity (actor, summary) VALUES ('system', $1)",
-      [`${MARKER_EVENT}:${decision.label} finished — ${verdict}`]);
+    await db.query("INSERT INTO scott_activity (actor, event_type, summary) VALUES ('system', $1, $2)",
+      [MARKER_EVENT, `${decision.label} finished — ${verdict}`]);
   } catch (e) { /* the log is the record; a failed insert must not mask the verdict */ }
 }
 
