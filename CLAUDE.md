@@ -2448,6 +2448,103 @@ run on 07/09/2026 against a fresh local database with a stub model at
 history and pending line arrive on every model turn. Governance
 addendum in `review/chat-drafted-invoices-governance-submission-2026-09-06.md`.
 
+### A real invoice request read as a conversation (15/09/2026)
+
+Tom typed an invoice request into Ask Ruth on production naming Tim Hunt
+at World Student Advisors and GBP 533, with no email address in it.
+**Nothing was raised.** No draft, no approval card, and two replies that
+implied otherwise: *"I can then have the invoice prepared for your
+approval"*, and after he confirmed the address, *"That action sits with
+the invoicing queue based on your instruction, not with me."* There was
+no queue entry and nothing was being prepared.
+
+**The defect was never in the model, and that is the thing to hold onto.**
+`invoiceIntent.parse` is the ONLY thing that raises a draft, so a
+sentence it does not read is a sentence nothing acts on, and whatever
+answers instead is answering about a business it cannot change.
+`INTENT_RE` wanted either a verb from a five-word list within 40
+characters of "invoice", or "invoice" within 20 of "to"/"for". Tom used
+"invoice" AS the verb with the customer's name in between, so neither
+fired, and the `loose` reading needs an address, which the sentence did
+not carry. It went to the model, and the model was free to offer what
+only the parser can do.
+
+Three changes, and the second and third only exist because the first
+one lands:
+
+1. **A verb with an amount is an invoice request, address or no
+   address.** `invoice`, `bill` or `charge` plus a figure raises an
+   INCOMPLETE draft that asks for what is missing, instead of the whole
+   request falling through. It is still only a draft behind an approval
+   card, so a wrong reading costs one discard; this false negative cost
+   a real client invoice.
+2. **A question is never an instruction.** "How much did we invoice
+   Orca, GBP 533?" must not raise a card, so a question opener or a
+   trailing question mark stands the parser down. A sentence OPENING
+   with a request word ("can you invoice Tim Hunt GBP 533?") is an
+   instruction however it ends, which is the same reasoning as the
+   Scott signpost's `KNOWLEDGE_OPENERS` guard and is why "can" is not
+   in the question list. This narrows the parser, including on two
+   shapes it used to accept, which is the safe direction on a path that
+   drafts real invoices.
+3. **The customer survives.** A name is now read from between the verb
+   and the amount, so the card says "to Tim Hunt at World Student
+   Advisors" rather than "to (no customer)". The trap is the follow-up:
+   an address typed on its own to complete the draft carries no name, so
+   `extractFields` falls back to the local part, and without a guard
+   "tim.hunt" would overwrite the name Tom typed. **That guard must not
+   over-reach**: SWAPPING one address for another is a different
+   customer and the new name does follow it, or the wrong person ends up
+   on a real invoice. The discriminator is whether the draft's address
+   was blank.
+
+Two smaller defects were visible in the same output and fixed with it: a
+dangling preposition ("for Tim Hunt at WSA for GBP 533") left the
+customer, with the "for" still attached, as the job description; and
+where both readings land on the same words the description is cleared,
+because the customer is not the job and a draft should ask rather than
+invent.
+
+**Four prompt rules**, since the model's half of this was real too: never
+offer to prepare, raise, arrange or queue anything and never describe
+another part of the system acting on the owner's instruction (nothing is
+waiting unless the server's own line says so); say a caveat ONCE; do not
+narrate your own limits. The caveat rule is worded to narrow WHEN a
+caveat is repeated and never WHETHER it is given, and is asserted in the
+same test as the stale-record rule and the no-actions rule, because the
+easiest way to satisfy "stop hedging" is to stop being honest. That is
+the same mistake caught mid-flight in Scott's date fix the same day.
+
+**Tests:** `test/workspace/invoiceRequestReading.test.js`, 9, seven of
+which were watched red against the pre-fix head. The two that stay green
+both ways are deliberate: they guard this fix against over-reaching, and
+they are exactly the cases a careless widening would break.
+
+**Verified over real HTTP** against a freshly seeded throwaway database
+with a local server, not by reading: "invoice Tim Hunt at World Student
+Advisors GBP 533" raises approval #1 as an incomplete draft-only card,
+"for the September retainer" and then the address on its own each revise
+THAT ROW in place (never a second row), the name Tom typed survives both,
+"send it" flips the mode to create and send, and the approvals page shows
+one row reading `Zoho invoice (create and send): GBP 533.00 to Tim Hunt
+at World Student Advisors ...`. No model call in any of the four turns.
+An invoice QUESTION asked with that draft still pending was passed
+through untouched and raised no second card.
+
+**Not a governance expansion.** No Zoho scope, execution gate or source
+class changed. `ENABLE_ZOHO_INVOICE_WRITES` is untouched, and creating
+and emailing still needs the flag, a named person, a browser
+confirmation and a spent-once approval. What changed is which typed
+sentences reach the approval queue as drafts, inside the capability
+already recorded in
+`review/chat-drafted-invoices-governance-submission-2026-09-06.md`.
+
+**Still open, reported rather than changed:** every general-lane answer
+prints a provenance line naming all 16 records it was given, which is
+most of the height of a reply. That is honest and it is not what failed,
+and the real fix is the general lane supplying fewer records, which is a
+routing change. Left alone deliberately.
+
 ### Zoho Invoice connector, reads and writes (06/09/2026, live)
 
 Arrington's real invoicing is Zoho Invoice, EU data centre, organisation
