@@ -125,16 +125,23 @@
         </div>
 
         <%
-          // The Level 1 ceiling. Generated from the cap in
-          // lib/scott/progression.js, not written next to it: at Level 1
-          // the workers genuinely cannot read the job, the price or the
-          // capacity, so this sentence is a description of the system
-          // rather than a caption on it. If the cap changes, this changes.
+          // WHAT LEVEL 1 SAYS ABOUT ITSELF, rewritten 15/09/2026.
+          //
+          // There was a "what I cannot see yet" warning here, generated
+          // from a source-class cap that Level 1 used to apply. Both are
+          // gone: under SAME BRAIN, MORE TOOLS, BIGGER WORKSPACE a level
+          // never withholds a fact, so a sentence claiming it does would
+          // be false, and this front page's whole job is to be believed.
+          //
+          // What replaced it says the true thing instead. The assistant
+          // here is the same one at every step; what a bigger workspace
+          // adds is applications. `ceiling` is still passed and is always
+          // null, so the old block cannot quietly come back.
         %>
-        <% if (ceiling) { %>
+        <% if (caps.level === 1) { %>
         <div class="sc-ceiling">
-          <span class="sc-ceiling-mark" aria-hidden="true">&#9888;</span>
-          <div class="sc-ceiling-body"><strong><%= ceiling.heading %></strong><%= ceiling.body %></div>
+          <span class="sc-ceiling-mark" aria-hidden="true">&#9679;</span>
+          <div class="sc-ceiling-body"><strong>This is the whole assistant, in a small workspace</strong>Ask it anything about the business and it answers from the company's own records. What the next steps add is not a cleverer assistant, it is more of the business attached to it: email, a diary, invoicing, the team, the books.</div>
         </div>
         <% } %>
 
@@ -199,15 +206,61 @@
               "Has anything changed on today’s schedule?"
             ]
           };
-          var activeSuggestions = PERSONA_SUGGESTIONS[personaId] || PERSONA_SUGGESTIONS["scott_mercer"];
+          // THE OWNER'S QUESTIONS FOLLOW THE LEVEL, because a step that
+          // adds tools should be asked something those tools answer
+          // (15/09/2026). Offering "show me the commercial leakage
+          // opportunities" at My Business is a fair question with a fair
+          // answer, and it demonstrates nothing about the diary and the
+          // invoicing that step just added.
+          //
+          // Only the owner's list varies. The other personas' lists are
+          // about their ROLE, which a level does not change: Mike Evans
+          // asks what he is driving today whatever is on screen.
+          //
+          // Everything here is answerable at the level it appears at, and
+          // several are deliberately answerable BELOW it too. That is the
+          // point of the model: the questions are not gated, the tools
+          // are.
+          var OWNER_BY_LEVEL = {
+            2: [
+              "Send an invoice to Moorland Holiday Lets £850 for two wingback chairs re-upholstered",
+              "What is in the diary this week?",
+              "Which jobs are at risk this week?",
+              "Which invoices are overdue at the moment?",
+              "Who has been in touch that I have not replied to?"
+            ],
+            3: [
+              "What does Scott see that Tony doesn’t?",
+              "Is there anything that needs my approval today?",
+              "Which jobs need sign-off before they can go out?",
+              "What stock do we need to order before it becomes a problem?",
+              "Who is doing what this week?"
+            ],
+            4: [
+              "Where are we losing money we’re not tracking?",
+              "Show me the commercial leakage opportunities",
+              "What does the VAT position look like?",
+              "Find me work nobody has asked us for yet",
+              "What has the company learned recently?"
+            ]
+          };
+          var activeSuggestions = (personaId === 'scott_mercer' && OWNER_BY_LEVEL[caps.level])
+            || PERSONA_SUGGESTIONS[personaId]
+            || PERSONA_SUGGESTIONS["scott_mercer"];
         %>
         <%
-          // Gated to Level 2 and up. These are business questions — "where
-          // are we losing money", "show me the commercial leakage" — and at
-          // Level 1 they sit directly under a note saying the system can
-          // read the incoming message and nothing else. Offering them there
-          // contradicts the ceiling on the same screen, which is worse than
-          // offering nothing. The chat's own starter prompts remain.
+          // Level 2 and up, and the reason changed on 15/09/2026 when the
+          // knowledge ceiling was removed.
+          //
+          // It used to be that these questions contradicted a note on the
+          // same screen claiming Level 1 could read almost nothing. That
+          // note is gone and every question here is answerable at Level 1
+          // too, so nothing is being withheld. It is now a question of
+          // COMPOSITION: Level 1's whole product is one box and a couple of
+          // starters, and six more chips under it would undo the calm that
+          // is the point of that state. The chat's own three starters
+          // remain, and one of them is deliberately an action, so Level 1
+          // still demonstrates the model rather than just looking tidy.
         %>
         <% if (caps.showBusinessContext) { %>
         <div class="sc-suggestions-wrap">

@@ -17,7 +17,7 @@
 <nav class="sc-rail" aria-label="How much of the business you are seeing">
   <div class="sc-rail-intro">
     <span class="sc-rail-eyebrow">A demonstration in four steps</span>
-    <span class="sc-rail-hint">Move in either direction. Nothing reloads and nothing is lost.</span>
+    <span class="sc-rail-hint">Move in either direction. Nothing reloads and nothing is lost. The size of the organisation dictates the workspace needed, so these are four examples rather than four stages.</span>
   </div>
   <ol class="sc-rail-steps">
     <% _lvls.forEach(function (st) { %>
@@ -34,6 +34,15 @@
           <span class="sc-rail-text">
             <span class="sc-rail-label"><%= st.label %></span>
             <span class="sc-rail-sub"><%= st.sub %></span>
+            <%
+              // The size of business this workspace suits. It is what turns
+              // the rail from four stages of maturity into four examples,
+              // which is the honest reading: a sole trader is not an
+              // immature version of a company, they just need less on
+              // screen. Guarded so an older level register without the
+              // field renders the rail rather than the word "undefined".
+            %>
+            <% if (st.orgSize) { %><span class="sc-rail-org"><%= st.orgSize %></span><% } %>
           </span>
         </button>
       </li>

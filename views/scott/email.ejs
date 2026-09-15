@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email | Scott's Armchair &amp; Knitting Service</title>
+  <meta name="robots" content="noindex, nofollow">
+  <%- include('partials/styles') %>
+</head>
+<body class="scott-body">
+  <div class="sc-shell">
+    <%- include('partials/sidebar', { active: 'email', navCounts: navCounts }) %>
+    <main class="sc-main">
+      <%- include('partials/progression-rail') %>
+      <% if (typeof isImpersonating !== 'undefined' && isImpersonating) { %>
+        <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
+      <% } %>
+
+      <div class="sc-page-header">
+        <div>
+          <h1 class="sc-h">Email</h1>
+          <p>Every conversation with a customer, in one place. These are the same enquiries that appear on Messages and the same jobs that are on the board, so nothing here can quietly disagree with the rest of the business.</p>
+        </div>
+      </div>
+
+      <% if (mailbox.withheld) { %>
+        <div class="sc-card sc-empty-note">
+          <p>Your clearance does not cover customer correspondence, so this mailbox is empty for you.</p>
+        </div>
+      <% } else if (!mailbox.threads.length) { %>
+        <div class="sc-card sc-empty-note"><p>No correspondence on file.</p></div>
+      <% } else { %>
+        <div class="sc-mail">
+          <div class="sc-mail-list">
+            <% mailbox.threads.forEach(function (t, i) { %>
+              <a class="sc-mail-row<%= t.unread ? ' is-unread' : '' %><%= i === 0 ? ' is-open' : '' %>" href="#thread-<%= t.id %>">
+                <span class="sc-mail-row-top">
+                  <span class="sc-mail-from"><%= t.correspondent %></span>
+                  <span class="sc-mail-when"><%= t.when %></span>
+                </span>
+                <span class="sc-mail-subject"><%= t.subject %></span>
+                <span class="sc-mail-preview"><%= t.preview %></span>
+                <span class="sc-mail-tags">
+                  <span class="sc-mail-tag"><%= t.channel %></span>
+                  <% if (t.awaitingReply) { %><span class="sc-mail-tag sc-mail-tag-wait">Awaiting reply</span><% } %>
+                </span>
+              </a>
+            <% }); %>
+          </div>
+
+          <div class="sc-mail-reading">
+            <% mailbox.threads.forEach(function (t, i) { %>
+              <article class="sc-mail-thread" id="thread-<%= t.id %>">
+                <header class="sc-mail-thread-head">
+                  <h2><%= t.subject %></h2>
+                  <p><%= t.correspondent %> &middot; <%= t.address %> &middot; arrived by <%= t.channel %></p>
+                </header>
+                <% t.mails.forEach(function (m) { %>
+                  <div class="sc-mail-item sc-mail-item-<%= m.direction %>">
+                    <div class="sc-mail-item-head">
+                      <strong><%= m.from %></strong>
+                      <span><%= m.when %></span>
+                    </div>
+                    <p><%= m.body %></p>
+                  </div>
+                <% }); %>
+                <div class="sc-mail-compose">
+                  <p class="sc-mail-compose-note">
+                    Replies are drafted here and go to Approvals before anything leaves the building.
+                    This workspace never sends on its own.
+                  </p>
+                  <a class="sc-btn sc-btn-outline" href="/scott/enquiries/<%= t.id %>">Open the enquiry</a>
+                </div>
+              </article>
+            <% }); %>
+          </div>
+        </div>
+      <% } %>
+      <%- include('partials/deeper-dive') %>
+    </main>
+  </div>
+</body>
+</html>

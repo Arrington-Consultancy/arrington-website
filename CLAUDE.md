@@ -1153,6 +1153,256 @@ database on either branch.
   `create-deployment` call that made a new service instead of targeting
   scott-demo; it has crashed, holds no variables, no domain and no data.
 
+## Scott: SAME BRAIN, MORE TOOLS, BIGGER WORKSPACE (15/09/2026, staging only)
+
+**This reverses the Level 1 knowledge ceiling described in the section above,
+on the same day it shipped.** Branch `claude/scott-progressive-experience`,
+commit `e9e8236`. NOT merged, NOT on production. The section above is left as
+written: it is the accurate record of what production is serving today, and
+where the two disagree this one is the current design.
+
+Tom settled the model after using the live build: **the four levels are about
+visualisation, workspace size and connected capability, not different
+intelligence.** The progression exists because showing the whole Scott
+environment at once was visually too large to understand. Moving right reveals
+a bigger WORKSPACE around the same AI. Level controls tools. Clearance controls
+what a human may know or do. They are kept completely separate.
+
+### The ceiling is gone, and what replaced it is stronger
+
+Level 1 used to cap a worker's readable source classes to `['leads']`, put a
+"what I cannot see yet" note on screen, and withhold `CURRENT_OPERATING_POSITION`
+from the prompt to make that note true. All three are gone.
+`contextDomainCap` and `levelAllowsDomain` are **deleted rather than left
+returning a permissive value** (an inert narrowing function is the shape of
+workspace finding W1), `buildContext` no longer takes a level, and
+`test/scott/levelOneCeiling.test.js` now asserts the prompt is **byte-identical
+whatever level is passed** — the strongest form, because it cannot rot.
+
+Two properties replace the old one, running in opposite directions on purpose,
+both asserted:
+
+- **Scott at Level 1 knows what Scott at Level 4 knows.** Shrinking the
+  workspace must not delete authorised knowledge.
+- **Mike Evans at Level 4 knows what Mike Evans at Level 1 knows.** Growing it
+  must not grant anything.
+
+**The honest-answer protection did not go with the cap.** It moved to the
+standing rule in `GOVERNANCE_PREAMBLE` that a worker must not state a figure it
+cannot derive from something it can see — level-independent, persona-independent,
+which is stronger than the thing it replaced. Two tests pin it, because that is
+exactly the protection a reversal like this is most likely to lose by accident.
+
+### One registry, which is the architectural point
+
+`lib/scott/capabilityRegistry.js` is the single place deciding where a
+capability first becomes available. The nav, the level gating, the view flags
+and the "available in My Business" behaviour all derive from it. The capability
+booleans that lived in `progression.js` and the destination list that lived in
+`sidebar.ejs` are both gone; a test asserts the sidebar hard-codes no
+`/scott/...` destination.
+
+**The two legs are ANDed in exactly one function** (`available()`): the level
+says how big the workspace is, `requiresDomain` says what this person may see or
+do, and neither may stand in for the other. A level still grants nothing.
+
+Moving a capability between levels is a one-line edit to a table. That is
+deliberate future-proofing: the four states **may** later become separately
+sold products, so the architecture has to support that without a rebuild. **No
+price is set and none is implied**, and nothing assumes it will happen.
+
+### The allocation (Tom's, 15/09/2026, expected to move)
+
+| Level | Arrives |
+|---|---|
+| 1 My Workspace | Ask AI, Today, Messages, Tasks |
+| 2 My Business | Email, Calendar, Jobs & Orders, Customers, Pipeline & Quotes, Sales & Invoices, Company Brain browsing |
+| 3 My Team | Viewing as, the team strip, People, Stock, Purchase Orders, Complaints, Quality Control, Assets, Approvals, enquiry assignment |
+| 4 My Whole Company | Banking & Accounting in full, Marketing, Social, Where the Money Goes, Lead Finder, Needs Human Input, Activity & Audit, Premises, provenance |
+
+Measured in a real browser: **3 → 10 → 19 → 26 destinations**, main column
+**1165 → 1633 → 1835 → 1948px**. `progressionLeakage.test.js` marks these as
+CONFIGURATION assertions rather than invariants, so moving something is a
+deliberate act with a test to update; the invariant beside them (every level
+keeps everything below it, and adds) does not need touching when it moves.
+
+**One deliberate exception to "strictly grows":** Sales & Invoices stands down
+at Level 4, where the whole Banking & Accounting area arrives. `supersededBy` in
+the registry. The capability is not withdrawn and the route is unchanged.
+
+**The finance area already split where the level boundary wanted to be**, and
+has since 01/09/2026: the Sales tab needs `invoice_status`, every other tab
+needs `finance_full`. The money split rides on reviewed structure rather than a
+new one.
+
+### Knowing something is different from having the tool to do it
+
+`detectUnavailable()` is deterministic and runs BEFORE the model. Tom's own pair:
+
+- *"What does Mrs Jones owe us?"* — answered at every level, from the same brain.
+- *"Invoice Mrs Jones for £160."* — understood, and signposted: **"I can do that
+  in My Business, where raising invoices is available."** plus a button that
+  changes level and carries the sentence across in `sessionStorage`.
+
+**The request is put in the box on arrival, not sent.** Arriving somewhere new
+to find a message already away on your behalf is the wrong kind of surprise.
+
+**A sentence opening with what / which / who / when / where / why / how is NEVER
+diverted.** That guard is load-bearing: without it the knowledge ceiling comes
+back through the side door one sentence at a time. "Can you invoice Mrs Jones?"
+is deliberately not caught by it, because "can" opens a request rather than a
+question about the business. The intent phrases are action-shaped for the same
+reason, so the guard is the second line rather than the only one.
+
+The model is told the tool is absent and must not claim the action was done. The
+visitor text carries **no worker name, capability id, level number or routing
+language** — pinned by test. Where a level would not help (Mike Evans asking for
+Lead Finder, which needs a clearance he will never hold), it stays silent and
+the ordinary refusal stands, rather than selling him a destination that will
+still refuse him.
+
+### Four new surfaces, built from the company that already exists
+
+`lib/scott/workspaceApps.js`. Tom's condition was reuse, not a second fictional
+world, and the tests are mostly about what these must NOT contain: no customer,
+no job reference, no price, no staff name appears in that module.
+
+- **Messages** is the enquiries surface under the name a sole owner would use.
+  Same route, same records. The page heading reads its own name out of the
+  registry, so the nav and the heading cannot disagree.
+- **Email** is a reading of the enquiries plus their activity trail. **There is
+  no send** — Scott refuses external actions by construction everywhere else,
+  and a reply drafts and goes to Approvals. Addresses derive to
+  `@example.invalid`, which can never route anywhere.
+- **Calendar** is the jobs' own `promised_date` and `collection_date`. The price
+  stays `job_margin` and not `jobs_ops`, so somebody who may see the diary does
+  not learn what the work earns by looking at it sideways.
+- **Tasks** is the only one storing anything: `scott_tasks`, a line of text and
+  a flag, no foreign key, seeded idempotently from work genuinely outstanding.
+
+**`scott_tasks` is created by the module, not in `db/schema.sql`**, deliberately:
+this is unmerged work, and the 29/08/2026 release incident (a column referencing
+a table created later in the file, invisible everywhere with history and fatal
+on the one database without) is reason enough to keep a new table out of the
+shared schema until the feature is going somewhere. **Worth knowing before this
+merges: `scott-demo` staging shares PRODUCTION's Postgres, so visiting
+`/scott/tasks` on staging creates that table in the production database.** It is
+additive and `scott_`-prefixed and nothing in production reads it, but it is the
+documented shared-database problem showing up again.
+
+**The calendar opens where the work is.** The seeded jobs carry fixed dates, so
+"this week" is empty whenever the demo runs outside them, which is most of the
+time and gets worse daily. Rather than move the work, it picks the nearest week
+that has any and says so on the page. An explicit `?w=` always wins, so a
+visitor who has navigated is never yanked elsewhere.
+
+### Three defects found by looking rather than by reading
+
+1. **The collapsible nav groups were closed by default**, so at Level 4 sixteen
+   of twenty-six destinations sat behind two folds and the state whose whole job
+   is to look like a complete operating environment rendered a SHORTER sidebar
+   than the one below it. Open by default now.
+2. **The chevron was double-escaped** (`'\\203A'`), so every group heading
+   rendered the literal text `\203A`.
+3. **The chat started naming the specialists at Level 3 while the strip
+   introducing them was tied to a Level 4 capability**, so a visitor met "Gareth
+   Bell, Commercial" in an answer a whole level before anything said who he was.
+   `showTeamStrip` is tied to `team_view` now, and a test asserts the two arrive
+   together.
+
+The EJS parser trap bit again, for the third time on this branch: **an EJS open
+tag inside a JS comment is still hunted for its closer.** There is now a note in
+`sidebar.ejs` saying so.
+
+### It made itself look weak twice in two messages (15/09/2026)
+
+Tom, using the live staging build: *"makes us look shit twice in two
+messages."* He was right, and neither was a leak, a permission fault or
+anything a clearance sweep would ever catch. **It was the system talking
+itself down in front of a prospect**, which is a class of defect this
+project had no tests for at all until now.
+
+**1. It hedged four times over.** Asked how many hours the team would do,
+it gave a sound estimate and then spent the rest of the reply undermining
+it: it could not give "certified figures", the total was "a working figure
+rather than something you can rely on to the hour", and the record it
+lacked was named twice. Meanwhile the interface had ALREADY printed a
+certainty badge under it. Four statements of the same caveat, and an
+answer that sounds like it does not believe itself.
+
+The prompt is now explicit that the badge exists and that the caveat is
+one short clause, with the exact sentence it produced quoted back as
+forbidden. **It did NOT overcorrect:** `certainty` still has to be LIKELY
+and "Never present a guess AS the record" is untouched, both pinned, because
+an estimate stated as a filed figure is the worse failure.
+
+**2. Asked the date, it said "I can't tell you today's real date, but this
+demonstration's snapshot is dated 29 August 2026."** Three defects in one
+sentence.
+
+- **Nothing told it the date.** A business assistant that does not know
+  what day it is looks like a toy. `todayBlock()` in `orchestrator.js` now
+  puts it in every prompt, **computed per call and never at module load**:
+  `GOVERNANCE_PREAMBLE` is a module-level constant, so a date interpolated
+  there would freeze at container boot and drift a day further from the
+  truth every day the deployment stayed up. Wrong and confident is worse
+  than absent.
+- **The prompt handed it the vocabulary.** `CURRENT_OPERATING_POSITION`
+  opened with `SNAPSHOT_LABEL`, which reads *"Scott AI Demonstration
+  snapshot v0.2-partial, transcribed from Drive on 2026-08-29"*. That
+  string exists for traceability between this code and the Drive records
+  and had no business being in a prompt. The header is now
+  `as at 2026-08-29` in plain language; the traceability moved to
+  `config.js`, a comment and the boot log, where it was always meant to be.
+- **It volunteered it unasked.** A new rule separates *being asked what
+  this is* from *an ordinary business question*.
+
+**THE HONESTY RULE WAS NOT TOUCHED, and the first version of this fix got
+that wrong.** I initially wrote a "never break character" block telling
+the worker it is not a demonstration. That directly contradicts Tom's own
+standing rule ("If a visitor asks what this is, say so plainly... you must
+not pretend the demonstration itself is something other than a
+demonstration") and would have made it lie when asked directly. Caught and
+rewritten before it ran. The rule that shipped narrows only WHEN the
+subject comes up, says in its own text that it does not soften the honesty
+rule, and both are asserted together so neither can be quietly dropped for
+the other.
+
+**3. It repeated a stale "next week".** The records are written as at 29
+August and say things like "this week"; read out in mid-September that
+made Ravi's annual leave "next week" when it had already happened. The
+prompt now says to translate those to actual dates rather than repeat them.
+This is the one of the three that was always latent and gets worse every
+day the snapshot ages.
+
+**The badges were reworded too.** "Likely, not certain" and "Unproven,
+insufficient evidence" are certainty-theory labels. A business says
+**"Worked out, not filed"** and **"Not enough to go on"**, which is the
+same claim without sounding like a disclaimer.
+
+Covered by `test/scott/answerQuality.test.js`. Stated for what it is: these
+are prompt-rule tests, so they prove the instruction is present and the
+failing sentence is forbidden by name. Whether the model then obeys is a
+live question, and the paid pressure suite is where that gets answered.
+
+### Evidence
+
+**649 Scott tests pass, 0 fail.** New: `capabilityRegistry.test.js` (31),
+`workspaceApps.test.js` (27). `levelOneCeiling.test.js` rewritten to assert the
+opposite of what it asserted that morning, with the history kept in the file
+rather than deleted. Full `npm test` on a genuinely fresh database exits 0, with
+the eight documented gated suites named on the run as always.
+
+Verified in a real browser against a local instance: the four states, the task
+add and tick round trip, the calendar opening on a week with work, and **every
+hidden route still answering 200 when typed at Level 1**, because hiding is not
+gating and a route that 404'd on a nav setting would be a second access model.
+
+**Not verified:** anything against the live model. `ENABLE_SCOTT_AI` was off
+locally, so the signpost's effect on a real reply, and the workspace note
+reaching the workers, are proven by unit test and by the prompt that is built,
+not by a live turn.
+
 ## Public prices: settled, and not a discount (14/09/2026)
 
 Tom confirmed the current public prices, and confirmed them as settled rather

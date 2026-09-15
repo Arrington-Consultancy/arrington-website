@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tasks | Scott's Armchair &amp; Knitting Service</title>
+  <meta name="robots" content="noindex, nofollow">
+  <%- include('partials/styles') %>
+</head>
+<body class="scott-body">
+  <div class="sc-shell">
+    <%- include('partials/sidebar', { active: 'tasks', navCounts: navCounts }) %>
+    <main class="sc-main">
+      <%- include('partials/progression-rail') %>
+      <% if (typeof isImpersonating !== 'undefined' && isImpersonating) { %>
+        <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
+      <% } %>
+
+      <div class="sc-page-header">
+        <div>
+          <h1 class="sc-h">Tasks</h1>
+          <p>Your own list. It opens with the things the business already has outstanding, so it is never a blank page on a Monday morning.</p>
+        </div>
+      </div>
+
+      <form class="sc-task-add" method="POST" action="/api/scott/tasks">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="text" name="title" class="sc-task-input" maxlength="300" required
+               placeholder="Add something to the list" aria-label="New task">
+        <button type="submit" class="sc-btn sc-btn-primary">Add</button>
+      </form>
+
+      <% if (!tasks.open.length && !tasks.done.length) { %>
+        <div class="sc-card sc-empty-note"><p>Nothing on the list.</p></div>
+      <% } %>
+
+      <% if (tasks.open.length) { %>
+        <h2 class="sc-section-title">To do<span class="sc-task-count"><%= tasks.open.length %></span></h2>
+        <ul class="sc-task-list">
+          <% tasks.open.forEach(function (t) { %>
+            <li class="sc-task">
+              <form method="POST" action="/api/scott/tasks/<%= t.id %>/done">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="done" value="true">
+                <button type="submit" class="sc-task-tick" aria-label="Mark done">&#9744;</button>
+              </form>
+              <div class="sc-task-body">
+                <span class="sc-task-title"><%= t.title %></span>
+                <% if (t.detail) { %><span class="sc-task-detail"><%= t.detail %></span><% } %>
+              </div>
+              <% if (t.source === 'enquiry') { %>
+                <a class="sc-task-src" href="/scott/enquiries">From a message</a>
+              <% } else if (t.source === 'job') { %>
+                <a class="sc-task-src" href="/scott/jobs/<%= String(t.source_ref).replace('job:', '') %>">From the job board</a>
+              <% } %>
+            </li>
+          <% }); %>
+        </ul>
+      <% } %>
+
+      <% if (tasks.done.length) { %>
+        <details class="sc-task-done-fold">
+          <summary>Done recently (<%= tasks.done.length %>)</summary>
+          <ul class="sc-task-list sc-task-list-done">
+            <% tasks.done.forEach(function (t) { %>
+              <li class="sc-task is-done">
+                <form method="POST" action="/api/scott/tasks/<%= t.id %>/done">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <input type="hidden" name="done" value="false">
+                  <button type="submit" class="sc-task-tick is-ticked" aria-label="Mark not done">&#9745;</button>
+                </form>
+                <div class="sc-task-body"><span class="sc-task-title"><%= t.title %></span></div>
+              </li>
+            <% }); %>
+          </ul>
+        </details>
+      <% } %>
+      <%- include('partials/deeper-dive') %>
+    </main>
+  </div>
+</body>
+</html>
