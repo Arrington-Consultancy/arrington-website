@@ -56,7 +56,8 @@ test('the rewrite changes pronouns and nothing else', () => {
   // Pull the real from/to pairs out of the migration rather than restating
   // them here, so this test cannot pass against a migration that says
   // something different from what this file asserts.
-  const rewrites = [...block.matchAll(/from:\s*(['"])([\s\S]*?)\1,\s*\n\s*to:\s*(['"])([\s\S]*?)\3/g)]
+  const voiceOnly = block.slice(block.indexOf('const REWRITES = ['), block.indexOf('];', block.indexOf('const REWRITES = [')));
+  const rewrites = [...voiceOnly.matchAll(/from:\s*(['"])([\s\S]*?)\1,\s*\n\s*to:\s*(['"])([\s\S]*?)\3/g)]
     .map((m) => ({ from: m[2], to: m[4] }));
 
   assert.strictEqual(rewrites.length, 2, 'expected exactly the two rewritten rows');
@@ -84,7 +85,8 @@ test('the rewrite changes pronouns and nothing else', () => {
 test('every fact in the restored case study survives the rewrite', () => {
   const copy = [defaults['casestudy2.intro'], defaults['casestudy2.body'], defaults['casestudy2.outcome']].join(' ');
   for (const fact of [
-    'Tristan',
+    // 'Tristan' is deliberately absent: the home page carries a summary as of
+    // 15/09/2026, and the named client belongs to the fuller telling.
     'over a year',
     'eighteen months',
     'reconciliation process',

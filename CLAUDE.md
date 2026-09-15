@@ -4406,6 +4406,104 @@ it: `casestudy__4` copied to `casestudy__7`, `casestudy2` attached as it
 stands, Evidence and the ads page both unchanged, a redeploy a silent no-op,
 and a simulated CMS reorder by Tom left exactly as he set it.
 
+## The home page proof becomes a summary (15/09/2026)
+
+Tom inspected the restored home page on his phone. Restoring the two case
+studies was right commercially, but it put two FULL case studies on the page:
+several screens of proof before the existing twenty-years block and the
+testimonials, which reads as repetition. His instruction: keep both evidenced
+outcomes, convert each into a concise summary preserving the strongest
+evidenced problem, intervention and result, then route on to Evidence.
+
+**Three findings from doing it, each of which changed the work:**
+
+1. **The copy had brought the Evidence page's PHOTOGRAPH with it.** The
+   `casestudy` template supports `photo_key`, and the 14/09 restore copied
+   every row including that one. It never appeared in the local measurements
+   because the July snapshot has no `photo_key`, so the sandbox was measuring
+   a shorter section than production was serving. That photo is a large part
+   of the height Tom saw. It is cleared on the home page instance and stays
+   on Evidence.
+2. **The home page already routed to Evidence.** `filter__2` ("Built from
+   running real businesses for over 20 years") carries a "Read what we have
+   done" button to `/evidence`, sitting immediately after the two case
+   studies. A first draft of the migration added a second routing block; that
+   would have been more of the exact repetition being complained about. The
+   migration now checks the home page's own sections and adds nothing when a
+   route exists. An earlier version of that check asked the whole content
+   table and found a button on a different page entirely.
+3. **The VAT Intervention has no fuller version on Evidence.** Evidence
+   carries `casestudy__4` (Orca, in full) and `casestudy2__2`, which is a
+   DIFFERENT case study ("More Margin From the Work Already There"). So
+   "route to Evidence for the detail" is true for Orca and not for VAT: the
+   longer VAT telling now exists nowhere public. Recorded as an open item
+   below rather than fixed, because adding a case study to Evidence is not
+   what was asked for.
+
+**How the shortening is guarded.** Orca's rows were copied from Evidence the
+day before, so the guard is a live comparison against that source: if the home
+page row still equals the Evidence row it is an untouched copy and safe to
+replace, and if either side has been edited the row is left alone. The
+Evidence instance is only ever READ. VAT is guarded on exact current values.
+
+**Nothing was invented.** `test/homepageProofSummary.test.js` (7) pins that
+every quantity in the summary appears in the approved source, that the
+evidence Tom named by hand survives (insolvency, twenty four months, monthly
+profit, sold at a profit, marketable asset, Princess Yachts; VAT, HMRC,
+six-figure cash flow collapse, eighteen months), and that the result is
+materially shorter. Both guards were watched red against a planted invented
+figure. Their stated limit: the corpus check alone would pass a quantity moved
+between the two case studies, which is why the per-case check exists.
+
+Measured on a production-shaped rebuild: the two proof sections go from
+1931px to 1491px on an iPhone 13, before the photo removal, which production
+also gets.
+
+## The paid landing page was ALREADY corrected (15/09/2026)
+
+Tom asked me to apply the pronoun rule to the three first-person sentences I
+had reported on `business-consultant-devon`. **That report was wrong.** It was
+read off the committed July snapshot, and an unguarded migration dated
+01/08/2026 already converted all three to third person and replaced "constant
+firefighting" with "constant intervention". The live rows read "Tom was
+brought into an insolvent Devon business", "Tom rebuilt the structure" and
+"Separately, Tom built, grew and sold his own business".
+
+Third person is correct there and must not be changed to "we": it is Tom's own
+business that he built and sold, so "we built our own business" would state
+something untrue, and the Brand Operating System already says Tom's personal
+story is normally third person on the website.
+
+A redundant migration written before this was discovered has been removed
+rather than left in as dead code claiming to do something.
+
+**The lesson, which has now cost two wrong statements in two days:** the
+committed snapshot is from 21/07/2026 and the seed has applied many content
+migrations since. It is evidence of what production held in July, not of what
+it holds now. Check the seed's own migrations before reporting live copy.
+
+## Content debt: first person in the seeded defaults (recorded 15/09/2026)
+
+`db/defaults.js` holds **20 rows in first person** (`approach.label`,
+`approach.heading`, `approach.step_1_body` to `step_3_body`, `insights.heading`,
+`insights.subtext`, `insights.card_1_title`, `insights.card_2_body`,
+`intervention.subtext`, `casestudy.phase_2_body`, `assessment.intro`,
+`proofstrip.label`, `filter.heading`, `filter.p1`, `filter.p2`,
+`contact.heading`, `contact.body`, `biography.col_1_p1`, `biography.col_2_p1`).
+
+These are the **superseded pre-copy-review originals** that the live site
+stopped using in July 2026. They reach a **fresh database only** and no live
+page, which is why Tom's instruction of 15/09/2026 was explicitly not to mass
+rewrite them. Correcting them is twenty pieces of brand copy and needs Tom's
+wording, not a rewrite from memory.
+
+They matter in exactly one situation: a genuinely fresh database (a new
+environment, or a restore from empty) would seed a site whose voice
+contradicts the live one. Not urgent, but real.
+
+Testimonial quotations are NOT part of this debt. First person inside a client
+quote is correct and must stay.
+
 ## Pronouns: the Useful Thinking carve-out (15/09/2026)
 
 Tom's decision, verbatim: *"normal Arrington website/commercial copy must use
@@ -4474,15 +4572,32 @@ was touched, because that is not what the decision asked for.
   "Reuse existing" tab lists orphans, which is the one route by which this
   wording could come back onto a page.
 
-### Reserved to Tom
+### Reserved to Tom: the Brand OS master edit is BLOCKED on one authorisation
 
-The amendment to the Brand OS master itself. These tools can create a Drive
-document but not edit an existing one's body in place, and
-`read_file_content` returns a plain-text rendering rather than the real
-document, so writing it back would destroy the master's formatting. The
-amendment is therefore recorded as its own dated document in the Brain folder,
-naming the exact line to insert under LANGUAGE RULES. Inserting it into
-"00 ARRINGTON BRAND OPERATING SYSTEM" is a one-line paste and is Tom's.
+Tom asked (15/09/2026) for the master itself to be updated by a method that
+preserves the document and its formatting. **That is not currently possible
+with the tools this session holds, and it was checked rather than assumed:**
+
+- `mcp__Google_Drive__update_file` updates **metadata only** (title, parent).
+  It cannot touch a document body at all.
+- `read_file_content` returns a plain-text rendering, not the real document,
+  so writing it back would destroy every heading and style in the master. Tom
+  explicitly forbade that, and it would be wrong anyway.
+- Zapier **does** expose a Google Docs `insert_text` action, which is the
+  right instrument: it inserts without replacing. But the Google Docs
+  connection is unauthenticated (`list_zapier_connections` returns none), and
+  connecting it needs Tom to visit the OAuth URL once.
+
+**So there are two ways to close this, both Tom's:** authorise the Zapier
+Google Docs connection once, after which the line can be inserted and read
+back automatically; or paste the line in by hand, which takes about thirty
+seconds. The exact line to insert is in the Drive document.
+
+**What was done in the meantime**, because "one controlling rule, not two
+competing authorities" is the actual requirement: the amendment document has
+been retitled to **"PENDING INSERTION INTO BRAND OS - PRONOUN RULE (15 SEPT
+2026) - NOT A SEPARATE AUTHORITY"**, so it cannot be mistaken for a rival
+authority while it waits. It is NOT marked incorporated, because it is not.
 
 ## Evidence: the Built proof section (14/09/2026)
 
