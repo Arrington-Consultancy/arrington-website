@@ -944,6 +944,215 @@ cannot reach `arringtonconsultancy.com` or `railway.app`, so a claim that a page
 renders correctly has to come from Tom or from a local rebuild, never from a
 fetch that did not happen.
 
+## Scott: the four-state progression, LIVE on production (15/09/2026)
+
+Merged as PR #185, `8d6e3af`, production deployment `9842ef68`, booted clean
+(`[PROD] Arrington CMS running on port 8080`) with an error rate of 0 across
+343 requests. Live at `/scott`.
+
+Tom's design: one interface, four progressively expanded states, rather than
+four products. **1 My workspace** (one question, one answer), **2 My whole
+company** (the records behind the answer), **3 My team** (who is asking changes
+the answer), **4 My business** (coordination, evidence, opportunities). The rail
+sits on all 26 portal pages, every step is reachable from every step, and the
+level is session state rather than a database column, because it is where
+somebody has got to in a demonstration and should not follow them to another
+browser.
+
+### The two properties that carry it, both asserted by test
+
+**A LEVEL NEVER WIDENS ACCESS.** It is a narrowing lens laid over the existing
+clearance model, never a second one. Level 4 grants exactly what 07Q/05A already
+grant, so "Mike Evans at Level 4" sees precisely what Mike Evans saw before this
+existed. True by construction rather than by vigilance: above Level 1 the level
+declares NO domain cap at all, so no list exists that could drift out of step
+with clearance. Hiding is not gating either, and that distinction is the thing
+to protect: every route stays registered and still refuses whoever it refused
+before, so a page absent from the Level 1 nav is still reachable by typing it.
+
+**LEVEL 1's CEILING IS TRUE**, and it was not when it was first written. See
+below; it is the most useful thing in this section.
+
+### The ceiling was false, and only a live probe could find it
+
+The progression caps which source classes reach a worker, and the unit tests
+prove that cap holds: at Level 1 the retrieved context carries `leads` and
+nothing else. Every one of those tests passed while the ceiling was a lie,
+because they all measure `buildContext`, and `buildContext` is not the only
+thing in the prompt.
+
+`CURRENT_OPERATING_POSITION` in `lib/scott/businessFacts.js` — weekly capacity,
+stock counts, lead times and the price list — is joined into EVERY worker's and
+Ruth's system prompt. It reaches them outside `buildContext` and therefore
+outside both the clearance filter and the level cap. Asked at Level 1 how much
+capacity was available, Ruth answered *"this week we're at 10 of 12 repair slots
+booked"*. The context held nothing but leads. The figure came from the prompt.
+
+So the interface was telling a visitor "I can read the message that came in and
+nothing else" while the worker behind it could state the price list. Not a leak
+of anything sensitive: a false statement about the system, on the one screen
+whose entire job is to be believed.
+
+At Level 1 the snapshot is now replaced by a block saying it is not available
+and explicitly forbidding the worker to state, estimate or reconstruct those
+figures. **Omitting it silently would have been worse than the leak**, because
+it invites the model to fill the hole from what is typical for a business like
+this, which is an invented figure presented as fact. The permanent brand and
+commercial rules stay at every level, being rules and tone rather than position.
+Above Level 1 the prompt is byte-for-byte what it was, and an unrecognised level
+is treated as "not Level 1" — the only place in this feature where the safe
+direction is not to narrow, since stripping a worker's snapshot in ordinary use
+would be the bigger harm.
+
+**Confirmed live on staging afterwards**, against the real model:
+
+> Bank balance: *"I can't see that. The current operating snapshot isn't
+> available to me at this point... A bank balance isn't something I can sensibly
+> estimate."*
+>
+> Capacity: *"I can't see next week's workshop capacity from here, that record
+> isn't available to me at this step."*
+
+Two mentions in her replies were checked against the actual Level 1 context
+rather than assumed — `SAKS-1038` with Helen Price of Teignmouth, and cream yarn
+at zero. Both are inside the `leads` records Level 1 legitimately holds
+(`E-260828-06` and `E-260828-03`), so she answered entirely from the messages
+that came in. Worth knowing for the next person who reads a reply and reaches
+for the panic button.
+
+### Four groups, not nine names
+
+Tom, after using the first build: *"Nine workers is too much and starts feeling
+like an org chart again. The objective is not to demonstrate how many AI workers
+exist."* The eight specialists are presented as **Winning work**, **Getting it
+done**, **The money** and **Records and rules**, grouped by what an owner wants
+rather than by what the system is made of.
+
+`lib/scott/workerGroups.js` is presentation ONLY, and that is the property the
+tests guard. It holds no domain, no clearance, no persona and no permission,
+requires nothing, and is never consulted to decide whether anybody may see
+anything. Grouping Gareth Bell with Bob Fletcher is a sentence about the
+interface; it would become a sentence about ACCESS the moment anything resolved
+permission through a group, at which point the narrower worker would silently
+gain the wider one's reach. Asserted from source (the module may not even
+mention the word "domain"), against `WORKER_DOMAINS` directly, and per group
+that no member can read what its group collectively can.
+
+**A person is round, a worker is square.** Humans are named in the Viewing-as
+control with circular avatars; the AI workers are square-cornered in the team
+strip and in provenance. The two never share a row. This rule was stated before
+and not applied — worker avatars were circular until now.
+
+### Level 4: calmer, not smaller
+
+*"Advanced should mean more capable, not more cluttered."* The owner's dashboard
+was rendering five gaps, ten attention items, twelve activity lines and six
+snapshot cards at once. Everything is capped rather than cut: two gaps and three
+attention items on screen, the rest one click away behind native `<details>`,
+and every fold states how much is inside so nothing looks smaller than it is.
+
+Gaps and the attention list stay SEPARATE lists rather than merging into one
+tidier "what needs you". A gap means a record is wrong, so everything downstream
+of it is unreliable; an attention item means a decision is waiting. 07H's rule
+depends on the reader telling those apart.
+
+Measured: Level 4 from 3441px to 1948px, and the four states now step up gently
+(1105, 1633, 1835, 1948) instead of exploding at the end.
+
+### Lead Finder
+
+The Level 4 payload, at `/scott/lead-finder`. Two candidates, each carrying
+source, what changed, why it may matter, the reasoning, a confidence and a
+suggested next action, collapsed behind "See why I found this" so the evidence
+does not permanently fill the page. Inference is labelled as inference in words
+rather than in a colour, and a candidate is never presented as a customer.
+
+Gated by the ordinary clearance rule, not a new one: the records are tagged
+`commercial_prospecting`, a domain only the owner persona holds. The route
+checks clearance BEFORE the level, so a viewer who will never be allowed in
+cannot learn the area exists by reaching Level 4.
+
+### Testing against a deployment, not a copy of it
+
+`scripts/scottStagingCheckRunner.js` (free) and `scripts/scottLevelOneProbe.js`
+(spends money) run inside the container that is serving the build and stream
+their real output into the deploy log. They exist because the sandbox has no
+outbound route to `railway.app`: a local instance of the same commit tests the
+same CODE but is not the same DEPLOYMENT, and misses the real `CANONICAL_HOST`,
+session secret, database and skip-login bypass — precisely the things an access
+test should not assume. Both refuse on the live public site, require a named run
+label rather than `true`, and mark the database before starting so a container
+restart cannot silently re-run.
+
+**Three traps, all hit, all worth knowing:**
+
+1. `scott_activity` requires `event_type`; the markers failed closed and the
+   runners did nothing. The runner beside them was the model to copy.
+2. **Loopback is HTTPS-redirected.** `server.js` forces HTTPS on any request
+   without `x-forwarded-proto`, which the edge adds and `127.0.0.1` does not, so
+   every request 301s before a route runs. The bare-IP exemption in
+   `isInternalHost` covers the HOST rewrite only, not the protocol check. Both
+   runners now prefer the service's own public hostname, which is a strictly
+   better test anyway; on loopback the header is emulated by
+   `scripts/forwardedProtoPreload.js` rather than by editing the reviewed
+   security suites.
+3. **The runners competed for the same rate limiter.** Both hit the same server
+   from one container IP, so the suites' POSTs exhausted the authed-write window
+   and the probe lost its very first call. They are chained now, with a settle
+   delay, because "the suites have exited" and "the limiter's window has rolled"
+   are not the same moment.
+
+**And a lesson about canaries.** The probe's first run scored a real leak as
+clean because its canaries were phrased the way the DASHBOARD renders those
+figures ("12 jobs") while the snapshot words them differently ("12 armchair
+repair jobs per week"); it was only visible because the probe prints the reply.
+Its second run then scored a textbook refusal as a FAIL, because it asked "What
+is SAKS-1047?" and matched its own question echoed back. **A canary must come
+from the record the leak would come from, and must not appear in the question.**
+Both fixed, and a probe left with no testable canary now makes the run
+INCONCLUSIVE rather than passing, because a probe that cannot fail is worse than
+one that does.
+
+**Railway's log API returns roughly the oldest 100 lines per deployment**, so a
+verdict printed after a noisy test run is unreadable through it. Run the probe
+on its own deploy (unset `SCOTT_STAGING_CHECK`) and the verdict lands inside the
+window. The probe also writes its verdict to `scott_activity`, so it is visible
+on `/scott/activity` whatever the log does.
+
+### Evidence, stated for what it is
+
+Full suite on a genuinely fresh database: **1200 tests, 1197 pass, 0 fail**, 3
+skipped. Baseline on `main` under identical conditions is also 0 fail. Scott
+suites 590/590. Adversarial plus progression HTTP suites against the DEPLOYED
+staging build, through the real public hostname and edge: **34/34, exit 0**.
+
+New suites: `progression.test.js` (26), `progressionLeakage.test.js` (15),
+`progressionApi.test.js` (16, gated and declared in `gatedSuites`),
+`workerGroups.test.js` (14), `levelOneCeiling.test.js` (7). Key assertions were
+watched red against planted defects.
+
+One failure was investigated and dismissed with evidence rather than waved away:
+a `crmErasure` failure appeared once and turned out to be a local server writing
+to the same database during a parallel run. It does not reproduce on a fresh
+database on either branch.
+
+### Open, and not the builder's to close
+
+- **`commercial_prospecting` has NOT been through the Drive governance route.**
+  It shipped on Tom's explicit instruction of 15/09/2026. It is owner-only,
+  granted to no worker lane, and narrows rather than widens, but it is still a
+  change to the clearance model and should be recorded properly.
+- **The operating snapshot reaches every persona regardless of clearance.** It
+  is in the system prompt, so Mike Evans gets the price list and the stock
+  counts like everybody else. Pre-existing Scott design, surfaced by this work
+  rather than caused by it, and worth a view.
+- **Staging still points at `claude/scott-progressive-experience`**, now merged.
+  Its original branch was `feature/scott-ai-demonstration`.
+- A stray Railway service, `arrington-website`, is staged for deletion in the
+  staging environment and needs Tom's 2FA. Created by accident by a
+  `create-deployment` call that made a new service instead of targeting
+  scott-demo; it has crashed, holds no variables, no domain and no data.
+
 ## Public prices: settled, and not a discount (14/09/2026)
 
 Tom confirmed the current public prices, and confirmed them as settled rather
