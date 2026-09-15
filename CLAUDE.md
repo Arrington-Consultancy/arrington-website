@@ -2545,85 +2545,200 @@ most of the height of a reply. That is honest and it is not what failed,
 and the real fix is the general lane supplying fewer records, which is a
 routing change. Left alone deliberately.
 
-### Hours log connector: BUILT, MERGED, INERT, NOT APPROVED (15/09/2026)
+### Receivables from authorised Drive records: BUILT, INERT, NOT APPROVED, NOT MERGED (15/09/2026)
 
-**Do not switch this on.** It is on `main` and it reads nothing. Three
-things must all be true first, and only Tom does any of them: Governance
-& Assurance approves the source expansion, the Google authorisation is
-completed, and `ENABLE_WORKSPACE_HOURS` is explicitly set to `true`.
-Submission: `review/hours-sheet-governance-submission-2026-09-15.md`.
+**Do not switch this on, and do not merge it.** It lives on
+`claude/new-session-hbgp04`. Three things must all be true before a single
+byte is read from Drive, and only Tom does any of them: Governance &
+Assurance approves the source expansion, the Google authorisation is
+completed, and `ENABLE_WORKSPACE_DRIVE_RECORDS` is explicitly set to
+`true`. Submission:
+`review/hours-sheet-governance-submission-2026-09-15.md`.
 
-**What it is for.** An invoice was prepared in Ask Ruth at £533 while the
-hours record said £551.33; the gap was exactly one logged row (26 August,
-55 minutes, £18.33). The two records disagreed and nothing could see
-both. **That invoice has since been sent and is out of scope**: nothing
-here reads, alters or revisits it.
+**This SUPERSEDES the first build of the same day**, which was pinned
+permanently to one spreadsheet id and whose only output was a sentence
+printed beside an invoice draft. Tom's correction, verbatim: *"You've
+interpreted the immediate WSA example too narrowly. The actual requirement
+is broader: Ruth should be able to use the appropriate Arrington Google
+Drive records to tell me what I am owed and what it relates to."* Six
+example questions came with it, and they are the acceptance criteria: what
+am I currently owed; what does WSA owe me for; have I invoiced all the WSA
+work I've logged; what work have I done that hasn't been invoiced; which
+clients have outstanding money; what evidence in Drive supports that
+figure.
 
-**The permission model is the part worth reading.** Pinning a spreadsheet
-id restricts our code, not Google's grant, and `spreadsheets.readonly` on
-Tom's own account is a RESTRICTED scope over EVERY sheet he can open,
-which is the Brain and every client file. So the identity is a **service
-account**, which has no Drive of its own and can read exactly what is
-shared with it. Effective authority is *scope INTERSECT what is shared*,
-and what is shared is one sheet as Viewer. The boundary is an ACL held by
-Google and visible in the sheet's own sharing dialog; revoking is
-unsharing. `drive.file` plus the Picker is also genuinely per-file and is
-the right answer for "let the user choose a file", but it needs an
-interactive grant bound to a user token, which is the wrong shape for a
-server reading one fixed sheet. **DOMAIN-WIDE DELEGATION MUST NEVER BE
-ENABLED on this service account**: it would confer impersonation of every
-user in the Workspace and destroy the whole argument.
+**THE DEFECT IN THE FIRST BUILD IS THE MOST USEFUL THING HERE.** Its
+record builder was never called by anything except its own test. The
+source class existed, the parser existed, `npm test` was green, and **no
+record was ever written**, so Ruth could not have answered one of the six
+questions. Same class as workspace governance finding W1: an inert
+mechanism reported as working. It is why the evidence below is shaped the
+way it is.
 
-**Files.** `lib/workspace/hours/hoursLog.js` (pure: parse, total,
-cross-check), `invoiceCheck.js` (pure: compare, attribute the
-difference), `sheetsClient.js` (service-account JWT, one read-only scope,
-failure taxonomy, pinned id), `service.js` (the honesty rules, where the
-failure modes actually arrive). Source class `hours` in `lanes.js`,
-granted to **no lane**; in `GENERAL_SOURCE_CLASSES` so only Tom's own
-general questions reach it, and the record is `confidential` so the
-clearance leg gates it too. Boot line `Workspace hours:`.
+**Which side is authoritative for what, and the first build had it
+backwards.** ZOHO is the system of record for money: what is owed, paid,
+overdue, and what an invoice was for. Nothing recomputes any of that from
+a spreadsheet. THE HOURS LOG is the record of work DONE, and is the only
+source for what has been delivered but not billed; it is never a statement
+about what a customer owes. THE DIFFERENCE is a finding for a person to
+judge, never an instruction.
 
-**It advises and never acts.** The check runs on every deterministic
-reply carrying an invoice card and appends a sentence. No module in it
-holds a write path to an approval row, none imports Zoho, and a connector
-fault costs a sentence rather than the invoice flow. Zoho and every
-existing invoice control are untouched.
+**The authorised-record register** (`lib/workspace/drive/register.js`) is
+the replacement for the single pinned id: a CODE-DECLARED ALLOWLIST, so
+adding a record is a reviewed commit in git history, never a config change
+and never runtime discovery. It holds **exactly one entry**, per Tom's
+instruction to keep it deliberately narrow: `CURRENT - Arrington
+Consultancy Log Hours Worker`. The boundary is TWO independent things and
+both must hold: Google's ACL (the service account has no Drive of its own
+and reads only what is shared with it) and the register
+(`assertRegistered` throws before a request is built). A file shared but
+not registered is never read; a file registered but not shared fails
+honestly and says which. **Neither alone is the control; the intersection
+is.** There is no `files.list`, no search and no folder traversal, so it
+cannot find a file it was not told about, and a test asserts that. The
+`DRIVE_RECORD_<ID>_FILE_ID` override lets a registered record MOVE without
+a deploy but still passes `assertRegistered`, so a mis-set variable cannot
+widen what is readable by one character. Registering a Google DOC would
+need a second scope (`drive.readonly`), and the scope list is DERIVED from
+the kinds in the register rather than declared by hand, so a Doc cannot
+ride in on a scope requested for sheets.
 
-**What it says, from the real record:** *"Hours log for WSA: 27h 34m at
-£20.00/hour = £551.33 across 22 billable entries. Your draft invoice is
-£533.00, which is £18.33 below the logged total. Difference: £18.33. The
-difference corresponds to the 26/08/2026 55 minute billable entry.
-Nothing has been changed: the figures are both stated so you can decide
-which is right."*
+**The permission model is still the part worth reading.** Pinning a
+spreadsheet id restricts our code, not Google's grant, and
+`spreadsheets.readonly` on Tom's own account is a RESTRICTED scope over
+EVERY sheet he can open, which is the Brain and every client file. So the
+identity is a **service account**: effective authority is *scope INTERSECT
+what is shared*, and revoking is unsharing. `drive.file` plus the Picker
+is also genuinely per-file and is the right answer for "let the user
+choose a file", but it needs an interactive grant bound to a user token,
+which is the wrong shape for a server reading one fixed sheet.
+**DOMAIN-WIDE DELEGATION MUST NEVER BE ENABLED on this service account**:
+it would confer impersonation of every user in the Workspace and destroy
+the whole argument.
 
-**Three things the tests taught, worth keeping:**
+**Files.** `lib/workspace/drive/register.js` (the allowlist),
+`lib/workspace/drive/sheetsClient.js` (service-account JWT, one read-only
+scope, failure taxonomy, register-checked reads),
+`lib/workspace/hours/hoursLog.js` (pure: parse, total, cross-check, and
+now the optional Invoice ref column), `invoiceCheck.js` (pure: compare,
+attribute), `reconcile.js` (pure: the Zoho join and the rendering),
+`service.js` (the honesty rules, the Zoho reads, and `refreshRecords()`).
+Boot line `Workspace Drive records:`.
+
+**Two Company Brain records, written through `repo.upsertRecord` like
+every other workspace record. No second write path.** `hours.log` (source
+class `hours`) and `receivables.summary` (source class `finance`, because
+what a customer owes is a finance fact whoever asks, and filing Zoho's own
+figures under a class invented for a spreadsheet would be wrong). Both
+`confidential`, both `stale_after_days: 1`. Written by a human pressing
+"Update receivables" on the Finance page
+(`POST /api/workspace/receivables/refresh`, behind the three workspace
+gates plus a confidential-clearance check). **No AI path reaches the
+route.**
+
+**Two modes, and the difference is stated in every answer.** ROW LEVEL,
+when the sheet carries an Invoice ref column: the rows with no reference
+are unbilled and are named. TOTALS, which is the state today: logged value
+minus invoiced value, an arithmetic comparison that cannot tell work never
+invoiced from work invoiced at a different figure, **and the record says
+so.**
+
+**The Invoice ref column is SPECIFIED, NOT ADDED** (Tom: *"Do not silently
+alter the live Google Sheet yet. Tell me exactly what column you want
+added and how it will behave."*). Section 7 of the submission is the exact
+spec: heading `Invoice ref` at the far right of the Hours Log tab, free
+text, heading matched loosely (`Invoice Ref`, `Invoice number`,
+`Invoice no.`, `Invoice #`, `Invoiced` all work); **blank means not yet
+invoiced**; any reference means invoiced and is never validated against
+Zoho; five phrases mean deliberately not chargeable and are excluded from
+both the billable total and the unbilled list (`n/a`, `not billable`,
+`no charge`, `written off`, `goodwill`); entirely optional, so with it
+absent everything works exactly as today.
+
+**Never reports a missing source as zero.** With the hours log unreadable,
+Zoho still answers and the record says "WORK DONE BUT NOT INVOICED:
+unavailable", carries `sync_outcome = 'partial'`, and contains no unbilled
+figure at all. A figure from an earlier read is prefixed `NOT CURRENT`
+with its age and why the fresh read failed. **And it never prints a
+negative money figure**: "more has been invoiced than the log accounts
+for" is stated in those words, because "-£646.67 logged and not invoiced"
+is a sentence with no meaning.
+
+**Read-only in both directions, asserted by enumeration rather than by a
+blanket ban** (the service DOES write now, and a test asserting it writes
+nothing would be satisfied by a capability that does not work): every
+`repo.*` call in the service must be exactly `upsertRecord`, and every
+`zohoClient.*` call exactly `getAccessToken` and `getInvoices`. No
+approval row, no Zoho write function, no write method in the Sheets
+client. `ENABLE_ZOHO_INVOICE_WRITES` is not read by anything here.
+
+**Five things the tests taught, worth keeping:**
 
 1. **A difference can have more than one explanation.** £30.00 is the 26
    and 27 August pair AND the 21 and 22 August pair. The first version
    named whichever the loop reached first, which is a confident wrong
-   answer of exactly the kind this check exists to prevent. Every match
-   is now collected before one is named, and several matches report as
-   ambiguous.
+   answer of exactly the kind this check exists to prevent. Every match is
+   collected before one is named, and several matches report as ambiguous.
 2. **A client code cannot always be matched.** "WSA" is the initials of
    the customer NAME, so that works; matching it to the domain
-   `worldstudentadvisors.com` would need to split a run of letters
-   without a dictionary, so it is deliberately NOT matched. Matching the
-   wrong client puts one client's hours against another's invoice, so
-   ambiguity refuses.
+   `worldstudentadvisors.com` would need to split a run of letters without
+   a dictionary, so it is deliberately NOT matched.
 3. **An unreadable row is never reconstructed.** A row with a start and
    finish but no hours figure is reported and excluded, never inferred as
    eight hours.
+4. **A draft is not money owed** and a void invoice is not money at all,
+   and Zoho's OWN `balance` is trusted rather than derived here, because it
+   accounts for credit notes and part payments this code never sees.
+5. **A customer with nothing invoiced and nothing outstanding is not
+   listed at £0.00.** A draft-only customer used to appear as "£0.00
+   outstanding across 0 invoice(s)", which reads as a statement about a
+   customer who owes nothing. Found by RUNNING the module against
+   realistic rows, not by reading it.
 
-**Tests:** `test/workspace/hoursLog.test.js`, 22, covering every case in
-Tom's list. The fixture carries the real record's dates, hours, rate and
-stated totals so the arithmetic is proved against the sheet the connector
-actually reads; the work descriptions and evidence notes are genericised,
-because they name client deliverables and say which entries are estimates
-rather than stopwatch time, and that does not belong in a repository.
-Five properties watched red against planted defects. Full suite 1306,
-1303 pass, 0 fail. Production behaviour verified unchanged over real HTTP
-with the flag unset: the invoice replies and cards are byte-for-byte what
-they were.
+**Tests:** `test/workspace/hoursLog.test.js` (26) and
+`test/workspace/receivables.test.js` (13, of which the last needs
+`DATABASE_URL` and is the one that matters). That end-to-end case runs the
+real refresh against a real database and asserts the records **exist by
+key and contain the answer to each of Tom's six questions**, the only
+shape of test that would have failed against the first build. Full suite
+on a genuinely fresh database: 1320 pass, 0 fail, 3 skipped, with the
+eight documented gated suites named on the run.
+
+**Eight properties watched red against planted defects, and one of them
+found a defect in the TEST rather than the code.** The end-to-end case
+originally passed against a refresh that wrote nothing, because a row left
+by an earlier run satisfied "the record exists". It now clears both rows
+first and asserts each was written by that refresh. The other seven, each
+red on the property it is named for: drafts counted as owed; a negative
+money figure printed; a missing hours log reported as nil; a Zoho zero
+printed for a source that was not read; a failure reason nested inside its
+own sentence; rows named when the sheet cannot support it; and the
+register accepting an unregistered file.
+
+**TWO DEFECTS WERE FOUND BY RUNNING THE ROUTE OVER REAL HTTP, NOT BY
+READING IT**, and both were honesty defects in the record Ruth would have
+answered from. With Zoho unreadable the record printed "OUTSTANDING:
+GBP 0.00 across 0 open invoice(s)", stating that nothing was owed when
+nothing was KNOWN. That is the rule already enforced for the hours log,
+simply missing on the money side, which is the side that matters more:
+`summariseInvoices([])` honestly returns zero, and a caveat printed above
+a figure does not undo the figure, so the figure is now withheld entirely.
+And a failure reason was interpolated as a whole sentence, giving "could
+not be read (The hours log could not be read (...))", which reads as
+carelessness in the one place the system is asking to be believed. The
+loaders now carry a bare `why` alongside the full `message`.
+
+**Not proven, and stated as such: no live Google call has been made.** The
+service account does not exist, the sheet has not been shared with
+anything, and this sandbox cannot reach the live service. The first real
+read will be Tom's, after approval.
+
+**A git trap worth knowing, hit while doing this.** `sheetsClient.js` was
+moved with `git mv`, so the path is staged as an ADD carrying the file's
+**pre-move** content. A later `git checkout -- <path>` on it therefore
+restored the old version and silently destroyed the working-tree edits;
+`git show :<path>` confirms what the index actually holds. On a staged
+rename, back the file up before reaching for `git checkout`.
 
 **`test/workspace/routing.test.js`'s general-source-classes assertion is a
 TRIPWIRE and is meant to fail** when a class is added, so the change gets

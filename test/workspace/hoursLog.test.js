@@ -32,7 +32,8 @@ const TEST_KEY = crypto.generateKeyPairSync('rsa', {
 
 const hoursLog = require('../../lib/workspace/hours/hoursLog');
 const invoiceCheck = require('../../lib/workspace/hours/invoiceCheck');
-const sheetsClient = require('../../lib/workspace/hours/sheetsClient');
+const sheetsClient = require('../../lib/workspace/drive/sheetsClient');
+const register = require('../../lib/workspace/drive/register');
 const service = require('../../lib/workspace/hours/service');
 const { LANES, SOURCE_CLASSES } = require('../../lib/workspace/lanes');
 const orchestrator = require('../../lib/workspace/orchestrator');
@@ -235,40 +236,40 @@ test('the invoice customer is matched to the log client, and refuses to guess', 
 // --- 7, 8, 10. The connector's gates and failures -----------------------
 
 test('7. with the flag off the connector is inert and makes no network call', async () => {
-  const prev = process.env.ENABLE_WORKSPACE_HOURS;
-  delete process.env.ENABLE_WORKSPACE_HOURS;
+  const prev = process.env.ENABLE_WORKSPACE_DRIVE_RECORDS;
+  delete process.env.ENABLE_WORKSPACE_DRIVE_RECORDS;
   let called = 0;
   sheetsClient.__setFetchForTests(async () => { called += 1; throw new Error('must not be called'); });
   try {
     assert.equal(sheetsClient.isEnabled(), false);
-    await assert.rejects(() => sheetsClient.readSheet(), (e) => e.kind === 'disabled');
+    await assert.rejects(() => sheetsClient.readRecord('hours_log'), (e) => e.kind === 'disabled');
     assert.equal(called, 0, 'nothing reached the network');
     // And the invoice path says nothing at all rather than half-checking.
     assert.equal(await service.invoiceFinding({ draft: { customerName: 'WSA', amount: 533 } }), null);
     assert.match(sheetsClient.describeStatus(), /flag OFF/);
-    assert.match(sheetsClient.describeStatus(), /will NOT be read/);
+    assert.match(sheetsClient.describeStatus(), /no Drive record will be read/);
   } finally {
-    if (prev === undefined) delete process.env.ENABLE_WORKSPACE_HOURS; else process.env.ENABLE_WORKSPACE_HOURS = prev;
+    if (prev === undefined) delete process.env.ENABLE_WORKSPACE_DRIVE_RECORDS; else process.env.ENABLE_WORKSPACE_DRIVE_RECORDS = prev;
     sheetsClient.__resetFetchForTests();
   }
 });
 
 test('7b. with the flag on but no credential it is still inert, and says which gate is open', async () => {
   const saved = { ...process.env };
-  process.env.ENABLE_WORKSPACE_HOURS = 'true';
-  delete process.env.HOURS_SHEET_SERVICE_ACCOUNT_JSON;
-  delete process.env.HOURS_SHEET_CLIENT_EMAIL;
-  delete process.env.HOURS_SHEET_PRIVATE_KEY;
+  process.env.ENABLE_WORKSPACE_DRIVE_RECORDS = 'true';
+  delete process.env.DRIVE_RECORDS_SERVICE_ACCOUNT_JSON;
+  delete process.env.DRIVE_RECORDS_CLIENT_EMAIL;
+  delete process.env.DRIVE_RECORDS_PRIVATE_KEY;
   let called = 0;
   sheetsClient.__setFetchForTests(async () => { called += 1; throw new Error('must not be called'); });
   try {
     assert.equal(sheetsClient.isConfigured(), false);
-    await assert.rejects(() => sheetsClient.readSheet(), (e) => e.kind === 'not_configured');
+    await assert.rejects(() => sheetsClient.readRecord('hours_log'), (e) => e.kind === 'not_configured');
     assert.equal(called, 0);
     const line = sheetsClient.describeStatus();
     assert.match(line, /flag on/);
     assert.match(line, /no service account credential set/);
-    assert.match(line, /will NOT be read/);
+    assert.match(line, /no Drive record will be read/);
   } finally {
     process.env = saved;
     sheetsClient.__resetFetchForTests();
@@ -277,9 +278,9 @@ test('7b. with the flag on but no credential it is still inert, and says which g
 
 test('8. when the sheet cannot be read the workspace says so and produces no figure', async () => {
   const saved = { ...process.env };
-  process.env.ENABLE_WORKSPACE_HOURS = 'true';
-  process.env.HOURS_SHEET_CLIENT_EMAIL = 'probe@example.iam.gserviceaccount.com';
-  process.env.HOURS_SHEET_PRIVATE_KEY = TEST_KEY;
+  process.env.ENABLE_WORKSPACE_DRIVE_RECORDS = 'true';
+  process.env.DRIVE_RECORDS_CLIENT_EMAIL = 'probe@example.iam.gserviceaccount.com';
+  process.env.DRIVE_RECORDS_PRIVATE_KEY = TEST_KEY;
   sheetsClient.__clearCacheForTests();
   sheetsClient.__clearTokenCacheForTests();
   sheetsClient.__setFetchForTests(async () => { throw new Error('ECONNREFUSED'); });
@@ -313,9 +314,9 @@ test('8b. Google failures are classified, so waiting is only suggested where wai
 
 test('10. a figure from an earlier read is ALWAYS labelled as not current', async () => {
   const saved = { ...process.env };
-  process.env.ENABLE_WORKSPACE_HOURS = 'true';
-  process.env.HOURS_SHEET_CLIENT_EMAIL = 'probe@example.iam.gserviceaccount.com';
-  process.env.HOURS_SHEET_PRIVATE_KEY = TEST_KEY;
+  process.env.ENABLE_WORKSPACE_DRIVE_RECORDS = 'true';
+  process.env.DRIVE_RECORDS_CLIENT_EMAIL = 'probe@example.iam.gserviceaccount.com';
+  process.env.DRIVE_RECORDS_PRIVATE_KEY = TEST_KEY;
   sheetsClient.__clearCacheForTests();
   sheetsClient.__clearTokenCacheForTests();
 
@@ -372,12 +373,82 @@ test('9. no worker lane can read the hours source', () => {
 
 test('9b. the record is confidential, so the human clearance leg gates it too', () => {
   const parsed = hoursLog.parseHoursLog(realGrid());
-  const record = service.buildRecord(parsed, { readAt: '2026-09-15T18:24:00.000Z' });
+  const record = service.buildHoursRecord(parsed, {
+    readAt: '2026-09-15T18:24:00.000Z',
+    title: 'CURRENT - Arrington Consultancy Log Hours Worker',
+    fileId: '11YzoTkTlUaYf2XB8mAzp_LMSAs45bXxzBsVN25dEB1A'
+  });
+  assert.equal(record.record_key, service.HOURS_RECORD_KEY);
   assert.equal(record.source_class, 'hours');
   assert.equal(record.sensitivity, 'confidential');
   assert.match(record.body, /27h 34m/);
   assert.match(record.body, /£551\.33/);
   assert.match(record.source_ref, /11YzoTkTlUaYf2XB8mAzp_LMSAs45bXxzBsVN25dEB1A/);
+  // It carries its own age, so a figure can never be quoted as current
+  // without the freshness machinery having a say.
+  assert.equal(record.stale_after_days, 1);
+  assert.equal(new Date(record.synced_at).toISOString(), '2026-09-15T18:24:00.000Z');
+});
+
+// --- The authorised-record register -------------------------------------
+
+test('the register is a code-declared allowlist, and today it holds exactly one record', () => {
+  assert.equal(register.list().length, 1, 'deliberately narrow: Tom asked for this one record only');
+  const rec = register.byId('hours_log');
+  assert.equal(rec.fileId, '11YzoTkTlUaYf2XB8mAzp_LMSAs45bXxzBsVN25dEB1A');
+  assert.equal(rec.title, 'CURRENT - Arrington Consultancy Log Hours Worker');
+  assert.equal(rec.sourceClass, 'hours');
+  assert.equal(rec.sensitivity, 'confidential');
+  // The scope set is DERIVED from the kinds in use, so registering a
+  // Google Doc later cannot ride in on a scope requested for sheets.
+  assert.deepEqual(register.requiredScopes(), ['spreadsheets.readonly']);
+});
+
+test('a file that is not registered is refused before a request is built', async () => {
+  assert.equal(register.isRegistered('some-other-file-id'), false);
+  assert.throws(() => register.assertRegistered('some-other-file-id'), /not in the authorised Drive record register/);
+  // And the refusal does not echo the id back: an error string travels,
+  // and which file somebody tried to read is itself information.
+  try { register.assertRegistered('secret-file-id'); } catch (e) {
+    assert.doesNotMatch(e.message, /secret-file-id/);
+  }
+  // An unregistered record id never reaches the network either.
+  let called = 0;
+  sheetsClient.__setFetchForTests(async () => { called += 1; throw new Error('must not be called'); });
+  try {
+    await assert.rejects(() => sheetsClient.readRecord('brain_index'), (e) => e.kind === 'not_registered');
+    assert.equal(called, 0);
+  } finally {
+    sheetsClient.__resetFetchForTests();
+  }
+});
+
+test('the override can move a registered record but cannot widen what is readable', async () => {
+  const saved = { ...process.env };
+  process.env.ENABLE_WORKSPACE_DRIVE_RECORDS = 'true';
+  process.env.DRIVE_RECORDS_CLIENT_EMAIL = 'probe@example.iam.gserviceaccount.com';
+  process.env.DRIVE_RECORDS_PRIVATE_KEY = TEST_KEY;
+  process.env.DRIVE_RECORD_HOURS_LOG_FILE_ID = 'a-file-nobody-registered';
+  sheetsClient.__clearTokenCacheForTests();
+  let called = 0;
+  sheetsClient.__setFetchForTests(async () => { called += 1; throw new Error('must not be called'); });
+  try {
+    await assert.rejects(() => sheetsClient.readRecord('hours_log'), /not in the authorised Drive record register/);
+    assert.equal(called, 0, 'a mis-set variable cannot widen what is readable by one character');
+  } finally {
+    process.env = saved;
+    sheetsClient.__resetFetchForTests();
+    sheetsClient.__clearTokenCacheForTests();
+  }
+});
+
+test('the connector has no discovery: it cannot find a file it was not told about', () => {
+  const client = fs.readFileSync(path.join(__dirname, '..', '..', 'lib', 'workspace', 'drive', 'sheetsClient.js'), 'utf8').replace(/^\s*\/\/.*$/gm, '');
+  // No listing, no search, no folder traversal anywhere in the module.
+  assert.doesNotMatch(client, /drive\/v3\/files|files\.list|files\?q=|\/drive\/v2\//);
+  assert.doesNotMatch(client, /\bsearch\b/i);
+  // And the only API host it names is the Sheets one.
+  assert.doesNotMatch(client, /www\.googleapis\.com\/drive/);
 });
 
 // --- 11. The check advises and never acts -------------------------------
@@ -389,9 +460,28 @@ test('11. the checking flow cannot alter or send an invoice', () => {
   assert.doesNotMatch(code, /repo\.|updateOpenApproval|createApproval|decideApproval|reviseInvoice/);
   assert.doesNotMatch(code, /fetch\(|sendMessage|sendInvoice|require\(['"].*zoho/i);
   const svc = fs.readFileSync(path.join(__dirname, '..', '..', 'lib', 'workspace', 'hours', 'service.js'), 'utf8').replace(/^\s*\/\/.*$/gm, '');
-  assert.doesNotMatch(svc, /repo\.|updateOpenApproval|createApproval|decideApproval/);
-  // And it reaches no other record, so it cannot silently fall back to one.
-  assert.doesNotMatch(svc, /require\(['"][^'"]*(finance|email|social|crm|scott)/);
+  // The service DOES write now, and that was the whole correction: the
+  // first build had a record builder nothing called. So the property is
+  // no longer "it writes nothing", which would be satisfied by a
+  // capability that does not work. It is narrower and stronger:
+  //   - the ONLY thing it writes is a Company Brain record;
+  //   - it touches no approval row, so it cannot alter an invoice draft;
+  //   - it reaches no Zoho WRITE function, so it cannot create, email or
+  //     amend an invoice, whatever ENABLE_ZOHO_INVOICE_WRITES says.
+  const repoCalls = [...svc.matchAll(/repo\.(\w+)/g)].map((m) => m[1]);
+  assert.deepEqual([...new Set(repoCalls)].sort(), ['upsertRecord'], 'the only repo call is the controlled record write');
+  assert.doesNotMatch(svc, /updateOpenApproval|createApproval|decideApproval|reviseInvoice/);
+  const zohoCalls = [...svc.matchAll(/zohoClient\.(\w+)/g)].map((m) => m[1]);
+  assert.deepEqual([...new Set(zohoCalls)].sort(), ['getAccessToken', 'getInvoices'], 'read functions only');
+  for (const write of ['createInvoice', 'createContact', 'emailInvoice']) {
+    assert.doesNotMatch(svc, new RegExp(write), `${write} must be unreachable from here`);
+  }
+  // It may reach finance (Zoho is the system of record for money owed),
+  // but nothing else: no email, no social, no CRM, and never Scott.
+  assert.doesNotMatch(svc, /require\(['"][^'"]*(email|social|crm|scott)/i);
+  // And the Sheets side stays read-only: no write method exists at all.
+  const clientSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'lib', 'workspace', 'drive', 'sheetsClient.js'), 'utf8').replace(/^\s*\/\/.*$/gm, '');
+  assert.doesNotMatch(clientSrc, /values:append|values:update|batchUpdate|method:\s*['"](POST|PUT|PATCH|DELETE)['"]\s*\}[^}]*sheets\.googleapis/);
 
   // The inputs it is handed come back untouched.
   const parsed = hoursLog.parseHoursLog(realGrid());
@@ -423,7 +513,7 @@ test('the modules stay pure and reach nothing they should not', () => {
     assert.doesNotMatch(src, /scott/i, f);
   }
   // The client never puts a credential into a URL or an error message.
-  const client = fs.readFileSync(path.join(__dirname, '..', '..', 'lib', 'workspace', 'hours', 'sheetsClient.js'), 'utf8');
+  const client = fs.readFileSync(path.join(__dirname, '..', '..', 'lib', 'workspace', 'drive', 'sheetsClient.js'), 'utf8');
   assert.doesNotMatch(client, /\$\{[^}]*private_key[^}]*\}/);
   // The key may be interpolated ONLY as its length.
   assert.doesNotMatch(client, /\$\{\s*cred\.key\s*\}/);
@@ -434,15 +524,15 @@ test('the modules stay pure and reach nothing they should not', () => {
   assert.doesNotMatch(client, /auth\/drive(?!\.)|auth\/drive\.readonly|auth\/spreadsheets(?!\.readonly)/);
 });
 
-test('the spreadsheet is pinned, and the pin is the one Tom named', () => {
-  assert.equal(sheetsClient.DEFAULT_SHEET_ID, '11YzoTkTlUaYf2XB8mAzp_LMSAs45bXxzBsVN25dEB1A');
-  const saved = process.env.HOURS_SHEET_ID;
-  delete process.env.HOURS_SHEET_ID;
+test('every credential read is trimmed, the Railway trailing-newline trap', () => {
+  const saved = { ...process.env };
   try {
-    assert.equal(sheetsClient.sheetId(), sheetsClient.DEFAULT_SHEET_ID);
-    process.env.HOURS_SHEET_ID = ' other-id ';
-    assert.equal(sheetsClient.sheetId(), 'other-id', 'trimmed, the Railway newline trap');
+    process.env.ENABLE_WORKSPACE_DRIVE_RECORDS = 'true\n';
+    assert.equal(sheetsClient.isEnabled(), true, 'a newline on the flag must not silently disable the connector');
+    process.env.DRIVE_RECORDS_CLIENT_EMAIL = ' probe@example.iam.gserviceaccount.com \n';
+    process.env.DRIVE_RECORDS_PRIVATE_KEY = TEST_KEY;
+    assert.equal(sheetsClient.credential().email, 'probe@example.iam.gserviceaccount.com');
   } finally {
-    if (saved === undefined) delete process.env.HOURS_SHEET_ID; else process.env.HOURS_SHEET_ID = saved;
+    process.env = saved;
   }
 });
