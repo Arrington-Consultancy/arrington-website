@@ -1314,6 +1314,77 @@ The EJS parser trap bit again, for the third time on this branch: **an EJS open
 tag inside a JS comment is still hunted for its closer.** There is now a note in
 `sidebar.ejs` saying so.
 
+### It made itself look weak twice in two messages (15/09/2026)
+
+Tom, using the live staging build: *"makes us look shit twice in two
+messages."* He was right, and neither was a leak, a permission fault or
+anything a clearance sweep would ever catch. **It was the system talking
+itself down in front of a prospect**, which is a class of defect this
+project had no tests for at all until now.
+
+**1. It hedged four times over.** Asked how many hours the team would do,
+it gave a sound estimate and then spent the rest of the reply undermining
+it: it could not give "certified figures", the total was "a working figure
+rather than something you can rely on to the hour", and the record it
+lacked was named twice. Meanwhile the interface had ALREADY printed a
+certainty badge under it. Four statements of the same caveat, and an
+answer that sounds like it does not believe itself.
+
+The prompt is now explicit that the badge exists and that the caveat is
+one short clause, with the exact sentence it produced quoted back as
+forbidden. **It did NOT overcorrect:** `certainty` still has to be LIKELY
+and "Never present a guess AS the record" is untouched, both pinned, because
+an estimate stated as a filed figure is the worse failure.
+
+**2. Asked the date, it said "I can't tell you today's real date, but this
+demonstration's snapshot is dated 29 August 2026."** Three defects in one
+sentence.
+
+- **Nothing told it the date.** A business assistant that does not know
+  what day it is looks like a toy. `todayBlock()` in `orchestrator.js` now
+  puts it in every prompt, **computed per call and never at module load**:
+  `GOVERNANCE_PREAMBLE` is a module-level constant, so a date interpolated
+  there would freeze at container boot and drift a day further from the
+  truth every day the deployment stayed up. Wrong and confident is worse
+  than absent.
+- **The prompt handed it the vocabulary.** `CURRENT_OPERATING_POSITION`
+  opened with `SNAPSHOT_LABEL`, which reads *"Scott AI Demonstration
+  snapshot v0.2-partial, transcribed from Drive on 2026-08-29"*. That
+  string exists for traceability between this code and the Drive records
+  and had no business being in a prompt. The header is now
+  `as at 2026-08-29` in plain language; the traceability moved to
+  `config.js`, a comment and the boot log, where it was always meant to be.
+- **It volunteered it unasked.** A new rule separates *being asked what
+  this is* from *an ordinary business question*.
+
+**THE HONESTY RULE WAS NOT TOUCHED, and the first version of this fix got
+that wrong.** I initially wrote a "never break character" block telling
+the worker it is not a demonstration. That directly contradicts Tom's own
+standing rule ("If a visitor asks what this is, say so plainly... you must
+not pretend the demonstration itself is something other than a
+demonstration") and would have made it lie when asked directly. Caught and
+rewritten before it ran. The rule that shipped narrows only WHEN the
+subject comes up, says in its own text that it does not soften the honesty
+rule, and both are asserted together so neither can be quietly dropped for
+the other.
+
+**3. It repeated a stale "next week".** The records are written as at 29
+August and say things like "this week"; read out in mid-September that
+made Ravi's annual leave "next week" when it had already happened. The
+prompt now says to translate those to actual dates rather than repeat them.
+This is the one of the three that was always latent and gets worse every
+day the snapshot ages.
+
+**The badges were reworded too.** "Likely, not certain" and "Unproven,
+insufficient evidence" are certainty-theory labels. A business says
+**"Worked out, not filed"** and **"Not enough to go on"**, which is the
+same claim without sounding like a disclaimer.
+
+Covered by `test/scott/answerQuality.test.js`. Stated for what it is: these
+are prompt-rule tests, so they prove the instruction is present and the
+failing sentence is forbidden by name. Whether the model then obeys is a
+live question, and the paid pressure suite is where that gets answered.
+
 ### Evidence
 
 **649 Scott tests pass, 0 fail.** New: `capabilityRegistry.test.js` (31),

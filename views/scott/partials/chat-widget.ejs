@@ -23,8 +23,8 @@
               <%= m.content %>
               <% if (m.certainty === 'LIKELY' || m.certainty === 'UNPROVEN' || m.technicalFailure) { %>
               <div class="sc-msg-meta-row">
-                <% if (m.certainty === 'LIKELY') { %><span class="sc-msg-tag sc-msg-tag-certainty">Likely, not certain</span><% } %>
-                <% if (m.certainty === 'UNPROVEN') { %><span class="sc-msg-tag sc-msg-tag-certainty">Unproven, insufficient evidence</span><% } %>
+                <% if (m.certainty === 'LIKELY') { %><span class="sc-msg-tag sc-msg-tag-certainty">Worked out, not filed</span><% } %>
+                <% if (m.certainty === 'UNPROVEN') { %><span class="sc-msg-tag sc-msg-tag-certainty">Not enough to go on</span><% } %>
                 <% if (m.technicalFailure) { %><span class="sc-msg-tag sc-msg-tag-fail">Technical problem</span><% } %>
               </div>
               <% } %>
@@ -174,8 +174,8 @@
     var div = document.createElement('div');
     div.className = 'sc-msg';
     var tags = '';
-    if (opts.certainty === 'LIKELY') tags += '<span class="sc-msg-tag sc-msg-tag-certainty">Likely, not certain</span>';
-    if (opts.certainty === 'UNPROVEN') tags += '<span class="sc-msg-tag sc-msg-tag-certainty">Unproven, insufficient evidence</span>';
+    if (opts.certainty === 'LIKELY') tags += '<span class="sc-msg-tag sc-msg-tag-certainty">Worked out, not filed</span>';
+    if (opts.certainty === 'UNPROVEN') tags += '<span class="sc-msg-tag sc-msg-tag-certainty">Not enough to go on</span>';
     if (opts.writeback) tags += '<span class="sc-msg-tag sc-msg-tag-writeback" title="' + escapeHtml(opts.writeback.summary) + '">Recorded in demo audit trail</span>';
     if (opts.escalation) tags += '<span class="sc-msg-tag sc-msg-tag-escalation" title="' + escapeHtml(opts.escalation.reason) + '">Needs ' + (opts.escalation.to === 'scott_mercer' ? 'Scott Mercer' : 'Tom Arrington') + ' approval</span>';
     if (opts.technicalFailure) tags += '<span class="sc-msg-tag sc-msg-tag-fail">Technical problem</span>';
