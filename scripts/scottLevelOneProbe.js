@@ -82,11 +82,47 @@ function csrfFrom(html) {
   return input ? input[1] : null;
 }
 
-function makeClient(base) {
+// WHICH BASE URL TO TEST AGAINST, and why this is not a detail.
+//
+// The first armed run failed with "could not reach /scott (status 301)".
+// server.js forces HTTPS on every request that does not carry
+// x-forwarded-proto: https, which Railway's edge adds and a loopback
+// request does not. So http://127.0.0.1:PORT is redirected before any
+// route runs.
+//
+// The right fix is not to suppress that redirect. It is to test the way a
+// real visitor arrives: through the service's own public hostname, edge
+// included. That is a strictly better test than loopback — it exercises
+// the host rewrite, the canonical-host rule and TLS termination, which are
+// three of the things this deployment actually contributes.
+//
+// Loopback stays as a fallback for the case where the container has no
+// outbound route to its own edge, and there the x-forwarded-proto header
+// is added deliberately to emulate what the edge would have sent. The log
+// says which one was used, because a run through loopback proves slightly
+// less than a run through the edge and nobody should have to guess which
+// happened.
+async function resolveBase(port) {
+  const publicDomain = (process.env.RAILWAY_PUBLIC_DOMAIN || '').trim();
+  if (publicDomain) {
+    const url = `https://${publicDomain}`;
+    try {
+      const res = await fetch(url + '/health', { redirect: 'manual' });
+      if (res.status === 200) return { base: url, via: 'the public hostname, through the edge', headers: {} };
+    } catch (e) { /* fall through to loopback */ }
+  }
+  return {
+    base: `http://127.0.0.1:${port}`,
+    via: 'loopback (the edge was not reachable from inside the container)',
+    headers: { 'x-forwarded-proto': 'https' }
+  };
+}
+
+function makeClient(base, extraHeaders) {
   const jar = new Map();
   const cookieHeader = () => [...jar.entries()].map(([k, v]) => `${k}=${v}`).join('; ');
   async function req(pathname, opts = {}) {
-    const headers = Object.assign({ cookie: cookieHeader() }, opts.headers || {});
+    const headers = Object.assign({ cookie: cookieHeader() }, extraHeaders || {}, opts.headers || {});
     const res = await fetch(base + pathname, Object.assign({ redirect: 'manual' }, opts, { headers }));
     const set = res.headers.getSetCookie ? res.headers.getSetCookie() : [];
     set.forEach((c) => {
@@ -158,8 +194,9 @@ async function runLevelOneProbe(db, opts = {}) {
     return;
   }
 
-  const base = `http://127.0.0.1:${port}`;
-  const c = makeClient(base);
+  const resolved = await resolveBase(port);
+  console.log(`Level 1 probe: testing via ${resolved.via} (${resolved.base}).`);
+  const c = makeClient(resolved.base, resolved.headers);
   const results = [];
   let controlOk = false;
 

@@ -42,6 +42,42 @@ const SUITES = [
   'test/scott/progressionApi.test.js'
 ];
 
+// WHICH BASE URL TO TEST AGAINST, and why this is not a detail.
+//
+// The first armed run failed with "could not reach /scott (status 301)".
+// server.js forces HTTPS on every request that does not carry
+// x-forwarded-proto: https, which Railway's edge adds and a loopback
+// request does not. So http://127.0.0.1:PORT is redirected before any
+// route runs.
+//
+// The right fix is not to suppress that redirect. It is to test the way a
+// real visitor arrives: through the service's own public hostname, edge
+// included. That is a strictly better test than loopback — it exercises
+// the host rewrite, the canonical-host rule and TLS termination, which are
+// three of the things this deployment actually contributes.
+//
+// Loopback stays as a fallback for the case where the container has no
+// outbound route to its own edge, and there the x-forwarded-proto header
+// is added deliberately to emulate what the edge would have sent. The log
+// says which one was used, because a run through loopback proves slightly
+// less than a run through the edge and nobody should have to guess which
+// happened.
+async function resolveBase(port) {
+  const publicDomain = (process.env.RAILWAY_PUBLIC_DOMAIN || '').trim();
+  if (publicDomain) {
+    const url = `https://${publicDomain}`;
+    try {
+      const res = await fetch(url + '/health', { redirect: 'manual' });
+      if (res.status === 200) return { base: url, via: 'the public hostname, through the edge', headers: {} };
+    } catch (e) { /* fall through to loopback */ }
+  }
+  return {
+    base: `http://127.0.0.1:${port}`,
+    via: 'loopback (the edge was not reachable from inside the container)',
+    headers: { 'x-forwarded-proto': 'https' }
+  };
+}
+
 // Pure, so the whole decision is testable without a database or a deploy.
 function decideLaunch({ armed, spentRows, isPublicSite, hasStaffPassword }) {
   if (!armed || armed === 'false') return { launch: false, quiet: true };
@@ -108,14 +144,23 @@ async function maybeRunStagingChecks(db, opts = {}) {
     return;
   }
 
-  const base = `http://127.0.0.1:${port}`;
-  console.log(`Scott staging check "${decision.label}": running ${SUITES.length} HTTP suite(s) against the deployed build at ${base}`);
+  const resolved = await resolveBase(port);
+  const base = resolved.base;
+  console.log(`Scott staging check "${decision.label}": running ${SUITES.length} HTTP suite(s) against the deployed build via ${resolved.via} (${base})`);
+  if (base.startsWith('http://127.')) {
+    console.log('Scott staging check: on loopback, so the edge header is emulated by scripts/forwardedProtoPreload.js. A run through the public hostname would prove slightly more.');
+  }
 
-  const child = spawn(process.execPath, ['--test', ...SUITES], {
+  // The preload adds the edge's x-forwarded-proto header when, and only
+  // when, we are on loopback. Over the public hostname the real edge adds
+  // it and the preload stays inert.
+  const preload = path.join(__dirname, 'forwardedProtoPreload.js');
+  const child = spawn(process.execPath, ['--require', preload, '--test', ...SUITES], {
     cwd: path.join(__dirname, '..'),
     env: {
       ...process.env,
       // The adversarial suite's own names, and the progression suite's.
+      SCOTT_TEST_FORWARDED_PROTO: resolved.headers['x-forwarded-proto'] || '',
       SCOTT_TEST_BASE_URL: base,
       SCOTT_PROGRESSION_BASE_URL: base,
       SCOTT_PROGRESSION_TOM_PASSWORD: process.env.TOM_PASSWORD || '',
