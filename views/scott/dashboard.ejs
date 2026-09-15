@@ -11,6 +11,7 @@
   <div class="sc-shell">
     <%- include('partials/sidebar', { active: 'dashboard' }) %>
     <main class="sc-main">
+      <%- include('partials/progression-rail') %>
       <% if (typeof isImpersonating !== 'undefined' && isImpersonating) { %>
         <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
       <% } %>
@@ -29,32 +30,74 @@
           <% } %>
         </div>
 
-        <% if (canImpersonate) { %>
-        <div class="sc-persona-chips-wrap">
-          <div class="sc-persona-chips-label">Switch viewpoint</div>
-          <p class="sc-persona-chips-sub">Switch between staff members and watch what each one can and cannot see. Every member of staff here is fictional; the roles, and the limits on what each may see, are real-world ones.</p>
-          <div class="sc-persona-chips-row">
-            <%
-              var activePersonaId = (typeof isImpersonating !== 'undefined' && isImpersonating) ? personaId : '';
-            %>
-            <button class="sc-persona-chip sc-persona-chip-owner<%= (activePersonaId === '' || activePersonaId === 'scott_mercer') ? ' active' : '' %>" data-persona-id="">
-              <div class="sc-persona-chip-dot">SM</div>
-              <div>
-                <div class="sc-persona-chip-name">Scott Mercer</div>
-                <div class="sc-persona-chip-role">Owner &middot; <span class="sc-persona-chip-code">07Q</span></div>
-              </div>
+        <%
+          // VIEWING AS (15/09/2026). Replaces the strip of eight persona
+          // chips, on Tom's instruction: a row of faces reads as an
+          // organisational chart, and it also put human beings and AI
+          // workers in the same visual register, which they are not.
+          //
+          // The rule this encodes, and it is the reason the two controls
+          // look different rather than a style preference: A PERSON IS
+          // ROUND, A WORKER IS SQUARE. People are named in this control
+          // with circular avatars. The AI workers appear in the team
+          // strip and in provenance with square marks, and the two never
+          // share a row.
+          //
+          // Three people, not eight. The demonstration's point is that
+          // the same question answers differently by who is asking, and
+          // three well-separated clearances make that faster than eight
+          // do. The other five are unchanged, still valid personas, and
+          // still reachable through the API and the compare screen; this
+          // is a control, not a permission list.
+          var VIEWING_IDS = ['scott_mercer', 'chloe_reed', 'mike_evans'];
+          var _activeId = (typeof isImpersonating !== 'undefined' && isImpersonating) ? personaId : 'scott_mercer';
+          function _initials(n) { return n.split(/\s+/).map(function (w) { return w[0]; }).join('').substring(0, 2).toUpperCase(); }
+        %>
+        <% if (canImpersonate && caps.showPersonaSwitch) { %>
+        <div class="sc-viewing">
+          <span class="sc-viewing-label">Viewing as</span>
+          <div class="sc-viewing-ctl">
+            <button type="button" class="sc-viewing-btn" id="scViewingBtn" aria-haspopup="true" aria-expanded="false">
+              <span class="sc-viewing-face"><%= _initials(persona.name) %></span>
+              <span><%= persona.name %> <span class="sc-viewing-role">&middot; <%= persona.role %></span></span>
+              <span class="sc-viewing-caret">&#9662;</span>
             </button>
-            <% Object.keys(personas).filter(function (id) { return id !== 'scott_mercer'; }).forEach(function (id) { var p = personas[id]; %>
-            <button class="sc-persona-chip<%= activePersonaId === id ? ' active' : '' %>" data-persona-id="<%= id %>">
-              <div class="sc-persona-chip-dot"><%= p.code.substring(0,2) %></div>
-              <div>
-                <div class="sc-persona-chip-name"><%= p.name %></div>
-                <div class="sc-persona-chip-role"><%= p.role %> &middot; <span class="sc-persona-chip-code"><%= p.code %></span></div>
-              </div>
-            </button>
-            <% }); %>
+            <div class="sc-viewing-menu" id="scViewingMenu" hidden role="menu">
+              <% VIEWING_IDS.forEach(function (id) { var pp = personas[id]; if (!pp) return; %>
+                <button type="button" class="sc-viewing-opt" role="menuitemradio"
+                        aria-checked="<%= _activeId === id ? 'true' : 'false' %>"
+                        data-persona-id="<%= id === 'scott_mercer' ? '' : id %>">
+                  <span class="sc-viewing-face"><%= _initials(pp.name) %></span>
+                  <span><%= pp.name %> <span class="sc-viewing-role">&middot; <%= pp.role %></span></span>
+                </button>
+              <% }); %>
+            </div>
           </div>
+          <span class="sc-viewing-note">The same question, answered for whoever is asking.</span>
         </div>
+        <script nonce="<%= nonce %>">
+        (function () {
+          // Opens the menu only. The switch itself is the delegated
+          // handler in partials/sidebar.ejs, which posts to
+          // /api/scott/impersonate — one switcher, one code path, so this
+          // control cannot drift from the permission check behind it.
+          var b = document.getElementById('scViewingBtn');
+          var m = document.getElementById('scViewingMenu');
+          if (!b || !m) return;
+          b.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var open = m.hidden;
+            m.hidden = !open;
+            b.setAttribute('aria-expanded', open ? 'true' : 'false');
+          });
+          document.addEventListener('click', function () {
+            if (!m.hidden) { m.hidden = true; b.setAttribute('aria-expanded', 'false'); }
+          });
+          document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && !m.hidden) { m.hidden = true; b.setAttribute('aria-expanded', 'false'); b.focus(); }
+          });
+        })();
+        </script>
         <% } %>
 
         <div class="sc-stage-ruth">
@@ -68,8 +111,22 @@
         <h1 class="sc-stage-h">What do you need help with?</h1>
 
         <div class="sc-stage-chat">
-          <%- include('partials/chat-widget', { workersById: workersById, csrfToken: csrfToken, aiEnabled: aiEnabled, heroFocus: true, heroMode: true }) %>
+          <%- include('partials/chat-widget', { workersById: workersById, csrfToken: csrfToken, aiEnabled: aiEnabled, heroFocus: true, heroMode: true, chatDetail: caps.chatDetail, showProvenance: caps.showProvenance }) %>
         </div>
+
+        <%
+          // The Level 1 ceiling. Generated from the cap in
+          // lib/scott/progression.js, not written next to it: at Level 1
+          // the workers genuinely cannot read the job, the price or the
+          // capacity, so this sentence is a description of the system
+          // rather than a caption on it. If the cap changes, this changes.
+        %>
+        <% if (ceiling) { %>
+        <div class="sc-ceiling">
+          <span class="sc-ceiling-mark" aria-hidden="true">&#9888;</span>
+          <div class="sc-ceiling-body"><strong><%= ceiling.heading %></strong><%= ceiling.body %></div>
+        </div>
+        <% } %>
 
         <%
           var PERSONA_SUGGESTIONS = {
@@ -134,6 +191,15 @@
           };
           var activeSuggestions = PERSONA_SUGGESTIONS[personaId] || PERSONA_SUGGESTIONS["scott_mercer"];
         %>
+        <%
+          // Gated to Level 2 and up. These are business questions — "where
+          // are we losing money", "show me the commercial leakage" — and at
+          // Level 1 they sit directly under a note saying the system can
+          // read the incoming message and nothing else. Offering them there
+          // contradicts the ceiling on the same screen, which is worse than
+          // offering nothing. The chat's own starter prompts remain.
+        %>
+        <% if (caps.showBusinessContext) { %>
         <div class="sc-suggestions-wrap">
           <div class="sc-suggestions-label">Ask Ruth</div>
           <div class="sc-suggestions-row">
@@ -142,7 +208,9 @@
             <% }); %>
           </div>
         </div>
+        <% } %>
 
+        <% if (caps.showTeamStrip) { %>
         <div class="sc-team-strip" aria-label="The specialists Ruth routes to">
           <div class="sc-team-lead-in">Ruth routes your question to</div>
           <div class="sc-team-row">
@@ -158,6 +226,7 @@
           </div>
           <div class="sc-stage-footnote">What you can see, and what the team will agree to do, depends on who is signed in. <a href="/scott/team">How this team works</a>.</div>
         </div>
+        <% } %>
       </section>
 
       <script nonce="<%= nonce %>">
@@ -190,6 +259,23 @@
       })();
       </script>
 
+      <%
+        // ------------------------------------------------------------
+        // LEVEL 2 AND UP: THE BUSINESS BEHIND THE ANSWER
+        // ------------------------------------------------------------
+        // Everything from here to the deeper-dive invitation is the
+        // company's own state: the pulse numbers, the gap register, the
+        // attention list, recent activity and the snapshot. At Level 1
+        // none of it is on screen, because the whole claim of that state
+        // is that there is one box and one answer.
+        //
+        // Hidden, not removed, and not gated. Every figure below is still
+        // clearance-filtered exactly as it was, and every page it links
+        // to is still registered and still refuses whoever it refused
+        // before. A visitor at Level 1 who types /scott/jobs gets the
+        // jobs page their clearance allows.
+      %>
+      <% if (caps.showBusinessContext) { %>
       <%
         // The pulse: the four numbers an owner actually glances at, big
         // and unboxed. The overdue-money figure is clearance-gated like
@@ -331,6 +417,24 @@
           </div>
         </div>
       </div>
+      <% } %>
+
+      <%
+        // LEVEL 4: Lead Finder. A pointer, not the thing itself — the
+        // work sits on its own page so the dashboard stays calm. Two
+        // conditions, ANDed: the level, and the ordinary clearance check
+        // for commercial_prospecting, which only the owner holds. A
+        // viewer without it never learns the area exists.
+      %>
+      <% if (caps.showLeadFinder && canSee('commercial_prospecting')) { %>
+        <h2 class="sc-section-title">Work nobody asked it to look for</h2>
+        <div class="sc-card sc-honesty-card">
+          <p class="sc-row-sub"><strong>Lead Finder has <%= leadFinderTotal %> opportunities this week.</strong>
+          Some are obvious and public. Some were found by following a change in one record through to who eventually pays for it.
+          Every one carries its source, its reasoning and how confident it is. <a href="/scott/lead-finder">Open Lead Finder</a>.</p>
+        </div>
+      <% } %>
+
       <%- include('partials/deeper-dive') %>
     </main>
   </div>

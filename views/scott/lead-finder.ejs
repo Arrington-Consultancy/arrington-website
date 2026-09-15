@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lead Finder | Scott's Armchair &amp; Knitting Service</title>
+  <meta name="robots" content="noindex, nofollow">
+  <%- include('partials/styles') %>
+</head>
+<body class="scott-body">
+  <div class="sc-shell">
+    <%- include('partials/sidebar', { active: 'leadfinder', navCounts: navCounts }) %>
+    <main class="sc-main">
+      <%- include('partials/progression-rail') %>
+      <% if (typeof isImpersonating !== 'undefined' && isImpersonating) { %>
+        <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
+      <% } %>
+
+      <div class="sc-page-header">
+        <div>
+          <h1 class="sc-h">Lead Finder</h1>
+          <p>Work nobody asked it to look for. Viewing as <strong><%= persona.name %></strong> (<%= persona.role %>).</p>
+        </div>
+      </div>
+
+      <%
+        // Reached only by somebody holding commercial_prospecting, and the
+        // records were filtered again on the way in. This branch is the
+        // belt on top of those braces: if filtering ever returns nothing,
+        // the page says so rather than rendering an empty frame that
+        // reads as "there is no work out there".
+      %>
+      <% if (!opportunities.length) { %>
+        <div class="sc-card sc-empty">Nothing is written up at the moment.</div>
+      <% } else { %>
+
+      <div class="sc-lf">
+        <div class="sc-lf-top">
+          <div class="sc-lf-count">
+            <span class="sc-lf-n"><%= leadSummary.total %></span>
+            <span class="sc-lf-cap">
+              <b>opportunities this week</b>
+              <span>Devon and Cornwall, checked every morning. The <%= leadSummary.shown %> below are written up in full.</span>
+            </span>
+          </div>
+          <div class="sc-lf-split">
+            <%
+              // These describe the ones written up below, not the headline
+              // count, which is why they do not add up to it. Said in
+              // words rather than left for the reader to work out, because
+              // "1 obvious, 1 missed" sitting next to a 7 reads as an
+              // arithmetic mistake and costs the whole panel its
+              // credibility.
+            %>
+            <span class="sc-pill sc-pill-status"><%= leadSummary.obvious %> obvious</span>
+            <span class="sc-pill sc-pill-risk"><%= leadSummary.hidden %> you would have missed</span>
+          </div>
+        </div>
+
+        <div class="sc-lf-body">
+          <% opportunities.forEach(function (o, i) { %>
+            <div class="sc-opp">
+              <div class="sc-opp-tag<%= o.kind === 'hidden' ? ' sc-opp-tag-h' : '' %>">
+                <%= o.kind === 'hidden' ? 'Hidden opportunity' : 'Obvious' %> &middot;
+                <%= String(o.confidence).split('.')[0].toLowerCase() %> confidence
+              </div>
+              <div class="sc-opp-t"><%= o.title %></div>
+              <div class="sc-opp-meta"><%= o.summary %></div>
+
+              <%
+                // The condensed chain, for the ones that were inferred
+                // rather than advertised. Four steps, no evidence: it is
+                // there to make "this was not on a tender site" legible
+                // in one glance. The evidence is one click away, which is
+                // the whole point of it being one click away.
+              %>
+              <% if (o.chain && o.chain.length) { %>
+                <div class="sc-mini">
+                  <% o.chain.forEach(function (step, si) { %>
+                    <div class="sc-mini-s"><%= step %></div>
+                    <% if (si < o.chain.length - 1) { %><div class="sc-mini-a" aria-hidden="true">&darr;</div><% } %>
+                  <% }); %>
+                </div>
+              <% } %>
+
+              <button class="sc-opp-more" type="button" data-opp="<%= i %>" aria-expanded="false" aria-controls="sc-ev-<%= i %>">See why I found this &rarr;</button>
+
+              <div class="sc-ev" id="sc-ev-<%= i %>" hidden>
+                <div class="sc-ev-r"><div class="sc-ev-k">Source</div><div class="sc-ev-v"><%= o.source %></div></div>
+                <div class="sc-ev-r"><div class="sc-ev-k">What changed</div><div class="sc-ev-v"><%= o.whatChanged %></div></div>
+                <div class="sc-ev-r"><div class="sc-ev-k">Why it may matter</div><div class="sc-ev-v"><%= o.whyItMayMatter %></div></div>
+                <div class="sc-ev-r"><div class="sc-ev-k">Reasoning</div><div class="sc-ev-v">
+                  <% (o.reasoning || []).forEach(function (r, ri) { %>
+                    <div class="sc-ev-step"><span class="sc-ev-num"><%= ri + 1 %></span><span><%= r %></span></div>
+                  <% }); %>
+                </div></div>
+                <div class="sc-ev-r"><div class="sc-ev-k">Confidence</div><div class="sc-ev-v"><%= o.confidence %></div></div>
+                <div class="sc-ev-r"><div class="sc-ev-k">Suggested next action</div><div class="sc-ev-v"><%= o.suggestedNextAction %></div></div>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+      </div>
+
+      <p class="sc-proposed-note">A candidate is not a lead. Nothing here has been contacted, and nothing here goes anywhere until a person decides it should.</p>
+
+      <script nonce="<%= nonce %>">
+      (function () {
+        Array.prototype.forEach.call(document.querySelectorAll('.sc-opp-more'), function (btn) {
+          var panel = document.getElementById('sc-ev-' + btn.getAttribute('data-opp'));
+          if (!panel) return;
+          btn.addEventListener('click', function () {
+            var open = panel.hidden;
+            panel.hidden = !open;
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            btn.innerHTML = open ? 'Hide the reasoning' : 'See why I found this &rarr;';
+          });
+        });
+      })();
+      </script>
+
+      <% } %>
+      <%- include('partials/deeper-dive') %>
+    </main>
+  </div>
+</body>
+</html>

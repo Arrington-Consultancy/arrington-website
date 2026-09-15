@@ -32,6 +32,7 @@ const TEST_ROOT = __dirname;
 const GATED = [
   { file: 'waiSeedMode.test.js', name: 'two-pass seed', arms: 'WAI_SEED_TEST_DATABASE_URL' },
   { file: 'scott/adversarialApi.test.js', name: 'Scott adversarial HTTP', arms: 'SCOTT_TEST_BASE_URL + SCOTT_DEMO_STAFF_PASSWORD, against a running server' },
+  { file: 'scott/progressionApi.test.js', name: 'Scott progression over real HTTP', arms: 'SCOTT_PROGRESSION_BASE_URL + SCOTT_PROGRESSION_TOM_PASSWORD + SCOTT_DEMO_STAFF_PASSWORD, against a running server' },
   { file: 'scott/liveAiPressure.test.js', name: 'Scott live-AI pressure (SPENDS MONEY)', arms: 'RUN_SCOTT_LIVE_AI=true + ANTHROPIC_API_KEY + ENABLE_SCOTT_AI=true' },
   { file: 'scott/estimateCoverage.test.js', name: 'Does every worker actually estimate (SPENDS MONEY)', arms: 'RUN_SCOTT_ESTIMATE_PROBE=<run label> + ANTHROPIC_API_KEY + ENABLE_SCOTT_AI=true + DATABASE_URL' },
   { file: 'workspace/adversarialApi.test.js', name: 'workspace adversarial HTTP', arms: 'WORKSPACE_TEST_BASE_URL + WORKSPACE_TEST_TOM_PASSWORD + WORKSPACE_TEST_PASSPHRASE, against a running server' },
@@ -121,6 +122,7 @@ test('what did not run in this invocation is reported', () => {
   const armed = {
     'waiSeedMode.test.js': !!env.WAI_SEED_TEST_DATABASE_URL,
     'scott/adversarialApi.test.js': !!(env.SCOTT_TEST_BASE_URL && env.SCOTT_DEMO_STAFF_PASSWORD),
+    'scott/progressionApi.test.js': !!(env.SCOTT_PROGRESSION_BASE_URL && env.SCOTT_PROGRESSION_TOM_PASSWORD && env.SCOTT_DEMO_STAFF_PASSWORD),
     'scott/liveAiPressure.test.js': !!(env.RUN_SCOTT_LIVE_AI && env.ANTHROPIC_API_KEY && env.ENABLE_SCOTT_AI === 'true'),
     'scott/estimateCoverage.test.js': !!(env.RUN_SCOTT_ESTIMATE_PROBE && env.ANTHROPIC_API_KEY && env.ENABLE_SCOTT_AI === 'true' && env.DATABASE_URL),
     // Finding M5: WORKSPACE_TEST_PASSPHRASE was missing here, so a run

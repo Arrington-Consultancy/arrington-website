@@ -10,15 +10,40 @@
     <input type="text" id="scSearchInput" class="sc-search-input" placeholder="Search jobs, enquiries, customers..." autocomplete="off">
     <div id="scSearchResults" class="sc-search-results" hidden></div>
   </div>
+<%
+    // The nav is one of the two places the progression is actually felt
+    // (the other is the dashboard). At Level 1 the demonstration is one
+    // question and one answer, so the fifteen links that made this need
+    // explaining are simply not there yet.
+    //
+    // HIDING IS NOT GATING. Every route below remains registered,
+    // access-guarded and clearance-filtered exactly as it was: a link
+    // absent from this list is still reachable by typing it, and still
+    // refuses anyone it refused before. That is deliberate. A nav that
+    // silently 404s a page it is merely not showing yet would be a second
+    // access model, and a second access model is how a finance figure
+    // eventually reaches the driver.
+    var _caps = (typeof caps !== 'undefined') ? caps : { showRecordsNav: true, showTeamStrip: true, showLeadFinder: true };
+    var _canProspect = (typeof canSee === 'function') ? canSee('commercial_prospecting') : false;
+  %>
   <ul class="sc-nav">
     <li><a href="/scott" class="<%= active === 'dashboard' ? 'active' : '' %>">Dashboard</a></li>
+    <% if (_caps.showRecordsNav) { %>
     <li><a href="/scott/jobs" class="<%= active === 'jobs' ? 'active' : '' %>">Jobs &amp; Orders</a></li>
     <li><a href="/scott/enquiries" class="<%= active === 'enquiries' ? 'active' : '' %>">Enquiries<% if (typeof navCounts !== 'undefined' && navCounts.newEnquiries) { %><span class="sc-badge"><%= navCounts.newEnquiries %></span><% } %></a></li>
     <li><a href="/scott/approvals" class="<%= active === 'approvals' ? 'active' : '' %>">Approvals<% if (typeof navCounts !== 'undefined' && navCounts.pendingApprovals) { %><span class="sc-badge"><%= navCounts.pendingApprovals %></span><% } %></a></li>
+    <% } %>
   </ul>
+  <% if (_caps.showLeadFinder && _canProspect) { %>
+  <ul class="sc-nav">
+    <li><a href="/scott/lead-finder" class="<%= active === 'leadfinder' ? 'active' : '' %>">Lead Finder</a></li>
+  </ul>
+  <% } %>
+  <% if (_caps.showTeamStrip) { %>
   <ul class="sc-nav">
     <li><a href="/scott/team" class="<%= active === 'team' ? 'active' : '' %>">How this team works</a></li>
   </ul>
+  <% } %>
   <%
     // Finance and Social Media get their own tabs rather than sitting
     // inside the collapsed Company records list, per Tom's instruction
@@ -35,7 +60,7 @@
     var allDataPages = (typeof dataPages !== 'undefined' ? dataPages : []);
     var pinnedPages = allDataPages.filter(function (p) { return PINNED_NAV_KEYS.indexOf(p.nav) !== -1; });
   %>
-  <ul class="sc-nav">
+  <ul class="sc-nav" <%= _caps.showRecordsNav ? '' : 'hidden' %>>
     <% pinnedPages.forEach(function (p) { %>
       <li><a href="<%= p.path %>" class="<%= active === p.nav ? 'active' : '' %>"><%= p.label %></a></li>
     <% }); %>
@@ -51,6 +76,7 @@
     var recordsPages = allDataPages.filter(function (p) { return PINNED_NAV_KEYS.indexOf(p.nav) === -1; });
     var recordsOpen = recordsPages.some(function (p) { return p.nav === active; });
   %>
+  <% if (_caps.showRecordsNav) { %>
   <button type="button" class="sc-nav-heading sc-nav-toggle" id="scRecordsToggle" aria-expanded="<%= recordsOpen ? 'true' : 'false' %>">Company records <span class="sc-nav-caret"><%= recordsOpen ? '▾' : '▸' %></span></button>
   <ul class="sc-nav" id="scRecordsList" <%= recordsOpen ? '' : 'hidden' %>>
     <% recordsPages.forEach(function (p) { %>
@@ -70,12 +96,13 @@
     });
   })();
   </script>
-  <% if (typeof persona !== 'undefined') { %>
+  <% } %>
+  <% if (typeof persona !== 'undefined' && _caps.showPersonaSwitch) { %>
   <div class="sc-clearance-block">
     <div class="sc-persona-label">Clearance</div>
     <div class="sc-clearance-value"><%= persona.code %> &middot; <%= persona.role %></div>
     <% if (typeof canImpersonate !== 'undefined' && canImpersonate) { %>
-      <p class="sc-persona-hint">The viewer switcher lives next to the chat on the <a href="/scott">dashboard</a>.</p>
+      <p class="sc-persona-hint">The <strong>Viewing as</strong> control sits above the chat on the <a href="/scott">dashboard</a>.</p>
     <% } %>
   </div>
   <% } %>
@@ -100,7 +127,7 @@
   // Persona chip switcher — delegated click handler so it works whether
   // the chips are on the dashboard or any other page that includes them.
   document.addEventListener('click', function (e) {
-    var chip = e.target.closest('.sc-persona-chip[data-persona-id]');
+    var chip = e.target.closest('[data-persona-id]');
     if (!chip) return;
     var personaId = chip.dataset.personaId || null;
     fetch('/api/scott/impersonate', {

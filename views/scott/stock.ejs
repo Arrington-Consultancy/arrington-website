@@ -11,6 +11,7 @@
   <div class="sc-shell">
     <%- include('partials/sidebar', { active: 'stock', navCounts: navCounts }) %>
     <main class="sc-main">
+      <%- include('partials/progression-rail') %>
       <% if (typeof isImpersonating !== 'undefined' && isImpersonating) { %>
         <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
       <% } %>
