@@ -1072,9 +1072,11 @@
   .sc-rail-step.is-current .sc-rail-num { background: var(--sc-terracotta); color: #fff; }
   .sc-rail-step.is-current .sc-rail-sub { color: var(--sc-text-muted); }
 
-  /* The Level 1 ceiling. Its whole job is to be believed, so it is
-     styled as a note the system is volunteering rather than as a warning
-     something has gone wrong. */
+  /* The note Level 1 volunteers about itself. It was the "ceiling" until
+     15/09/2026, when the knowledge cap it described was removed; the
+     styling is unchanged because it was already right for the new job.
+     Deliberately not warning-shaped: nothing has gone wrong at Level 1,
+     and this sentence's whole job is to be believed. */
   .sc-ceiling {
     display: flex; gap: 11px; align-items: flex-start;
     background: #fbf6ec; border: 1px solid #ecdcbf; border-left: 3px solid var(--sc-mustard);
