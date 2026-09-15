@@ -2118,6 +2118,72 @@
             margin-bottom: 2rem;
         }
 
+        /* Route on to the full case study. Quiet accent text link rather than
+           a button: on the home page these sit at the end of a compact
+           summary, and a full button there adds height to the exact sections
+           that were made shorter. */
+        .case-more {
+            margin-top: 1.75rem;
+            font-size: 0.95rem;
+        }
+        .case-more a {
+            color: var(--accent);
+            text-decoration: none;
+            border-bottom: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+            padding-bottom: 2px;
+        }
+        .case-more a:hover,
+        .case-more a:focus-visible {
+            border-bottom-color: var(--accent);
+        }
+
+        /* HOME PAGE ONLY: the two case studies are compact proof summaries
+           there, and the full tellings live on Evidence. Measured on an
+           iPhone 13 before choosing these numbers: the section padding, the
+           timeline's top margin and the per-phase bottom padding were the
+           three largest non-text consumers of height. Scoped to .page-main so
+           the Evidence page keeps the full, roomier treatment. */
+        .page-main .case-study,
+        .page-main .casestudy2 {
+            padding-top: 1.85rem;
+            padding-bottom: 1.85rem;
+        }
+        .page-main .case-study .section-label,
+        .page-main .casestudy2 .section-label {
+            margin-bottom: 0.5rem;
+        }
+        .page-main .case-study .section-heading,
+        .page-main .casestudy2 .section-heading {
+            margin-bottom: 0.75rem;
+        }
+        .page-main .case-timeline {
+            margin-top: 1rem;
+        }
+        .page-main .case-phase {
+            padding-bottom: 1.15rem;
+        }
+        .page-main .casestudy2-intro {
+            margin-top: 0.9rem;
+            margin-bottom: 0.9rem;
+        }
+        .page-main .casestudy2-body {
+            margin-bottom: 1.25rem;
+        }
+        .page-main .casestudy2-outcome {
+            padding: 1.15rem 1.35rem;
+        }
+        .page-main .case-more {
+            margin-top: 0.85rem;
+        }
+        /* The two summaries read as one proof block, so the join between them
+           does not need two full section paddings. */
+        .page-main .case-study {
+            padding-bottom: 1.1rem;
+        }
+        .page-main .case-study + .casestudy2 {
+            padding-top: 1.1rem;
+        }
+
         .casestudy2-outcome {
             background: var(--charcoal);
             border-left: 3px solid var(--accent);
@@ -4008,6 +4074,22 @@
                     </div>
                 </div>
             </div>
+            <%
+              // Route on to the full case study. Added 15/09/2026: the home
+              // page carries compact summaries and has to lead somewhere real.
+              // Deliberately NOT the existing casestudy2 button_href, which is
+              // validated as an EXTERNAL https URL and opens a new tab; this is
+              // an internal link and may carry a #fragment to the section it
+              // points at. Validated at render like the documents paths: root
+              // relative, optional fragment, no traversal, so a bad value
+              // renders nothing rather than reaching an href.
+              const _csMoreText = (content[_k + '.link_text'] || '').replace(/<[^>]+>/g, '').trim();
+              const _csMoreHref = (content[_k + '.link_href'] || '').trim();
+              const _csMoreOk = _csMoreText && /^\/[A-Za-z0-9._\-\/]*(?:#[A-Za-z0-9_\-]+)?$/.test(_csMoreHref) && !_csMoreHref.includes('..');
+            %>
+            <% if (_csMoreOk) { %>
+            <p class="case-more"><a href="<%= _csMoreHref %>"><%= _csMoreText %> <span aria-hidden="true">&rarr;</span></a></p>
+            <% } %>
         </div>
     </div>
 </section>
@@ -4098,6 +4180,22 @@
             %>
             <% if (_cs2BtnText && _cs2ValidHref) { %>
             <a href="<%= _cs2BtnHref %>" class="btn btn-primary" target="_blank" rel="noopener noreferrer"><%= _cs2BtnText %></a>
+            <% } %>
+            <%
+              // Route on to the full case study. Added 15/09/2026: the home
+              // page carries compact summaries and has to lead somewhere real.
+              // Deliberately NOT the existing casestudy2 button_href, which is
+              // validated as an EXTERNAL https URL and opens a new tab; this is
+              // an internal link and may carry a #fragment to the section it
+              // points at. Validated at render like the documents paths: root
+              // relative, optional fragment, no traversal, so a bad value
+              // renders nothing rather than reaching an href.
+              const _csMoreText = (content[_k + '.link_text'] || '').replace(/<[^>]+>/g, '').trim();
+              const _csMoreHref = (content[_k + '.link_href'] || '').trim();
+              const _csMoreOk = _csMoreText && /^\/[A-Za-z0-9._\-\/]*(?:#[A-Za-z0-9_\-]+)?$/.test(_csMoreHref) && !_csMoreHref.includes('..');
+            %>
+            <% if (_csMoreOk) { %>
+            <p class="case-more"><a href="<%= _csMoreHref %>"><%= _csMoreText %> <span aria-hidden="true">&rarr;</span></a></p>
             <% } %>
         </div>
     </div>

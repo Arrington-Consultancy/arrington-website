@@ -6635,6 +6635,273 @@ async function seed() {
   }
 
 
+  // Migration: compact the home page proof, and give the VAT Intervention a
+  // real Evidence destination (15/09/2026, second pass).
+  //
+  // Tom reviewed the deployed result on his phone. The hierarchy is right and
+  // is not reopened here. One thing remained: the two case studies, each
+  // reasonable alone, still ran to several screens together and sat directly
+  // above the twenty-years block, its proof tiles and the testimonials, so
+  // the middle of the page read as proof-heavy and repetitive. His target is
+  // roughly one to one and a half mobile screens for the pair, by good design
+  // rather than a pixel count.
+  //
+  // THE HEIGHT WAS MOSTLY NOT THE WORDS, which is why this pass is small on
+  // copy. Measured on an iPhone 13 before deciding anything: of Orca's 806px,
+  // 128px was section padding, 48px the timeline's top margin and 80px the
+  // per-phase bottom padding, against 354px of actual prose. So the main
+  // lever is spacing, applied as `.page-main` rules in views/index.ejs, and
+  // the Evidence page keeps the full, roomier treatment untouched.
+  //
+  // What changes in content here:
+  //
+  //   1. Orca's result phase carries Tom's required line verbatim, "From
+  //      insolvency risk to a marketable asset. Twenty four months, start to
+  //      sale." The old body opened "Twenty four months later", so the
+  //      opening is rewritten to avoid saying it twice, and `stat_number` is
+  //      cleared on the home page instance because its capstone renders
+  //      ", start to sale." and would now repeat the same phrase.
+  //   2. The `subtext` line is cleared on the home page instance only. It is
+  //      a one-line restatement of the heading and result.
+  //   3. VAT's body loses one clause.
+  //   4. Both summaries gain a link to their full case study on Evidence.
+  //   5. The full VAT Intervention is ADDED to Evidence, because it had no
+  //      fuller public version anywhere and so the home page summary had
+  //      nothing genuine to lead to. It is the approved wording verbatim, in
+  //      the "we" voice Tom confirmed, with no new fact or claim.
+  //
+  // Existing Evidence case studies are only ever READ here, never written.
+  {
+    const COMPACT_MARKER = 'homepage.proof_compact_2026-09-15';
+
+    // The full VAT Intervention, exactly as approved and already live on the
+    // home page before this pass shortened it. Nothing here is new wording:
+    // it is the pre-summary text with the 15/09 pronoun correction applied.
+    const VAT_FULL = {
+      heading: 'The VAT Intervention',
+      intro: 'We walked into a business where the growth was real but the oversight was non-existent. Tristan had built a success, but the back office was a black hole.',
+      body: "The VAT had been incorrectly managed for over a year, creating a hidden liability that was threatening to swallow the company's entire cash reserve. We didn't just find the error; we sat in the room, untangled eighteen months of forensic data, and rebuilt the reconciliation process from scratch.",
+      outcome: 'We corrected the filing, secured the position with HMRC, and saved the business from a <strong>six-figure cash flow collapse</strong>. It wasn\'t about "consultancy". It was about having the stomach to fix the mess the owner was too busy to see.'
+    };
+
+    // Home page tightening, each guarded on the exact value this file wrote
+    // in the previous pass, so a CMS edit since then always wins.
+    const ORCA_TIGHTEN = [
+      {
+        // The summary keeps what was wrong, not the colour: the marine
+        // client and the Princess Yachts work stay in the full telling on
+        // Evidence, which this section now links to.
+        field: 'phase_1_body',
+        from: 'A Devon marine firm working on superyachts, including projects for Princess Yachts, was close to insolvency with no provision for VAT or tax.',
+        to: 'A Devon marine firm was close to insolvency, with no provision for VAT or tax.'
+      },
+      {
+        field: 'phase_2_body',
+        from: 'Tom took full financial control, with his own money at risk, ring fenced the liabilities and paid creditors down on agreed terms.',
+        to: 'Tom took full financial control, with his own money at risk, and paid the liabilities down.'
+      },
+      {
+        field: 'phase_3_body',
+        from: 'Twenty four months later it was making consistent monthly profit and was sold at a profit, with no outside investment.<br /><br /><strong>From insolvency risk to a marketable asset.</strong>',
+        to: 'It reached consistent monthly profit and was sold at a profit, with no outside investment.<br /><br /><strong>From insolvency risk to a marketable asset. Twenty four months, start to sale.</strong>'
+      }
+    ];
+    const VAT_TIGHTEN = [
+      {
+        field: 'body',
+        from: "The VAT had been incorrectly managed for over a year, creating a hidden liability that was threatening to swallow the company's entire cash reserve. We untangled eighteen months of data and rebuilt the reconciliation process from scratch.",
+        to: "VAT had been mismanaged for over a year, creating a hidden liability against the entire cash reserve. We untangled eighteen months of data and rebuilt the reconciliation."
+      }
+    ];
+
+    const LINK_TEXT = 'Read the full case study';
+
+    const { rows: compactMarker } = await db.query(
+      'SELECT 1 FROM content WHERE section_key = $1', [COMPACT_MARKER]
+    );
+
+    if (compactMarker.length === 0) {
+      const { rows: allPages } = await db.query('SELECT slug, section_order FROM pages');
+      const main = allPages.find((pg) => pg.slug === 'main');
+      const evidence = allPages.find((pg) => pg.slug === 'evidence');
+
+      if (main && Array.isArray(main.section_order)) {
+        const notes = [];
+        const mainOrder = main.section_order;
+        const orcaId = mainOrder.find((id) => /^casestudy(?:__\d+)?$/.test(id));
+        const vatId = mainOrder.find((id) => /^casestudy2(?:__\d+)?$/.test(id));
+
+        // --- The Evidence destination for VAT ---
+        let vatEvidenceId = null;
+        if (!evidence || !Array.isArray(evidence.section_order)) {
+          notes.push('no evidence page, VAT case study not added');
+        } else {
+          const evOrder = evidence.section_order.slice();
+
+          // Already there? Match on the heading rather than the id, because
+          // the id is allocated and a rerun must not add a second copy.
+          const { rows: existingVat } = await db.query(
+            `SELECT section_key FROM content
+              WHERE section_key = ANY($1) AND content = $2`,
+            [evOrder.map((id) => id + '.heading'), VAT_FULL.heading]
+          );
+
+          if (existingVat.length) {
+            vatEvidenceId = existingVat[0].section_key.replace(/\.heading$/, '');
+            notes.push('Evidence already carries the VAT case study as ' + vatEvidenceId);
+          } else {
+            const inUse = new Set();
+            for (const pg of allPages) {
+              if (Array.isArray(pg.section_order)) for (const id of pg.section_order) inUse.add(id);
+            }
+            const { rows: prefixRows } = await db.query(
+              "SELECT DISTINCT split_part(section_key, '.', 1) AS prefix FROM content"
+            );
+            const prefixes = new Set(prefixRows.map((r) => r.prefix));
+            let allocated = null;
+            for (let n = 2; n <= 99; n++) {
+              const candidate = 'casestudy2__' + n;
+              if (!inUse.has(candidate) && !prefixes.has(candidate)) { allocated = candidate; break; }
+            }
+
+            if (!allocated) {
+              notes.push('no free casestudy2 id, VAT case study not added to Evidence');
+            } else {
+              // Continue Evidence's own numbered series rather than inventing
+              // a label format. Read the highest number actually in use on
+              // that page; fall back to a plain label if the series is gone.
+              const { rows: labelRows } = await db.query(
+                'SELECT content FROM content WHERE section_key = ANY($1)',
+                [evOrder.map((id) => id + '.label')]
+              );
+              let highest = 0;
+              for (const row of labelRows) {
+                const m = /evidence:\s*(\d+)/i.exec(String(row.content).replace(/<[^>]+>/g, ''));
+                if (m) highest = Math.max(highest, parseInt(m[1], 10));
+              }
+              const label = highest > 0
+                ? '<strong>EVIDENCE: ' + String(highest + 1).padStart(2, '0') + '</strong>'
+                : '<strong>Case study</strong>';
+
+              for (const [field, value] of [
+                ['label', label],
+                ['heading', VAT_FULL.heading],
+                ['intro', VAT_FULL.intro],
+                ['body', VAT_FULL.body],
+                ['outcome', VAT_FULL.outcome]
+              ]) {
+                await db.query(
+                  'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+                  [allocated + '.' + field, value]
+                );
+              }
+
+              // Directly after the last existing case study, so the case
+              // studies stay together and the documents still follow them.
+              let lastCase = -1;
+              evOrder.forEach((id, i) => { if (/^casestudy2?(?:__\d+)?$/.test(id)) lastCase = i; });
+              const at = lastCase === -1 ? evOrder.length : lastCase + 1;
+              evOrder.splice(at, 0, allocated);
+              await db.query(
+                'UPDATE pages SET section_order = $1::jsonb WHERE slug = $2',
+                [JSON.stringify(evOrder), 'evidence']
+              );
+              vatEvidenceId = allocated;
+              notes.push('added the full VAT case study to Evidence as ' + allocated + ' at position ' + at);
+            }
+          }
+        }
+
+        // The Orca destination already exists on Evidence; find it rather
+        // than hardcoding, so the link cannot point at a section that moved.
+        let orcaEvidenceId = null;
+        if (evidence && Array.isArray(evidence.section_order)) {
+          orcaEvidenceId = evidence.section_order.find((id) => /^casestudy(?:__\d+)?$/.test(id)) || null;
+        }
+
+        // --- Orca: tighten, drop the restated subtext and the now-duplicated
+        //     capstone, and link on ---
+        if (!orcaId) {
+          notes.push('no case study on the home page');
+        } else {
+          let changed = 0;
+          for (const { field, from, to } of ORCA_TIGHTEN) {
+            const { rowCount } = await db.query(
+              'UPDATE content SET content = $1 WHERE section_key = $2 AND content = $3',
+              [to, orcaId + '.' + field, from]
+            );
+            changed += rowCount;
+          }
+          // The capstone renders ", start to sale." after stat_number, which
+          // the result line now says in full.
+          const { rowCount: capstoneCleared } = await db.query(
+            "UPDATE content SET content = '' WHERE section_key = $1 AND content <> ''",
+            [orcaId + '.stat_number']
+          );
+          // Guarded on the Evidence source's own value, the same
+          // still-an-untouched-copy rule the previous pass used.
+          let subtextCleared = 0;
+          if (orcaEvidenceId) {
+            const { rows: srcSub } = await db.query(
+              'SELECT content FROM content WHERE section_key = $1', [orcaEvidenceId + '.subtext']
+            );
+            if (srcSub.length && srcSub[0].content.trim()) {
+              const { rowCount } = await db.query(
+                "UPDATE content SET content = '' WHERE section_key = $1 AND content = $2",
+                [orcaId + '.subtext', srcSub[0].content]
+              );
+              subtextCleared = rowCount;
+            }
+          }
+          if (orcaEvidenceId) {
+            await db.query(
+              'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content',
+              [orcaId + '.link_text', LINK_TEXT]
+            );
+            await db.query(
+              'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content',
+              [orcaId + '.link_href', '/evidence#' + orcaEvidenceId]
+            );
+          }
+          notes.push(orcaId + ': ' + changed + ' row(s) tightened, subtext ' + (subtextCleared ? 'cleared' : 'left') + ', capstone ' + (capstoneCleared ? 'cleared' : 'not set') + ', link ' + (orcaEvidenceId ? '-> /evidence#' + orcaEvidenceId : 'not set'));
+        }
+
+        // --- VAT: tighten and link on ---
+        if (!vatId) {
+          notes.push('no casestudy2 on the home page');
+        } else {
+          let changed = 0;
+          for (const { field, from, to } of VAT_TIGHTEN) {
+            const { rowCount } = await db.query(
+              'UPDATE content SET content = $1 WHERE section_key = $2 AND content = $3',
+              [to, vatId + '.' + field, from]
+            );
+            changed += rowCount;
+          }
+          if (vatEvidenceId) {
+            await db.query(
+              'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content',
+              [vatId + '.link_text', LINK_TEXT]
+            );
+            await db.query(
+              'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content',
+              [vatId + '.link_href', '/evidence#' + vatEvidenceId]
+            );
+          }
+          notes.push(vatId + ': ' + changed + ' row(s) tightened, link ' + (vatEvidenceId ? '-> /evidence#' + vatEvidenceId : 'not set'));
+        }
+
+        console.log('Homepage proof compaction: ' + notes.join('; ') + '.');
+
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [COMPACT_MARKER, 'true']
+        );
+      }
+    }
+  }
+
+
   // Arrington AI Workspace: ingest the encrypted snapshot into
   // workspace_records. A no-op when WORKSPACE_SNAPSHOT_KEY is unset, and
   // never fatal: an ingest failure records itself as a failed sync run
