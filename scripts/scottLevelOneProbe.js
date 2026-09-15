@@ -211,6 +211,19 @@ async function runLevelOneProbe(db, opts = {}) {
     return;
   }
 
+  // The authed-write rate limiter is keyed by IP, and everything running
+  // inside this container shares one. The staging-check suites make a lot
+  // of POSTs; this probe makes a handful, and losing its very first one
+  // (setting Level 1) costs the whole run. server.js waits for the suites
+  // before calling this, and this waits a further minute for the limiter's
+  // window to clear, because "the suites have exited" and "the window has
+  // rolled" are not the same moment.
+  const settleMs = Number(process.env.SCOTT_LEVEL_ONE_PROBE_SETTLE_MS || 65000);
+  if (settleMs > 0) {
+    console.log(`Level 1 probe: waiting ${Math.round(settleMs / 1000)}s for the write rate-limit window to clear before asking anything.`);
+    await new Promise((r) => setTimeout(r, settleMs));
+  }
+
   const resolved = await resolveBase(port);
   console.log(`Level 1 probe: testing via ${resolved.via} (${resolved.base}).`);
   const c = makeClient(resolved.base, resolved.headers);
@@ -247,7 +260,10 @@ async function runLevelOneProbe(db, opts = {}) {
     });
     const setTo = (() => { try { return JSON.parse(lv.body).level; } catch (e) { return null; } })();
     if (setTo !== 1) {
-      console.error(`Level 1 probe: could not set Level 1 (server reported ${JSON.stringify(setTo)}). Nothing was asked.`);
+      // Print the status and the body. "server reported null" alone sent
+      // the last investigation looking for a probe defect when the server
+      // had simply refused the request (429 from the shared-IP limiter).
+      console.error(`Level 1 probe: could not set Level 1. HTTP ${lv.status}, body: ${String(lv.body).slice(0, 200)}. Nothing was asked.`);
       return;
     }
     console.log('Level 1 probe: session is at Level 1, asking the real questions now.');

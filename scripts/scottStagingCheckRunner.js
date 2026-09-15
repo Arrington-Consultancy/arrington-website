@@ -172,23 +172,33 @@ async function maybeRunStagingChecks(db, opts = {}) {
     stdio: ['ignore', 'inherit', 'inherit']
   });
 
-  const kill = setTimeout(() => {
-    console.error('Scott staging check: suite exceeded 10 minutes, killing it.');
-    child.kill('SIGKILL');
-  }, KILL_AFTER_MS);
+  // Resolves when the child exits, so a caller can wait. That matters:
+  // the Level 1 probe and these suites hit the same server from the same
+  // container, so they share an IP with the authed-write rate limiter. Run
+  // together, the suites' POSTs exhausted the window and the probe's own
+  // "set Level 1" call was refused — it reported "server reported null"
+  // and asked nothing, which looked like a probe defect and was contention.
+  return await new Promise((resolve) => {
+    const kill = setTimeout(() => {
+      console.error('Scott staging check: suite exceeded 10 minutes, killing it.');
+      child.kill('SIGKILL');
+    }, KILL_AFTER_MS);
 
-  child.on('exit', (code) => {
-    clearTimeout(kill);
-    console.log(`Scott staging check "${decision.label}": finished with exit code ${code}. ${code === 0 ? 'ALL PASSED.' : 'THERE ARE FAILURES ABOVE.'}`);
-    db.query(
-      "INSERT INTO scott_activity (actor, event_type, summary) VALUES ('system', $1, $2)",
-      [MARKER_EVENT, `${decision.label} finished exit=${code}`]
-    ).catch(() => {});
-  });
+    child.on('exit', (code) => {
+      clearTimeout(kill);
+      console.log(`Scott staging check "${decision.label}": finished with exit code ${code}. ${code === 0 ? 'ALL PASSED.' : 'THERE ARE FAILURES ABOVE.'}`);
+      db.query(
+        "INSERT INTO scott_activity (actor, event_type, summary) VALUES ('system', $1, $2)",
+        [MARKER_EVENT, `${decision.label} finished exit=${code}`]
+      ).catch(() => {});
+      resolve();
+    });
 
-  child.on('error', (err) => {
-    clearTimeout(kill);
-    console.error('Scott staging check: could not start the suite:', err.message);
+    child.on('error', (err) => {
+      clearTimeout(kill);
+      console.error('Scott staging check: could not start the suite:', err.message);
+      resolve();
+    });
   });
 }
 
