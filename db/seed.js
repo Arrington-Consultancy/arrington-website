@@ -6113,6 +6113,225 @@ async function seed() {
   }
 
 
+  // Migration: put the two case studies back on the home page (15/09/2026).
+  //
+  // Tom's instruction: "Put both Orca Marine and the VAT Intervention back
+  // onto the homepage as evidenced commercial outcomes. Keep them concise
+  // and high enough to establish credibility early. Use only the existing
+  // approved evidence and copy, with no embellishment."
+  //
+  // Why it is needed: the 14/09 proof-order migration above found nothing to
+  // do on production and said so in its own boot log ("no credentials section
+  // on the home page"). The live home page is a hero and two filter blocks.
+  // The strongest evidence the site holds is not on the page a visitor lands
+  // on.
+  //
+  // THE NAIVE VERSION OF THIS IS WRONG, and it is worth saying why, because
+  // it looks obviously right. casestudy and casestudy2 are both sitting in
+  // the home page's deleted_sections, so "take them out of deleted_sections
+  // and put them back in section_order" is the reading that suggests itself.
+  // But an instance id lives on exactly ONE page, and the committed
+  // production snapshot (handover/live-content-export-2026-07-21.sql) shows
+  // the base casestudy instance is not orphaned at all: it is live on the
+  // business-consultant-devon Google Ads landing page. Re-attaching it here
+  // would put one instance id on two pages, which every other part of this
+  // codebase assumes cannot happen (the add-section allocator, deleted_sections
+  // and the hide/delete handlers all key on an instance having one home).
+  //
+  // So this migration allocates rather than assumes, the same pattern as the
+  // Websites and AI migration: it reads every page's section_order first, and
+  // only ever attaches an id that no page is using.
+  //
+  // It writes no copy of its own. Where a source instance is orphaned it is
+  // attached exactly as it stands and NOT ONE content row is written. Where
+  // the source is live on another page it is left alone and its rows are
+  // copied verbatim onto a freshly allocated id, so the other page keeps its
+  // section unchanged.
+  //
+  // The sources are named rather than inferred, because "which instance is the
+  // approved one" is not derivable from the data. Both were identified from
+  // the snapshot:
+  //
+  //   Orca Marine  -> casestudy__4, "The Insolvent Turnaround", live on the
+  //                   Evidence page. This is the post-copy-review third-person
+  //                   version. The orphaned casestudy__3/__5/__6 carry the same
+  //                   heading but are superseded first-person drafts, and the
+  //                   base casestudy on the ads page is the older generic
+  //                   "Commercial decisions with real consequences" version
+  //                   whose phase 2 still contains "constant firefighting",
+  //                   language the Brand Operating System no longer allows.
+  //                   Neither of those belongs on the home page.
+  //
+  //   VAT           -> casestudy2, "The VAT Intervention", orphaned, so it is
+  //                   attached as it stands with nothing written.
+  //
+  // ONE substitution is made, and it is deliberate and visible: casestudy__4's
+  // label reads "Evidence: 02", which is its position in the Evidence page's
+  // numbered series and means nothing on a home page that has no Evidence 01.
+  // The copy takes casestudy.label instead ("Real commercial experience"),
+  // which is itself existing approved copy live on the ads page today. No
+  // string in this migration was written for it.
+  //
+  // Placement is relative for the same reason as the migration above: the live
+  // order is CMS state this sandbox cannot read, so a hardcoded array could
+  // undo an arrangement Tom made himself. The proof goes immediately after the
+  // first filter block (the "What we do" summary), which puts it ahead of the
+  // credibility block and high on the page. No filter block falls back to just
+  // after the hero, and no hero to the top.
+  {
+    const PROOF_RESTORE_MARKER = 'homepage.proof_restored_2026-09-15';
+
+    // template: what to put on the page. sources: candidate instances holding
+    // the approved copy, best first. labelFrom: an existing content row to use
+    // for the label when the copy is taken from a numbered Evidence instance.
+    const RESTORE = [
+      { template: 'casestudy', sources: ['casestudy__4'], labelFrom: 'casestudy.label' },
+      { template: 'casestudy2', sources: ['casestudy2', 'casestudy2__3'], labelFrom: null }
+    ];
+
+    const { rows: markerRows } = await db.query(
+      'SELECT 1 FROM content WHERE section_key = $1', [PROOF_RESTORE_MARKER]
+    );
+
+    if (markerRows.length === 0) {
+      const { rows: allPages } = await db.query('SELECT slug, section_order FROM pages');
+      const main = allPages.find((p) => p.slug === 'main');
+
+      if (main && Array.isArray(main.section_order)) {
+        // Every instance id any page is currently using, plus every content
+        // prefix in the table, so an allocated id can collide with neither.
+        const inUse = new Set();
+        for (const pg of allPages) {
+          if (Array.isArray(pg.section_order)) for (const id of pg.section_order) inUse.add(id);
+        }
+        const { rows: prefixRows } = await db.query(
+          "SELECT DISTINCT split_part(section_key, '.', 1) AS prefix FROM content"
+        );
+        const prefixes = new Set(prefixRows.map((r) => r.prefix));
+
+        const { rows: mainRows } = await db.query(
+          "SELECT hidden_sections, deleted_sections FROM pages WHERE slug = 'main'"
+        );
+        const order = main.section_order.slice();
+        const hidden = Array.isArray(mainRows[0].hidden_sections) ? mainRows[0].hidden_sections.slice() : [];
+        const deleted = Array.isArray(mainRows[0].deleted_sections) ? mainRows[0].deleted_sections.slice() : [];
+
+        const attached = [];
+        const notes = [];
+
+        const hasContent = async (iid) => {
+          const { rows } = await db.query(
+            'SELECT 1 FROM content WHERE section_key LIKE $1 LIMIT 1', [iid + '.%']
+          );
+          return rows.length > 0;
+        };
+
+        for (const { template, sources, labelFrom } of RESTORE) {
+          const isInstance = new RegExp('^' + template + '(?:__\\d+)?$');
+          if (order.some((id) => isInstance.test(id))) {
+            notes.push(template + ': an instance is already on the home page');
+            continue;
+          }
+
+          let source = null;
+          for (const candidate of sources) {
+            if (await hasContent(candidate)) { source = candidate; break; }
+          }
+          if (!source) {
+            notes.push(template + ': none of its source instances has content, not attached');
+            continue;
+          }
+
+          if (!inUse.has(source)) {
+            // Orphaned. Attach it exactly as it stands, writing nothing.
+            order.push(source);
+            attached.push(source);
+            inUse.add(source);
+            notes.push(template + ': attached orphaned ' + source + ' as it stands, no copy written');
+            continue;
+          }
+
+          // Live on another page. Leave it there and copy it onto a free id.
+          let allocated = null;
+          for (let n = 2; n <= 99; n++) {
+            const candidate = template + '__' + n;
+            if (!inUse.has(candidate) && !prefixes.has(candidate)) { allocated = candidate; break; }
+          }
+          if (!allocated) {
+            notes.push(template + ': no free instance id below __99, not attached');
+            continue;
+          }
+
+          const { rows: sourceRows } = await db.query(
+            'SELECT section_key, content FROM content WHERE section_key LIKE $1', [source + '.%']
+          );
+          for (const row of sourceRows) {
+            const field = row.section_key.slice(source.length + 1);
+            await db.query(
+              'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+              [allocated + '.' + field, row.content]
+            );
+          }
+          if (labelFrom) {
+            const { rows: labelRows } = await db.query(
+              'SELECT content FROM content WHERE section_key = $1', [labelFrom]
+            );
+            if (labelRows.length) {
+              await db.query(
+                'UPDATE content SET content = $1 WHERE section_key = $2',
+                [labelRows[0].content, allocated + '.label']
+              );
+            }
+          }
+
+          order.push(allocated);
+          attached.push(allocated);
+          inUse.add(allocated);
+          prefixes.add(allocated);
+          notes.push(
+            template + ': ' + source + ' is live on another page, so its ' + sourceRows.length +
+            ' row(s) were copied to ' + allocated + (labelFrom ? ' with the label from ' + labelFrom : '')
+          );
+        }
+
+        if (attached.length === 0) {
+          console.log('Homepage proof restore: nothing attached (' + notes.join('; ') + ').');
+        } else {
+          // Everything was pushed to the end above so allocation could see it;
+          // now move the attached ids into place, keeping their given order.
+          const rest = order.filter((id) => !attached.includes(id));
+          let insertAt = rest.findIndex((id) => /^filter(?:__\d+)?$/.test(id));
+          if (insertAt === -1) insertAt = rest.findIndex((id) => /^hero(?:__\d+)?$/.test(id));
+          insertAt = insertAt === -1 ? 0 : insertAt + 1;
+          rest.splice(insertAt, 0, ...attached);
+
+          await db.query(
+            `UPDATE pages
+                SET section_order = $1::jsonb,
+                    hidden_sections = $2::jsonb,
+                    deleted_sections = $3::jsonb
+              WHERE slug = 'main'`,
+            [
+              JSON.stringify(rest),
+              JSON.stringify(hidden.filter((id) => !attached.includes(id))),
+              JSON.stringify(deleted.filter((id) => !attached.includes(id)))
+            ]
+          );
+          console.log(
+            'Homepage proof restore: ' + notes.join('; ') +
+            '. Home page order is now ' + rest.join(', ') + '.'
+          );
+        }
+
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [PROOF_RESTORE_MARKER, 'true']
+        );
+      }
+    }
+  }
+
+
   // Arrington AI Workspace: ingest the encrypted snapshot into
   // workspace_records. A no-op when WORKSPACE_SNAPSHOT_KEY is unset, and
   // never fatal: an ingest failure records itself as a failed sync run

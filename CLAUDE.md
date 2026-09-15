@@ -4333,6 +4333,70 @@ Two suites need more than `DATABASE_URL`:
 
 - **Generic template** extracted from this project for Nat's brother Ben: `github.com/natparnell/single-page-cms-template` (public, marked as GitHub template repo, scrubbed of Tom-specific content, ships with a `HANDOVER.md` written for a Claude Code agent). Not a fork and has no upstream link to this repo. Nat has an untracked local copy at `~/west-cms-template/` used as the source for the public template.
 
+## The home page carries proof again (15/09/2026)
+
+Tom: "Put both Orca Marine and the VAT Intervention back onto the homepage as
+evidenced commercial outcomes. Keep them concise and high enough to establish
+credibility early. Use only the existing approved evidence and copy, with no
+embellishment."
+
+The live home page was a hero and two `filter` blocks; both case study
+templates were sitting in the page's `deleted_sections`. It is now hero,
+"What we do", the two case studies, then the twenty-years credibility block.
+
+**The obvious implementation is wrong, and it looks right.** Both templates
+are in `deleted_sections`, so "take them out and put them back in
+`section_order`" suggests itself. But an instance id belongs to exactly ONE
+page, and the committed snapshot shows the base `casestudy` instance is not
+orphaned at all: it is live on the `business-consultant-devon` Google Ads
+landing page. Re-attaching it would have put one id on two pages, which the
+add-section allocator, `deleted_sections` and the hide/delete handlers all
+assume cannot happen. The migration therefore allocates against every page's
+`section_order` rather than assuming, the same pattern as the Websites and AI
+migration.
+
+**No copy was written.** Where the source is orphaned it is attached exactly
+as it stands and not one content row is touched. Where the source is live on
+another page it is left there and its rows are copied verbatim onto a freshly
+allocated id.
+
+| What Tom named | Source | Why |
+|---|---|---|
+| Orca Marine | `casestudy__4`, live on Evidence | The post-copy-review third-person version ("The Insolvent Turnaround"). Copied to a new id; Evidence keeps its own. |
+| The VAT Intervention | `casestudy2`, orphaned | Attached as it stands, nothing written. |
+
+The orphaned `casestudy__3/__5/__6` carry the same heading but are superseded
+first-person drafts, and the base `casestudy` on the ads page is the older
+generic version whose phase 2 still contains **"constant firefighting"**,
+language the Brand Operating System no longer allows. Neither belongs on the
+home page, and a test asserts the bare `casestudy` is never named as a source.
+
+**One substitution, deliberate and visible:** `casestudy__4`'s label reads
+"Evidence: 02", its position in the Evidence page's numbered series, which
+means nothing on a home page with no Evidence 01. The copy takes
+`casestudy.label` instead ("Real commercial experience"), itself existing
+approved copy live on the ads page. No string was written for it.
+
+**Three things for Tom, none of them blockers:**
+
+1. **Neither section names Orca Marine.** The live copy says "A Devon marine
+   firm working on superyachts, including projects for Princess Yachts". That
+   is the approved wording and was not changed; the client is not named
+   publicly anywhere on the site.
+2. **The VAT Intervention is first person** ("I walked into a business...")
+   on a home page whose other copy is "we". It was restored exactly as it
+   stands per the instruction. Changing it is a Brand OS matter and a CMS
+   edit, not a deploy.
+3. **The Orca Marine copy is now in two places** (home page and Evidence). An
+   edit to one will not reach the other.
+
+Tests: `test/homepageProofRestore.test.js`, 7, each watched red against the
+naive version. Verified by rebuilding the July production state locally from
+`handover/live-content-export-2026-07-21.sql` and running the real seed over
+it: `casestudy__4` copied to `casestudy__7`, `casestudy2` attached as it
+stands, Evidence and the ads page both unchanged, a redeploy a silent no-op,
+and a simulated CMS reorder by Tom left exactly as he set it.
+
 ## Evidence: the Built proof section (14/09/2026)
 
 Tom's brief: the Evidence page proved the commercial thinking through the
