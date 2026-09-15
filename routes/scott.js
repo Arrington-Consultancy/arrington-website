@@ -31,6 +31,15 @@ const { runTurn, isScottAIEnabled } = require('../lib/scott/orchestrator');
 const clearance = require('../lib/scott/clearance');
 const progression = require('../lib/scott/progression');
 const leadFinder = require('../lib/scott/leadFinder');
+const workerGroups = require('../lib/scott/workerGroups');
+
+// worker id -> group heading, computed once at load. A plain map for the
+// browser; it carries no domain, no clearance and no permission, which is
+// what makes it safe to ship to the client at all.
+const WORKER_GROUP_LABELS = workerGroups.GROUPS.reduce((acc, g) => {
+  g.workerIds.forEach((wid) => { acc[wid] = g.label; });
+  return acc;
+}, {});
 const brainPreview = require('../lib/scott/brainPreview');
 const { checkReleaseGate } = require('../lib/scott/qualityGate');
 const deepFacts = require('../lib/scott/deepBusinessFacts');
@@ -196,6 +205,9 @@ function viewerViewModel(req) {
     field: (record, name) => clearance.fieldValue(personaId, null, record, name),
     deniedNote: clearance.clearanceDeniedNote,
     dataPages: NAV_PAGES,
+    // Presentation only. Every page that can host the chat widget needs it,
+    // so it lives here rather than being remembered per route.
+    workerGroupLabels: WORKER_GROUP_LABELS,
     // The progression, for the rail and for every level-gated surface.
     // `levels` is the whole register so the rail can render all four
     // states including the ones ahead of the visitor.
@@ -496,6 +508,10 @@ function mountPageRoute(app, generateCsrfToken) {
         // module rather than typed into the view, so the dashboard and
         // the page itself cannot end up claiming different counts.
         leadFinderTotal: leadFinder.WEEK_TOTAL,
+        // Presentation grouping for the team strip. Derived from the ACTIVE
+        // worker list, so deactivating a worker empties or removes its group
+        // rather than leaving a heading with nothing behind it.
+        teamGroups: workerGroups.activeGroups(ACTIVE_WORKER_IDS.filter((id) => id !== 'receptionist')),
         aiEnabled: isScottAIEnabled(),
         workersById: WORKERS_BY_ID_JSON,
         navCounts: { newEnquiries: summary.newEnquiries, pendingApprovals: summary.pendingApprovals, openGaps: visibleGaps.length },

@@ -1198,13 +1198,58 @@
   }
 
   @media (max-width: 900px) {
+    .sc-team-row-groups { grid-template-columns: repeat(2, 1fr); }
     .sc-rail-steps { grid-template-columns: repeat(2, 1fr); }
     .sc-ev-r { flex-direction: column; gap: 4px; }
     .sc-ev-k { width: auto; }
   }
   @media (max-width: 600px) {
+    .sc-team-row-groups { grid-template-columns: 1fr; }
     .sc-rail-steps { grid-template-columns: 1fr; }
     .sc-lf-n { font-size: 38px; }
   }
+
+
+  /* ------------------------------------------------------------
+     PROGRESSIVE DISCLOSURE (15/09/2026)
+     ------------------------------------------------------------
+     Native <details>, not a scripted toggle. Under this site's strict CSP
+     every scripted toggle is another nonced block to get wrong, and this
+     one keeps working with JavaScript off. The summary always states how
+     much is inside, so folding never makes the company look smaller than
+     it is. */
+  .sc-fold { margin: 10px 0 4px; }
+  .sc-fold-summary {
+    display: inline-flex; align-items: center; gap: 7px;
+    cursor: pointer; list-style: none;
+    font-size: 13px; font-weight: 600; color: var(--sc-terracotta);
+    padding: 5px 0;
+  }
+  .sc-fold-summary::-webkit-details-marker { display: none; }
+  .sc-fold-summary::before {
+    content: '\25b8'; font-size: 11px; transition: transform .15s ease;
+  }
+  .sc-fold[open] > .sc-fold-summary::before { transform: rotate(90deg); }
+  .sc-fold-summary:focus-visible { outline: 2px solid var(--sc-terracotta); outline-offset: 3px; border-radius: 3px; }
+  .sc-fold-body { margin-top: 10px; }
+  .sc-fold-wide { margin-top: 20px; }
+
+  /* Team groups. Four headings instead of eight faces (Tom, 15/09/2026):
+     "the objective is not to demonstrate how many AI workers exist". No
+     avatar at all here — a group is a capability, not a person, and giving
+     it a face would put it back in the same visual register as the human
+     in the Viewing-as control, which is the blur the round/square rule
+     exists to prevent. */
+  /* Four groups, so an explicit 4-up grid rather than a wrapping flex row.
+     Left as flex, the four chips wrapped 3 + 1 and read as "three things,
+     and an afterthought". Collapses to 2x2 on a narrow screen, which is
+     four equal halves rather than a ragged stack. */
+  .sc-team-row-groups {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    max-width: 920px; margin: 0 auto;
+  }
+  .sc-team-chip[data-team-group] { padding: 12px 15px; min-width: 0; }
+  .sc-team-chip[data-team-group] .sc-team-name { font-size: 14.5px; }
+  .sc-team-chip[data-team-group] .sc-team-role { line-height: 1.4; }
 
 </style>

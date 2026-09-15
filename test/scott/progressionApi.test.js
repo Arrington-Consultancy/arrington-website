@@ -209,6 +209,56 @@ describe('the progression over real HTTP', { skip: SKIP }, () => {
     assert.equal(jobs.status, 200, 'Level 1 turned a hidden link into a broken page');
   });
 
+  test('LEVEL 4 IS CALMER: the long lists are folded rather than all on screen', async () => {
+    // Tom, 15/09/2026: "Advanced should mean more capable, not more
+    // cluttered." The measurable version of that: the owner's Level 4
+    // dashboard must not render every gap, every attention item, every
+    // activity line and every snapshot card at once.
+    await setLevel(tom, 4);
+    await setPersona(tom, null);
+    const page = await tom.req('/scott');
+    assert.equal(page.status, 200);
+
+    const folds = (page.body.match(/<details class="sc-fold/g) || []).length;
+    assert.ok(folds >= 1, 'nothing on the Level 4 dashboard is folded');
+
+    // The reference block (activity + snapshot) must be closed on arrival.
+    // <details open> would be the defect wearing the fix's clothes.
+    assert.ok(!/<details class="sc-fold[^"]*"[^>]*\sopen/.test(page.body),
+      'a fold is open by default, so it is not progressive disclosure');
+
+    // Every fold states how much is inside, so folding never makes the
+    // company look smaller than it is.
+    const summaries = page.body.match(/<summary class="sc-fold-summary">([^<]*)</g) || [];
+    assert.ok(summaries.length >= 1, 'a fold has no summary');
+    summaries.forEach((sum) => {
+      assert.ok(/\d/.test(sum) || /snapshot/i.test(sum),
+        `a fold summary states no count: ${sum}`);
+    });
+  });
+
+  test('FOUR GROUPS, NOT NINE NAMES, and no worker is dropped from the interface', async () => {
+    await setLevel(tom, 4);
+    await setPersona(tom, null);
+    const page = await tom.req('/scott');
+
+    const groups = (page.body.match(/data-team-group="/g) || []).length;
+    assert.ok(groups >= 3 && groups <= 5, `expected a handful of groups, found ${groups}`);
+    assert.equal((page.body.match(/data-team-worker="/g) || []).length, 0,
+      'the old per-worker chips are still rendered alongside the groups');
+
+    // Every specialist the server considers active must be covered by some
+    // group's worker list, or its answers come from a part of the business
+    // the screen never mentions.
+    const covered = new Set();
+    (page.body.match(/data-team-workers="([^"]*)"/g) || []).forEach((m) => {
+      m.replace(/data-team-workers="([^"]*)"/, '$1').split(' ').filter(Boolean).forEach((id) => covered.add(id));
+    });
+    ['commercial', 'customers_marketing', 'operations', 'quality_control',
+     'finance_accounts', 'company_brain', 'governance', 'people_hr']
+      .forEach((id) => assert.ok(covered.has(id), `${id} is in no group on the rendered page`));
+  });
+
   describe('Lead Finder', () => {
     test('the owner reaches it at Level 4, with its evidence collapsed', async () => {
       await setLevel(tom, 4);

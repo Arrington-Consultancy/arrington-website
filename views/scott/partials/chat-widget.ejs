@@ -82,6 +82,10 @@
 <script nonce="<%= nonce %>">
 (function () {
   var WORKERS = <%- JSON.stringify(workersById) %>;
+  // worker id -> the group heading it is presented under. Built on the
+  // server from lib/scott/workerGroups.js so the strip and this panel can
+  // never name the same worker two different ways.
+  var GROUP_LABELS = <%- JSON.stringify(typeof workerGroupLabels !== 'undefined' ? workerGroupLabels : {}) %>;
   var conversationId = <%- typeof initialConversationId !== 'undefined' && initialConversationId ? initialConversationId : 'null' %>;
   var relatedJobId = <%- typeof relatedJobId !== 'undefined' && relatedJobId ? relatedJobId : 'null' %>;
   var relatedEnquiryId = <%- typeof relatedEnquiryId !== 'undefined' && relatedEnquiryId ? relatedEnquiryId : 'null' %>;
@@ -208,9 +212,14 @@
       if (Object.prototype.hasOwnProperty.call(seen, r.workerId)) return;
       seen[r.workerId] = true;
       var w = WORKERS[r.workerId] || {};
+      // The GROUP name, not the worker's own role, so "how this was handled"
+      // reads in the same four words the strip above uses. Still true rather
+      // than a simplification: the worker that answered really is in that
+      // group, and its own name is already on the message above this panel.
+      var fn = (GROUP_LABELS[r.workerId] || w.displayRole || r.displayRole || 'Part of the business');
       steps.push({
-        fn: w.displayRole || r.displayRole || 'Part of the business',
-        mark: String(w.displayRole || r.displayRole || '??').replace(/[^A-Za-z]/g, '').substring(0, 2).toUpperCase(),
+        fn: fn,
+        mark: String(fn).replace(/[^A-Za-z]/g, '').substring(0, 2).toUpperCase(),
         did: r.certainty === 'UNPROVEN'
           ? 'Looked, and said the evidence was not there.'
           : 'Checked its own records and answered.'
