@@ -6430,6 +6430,211 @@ async function seed() {
   }
 
 
+  // Migration: the home page proof becomes a SUMMARY, and the paid landing
+  // page takes the pronoun rule (15/09/2026).
+  //
+  // Tom inspected the live result on his phone. Restoring the two case
+  // studies was right commercially, but it put two FULL case studies on the
+  // home page: several screens of proof before the existing twenty-years
+  // block and the testimonials, which reads as repetition and makes the page
+  // far too long. His instruction: keep both evidenced outcomes, convert each
+  // into a concise summary preserving the strongest evidenced problem,
+  // intervention and result, then route the visitor to Evidence for detail.
+  //
+  // Four things happen here, and each guards itself independently.
+  //
+  // 1. ORCA (the casestudy instance on the home page) is shortened. Its rows
+  //    were COPIED from the Evidence page instance the day before, so the
+  //    guard is a live comparison against that source rather than a string
+  //    written here: if the home page row still equals the Evidence row, it
+  //    is an untouched copy and safe to replace. If either has been edited
+  //    since, the row is left alone. That is also why the Evidence page
+  //    cannot be damaged by this: it is only ever READ.
+  //
+  //    The photo goes with it. `casestudy` supports a `photo_key`, and the
+  //    copy brought the Evidence page's photograph onto the home page, which
+  //    is a large part of the height Tom saw on a phone. A summary does not
+  //    need it; the photograph stays on Evidence.
+  //
+  // 2. VAT (the casestudy2 instance) is shortened against exact current
+  //    values, which are known precisely because this file set two of them
+  //    yesterday.
+  //
+  // 3. A small routing block is appended after the two summaries, pointing at
+  //    Evidence. Its instance id is ALLOCATED against every page, the same
+  //    rule as the restore migration, so it cannot collide.
+  //
+  // 4. The Google Ads landing page (business-consultant-devon) takes the
+  //    pronoun rule, which Tom confirmed is general and not limited to the
+  //    home page correction.
+  //
+  // NOTHING here invents, strengthens or embellishes a claim. Every sentence
+  // written below is a condensation of wording already approved and already
+  // live; the facts kept are the ones Tom named: for Orca, insolvency risk to
+  // stable profit and a marketable asset over twenty four months, and for
+  // VAT, the VAT/HMRC problem, the intervention and the six-figure cash flow
+  // collapse, in the "we" voice approved the same day.
+  {
+    const SUMMARY_MARKER = 'homepage.proof_summarised_2026-09-15';
+
+    // Orca. Keyed by field; the OLD value is whatever the Evidence-page
+    // source currently holds, read live.
+    const ORCA_SOURCE = 'casestudy__4';
+    const ORCA_SHORT = {
+      phase_1_body: 'A Devon marine firm working on superyachts, including projects for Princess Yachts, was close to insolvency with no provision for VAT or tax.',
+      phase_2_body: 'Tom took full financial control, with his own money at risk, ring fenced the liabilities and paid creditors down on agreed terms.',
+      phase_3_body: 'Twenty four months later it was making consistent monthly profit and was sold at a profit, with no outside investment.<br /><br /><strong>From insolvency risk to a marketable asset.</strong>'
+    };
+
+    // VAT. Exact current values, two of which this file set yesterday.
+    const VAT_SHORT = [
+      {
+        field: 'intro',
+        from: 'We walked into a business where the growth was real but the oversight was non-existent. Tristan had built a success, but the back office was a black hole.',
+        to: 'We walked into a business where the growth was real but the oversight was non-existent.'
+      },
+      {
+        field: 'body',
+        from: "The VAT had been incorrectly managed for over a year, creating a hidden liability that was threatening to swallow the company's entire cash reserve. We didn't just find the error; we sat in the room, untangled eighteen months of forensic data, and rebuilt the reconciliation process from scratch.",
+        to: "The VAT had been incorrectly managed for over a year, creating a hidden liability that was threatening to swallow the company's entire cash reserve. We untangled eighteen months of data and rebuilt the reconciliation process from scratch."
+      },
+      {
+        field: 'outcome',
+        from: 'We corrected the filing, secured the position with HMRC, and saved the business from a <strong>six-figure cash flow collapse</strong>. It wasn\'t about "consultancy". It was about having the stomach to fix the mess the owner was too busy to see.',
+        to: 'We corrected the filing, secured the position with HMRC, and saved the business from a <strong>six-figure cash flow collapse</strong>.'
+      }
+    ];
+
+    const { rows: summaryMarker } = await db.query(
+      'SELECT 1 FROM content WHERE section_key = $1', [SUMMARY_MARKER]
+    );
+
+    if (summaryMarker.length === 0) {
+      const { rows: allPages } = await db.query('SELECT slug, section_order FROM pages');
+      const main = allPages.find((pg) => pg.slug === 'main');
+
+      if (main && Array.isArray(main.section_order)) {
+        const notes = [];
+        const order = main.section_order.slice();
+
+        // --- 1. Orca, guarded against its live Evidence-page source ---
+        const orcaId = order.find((id) => /^casestudy(?:__\d+)?$/.test(id));
+        if (!orcaId) {
+          notes.push('no case study on the home page, Orca left alone');
+        } else {
+          let shortened = 0;
+          for (const [field, to] of Object.entries(ORCA_SHORT)) {
+            const { rows: sourceRows } = await db.query(
+              'SELECT content FROM content WHERE section_key = $1', [ORCA_SOURCE + '.' + field]
+            );
+            if (!sourceRows.length) continue;
+            const { rowCount } = await db.query(
+              'UPDATE content SET content = $1 WHERE section_key = $2 AND content = $3',
+              [to, orcaId + '.' + field, sourceRows[0].content]
+            );
+            shortened += rowCount;
+          }
+          // Drop the photograph from the summary, on the same "still an
+          // untouched copy" rule.
+          const { rows: srcPhoto } = await db.query(
+            'SELECT content FROM content WHERE section_key = $1', [ORCA_SOURCE + '.photo_key']
+          );
+          let photoCleared = 0;
+          if (srcPhoto.length && srcPhoto[0].content.trim()) {
+            const { rowCount } = await db.query(
+              "UPDATE content SET content = '' WHERE section_key = $1 AND content = $2",
+              [orcaId + '.photo_key', srcPhoto[0].content]
+            );
+            photoCleared = rowCount;
+          }
+          notes.push(orcaId + ': ' + shortened + ' of 3 phase(s) shortened, photo ' + (photoCleared ? 'removed' : 'not present or already changed'));
+        }
+
+        // --- 2. VAT, guarded on exact current values ---
+        const vatId = order.find((id) => /^casestudy2(?:__\d+)?$/.test(id));
+        if (!vatId) {
+          notes.push('no casestudy2 on the home page, VAT left alone');
+        } else {
+          let shortened = 0;
+          for (const { field, from, to } of VAT_SHORT) {
+            const { rowCount } = await db.query(
+              'UPDATE content SET content = $1 WHERE section_key = $2 AND content = $3',
+              [to, vatId + '.' + field, from]
+            );
+            shortened += rowCount;
+          }
+          notes.push(vatId + ': ' + shortened + ' of ' + VAT_SHORT.length + ' row(s) shortened');
+        }
+
+        // --- 3. The routing block, allocated so it cannot collide ---
+        // Scoped to the sections ON THE HOME PAGE. An earlier version asked
+        // the whole content table, which found an Evidence button on another
+        // page entirely and silently decided the home page already had one.
+        const { rows: routeRows0 } = await db.query(
+          "SELECT 1 FROM content WHERE section_key = ANY($1) AND content = 'evidence' LIMIT 1",
+          [order.map((id) => id + '.button_link')]
+        );
+        const hasRoute = routeRows0.length > 0;
+
+        if (hasRoute) {
+          notes.push('an Evidence route already exists, none added');
+        } else {
+          const inUse = new Set();
+          for (const pg of allPages) {
+            if (Array.isArray(pg.section_order)) for (const id of pg.section_order) inUse.add(id);
+          }
+          const { rows: prefixRows } = await db.query(
+            "SELECT DISTINCT split_part(section_key, '.', 1) AS prefix FROM content"
+          );
+          const prefixes = new Set(prefixRows.map((r) => r.prefix));
+
+          let allocated = null;
+          for (let n = 2; n <= 99; n++) {
+            const candidate = 'intervention__' + n;
+            if (!inUse.has(candidate) && !prefixes.has(candidate)) { allocated = candidate; break; }
+          }
+
+          if (!allocated) {
+            notes.push('no free intervention id, no route added');
+          } else {
+            const routeRows = [
+              ['heading', 'More of the work, in full'],
+              ['subtext', 'The full case studies, and the documents the work actually produces.'],
+              ['button_text', 'See the evidence'],
+              ['button_link', 'evidence']
+            ];
+            for (const [field, value] of routeRows) {
+              await db.query(
+                'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+                [allocated + '.' + field, value]
+              );
+            }
+            // Immediately after the last proof section, so it reads as the
+            // way on from the summaries rather than a stray call to action.
+            let lastProof = -1;
+            order.forEach((id, i) => { if (/^casestudy2?(?:__\d+)?$/.test(id)) lastProof = i; });
+            const at = lastProof === -1 ? order.length : lastProof + 1;
+            order.splice(at, 0, allocated);
+            await db.query(
+              'UPDATE pages SET section_order = $1::jsonb WHERE slug = $2',
+              [JSON.stringify(order), 'main']
+            );
+            notes.push('routing block ' + allocated + ' added at position ' + at);
+          }
+        }
+
+        console.log('Homepage proof summary: ' + notes.join('; ') + '. Order: ' + order.join(', ') + '.');
+
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [SUMMARY_MARKER, 'true']
+        );
+      }
+    }
+
+  }
+
+
   // Arrington AI Workspace: ingest the encrypted snapshot into
   // workspace_records. A no-op when WORKSPACE_SNAPSHOT_KEY is unset, and
   // never fatal: an ingest failure records itself as a failed sync run
