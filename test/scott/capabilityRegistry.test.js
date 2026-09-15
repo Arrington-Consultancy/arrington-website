@@ -162,6 +162,21 @@ describe('the nav derives from the registry and nowhere else', () => {
     });
   });
 
+  test('the team is introduced in the same step the chat starts naming them', () => {
+    // A real defect, found by looking at Level 3 rather than by reading
+    // the code: the chat switched to naming the specialists at Level 3
+    // while the strip saying who they are was tied to a Level 4
+    // capability. A visitor met "Gareth Bell, Commercial" in an answer a
+    // whole level before anything on screen introduced him.
+    LEVELS.forEach((lv) => {
+      const c = registry.viewCapabilities(lv, allowAll);
+      if (c.chatDetail === 'team') {
+        assert.equal(c.showTeamStrip, true,
+          `level ${lv} names the workers in chat but does not introduce them`);
+      }
+    });
+  });
+
   test('the four states are genuinely different sizes', () => {
     const size = (lv) => registry.navFor(lv, allowAll).reduce((t, g) => t + g.items.length, 0);
     const sizes = LEVELS.map(size);
