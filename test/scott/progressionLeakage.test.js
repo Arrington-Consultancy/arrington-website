@@ -20,6 +20,7 @@ const path = require('node:path');
 const ejs = require('ejs');
 
 const clearance = require('../../lib/scott/clearance');
+const registry = require('../../lib/scott/capabilityRegistry');
 const progression = require('../../lib/scott/progression');
 const leadFinder = require('../../lib/scott/leadFinder');
 
@@ -49,7 +50,12 @@ function renderLeadFinder(locals) {
 }
 
 function sidebarLocals(personaId, level) {
-  const caps = progression.capabilities(level);
+  // Built from the capability registry, the same call routes/scott.js
+  // makes, so this sweep exercises the real nav rather than a hand-made
+  // approximation of it. Passing the persona's OWN clearance predicate is
+  // the whole point: the registry's two legs are ANDed, and a sweep that
+  // handed it a permissive stub would only ever test the level leg.
+  const caps = registry.viewCapabilities(level, (d) => clearance.personaCanSeeDomain(personaId, d));
   return {
     active: 'dashboard',
     nonce: 'test-nonce',
@@ -114,17 +120,58 @@ describe('the rail renders in every state and never strands a visitor', () => {
 });
 
 describe('the nav hides by level and refuses by clearance, never the other way round', () => {
-  test('Level 1 shows the dashboard alone', () => {
+  // THESE TWO ARE CONFIGURATION ASSERTIONS, not invariants.
+  //
+  // They pin the allocation Tom set on 15/09/2026, so that moving a
+  // capability between levels is a deliberate act with a test to update
+  // rather than something that drifts unnoticed. When he moves one after
+  // using the real interface, the registry changes and so does the list
+  // below. That is the intended workflow, not a failure of the test.
+
+  test('Level 1 is the small calm workspace: the AI, today, messages and tasks', () => {
     const html = renderSidebar(sidebarLocals('scott_mercer', 1));
-    assert.ok(html.includes('href="/scott"'), 'the dashboard link is gone');
-    ['/scott/jobs', '/scott/enquiries', '/scott/approvals', '/scott/customers', '/scott/lead-finder']
+    ['/scott', '/scott/enquiries', '/scott/tasks']
+      .forEach((p) => assert.ok(html.includes(`href="${p}"`), `Level 1 is missing ${p}`));
+    // And nothing else. Everything below belongs to a larger workspace.
+    ['/scott/jobs', '/scott/approvals', '/scott/customers', '/scott/email',
+     '/scott/calendar', '/scott/finance', '/scott/lead-finder', '/scott/activity']
       .forEach((p) => assert.ok(!html.includes(`href="${p}"`), `Level 1 still lists ${p}`));
   });
 
-  test('Level 2 brings the records back', () => {
+  test('Level 2 adds the everyday applications and the business records', () => {
     const html = renderSidebar(sidebarLocals('scott_mercer', 2));
-    ['/scott/jobs', '/scott/enquiries', '/scott/approvals', '/scott/customers']
+    ['/scott/email', '/scott/calendar', '/scott/jobs', '/scott/customers', '/scott/pipeline', '/scott/brain']
       .forEach((p) => assert.ok(html.includes(`href="${p}"`), `Level 2 is missing ${p}`));
+    // Approvals means nothing in a workspace with one person in it, so it
+    // waits for My Team. The full books wait for My Whole Company.
+    ['/scott/approvals', '/scott/people', '/scott/activity', '/scott/social']
+      .forEach((p) => assert.ok(!html.includes(`href="${p}"`), `Level 2 should not yet list ${p}`));
+  });
+
+  test('Level 3 is where more than one person starts to exist', () => {
+    const html = renderSidebar(sidebarLocals('scott_mercer', 3));
+    ['/scott/approvals', '/scott/people', '/scott/team', '/scott/quality', '/scott/stock']
+      .forEach((p) => assert.ok(html.includes(`href="${p}"`), `Level 3 is missing ${p}`));
+  });
+
+  test('the workspace strictly grows: every level keeps everything below it', () => {
+    // The invariant behind the three configuration assertions above. This
+    // one does NOT need updating when Tom moves a capability, and it is
+    // the one that would catch a move that accidentally removed something.
+    const links = (lv) => (renderSidebar(sidebarLocals('scott_mercer', lv)).match(/href="\/scott[^"]*"/g) || []);
+    for (let n = 2; n <= 4; n += 1) {
+      const lower = links(n - 1);
+      const higher = links(n);
+      lower.forEach((href) => {
+        // Sales & Invoices is the one deliberate exception: it is the
+        // narrow view of an area that arrives whole at Level 4, so the
+        // narrow link stands down rather than sitting beside it. The
+        // capability is not withdrawn and the route is unchanged.
+        if (href.includes('/scott/finance/sales')) return;
+        assert.ok(higher.includes(href), `level ${n} dropped ${href}, which level ${n - 1} had`);
+      });
+      assert.ok(higher.length > lower.length, `level ${n} adds nothing over level ${n - 1}`);
+    }
   });
 
   test('Lead Finder appears in the nav at Level 4 for the owner only', () => {

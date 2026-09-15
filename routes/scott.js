@@ -30,6 +30,8 @@ const { requireScottPageAccess, requireScottApiAccess, hasScottAccess } = requir
 const { runTurn, isScottAIEnabled } = require('../lib/scott/orchestrator');
 const clearance = require('../lib/scott/clearance');
 const progression = require('../lib/scott/progression');
+const capabilityRegistry = require('../lib/scott/capabilityRegistry');
+const workspaceApps = require('../lib/scott/workspaceApps');
 const leadFinder = require('../lib/scott/leadFinder');
 const workerGroups = require('../lib/scott/workerGroups');
 
@@ -213,8 +215,20 @@ function viewerViewModel(req) {
     // states including the ones ahead of the visitor.
     level: currentLevel(req),
     levels: progression.LEVELS,
-    caps: progression.capabilities(currentLevel(req)),
-    ceiling: progression.ceilingNote(currentLevel(req))
+    // `caps` now comes from the capability registry rather than from a
+    // handful of hand-written `level >= n` comparisons. It carries the
+    // same named flags the views already use, plus `caps.can.<id>` for
+    // any capability, plus `caps.nav` — the sidebar is rendered from that
+    // rather than from its own conditionals, which is what makes the
+    // registry the single source it is meant to be.
+    //
+    // The clearance predicate handed in is the SAME one every page and the
+    // context builder use. The registry never gets its own.
+    caps: capabilityRegistry.viewCapabilities(
+      currentLevel(req),
+      (domain) => clearance.personaCanSeeDomain(personaId, domain)
+    ),
+    ceiling: progression.ceilingNote()
   };
 }
 
@@ -534,6 +548,92 @@ function mountPageRoute(app, generateCsrfToken) {
         ...viewerViewModel(req),
         workers: ACTIVE_WORKER_IDS.map((id) => WORKERS[id]),
         proposedWorkers: PROPOSED_WORKER_IDS.map((id) => WORKERS[id]),
+        navCounts,
+        csrfToken: generateCsrfToken(req, res)
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ------------------------------------------------------------
+  // The everyday applications (15/09/2026)
+  // ------------------------------------------------------------
+  //
+  // Email, Calendar and Tasks. All three are built out of records the
+  // company already has (see lib/scott/workspaceApps.js) rather than out
+  // of a second fictional world, so they agree with the job board and the
+  // enquiry list because they are reading the same rows.
+  //
+  // THE LEVEL IS NOT AN ACCESS CHECK, so it is not applied here. These
+  // routes stay registered and clearance-guarded at every level, exactly
+  // like every other Scott page: a capability the current level does not
+  // show is absent from the NAV, and typing its address still works and
+  // still refuses whoever it refused before. Hiding is not gating, and a
+  // route that 404'd because a nav control was set to a lower number
+  // would be a second access model.
+
+  app.get('/scott/email', noindexHeader, requireScottPageAccess, async (req, res, next) => {
+    try {
+      const personaId = clearance.getEffectivePersonaId(req);
+      const canSee = (domain) => clearance.personaCanSeeDomain(personaId, domain);
+      const [navCounts, mailbox] = await Promise.all([
+        repo.getDashboardSummary(),
+        workspaceApps.loadMailbox({ canSee })
+      ]);
+      res.render('scott/email', {
+        ...viewerViewModel(req),
+        mailbox,
+        navCounts,
+        csrfToken: generateCsrfToken(req, res)
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.get('/scott/calendar', noindexHeader, requireScottPageAccess, async (req, res, next) => {
+    try {
+      const personaId = clearance.getEffectivePersonaId(req);
+      const canSee = (domain) => clearance.personaCanSeeDomain(personaId, domain);
+      // Bounded and integer-parsed before it reaches the loader, which
+      // clamps it again. A week offset is the only thing this page takes
+      // from the query string.
+      const raw = parseInt(String(req.query.w || '0'), 10);
+      const [navCounts, calendar] = await Promise.all([
+        repo.getDashboardSummary(),
+        workspaceApps.loadCalendar({
+          canSee,
+          weekOffset: Number.isInteger(raw) ? raw : 0,
+          // An explicit ?w= always wins: a visitor who has navigated must
+          // never be yanked back to wherever the diary thinks the work is.
+          explicitWeek: Object.prototype.hasOwnProperty.call(req.query, 'w')
+        })
+      ]);
+      res.render('scott/calendar', {
+        ...viewerViewModel(req),
+        calendar,
+        navCounts,
+        csrfToken: generateCsrfToken(req, res)
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.get('/scott/tasks', noindexHeader, requireScottPageAccess, async (req, res, next) => {
+    try {
+      // Seeded from work the company already has outstanding, so the list
+      // is never a blank page. Idempotent on the source reference, so a
+      // task somebody has ticked does not come back on the next visit.
+      await workspaceApps.seedTasksFromWork().catch(() => {});
+      const [navCounts, tasks] = await Promise.all([
+        repo.getDashboardSummary(),
+        workspaceApps.loadTasks()
+      ]);
+      res.render('scott/tasks', {
+        ...viewerViewModel(req),
+        tasks,
         navCounts,
         csrfToken: generateCsrfToken(req, res)
       });
@@ -1020,13 +1120,42 @@ async function runScottTurnAndPersist({ conversation, conversationId, userMessag
   const history = await repo.getMessages(conversationId);
   await repo.addMessage({ conversationId, sender: 'user', content: userMessage });
 
-  // The level is the third narrowing leg on the AI's own reading, not a
-  // presentation flag. At Level 1 the workers genuinely cannot read the
-  // job, the price or the capacity, which is what makes the ceiling the
-  // interface shows an honest statement rather than a caption. Undefined
-  // means "narrow nothing", so the lead-intake auto-draft path below is
-  // unchanged.
-  const turn = await runTurn({ userMessage, history, personaId, level });
+  // WHAT THE WORKSPACE CAN DO, AS OPPOSED TO WHAT THE PERSON MAY KNOW.
+  //
+  // The level no longer narrows anything the AI can read (see
+  // lib/scott/progression.js). It decides which APPLICATIONS are attached.
+  // So an ACTION the current workspace has no tool for is recognised here,
+  // deterministically, before the model is called:
+  //
+  //   "What does Mrs Jones owe us?"  -> a question. Answered normally at
+  //                                     every level, from the same brain.
+  //   "Invoice Mrs Jones for £160."  -> an action needing an application
+  //                                     this workspace has not got yet.
+  //
+  // The model still answers, because the whole point is that it UNDERSTOOD.
+  // What this adds is a note telling the workers the tool is absent, so no
+  // worker can reply as though the invoice had been raised, plus the
+  // signpost the interface renders under the answer. Deciding it in code
+  // rather than leaving it to the model is what stops the interface
+  // claiming a capability exists because a sentence sounded confident.
+  const capabilityNotice = capabilityRegistry.detectUnavailable(
+    userMessage,
+    level,
+    (domain) => clearance.personaCanSeeDomain(personaId || clearance.DEFAULT_PERSONA, domain)
+  );
+
+  const turn = await runTurn({
+    userMessage,
+    history,
+    personaId,
+    // Plain English, no capability id and no level number: this reaches a
+    // model that is writing to a business owner, and "the invoicing
+    // capability is gated at level 2" is a sentence about our
+    // implementation rather than about their business.
+    workspaceNote: capabilityNotice
+      ? `THIS WORKSPACE DOES NOT CURRENTLY HAVE THE TOOL FOR THIS. ${capabilityNotice.label} is not part of the workspace at this point, so ${capabilityNotice.doing || 'that action'} cannot actually be carried out here. Answer the question behind the request using anything you can see, acknowledge plainly that you cannot carry the action out in this workspace yet, and NEVER state or imply that you have done it, started it, queued it or arranged it. Do not name the level, do not mention settings or plans, and do not apologise at length: the interface itself shows the visitor where the tool lives.`
+      : null
+  });
 
   if (turn.receptionist.note) {
     await repo.addMessage({ conversationId, sender: 'worker', workerId: 'receptionist', content: turn.receptionist.note, technicalFailure: turn.receptionist.technicalFailure });
@@ -1267,7 +1396,10 @@ async function runScottTurnAndPersist({ conversation, conversationId, userMessag
     }
   }
 
-  return turn;
+  // Attached to the turn rather than computed again in the serializer, so
+  // the sentence the workers were told and the sentence the visitor is
+  // shown come from one decision.
+  return { ...turn, capabilityNotice };
 }
 
 // A fictional staff member's notification address. They have no real
@@ -1315,6 +1447,11 @@ function serializeTurn(conversationId, turn, mayReviewFacts = false) {
   return {
     conversationId,
     receptionist: { note: turn.receptionist.note, technicalFailure: turn.receptionist.technicalFailure },
+    // The signpost, when the workspace has no tool for what was asked.
+    // Null the rest of the time, which is the overwhelming majority of
+    // turns. Carries no record, no figure and no worker name: a label, a
+    // sentence, a destination.
+    capabilityNotice: turn.capabilityNotice || null,
     gaps: (turn.gapRecords || []).map(serializeGapRecord),
     // Proposed facts are reported with their verdict so the interface can
     // say a suggestion was queued. Deliberately NOT the proposed value
@@ -1642,6 +1779,44 @@ router.post('/scott/logout', noindexHeader, (req, res) => {
 // nothing beyond it.
 //
 // An unrecognised value is not an error. progression.normaliseLevel fails
+// ------------------------------------------------------------
+// Tasks: the one everyday application that stores anything of its own
+// ------------------------------------------------------------
+//
+// Ordinary form posts rather than fetch, so the page needs no script of
+// its own and stays inside the nonce discipline. Both carry the global
+// CSRF token like every other non-GET route on the site.
+//
+// No requireAction gate, and that is a considered choice rather than an
+// omission: a task row holds a line of somebody's own text and a flag. It
+// carries no customer, no figure and no clearance-bearing detail, so there
+// is no domain for it to require. The moment one of these rows starts
+// quoting a record, that stops being true and this needs a gate.
+router.post('/api/scott/tasks', noindexHeader, requireScottApiAccess, async (req, res, next) => {
+  try {
+    const v = viewer(req);
+    await workspaceApps.addTask({
+      title: sanitizeHtml(String(req.body.title || ''), { allowedTags: [], allowedAttributes: {} }),
+      detail: sanitizeHtml(String(req.body.detail || ''), { allowedTags: [], allowedAttributes: {} }),
+      createdBy: v.displayName || v.username || ''
+    });
+    res.redirect('/scott/tasks');
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/api/scott/tasks/:id/done', noindexHeader, requireScottApiAccess, async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id)) return res.redirect('/scott/tasks');
+    await workspaceApps.setTaskDone(id, String(req.body.done) === 'true');
+    res.redirect('/scott/tasks');
+  } catch (err) {
+    next(err);
+  }
+});
+
 // closed to Level 1 and the response reports the level actually set, so a
 // caller can never end up believing it is somewhere it is not.
 router.post('/api/scott/level', noindexHeader, requireScottApiAccess, (req, res) => {

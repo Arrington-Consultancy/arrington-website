@@ -1,3 +1,20 @@
+<%
+  // Counts hang off the capability they belong to rather than off a
+  // hard-coded label, so renaming Enquiries to Messages did not silently
+  // drop its badge. Returns raw HTML, so the call sites interpolate it
+  // unescaped; the only thing interpolated is an integer from our own
+  // summary query. (Do not write an EJS open tag in this comment. The
+  // parser does not know it is a comment and will hunt for its closer —
+  // that mistake has now cost two debugging rounds on this branch.)
+  function navBadge(id) {
+    if (typeof navCounts === 'undefined' || !navCounts) return '';
+    var n = id === 'messages' ? navCounts.newEnquiries
+          : id === 'approvals' ? navCounts.pendingApprovals
+          : id === 'gaps' ? navCounts.openGaps
+          : 0;
+    return n ? '<span class="sc-badge">' + parseInt(n, 10) + '</span>' : '';
+  }
+%>
 <aside class="sc-sidebar">
   <div class="sc-brand">
     <div class="sc-brand-mark">SA</div>
@@ -11,92 +28,62 @@
     <div id="scSearchResults" class="sc-search-results" hidden></div>
   </div>
 <%
-    // The nav is one of the two places the progression is actually felt
-    // (the other is the dashboard). At Level 1 the demonstration is one
-    // question and one answer, so the fifteen links that made this need
-    // explaining are simply not there yet.
+    // THE NAV IS RENDERED FROM THE CAPABILITY REGISTRY, not from
+    // conditionals written here (15/09/2026). `caps.nav` is
+    // capabilityRegistry.navFor(level, canSee): the groups this level
+    // reveals, already filtered to what this person's clearance allows,
+    // with empty groups dropped so no level ever renders a bare heading.
     //
-    // HIDING IS NOT GATING. Every route below remains registered,
+    // That is the whole point of the registry. Moving Calendar from My
+    // Business to My Team is now a single number in one table, and this
+    // file does not need to know it happened.
+    //
+    // HIDING IS NOT GATING. Every route stays registered,
     // access-guarded and clearance-filtered exactly as it was: a link
     // absent from this list is still reachable by typing it, and still
-    // refuses anyone it refused before. That is deliberate. A nav that
-    // silently 404s a page it is merely not showing yet would be a second
-    // access model, and a second access model is how a finance figure
-    // eventually reaches the driver.
-    var _caps = (typeof caps !== 'undefined') ? caps : { showRecordsNav: true, showTeamStrip: true, showLeadFinder: true };
-    var _canProspect = (typeof canSee === 'function') ? canSee('commercial_prospecting') : false;
+    // refuses anyone it refused before. A nav that silently 404'd a page
+    // it is merely not showing yet would be a second access model, and a
+    // second access model is how a finance figure eventually reaches the
+    // driver.
+    var _caps = (typeof caps !== 'undefined') ? caps : { nav: [], showPersonaSwitch: true };
+    var _groups = _caps.nav || [];
   %>
-  <ul class="sc-nav">
-    <li><a href="/scott" class="<%= active === 'dashboard' ? 'active' : '' %>">Dashboard</a></li>
-    <% if (_caps.showRecordsNav) { %>
-    <li><a href="/scott/jobs" class="<%= active === 'jobs' ? 'active' : '' %>">Jobs &amp; Orders</a></li>
-    <li><a href="/scott/enquiries" class="<%= active === 'enquiries' ? 'active' : '' %>">Enquiries<% if (typeof navCounts !== 'undefined' && navCounts.newEnquiries) { %><span class="sc-badge"><%= navCounts.newEnquiries %></span><% } %></a></li>
-    <li><a href="/scott/approvals" class="<%= active === 'approvals' ? 'active' : '' %>">Approvals<% if (typeof navCounts !== 'undefined' && navCounts.pendingApprovals) { %><span class="sc-badge"><%= navCounts.pendingApprovals %></span><% } %></a></li>
+  <% _groups.forEach(function (g, gi) { %>
+    <% if (g.label) { %>
+      <% if (g.collapsible) { %>
+        <%
+          // OPEN BY DEFAULT, and this was a real bug rather than a
+          // preference. Closed, sixteen of Level 4's twenty-six
+          // destinations sat behind two folds, so the state whose whole
+          // job is to look like a complete operating environment rendered
+          // a SHORTER sidebar than the state below it. The workspace has
+          // to be seen to grow; the fold is there so somebody can put a
+          // section away, not so the growth is hidden by default.
+        %>
+        <details class="sc-nav-group" open>
+          <summary class="sc-nav-heading"><%= g.label %></summary>
+          <ul class="sc-nav">
+            <% g.items.forEach(function (it) { %>
+              <li><a href="<%= it.path %>" class="<%= active === it.activeKey ? 'active' : '' %>"><%= it.label %><%- navBadge(it.id) %></a></li>
+            <% }); %>
+          </ul>
+        </details>
+      <% } else { %>
+        <div class="sc-nav-heading sc-nav-heading-static"><%= g.label %></div>
+        <ul class="sc-nav">
+          <% g.items.forEach(function (it) { %>
+            <li><a href="<%= it.path %>" class="<%= active === it.activeKey ? 'active' : '' %>"><%= it.label %><%- navBadge(it.id) %></a></li>
+          <% }); %>
+        </ul>
+      <% } %>
+    <% } else { %>
+      <ul class="sc-nav">
+        <% g.items.forEach(function (it) { %>
+          <li><a href="<%= it.path %>" class="<%= active === it.activeKey ? 'active' : '' %>"><%= it.label %><%- navBadge(it.id) %></a></li>
+        <% }); %>
+      </ul>
     <% } %>
-  </ul>
-  <% if (_caps.showLeadFinder && _canProspect) { %>
-  <ul class="sc-nav">
-    <li><a href="/scott/lead-finder" class="<%= active === 'leadfinder' ? 'active' : '' %>">Lead Finder</a></li>
-  </ul>
-  <% } %>
-  <% if (_caps.showTeamStrip) { %>
-  <ul class="sc-nav">
-    <li><a href="/scott/team" class="<%= active === 'team' ? 'active' : '' %>">How this team works</a></li>
-  </ul>
-  <% } %>
-  <%
-    // Finance and Social Media get their own tabs rather than sitting
-    // inside the collapsed Company records list, per Tom's instruction
-    // (31/08/2026). This is a nav placement change only: both routes,
-    // both pages and everything they show are exactly what was already
-    // built and reviewed. PINNED_NAV_KEYS drives the split, so the
-    // single source of truth for path/label stays DATA_PAGES in
-    // routes/scott.js - nothing is duplicated here.
-    // Banking & Accounting (01/09/2026) replaces the two separate
-    // Finance and Banking items: one area with its own tabs rather than
-    // two links to overlapping views of the same money. It keeps the
-    // 'finance' key, so it stays where Finance was and above Social Media.
-    var PINNED_NAV_KEYS = ['finance', 'social'];
-    var allDataPages = (typeof dataPages !== 'undefined' ? dataPages : []);
-    var pinnedPages = allDataPages.filter(function (p) { return PINNED_NAV_KEYS.indexOf(p.nav) !== -1; });
-  %>
-  <ul class="sc-nav" <%= _caps.showRecordsNav ? '' : 'hidden' %>>
-    <% pinnedPages.forEach(function (p) { %>
-      <li><a href="<%= p.path %>" class="<%= active === p.nav ? 'active' : '' %>"><%= p.label %></a></li>
-    <% }); %>
-  </ul>
-  <%
-    // The records are the building, not the doorway: fifteen links at
-    // first contact is what made the demo need explaining. Collapsed by
-    // default, auto-expanded when you are already inside one, and
-    // nothing is removed - Finance and Social Media are filtered out of
-    // this list only because they are now pinned above, not deleted from
-    // dataPages/DATA_PAGES, so route registration and search are
-    // untouched.
-    var recordsPages = allDataPages.filter(function (p) { return PINNED_NAV_KEYS.indexOf(p.nav) === -1; });
-    var recordsOpen = recordsPages.some(function (p) { return p.nav === active; });
-  %>
-  <% if (_caps.showRecordsNav) { %>
-  <button type="button" class="sc-nav-heading sc-nav-toggle" id="scRecordsToggle" aria-expanded="<%= recordsOpen ? 'true' : 'false' %>">Company records <span class="sc-nav-caret"><%= recordsOpen ? '▾' : '▸' %></span></button>
-  <ul class="sc-nav" id="scRecordsList" <%= recordsOpen ? '' : 'hidden' %>>
-    <% recordsPages.forEach(function (p) { %>
-      <li><a href="<%= p.path %>" class="<%= active === p.nav ? 'active' : '' %>"><%= p.label %><% if (p.nav === 'gaps' && typeof navCounts !== 'undefined' && navCounts.openGaps) { %><span class="sc-badge"><%= navCounts.openGaps %></span><% } %></a></li>
-    <% }); %>
-  </ul>
-  <script nonce="<%= nonce %>">
-  (function () {
-    var t = document.getElementById('scRecordsToggle');
-    var l = document.getElementById('scRecordsList');
-    if (!t || !l) return;
-    t.addEventListener('click', function () {
-      var open = l.hidden;
-      l.hidden = !open;
-      t.setAttribute('aria-expanded', open ? 'true' : 'false');
-      t.querySelector('.sc-nav-caret').textContent = open ? '\u25be' : '\u25b8';
-    });
-  })();
-  </script>
-  <% } %>
+  <% }); %>
   <% if (typeof persona !== 'undefined' && _caps.showPersonaSwitch) { %>
   <div class="sc-clearance-block">
     <div class="sc-persona-label">Clearance</div>

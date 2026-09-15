@@ -14,7 +14,18 @@
       <%- include('partials/progression-rail') %>
       <div class="sc-page-header">
         <div>
-          <h1 class="sc-h">Enquiries</h1>
+          <%
+            // The page calls itself what the nav calls it. The registry
+            // owns that name, so renaming it there renames it here too
+            // rather than leaving a nav item and a heading disagreeing —
+            // which is exactly what "Messages" in the sidebar above an
+            // "Enquiries" heading was doing.
+            var _navName = 'Enquiries';
+            (((typeof caps !== 'undefined' && caps.nav) || []).forEach(function (g) {
+              g.items.forEach(function (it) { if (it.activeKey === 'enquiries') _navName = it.label; });
+            }));
+          %>
+          <h1 class="sc-h"><%= _navName %></h1>
           <p><%= enquiries.length %> shown</p>
         </div>
       </div>

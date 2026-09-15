@@ -125,16 +125,23 @@
         </div>
 
         <%
-          // The Level 1 ceiling. Generated from the cap in
-          // lib/scott/progression.js, not written next to it: at Level 1
-          // the workers genuinely cannot read the job, the price or the
-          // capacity, so this sentence is a description of the system
-          // rather than a caption on it. If the cap changes, this changes.
+          // WHAT LEVEL 1 SAYS ABOUT ITSELF, rewritten 15/09/2026.
+          //
+          // There was a "what I cannot see yet" warning here, generated
+          // from a source-class cap that Level 1 used to apply. Both are
+          // gone: under SAME BRAIN, MORE TOOLS, BIGGER WORKSPACE a level
+          // never withholds a fact, so a sentence claiming it does would
+          // be false, and this front page's whole job is to be believed.
+          //
+          // What replaced it says the true thing instead. The assistant
+          // here is the same one at every step; what a bigger workspace
+          // adds is applications. `ceiling` is still passed and is always
+          // null, so the old block cannot quietly come back.
         %>
-        <% if (ceiling) { %>
+        <% if (caps.level === 1) { %>
         <div class="sc-ceiling">
-          <span class="sc-ceiling-mark" aria-hidden="true">&#9888;</span>
-          <div class="sc-ceiling-body"><strong><%= ceiling.heading %></strong><%= ceiling.body %></div>
+          <span class="sc-ceiling-mark" aria-hidden="true">&#9679;</span>
+          <div class="sc-ceiling-body"><strong>This is the whole assistant, in a small workspace</strong>Ask it anything about the business and it answers from the company's own records. What the next steps add is not a cleverer assistant, it is more of the business attached to it: email, a diary, invoicing, the team, the books.</div>
         </div>
         <% } %>
 

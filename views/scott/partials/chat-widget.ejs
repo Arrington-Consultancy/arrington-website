@@ -53,16 +53,24 @@
   <div class="sc-chat-suggestions" id="scChatSuggestions">
     <% if (typeof level !== 'undefined' && level === 1) { %>
       <%
-        // Level 1 gets two, both answerable inside its own ceiling. The
-        // four below are deliberately chosen to demonstrate capacity,
-        // pricing, an approval boundary and a clearance refusal, and all
-        // four sit outside what Level 1 can read: offering them one line
-        // above a note saying "I can read the message that came in and
-        // nothing else" invites the visitor to prove the system wrong on
-        // its own front page.
+        // LEVEL 1'S THREE QUESTIONS DEMONSTRATE THE PRINCIPLE, rather than
+        // working around a restriction (rewritten 15/09/2026).
+        //
+        // They used to be two, chosen to stay inside a knowledge ceiling
+        // Level 1 no longer has. Now the point of the smallest workspace
+        // is that the assistant in it is the whole assistant, so:
+        //
+        //   1. an ordinary question about what has come in;
+        //   2. a question about the money, which Level 1 ANSWERS — this is
+        //      the one that shows the brain is not cut down here;
+        //   3. an ACTION, which it understands perfectly and has no tool
+        //      for yet, so it says where the tool lives and takes you.
+        //
+        // Three, not four, because the calm of this state is the product.
       %>
       <button type="button" data-q="What has come in that I need to deal with?">What has come in that I need to deal with?</button>
-      <button type="button" data-q="Can you draft a holding reply to that?">Can you draft a holding reply to that?</button>
+      <button type="button" data-q="What is the company's current bank balance?">What is our bank balance?</button>
+      <button type="button" data-q="Invoice Mrs Patel £160 for the two dining chairs.">Invoice Mrs Patel £160</button>
     <% } else { %>
       <button type="button" data-q="What needs my attention today?">What needs my attention today?</button>
       <button type="button" data-q="Could we take on a six-chair trade repair next week, and what would we charge?">Could we take a six-chair trade job next week, and at what price?</button>
@@ -97,6 +105,9 @@
   var suggestionsEl = document.getElementById('scChatSuggestions');
   var csrfToken = <%- JSON.stringify(csrfToken) %>;
   var busy = false;
+  // The last thing the person typed, so a capability signpost can carry
+  // it to the level that has the tool.
+  var lastUserText = '';
 
   // THE PROGRESSION, in the chat.
   //
@@ -293,7 +304,53 @@
         text: wr.reply, certainty: wr.certainty, writeback: wr.writeback, escalation: wr.escalation, technicalFailure: wr.technicalFailure
       });
     }
+    renderCapabilityNotice(turn);
     renderProvenance(turn);
+  }
+
+  // THE SIGNPOST. Shown when the person asked for an action this
+  // workspace has no tool for. It arrives already decided by the server
+  // (lib/scott/capabilityRegistry.js), so nothing is worked out here:
+  // this renders a label, a sentence and a destination.
+  //
+  // It is deliberately not an error and not a wall. The AI has understood
+  // and has answered above it; this says where the tool lives and takes
+  // you there, carrying what you typed so you do not have to say it again.
+  function renderCapabilityNotice(turn) {
+    var n = turn && turn.capabilityNotice;
+    if (!n) return;
+
+    var box = document.createElement('div');
+    box.className = 'sc-caps-note';
+
+    var p = document.createElement('p');
+    p.className = 'sc-caps-note-text';
+    p.textContent = n.message;
+    box.appendChild(p);
+
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'sc-caps-note-cta';
+    btn.textContent = n.cta;
+    btn.addEventListener('click', function () {
+      btn.disabled = true;
+      // The request travels with the visitor. Stored rather than put in
+      // the URL: it is the person's own sentence, and a query string is
+      // the one place on this site it would end up in a server log.
+      try {
+        sessionStorage.setItem('scottCarriedRequest', lastUserText || '');
+      } catch (e) { /* private window: the level change still works */ }
+      fetch('/api/scott/level', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
+        body: JSON.stringify({ level: n.level })
+      }).then(function () { window.location.href = '/scott'; })
+        .catch(function () { btn.disabled = false; });
+    });
+    box.appendChild(btn);
+
+    messagesEl.appendChild(box);
+    scrollToBottom();
   }
 
   async function sendMessage(text) {
@@ -302,6 +359,7 @@
     ping('receptionist', 'thinking');
     sendBtn.disabled = true;
     if (suggestionsEl) suggestionsEl.hidden = true;
+    lastUserText = text;
     addUserMessage(text);
     input.value = '';
 
@@ -338,5 +396,27 @@
       btn.addEventListener('click', function () { sendMessage(btn.getAttribute('data-q')); });
     });
   }
+
+  // THE OTHER HALF OF CARRYING THE REQUEST ACROSS. Arriving from a
+  // capability signpost, the sentence the person typed is put back in the
+  // box, ready to send, rather than made them type it twice.
+  //
+  // It is PUT IN THE BOX, not sent. Arriving somewhere new and finding a
+  // message already away on your behalf is the wrong kind of surprise,
+  // and the point of the moment is that the tool is now here, not that
+  // something happened while you were travelling.
+  //
+  // Read once and cleared, so a later reload does not repopulate it.
+  try {
+    var carried = sessionStorage.getItem('scottCarriedRequest');
+    if (carried) {
+      sessionStorage.removeItem('scottCarriedRequest');
+      if (input && !input.value) {
+        input.value = carried;
+        input.focus();
+        if (suggestionsEl) suggestionsEl.hidden = true;
+      }
+    }
+  } catch (e) { /* private window: nothing carried, everything else works */ }
 })();
 </script>

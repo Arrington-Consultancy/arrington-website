@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calendar | Scott's Armchair &amp; Knitting Service</title>
+  <meta name="robots" content="noindex, nofollow">
+  <%- include('partials/styles') %>
+</head>
+<body class="scott-body">
+  <div class="sc-shell">
+    <%- include('partials/sidebar', { active: 'calendar', navCounts: navCounts }) %>
+    <main class="sc-main">
+      <%- include('partials/progression-rail') %>
+      <% if (typeof isImpersonating !== 'undefined' && isImpersonating) { %>
+        <div class="sc-impersonation-banner">Demonstration mode: viewing as <%= persona.name %>, Clearance <%= persona.code %> (<%= persona.role %>). This is exactly what they can see.</div>
+      <% } %>
+
+      <div class="sc-page-header">
+        <div>
+          <h1 class="sc-h">Calendar</h1>
+          <p>What is promised and what is going back, taken straight from the jobs themselves. Nothing here is typed in twice: move a date on the job and it moves here.</p>
+        </div>
+      </div>
+
+      <% if (calendar.withheld) { %>
+        <div class="sc-card sc-empty-note">
+          <p>Your clearance does not cover the job board, so there is no diary to show you.</p>
+        </div>
+      <% } else { %>
+        <div class="sc-cal-bar">
+          <a class="sc-btn sc-btn-quiet" href="/scott/calendar?w=<%= calendar.weekOffset - 1 %>">&larr; Previous week</a>
+          <span class="sc-cal-range">
+            <%= new Date(calendar.weekStart).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' }) %>
+            &ndash;
+            <%= new Date(calendar.weekEnd).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) %>
+          </span>
+          <a class="sc-btn sc-btn-quiet" href="/scott/calendar?w=<%= calendar.weekOffset + 1 %>">Next week &rarr;</a>
+        </div>
+
+        <% if (calendar.shifted) { %>
+          <p class="sc-cal-note">Nothing is booked in this week, so the diary has opened on the nearest week that has work in it. Use the arrows to step back to today.</p>
+        <% } %>
+        <div class="sc-cal-week">
+          <% calendar.week.forEach(function (d) { %>
+            <section class="sc-cal-day<%= d.day === calendar.todayKey ? ' is-today' : '' %>">
+              <header class="sc-cal-day-head">
+                <span class="sc-cal-day-name"><%= d.name %></span>
+                <span class="sc-cal-day-num"><%= d.number %></span>
+              </header>
+              <% if (!d.entries.length) { %>
+                <p class="sc-cal-empty">&mdash;</p>
+              <% } %>
+              <% d.entries.forEach(function (e) { %>
+                <a class="sc-cal-entry sc-cal-entry-<%= e.kind %><%= e.atRisk ? ' is-risk' : '' %>" href="/scott/jobs/<%= e.ref %>">
+                  <span class="sc-cal-entry-label"><%= e.label %></span>
+                  <span class="sc-cal-entry-ref"><%= e.ref %></span>
+                  <span class="sc-cal-entry-cust"><%= e.customer %></span>
+                  <% if (e.price) { %><span class="sc-cal-entry-price"><%= e.price %></span><% } %>
+                  <% if (e.atRisk) { %><span class="sc-cal-entry-risk">At risk: <%= e.riskNote %></span><% } %>
+                </a>
+              <% }); %>
+            </section>
+          <% }); %>
+        </div>
+
+        <p class="sc-cal-foot">
+          Dates come from each job's promised and collection dates. A job you are not cleared to see is not in this week.
+        </p>
+      <% } %>
+      <%- include('partials/deeper-dive') %>
+    </main>
+  </div>
+</body>
+</html>
