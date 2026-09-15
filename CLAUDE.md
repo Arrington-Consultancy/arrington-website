@@ -848,7 +848,7 @@ removed because it is how the decision gets reversed if Tom ever wants
 downloads counted: create a conversion action in the Ads account and set
 its label. Do not re-raise this as an open item.
 
-### Unexplained deploy log line (open, non-blocking, 14/09/2026)
+### The deploy log line, explained (raised 14/09/2026, source found 15/09/2026)
 
 Every production deployment logs one line a few seconds before the app
 starts:
@@ -869,10 +869,33 @@ build image rather than the site.
 **Tom's instruction, 14/09/2026:** keep it as a non-blocking technical
 investigation item, and *"Do not change production behaviour merely to
 remove the log unless you can identify its actual source and demonstrate
-the change is safe."* That bar has not been met, so nothing has been
-changed. Treat a speculative fix here as out of bounds: the line is
-cosmetic, the site is healthy, and a change made to silence a log whose
-origin is unknown is a change whose blast radius is also unknown.
+the change is safe."*
+
+**SOURCE IDENTIFIED, 15/09/2026. It is not in this repository, which is
+why every search of it came up empty: it is the production service's own
+`preDeployCommand` in Railway.** That command is a Node one-liner that
+POSTs a ten-token test message to `api.anthropic.com` and prints either
+the reply or `console.log('Error:', j.error.message)`. It still asks for
+`claude-3-5-sonnet-20241022`, a model id the API no longer serves, so
+every deploy gets a 404 and prints the error message, which is the model
+id. The two lines appear together, 4ms apart, in the boot log of
+deployment `dbe6f50b`:
+
+> `TEST_RESULT: 404`
+> `Error: model: claude-3-5-sonnet-20241022`
+
+That accounts for all four facts recorded above: the string is absent
+from the repo (it is service config), the severity is INFO (it is
+`console.log`, not `console.error`), it precedes the app's own logging
+(pre-deploy runs before the start command), and it predates the
+14/09 releases (the command has been there throughout).
+
+**Nothing has been changed.** The command is a connectivity probe Tom set
+up; removing it, or updating its model id to `claude-sonnet-5`, is a
+change to production configuration and his call, not the builder's. It
+costs one failed API call per deploy and affects nothing else: the
+command ends `|| true`, so its failure cannot block a deploy, and the
+app's real AI paths use `claude-sonnet-5` and are unaffected.
 
 ### Scott evolves on its own (PR #165, merge `a009500`)
 
@@ -4529,6 +4552,25 @@ rather than claimed as on-target.
 Both anchors verified resolving on a real server: `/evidence#casestudy__4` to
 "The Insolvent Turnaround" (146 words, unchanged) and `/evidence#casestudy2__4`
 to "The VAT Intervention" (121 words). A redeploy is a silent no-op.
+
+**Live on production**, merge `bc41b38`, deployment `839422e3`:
+
+> Homepage proof compaction: added the full VAT case study to Evidence as
+> casestudy2__5 at position 4; casestudy__7: 3 row(s) tightened, subtext
+> cleared, capstone cleared, link -> /evidence#casestudy__4; casestudy2: 1
+> row(s) tightened, link -> /evidence#casestudy2__5.
+
+**Production allocated `casestudy2__5`, not the `__4` the local rebuild
+produced**, because production already had a `casestudy2__4`. That is the
+allocator doing its job, and the reason nothing here hardcodes an instance id.
+The serving deployment (`dbe6f50b`) printed no compaction line at all, which is
+the marker working: a redeploy is a silent no-op. Zero 5xx across the release
+window on 58 requests.
+
+**The trap caught again, and worth restating:** the deployment that ran the
+seed (`839422e3`) is marked REMOVED, because a second deployment superseded it
+seconds later. Its database writes still count. Check the superseded deployment
+before concluding a migration did not run.
 
 **Still open, and not a defect:** the two first-person hits on the Evidence
 page are inside testimonial quotations in its `fourcards` section. Those are
