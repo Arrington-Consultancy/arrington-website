@@ -4438,7 +4438,8 @@ evidenced problem, intervention and result, then route on to Evidence.
    "route to Evidence for the detail" is true for Orca and not for VAT: the
    longer VAT telling now exists nowhere public. Recorded as an open item
    below rather than fixed, because adding a case study to Evidence is not
-   what was asked for.
+   what was asked for. **CLOSED the same day** by the compaction pass in the
+   next section, which adds it.
 
 **How the shortening is guarded.** Orca's rows were copied from Evidence the
 day before, so the guard is a live comparison against that source: if the home
@@ -4458,6 +4459,85 @@ between the two case studies, which is why the per-case check exists.
 Measured on a production-shaped rebuild: the two proof sections go from
 1931px to 1491px on an iPhone 13, before the photo removal, which production
 also gets.
+
+## The home page proof is compacted, and VAT gets an Evidence page (15/09/2026)
+
+Tom reviewed the live result on his phone. Both evidenced outcomes belonged
+there, but they still ran long, and one of them routed nowhere.
+
+**The finding that shaped this pass: the marine summary linked on to a fuller
+telling, and the VAT one could not, because there was no fuller VAT telling
+anywhere public.** Evidence carries `casestudy__4` (Orca, in full) and
+`casestudy2__2`, which is a DIFFERENT case study ("More Margin From the Work
+Already There"). This was recorded as an open item on the previous pass and is
+now closed: the full VAT Intervention is added to Evidence as a new allocated
+instance, in the approved wording with the 15/09 pronoun correction applied,
+and nothing is written.
+
+**Chain of custody on that copy, because "add the approved case study" is the
+easiest place for new wording to slip in.** The intro and body are byte-equal
+to the `to` values of the `homepage.vat_intervention_we_voice_2026-09-15`
+migration, which `test/vatInterventionVoice.test.js` already diffs word for
+word against the July snapshot; the outcome, which that migration never
+touched, is byte-equal to the snapshot. A test asserts all three equalities,
+so the Evidence copy cannot drift from the approved source without a test
+going red.
+
+**Its label continues Evidence's own series rather than inventing a format:**
+the migration reads the highest `EVIDENCE: 0N` actually in use on that page
+and takes the next one (it landed as `EVIDENCE: 04`), falling back to a plain
+"Case study" if the series is ever gone. Position is directly after the last
+existing case study, so the case studies stay together and the documents still
+follow them.
+
+**What was compacted, and how it is guarded.** Each home page rewrite is an
+exact-value `UPDATE`, so a CMS edit always wins. Orca loses the marine/Princess
+Yachts colour (which stays in the full telling one click away), loses its
+restated `subtext` and its `stat_number` capstone, and its result phase carries
+Tom's required line verbatim: **"From insolvency risk to a marketable asset.
+Twenty four months, start to sale."** The old body opened "Twenty four months
+later", so the opening was rewritten rather than left to say it twice. VAT
+loses one clause. Both gain `link_text` / `link_href` pointing at their own
+Evidence section.
+
+**The main lever was spacing, not words.** Measured before deciding anything:
+of Orca's 806px on an iPhone 13, 128px was section padding, 48px the timeline's
+top margin and 80px per-phase padding, against 354px of actual prose. The
+compaction rules are all scoped to `.page-main`, so the Evidence page keeps the
+fuller, roomier treatment; a test fails if one of them is ever written
+unscoped.
+
+**Two new content keys on both case study templates.** `link_text` and
+`link_href` render as a `.case-more` paragraph, gated at render time on a
+root-relative-with-optional-anchor regex and a `..` check, the same
+defence-in-depth as the documents template's paths and the SEO URL fields. An
+href that fails renders nothing rather than reaching an attribute. Labels and
+the short-field heuristic are wired in `public/js/admin.js`, so both are
+ordinary CMS fields.
+
+**Measured on a production-shaped rebuild** (July snapshot plus
+`casestudy__4.photo_key`/`stat_number` seeded, all four 15/09 markers cleared
+so the whole chain replays in production order): the two proof sections come to
+**1065px on an iPhone 13, about 1.6 mobile screens** (550 + 515, so roughly
+equal weight), against 1931px before the first shortening pass. Desktop 0.84
+screens. **That is slightly above the "one to one-and-a-half screens" Tom
+named**, reached over three iterations (1.98, 1.74, 1.60); going further meant
+dropping something he asked to keep, and his instruction said the target was
+"subject to good design rather than an artificial pixel target". Reported
+rather than claimed as on-target.
+
+Both anchors verified resolving on a real server: `/evidence#casestudy__4` to
+"The Insolvent Turnaround" (146 words, unchanged) and `/evidence#casestudy2__4`
+to "The VAT Intervention" (121 words). A redeploy is a silent no-op.
+
+**Still open, and not a defect:** the two first-person hits on the Evidence
+page are inside testimonial quotations in its `fourcards` section. Those are
+speech and are exempt under Tom's own rule. Do not "fix" them.
+
+Tests: `test/homepageProofCompact.test.js`, 10, each guard watched red against
+a planted defect (a strengthened claim word, an invented quantity, the required
+capstone line dropped, first person reintroduced, the approved Evidence copy
+reworded, a write against the existing Evidence instance).
 
 ## The paid landing page was ALREADY corrected (15/09/2026)
 

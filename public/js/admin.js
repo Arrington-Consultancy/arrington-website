@@ -132,6 +132,8 @@
         'documents.doc_4_image': 'Document 4 preview image path',
         'casestudy.label': 'Section label',
         'casestudy.heading': 'Heading',
+        'casestudy.link_text': 'Link text (to the full case study)',
+        'casestudy.link_href': 'Link URL (root relative, e.g. /evidence#casestudy__4)',
         'casestudy.subtext': 'Subtext',
         'casestudy.phase_1_label': 'Phase 1 label',
         'casestudy.phase_1_body': 'Phase 1 body',
@@ -155,6 +157,8 @@
         'casestudy2.item_7': 'Included item 7',
         'casestudy2.item_8': 'Included item 8',
         'casestudy2.outcome': 'Outcome',
+        'casestudy2.link_text': 'Link text (to the full case study)',
+        'casestudy2.link_href': 'Link URL (root relative, e.g. /evidence#casestudy2__5)',
         'casestudy2.button_text': 'Button text (leave empty to hide)',
         'casestudy2.button_href': 'Button link (full https:// URL)',
         'assessment.label': 'Section label',
@@ -271,7 +275,7 @@
             key.includes('_caption') ||
             key.includes('_price') || key.includes('_name') ||
             key.includes('_file') || key.includes('_image') || key.endsWith('.image') || key.includes('_meta') ||
-            key.includes('_link') || key.includes('button_text') ||
+            key.includes('_link') || key.includes('link_') || key.includes('button_text') ||
             key.includes('placeholder') || key.includes('submit_text')) {
             return 'short';
         }
