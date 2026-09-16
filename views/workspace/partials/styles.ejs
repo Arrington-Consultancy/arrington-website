@@ -50,6 +50,10 @@
   .ws-sub { color: var(--ws-muted); margin: 0 0 1.4rem; font-size: 0.9rem; }
   .ws-card { background: var(--ws-panel); border: 1px solid var(--ws-border); border-radius: 8px; padding: 1rem 1.2rem; margin-bottom: 1rem; }
   .ws-card h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ws-muted); margin: 0 0 0.7rem; }
+  /* A card that carries an id is a link target from the Today page, so
+     leave it a little room rather than landing flush against the top. */
+  .ws-card[id] { scroll-margin-top: 1rem; }
+  .ws-fix-links { margin-top: 0.3rem; }
   .ws-item { padding: 0.55rem 0; border-top: 1px solid var(--ws-border); }
   .ws-item:first-of-type { border-top: 0; }
   .ws-item-title { font-weight: 600; }

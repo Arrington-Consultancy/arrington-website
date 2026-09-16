@@ -10,7 +10,13 @@
 <% if (connectError) { %><div class="ws-card"><p class="ws-note-error"><%= connectError %></p></div><% } %>
 <% if (notice) { %><div class="ws-card"><p class="ws-meta"><%= notice %></p></div><% } %>
 
-<div class="ws-card">
+<%# Link target from the Today page. It is on the CARD and not on the
+    "Update the Company Brain" form below, deliberately: that form only
+    renders when Gmail is both configured and readable, so an anchor on
+    it disappears in exactly the state someone following a "the inbox
+    snapshot is stale" link is most likely to be in. This card always
+    renders, and when Gmail cannot be read it says why. %>
+<div class="ws-card" id="wsEmailBrain">
   <h2>Inbox</h2>
   <% if (!gmail.configured) { %>
     <p class="ws-empty">Not connected. Set <code>GMAIL_CLIENT_ID</code> and <code>GMAIL_CLIENT_SECRET</code> in Railway, let it redeploy, then use the connection controls at the bottom of this page.</p>
