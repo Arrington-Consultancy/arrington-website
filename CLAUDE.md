@@ -2545,6 +2545,77 @@ most of the height of a reply. That is honest and it is not what failed,
 and the real fix is the general lane supplying fewer records, which is a
 routing change. Left alone deliberately.
 
+### Every NEEDS ATTENTION row links to where it gets fixed (16/09/2026)
+
+Tom, looking at the live Today page, which listed five things needing
+attention as plain text: *"I want clickable links to fix each of these, ie
+clicks through to bnaking upload, links to fix these gaps depending what
+they are."*
+
+`lib/workspace/fixDestination.js` is pure and is the whole mapping.
+**The rule that makes it trustworthy: a destination is DERIVED from a
+structured field the row already carries, never pattern-matched out of
+the prose beside it.** A gap's description is written by the model, so
+routing on its wording would mean a reworded sentence silently sending
+Tom to a different page with nothing on screen to show it had. A test
+pins exactly that: two gaps whose text reads as though it is about email
+and banking, neither of which names a record, both go to the register.
+
+A stale or failed RECORD gets one link, from its own `record_key`
+namespace, and the four namespaces in the table are the four whose page
+carries the control that rewrites them: `finance.*` to the ANNA upload,
+`receivables.*` and `hours.*` to Update receivables, `email.*` to the
+inbox. Deliberately not a list of every page: the snapshot records
+(`authority.*`, `strategy.*`, `worker_register.*` and the rest) are
+corrected in Drive and re-ingested at boot, so there is no button, and
+they fall through to `/workspace/brain?q=<key>` rather than being given a
+destination that cannot help. `opportunity` and `project` get their own
+listing page from `source_class`.
+
+A material GAP gets up to two, and the second is not decoration: a gap is
+only ever closed by a human on the register with a written statement of
+what was done, so the row offers where to fix the evidence AND
+`/workspace/gaps#gap-<id>`. Where no record is named, the register is the
+only honest destination and the label reads "Open the gap" rather than
+claiming to be the fix.
+
+**Three defects found by FOLLOWING the links over real HTTP, none of
+which reading the code would have shown:**
+
+1. **`#wsEmailBrainForm` was in the view source and absent from the
+   served page.** It sat inside the "Gmail is configured and answering"
+   branch, so the anchor disappeared in exactly the state someone
+   following a "the inbox snapshot is stale" link is most likely to be
+   in. Every anchor is now on a CARD, which always renders and says why
+   its control is missing. A test walks the EJS brace depth and fails an
+   anchor enclosed by any connector-state condition.
+2. **The Company Brain fallback landed on an empty search.**
+   `repo.searchRecords` covered `title` and `body` only, so
+   `?q=worker_register.current` reported no matches about a record
+   sitting in the database. `record_key` is searched now, which is right
+   beyond this link: the key is printed on screen in two places, so a key
+   you can read and cannot search for is a dead end. No clearance
+   consequence, since the caller still filters what comes back.
+3. **The test helper itself was wrong twice**, and both times the planted
+   defect stayed GREEN, which is the more useful lesson. It tracked
+   if/else shapes rather than brace depth, so `<% } else { %>` lost a
+   frame; fixing that still lost one on
+   `<% gmail.messages.forEach(function (m) { %>` ... `<% }) %>`, which
+   opens and closes a brace while being no kind of condition. Either way
+   the stack drained and everything after that point in the file read as
+   unconditional. It counts braces now and pushes non-conditional frames
+   as null, and it carries a positive control asserting it can still SEE
+   a genuinely connector-gated element.
+
+Tests: `test/workspace/fixDestination.test.js`, 11. Three planted defects
+watched red on the right assertion (a removed anchor, a destination
+routed off the description, an unregistered route), plus the anchor
+defect above. Verified over real HTTP against a freshly seeded throwaway
+database carrying the shape of Tom's screenshot: nine attention rows, all
+eleven links fetched, every one 200 with its anchor present in the served
+HTML, and both unanchored destinations confirmed to show the record they
+name.
+
 ### Receivables from authorised Drive records: MERGED AND INERT, NOT ENABLED (15-16/09/2026)
 
 **Do not switch this on.** The code is on `main` and reads nothing. Tom's

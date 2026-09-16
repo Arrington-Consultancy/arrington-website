@@ -12,6 +12,11 @@
     <div class="ws-item">
       <span class="ws-badge ws-badge-<%= a.kind === 'gap' ? 'material' : a.kind %>"><%= a.kind === 'gap' ? 'gap' : a.kind.replace('_', ' ') %></span>
       <%= a.text %>
+      <% if (a.actions && a.actions.length) { %>
+        <div class="ws-meta ws-fix-links">
+          <% a.actions.forEach(function (act, i) { %><% if (i > 0) { %> · <% } %><a href="<%= act.href %>"><%= act.label %></a><% }) %>
+        </div>
+      <% } %>
     </div>
   <% }) %>
 </div>

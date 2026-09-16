@@ -7,7 +7,9 @@
   <div class="ws-card"><p class="ws-empty">No gaps recorded.</p></div>
 <% } %>
 <% gaps.forEach(function (g) { %>
-  <div class="ws-card">
+  <%# id so a Today attention row can link straight to this gap's own
+      close form rather than to the top of the register. %>
+  <div class="ws-card" id="gap-<%= g.id %>">
     <span class="ws-badge ws-badge-plain"><%= g.gap_type.replace('_', ' ') %></span>
     <% if (g.material) { %><span class="ws-badge ws-badge-material">material</span><% } %>
     <span class="ws-badge <%= g.status === 'open' ? 'ws-badge-stale' : (g.status === 'resolved' ? 'ws-badge-fresh' : 'ws-badge-plain') %>"><%= g.status %></span>

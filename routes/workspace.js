@@ -34,6 +34,7 @@ const socialMemory = require('../lib/workspace/social/memory');
 const socialSync = require('../lib/workspace/social/sync');
 const socialMutations = require('../lib/workspace/social/mutations');
 const receptionist = require('../lib/workspace/receptionist');
+const fixDestination = require('../lib/workspace/fixDestination');
 const financeRepo = require('../lib/workspace/finance/repo');
 const financeRegistry = require('../lib/workspace/finance/registry');
 const financeAccounting = require('../lib/workspace/finance/accounting');
@@ -264,11 +265,14 @@ function mountPageRoute(app, generateCsrfToken) {
       repo.listActivity(8)
     ]);
     const records = withFreshness(filterRecordsForClearance(clearanceId, allRecords));
+    // Every attention row carries where it gets fixed. The destination is
+    // derived from the row's own structured fields by fixDestination.js,
+    // never from the wording of the text beside it; see that module.
     const attention = [];
-    records.filter((r) => r.freshness.state === 'stale').forEach((r) => attention.push({ kind: 'stale', text: `${r.title} is stale (last synced ${r.freshness.ageDays} days ago).` }));
-    records.filter((r) => r.freshness.state === 'sync_failed').forEach((r) => attention.push({ kind: 'sync_failed', text: `${r.title}: the last sync FAILED; the content shown may be out of date.` }));
+    records.filter((r) => r.freshness.state === 'stale').forEach((r) => attention.push({ kind: 'stale', text: `${r.title} is stale (last synced ${r.freshness.ageDays} days ago).`, actions: fixDestination.fixForRecord(r) }));
+    records.filter((r) => r.freshness.state === 'sync_failed').forEach((r) => attention.push({ kind: 'sync_failed', text: `${r.title}: the last sync FAILED; the content shown may be out of date.`, actions: fixDestination.fixForRecord(r) }));
     const visibleGaps = gaps.filter((g) => clearanceCanSeeSensitivity(clearanceId, g.sensitivity));
-    visibleGaps.filter((g) => g.material).forEach((g) => attention.push({ kind: 'gap', text: `Material brain gap: ${g.description.slice(0, 160)}` }));
+    visibleGaps.filter((g) => g.material).forEach((g) => attention.push({ kind: 'gap', text: `Material brain gap: ${g.description.slice(0, 160)}`, actions: fixDestination.fixForGap(g) }));
     res.render('workspace/today', {
       ...viewer(req),
       counts: await navCounts(clearanceId),

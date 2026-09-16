@@ -14,7 +14,7 @@
   <div class="ws-card"><p class="ws-meta"><%= importResult %></p></div>
 <% } %>
 
-<div class="ws-card">
+<div class="ws-card" id="wsAnnaUpload">
   <h2>Upload an ANNA statement</h2>
   <p class="ws-body-text">In the ANNA app, type <strong>"Get an account statement"</strong>, choose a period (a single month, or your full history since the account opened), and choose <strong>CSV</strong>. Upload that file below. Re-uploading a period you have already imported is safe: matching transactions are recognised and not duplicated.</p>
   <p class="ws-meta">The statement export lives in the ANNA app rather than on this page, because ANNA publishes no developer API for a third party to pull it: <a href="https://anna.money/" target="_blank" rel="noopener noreferrer">open ANNA</a> and sign in there. Nothing on this page ever holds your ANNA login.</p>
@@ -212,7 +212,7 @@
   <% } %>
 </div>
 
-<div class="ws-card">
+<div class="ws-card" id="wsReceivables">
   <h2>Receivables: update the Company Brain</h2>
   <p class="ws-meta">Reads Zoho Invoice for what is owed and the authorised hours log for work done but not yet invoiced, and writes both into the Company Brain so Ask Ruth can answer from them with their sources and read times. It reads only; it cannot create, amend or send an invoice, and it never writes to the hours log.</p>
   <% if (!receivables.driveEnabled) { %>
