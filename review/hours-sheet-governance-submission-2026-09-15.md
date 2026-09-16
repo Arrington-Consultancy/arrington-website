@@ -169,6 +169,53 @@ what a customer owes is a finance fact whoever asks, and filing Zoho's own
 figures under a source class invented for a spreadsheet would have been
 wrong. It is `confidential` either way.
 
+## 4a. THE OPEN GOVERNANCE STOP THIS CHANGE TOUCHES
+
+**Raised by the builder rather than waited for.** The ARRINGTON GOVERNANCE &
+ASSURANCE worker handoff (read 16 September 2026) records an open bounded
+STOP:
+
+> The last inspected substantive finding is AMBER with a bounded STOP on
+> inferred standing finance access... Next controlled action remains
+> correction of inferred Governance standing finance access, inspection of
+> the actual permission outcome and independent recheck before dependent
+> finance activity resumes.
+
+And, in the same document: *"Governance remit does not imply standing access
+to banking or other sensitive source systems."*
+
+**This change contains an instance of exactly that pattern, and it should be
+decided rather than inherited.** Section 4 states that
+`governance_assurance` reaches the new `hours` class "only because that lane
+takes `Object.keys(SOURCE_CLASSES)` wholesale; no lane names it". That is
+true, and it is also the mechanism the STOP is about: a new confidential
+source class is picked up by the governance lane **automatically, because of
+how that lane is written, without anyone deciding it should be**. The same
+is already true of `finance` and `email`.
+
+The builder has NOT changed it, for two reasons. It is pre-existing
+structure, not something this change introduced, so altering it here would
+be scope drift of the kind these reviews exist to catch. And narrowing the
+governance lane is itself a worker-permission change, which is Governance's
+own decision and Tom's, not the builder's.
+
+**Three options, for the reviewer and Tom, not for the builder:**
+
+1. **Leave it.** The governance lane keeps reading every class including
+   `hours`. Defensible if that lane's remit genuinely requires it, but it
+   should be recorded as a decision rather than a side effect of a
+   `Object.keys()` call.
+2. **Name the classes the governance lane holds explicitly**, so a new class
+   joins it only when somebody adds it. This is the smallest correction and
+   the one that matches the STOP's own wording.
+3. **Exclude the sensitive source classes from that lane by name**
+   (`finance`, `email`, `hours`), so the governance remit audits the system
+   without standing access to the commercial records inside it.
+
+**Whichever is chosen, the decision belongs in the governance record.** No
+dependent finance activity is being resumed by this submission: nothing here
+is enabled, and the flag stays unset regardless of the outcome above.
+
 ## 5. OAuth scope, and why it is not what it looks like
 
 **Requested scope:** `https://www.googleapis.com/auth/spreadsheets.readonly`

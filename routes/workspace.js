@@ -376,10 +376,27 @@ function mountPageRoute(app, generateCsrfToken) {
     const parts = rows.map((row, i) => {
       if (!row) return `${keys[i]}: not written yet`;
       const f = repo.recordFreshness(row);
-      const age = f.ageDays === null ? '' : `, ${f.ageDays} day(s) old`;
+      // A record written seconds ago rendered as "-1 day(s) old", because
+      // the age is floored and the app's clock and the database's differ
+      // by up to a minute (the same skew as governance finding N4). A
+      // negative age is meaningless to a reader, so anything under a day
+      // reads as today rather than as a number.
+      const age = f.ageDays === null ? '' : (f.ageDays < 1 ? ', written today' : `, ${f.ageDays} day(s) old`);
       return `${keys[i]}: ${f.state}${age}${row.sync_outcome && row.sync_outcome !== 'ok' ? ` (${row.sync_outcome})` : ''}`;
     });
-    return { driveEnabled, records: `Company Brain records. ${parts.join('. ')}.` };
+    // Which reconciliation mode the last refresh actually used. This is
+    // the one visible effect of adding the Invoice ref column to the
+    // sheet, so it is reported from the record's own meta rather than
+    // from the register: it says what the last READ found, not what the
+    // code is capable of.
+    const hoursRow = rows[0];
+    let mode = '';
+    if (hoursRow && hoursRow.meta && typeof hoursRow.meta === 'object') {
+      mode = hoursRow.meta.hasInvoiceRefColumn
+        ? 'The hours log carries an Invoice ref column, so unbilled work is named row by row.'
+        : 'The hours log has no Invoice ref column, so unbilled work can only be a comparison of totals. Adding that column changes this line.';
+    }
+    return { driveEnabled, records: `Company Brain records. ${parts.join('. ')}.`, mode };
   }
 
   page('/workspace/finance', async (req, res) => {
@@ -398,7 +415,7 @@ function mountPageRoute(app, generateCsrfToken) {
         moneyActionsNeverBuilt: financeRegistry.MONEY_ACTION_CLASS_NEVER_BUILT,
         period: null, summary: null, periodPresets: [], recurringGroups: [], trend: [],
         zoho: { configured: false, writesEnabled: false, invoices: [], payments: [], contacts: [], error: '', invoicesError: '', paymentsError: '', contactsError: '', readAt: null },
-        receivables: { driveEnabled: false, records: '' },
+        receivables: { driveEnabled: false, records: '', mode: '' },
         csrfToken: generateCsrfToken(req, res)
       });
     }

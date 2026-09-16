@@ -219,6 +219,7 @@
     <p class="ws-meta">The Drive record connector is switched off, so the hours log will not be read. Zoho still answers, and the record will say plainly that the unbilled side is unavailable rather than reporting zero.</p>
   <% } %>
   <p class="ws-meta"><%= receivables.records %></p>
+  <% if (receivables.mode) { %><p class="ws-meta"><%= receivables.mode %></p><% } %>
   <form id="wsReceivablesForm" class="ws-form-row">
     <button class="ws-btn" type="submit">Update receivables</button>
   </form>

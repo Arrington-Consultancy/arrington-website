@@ -2545,15 +2545,28 @@ most of the height of a reply. That is honest and it is not what failed,
 and the real fix is the general lane supplying fewer records, which is a
 routing change. Left alone deliberately.
 
-### Receivables from authorised Drive records: BUILT, INERT, NOT APPROVED, NOT MERGED (15/09/2026)
+### Receivables from authorised Drive records: MERGED AND INERT, NOT ENABLED (15-16/09/2026)
 
-**Do not switch this on, and do not merge it.** It lives on
-`claude/new-session-hbgp04`. Three things must all be true before a single
-byte is read from Drive, and only Tom does any of them: Governance &
-Assurance approves the source expansion, the Google authorisation is
-completed, and `ENABLE_WORKSPACE_DRIVE_RECORDS` is explicitly set to
-`true`. Submission:
-`review/hours-sheet-governance-submission-2026-09-15.md`.
+**Do not switch this on.** The code is on `main` and reads nothing. Tom's
+instruction of 16/09/2026: *"Put the governance submission through the
+existing review route in parallel. Don't create another artificial approval
+gate around reversible code."* So the inert code merged and the gate that
+matters is the one that was always real: **three things must all be true
+before a single byte is read from Drive, and only Tom does any of them.**
+Governance & Assurance approves the source expansion, the Google
+authorisation is completed, and `ENABLE_WORKSPACE_DRIVE_RECORDS` is
+explicitly set to `true`. Submission:
+`review/hours-sheet-governance-submission-2026-09-15.md`, lodged in Drive
+on 16/09/2026 as the review request in the Arrington workers folder.
+
+**What merging actually turned on, stated rather than implied:** a new
+"Receivables" card on `/workspace/finance` and
+`POST /api/workspace/receivables/refresh`, both behind the three existing
+workspace gates, so Tom's own login only. With the Drive flag unset the
+button still works and is useful: **Zoho is already configured on
+production**, so a refresh writes a real `receivables.summary` from live
+Zoho data and says plainly that the unbilled half is unavailable. That is
+the whole capability minus the hours log.
 
 **This SUPERSEDES the first build of the same day**, which was pinned
 permanently to one spreadsheet id and whose only output was a sentence
@@ -2732,6 +2745,35 @@ loaders now carry a bare `why` alongside the full `message`.
 service account does not exist, the sheet has not been shared with
 anything, and this sandbox cannot reach the live service. The first real
 read will be Tom's, after approval.
+
+**Ruth actually reaching the records is a SEPARATE fact from writing them,
+and it now has its own suite** (`test/workspace/receivablesRetrieval.test.js`,
+4). Writing a record and Ruth being able to read it are two different
+things, and the first build proved that: it had a builder nothing called.
+The receivables suite closed half of it (the rows exist in the database);
+this one closes the other half by calling the SAME `buildLaneContext` the
+live ask route calls and asserting both records reach the prompt carrying
+the answer to each of Tom's six questions, with their freshness rendered as
+a word. It carries two negative controls, because a test that only asserts
+presence passes on a system that shows everything to everyone: a narrow
+clearance gets neither record and neither figure, and no worker lane
+reaches the hours log. Three properties watched red: `hours` dropped from
+`GENERAL_SOURCE_CLASSES`, the context cap reverted to a `slice()`, and the
+clearance check made permissive.
+
+**The thin-class property is worth keeping in mind.** `hours` will always
+be the smallest class in the brain, one record against dozens of
+`worker_register` rows, against a cap of 24. Before `selectContextRecords`
+round-robined by class this was a `slice()` over an alphabetically ordered
+list, where "hours" sorting early was the only thing keeping it in the
+prompt. The test asserts the property with the thin records deliberately
+LAST, which is the worst case for a slice.
+
+**One defect found by looking at the rendered page rather than the test.**
+A record written seconds earlier displayed as "-1 day(s) old", because the
+age is floored and the app's clock and the database's differ by up to a
+minute, which is governance finding N4 showing up in a display string.
+Anything under a day now reads "written today".
 
 **A git trap worth knowing, hit while doing this.** `sheetsClient.js` was
 moved with `git mv`, so the path is staged as an ADD carrying the file's
