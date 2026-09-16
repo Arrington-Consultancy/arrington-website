@@ -212,6 +212,21 @@
   <% } %>
 </div>
 
+<div class="ws-card">
+  <h2>Receivables: update the Company Brain</h2>
+  <p class="ws-meta">Reads Zoho Invoice for what is owed and the authorised hours log for work done but not yet invoiced, and writes both into the Company Brain so Ask Ruth can answer from them with their sources and read times. It reads only; it cannot create, amend or send an invoice, and it never writes to the hours log.</p>
+  <% if (!receivables.driveEnabled) { %>
+    <p class="ws-meta">The Drive record connector is switched off, so the hours log will not be read. Zoho still answers, and the record will say plainly that the unbilled side is unavailable rather than reporting zero.</p>
+  <% } %>
+  <p class="ws-meta"><%= receivables.records %></p>
+  <% if (receivables.mode) { %><p class="ws-meta"><%= receivables.mode %></p><% } %>
+  <form id="wsReceivablesForm" class="ws-form-row">
+    <button class="ws-btn" type="submit">Update receivables</button>
+  </form>
+  <p class="ws-note-error" id="wsReceivablesError" hidden></p>
+  <p class="ws-meta" id="wsReceivablesResult" hidden></p>
+</div>
+
 <% if (zoho.configured && zoho.writesEnabled) { %>
 <div class="ws-card" id="wsZohoCreateCard">
   <h2>Create and send an invoice</h2>
@@ -375,6 +390,33 @@
           window.location.reload();
         } catch (ex) {
           window.alert('Network problem: ' + ex.message);
+          btn.disabled = false;
+        }
+      });
+    }
+    // Receivables: read both sources and write the two Company Brain
+    // records. Read-only against both, so no confirmation is asked for.
+    // It reports what it managed rather than reloading, because a partial
+    // success ("Zoho answered, the hours log did not") is the answer.
+    var recForm = document.getElementById('wsReceivablesForm');
+    if (recForm) {
+      var recErr = document.getElementById('wsReceivablesError');
+      var recOut = document.getElementById('wsReceivablesResult');
+      recForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        recErr.hidden = true; recOut.hidden = true;
+        var btn = recForm.querySelector('button');
+        btn.disabled = true;
+        try {
+          var r = await fetch('/api/workspace/receivables/refresh', { method: 'POST', headers: { 'x-csrf-token': csrf } });
+          var data = await r.json();
+          if (!r.ok) { recErr.textContent = data.error || 'That did not work.'; recErr.hidden = false; btn.disabled = false; return; }
+          recOut.textContent = data.summary;
+          recOut.hidden = false;
+          btn.disabled = false;
+        } catch (ex) {
+          recErr.textContent = 'Network problem: ' + ex.message;
+          recErr.hidden = false;
           btn.disabled = false;
         }
       });

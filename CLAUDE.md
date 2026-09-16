@@ -2448,6 +2448,345 @@ run on 07/09/2026 against a fresh local database with a stub model at
 history and pending line arrive on every model turn. Governance
 addendum in `review/chat-drafted-invoices-governance-submission-2026-09-06.md`.
 
+### A real invoice request read as a conversation (15/09/2026)
+
+Tom typed an invoice request into Ask Ruth on production naming Tim Hunt
+at World Student Advisors and GBP 533, with no email address in it.
+**Nothing was raised.** No draft, no approval card, and two replies that
+implied otherwise: *"I can then have the invoice prepared for your
+approval"*, and after he confirmed the address, *"That action sits with
+the invoicing queue based on your instruction, not with me."* There was
+no queue entry and nothing was being prepared.
+
+**The defect was never in the model, and that is the thing to hold onto.**
+`invoiceIntent.parse` is the ONLY thing that raises a draft, so a
+sentence it does not read is a sentence nothing acts on, and whatever
+answers instead is answering about a business it cannot change.
+`INTENT_RE` wanted either a verb from a five-word list within 40
+characters of "invoice", or "invoice" within 20 of "to"/"for". Tom used
+"invoice" AS the verb with the customer's name in between, so neither
+fired, and the `loose` reading needs an address, which the sentence did
+not carry. It went to the model, and the model was free to offer what
+only the parser can do.
+
+Three changes, and the second and third only exist because the first
+one lands:
+
+1. **A verb with an amount is an invoice request, address or no
+   address.** `invoice`, `bill` or `charge` plus a figure raises an
+   INCOMPLETE draft that asks for what is missing, instead of the whole
+   request falling through. It is still only a draft behind an approval
+   card, so a wrong reading costs one discard; this false negative cost
+   a real client invoice.
+2. **A question is never an instruction.** "How much did we invoice
+   Orca, GBP 533?" must not raise a card, so a question opener or a
+   trailing question mark stands the parser down. A sentence OPENING
+   with a request word ("can you invoice Tim Hunt GBP 533?") is an
+   instruction however it ends, which is the same reasoning as the
+   Scott signpost's `KNOWLEDGE_OPENERS` guard and is why "can" is not
+   in the question list. This narrows the parser, including on two
+   shapes it used to accept, which is the safe direction on a path that
+   drafts real invoices.
+3. **The customer survives.** A name is now read from between the verb
+   and the amount, so the card says "to Tim Hunt at World Student
+   Advisors" rather than "to (no customer)". The trap is the follow-up:
+   an address typed on its own to complete the draft carries no name, so
+   `extractFields` falls back to the local part, and without a guard
+   "tim.hunt" would overwrite the name Tom typed. **That guard must not
+   over-reach**: SWAPPING one address for another is a different
+   customer and the new name does follow it, or the wrong person ends up
+   on a real invoice. The discriminator is whether the draft's address
+   was blank.
+
+Two smaller defects were visible in the same output and fixed with it: a
+dangling preposition ("for Tim Hunt at WSA for GBP 533") left the
+customer, with the "for" still attached, as the job description; and
+where both readings land on the same words the description is cleared,
+because the customer is not the job and a draft should ask rather than
+invent.
+
+**Four prompt rules**, since the model's half of this was real too: never
+offer to prepare, raise, arrange or queue anything and never describe
+another part of the system acting on the owner's instruction (nothing is
+waiting unless the server's own line says so); say a caveat ONCE; do not
+narrate your own limits. The caveat rule is worded to narrow WHEN a
+caveat is repeated and never WHETHER it is given, and is asserted in the
+same test as the stale-record rule and the no-actions rule, because the
+easiest way to satisfy "stop hedging" is to stop being honest. That is
+the same mistake caught mid-flight in Scott's date fix the same day.
+
+**Tests:** `test/workspace/invoiceRequestReading.test.js`, 9, seven of
+which were watched red against the pre-fix head. The two that stay green
+both ways are deliberate: they guard this fix against over-reaching, and
+they are exactly the cases a careless widening would break.
+
+**Verified over real HTTP** against a freshly seeded throwaway database
+with a local server, not by reading: "invoice Tim Hunt at World Student
+Advisors GBP 533" raises approval #1 as an incomplete draft-only card,
+"for the September retainer" and then the address on its own each revise
+THAT ROW in place (never a second row), the name Tom typed survives both,
+"send it" flips the mode to create and send, and the approvals page shows
+one row reading `Zoho invoice (create and send): GBP 533.00 to Tim Hunt
+at World Student Advisors ...`. No model call in any of the four turns.
+An invoice QUESTION asked with that draft still pending was passed
+through untouched and raised no second card.
+
+**Not a governance expansion.** No Zoho scope, execution gate or source
+class changed. `ENABLE_ZOHO_INVOICE_WRITES` is untouched, and creating
+and emailing still needs the flag, a named person, a browser
+confirmation and a spent-once approval. What changed is which typed
+sentences reach the approval queue as drafts, inside the capability
+already recorded in
+`review/chat-drafted-invoices-governance-submission-2026-09-06.md`.
+
+**Still open, reported rather than changed:** every general-lane answer
+prints a provenance line naming all 16 records it was given, which is
+most of the height of a reply. That is honest and it is not what failed,
+and the real fix is the general lane supplying fewer records, which is a
+routing change. Left alone deliberately.
+
+### Receivables from authorised Drive records: MERGED AND INERT, NOT ENABLED (15-16/09/2026)
+
+**Do not switch this on.** The code is on `main` and reads nothing. Tom's
+instruction of 16/09/2026: *"Put the governance submission through the
+existing review route in parallel. Don't create another artificial approval
+gate around reversible code."* So the inert code merged and the gate that
+matters is the one that was always real: **three things must all be true
+before a single byte is read from Drive, and only Tom does any of them.**
+Governance & Assurance approves the source expansion, the Google
+authorisation is completed, and `ENABLE_WORKSPACE_DRIVE_RECORDS` is
+explicitly set to `true`. Submission:
+`review/hours-sheet-governance-submission-2026-09-15.md`, lodged in Drive
+on 16/09/2026 as the review request in the Arrington workers folder.
+
+**What merging actually turned on, stated rather than implied:** a new
+"Receivables" card on `/workspace/finance` and
+`POST /api/workspace/receivables/refresh`, both behind the three existing
+workspace gates, so Tom's own login only. With the Drive flag unset the
+button still works and is useful: **Zoho is already configured on
+production**, so a refresh writes a real `receivables.summary` from live
+Zoho data and says plainly that the unbilled half is unavailable. That is
+the whole capability minus the hours log.
+
+**This SUPERSEDES the first build of the same day**, which was pinned
+permanently to one spreadsheet id and whose only output was a sentence
+printed beside an invoice draft. Tom's correction, verbatim: *"You've
+interpreted the immediate WSA example too narrowly. The actual requirement
+is broader: Ruth should be able to use the appropriate Arrington Google
+Drive records to tell me what I am owed and what it relates to."* Six
+example questions came with it, and they are the acceptance criteria: what
+am I currently owed; what does WSA owe me for; have I invoiced all the WSA
+work I've logged; what work have I done that hasn't been invoiced; which
+clients have outstanding money; what evidence in Drive supports that
+figure.
+
+**THE DEFECT IN THE FIRST BUILD IS THE MOST USEFUL THING HERE.** Its
+record builder was never called by anything except its own test. The
+source class existed, the parser existed, `npm test` was green, and **no
+record was ever written**, so Ruth could not have answered one of the six
+questions. Same class as workspace governance finding W1: an inert
+mechanism reported as working. It is why the evidence below is shaped the
+way it is.
+
+**Which side is authoritative for what, and the first build had it
+backwards.** ZOHO is the system of record for money: what is owed, paid,
+overdue, and what an invoice was for. Nothing recomputes any of that from
+a spreadsheet. THE HOURS LOG is the record of work DONE, and is the only
+source for what has been delivered but not billed; it is never a statement
+about what a customer owes. THE DIFFERENCE is a finding for a person to
+judge, never an instruction.
+
+**The authorised-record register** (`lib/workspace/drive/register.js`) is
+the replacement for the single pinned id: a CODE-DECLARED ALLOWLIST, so
+adding a record is a reviewed commit in git history, never a config change
+and never runtime discovery. It holds **exactly one entry**, per Tom's
+instruction to keep it deliberately narrow: `CURRENT - Arrington
+Consultancy Log Hours Worker`. The boundary is TWO independent things and
+both must hold: Google's ACL (the service account has no Drive of its own
+and reads only what is shared with it) and the register
+(`assertRegistered` throws before a request is built). A file shared but
+not registered is never read; a file registered but not shared fails
+honestly and says which. **Neither alone is the control; the intersection
+is.** There is no `files.list`, no search and no folder traversal, so it
+cannot find a file it was not told about, and a test asserts that. The
+`DRIVE_RECORD_<ID>_FILE_ID` override lets a registered record MOVE without
+a deploy but still passes `assertRegistered`, so a mis-set variable cannot
+widen what is readable by one character. Registering a Google DOC would
+need a second scope (`drive.readonly`), and the scope list is DERIVED from
+the kinds in the register rather than declared by hand, so a Doc cannot
+ride in on a scope requested for sheets.
+
+**The permission model is still the part worth reading.** Pinning a
+spreadsheet id restricts our code, not Google's grant, and
+`spreadsheets.readonly` on Tom's own account is a RESTRICTED scope over
+EVERY sheet he can open, which is the Brain and every client file. So the
+identity is a **service account**: effective authority is *scope INTERSECT
+what is shared*, and revoking is unsharing. `drive.file` plus the Picker
+is also genuinely per-file and is the right answer for "let the user
+choose a file", but it needs an interactive grant bound to a user token,
+which is the wrong shape for a server reading one fixed sheet.
+**DOMAIN-WIDE DELEGATION MUST NEVER BE ENABLED on this service account**:
+it would confer impersonation of every user in the Workspace and destroy
+the whole argument.
+
+**Files.** `lib/workspace/drive/register.js` (the allowlist),
+`lib/workspace/drive/sheetsClient.js` (service-account JWT, one read-only
+scope, failure taxonomy, register-checked reads),
+`lib/workspace/hours/hoursLog.js` (pure: parse, total, cross-check, and
+now the optional Invoice ref column), `invoiceCheck.js` (pure: compare,
+attribute), `reconcile.js` (pure: the Zoho join and the rendering),
+`service.js` (the honesty rules, the Zoho reads, and `refreshRecords()`).
+Boot line `Workspace Drive records:`.
+
+**Two Company Brain records, written through `repo.upsertRecord` like
+every other workspace record. No second write path.** `hours.log` (source
+class `hours`) and `receivables.summary` (source class `finance`, because
+what a customer owes is a finance fact whoever asks, and filing Zoho's own
+figures under a class invented for a spreadsheet would be wrong). Both
+`confidential`, both `stale_after_days: 1`. Written by a human pressing
+"Update receivables" on the Finance page
+(`POST /api/workspace/receivables/refresh`, behind the three workspace
+gates plus a confidential-clearance check). **No AI path reaches the
+route.**
+
+**Two modes, and the difference is stated in every answer.** ROW LEVEL,
+when the sheet carries an Invoice ref column: the rows with no reference
+are unbilled and are named. TOTALS, which is the state today: logged value
+minus invoiced value, an arithmetic comparison that cannot tell work never
+invoiced from work invoiced at a different figure, **and the record says
+so.**
+
+**The Invoice ref column is SPECIFIED, NOT ADDED** (Tom: *"Do not silently
+alter the live Google Sheet yet. Tell me exactly what column you want
+added and how it will behave."*). Section 7 of the submission is the exact
+spec: heading `Invoice ref` at the far right of the Hours Log tab, free
+text, heading matched loosely (`Invoice Ref`, `Invoice number`,
+`Invoice no.`, `Invoice #`, `Invoiced` all work); **blank means not yet
+invoiced**; any reference means invoiced and is never validated against
+Zoho; five phrases mean deliberately not chargeable and are excluded from
+both the billable total and the unbilled list (`n/a`, `not billable`,
+`no charge`, `written off`, `goodwill`); entirely optional, so with it
+absent everything works exactly as today.
+
+**Never reports a missing source as zero.** With the hours log unreadable,
+Zoho still answers and the record says "WORK DONE BUT NOT INVOICED:
+unavailable", carries `sync_outcome = 'partial'`, and contains no unbilled
+figure at all. A figure from an earlier read is prefixed `NOT CURRENT`
+with its age and why the fresh read failed. **And it never prints a
+negative money figure**: "more has been invoiced than the log accounts
+for" is stated in those words, because "-£646.67 logged and not invoiced"
+is a sentence with no meaning.
+
+**Read-only in both directions, asserted by enumeration rather than by a
+blanket ban** (the service DOES write now, and a test asserting it writes
+nothing would be satisfied by a capability that does not work): every
+`repo.*` call in the service must be exactly `upsertRecord`, and every
+`zohoClient.*` call exactly `getAccessToken` and `getInvoices`. No
+approval row, no Zoho write function, no write method in the Sheets
+client. `ENABLE_ZOHO_INVOICE_WRITES` is not read by anything here.
+
+**Five things the tests taught, worth keeping:**
+
+1. **A difference can have more than one explanation.** £30.00 is the 26
+   and 27 August pair AND the 21 and 22 August pair. The first version
+   named whichever the loop reached first, which is a confident wrong
+   answer of exactly the kind this check exists to prevent. Every match is
+   collected before one is named, and several matches report as ambiguous.
+2. **A client code cannot always be matched.** "WSA" is the initials of
+   the customer NAME, so that works; matching it to the domain
+   `worldstudentadvisors.com` would need to split a run of letters without
+   a dictionary, so it is deliberately NOT matched.
+3. **An unreadable row is never reconstructed.** A row with a start and
+   finish but no hours figure is reported and excluded, never inferred as
+   eight hours.
+4. **A draft is not money owed** and a void invoice is not money at all,
+   and Zoho's OWN `balance` is trusted rather than derived here, because it
+   accounts for credit notes and part payments this code never sees.
+5. **A customer with nothing invoiced and nothing outstanding is not
+   listed at £0.00.** A draft-only customer used to appear as "£0.00
+   outstanding across 0 invoice(s)", which reads as a statement about a
+   customer who owes nothing. Found by RUNNING the module against
+   realistic rows, not by reading it.
+
+**Tests:** `test/workspace/hoursLog.test.js` (26) and
+`test/workspace/receivables.test.js` (13, of which the last needs
+`DATABASE_URL` and is the one that matters). That end-to-end case runs the
+real refresh against a real database and asserts the records **exist by
+key and contain the answer to each of Tom's six questions**, the only
+shape of test that would have failed against the first build. Full suite
+on a genuinely fresh database: 1320 pass, 0 fail, 3 skipped, with the
+eight documented gated suites named on the run.
+
+**Eight properties watched red against planted defects, and one of them
+found a defect in the TEST rather than the code.** The end-to-end case
+originally passed against a refresh that wrote nothing, because a row left
+by an earlier run satisfied "the record exists". It now clears both rows
+first and asserts each was written by that refresh. The other seven, each
+red on the property it is named for: drafts counted as owed; a negative
+money figure printed; a missing hours log reported as nil; a Zoho zero
+printed for a source that was not read; a failure reason nested inside its
+own sentence; rows named when the sheet cannot support it; and the
+register accepting an unregistered file.
+
+**TWO DEFECTS WERE FOUND BY RUNNING THE ROUTE OVER REAL HTTP, NOT BY
+READING IT**, and both were honesty defects in the record Ruth would have
+answered from. With Zoho unreadable the record printed "OUTSTANDING:
+GBP 0.00 across 0 open invoice(s)", stating that nothing was owed when
+nothing was KNOWN. That is the rule already enforced for the hours log,
+simply missing on the money side, which is the side that matters more:
+`summariseInvoices([])` honestly returns zero, and a caveat printed above
+a figure does not undo the figure, so the figure is now withheld entirely.
+And a failure reason was interpolated as a whole sentence, giving "could
+not be read (The hours log could not be read (...))", which reads as
+carelessness in the one place the system is asking to be believed. The
+loaders now carry a bare `why` alongside the full `message`.
+
+**Not proven, and stated as such: no live Google call has been made.** The
+service account does not exist, the sheet has not been shared with
+anything, and this sandbox cannot reach the live service. The first real
+read will be Tom's, after approval.
+
+**Ruth actually reaching the records is a SEPARATE fact from writing them,
+and it now has its own suite** (`test/workspace/receivablesRetrieval.test.js`,
+4). Writing a record and Ruth being able to read it are two different
+things, and the first build proved that: it had a builder nothing called.
+The receivables suite closed half of it (the rows exist in the database);
+this one closes the other half by calling the SAME `buildLaneContext` the
+live ask route calls and asserting both records reach the prompt carrying
+the answer to each of Tom's six questions, with their freshness rendered as
+a word. It carries two negative controls, because a test that only asserts
+presence passes on a system that shows everything to everyone: a narrow
+clearance gets neither record and neither figure, and no worker lane
+reaches the hours log. Three properties watched red: `hours` dropped from
+`GENERAL_SOURCE_CLASSES`, the context cap reverted to a `slice()`, and the
+clearance check made permissive.
+
+**The thin-class property is worth keeping in mind.** `hours` will always
+be the smallest class in the brain, one record against dozens of
+`worker_register` rows, against a cap of 24. Before `selectContextRecords`
+round-robined by class this was a `slice()` over an alphabetically ordered
+list, where "hours" sorting early was the only thing keeping it in the
+prompt. The test asserts the property with the thin records deliberately
+LAST, which is the worst case for a slice.
+
+**One defect found by looking at the rendered page rather than the test.**
+A record written seconds earlier displayed as "-1 day(s) old", because the
+age is floored and the app's clock and the database's differ by up to a
+minute, which is governance finding N4 showing up in a display string.
+Anything under a day now reads "written today".
+
+**A git trap worth knowing, hit while doing this.** `sheetsClient.js` was
+moved with `git mv`, so the path is staged as an ADD carrying the file's
+**pre-move** content. A later `git checkout -- <path>` on it therefore
+restored the old version and silently destroyed the working-tree edits;
+`git show :<path>` confirms what the index actually holds. On a staged
+rename, back the file up before reaching for `git checkout`.
+
+**`test/workspace/routing.test.js`'s general-source-classes assertion is a
+TRIPWIRE and is meant to fail** when a class is added, so the change gets
+revisited. Revisited: `NO_LANE_INSTRUCTION` deliberately does not
+enumerate the classes, so it needed no change.
+
 ### Zoho Invoice connector, reads and writes (06/09/2026, live)
 
 Arrington's real invoicing is Zoho Invoice, EU data centre, organisation
@@ -5215,6 +5554,90 @@ competing authorities" is the actual requirement: the amendment document has
 been retitled to **"PENDING INSERTION INTO BRAND OS - PRONOUN RULE (15 SEPT
 2026) - NOT A SEPARATE AUTHORITY"**, so it cannot be mistaken for a rival
 authority while it waits. It is NOT marked incorporated, because it is not.
+
+## Opportunity Builder background prospecting: DECIDED AND WRITTEN INTO DRIVE (15/09/2026)
+
+Tom's decision of 15/09/2026, taken from the open Brain gap on `/workspace/gaps`:
+ARRINGTON OPPORTUNITY BUILDER becomes a continuing background prospecting and
+drafting system. It identifies prospects, researches and qualifies them from
+current evidence, uses only evidenced contact details and never an invented one,
+prepares an evidence-backed prospect record, drafts a first approach from that
+evidence, and puts both in a review queue for Tom. It sends nothing. His
+corrections are retained as governed learning. No separate Lead Finder worker.
+
+**All four controlling records were corrected in place on 15/09/2026**, plus the
+outstanding Brand OS pronoun rule. Every file id, link and heading preserved.
+Each edit was verified by reading the document back.
+
+| Record | Change | Verified |
+|---|---|---|
+| Opportunity Builder Worker Handoff | header date, 3 replacements, new APPROVED BACKGROUND PROSPECTING AND DRAFTING SYSTEM section (17 rules) | yes |
+| 01 ARRINGTON CURRENT OPERATING POSITION | outreach sentence | yes |
+| START HERE. ARRINGTON CONSULTANCY BRAIN INDEX | naming-control line, header date | yes |
+| Arrington Consultancy Decision Log | new dated entry, full template | yes |
+| 00 ARRINGTON BRAND OPERATING SYSTEM | pronoun rule + testimonial carve-out under LANGUAGE RULES | yes |
+
+**Still open, and deliberately so: the Brain gap on `/workspace/gaps` has NOT
+been marked Source corrected.** Closing it needs a logged-in human; no AI path
+reaches that route. Tom presses the button.
+
+### The Zapier account-ID trap, which cost most of a session
+
+In-place Google Doc editing needs the Zapier Google Docs connector. The Drive
+MCP `update_file` is metadata only, confirmed from its own schema.
+
+**The Claude Zapier connector was OAuth-bound to Zapier account `28430776`.
+Tom's own account is `28430716`.** One digit, seventh position. Every auth URL
+the tools generated carried the wrong account, so they 403'd; the MCP config
+page 404'd; and "My servers" looked empty to Tom because the server lived under
+an account he was not in. It also explains why the Google Sheets connection
+recorded as "awaiting one-click authorisation" on 11/09 never completed.
+
+**The fix was to disconnect and reconnect the Zapier connector in claude.ai
+while signed into the right Zapier account.** That rebinds it and starts a clean
+server. Diagnose it by calling `manage_zapier_connections` and reading the
+`accountId` out of the returned URL; do not trust the connector reporting itself
+as connected.
+
+The rebind also dropped a World Student Advisors Pipedrive connection that had
+been sitting on the Arrington server since 19/08/2026. Do not reconnect it.
+
+### Two Google Docs behaviours worth knowing before the next edit
+
+Both were established by test rather than assumed, on a scratch document:
+
+- **`\n` is preserved as a real paragraph break** by BOTH `append` and
+  `find_and_replace`. Proved by index arithmetic: markers either side of a
+  newline sit exactly one character apart. So multi-paragraph inserts work in
+  plain text and no HTML is needed.
+- **`find_and_replace` matches long strings within a paragraph**, including a
+  187-character line with punctuation and brackets, and the live documents use
+  **straight apostrophes**, not smart quotes.
+
+Working method that made this safe: `find_text` with `returnAllMatches` to prove
+the target is unique, then replace, then `find_text` the new string to prove it
+landed. `occurrencesChanged` must be exactly 1. The returned `documentTitle` on
+every read is a free check that you are in the document you think you are.
+
+### Two live constraints any implementation must respect
+
+From the Decision Log, both easy to breach by accident:
+
+- **9 September:** AI capability "must not open a cold outreach email", and the
+  approach goes through "a specific business observation, not AI-first selling".
+  Fit test is whether people, sites or information can move off the owner.
+  Turnover bands withdrawn.
+- **11 September:** 14 researched cold emails were sent with Tom's explicit
+  approval, "specific to that batch", and "every future outbound send still
+  requires Tom's explicit approval". Outreach is already governed and live; this
+  decision changes who drafts, not who sends.
+
+**Nothing has been built.** No code, no permission widened, no source class
+added. The next implementation step is the evidence layer, not the drafting: a
+prospect record that cannot be written without a company number, a source URL
+and a retrieval date, and a contact detail that cannot be written without the
+page it came from. Companies House finds businesses but publishes no email
+addresses, so the contact detail is the hard half.
 
 ## Evidence: the Built proof section (14/09/2026)
 

@@ -46,6 +46,10 @@ const invoiceIntent = require('../lib/workspace/finance/invoiceIntent');
 const pendingAction = require('../lib/workspace/finance/pendingAction');
 const gmailClient = require('../lib/workspace/email/gmailClient');
 const emailSummary = require('../lib/workspace/email/summary');
+// Read-only, inert until its own flag is on. It advises on an invoice and
+// can never alter or send one; see lib/workspace/hours/invoiceCheck.js.
+const hoursService = require('../lib/workspace/hours/service');
+const driveSheetsClient = require('../lib/workspace/drive/sheetsClient');
 const { encryptToken, tokenCryptoConfigured } = require('../lib/workspace/finance/tokenCrypto');
 const crm = require('../lib/crm/contacts');
 const erasure = require('../lib/crm/erasure');
@@ -360,6 +364,41 @@ function mountPageRoute(app, generateCsrfToken) {
   // permission system. Rendered whether or not Xero is connected, same
   // reasoning as social: "not connected" is information Tom needs, not
   // an absence to hide.
+  // What the two receivables records say about themselves, for the card
+  // on the Finance page. Reports each record's real freshness rather than
+  // a date, because the whole point of this capability is that a figure
+  // carries its age: "written 3 days ago" and "current" are different
+  // answers and the card must not blur them.
+  async function describeReceivablesRecords() {
+    const driveEnabled = driveSheetsClient.isEnabled() && driveSheetsClient.isConfigured();
+    const keys = [hoursService.HOURS_RECORD_KEY, hoursService.RECEIVABLES_RECORD_KEY];
+    const rows = await Promise.all(keys.map((k) => repo.getRecordByKey(k)));
+    const parts = rows.map((row, i) => {
+      if (!row) return `${keys[i]}: not written yet`;
+      const f = repo.recordFreshness(row);
+      // A record written seconds ago rendered as "-1 day(s) old", because
+      // the age is floored and the app's clock and the database's differ
+      // by up to a minute (the same skew as governance finding N4). A
+      // negative age is meaningless to a reader, so anything under a day
+      // reads as today rather than as a number.
+      const age = f.ageDays === null ? '' : (f.ageDays < 1 ? ', written today' : `, ${f.ageDays} day(s) old`);
+      return `${keys[i]}: ${f.state}${age}${row.sync_outcome && row.sync_outcome !== 'ok' ? ` (${row.sync_outcome})` : ''}`;
+    });
+    // Which reconciliation mode the last refresh actually used. This is
+    // the one visible effect of adding the Invoice ref column to the
+    // sheet, so it is reported from the record's own meta rather than
+    // from the register: it says what the last READ found, not what the
+    // code is capable of.
+    const hoursRow = rows[0];
+    let mode = '';
+    if (hoursRow && hoursRow.meta && typeof hoursRow.meta === 'object') {
+      mode = hoursRow.meta.hasInvoiceRefColumn
+        ? 'The hours log carries an Invoice ref column, so unbilled work is named row by row.'
+        : 'The hours log has no Invoice ref column, so unbilled work can only be a comparison of totals. Adding that column changes this line.';
+    }
+    return { driveEnabled, records: `Company Brain records. ${parts.join('. ')}.`, mode };
+  }
+
   page('/workspace/finance', async (req, res) => {
     const clearanceId = req.workspaceClearance;
     const permitted = clearanceCanSeeSensitivity(clearanceId, 'confidential');
@@ -376,6 +415,7 @@ function mountPageRoute(app, generateCsrfToken) {
         moneyActionsNeverBuilt: financeRegistry.MONEY_ACTION_CLASS_NEVER_BUILT,
         period: null, summary: null, periodPresets: [], recurringGroups: [], trend: [],
         zoho: { configured: false, writesEnabled: false, invoices: [], payments: [], contacts: [], error: '', invoicesError: '', paymentsError: '', contactsError: '', readAt: null },
+        receivables: { driveEnabled: false, records: '', mode: '' },
         csrfToken: generateCsrfToken(req, res)
       });
     }
@@ -456,6 +496,7 @@ function mountPageRoute(app, generateCsrfToken) {
       recurringGroups: financeRecurring.detectRecurringGroups(allTransactions),
       trend: financeAccounting.monthlyTrend(allTransactions, 12),
       zoho,
+      receivables: await describeReceivablesRecords(),
       formatPence: financeRepo.formatPence,
       csrfToken: generateCsrfToken(req, res)
     });
@@ -899,12 +940,32 @@ router.post('/api/workspace/ask', requireWorkspaceApiAccess, askLimiter, async (
     // record, so there is no handoff note to write).
     const confidential = clearanceCanSeeSensitivity(clearanceId, 'confidential');
     async function replyDeterministic(answer, invoiceDraft) {
+      // The hours check (15/09/2026). Every deterministic reply carrying
+      // an invoice card is a moment Tom is preparing or reviewing that
+      // invoice, so the check runs on all of them: drafting, amending,
+      // switching the mode, asking to see it, and confirming.
+      //
+      // It ADVISES. It cannot alter the draft: the finding is a string
+      // appended to the answer, and nothing on this path writes to the
+      // approval row. It is also never allowed to break the reply, so a
+      // connector fault costs a sentence and not the invoice flow.
+      let hoursNote = '';
+      if (invoiceDraft && invoiceDraft.draft) {
+        try {
+          const finding = await hoursService.invoiceFinding({ draft: invoiceDraft.draft });
+          if (finding && finding.message) hoursNote = `\n\n${finding.message}`;
+        } catch (err) {
+          console.error('Hours check failed:', err && err.message ? err.message : err);
+          hoursNote = '\n\nI could not check this against the hours log, so it has NOT been checked.';
+        }
+      }
+      const finalAnswer = `${answer}${hoursNote}`;
       if (!conversation) {
         conversation = await repo.createConversation({ ownerUsername: username, clearance: clearanceId, laneId: '', title: question.slice(0, 120) });
       }
       await repo.addMessage({ conversationId: conversation.id, role: 'user', content: question, laneId: '' });
-      await repo.addMessage({ conversationId: conversation.id, role: 'assistant', content: answer, laneId: '', provenance: [] });
-      return res.json({ ok: true, conversationId: conversation.id, laneId: null, laneName: null, answer, provenance: [], gap: null, escalation: null, receptionist: null, invoiceDraft: invoiceDraft || null });
+      await repo.addMessage({ conversationId: conversation.id, role: 'assistant', content: finalAnswer, laneId: '', provenance: [] });
+      return res.json({ ok: true, conversationId: conversation.id, laneId: null, laneName: null, answer: finalAnswer, provenance: [], gap: null, escalation: null, receptionist: null, invoiceDraft: invoiceDraft || null });
     }
     async function reviseInvoiceApproval(pending, { changes = {}, mode = null, note }) {
       const payload = pending.payload;
@@ -1411,6 +1472,43 @@ async function createAndSendZohoInvoice({ actor, customerId = '', customerEmail 
   }
   return { invoiceNumber: invoice.invoice_number, invoiceId: invoice.invoice_id, total: invoice.total, createdCustomer, sent, sendError };
 }
+
+// Receivables: read Zoho and the authorised hours log, and write the two
+// Company Brain records so Ask Ruth can answer from them.
+//
+// READ-ONLY IN BOTH DIRECTIONS, and that is the property to keep: this
+// route reaches no Zoho write function (the connector refuses them
+// without ENABLE_ZOHO_INVOICE_WRITES anyway), and the Sheets scope is
+// readonly with no write method in the client at all. It cannot create,
+// amend, send or cancel an invoice, and it cannot alter the hours log.
+//
+// It NEVER fails on a missing source. A source that cannot be read
+// produces a record saying so, because "Zoho says £533 and the hours log
+// could not be read" is the honest answer and writing nothing would
+// leave an older record standing that claims otherwise.
+router.post('/api/workspace/receivables/refresh', requireWorkspaceApiAccess, writeLimiter, async (req, res, next) => {
+  try {
+    // Both records are confidential: one carries Arrington's charging
+    // rate, the other what customers owe. Gate on the sensitivity, the
+    // same check the Finance page itself uses, not on the route existing.
+    if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'confidential')) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    const result = await hoursService.refreshRecords();
+    await repo.addActivity({
+      actor: req.session.user.username,
+      eventType: 'receivables_brain_synced',
+      summary: `Updated the Company Brain receivables records: ${result.written.join(', ')}. ${result.problems.length ? `Problems: ${result.problems.join(' ')}` : 'Both sources read.'}`
+    });
+    const bits = [`Wrote ${result.written.join(' and ')}.`];
+    if (result.problems.length) bits.push(...result.problems);
+    else bits.push(`Zoho reports ${result.openInvoices} open invoice(s).`);
+    if (result.stale) bits.push('The hours figures are from an earlier read and are labelled as not current.');
+    res.json({ ok: true, ...result, summary: bits.join(' ') });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // Email: snapshot the inbox into the Company Brain. A human presses the
 // button; the record is bounded (see lib/workspace/email/summary.js) and

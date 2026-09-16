@@ -306,8 +306,13 @@ test('the exported general source classes cannot be mutated by a caller', () => 
   // opportunity record appeared in the no-lane context process-wide.
   assert.ok(Object.isFrozen(orchestrator.GENERAL_SOURCE_CLASSES));
   assert.throws(() => { orchestrator.GENERAL_SOURCE_CLASSES.push('opportunity'); });
+  // 'hours' added 15/09/2026. Revisited as this assertion demands: the
+  // no-lane instruction does NOT enumerate the classes (deliberately, see
+  // the comment above NO_LANE_INSTRUCTION), so it needed no change, and
+  // the record is 'confidential' so the human clearance leg still gates
+  // it exactly as it gates finance and email.
   assert.deepEqual([...orchestrator.GENERAL_SOURCE_CLASSES],
-    ['authority', 'strategy', 'worker_register', 'finance', 'email'],
+    ['authority', 'strategy', 'worker_register', 'finance', 'email', 'hours'],
     'the general context changed; the no-lane system prompt names these classes and must be revisited');
 });
 
