@@ -42,24 +42,39 @@
                 <input type="text" name="preferred_time" placeholder="Best day/time for a 30 min call (optional)" maxlength="255">
             </div>
             <textarea name="message" placeholder="<%= pageContact.messagePlaceholder %>" maxlength="2000" rows="4"></textarea>
-            <%# "How did you hear about us?" (19/09/2026). Optional: the first
-                option is the prompt and submits as an empty value, matching the
+            <%# "How did you hear about us?" (19/09/2026). The first option is
+                the prompt and submits as an empty value, matching the
                 placeholder-only style of the fields above, which carry no
                 visible labels either. The option list comes from
                 lib/heardAbout.js so the dropdown and the server's allowlist
                 cannot drift apart. The Other box is hidden until Other is
                 chosen (see the chrome script), and starts hidden here rather
-                than in script so it never flashes on a slow load. %>
+                than in script so it never flashes on a slow load.
+
+                IT IS OPTIONAL AND DOES NOT SAY SO (Tom's question, 19/09/2026:
+                does the word invite people to skip it?). It carries no
+                `required`, so a visitor can send the form without touching it,
+                and the server stores '' for an unanswered question. The word is
+                dropped because a dropdown resting on its own question already
+                LOOKS unanswered and skippable: the marker adds no information
+                and only nudges. Phone and best day/time keep theirs, because
+                there the word is doing real work, answering "do I have to give
+                you my number?" Nobody hesitates over admitting they found us on
+                Google, so the same reassurance buys nothing here.
+
+                DO NOT MAKE IT REQUIRED. Reasons in CLAUDE.md; the short one is
+                that a forced answer is a worse answer, and `attribution`
+                already records the channel automatically on every enquiry. %>
             <div class="lead-row lead-row-single">
-                <select name="heard_about" id="leadHeardAbout" class="lead-select-empty" aria-label="How did you hear about us? (optional)">
-                    <option value="">How did you hear about us? (optional)</option>
+                <select name="heard_about" id="leadHeardAbout" class="lead-select-empty" aria-label="How did you hear about us?">
+                    <option value="">How did you hear about us?</option>
                     <% heardAboutOptions.forEach(function (opt) { %>
                     <option value="<%= opt.id %>"><%= opt.label %></option>
                     <% }) %>
                 </select>
             </div>
             <div class="lead-row lead-row-single lead-row-hidden" id="leadHeardAboutOtherRow">
-                <input type="text" name="heard_about_other" id="leadHeardAboutOther" placeholder="Where did you hear about us? (optional)" maxlength="200">
+                <input type="text" name="heard_about_other" id="leadHeardAboutOther" placeholder="Where did you hear about us?" maxlength="200">
             </div>
             <p class="lead-privacy-note">We use your details to respond to your enquiry. Read our <a href="/privacy">Privacy</a> page.</p>
             <button type="submit" class="btn btn-primary"><%= pageContact.submitText %></button>
