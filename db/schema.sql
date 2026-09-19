@@ -1106,6 +1106,20 @@ ALTER TABLE commercial_gaps_reviews ADD COLUMN IF NOT EXISTS signup_source VARCH
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS attribution JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE commercial_gaps_reviews ADD COLUMN IF NOT EXISTS attribution JSONB NOT NULL DEFAULT '{}'::jsonb;
 
+-- "How did you hear about us?" (19/09/2026), the optional question on the
+-- footer contact form. Two columns rather than one free-text field, so the
+-- answer stays countable: heard_about holds one of the six option ids from
+-- lib/heardAbout.js and nothing else, and heard_about_other holds the
+-- visitor's own words, kept only when they chose Other. '' means the
+-- question was not answered, which is a normal submission.
+--
+-- Deliberately separate from `attribution` above, which is what the BROWSER
+-- observed (landing page, referrer, utm, gclid). This is what the PERSON
+-- says, and the two disagreeing is a useful fact rather than a conflict: an
+-- ad click that the visitor remembers as a recommendation is worth knowing.
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS heard_about VARCHAR(40) NOT NULL DEFAULT '';
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS heard_about_other VARCHAR(255) NOT NULL DEFAULT '';
+
 -- Erasure register (30/08/2026).
 --
 -- Evidence that a specific erasure request was carried out, designed so

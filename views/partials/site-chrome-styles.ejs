@@ -415,6 +415,7 @@ button.btn {
 }
 
 .lead-form input,
+.lead-form select,
 .lead-form textarea {
     width: 100%;
     background: var(--charcoal);
@@ -424,6 +425,29 @@ button.btn {
     font-family: inherit;
     font-size: 0.92rem;
     color: var(--text-bright);
+}
+
+/* "How did you hear about us?" and its Other box are one field wide,
+   unlike the paired rows above. */
+.lead-row-single {
+    grid-template-columns: 1fr;
+}
+
+.lead-row-hidden {
+    display: none;
+}
+
+/* An unanswered select shows its prompt, so it reads like the placeholders
+   on the fields above rather than like an answer already given.
+   appearance:none would also remove the dropdown arrow, so the native
+   control is kept and only the colour changes. */
+.lead-form select.lead-select-empty {
+    color: var(--text-muted);
+}
+
+.lead-form select option {
+    color: var(--text-bright);
+    background: var(--charcoal);
 }
 
 .lead-form textarea {
@@ -451,6 +475,7 @@ button.btn {
 }
 
 .lead-form input:focus,
+.lead-form select:focus,
 .lead-form textarea:focus {
     outline: none;
     border-color: var(--accent);

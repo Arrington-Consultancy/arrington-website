@@ -2979,6 +2979,7 @@
         }
 
         .lead-form input,
+        .lead-form select,
         .lead-form textarea {
             width: 100%;
             background: var(--charcoal);
@@ -2988,6 +2989,31 @@
             font-family: inherit;
             font-size: 0.92rem;
             color: var(--text-bright);
+        }
+
+        /* "How did you hear about us?" and its Other box are one field wide,
+           unlike the paired rows above. */
+        .lead-row-single {
+            grid-template-columns: 1fr;
+        }
+
+        .lead-row-hidden {
+            display: none;
+        }
+
+        /* An unanswered select shows its prompt, so it reads like the
+           placeholders on the fields above rather than like an answer
+           already given. appearance:none would also
+           remove the dropdown arrow, so the native control is kept and only
+           the colour changes. The class is set in the markup as well as by
+           script, so the prompt is muted before any JS runs. */
+        .lead-form select.lead-select-empty {
+            color: var(--text-muted);
+        }
+
+        .lead-form select option {
+            color: var(--text-bright);
+            background: var(--charcoal);
         }
 
         .lead-form textarea {
@@ -3015,6 +3041,7 @@
         }
 
         .lead-form input:focus,
+        .lead-form select:focus,
         .lead-form textarea:focus {
             outline: none;
             border-color: var(--accent);
@@ -4737,6 +4764,35 @@
                 btn.disabled = false;
             }
         });
+    })();
+
+    // "How did you hear about us?": reveal the Other box only when Other is
+    // chosen, and keep the prompt muted while nothing is selected. The box is
+    // hidden in the markup rather than here, so it never flashes before this
+    // runs. Nothing else is needed to submit the answer: the handler above
+    // serialises the whole form, so both fields travel with the enquiry.
+    (function () {
+        const select = document.getElementById('leadHeardAbout');
+        const otherRow = document.getElementById('leadHeardAboutOtherRow');
+        const otherInput = document.getElementById('leadHeardAboutOther');
+        if (!select || !otherRow || !otherInput) return;
+
+        const sync = () => {
+            const isOther = select.value === 'other';
+            otherRow.classList.toggle('lead-row-hidden', !isOther);
+            select.classList.toggle('lead-select-empty', select.value === '');
+            // A hidden box must not still carry what someone typed before
+            // changing their mind, or the enquiry would arrive saying "Google
+            // search" with a stray sentence attached. The server drops it too;
+            // this keeps the screen and the record telling the same story.
+            if (!isOther) otherInput.value = '';
+        };
+
+        select.addEventListener('change', sync);
+        // A form reset (after a successful send) restores the defaults
+        // asynchronously, so re-sync on the next tick rather than immediately.
+        select.form.addEventListener('reset', () => setTimeout(sync, 0));
+        sync();
     })();
 
     // Gated PDF downloads: click "Get the full PDF" -> email-capture modal ->

@@ -40,6 +40,16 @@ const isProd = !!process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 'pr
 const googleSigninClientId = (process.env.GOOGLE_SIGNIN_CLIENT_ID || '').trim();
 app.locals.googleSigninClientId = googleSigninClientId;
 
+// The "How did you hear about us?" options for the footer contact form.
+// It sits in app.locals rather than being passed into the footer partial
+// because that partial is included from fourteen views: threading a new
+// local through all fourteen is fourteen chances to miss one, and a missed
+// one is not a cosmetic slip but an EJS render error, so a live page would
+// 500. app.locals reaches every render, and the option list is a constant
+// with nothing request-specific in it. The route validates against the
+// same module rather than trusting whatever the form posts back.
+app.locals.heardAboutOptions = require('./lib/heardAbout').OPTIONS;
+
 // Google Ads conversion label for a gated PDF request. Until 11/09/2026 a
 // successful PDF request fired the same conversion label as a phone, email
 // or WhatsApp click, so a document download counted as a contact. It now
