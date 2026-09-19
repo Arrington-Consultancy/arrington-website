@@ -175,6 +175,42 @@ test('the toggle script is in both copies of the duplicated chrome script', () =
   }
 });
 
+test('the question is optional and does not say so, and the other two still do', () => {
+  // Tom, 19/09/2026: "Is making it optional a barrier that means people won't
+  // use it? Or could you have it optional without saying its optional?"
+  //
+  // Both halves matter and they pull against each other, which is why they
+  // are asserted together. Drop the word but quietly add `required` and the
+  // form starts refusing enquiries; keep it genuinely optional but print
+  // "(optional)" and the label is an invitation to skip.
+  const footer = read('views/partials/site-footer.ejs');
+  const block = footer.slice(footer.indexOf('name="heard_about"'), footer.indexOf('lead-privacy-note'));
+
+  assert.ok(!/optional/i.test(block), 'neither the prompt nor the Other box nags about being optional');
+  assert.ok(!/\brequired\b/.test(block), 'and neither is required, so the word was not traded for the behaviour');
+  assert.match(block, /<option value="">How did you hear about us\?<\/option>/, 'the prompt is the question itself');
+  assert.match(block, /aria-label="How did you hear about us\?"/, 'a screen reader hears the same words a sighted visitor reads');
+
+  // The two fields ABOVE it keep their marker, because there the word answers
+  // a real hesitation ("do I have to give you my phone number?"). Removing it
+  // from those would be a different and worse change.
+  assert.match(footer, /name="phone" placeholder="Phone \(optional\)"/);
+  assert.match(footer, /name="preferred_time" placeholder="[^"]*\(optional\)"/);
+});
+
+test('an untouched dropdown submits, which is what optional has to mean', () => {
+  // The behaviour behind the missing word. A browser posts '' for a select
+  // left on its prompt, and that has to be an ordinary submission rather than
+  // a validation error.
+  assert.deepEqual(parseHeardAbout({ heard_about: '', name: 'Someone', email: 'a@b.invalid' }),
+    { heardAbout: '', heardAboutOther: '' });
+  // routes/leads.js rejects only on name and email, and the question is not
+  // named in that check.
+  const leads = read('routes/leads.js');
+  const guard = leads.slice(leads.indexOf('if (!name || !email)'), leads.indexOf('Please enter a valid email'));
+  assert.ok(!guard.includes('heard'), 'the required-field guard does not mention the question');
+});
+
 test('nothing else on the form changed', () => {
   // Tom asked for one optional question and nothing else touched. The
   // existing fields, the honeypot and the privacy note are all still there
