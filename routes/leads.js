@@ -8,6 +8,7 @@ const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const db = require('../db/pool');
 const { verifyTurnstileToken } = require('../lib/turnstile');
 const { parseAttribution, describeAttribution } = require('../lib/leadAttribution');
+const { parseHeardAbout, describeHeardAbout } = require('../lib/heardAbout');
 
 const router = express.Router();
 
@@ -138,14 +139,19 @@ router.post('/api/leads', publicFormLimiter, async (req, res) => {
     }
 
     const attribution = parseAttribution(body.attribution);
+    // Optional, so an unanswered question is '' and never blocks the
+    // submission. The option id is allowlisted and the free text is kept
+    // only alongside Other; see lib/heardAbout.js.
+    const { heardAbout, heardAboutOther } = parseHeardAbout(body);
     await db.query(
-      `INSERT INTO leads (kind, name, email, phone, message, preferred_time, signup_source, attribution)
-       VALUES ('contact', $1, $2, $3, $4, $5, $6, $7::jsonb)`,
-      [name, email, phone, message, preferredTime, signupSource(req.body), JSON.stringify(attribution)]
+      `INSERT INTO leads (kind, name, email, phone, message, preferred_time, signup_source, attribution, heard_about, heard_about_other)
+       VALUES ('contact', $1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9)`,
+      [name, email, phone, message, preferredTime, signupSource(req.body), JSON.stringify(attribution), heardAbout, heardAboutOther]
     );
 
     res.json({ ok: true });
 
+    const heardAboutLine = describeHeardAbout(heardAbout, heardAboutOther);
     notify({
       subject: `New website enquiry from ${name}`,
       text: [
@@ -153,6 +159,9 @@ router.post('/api/leads', publicFormLimiter, async (req, res) => {
         `Email: ${email}`,
         phone && `Phone: ${phone}`,
         preferredTime && `Preferred time: ${preferredTime}`,
+        // What the visitor SAYS, kept beside what the browser observed
+        // below it. They can legitimately differ.
+        heardAboutLine && `How they heard about us: ${heardAboutLine}`,
         sourceLine(signupSource(req.body)),
         ...describeAttribution(attribution),
         message && `Message:\n${message}`

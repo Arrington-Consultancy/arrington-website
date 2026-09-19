@@ -945,6 +945,12 @@
                 // direct), server-derived; absent on rows captured before
                 // 11/09/2026 or when the browser sent nothing.
                 if (lead.source_summary) parts.push(`Source: ${escapeHtml(lead.source_summary)}${lead.attribution && lead.attribution.landing_page ? ` (landed on ${escapeHtml(lead.attribution.landing_page)})` : ''}<br>`);
+                // What the visitor SAID, as opposed to what the browser
+                // observed above. Optional and server-derived, so it is
+                // absent on rows before 19/09/2026 and on any enquiry where
+                // the question was skipped. Escaped like every other field
+                // here, because the Other box is raw visitor input.
+                if (lead.heard_about_summary) parts.push(`Heard about us: ${escapeHtml(lead.heard_about_summary)}<br>`);
                 if (lead.signup_source === 'google') parts.push('Signed up with Google<br>');
                 parts.push(`<span class="log-time">${timeStr}</span>`);
                 return `<div class="cms-log-entry">${parts.join('')}</div>`;

@@ -106,6 +106,35 @@ document.querySelectorAll('a[href^="tel:"], a[href^="mailto:"], a[href^="https:/
     });
 })();
 
+// "How did you hear about us?": reveal the Other box only when Other is
+// chosen, and keep the prompt muted while nothing is selected. The box is
+// hidden in the markup rather than here, so it never flashes before this
+// runs. Nothing else is needed to submit the answer: the handler above
+// serialises the whole form, so both fields travel with the enquiry.
+(function () {
+    const select = document.getElementById('leadHeardAbout');
+    const otherRow = document.getElementById('leadHeardAboutOtherRow');
+    const otherInput = document.getElementById('leadHeardAboutOther');
+    if (!select || !otherRow || !otherInput) return;
+
+    const sync = () => {
+        const isOther = select.value === 'other';
+        otherRow.classList.toggle('lead-row-hidden', !isOther);
+        select.classList.toggle('lead-select-empty', select.value === '');
+        // A hidden box must not still carry what someone typed before
+        // changing their mind, or the enquiry would arrive saying "Google
+        // search" with a stray sentence attached. The server drops it too;
+        // this keeps the screen and the record telling the same story.
+        if (!isOther) otherInput.value = '';
+    };
+
+    select.addEventListener('change', sync);
+    // A form reset (after a successful send) restores the defaults
+    // asynchronously, so re-sync on the next tick rather than immediately.
+    select.form.addEventListener('reset', () => setTimeout(sync, 0));
+    sync();
+})();
+
 window.addEventListener('scroll', () => {
     const navEl = document.getElementById('nav');
     if (navEl) navEl.classList.toggle('scrolled', window.scrollY > 20);

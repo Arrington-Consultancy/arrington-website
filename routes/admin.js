@@ -6,6 +6,7 @@ const db = require('../db/pool');
 const defaults = require('../db/defaults');
 const themes = require('../db/themes');
 const { attributionSummary } = require('../lib/leadAttribution');
+const { describeHeardAbout } = require('../lib/heardAbout');
 
 const BCRYPT_ROUNDS = 12;
 
@@ -69,12 +70,22 @@ router.get('/log', requireCapability('view_activity'), async (req, res) => {
 router.get('/leads', requireCapability('view_activity'), async (req, res) => {
   try {
     const { rows } = await db.query(
-      `SELECT id, kind, name, email, phone, message, preferred_time, document, signup_source, attribution, created_at
+      `SELECT id, kind, name, email, phone, message, preferred_time, document, signup_source, attribution,
+              heard_about, heard_about_other, created_at
        FROM leads ORDER BY created_at DESC LIMIT 100`
     );
     // One short "where did this come from" phrase per row, derived here so
-    // the panel never has to interpret the raw attribution object.
-    res.json({ leads: rows.map((r) => ({ ...r, source_summary: attributionSummary(r.attribution) })) });
+    // the panel never has to interpret the raw attribution object. The
+    // heard-about line is derived the same way and from the same module the
+    // form renders from, so the panel can never print a stored id at Tom or
+    // a label that has since been reworded.
+    res.json({
+      leads: rows.map((r) => ({
+        ...r,
+        source_summary: attributionSummary(r.attribution),
+        heard_about_summary: describeHeardAbout(r.heard_about, r.heard_about_other)
+      }))
+    });
   } catch (err) {
     console.error('Leads list error:', err);
     res.status(500).json({ error: 'Failed to load leads' });
