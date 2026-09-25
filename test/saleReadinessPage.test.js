@@ -264,18 +264,27 @@ test('operator credibility is controlled copy, and sits above the two routes', (
   // invented wording is the defect the brief exists to prevent.
   const view = emitted(VIEW);
 
-  // These two are verbatim from live controlled copy. The first is in
-  // views/market-ready-test-result.ejs; the second is the live row on the
-  // Business Consultant Devon page, set third-person by the 01/08/2026 seed
-  // migration in db/seed.js. Asserting them by their exact wording is what
-  // stops a later edit "improving" them into a claim nobody approved.
-  const approved = [
-    'has bought, built and sold owner run businesses himself',
-    'built, grew and sold his own business in a seven-figure exit'
-  ];
-  for (const phrase of approved) {
-    assert.ok(view.includes(phrase), `the approved credibility wording is gone: "${phrase}"`);
-  }
+  // The claim sentence, asserted by its exact wording, which is what stops a
+  // later edit "improving" it into something nobody approved. It is the live
+  // row on the Business Consultant Devon page (casestudy.phase_3_body, set
+  // third-person by the 01/08/2026 seed migration in db/seed.js).
+  //
+  // This list held a second sentence until 25/09/2026, verbatim from
+  // views/market-ready-test-result.ejs: "Tom Arrington has bought, built and
+  // sold owner run businesses himself". Tom removed it from the page in a
+  // copy correction, so it is removed here. That is the test recording his
+  // decision, not the guard being weakened: the remaining sentence is still
+  // pinned word for word, and the "no invented claim" test below still runs
+  // over the whole page.
+  const approved = 'Tom Arrington built, grew and sold his own business in a seven-figure exit';
+  assert.ok(view.includes(approved), `the approved credibility wording is gone: "${approved}"`);
+
+  // The removed sentence must not creep back without a decision, since it
+  // reads as approved copy and would look like a harmless restoration.
+  assert.ok(
+    !view.includes('bought, built and sold owner run businesses'),
+    'the credibility sentence Tom removed on 25/09/2026 is back on the page'
+  );
 
   // Position: credibility must come before the visitor has to choose a route.
   const body = bodyOf(VIEW);
