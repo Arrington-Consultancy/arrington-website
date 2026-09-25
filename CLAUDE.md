@@ -5892,6 +5892,14 @@ its copy is a code edit, not a CMS edit.
   to its exact sentence in the price test.
 - The Brand OS fire-metaphor ban applies: Tom's "building is on fire" line
   was translated to "the foundations are giving way".
+- "We stay in your corner" sits directly on the page background, NOT in a
+  card. It was the page's one cream paper panel until Tom inspected it live
+  on 25/09/2026: too heavy against the navy, and it read like a generic
+  information card. Its replacement is deliberately restrained: ordinary
+  body text (12.08:1 on the live Oxford theme), a 62ch measure (70
+  characters on the widest line in DM Sans), one short gold rule under the
+  heading, and spacing rather than a container. The page now carries no
+  paper surface at all. A test guards against the card coming back.
 - Tom's proof line on the Market Ready Test result page is "Tom Arrington
   bought, built and sold his own business in a seven-figure exit, after
   nearly twenty years of running it himself." The earlier plural "owner run

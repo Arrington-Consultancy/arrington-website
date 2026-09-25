@@ -443,27 +443,38 @@ test('operator credibility is controlled copy, and sits above the two routes', (
   );
 });
 
-test('the cream treatment is kept, on the section that now carries it', () => {
-  // Tom singled the treatment out in the reshape review: "Keep the cream
-  // treatment and its position." On 25/09/2026 he replaced the section's
-  // copy, so the heading this anchors on moved from "What we do not do" to
-  // "We stay in your corner". The TREATMENT is the thing under guard, not the
-  // old heading, and a planted removal of the cream passed every other test,
-  // which is why this exists at all.
+test('"We stay in your corner" sits on the page, not in a card', () => {
+  // REVERSED ON 25/09/2026, and recorded rather than deleted. This test used
+  // to be "the cream treatment is kept", guarding the section's cream paper
+  // card, which Tom had earlier singled out as working. After inspecting the
+  // live section he removed it: against the navy page the large cream box was
+  // too heavy and made the section read like a generic information card. The
+  // guard now points the other way, because "put it back in a nice card" is
+  // exactly the well-meant edit that would undo his decision.
   const body = bodyOf(VIEW);
-  const heading = body.indexOf('We stay in your corner');
-  assert.ok(heading > -1, 'the "We stay in your corner" section has gone');
-  const section = body.slice(heading, heading + 1200);
-  assert.ok(
-    /class="sr-card surface-paper"/.test(section),
-    'the warm paper surface has been removed from the "We stay in your corner" card'
-  );
+  const start = body.indexOf('<h2>We stay in your corner</h2>');
+  assert.ok(start > -1, 'the "We stay in your corner" section has gone');
+  const section = body.slice(start, body.indexOf('<h2>If the business depends on you'));
 
-  // And it stays the ONLY paper surface on the page. It works as a break
-  // because it is the single one; boxing the rest to match would remove the
-  // very contrast Tom kept it for.
-  const paperCount = (body.match(/surface-paper/g) || []).length;
-  assert.strictEqual(paperCount, 1, 'the warm paper surface is now used more than once, so it no longer breaks the page');
+  assert.ok(!/surface-paper/.test(section), 'the cream paper surface is back on "We stay in your corner"');
+  assert.ok(!/class="[^"]*\bsr-card\b/.test(section), 'the "We stay in your corner" copy is back inside a card');
+  assert.ok(/class="sr-corner-body"/.test(section), 'the corner copy no longer sits in its unboxed body');
+  // The paper surface is gone from this page entirely, not moved elsewhere.
+  assert.ok(!/surface-paper/.test(body), 'a cream paper surface has reappeared somewhere on the page');
+
+  // What replaces the card, as Tom specified: a readable measure, spacing,
+  // and at most a restrained gold detail. None of it may become a box.
+  const css = cssRules(VIEW);
+  const bodyRule = (css.match(/\.sr-corner-body\s*\{[^}]*\}/) || [''])[0];
+  assert.ok(/max-width:\s*\d+(\.\d+)?ch/.test(bodyRule), 'the corner copy has lost its readable measure and can run the full column');
+  for (const boxy of ['background', 'border', 'box-shadow', 'padding']) {
+    assert.ok(!new RegExp(`${boxy}\\s*:`).test(bodyRule), `the corner copy has gained ${boxy}, which rebuilds the card`);
+  }
+  const accent = (css.match(/\.sr-section\.sr-corner\s*>\s*h2::after\s*\{[^}]*\}/) || [''])[0];
+  assert.ok(accent, 'the short gold rule under the heading has gone');
+  const width = accent.match(/width:\s*([\d.]+)rem/);
+  assert.ok(width && Number(width[1]) <= 4, 'the gold rule is no longer short; it must stay a restrained detail, not a bar');
+  assert.ok(/height:\s*[12]px/.test(accent), 'the gold rule is no longer a hairline-weight detail');
 });
 
 test('technology is not pitched on this page', () => {
@@ -997,7 +1008,9 @@ test('after the Review: judged on value to the seller, with no shopping list', (
 test('"We stay in your corner" carries Tom\'s proposition, with the Brand OS fixes', () => {
   const body = bodyOf(VIEW);
   const start = body.indexOf('<h2>We stay in your corner</h2>');
-  const section = body.slice(start, body.indexOf('</div>', body.indexOf('surface-paper', start)));
+  // Bounded by the next section's heading. It used to end at the cream
+  // panel's closing tag, and the panel was removed on 25/09/2026.
+  const section = body.slice(start, body.indexOf('<h2>If the business depends on you', start));
   assert.ok(start > -1, 'the "We stay in your corner" section has gone');
 
   const pinned = [

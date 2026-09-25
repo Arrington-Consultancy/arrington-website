@@ -273,12 +273,43 @@
         .sr-price-fig { font-family: 'DM Serif Display', serif; font-size: 1.9rem; color: var(--accent); line-height: 1; }
         .sr-price p { margin: 0; font-size: 0.94rem; color: var(--text-muted); }
 
-        /* KEPT AS BUILT. Tom's review of 25/09/2026 singled this treatment out
-           as working and as the page's commercial and visual break. Do not
-           box the rest of the page to match it: it works because it is the
-           only paper surface here. */
-        .sr-card.surface-paper { background: var(--surface-paper); }
-        .sr-card.surface-paper p:last-child { margin-bottom: 0; }
+        /* WE STAY IN YOUR CORNER, directly on the page background. This was
+           the page's one cream paper card until Tom removed it after a live
+           inspection on 25/09/2026: too heavy against the navy, and it made
+           the section read like a generic information card. So there is no
+           container here, and there must not be one.
+
+           What replaces the card, all of it restrained:
+           - the ordinary body text (var(--text) on var(--black), 12.08:1 on
+             the live Oxford theme, well above AAA);
+           - a readable measure, so the six paragraphs do not run the full
+             width of the column;
+           - a short gold rule under the heading, the only accent, in the
+             brand gold at the same 2px weight a button border reads at;
+           - spacing for hierarchy: more room above the section than its
+             neighbours get, because it follows another all-text section and
+             the card used to supply that break, and more room above the
+             closing paragraph, which is the section's concluding thought.
+           Specificity is doubled (.sr-section.sr-corner) so these win over
+           the generic .sr-section rules in either media query, whatever
+           order they appear in. */
+        .sr-section.sr-corner { margin-top: 4.25rem; }
+        .sr-section.sr-corner > h2 { margin-bottom: 1.4rem; }
+        .sr-section.sr-corner > h2::after {
+            content: '';
+            display: block;
+            width: 2.5rem;
+            height: 2px;
+            margin-top: 0.9rem;
+            background: var(--accent);
+        }
+        .sr-corner-body { max-width: 62ch; }
+        .sr-corner-body p:last-child { margin-top: 1.9rem; margin-bottom: 0; }
+        @media (max-width: 760px) {
+            .sr-section.sr-corner { margin-top: 2.9rem; }
+            .sr-section.sr-corner > h2 { margin-bottom: 1.15rem; }
+            .sr-corner-body p:last-child { margin-top: 1.5rem; }
+        }
 
         .sr-final { border-top: 1px solid var(--border); padding-top: 2.5rem; margin-top: 3.5rem; }
         .sr-final h2 { font-size: 1.4rem; margin-bottom: 0.6rem; }
@@ -478,8 +509,17 @@
             <p>Any further work is agreed separately, once the Review has established what is worth doing and where the value is.</p>
         </div>
 
-        <%# THE CREAM PANEL. Same treatment, same position. Copy rebuilt on
-            25/09/2026 from Tom's own proposition, replacing generic wording.
+        <%# WE STAY IN YOUR CORNER. Copy rebuilt on 25/09/2026 from Tom's own
+            proposition, replacing generic wording.
+
+            NO PANEL, deliberately. Until 25/09/2026 this copy sat in the
+            page's one cream "paper" card. Tom inspected it live and removed
+            it: against the navy page the large cream box was too heavy and
+            made the section read as a generic information card. The copy
+            now sits directly on the page background in the ordinary body
+            text, held to a readable measure, with a short gold rule under
+            the heading and spacing (not a container) doing the separating.
+            Do not put it back in a card or a paper surface: see .sr-corner.
 
             The professional boundary now sits in the fifth paragraph: where
             the job genuinely needs an accountant, solicitor, valuer or other
@@ -496,9 +536,9 @@
             principle. The closing paragraph is the outcome Tom cares about,
             with the price disclaimer attached so it cannot read as a promise
             about what a buyer will pay. %>
-        <div class="sr-section">
+        <div class="sr-section sr-corner">
             <h2>We stay in your corner</h2>
-            <div class="sr-card surface-paper">
+            <div class="sr-corner-body">
                 <p>Selling a business can be brutal, both emotionally and commercially. We stay alongside you and fight for your commercial interests for as long as we are involved.</p>
                 <p>Tom has been through the process himself, and that experience is part of the value of having us in your corner.</p>
                 <p>Before a buyer gets the chance to pick the business apart, we want to do it first, finding the weaknesses that could cost you money and strengthening what the buyer is actually going to be paying for.</p>
