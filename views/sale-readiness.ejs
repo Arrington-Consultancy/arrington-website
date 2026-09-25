@@ -144,7 +144,11 @@
            stretched over the card, so a click anywhere in the card activates
            that same anchor. See the EJS comment on the markup for why this is
            done here rather than by wrapping the card or adding a JS handler. */
-        .sr-route { position: relative; cursor: pointer; transition: border-color 0.2s, background-color 0.2s; }
+        <%# background-color was in this transition list until 25/09/2026 and
+            is dropped with the hover fill it existed for: the card's
+            background no longer changes in any state, so transitioning it
+            animated nothing and implied a fill someone might go looking for. %>
+        .sr-route { position: relative; cursor: pointer; transition: border-color 0.2s; }
         .sr-route-link::after {
             content: '';
             position: absolute;
