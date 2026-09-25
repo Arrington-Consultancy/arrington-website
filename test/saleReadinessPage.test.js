@@ -30,6 +30,15 @@ const emitted = (p) => read(p)
   .replace(/<%#[\s\S]*?%>/g, '')
   .replace(/<%\s*\/\*[\s\S]*?\*\/\s*%>/g, '');
 
+// Everything from <main> onwards, i.e. what a visitor is actually served,
+// with the page's own <style> block excluded. Needed for any assertion about
+// POSITION or COUNT: `.sr-cred` and `.surface-paper` are both declared in the
+// stylesheet above the H1, so a naive indexOf/match over the whole file finds
+// the CSS rule rather than the markup. Both of the tests below were written
+// that way first and both failed against a correct page, which is the useful
+// reminder that a passing grep is not the same as a correct one.
+const bodyOf = (p) => { const v = emitted(p); return v.slice(v.indexOf('<main>')); };
+
 const PATH = '/get-your-business-ready-to-sell';
 const VIEW = 'views/sale-readiness.ejs';
 
@@ -243,6 +252,63 @@ test('no existing case is reframed as a sale-readiness case study', () => {
   }
   // The positive half: proof is still pointed at rather than simply omitted.
   assert.ok(/href="\/evidence"/.test(view), 'the page no longer links to the Evidence page');
+});
+
+test('operator credibility is controlled copy, and sits above the two routes', () => {
+  // Tom's reshape instruction of 25/09/2026: bring legitimate operator
+  // credibility much higher up, using "only controlled evidence about Tom
+  // having built, operated and sold a real business, with the approved
+  // wording available in the current controlled sources". Both halves are
+  // guarded, because either alone fails: the right sentences placed at the
+  // bottom is the defect he reported, and the right position filled with
+  // invented wording is the defect the brief exists to prevent.
+  const view = emitted(VIEW);
+
+  // These two are verbatim from live controlled copy. The first is in
+  // views/market-ready-test-result.ejs; the second is the live row on the
+  // Business Consultant Devon page, set third-person by the 01/08/2026 seed
+  // migration in db/seed.js. Asserting them by their exact wording is what
+  // stops a later edit "improving" them into a claim nobody approved.
+  const approved = [
+    'has bought, built and sold owner run businesses himself',
+    'built, grew and sold his own business in a seven-figure exit'
+  ];
+  for (const phrase of approved) {
+    assert.ok(view.includes(phrase), `the approved credibility wording is gone: "${phrase}"`);
+  }
+
+  // Position: credibility must come before the visitor has to choose a route.
+  const body = bodyOf(VIEW);
+  const cred = body.indexOf('sr-cred');
+  const routes = body.indexOf('sr-routes');
+  const h1 = body.indexOf('<h1');
+  assert.ok(cred > -1, 'the credibility block has gone');
+  assert.ok(h1 > -1 && cred > h1, 'the credibility block sits above the H1');
+  assert.ok(
+    cred < routes,
+    'credibility now sits below the two routes; the brief moved it up because being late was the reported defect'
+  );
+});
+
+test('the cream treatment on "What we do not do" is kept', () => {
+  // Tom singled this out in the reshape review: "Keep the cream 'What we do
+  // not do' treatment. It works and gives the page an important visual and
+  // commercial break." Nothing guarded it, and a planted removal passed all
+  // fourteen other tests, which is exactly why this exists.
+  const body = bodyOf(VIEW);
+  const heading = body.indexOf('What we do not do');
+  assert.ok(heading > -1, 'the "What we do not do" section has gone');
+  const section = body.slice(heading, heading + 1200);
+  assert.ok(
+    /class="sr-card surface-paper"/.test(section),
+    'the warm paper surface has been removed from the "What we do not do" card'
+  );
+
+  // And it stays the ONLY paper surface on the page. It works as a break
+  // because it is the single one; boxing the rest to match would remove the
+  // very contrast Tom kept it for.
+  const paperCount = (body.match(/surface-paper/g) || []).length;
+  assert.strictEqual(paperCount, 1, 'the warm paper surface is now used more than once, so it no longer breaks the page');
 });
 
 test('technology is a means, and the commercial problem is named first', () => {

@@ -75,33 +75,117 @@
            therefore the same height already, and the difference in weight is
            the fill rather than the size. */
 
-        main { max-width: 640px; margin: 0 auto; padding: calc(var(--site-chrome) + 2.5rem) 1.5rem 5rem; }
+        main { max-width: 700px; margin: 0 auto; padding: calc(var(--site-chrome) + 2.5rem) 1.5rem 5rem; }
 
         .sr-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; color: var(--accent); margin-bottom: 1rem; display: block; }
-        h1 { font-size: clamp(1.9rem, 4.5vw, 2.4rem); margin-bottom: 1.4rem; }
-        .sr-lede { font-size: 1.12rem; color: var(--text-bright); }
+        h1 { font-size: clamp(1.9rem, 4.5vw, 2.4rem); margin-bottom: 1.2rem; }
+        .sr-lede { font-size: 1.12rem; color: var(--text-bright); margin-bottom: 0; }
 
-        /* The same bordered-card device the Where to Start offer pages and
-           Owner Check use, so this page reads as part of the site rather than
-           a campaign microsite. Related facts sit together in one card with a
-           lighter internal rule between items, not a divider after every
-           paragraph. */
-        .sr-card { border: 1px solid var(--border); border-radius: 6px; padding: 2rem 2.25rem; margin-top: 2rem; }
-        .sr-card-item + .sr-card-item { margin-top: 1.75rem; padding-top: 1.75rem; border-top: 1px solid var(--border); }
-        .sr-card h2 { font-size: 1.05rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); font-weight: 700; margin-bottom: 1.2rem; }
-        .sr-card h3 { font-size: 1.15rem; margin-bottom: 0.7rem; }
-        .sr-card p { font-size: 1.02rem; }
-        .sr-card p:last-child { margin-bottom: 0; }
+        /* OPERATOR CREDIBILITY, HIGH ON THE PAGE.
+           De-boxed on purpose: hairline rules above and below rather than a
+           filled card, which is the "editorial, fewer-containers" treatment
+           the fourcards/credentials/proof strip sections already use on the
+           main site. A box here would compete with the two route cards
+           directly underneath, which are the thing the visitor has to choose
+           between. Every sentence in it is controlled copy already live
+           elsewhere on the site; see the EJS comment on the block itself. */
+        .sr-cred {
+            margin-top: 2.5rem;
+            padding: 1.5rem 0;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+        .sr-cred p { margin: 0; font-size: 1.02rem; color: var(--text-bright); }
+        .sr-cred p + p { margin-top: 0.5rem; color: var(--text); font-size: 0.97rem; }
+
+        .sr-section { margin-top: 3.25rem; }
+        .sr-section > h2 { font-size: 1.4rem; margin-bottom: 0.9rem; }
+        .sr-section > .sr-intro { font-size: 1rem; color: var(--text-muted); margin-bottom: 1.6rem; max-width: 58ch; }
+
+        /* THE TWO ROUTES, side by side so the choice is visible without
+           reading. Each card leads with an accent condition label, so a
+           visitor matches their own situation on four or five words rather
+           than on a paragraph. Same bordered-card device as Owner Check's
+           .check-card and the Where to Start offer pages. */
+        .sr-routes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem; }
+        .sr-route {
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1.75rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+        }
+        /* The already-selling card carries the accent edge because its route
+           is the primary CTA site-wide (the conversation). This is emphasis
+           on the ROUTE, not a claim that one reader matters more. */
+        .sr-route--now { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+        /* 0.72rem matches this page's own .sr-label and the site's existing
+           small-label convention (Owner Check's .check-card-learn is 0.75rem).
+           It was 0.68rem, which measured 10.88px on the rendered page and was
+           the smallest text anywhere on the site. */
+        .sr-route-label {
+            font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em;
+            font-weight: 700; color: var(--accent); margin-bottom: 0.75rem;
+        }
+        .sr-route h3 { font-size: 1.2rem; margin-bottom: 0.6rem; }
+        .sr-route p { font-size: 0.97rem; margin-bottom: 1.4rem; }
+        .sr-route-actions { margin-top: auto; }
+        /* Reduced side padding inside the route cards only. At the 700px
+           column each card is about 337px wide, and the site's standard
+           1.5rem button padding left too little for "Book a 30 minute
+           conversation" to sit on one line, so both CTAs wrapped to two.
+           Measured on the rendered page, not guessed. The button's height,
+           colour and weight are untouched, so this is a fit correction
+           rather than a second button style. */
+        .sr-route-actions .btn { width: 100%; text-align: center; padding-left: 0.75rem; padding-right: 0.75rem; }
+
+        /* SIX THINGS A BUYER ASKS. De-boxed grid, top rule per item, exactly
+           the .fourcard treatment from index.ejs: the lead-in and the rule
+           carry the separation instead of six more boxes. Deliberately NOT
+           numbered, because these are not a sequence and a number would
+           assert an order that does not exist. */
+        .sr-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem 2rem; }
+        .sr-item { padding-top: 1.1rem; border-top: 1px solid var(--border); }
+        .sr-item-lead { display: block; font-weight: 700; color: var(--text-bright); margin-bottom: 0.3rem; font-size: 0.98rem; }
+        .sr-item p { font-size: 0.94rem; color: var(--text-muted); margin: 0; }
+
+        /* Accent-dot list, lifted from Owner Check's .check-card ul rather
+           than using the browser's default discs, which are the one thing
+           that made the first version read as an unstyled document. */
+        .sr-dots { list-style: none; padding: 0; margin: 0; }
+        .sr-dots li { position: relative; padding-left: 1.15rem; margin-bottom: 0.85rem; font-size: 0.98rem; color: var(--text); }
+        .sr-dots li:last-child { margin-bottom: 0; }
+        .sr-dots li::before {
+            content: ''; position: absolute; left: 0; top: 0.6em;
+            width: 5px; height: 5px; border-radius: 50%; background: var(--accent);
+        }
+        .sr-dots strong { color: var(--text-bright); font-weight: 700; }
+        .sr-dots--two { columns: 2; column-gap: 2rem; }
+        .sr-dots--two li { break-inside: avoid; }
+
+        /* The review: two numbered steps, because this genuinely IS a
+           sequence. The price is pulled out of the sequence rather than
+           becoming a third step, since paying is not a stage of the work. */
+        .sr-card { border: 1px solid var(--border); border-radius: 6px; padding: 1.9rem 2rem; }
+        .sr-step { display: grid; grid-template-columns: auto 1fr; gap: 1rem; }
+        .sr-step + .sr-step { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+        .sr-step-num { font-family: 'DM Serif Display', serif; font-size: 1.6rem; color: var(--accent); opacity: 0.45; line-height: 1; }
+        .sr-step h3 { font-size: 1.1rem; margin-bottom: 0.4rem; }
+        .sr-step p { font-size: 0.97rem; margin: 0; }
+        .sr-price {
+            margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--border);
+            display: flex; align-items: baseline; gap: 0.9rem; flex-wrap: wrap;
+        }
+        .sr-price-fig { font-family: 'DM Serif Display', serif; font-size: 1.9rem; color: var(--accent); line-height: 1; }
+        .sr-price p { margin: 0; font-size: 0.94rem; color: var(--text-muted); }
+
+        /* KEPT AS BUILT. Tom's review of 25/09/2026 singled this treatment out
+           as working and as the page's commercial and visual break. Do not
+           box the rest of the page to match it: it works because it is the
+           only paper surface here. */
         .sr-card.surface-paper { background: var(--surface-paper); }
+        .sr-card.surface-paper p:last-child { margin-bottom: 0; }
 
-        .sr-list { margin: 0; padding-left: 1.3rem; color: var(--text); }
-        .sr-list li { margin-bottom: 0.7rem; font-size: 1.02rem; }
-        .sr-list li:last-child { margin-bottom: 0; }
-
-        .sr-section { margin-top: 3rem; }
-        .sr-section > h2 { font-size: 1.4rem; margin-bottom: 1rem; }
-
-        .sr-route-actions { margin-top: 1.2rem; }
         .sr-final { border-top: 1px solid var(--border); padding-top: 2.5rem; margin-top: 3.5rem; }
         .sr-final h2 { font-size: 1.4rem; margin-bottom: 0.6rem; }
         .sr-final-actions { display: flex; flex-wrap: wrap; gap: 0.9rem; margin-top: 1.6rem; }
@@ -109,11 +193,9 @@
         /* An inline link in body copy. Nothing in site-chrome-styles sets a
            colour for one, so without this the Evidence link rendered in
            default browser blue and underlined on the near-black ground, which
-           reads as an unstyled page rather than an Arrington one. Found by
-           looking at the rendered page on a phone, not in the markup. This is
-           the site's existing treatment, copied from .case-more a in
-           index.ejs rather than invented here: accent, no underline, and a
-           faint accent rule that solidifies on hover. */
+           reads as an unstyled page rather than an Arrington one. This is the
+           site's existing treatment, copied from .case-more a in index.ejs
+           rather than invented here. */
         .sr-aside a {
             color: var(--accent);
             text-decoration: none;
@@ -122,9 +204,25 @@
         }
         .sr-aside a:hover, .sr-aside a:focus-visible { border-bottom-color: var(--accent); }
 
-        @media (max-width: 520px) {
-            .sr-card { padding: 1.75rem 1.5rem; }
-            .sr-final-actions .btn { width: 100%; }
+        /* MOBILE IS A DESIGN STATE, NOT A STACKED DESKTOP (Build Protocol).
+           Everything below is about making 390px scannable rather than
+           merely narrow: single columns, tighter section rhythm, smaller
+           card padding, and full-width controls. */
+        @media (max-width: 760px) {
+            main { padding-top: calc(var(--site-chrome) + 1.75rem); }
+            .sr-routes { grid-template-columns: 1fr; gap: 1rem; }
+            .sr-grid { grid-template-columns: 1fr; gap: 0.9rem; }
+            .sr-dots--two { columns: 1; }
+            .sr-dots li { margin-bottom: 0.7rem; }
+            .sr-section { margin-top: 2.1rem; }
+            .sr-section > h2 { margin-bottom: 0.7rem; }
+            .sr-section > .sr-intro { margin-bottom: 1.2rem; }
+            .sr-cred { margin-top: 2rem; padding: 1.25rem 0; }
+            .sr-card { padding: 1.4rem 1.25rem; }
+            .sr-route { padding: 1.4rem 1.25rem; }
+            .sr-step + .sr-step { margin-top: 1.25rem; padding-top: 1.25rem; }
+            .sr-final { margin-top: 2.5rem; padding-top: 1.9rem; }
+            .sr-final-actions .btn { width: 100%; text-align: center; }
         }
     </style>
 </head>
@@ -139,25 +237,52 @@
     <main>
         <span class="sr-label">Sale readiness</span>
         <h1>Get your business ready to sell</h1>
-        <p class="sr-lede">A business that can run without you is easier for somebody else to take on, and better to own while you still have it. That is the work: strengthening how the business runs, improving what it earns, and reducing how much of it depends on you being there.</p>
+        <p class="sr-lede">Make the business less dependent on you, commercially stronger, and straightforward for somebody else to take over. That work pays whether you sell or keep it.</p>
+
+        <%# OPERATOR CREDIBILITY, and every sentence here is controlled copy
+            already published elsewhere on the site rather than written for
+            this page. Tom's build instruction of 25/09/2026: "Use only
+            controlled evidence about Tom having built, operated and sold a
+            real business, with the approved wording available in the current
+            controlled sources."
+
+            Sentence 1 is verbatim from views/market-ready-test-result.ejs.
+            Sentence 2 is the live row on the Business Consultant Devon page
+            (casestudy.phase_3_body, third-person since the 01/08/2026 seed
+            migration), with two non-substantive edits reported to Tom: the
+            opening connector "Separately," is dropped because it referred to
+            that page's preceding phase, and "Tom" becomes "He" to avoid
+            opening two consecutive sentences with the same name.
+            Sentence 3 is the Brand Operating System's own PROOF wording.
+
+            NOTHING here is a client case study and nothing existing has been
+            reframed as sale-readiness work. These are facts about Tom's own
+            businesses. %>
+        <div class="sr-cred">
+            <p>Tom Arrington has bought, built and sold owner run businesses himself. He built, grew and sold his own business in a seven-figure exit.</p>
+            <p>More than 20 years of experience inside real businesses across Devon and Cornwall sits behind the work.</p>
+        </div>
 
         <div class="sr-section">
-            <h2>Where you are now</h2>
-            <p>These are two different situations and they need different first steps, so it is worth being honest about which one you are in.</p>
+            <h2>Which of these is you?</h2>
+            <p class="sr-intro">The two need different first steps, so it is worth being honest about which one you are in.</p>
 
-            <div class="sr-card">
-                <div class="sr-card-item">
+            <div class="sr-routes">
+                <div class="sr-route">
+                    <span class="sr-route-label">A sale is years away</span>
                     <h3>You are preparing ahead</h3>
-                    <p>A sale is somewhere in mind, perhaps a few years out, and nothing is under way. This is the better position to be in, because most of what makes a business straightforward to hand over takes time to put right. Start with a Commercial Review.</p>
+                    <p>Nothing is under way yet. This is the better position to be in, because most of what makes a business straightforward to hand over takes time to put right.</p>
                     <div class="sr-route-actions">
-                        <a href="/where-to-start/commercial-review" class="btn btn-outline" id="srPrepareCta">See the £500 Commercial Review</a>
+                        <a href="/where-to-start/commercial-review" class="btn btn-outline">The £500 Commercial Review</a>
                     </div>
                 </div>
-                <div class="sr-card-item">
+
+                <div class="sr-route sr-route--now">
+                    <span class="sr-route-label">A sale is already under way</span>
                     <h3>You are already selling</h3>
-                    <p>There is an offer on the table, or conversations are under way. Speak to us before buying anything. Some of what a buyer will ask about cannot be put right inside a live process, and we would rather say so on a call than take a fee for a review that tells you the same thing.</p>
+                    <p>There is an offer on the table, or conversations have started. Speak to us before buying anything, because some of what a buyer asks about cannot be put right inside a live process.</p>
                     <div class="sr-route-actions">
-                        <a href="/book-a-30-minute-conversation" class="btn btn-primary" id="srSellingCta">Book a 30 minute conversation</a>
+                        <a href="/book-a-30-minute-conversation" class="btn btn-primary">Book a 30 minute conversation</a>
                     </div>
                 </div>
             </div>
@@ -165,46 +290,70 @@
 
         <div class="sr-section">
             <h2>What a buyer will want to understand</h2>
-            <p>None of this is exotic. It is the same short list of questions every time, and most owner run businesses have good answers to some of it and no answer at all to the rest.</p>
-            <ul class="sr-list">
-                <li>How much of the day to day runs through you personally, and what would happen in the fortnight after you stopped.</li>
-                <li>Whether the records would hold up when an accountant goes through them properly.</li>
-                <li>How much of the revenue sits with one or two customers or a single supplier.</li>
-                <li>Which work makes money and which only looks busy.</li>
-                <li>What is written down, and what exists only as habit in somebody's head.</li>
-                <li>The things you have known needed fixing for a long time and have not got to.</li>
-            </ul>
+            <p class="sr-intro">The same short list every time. Most owner run businesses answer some of it well and the rest not at all.</p>
+            <div class="sr-grid">
+                <div class="sr-item">
+                    <span class="sr-item-lead">How much runs through you</span>
+                    <p>What would happen in the fortnight after you stopped.</p>
+                </div>
+                <div class="sr-item">
+                    <span class="sr-item-lead">Whether the records stand up</span>
+                    <p>When an accountant goes through them properly.</p>
+                </div>
+                <div class="sr-item">
+                    <span class="sr-item-lead">Where the revenue sits</span>
+                    <p>How much of it rests on one or two customers, or a single supplier.</p>
+                </div>
+                <div class="sr-item">
+                    <span class="sr-item-lead">Which work makes money</span>
+                    <p>And which of it only looks busy.</p>
+                </div>
+                <div class="sr-item">
+                    <span class="sr-item-lead">What is written down</span>
+                    <p>And what exists only as habit in somebody's head.</p>
+                </div>
+                <div class="sr-item">
+                    <span class="sr-item-lead">The things you have not got to</span>
+                    <p>Known about for a long time, still not dealt with.</p>
+                </div>
+            </div>
         </div>
 
         <div class="sr-section">
             <h2>What the Commercial Review establishes</h2>
-            <p>We start with the same Commercial Review we run for any owner. What changes here is what we are looking for.</p>
+            <p class="sr-intro">The same Commercial Review we run for any owner. What changes here is what we are looking for.</p>
             <div class="sr-card">
-                <div class="sr-card-item">
-                    <h3>The conversation</h3>
-                    <p>We listen for as long as it genuinely takes to understand the business, whether that is thirty minutes or two hours. You know your business better than we will; the value we add is an outside commercial read on it.</p>
+                <div class="sr-step">
+                    <span class="sr-step-num">01</span>
+                    <div>
+                        <h3>The conversation</h3>
+                        <p>We listen for as long as it genuinely takes, whether that is thirty minutes or two hours. You know your business better than we will; what we add is an outside commercial read on it.</p>
+                    </div>
                 </div>
-                <div class="sr-card-item">
-                    <h3>The written assessment</h3>
-                    <p>Within 4 business days you get a written assessment: where the business depends on you and what that would cost a new owner, which records would not survive scrutiny, where margin is actually made, and what should change first rather than a list of everything that could change.</p>
+                <div class="sr-step">
+                    <span class="sr-step-num">02</span>
+                    <div>
+                        <h3>The written assessment</h3>
+                        <p>Within 4 business days: where the business depends on you and what that would cost a new owner, which records would not survive scrutiny, where margin is actually made, and what should change first rather than a list of everything that could.</p>
+                    </div>
                 </div>
-                <div class="sr-card-item">
-                    <h3>The price</h3>
-                    <p>£500. If you go on to a larger review route afterwards, that £500 is credited in full against it.</p>
+                <div class="sr-price">
+                    <span class="sr-price-fig">£500</span>
+                    <p>Credited in full against a larger review route if you go on to one.</p>
                 </div>
             </div>
         </div>
 
         <div class="sr-section">
             <h2>What the work can involve afterwards</h2>
-            <p>Once the review has established what matters, we can get involved in putting it right rather than handing over a document and leaving. What that means in practice depends on the business, but it is usually some of the following.</p>
-            <ul class="sr-list">
-                <li>Moving decisions and responsibilities off you, with the people who will actually hold them.</li>
-                <li>Reviewing pricing where the margin does not reflect the work.</li>
-                <li>Turning the decisions you make by instinct into something written down that survives a handover.</li>
-                <li>Management information you do not have to assemble yourself every month.</li>
-                <li>Reducing how much rests on one customer, one supplier or one member of staff.</li>
-                <li>Systems, a shared workspace or AI, where they carry one of the changes above. The commercial problem comes first and the technology follows from it, never the other way round.</li>
+            <p class="sr-intro">Once the review has established what matters, we can get involved in putting it right rather than handing over a document and leaving.</p>
+            <ul class="sr-dots sr-dots--two">
+                <li><strong>Moving decisions off you</strong>, with the people who will actually hold them.</li>
+                <li><strong>Pricing</strong>, where the margin does not reflect the work.</li>
+                <li><strong>Writing down</strong> what you currently decide by instinct, so it survives a handover.</li>
+                <li><strong>Management information</strong> you do not have to assemble yourself every month.</li>
+                <li><strong>Reducing what rests on one</strong> customer, supplier or member of staff.</li>
+                <li><strong>Systems, a shared workspace or AI</strong>, where they carry one of the changes above. The commercial problem comes first and the technology follows from it, never the other way round.</li>
             </ul>
             <p class="sr-aside">That work is agreed separately once we both know what it involves. There is no standing package price for it, because the work is different in every business, and it is not a retainer.</p>
         </div>
@@ -219,8 +368,8 @@
 
         <div class="sr-section">
             <h2>How you would know it worked</h2>
-            <p>Before the work starts we agree which of these matter to you, so there is something to check against afterwards rather than an impression that things feel better.</p>
-            <ul class="sr-list">
+            <p class="sr-intro">Agreed before the work starts, so there is something to check against afterwards.</p>
+            <ul class="sr-dots sr-dots--two">
                 <li>How many decisions still have to come through you.</li>
                 <li>The time you spend on work only you can do.</li>
                 <li>The share of revenue sitting with your largest customer.</li>
@@ -233,17 +382,16 @@
             <h2>Start with a conversation</h2>
             <p>Thirty minutes, no charge. Tell us where the business is and what you are thinking, and we will say plainly whether this is work worth doing yet, and what it would involve if it is.</p>
             <div class="sr-final-actions">
-                <a href="/book-a-30-minute-conversation" class="btn btn-primary" id="srPrimaryCta">Book a 30 minute conversation</a>
-                <a href="/where-to-start/commercial-review" class="btn btn-outline" id="srSecondaryCta">Or start with the £500 Commercial Review</a>
+                <a href="/book-a-30-minute-conversation" class="btn btn-primary">Book a 30 minute conversation</a>
+                <a href="/where-to-start/commercial-review" class="btn btn-outline">Or start with the £500 Commercial Review</a>
             </div>
             <%# Evidence is LINKED rather than summarised, and nothing on this
-                page describes an existing case as sale-readiness work. Tom's
-                instruction of 25/09/2026: do not reframe an existing case as a
-                sale-readiness case study unless the controlled evidence
-                specifically supports that description. No such controlled
-                evidence has been inspected, so the honest move is to point at
-                the proof that exists rather than recast it. %>
-            <p class="sr-aside">Twenty years of running and fixing businesses across Devon and Cornwall sits behind this. <a href="/evidence">See what we have done</a>.</p>
+                page describes an existing client case as sale-readiness work.
+                Tom's instruction of 25/09/2026: do not reframe an existing
+                case as a sale-readiness case study unless the controlled
+                evidence specifically supports that description. No such
+                controlled evidence has been inspected. %>
+            <p class="sr-aside"><a href="/evidence">See what we have done</a>.</p>
         </div>
     </main>
 
