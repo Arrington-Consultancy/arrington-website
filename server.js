@@ -21,6 +21,7 @@ const marketReadyTest = require('./routes/marketReadyTest');
 const commercialGapsReview = require('./routes/commercialGapsReview');
 const whereToStart = require('./routes/whereToStart');
 const productGuide = require('./routes/productGuide');
+const saleReadiness = require('./routes/saleReadiness');
 const scott = require('./routes/scott');
 const workspace = require('./routes/workspace');
 const { hasWorkspaceAccess } = require('./lib/workspace/access');
@@ -759,6 +760,18 @@ app.use(whereToStart.router);
 // behind the global CSRF middleware like every other public form.
 productGuide.mountPageRoute(app, generateCsrfToken);
 app.use(productGuide.router);
+
+// Sale readiness campaign landing page (see routes/saleReadiness.js for the
+// full brief). Registered here so it is matched ahead of the generic /:slug
+// CMS catch-all. It has no router because it has no POST endpoints of its
+// own: every action on the page links to an existing route.
+//
+// It is NOT in the main navigation and NOT promoted on the homepage, by Tom's
+// decision of 25/09/2026. It is a campaign destination reached from social
+// media and, if separately configured, Google Ads. Do not add a nav entry or
+// a homepage block for it without a new decision; test/saleReadinessPage.test.js
+// fails if either appears.
+saleReadiness.mountPageRoute(app, generateCsrfToken);
 
 // Scott AI Demonstration — private, invited-access-only fictional-company
 // demo (see routes/scott.js, lib/scott/**). Same registration pattern as
