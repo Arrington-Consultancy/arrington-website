@@ -6902,6 +6902,153 @@ async function seed() {
   }
 
 
+  // SALE READINESS: the contextual route in from What We Do (25/09/2026).
+  //
+  // Tom's decision, verbatim: "i dont wnat to add more to the main menu but
+  // this could be a great route to market. should this be in a subsection on
+  // what we do page and then a link on the sales ready quiz page?" Both
+  // halves were agreed; this is the What We Do half. The quiz half is a
+  // contextual link on the Market Ready Test result page, which is markup
+  // rather than content and therefore not here.
+  //
+  // WHY THIS EXISTS AT ALL. /get-your-business-ready-to-sell is deliberately
+  // not in the main navigation and not promoted on the homepage (see the
+  // header of routes/saleReadiness.js for the standing decision, which this
+  // does not reverse). That left it reachable only from a social post or an
+  // ad, so an organic visitor reading about what Arrington does had no way to
+  // find it. A subsection on What We Do is the site's established answer to
+  // exactly that problem.
+  //
+  // THE PATTERN IS COPIED, NOT INVENTED. Websites and AI got its route in
+  // from What We Do the same way on 30/07/2026 (search this file for
+  // wwdLinkId): a NEW intervention instance appended to that page's
+  // section_order, so nothing already on the page is edited, moved or
+  // replaced. Appending rather than inserting is also what makes this safe
+  // from here: the live section_order is in the production database and
+  // cannot be read from a sandbox, so any position other than "last" would
+  // be a guess about a page nobody here can see. Tom can move it with the
+  // ▲/▼ buttons in one click.
+  //
+  // THE ONE TRAP, WRITTEN DOWN BECAUSE IT IS SILENT. button_link holds the
+  // slug 'get-your-business-ready-to-sell', which views/index.ejs resolves
+  // correctly: it matches the slug regex and _resolvePageHref just prefixes
+  // a slash without checking the slug is a real CMS page. But the edit
+  // modal's button-link <select> is populated from <meta name="all-pages">,
+  // which lists `pages` rows only, and this destination is a code route. So
+  // the dropdown will NOT offer it, and opening this section in the CMS and
+  // saving would quietly repoint the button at whichever page the select
+  // defaults to. If that happens the fix is to re-run this migration by
+  // deleting the marker row, or to point it at #conversation and accept the
+  // loss. A test pins the slug so a rename of the route breaks a test rather
+  // than the link.
+  //
+  // Guarded twice, the established pattern: a run-once marker so a redeploy
+  // is a silent no-op, and a check that no link to this destination is
+  // already on the page, so a hand-built one is never duplicated.
+  {
+    const SR_LINK_MARKER = 'what-we-do.sale_readiness_link_2026-09-25';
+    const SR_SLUG = 'get-your-business-ready-to-sell';
+
+    const { rows: markerRows } = await db.query(
+      'SELECT 1 FROM content WHERE section_key = $1', [SR_LINK_MARKER]
+    );
+
+    if (markerRows.length === 0) {
+      const { rows: wwdRows } = await db.query(
+        "SELECT section_order FROM pages WHERE slug = 'what-we-do'"
+      );
+
+      if (wwdRows.length === 0) {
+        // A fresh database has no What We Do page (Tom created it by hand),
+        // so there is nothing to append to. No marker is stamped, so this
+        // runs again on the deployment that does have the page.
+        console.log('Sale readiness What We Do link skipped: the What We Do page does not exist.');
+      } else {
+        const order = Array.isArray(wwdRows[0].section_order) ? wwdRows[0].section_order.slice() : [];
+
+        // Is a link to this destination already on the page? Checked by
+        // destination rather than by instance id, because a link Tom added
+        // himself in the CMS would carry a different id and this must not
+        // add a second one beside it.
+        const { rows: existingRows } = await db.query(
+          "SELECT section_key FROM content WHERE section_key LIKE '%.button_link' AND content = $1",
+          [SR_SLUG]
+        );
+        const alreadyLinked = existingRows.some(
+          (r) => order.includes(r.section_key.replace(/\.button_link$/, ''))
+        );
+
+        if (alreadyLinked) {
+          console.log('Sale readiness What We Do link skipped: the page already links to it.');
+          await db.query(
+            'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+            [SR_LINK_MARKER, 'true']
+          );
+        } else {
+          // Allocate against every page's section_order AND every content
+          // prefix, so the new id can collide with neither a live instance
+          // nor an orphaned one whose rows are still in the table.
+          const { rows: allPages } = await db.query('SELECT section_order FROM pages');
+          const inUse = new Set();
+          for (const pg of allPages) {
+            if (Array.isArray(pg.section_order)) for (const id of pg.section_order) inUse.add(id);
+          }
+          const { rows: prefixRows } = await db.query(
+            "SELECT DISTINCT split_part(section_key, '.', 1) AS prefix FROM content"
+          );
+          const prefixes = new Set(prefixRows.map((r) => r.prefix));
+
+          let linkId = null;
+          for (let n = 2; n <= 99; n++) {
+            const candidate = 'intervention__' + n;
+            if (!inUse.has(candidate) && !prefixes.has(candidate)) { linkId = candidate; break; }
+          }
+
+          if (!linkId) {
+            console.log('Sale readiness What We Do link skipped: no free intervention instance id.');
+          } else {
+            // Copy, not new positioning or a new claim. It names what the
+            // page is for in the owner's own terms and sends them to it.
+            // No price, no timeframe, no valuation language: the
+            // destination page carries the commercial detail, and 02
+            // ARRINGTON COMMERCIAL POSITION governs what may be said about
+            // it. "we", per Tom's pronoun decision of 15/09/2026.
+            const rows = [
+              [`${linkId}.label`, ''],
+              [`${linkId}.heading`, 'Thinking about selling, or just want the option?'],
+              [`${linkId}.subtext`, 'A business that could run without you is worth more to a buyer and easier to own in the meantime. We look at what a buyer would question and what is worth strengthening first.'],
+              [`${linkId}.button_text`, 'Getting ready to sell'],
+              [`${linkId}.button_link`, SR_SLUG]
+            ];
+
+            for (const [key, value] of rows) {
+              await db.query(
+                'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+                [key, value]
+              );
+            }
+
+            await db.query(
+              'UPDATE pages SET section_order = $1::jsonb WHERE slug = $2',
+              [JSON.stringify(order.concat([linkId])), 'what-we-do']
+            );
+
+            console.log(`Sale readiness: contextual link (${linkId}) appended to What We Do -> /${SR_SLUG}.`);
+
+            // Stamped only on the path that actually did something, so a
+            // failure to allocate leaves this to run again rather than
+            // recording a link that was never added.
+            await db.query(
+              'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+              [SR_LINK_MARKER, 'true']
+            );
+          }
+        }
+      }
+    }
+  }
+
+
   // Arrington AI Workspace: ingest the encrypted snapshot into
   // workspace_records. A no-op when WORKSPACE_SNAPSHOT_KEY is unset, and
   // never fatal: an ingest failure records itself as a failed sync run

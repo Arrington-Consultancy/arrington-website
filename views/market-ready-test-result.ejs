@@ -117,6 +117,18 @@
         button.btn { font: inherit; }
         .mrt-request-status { margin-top: 0.75rem; font-size: 0.85rem; color: var(--accent); }
 
+        /* The contextual route on to the sale readiness page. Deliberately an
+           inline link in the prose rather than a third button: the two CTAs
+           below it are the actions, and a third would compete with both while
+           sending the reader away instead of into a conversation. Same
+           treatment as .case-more in views/index.ejs, which is how every
+           other contextual link on the site reads. Left unstyled it rendered
+           as default browser blue, which is how this class of bug has already
+           reached production once on the sale readiness page itself. */
+        .mrt-more { margin-top: 1.1rem; font-size: 0.92rem; color: var(--text-muted); }
+        .mrt-more a { color: var(--accent); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); padding-bottom: 2px; }
+        .mrt-more a:hover, .mrt-more a:focus-visible { border-bottom-color: var(--accent); }
+
         @media (max-width: 480px) {
             .mrt-cta-actions { flex-direction: column; }
             .mrt-cta-actions .btn { text-align: center; }
@@ -260,7 +272,8 @@
         <div class="mrt-next-step">
             <h2>Want Tom to review the result?</h2>
             <p>This score is based entirely on your own answers. It cannot walk through the business, test the evidence or bring an outside view to what you have said.</p>
-            <p>Tom Arrington has bought, built and sold owner run businesses himself. A commercial review looks at what is really happening, what a buyer is likely to question and what is worth strengthening before you approach the market.</p>
+            <p>Tom Arrington bought, built and sold his own business in a seven-figure exit, after nearly twenty years of running it himself. A commercial review looks at what is really happening, what a buyer is likely to question and what is worth strengthening before you approach the market.</p>
+            <p class="mrt-more"><a href="/get-your-business-ready-to-sell">What getting a business ready to sell involves <span aria-hidden="true">&rarr;</span></a></p>
             <div class="mrt-cta-actions">
                 <button type="button" class="btn btn-primary" id="mrt-ask-tom" data-token="<%= resultToken %>">Ask Tom to review my result</button>
                 <a href="/#conversation" class="btn btn-outline">Talk to us</a>
