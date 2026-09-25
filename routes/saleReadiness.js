@@ -67,6 +67,36 @@ async function loadThemeAndShell() {
   return { theme, ...shell };
 }
 
+// PER-PAGE FOOTER CONTACT COPY.
+//
+// The footer enquiry form is global: one block, rendered from the contact.*
+// content rows on every page of the site. On production those rows currently
+// read "Tell us where the pressure is showing", which is right for a visitor
+// who arrived with a problem and wrong for one reading about preparing a
+// business for sale. Tom raised it against the live page on 25/09/2026.
+//
+// Two things made it worse than a mismatched sentence. The footer lands
+// immediately after this page's own closing CTA, so the visitor met two
+// different contact prompts back to back. And "pressure showing" quietly
+// reframes the reader as someone in trouble, which is the opposite of this
+// page's position that preparing ahead is the better place to be.
+//
+// The override is per-page and nothing else changes. views/partials/site-footer
+// renders pageContact.heading / .body / .messagePlaceholder, so replacing
+// those three for this one render leaves every other page exactly as it was.
+// Deliberately NOT done by editing the contact.* content rows: those are the
+// global copy and changing them would rewrite the footer on the homepage, the
+// offer pages, the assessments and everything else. A test asserts this stays
+// an override rather than becoming a CMS edit.
+//
+// The phone, name, email, day/time, message and "How did you hear about us"
+// fields are untouched, as is the form's endpoint and behaviour.
+const SALE_READINESS_CONTACT = {
+  heading: 'Tell us what you are weighing up.',
+  body: 'You do not need a decision made or a polished set of accounts. Tell us roughly where the business is, and we will come back to you.',
+  messagePlaceholder: 'What you are considering, and where the business is now'
+};
+
 function mountPageRoute(app, generateCsrfToken) {
   app.get(SALE_READINESS_PATH, async (req, res, next) => {
     try {
@@ -77,7 +107,9 @@ function mountPageRoute(app, generateCsrfToken) {
         csrfToken: generateCsrfToken(req, res),
         navPages,
         content,
-        pageContact
+        // Spread first so label, headerCtaText and submitText keep the site's
+        // own values; only the three fields above are this page's.
+        pageContact: { ...pageContact, ...SALE_READINESS_CONTACT }
       });
     } catch (err) {
       next(err);
