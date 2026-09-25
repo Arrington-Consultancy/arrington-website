@@ -5859,3 +5859,46 @@ previews, which is what keeps the preview line out of the clearance model.
   inputs render `mm/dd/yyyy` on a UK business tool, and the cashflow table
   leads with empty months. Contacts was used instead. Worth fixing on its
   own terms rather than for this page.
+
+## Sale readiness page
+
+`/get-your-business-ready-to-sell` is a campaign landing page for social and
+paid traffic. It is a code route (`routes/saleReadiness.js`,
+`views/sale-readiness.ejs`, tests in `test/saleReadinessPage.test.js`), not a
+CMS page: its copy is changed in code, and keeping it out of the navigation
+depends on it never being added to `navPages`.
+
+- Keep it out of the main navigation and off the homepage. It is indexable
+  but stays out of `sitemap.xml`.
+- It is reached through contextual links: a section on What We Do and a link
+  on the Market Ready Test result page. The CMS button-link dropdown lists
+  only `pages` rows, so it cannot offer this code route; saving that What We
+  Do section in the CMS will repoint its button.
+- The two route cards carry equal visual weight at rest and on hover; neither
+  may look preferred. Each card is a stretched link, so hovering the card is
+  hovering its button: cancel the button's hover fill explicitly for these
+  cards, and confirm hover states with computed styles in a browser rather
+  than by reading the CSS.
+- Describe the Commercial Review only on its own page. Here, say why it is
+  relevant and link to it; do not restate its price mechanics, timeline or
+  credit.
+- Publish no price on this page other than the existing Commercial Review
+  price. The one illustrative figure that is allowed is pinned by the price
+  test.
+- "We stay in your corner" sits directly on the page background: no card and
+  no paper surface. Separate it with a readable measure and spacing and, at
+  most, a restrained gold detail.
+
+## Writing and reviewing website copy
+
+- Where a brief asks for copy but does not contain the underlying commercial
+  thinking, stop and ask Tom for it. Do not fill the gap with plausible
+  consultancy language.
+- Do not rewrite sound approved copy merely because an alternative can be
+  produced.
+- When reviewing copy, sort each issue as (1) a factual error, (2) a Brand
+  Operating System or controlled-authority violation, (3) a genuine
+  commercial or UX problem, or (4) an optional stylistic rewrite. Change
+  nothing in (4) without a specific reason and Tom's approval.
+- Check every string against the current Brand Operating System in Drive
+  before it ships, not against a record of it in this file.

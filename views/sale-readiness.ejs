@@ -206,19 +206,27 @@
            rather than a second button style. */
         .sr-route-actions .btn { width: 100%; text-align: center; padding-left: 0.75rem; padding-right: 0.75rem; }
 
-        /* SIX THINGS A BUYER ASKS. De-boxed grid, top rule per item, exactly
-           the .fourcard treatment from index.ejs: the lead-in and the rule
-           carry the separation instead of six more boxes. Deliberately NOT
-           numbered, because these are not a sequence and a number would
-           assert an order that does not exist. */
+        /* WHAT A BUYER ASKS: five points since 25/09/2026, previously six.
+           De-boxed grid, top rule per item, exactly the .fourcard treatment
+           from index.ejs: the lead-in and the rule carry the separation
+           instead of more boxes. Deliberately NOT numbered, because these are
+           not a sequence and a number would assert an order that does not
+           exist. */
         .sr-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem 2rem; }
+        /* An odd last item runs the full width of the grid rather than sitting
+           alone in the left column looking left over. Tom's decision of
+           25/09/2026: no sixth point manufactured to fill the slot. Written
+           as a condition on the count, not as "the fifth item", so it stays
+           right if the list ever changes length. On mobile the grid is a
+           single column already, so this changes nothing there. */
+        .sr-grid > .sr-item:last-child:nth-child(odd) { grid-column: 1 / -1; }
         /* Gold rules rather than grey (Tom, 25/09/2026), so the section carries
-           the brand without the items turning into six cards. 40% is the same
+           the brand without the items turning into cards. 40% is the same
            accent strength the site already uses for a restrained accent
            hairline on .case-more a in index.ejs, so this is the existing
            treatment rather than a new one. The items stay unboxed: a rule
-           only, no border, background or radius, because six bordered boxes
-           would read as six calls to action rather than supporting detail. */
+           only, no border, background or radius, because bordered boxes
+           would read as calls to action rather than supporting detail. */
         .sr-item { padding-top: 1.1rem; border-top: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); }
         .sr-item-lead { display: block; font-weight: 700; color: var(--text-bright); margin-bottom: 0.3rem; font-size: 0.98rem; }
         .sr-item p { font-size: 0.94rem; color: var(--text-muted); margin: 0; }
@@ -265,12 +273,68 @@
         .sr-price-fig { font-family: 'DM Serif Display', serif; font-size: 1.9rem; color: var(--accent); line-height: 1; }
         .sr-price p { margin: 0; font-size: 0.94rem; color: var(--text-muted); }
 
-        /* KEPT AS BUILT. Tom's review of 25/09/2026 singled this treatment out
-           as working and as the page's commercial and visual break. Do not
-           box the rest of the page to match it: it works because it is the
-           only paper surface here. */
-        .sr-card.surface-paper { background: var(--surface-paper); }
-        .sr-card.surface-paper p:last-child { margin-bottom: 0; }
+        /* WE STAY IN YOUR CORNER, directly on the page background. This was
+           the page's one cream paper card until Tom removed it after a live
+           inspection on 25/09/2026: too heavy against the navy, and it made
+           the section read like a generic information card. So there is no
+           container here, and there must not be one.
+
+           What replaces the card, all of it restrained:
+           - the ordinary body text (var(--text) on var(--black), 12.08:1 on
+             the live Oxford theme, well above AAA);
+           - a readable measure, so the six paragraphs do not run the full
+             width of the column;
+           - a short gold rule under the heading, the only accent, in the
+             brand gold at the same 2px weight a button border reads at;
+           - spacing for hierarchy: more room above the section than its
+             neighbours get, because it follows another all-text section and
+             the card used to supply that break, and more room above the
+             closing paragraph, which is the section's concluding thought.
+           Specificity is doubled (.sr-section.sr-corner) so these win over
+           the generic .sr-section rules in either media query, whatever
+           order they appear in. */
+        .sr-section.sr-corner { margin-top: 4.25rem; }
+        .sr-section.sr-corner > h2 { margin-bottom: 1.4rem; }
+        .sr-section.sr-corner > h2::after {
+            content: '';
+            display: block;
+            width: 2.5rem;
+            height: 2px;
+            margin-top: 0.9rem;
+            background: var(--accent);
+        }
+        .sr-corner-body { max-width: 62ch; }
+
+        /* ONE READABLE MEASURE FOR RUNNING TEXT (Tom, 25/09/2026). At the full
+           column these sections ran to 91 to 95 characters a line in DM Sans,
+           well past comfortable reading, and the narrower corner section made
+           the difference visible as a jump in the right edge. The same 62ch
+           measure now applies to the two Review sections and to the TEXT of
+           the full-width fifth buyer point; that item's gold rule still spans
+           the grid, so it keeps reading as a deliberate closing item. Mobile
+           is narrower than 62ch already, so nothing changes there. */
+        .sr-section.sr-prose > p { max-width: 62ch; }
+        .sr-grid > .sr-item:last-child:nth-child(odd) p { max-width: 62ch; }
+
+        /* THE TWO REVIEW SECTIONS READ AS ONE STEP: the Review, then what
+           happens after it. The gap between them is half the gap between
+           unrelated sections, so the short first one no longer reads as an
+           orphan. */
+        .sr-section.sr-pair-next { margin-top: 1.625rem; }
+        @media (max-width: 760px) {
+            .sr-section.sr-pair-next { margin-top: 1.05rem; }
+        }
+
+        /* Even padding in a card. The last element's paragraph margin sat
+           inside the card on top of its padding, leaving more space below the
+           last line than above the first. */
+        .sr-card > :last-child { margin-bottom: 0; }
+        .sr-corner-body p:last-child { margin-top: 1.9rem; margin-bottom: 0; }
+        @media (max-width: 760px) {
+            .sr-section.sr-corner { margin-top: 2.9rem; }
+            .sr-section.sr-corner > h2 { margin-bottom: 1.15rem; }
+            .sr-corner-body p:last-child { margin-top: 1.5rem; }
+        }
 
         .sr-final { border-top: 1px solid var(--border); padding-top: 2.5rem; margin-top: 3.5rem; }
         .sr-final h2 { font-size: 1.4rem; margin-bottom: 0.6rem; }
@@ -390,7 +454,7 @@
                 <div class="sr-route">
                     <span class="sr-route-label">A sale is years away</span>
                     <h3>You are preparing ahead</h3>
-                    <p>Nothing is under way yet. This is the better position to be in, because most of what makes a business straightforward to hand over takes time to put right.</p>
+                    <p>Nothing is under way yet, which gives you time to act. Most of what makes a business straightforward to hand over takes a while to put right.</p>
                     <div class="sr-route-actions">
                         <a href="/where-to-start/commercial-review" class="btn btn-outline sr-route-link">The £500 Commercial Review</a>
                     </div>
@@ -403,7 +467,7 @@
                 <div class="sr-route">
                     <span class="sr-route-label">A sale is already under way</span>
                     <h3>You are already selling</h3>
-                    <p>There is an offer on the table, or conversations have started. Speak to us before buying anything, because some of what a buyer asks about cannot be put right inside a live process.</p>
+                    <p>There is an offer on the table, or conversations have started. Speak to us before paying for a review, because some of what a buyer asks about cannot be put right inside a live process.</p>
                     <div class="sr-route-actions">
                         <a href="/book-a-30-minute-conversation" class="btn btn-outline sr-route-link">Book a 30 minute conversation</a>
                     </div>
@@ -413,113 +477,108 @@
 
         <div class="sr-section">
             <h2>What a buyer will want to understand</h2>
-            <p class="sr-intro">The same short list every time. Most owner run businesses answer some of it well and the rest not at all.</p>
+            <%# FIVE POINTS, AND ONLY FIVE. Rebuilt on 25/09/2026 from Tom's own
+                commercial thinking, supplied point by point, replacing six
+                items that had been written to fill a six-slot grid. The sixth
+                ("The things you have not got to") was deleted because it was
+                not Tom's thinking, and Tom was explicit that no sixth point may
+                be manufactured to preserve the layout. The odd fifth item runs
+                full width instead: see the .sr-item:last-child rule. %>
+            <p class="sr-intro">A potential buyer will almost always come in with the same underlying questions, even if they phrase them differently. Owners often answer some of them well, but frequently fail to frame the business in the way a buyer needs to understand it.</p>
             <div class="sr-grid">
                 <div class="sr-item">
-                    <span class="sr-item-lead">How much runs through you</span>
-                    <p>What would happen in the fortnight after you stopped.</p>
+                    <span class="sr-item-lead">Owner dependency</span>
+                    <p>The real test is an unplanned absence. If you walked away for a week with no warning, what would you come back to? And would the answer be different if you had planned to be away? If you are effectively the product, there is very little for anyone else to buy. A business that can be sold has to be able to run without you.</p>
                 </div>
                 <div class="sr-item">
-                    <span class="sr-item-lead">Whether the records stand up</span>
-                    <p>When an accountant goes through them properly.</p>
+                    <span class="sr-item-lead">Whether the numbers tell the true story</span>
+                    <p>Accounts can make a business look successful while hiding what the owner's own contribution really costs. An owner working 100 hours a week for free can prop up profitability that is not really there. A serious buyer sees through that very early.</p>
                 </div>
                 <div class="sr-item">
-                    <span class="sr-item-lead">Where the revenue sits</span>
-                    <p>How much of it rests on one or two customers, or a single supplier.</p>
+                    <span class="sr-item-lead">Revenue distribution and deal risk</span>
+                    <p>How the revenue is distributed can matter as much as how much depends on you. Too much resting on one customer, one supplier or one relationship can become a serious obstacle to a sale. Finding that early gives you time to do something about it, rather than meeting it in the middle of a transaction.</p>
                 </div>
                 <div class="sr-item">
-                    <span class="sr-item-lead">Which work makes money</span>
-                    <p>And which of it only looks busy.</p>
+                    <span class="sr-item-lead">What is actually adding value</span>
+                    <p>Bigger does not necessarily mean more valuable. Bloated or loss-making parts of a business can take up people, time and capacity while hurting its value. A fresh and commercially savage set of eyes should tell you what strengthens the business and what may be better cut before a sale.</p>
                 </div>
                 <div class="sr-item">
-                    <span class="sr-item-lead">What is written down</span>
-                    <p>And what exists only as habit in somebody's head.</p>
-                </div>
-                <div class="sr-item">
-                    <span class="sr-item-lead">The things you have not got to</span>
-                    <p>Known about for a long time, still not dealt with.</p>
+                    <span class="sr-item-lead">Transferability</span>
+                    <p>This is not simply about having procedures written down. To hand a business over properly, the recurring actions, judgements and decisions that currently live in your head have to be explainable, and then transferable to somebody else.</p>
                 </div>
             </div>
         </div>
 
-        <div class="sr-section">
-            <h2>What the Commercial Review establishes</h2>
-            <p class="sr-intro">The same Commercial Review we run for any owner. What changes here is what we are looking for.</p>
-            <div class="sr-card">
-                <div class="sr-step">
-                    <span class="sr-step-num">01</span>
-                    <div>
-                        <h3>The conversation</h3>
-                        <p>We listen for as long as it genuinely takes, whether that is thirty minutes or two hours. You know your business better than we will; what we add is an outside commercial read on it.</p>
-                    </div>
-                </div>
-                <div class="sr-step">
-                    <span class="sr-step-num">02</span>
-                    <div>
-                        <h3>The written assessment</h3>
-                        <p>Within 4 business days: where the business depends on you and what that would cost a new owner, which records would not survive scrutiny, where margin is actually made, and what should change first rather than a list of everything that could.</p>
-                    </div>
-                </div>
-                <div class="sr-price">
-                    <span class="sr-price-fig">£500</span>
-                    <p>Credited in full against a larger review route if you go on to one.</p>
-                </div>
-            </div>
+        <%# THE COMMERCIAL REVIEW IS EXPLAINED ONCE, ON ITS OWN PAGE. Until
+            25/09/2026 this section restated the product (the conversation,
+            the written assessment, four business days, the £500 credit) as a
+            second description of the same thing. Tom's decision: say only why
+            the existing Review is relevant here, and link to the canonical
+            page for the mechanics, so there are never two descriptions of
+            one product to drift apart. %>
+        <div class="sr-section sr-prose">
+            <h2>Where the Commercial Review comes in</h2>
+            <p>The £500 Commercial Review is where we look at the business through the eyes of a potential buyer and identify what is genuinely worth dealing with before the buyer gets the chance to pick it apart.</p>
+            <p class="sr-aside"><a href="/where-to-start/commercial-review">How the Commercial Review works <span aria-hidden="true">&rarr;</span></a></p>
         </div>
 
-        <div class="sr-section">
-            <h2>What the work can involve afterwards</h2>
-            <p class="sr-intro">Once the review has established what matters, we can get involved in putting it right rather than handing over a document and leaving.</p>
-            <ul class="sr-dots sr-dots--two">
-                <li><strong>Moving decisions off you</strong>, with the people who will actually hold them.</li>
-                <li><strong>Pricing</strong>, where the margin does not reflect the work.</li>
-                <li><strong>Writing down</strong> what you currently decide by instinct, so it survives a handover.</li>
-                <li><strong>Management information</strong> you do not have to assemble yourself every month.</li>
-                <li><strong>Reducing what rests on one</strong> customer, supplier or member of staff.</li>
-                <li><strong>Systems, a shared workspace or AI</strong>, where they carry one of the changes above. The commercial problem comes first and the technology follows from it, never the other way round.</li>
-            </ul>
-            <p class="sr-aside">That work is agreed separately once we both know what it involves. There is no standing package price for it, because the work is different in every business, and it is not a retainer.</p>
+        <%# No shopping list, deliberately. Tom's decision of 25/09/2026: the
+            problems are already named in the buyer section, and listing them
+            again as work we could do reads as an upsell. The AI and technology
+            paragraph went too, as unnecessary on this page. %>
+        <div class="sr-section sr-prose sr-pair-next">
+            <h2>What happens after the Review</h2>
+            <p>The Review tells us where the problems are. Then we decide what is actually worth fixing before a buyer arrives.</p>
+            <p>Everything after that is judged on one question: will dealing with it strengthen what the business offers a buyer, protect its value, improve its value, or materially help the sale complete?</p>
+            <p>We spend your time and money where there is a commercial reason to. We do not fix things simply because they could be improved.</p>
+            <p>Any further work is agreed separately, once the Review has established what is worth doing and where the value is.</p>
         </div>
 
-        <%# THE CREAM PANEL. Same treatment, same position, positive copy.
-            Tom's refinement pass of 25/09/2026: this was "What we do not do",
-            and it spent the page's strongest visual break listing what
-            Arrington will not touch.
+        <%# WE STAY IN YOUR CORNER. Copy rebuilt on 25/09/2026 from Tom's own
+            proposition, replacing generic wording.
 
-            The professional boundary is PRESERVED, in the second paragraph:
-            where a solicitor, accountant, valuer or other specialist is
-            needed we say so and work alongside them. Tom's instruction was
-            explicit that the old defensive list must not be re-added
-            underneath, so it is not. Worth knowing for whoever reads this
-            next: the page no longer says in as many words that Arrington is
-            not a broker or an exit planner. That was Tom's call, made with
-            the commercial review's warning about brokerage enquiries in
-            front of him, and it is his to reverse. %>
-        <div class="sr-section">
+            NO PANEL, deliberately. Until 25/09/2026 this copy sat in the
+            page's one cream "paper" card. Tom inspected it live and removed
+            it: against the navy page the large cream box was too heavy and
+            made the section read as a generic information card. The copy
+            now sits directly on the page background in the ordinary body
+            text, held to a readable measure, with a short gold rule under
+            the heading and spacing (not a container) doing the separating.
+            Do not put it back in a card or a paper surface: see .sr-corner.
+
+            The professional boundary now sits in the fifth paragraph: where
+            the job genuinely needs an accountant, solicitor, valuer or other
+            specialist, the owner should use one. The first paragraph says we
+            fight the owner's corner "for as long as we are involved", which
+            Tom approved to tie that to our role rather than to the
+            transaction, without adding a disclaimer. The page still does not
+            say in as many words that Arrington is not a broker or an exit
+            planner; that was Tom's call and it is his to reverse.
+
+            The fire line was translated, not dropped: the Brand Operating
+            System bans fire-based business metaphors, so "the building is on
+            fire" became "the foundations are giving way", keeping Tom's
+            principle. The closing paragraph is the outcome Tom cares about,
+            with the price disclaimer attached so it cannot read as a promise
+            about what a buyer will pay. %>
+        <div class="sr-section sr-corner">
             <h2>We stay in your corner</h2>
-            <div class="sr-card surface-paper">
-                <p>We work on the business itself. The things that make it stronger to own today and easier for somebody else to take over tomorrow.</p>
-                <p>That can mean reducing how much depends on you, tightening margins and pricing, improving the information you have, sorting processes that only exist in people's heads, strengthening how the team operates and dealing with commercial problems that have been left sitting there.</p>
-                <p>Where the job needs a solicitor, accountant, valuer or another specialist, we will tell you plainly and work alongside them. You do not need us pretending to be something we're not. You need somebody staying on the commercial side of the table with you and making sure the business itself gets stronger.</p>
+            <div class="sr-corner-body">
+                <p>Selling a business can be brutal, both emotionally and commercially. We stay alongside you and fight for your commercial interests for as long as we are involved.</p>
+                <p>Tom has been through the process himself, and that experience is part of the value of having us in your corner.</p>
+                <p>Before a buyer gets the chance to pick the business apart, we want to do it first, finding the weaknesses that could cost you money and strengthening what the buyer is actually going to be paying for.</p>
+                <p>In a sale, the business itself is the product. We want to make that product as strong as is commercially sensible, but every intervention has to earn its place. There is no point fixing the roof if the foundations are giving way.</p>
+                <p>We protect every point and every penny. Where the job genuinely needs an accountant, a solicitor, a valuer or another specialist, use one. But nobody should spend £5,000 on something that can competently be done for £500, simply because they are in the middle of a sale. We question the costs and the decisions, and we protect your money as though it were our own.</p>
+                <p>What we care about is that you come out of it knowing somebody fought your corner and protected every penny of value the business deserved. What a buyer finally pays is theirs to decide, not ours.</p>
             </div>
-        </div>
-
-        <div class="sr-section">
-            <h2>What should be stronger afterwards</h2>
-            <p class="sr-intro">Before we start, we agree what needs to improve. That gives us something real to measure the work against.</p>
-            <ul class="sr-dots sr-dots--two">
-                <li>How many decisions still have to come through you.</li>
-                <li>The time you spend on work only you can do.</li>
-                <li>The share of revenue sitting with your largest customer.</li>
-                <li>Margin by type of work, rather than one figure for everything.</li>
-                <li>Which records an accountant would now accept without rebuilding them.</li>
-            </ul>
         </div>
 
         <%# OWNER DEPENDENCY, placed immediately before the closing CTA on
-            Tom's instruction of 25/09/2026. It is the argument that makes the
-            rest of the page matter, and it hands the visitor a free, concrete
-            next step that is not a purchase.
+            Tom's instruction of 25/09/2026. Since the same day's copy rebuild
+            it is a BRIDGE, not an argument: the explanation lives in the
+            "Owner dependency" buyer point above, and saying it twice read as
+            an upsell. It keeps Tom's two lines and hands the visitor a free,
+            concrete next step that is not a purchase.
 
             The destination is the EXISTING route, inspected before writing:
             /owner-dependency-quiz, registered in server.js and listed in
@@ -574,20 +633,17 @@
                     alt="Illustration of a business owner standing back in a workshop doorway, watching staff load vans and work in the yard at the end of the day">
             </picture>
             <div class="sr-card">
-                <p>A business that only works because you are there every day is difficult for somebody else to buy.</p>
-                <p>If every decision, customer problem, bit of knowledge and important relationship comes back to you, the buyer is not just buying the business. They need you to keep it working.</p>
-                <p>The aim is to separate the business from the owner. Build something that can make decisions, serve customers and keep moving without everything coming back through one person.</p>
-                <p>If the business owns you, it is going to be very difficult to sell it. And the business cannot sell you with it.</p>
+                <p>If the business owns you, it is going to be very difficult to sell it. And the business cannot sell you with it. It is worth knowing how much of it still comes back to you.</p>
                 <div class="sr-route-actions">
                     <a href="/owner-dependency-quiz" class="btn btn-outline">See how dependent the business is on you</a>
                 </div>
-                <p class="sr-aside">The Owner Dependency Quiz, about two minutes, no charge.</p>
+                <p class="sr-aside">The Owner Dependency Quiz, about five minutes, no charge.</p>
             </div>
         </div>
 
         <div class="sr-final">
             <h2>Start with a conversation</h2>
-            <p>Thirty minutes, no charge. Tell us where the business is and what you are thinking, and we will say plainly whether this is work worth doing yet, and what it would involve if it is.</p>
+            <p>The conversation takes thirty minutes and costs nothing. We will say plainly whether this is work worth doing yet, and what it would involve if it is.</p>
             <div class="sr-final-actions">
                 <a href="/book-a-30-minute-conversation" class="btn btn-primary">Book a 30 minute conversation</a>
                 <a href="/where-to-start/commercial-review" class="btn btn-outline">Or start with the £500 Commercial Review</a>
