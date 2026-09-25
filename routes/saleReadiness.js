@@ -91,9 +91,16 @@ async function loadThemeAndShell() {
 //
 // The phone, name, email, day/time, message and "How did you hear about us"
 // fields are untouched, as is the form's endpoint and behaviour.
+// Copy set by Tom on 25/09/2026, replacing the first override of the same
+// day. That one opened "Tell us what you are weighing up", which still cast
+// the visitor as undecided; this asks the question the page is actually about
+// and answers it from the owner's side. The <br /><br /> is how the global
+// contact.body already carries a paragraph break, since the footer renders
+// this field unescaped. The message placeholder is deliberately unchanged:
+// Tom's brief set the heading and the body and said no other copy changes.
 const SALE_READINESS_CONTACT = {
-  heading: 'Tell us what you are weighing up.',
-  body: 'You do not need a decision made or a polished set of accounts. Tell us roughly where the business is, and we will come back to you.',
+  heading: 'Are you ready to sell?',
+  body: "You've spent years putting everything into the business. At some point, it should give something back. If you decide to sell, our job is to make sure the value you've built is actually there for someone else to buy.<br /><br />Tell us where the business is now and what you are thinking about doing next.",
   messagePlaceholder: 'What you are considering, and where the business is now'
 };
 

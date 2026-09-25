@@ -183,20 +183,33 @@ test('no new price, no new checkout and no new conversion label', () => {
   assert.deepStrictEqual(labels, [], 'a Google Ads conversion label has been added to this page');
 });
 
-test('the commercial boundary is stated on the page, not just in a contract', () => {
+test('the professional boundary is stated on the page, not just in a contract', () => {
+  // NARROWED ON TOM'S INSTRUCTION, 25/09/2026, and the change is recorded
+  // rather than made quietly because it removes assertions.
+  //
+  // This used to require the page to say, in as many words, that Arrington is
+  // not a broker, valuer or exit planner, and to exclude finding buyers,
+  // negotiating, legal drafting and tax structuring. Tom replaced that
+  // defensive list with positive copy and instructed that it must not be
+  // re-added underneath. So those assertions are gone: keeping them would
+  // fail the page for obeying him.
+  //
+  // What his brief DID require is that "the important professional boundary"
+  // survives, and that is what this now pins: the page must still name the
+  // specialists whose work is not ours and say we work alongside them. The
+  // page falling completely silent on the limits of the engagement is still
+  // a failure, and that is the property worth keeping.
   const view = emitted(VIEW);
-  // Each of the three roles Arrington is not, named explicitly. A visitor who
-  // reads this page and still asks us to find them a buyer is the expensive
-  // failure mode, so the words have to be on the page.
-  for (const word of ['broker', 'valuer', 'exit planner']) {
+  for (const specialist of ['solicitor', 'accountant', 'valuer', 'specialist']) {
     assert.ok(
-      new RegExp(`\\b${word}`, 'i').test(view),
-      `the page does not say we are not a ${word}`
+      new RegExp(`\\b${specialist}`, 'i').test(view),
+      `the boundary no longer names a ${specialist}`
     );
   }
-  for (const excluded of ['find buyers', 'negotiate', 'legal drafting', 'tax structuring']) {
-    assert.ok(view.toLowerCase().includes(excluded), `the page does not exclude ${excluded}`);
-  }
+  assert.ok(
+    /work alongside them/i.test(view),
+    'the page no longer says we work alongside the specialists it names'
+  );
 });
 
 test('nothing is promised that the brief forbids promising', () => {
@@ -299,18 +312,20 @@ test('operator credibility is controlled copy, and sits above the two routes', (
   );
 });
 
-test('the cream treatment on "What we do not do" is kept', () => {
-  // Tom singled this out in the reshape review: "Keep the cream 'What we do
-  // not do' treatment. It works and gives the page an important visual and
-  // commercial break." Nothing guarded it, and a planted removal passed all
-  // fourteen other tests, which is exactly why this exists.
+test('the cream treatment is kept, on the section that now carries it', () => {
+  // Tom singled the treatment out in the reshape review: "Keep the cream
+  // treatment and its position." On 25/09/2026 he replaced the section's
+  // copy, so the heading this anchors on moved from "What we do not do" to
+  // "We stay in your corner". The TREATMENT is the thing under guard, not the
+  // old heading, and a planted removal of the cream passed every other test,
+  // which is why this exists at all.
   const body = bodyOf(VIEW);
-  const heading = body.indexOf('What we do not do');
-  assert.ok(heading > -1, 'the "What we do not do" section has gone');
+  const heading = body.indexOf('We stay in your corner');
+  assert.ok(heading > -1, 'the "We stay in your corner" section has gone');
   const section = body.slice(heading, heading + 1200);
   assert.ok(
     /class="sr-card surface-paper"/.test(section),
-    'the warm paper surface has been removed from the "What we do not do" card'
+    'the warm paper surface has been removed from the "We stay in your corner" card'
   );
 
   // And it stays the ONLY paper surface on the page. It works as a break
@@ -406,7 +421,7 @@ test('the footer enquiry copy is overridden for this page only', () => {
   assert.ok(/SALE_READINESS_CONTACT/.test(route), 'the per-page contact override has gone');
   for (const field of ['heading', 'body', 'messagePlaceholder']) {
     assert.ok(
-      new RegExp(`${field}:\\s*'`).test(route),
+      new RegExp(`${field}:\\s*['"\`]`).test(route),
       `the override no longer sets ${field}`
     );
   }
@@ -416,18 +431,115 @@ test('the footer enquiry copy is overridden for this page only', () => {
     'the override is no longer spread over the shared pageContact, so other fields may be lost'
   );
 
-  // Half two, and the one that actually protects the rest of the site: this
+  // Half two, and the one that actually protects the rest of the site. Both
+  // checks run against `code` rather than the raw file, for the same reason
+  // the wording check does: the comment explaining this override has to name
+  // the global rows it deliberately leaves alone, and a raw scan flags that
+  // explanation. What matters is that no statement READS or WRITES them.
+  // This
   // must never become an edit to the shared contact.* rows, which would
   // rewrite the footer on every page. The route may read content, but it must
   // not write it.
   assert.ok(
-    !/UPDATE\s+content|INSERT\s+INTO\s+content/i.test(route),
+    !/UPDATE\s+content|INSERT\s+INTO\s+content/i.test(code),
     'the sale-readiness route now writes to the global content table'
   );
   assert.ok(
-    !/contact\.heading|contact\.body/.test(route),
+    !/contact\.heading|contact\.body/.test(code),
     'the route references the global contact rows directly; the override must be local to this page'
   );
+});
+
+test('each route card is clickable as a whole, with exactly one link in it', () => {
+  // Tom, 25/09/2026: the whole card should go where its button goes, with the
+  // button still visible. The accessibility property is the one under guard:
+  // ONE link per card, so there is one tab stop, one announced destination
+  // and no duplicate navigation. A wrapping anchor or a JS click handler
+  // would each break that, which is why this checks the structure and not
+  // just that clicking works.
+  const body = bodyOf(VIEW);
+  const routes = body.slice(body.indexOf('sr-routes'), body.indexOf('What a buyer will want'));
+
+  // Split on the card opener only. A plain indexOf/split on "sr-route" also
+  // matches the sr-route-actions wrapper INSIDE each card and reports four
+  // cards, which is what the first draft of this test did. The lookahead
+  // requires the class name to end there, so the -actions wrapper is excluded.
+  const cards = routes.split(/<div class="sr-route(?=["\s])/).slice(1);
+  assert.strictEqual(cards.length, 2, 'there are no longer exactly two route cards');
+  for (const card of cards) {
+    const anchors = card.match(/<a\s/g) || [];
+    assert.strictEqual(anchors.length, 1, 'a route card has more than one link in it');
+    assert.ok(/class="btn [^"]*sr-route-link"/.test(card), 'the card link is no longer the visible button');
+  }
+
+  // No wrapping anchor and no click handler: either would be a second way to
+  // navigate that the single announced link does not account for.
+  assert.ok(!/<a[^>]*>\s*<div class="sr-route/.test(body), 'a route card is wrapped in an anchor, nesting its button link');
+  const view = read(VIEW);
+  assert.ok(!/addEventListener\('click'/.test(view), 'a click handler has been added; the card must navigate through its own link');
+
+  // The stretch itself, and the focus ring that makes it usable by keyboard.
+  assert.ok(/\.sr-route-link::after/.test(view), 'the stretched-link overlay has gone, so only the button is clickable');
+  assert.ok(/\.sr-route\s*\{[^}]*position:\s*relative/.test(view), 'the card is no longer positioned, so the overlay would escape it');
+  assert.ok(/\.sr-route:focus-within/.test(view), 'keyboard focus is no longer shown at card level');
+});
+
+test('each route card still goes to its own destination', () => {
+  // The whole-card change must not have crossed the two destinations over.
+  const body = bodyOf(VIEW);
+  const prep = body.indexOf('You are preparing ahead');
+  const now = body.indexOf('You are already selling');
+  const buyer = body.indexOf('What a buyer will want');
+  assert.ok(prep > -1 && now > prep && buyer > now, 'the two route cards are no longer in the expected order');
+
+  const prepCard = body.slice(prep, now);
+  const nowCard = body.slice(now, buyer);
+  assert.ok(prepCard.includes('/where-to-start/commercial-review'), 'preparing ahead no longer leads to the Commercial Review');
+  assert.ok(!prepCard.includes('/book-a-30-minute-conversation'), 'preparing ahead now also offers the conversation');
+  assert.ok(nowCard.includes('/book-a-30-minute-conversation'), 'already selling no longer leads to the conversation');
+  assert.ok(!nowCard.includes('/where-to-start'), 'already selling points at a purchase page; that reader goes to a conversation first');
+});
+
+test('the buyer items carry gold rules and stay unboxed', () => {
+  // Tom, 25/09/2026: gold rather than grey, but "do not turn them into six
+  // cards". Both halves are asserted, because satisfying one by breaking the
+  // other is exactly the likely mistake.
+  const view = read(VIEW);
+  const rule = view.match(/\.sr-item\s*\{[^}]*\}/);
+  assert.ok(rule, 'the .sr-item rule has gone');
+  assert.ok(/border-top:[^;]*var\(--accent\)/.test(rule[0]), 'the buyer items no longer carry a gold top rule');
+  for (const boxed of ['border-radius', 'background']) {
+    assert.ok(!new RegExp(boxed).test(rule[0]), `the buyer items have gained ${boxed}, which turns them into cards`);
+  }
+  assert.ok(!/border:\s/.test(rule[0]), 'the buyer items have gained a full border, which turns them into cards');
+});
+
+test('the owner-dependency section links to the real quiz, before the closing CTA', () => {
+  // Tom, 25/09/2026: add this before the final conversion area and link it to
+  // the EXISTING Owner Dependency / Owner Check route. "Do not invent a new
+  // assessment or destination", so the destination is asserted against the
+  // route actually registered in server.js rather than trusted from the view.
+  const body = bodyOf(VIEW);
+  const section = body.indexOf('If the business depends on you, start there');
+  const final = body.indexOf('sr-final');
+  assert.ok(section > -1, 'the owner-dependency section has gone');
+  assert.ok(section < final, 'the owner-dependency section has moved below the closing CTA');
+
+  const block = body.slice(section, final);
+  assert.ok(block.includes('href="/owner-dependency-quiz"'), 'it no longer links to the Owner Dependency Quiz');
+
+  const server = read('server.js');
+  assert.ok(
+    /app\.get\('\/owner-dependency-quiz'/.test(server),
+    'the destination is not a registered route; no new assessment may be invented'
+  );
+
+  // The Brand Operating System fixes the quiz's public name and forbids
+  // renaming it, so the page must call it what it is called.
+  assert.ok(/Owner Dependency Quiz/.test(block), 'the quiz is no longer named by its exact public name');
+
+  // It must not outrank the conversation, which is the page's primary CTA.
+  assert.ok(!/btn btn-primary/.test(block), 'the owner-dependency CTA has become a primary button, outranking the conversation');
 });
 
 test('the two changes the brief deferred were not made', () => {
