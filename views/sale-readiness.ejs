@@ -130,6 +130,29 @@
         .sr-route h3 { font-size: 1.2rem; margin-bottom: 0.6rem; }
         .sr-route p { font-size: 0.97rem; margin-bottom: 1.4rem; }
         .sr-route-actions { margin-top: auto; }
+        /* WHOLE-CARD CLICKABLE. The anchor stays the only link; its ::after is
+           stretched over the card, so a click anywhere in the card activates
+           that same anchor. See the EJS comment on the markup for why this is
+           done here rather than by wrapping the card or adding a JS handler. */
+        .sr-route { position: relative; cursor: pointer; transition: border-color 0.2s, background-color 0.2s; }
+        .sr-route-link::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 6px;
+        }
+        /* The card reacts as one object, so it reads as clickable before the
+           visitor finds the button. */
+        .sr-route:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 5%, transparent); }
+        /* Keyboard focus lands on the button, which is inside the card, so the
+           ring is drawn at CARD level. Without this a keyboard user would see
+           a focus ring on a button while the whole card is what activates. */
+        .sr-route:focus-within { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: 3px; }
+        /* The button keeps its own hover colours rather than inheriting the
+           card's, so it still reads as the control it is. */
+        .sr-route:hover .btn-outline { background: var(--accent); color: var(--black); }
+        .sr-route:hover .btn-primary { background: var(--accent-hover); border-color: var(--accent-hover); }
+        @media (prefers-reduced-motion: reduce) { .sr-route { transition: none; } }
         /* Reduced side padding inside the route cards only. At the 700px
            column each card is about 337px wide, and the site's standard
            1.5rem button padding left too little for "Book a 30 minute
@@ -145,7 +168,14 @@
            numbered, because these are not a sequence and a number would
            assert an order that does not exist. */
         .sr-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem 2rem; }
-        .sr-item { padding-top: 1.1rem; border-top: 1px solid var(--border); }
+        /* Gold rules rather than grey (Tom, 25/09/2026), so the section carries
+           the brand without the items turning into six cards. 40% is the same
+           accent strength the site already uses for a restrained accent
+           hairline on .case-more a in index.ejs, so this is the existing
+           treatment rather than a new one. The items stay unboxed: a rule
+           only, no border, background or radius, because six bordered boxes
+           would read as six calls to action rather than supporting detail. */
+        .sr-item { padding-top: 1.1rem; border-top: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); }
         .sr-item-lead { display: block; font-weight: 700; color: var(--text-bright); margin-bottom: 0.3rem; font-size: 0.98rem; }
         .sr-item p { font-size: 0.94rem; color: var(--text-muted); margin: 0; }
 
@@ -276,13 +306,37 @@
             <h2>Which of these is you?</h2>
             <p class="sr-intro">The two need different first steps, so it is worth being honest about which one you are in.</p>
 
+            <%# WHOLE-CARD CLICKABLE, with exactly ONE link per card.
+                Tom's refinement pass of 25/09/2026: the whole card should go
+                where its button goes, with the button still visible.
+
+                Done with the stretched-link pattern rather than a wrapping
+                anchor or a JS click handler, and the reason is accessibility.
+                Wrapping the card in an <a> would either nest the button's
+                anchor inside it (invalid HTML, undefined behaviour) or force
+                the button to stop being a link. A JS handler on the card
+                would give a mouse user a second way to navigate that a
+                keyboard user does not have, and screen readers would announce
+                one link while the card silently had another.
+
+                Here the BUTTON IS THE ONLY LINK. Its ::after is stretched
+                over the whole card, so a click anywhere lands on that same
+                anchor. There is one tab stop per card, one announced link,
+                one destination, and no duplicate navigation. The card shows
+                the focus ring via :focus-within, so keyboard focus is visible
+                at card level rather than only on the button.
+
+                Known cost, accepted: the overlay sits above the card's text,
+                so text inside a card is not selectable by dragging. That is
+                the standard trade-off of this pattern and these cards carry
+                two short sentences each. %>
             <div class="sr-routes">
                 <div class="sr-route">
                     <span class="sr-route-label">A sale is years away</span>
                     <h3>You are preparing ahead</h3>
                     <p>Nothing is under way yet. This is the better position to be in, because most of what makes a business straightforward to hand over takes time to put right.</p>
                     <div class="sr-route-actions">
-                        <a href="/where-to-start/commercial-review" class="btn btn-outline">The £500 Commercial Review</a>
+                        <a href="/where-to-start/commercial-review" class="btn btn-outline sr-route-link">The £500 Commercial Review</a>
                     </div>
                 </div>
 
@@ -291,7 +345,7 @@
                     <h3>You are already selling</h3>
                     <p>There is an offer on the table, or conversations have started. Speak to us before buying anything, because some of what a buyer asks about cannot be put right inside a live process.</p>
                     <div class="sr-route-actions">
-                        <a href="/book-a-30-minute-conversation" class="btn btn-primary">Book a 30 minute conversation</a>
+                        <a href="/book-a-30-minute-conversation" class="btn btn-primary sr-route-link">Book a 30 minute conversation</a>
                     </div>
                 </div>
             </div>
@@ -367,17 +421,32 @@
             <p class="sr-aside">That work is agreed separately once we both know what it involves. There is no standing package price for it, because the work is different in every business, and it is not a retainer.</p>
         </div>
 
+        <%# THE CREAM PANEL. Same treatment, same position, positive copy.
+            Tom's refinement pass of 25/09/2026: this was "What we do not do",
+            and it spent the page's strongest visual break listing what
+            Arrington will not touch.
+
+            The professional boundary is PRESERVED, in the second paragraph:
+            where a solicitor, accountant, valuer or other specialist is
+            needed we say so and work alongside them. Tom's instruction was
+            explicit that the old defensive list must not be re-added
+            underneath, so it is not. Worth knowing for whoever reads this
+            next: the page no longer says in as many words that Arrington is
+            not a broker or an exit planner. That was Tom's call, made with
+            the commercial review's warning about brokerage enquiries in
+            front of him, and it is his to reverse. %>
         <div class="sr-section">
-            <h2>What we do not do</h2>
+            <h2>We stay in your corner</h2>
             <div class="sr-card surface-paper">
-                <p>We are not a broker, a valuer or an exit planner, and this is not advice on whether you should sell. We do not find buyers, introduce you to them or negotiate on your behalf. We do not carry out formal valuations, legal drafting, tax structuring or specialist accounting work.</p>
-                <p>Where any of that is needed we will say so plainly, and work alongside the accountant or solicitor you appoint. We make no claim about what the business would sell for, and no promise that it will sell at all.</p>
+                <p>We work on the business itself. The things that make it stronger to own today and easier for somebody else to take over tomorrow.</p>
+                <p>That can mean reducing how much depends on you, tightening margins and pricing, improving the information you have, sorting processes that only exist in people's heads, strengthening how the team operates and dealing with commercial problems that have been left sitting there.</p>
+                <p>Where the job needs a solicitor, accountant, valuer or another specialist, we will tell you plainly and work alongside them. You do not need us pretending to be something we're not. You need somebody staying on the commercial side of the table with you and making sure the business itself gets stronger.</p>
             </div>
         </div>
 
         <div class="sr-section">
-            <h2>How you would know it worked</h2>
-            <p class="sr-intro">Agreed before the work starts, so there is something to check against afterwards.</p>
+            <h2>What should be stronger afterwards</h2>
+            <p class="sr-intro">Before we start, we agree what needs to improve. That gives us something real to measure the work against.</p>
             <ul class="sr-dots sr-dots--two">
                 <li>How many decisions still have to come through you.</li>
                 <li>The time you spend on work only you can do.</li>
@@ -385,6 +454,35 @@
                 <li>Margin by type of work, rather than one figure for everything.</li>
                 <li>Which records an accountant would now accept without rebuilding them.</li>
             </ul>
+        </div>
+
+        <%# OWNER DEPENDENCY, placed immediately before the closing CTA on
+            Tom's instruction of 25/09/2026. It is the argument that makes the
+            rest of the page matter, and it hands the visitor a free, concrete
+            next step that is not a purchase.
+
+            The destination is the EXISTING route, inspected before writing:
+            /owner-dependency-quiz, registered in server.js and listed in
+            sitemap.xml. Nothing new was invented. "Owner Dependency Quiz" is
+            its exact public name and the Brand Operating System forbids
+            renaming it, so the supporting line names it precisely while the
+            button carries Tom's own wording.
+
+            Outline rather than filled, deliberately: the conversation below
+            is still the page's primary call to action and this must not
+            outrank it. %>
+        <div class="sr-section">
+            <h2>If the business depends on you, start there</h2>
+            <div class="sr-card">
+                <p>A business that only works because you are there every day is difficult for somebody else to buy.</p>
+                <p>If every decision, customer problem, bit of knowledge and important relationship comes back to you, the buyer is not just buying the business. They need you to keep it working.</p>
+                <p>The aim is to separate the business from the owner. Build something that can make decisions, serve customers and keep moving without everything coming back through one person.</p>
+                <p>If the business owns you, it is going to be very difficult to sell it. And the business cannot sell you with it.</p>
+                <div class="sr-route-actions">
+                    <a href="/owner-dependency-quiz" class="btn btn-outline">See how dependent the business is on you</a>
+                </div>
+                <p class="sr-aside">The Owner Dependency Quiz, about two minutes, no charge.</p>
+            </div>
         </div>
 
         <div class="sr-final">
