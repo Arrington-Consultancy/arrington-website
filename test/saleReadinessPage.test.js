@@ -542,6 +542,63 @@ test('the owner-dependency section links to the real quiz, before the closing CT
   assert.ok(!/btn btn-primary/.test(block), 'the owner-dependency CTA has become a primary button, outranking the conversation');
 });
 
+test('the illustrative image is used once, optimised, and never as evidence', () => {
+  // Tom's instruction of 25/09/2026: the image is AI-generated for this page,
+  // it is illustrative, and it "must not be presented or positioned as
+  // evidence of a real client, real business or Arrington engagement". Every
+  // assertion here exists to keep that true after somebody else edits the
+  // page, because nothing about the file itself says it is an illustration.
+  const body = bodyOf(VIEW);
+  const view = read(VIEW);
+  const fs = require('node:fs');
+
+  // ONCE. Tom was explicit that neither the second generated image he sent
+  // nor any other may be added.
+  const imgs = body.match(/<img\s/g) || [];
+  assert.strictEqual(imgs.length, 1, 'the page no longer carries exactly one image');
+  const pictures = body.match(/<picture>/g) || [];
+  assert.strictEqual(pictures.length, 1, 'the page no longer carries exactly one <picture>');
+
+  // POSITION. It belongs to the owner-dependency section, which argues a case
+  // and names no client, outcome or figure. It must not drift to the hero,
+  // the credibility block or the Evidence link, where a reader would take it
+  // as documentary.
+  const section = body.indexOf('If the business depends on you, start there');
+  const card = body.indexOf('<div class="sr-card">', section);
+  const imgAt = body.indexOf('<picture>');
+  assert.ok(section > -1 && imgAt > section && imgAt < card, 'the image is no longer between that H2 and its copy');
+  assert.ok(body.indexOf('sr-cred') < section, 'the image has moved next to the credibility block');
+  assert.ok(imgAt < body.indexOf('href="/evidence"'), 'sanity: the Evidence link should still follow, not precede, the image');
+
+  // HONEST ALT TEXT. It must describe the scene and must not assert the scene
+  // is real or belongs to anyone.
+  const alt = (view.match(/alt="([^"]+)"/) || [])[1];
+  assert.ok(alt, 'the image has no alt text');
+  assert.match(alt, /^Illustration/, 'the alt text no longer declares itself an illustration');
+  for (const forbidden of ['client', 'customer of', 'our work', 'case study', 'Arrington client']) {
+    assert.ok(!new RegExp(forbidden, 'i').test(alt), `the alt text claims the scene is a real ${forbidden}`);
+  }
+
+  // OPTIMISED. The 1.78MB PNG source must never be shipped, and what is
+  // shipped has to actually exist at a sensible weight.
+  assert.ok(!/\.png/i.test(body), 'a PNG is being served; the source was not converted');
+  assert.ok(/loading="lazy"/.test(view), 'the image is no longer lazy-loaded');
+  assert.ok(/width="\d+" height="\d+"/.test(view), 'the image has no intrinsic size, so the copy will jump as it loads');
+  assert.ok(/type="image\/webp"/.test(view), 'the WebP source has gone, leaving only the fallback');
+
+  const files = [
+    ['public/img/sale-readiness/owner-watching-700.webp', 120],
+    ['public/img/sale-readiness/owner-watching-1400.webp', 200],
+    ['public/img/sale-readiness/owner-watching-1400.jpg', 400]
+  ];
+  for (const [f, maxKb] of files) {
+    assert.ok(fs.existsSync(f), `a referenced image file is missing: ${f}`);
+    const kb = fs.statSync(f).size / 1024;
+    assert.ok(kb < maxKb, `${f} is ${Math.round(kb)}KB, over the ${maxKb}KB budget for this page`);
+    assert.ok(body.includes(f.replace('public', '')), `${f} exists but nothing references it`);
+  }
+});
+
 test('the two changes the brief deferred were not made', () => {
   // "Do not wire succession answers into Product Guide routing or change the
   // Market Ready Test commercial CTA in this build. Those remain separate

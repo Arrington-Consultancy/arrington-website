@@ -196,6 +196,18 @@
         /* The review: two numbered steps, because this genuinely IS a
            sequence. The price is pulled out of the sequence rather than
            becoming a third step, since paying is not a stage of the work. */
+        /* The one image on the page. Radius matches the cards so it belongs to
+           the same visual system, and width/height on the element plus
+           height:auto here keeps the reserved space correct at every width
+           without a layout jump when it loads. */
+        .sr-figure {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+        }
+
         .sr-card { border: 1px solid var(--border); border-radius: 6px; padding: 1.9rem 2rem; }
         .sr-step { display: grid; grid-template-columns: auto 1fr; gap: 1rem; }
         .sr-step + .sr-step { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
@@ -473,6 +485,46 @@
             outrank it. %>
         <div class="sr-section">
             <h2>If the business depends on you, start there</h2>
+            <%# ILLUSTRATIVE IMAGE, AND THE PROVENANCE MATTERS MORE THAN THE
+                PLACEMENT. Tom's instruction of 25/09/2026, recorded verbatim
+                because a later reader could easily mistake this for a client
+                photograph: "the image is AI-generated specifically for
+                Arrington Consultancy for this page. It is illustrative and
+                must not be presented or positioned as evidence of a real
+                client, real business or Arrington engagement."
+
+                So it sits beside an ARGUMENT, never beside a claim. This
+                section makes a case about owner dependency and names no
+                client, no outcome and no figure. It is deliberately NOT in
+                the hero, not near the credibility block, and not near the
+                Evidence link, because in any of those places a reader would
+                reasonably take it as documentary.
+
+                The alt text says "illustration" in its first word for the
+                same reason. The site already has this convention: the Abacus
+                photo in index.ejs is described as "representative of" its
+                case study rather than as a record of it.
+
+                One image only, on Tom's instruction. Do not add the second
+                generated image he sent, or any other, to this page.
+
+                Sizes: the column caps at 700px, so 1400 is the 2x case and
+                700 the 1x; nothing larger is ever served. The 1.78MB PNG
+                source is not shipped. width/height are set so the space is
+                reserved before it loads and the copy underneath does not
+                jump. %>
+            <picture>
+                <source
+                    type="image/webp"
+                    srcset="/img/sale-readiness/owner-watching-700.webp 700w, /img/sale-readiness/owner-watching-1400.webp 1400w"
+                    sizes="(max-width: 760px) calc(100vw - 3rem), 700px">
+                <img
+                    class="sr-figure"
+                    src="/img/sale-readiness/owner-watching-1400.jpg"
+                    width="1400" height="700"
+                    loading="lazy" decoding="async"
+                    alt="Illustration of a business owner standing back in a workshop doorway, watching staff load vans and work in the yard at the end of the day">
+            </picture>
             <div class="sr-card">
                 <p>A business that only works because you are there every day is difficult for somebody else to buy.</p>
                 <p>If every decision, customer problem, bit of knowledge and important relationship comes back to you, the buyer is not just buying the business. They need you to keep it working.</p>
