@@ -289,24 +289,26 @@ test('headings descend without skipping, and nothing outranks the H1', () => {
 });
 
 test('canonical and indexing behaviour are deliberate', () => {
+  // TOM'S APPROVED DECISION, 25/09/2026, verbatim: "keep the page indexable,
+  // but do not add it to sitemap.xml". This was built as a judgement call and
+  // then put to him; it is now settled, so this test guards a decision rather
+  // than a default. The two halves pull in opposite directions and both
+  // matter: indexable means a social or ad visitor is never served a page
+  // asking search engines to ignore it, and out of the sitemap means it stays
+  // a campaign destination rather than becoming another organic front door,
+  // which the build brief explicitly ruled out.
   const view = read(VIEW);
   assert.ok(
     view.includes(`<link rel="canonical" href="https://www.arringtonconsultancy.com${PATH}">`),
     'the canonical tag is missing or points somewhere else'
   );
-  // Not noindexed: campaign traffic arriving from a social post must not be
-  // served a page that asks search engines to ignore it, and nobody decided
-  // to hide it.
-  assert.ok(!/noindex/i.test(view), 'the page has been set to noindex, which is a commercial decision nobody recorded');
+  assert.ok(!/noindex/i.test(view), 'the page has been set to noindex, against the approved decision of 25/09/2026');
 
-  // Kept OUT of sitemap.xml on purpose: it is a campaign destination, not
-  // another organic front door (see the report accompanying this build; this
-  // is flagged for Tom's decision rather than settled).
   const server = read('server.js');
   const sitemapBlock = server.slice(server.indexOf('ASSESSMENT_ROUTE_LASTMOD'), server.indexOf('res.type(\'application/xml\')'));
   assert.ok(
     !sitemapBlock.includes('get-your-business-ready-to-sell'),
-    'the campaign page has been added to the sitemap; that is a decision for Tom, not a default'
+    'the campaign page has been added to sitemap.xml, against the approved decision of 25/09/2026'
   );
 });
 
