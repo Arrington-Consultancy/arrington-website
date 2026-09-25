@@ -7016,7 +7016,11 @@ async function seed() {
             const rows = [
               [`${linkId}.label`, ''],
               [`${linkId}.heading`, 'Thinking about selling, or just want the option?'],
-              [`${linkId}.subtext`, 'A business that could run without you is worth more to a buyer and easier to own in the meantime. We look at what a buyer would question and what is worth strengthening first.'],
+              // Wording corrected on Tom's instruction of 25/09/2026 ("worth
+              // more to a buyer" was an unevidenced valuation implication).
+              // An existing database is corrected by the guarded migration
+              // immediately below; this default is what a fresh one gets.
+              [`${linkId}.subtext`, 'A business that could run without you is easier for somebody else to take over and better to own in the meantime. We look at what a buyer would question and what is worth strengthening first.'],
               [`${linkId}.button_text`, 'Getting ready to sell'],
               [`${linkId}.button_link`, SR_SLUG]
             ];
@@ -7044,6 +7048,78 @@ async function seed() {
             );
           }
         }
+      }
+    }
+  }
+
+
+  // SALE READINESS: What We Do wording correction (25/09/2026).
+  //
+  // Tom, reviewing the live section: "worth more to a buyer" is an
+  // unevidenced valuation implication, and the Brand Operating System keeps
+  // sale readiness out of valuation. The underlying point (less dependent on
+  // the owner, easier to transfer) is kept. One row changes: the section's
+  // subtext. Heading, button and destination are untouched.
+  //
+  // WHY A MIGRATION AND NOT JUST THE DEFAULT ABOVE: the migration that
+  // created this section is marker-guarded and has already run on
+  // production (it allocated intervention__25), so changing its default
+  // reaches a fresh database only.
+  //
+  // Guarded the established way, so a CMS edit always wins:
+  //   - scoped by DESTINATION, the What We Do instance whose button_link is
+  //     the sale-readiness slug, never by an assumed instance id, since
+  //     production and a fresh database allocate different ids;
+  //   - the UPDATE matches the exact OLD value, so a row Tom has edited in
+  //     the CMS is left alone;
+  //   - a run-once marker, so if the old sentence is ever typed back in
+  //     deliberately, a later deploy does not rewrite it again.
+  // The marker is stamped only once the section has been found, whatever its
+  // value; with no such section yet there is nothing to decide, and the
+  // corrected default above is what will be written when it is created.
+  {
+    const SR_COPY_MARKER = 'what-we-do.sale_readiness_link_copy_2026-09-25';
+    const SR_COPY_SLUG = 'get-your-business-ready-to-sell';
+    const OLD_SUBTEXT = 'A business that could run without you is worth more to a buyer and easier to own in the meantime. We look at what a buyer would question and what is worth strengthening first.';
+    const NEW_SUBTEXT = 'A business that could run without you is easier for somebody else to take over and better to own in the meantime. We look at what a buyer would question and what is worth strengthening first.';
+
+    const { rows: markerRows } = await db.query(
+      'SELECT 1 FROM content WHERE section_key = $1', [SR_COPY_MARKER]
+    );
+
+    if (markerRows.length === 0) {
+      const { rows: wwdRows } = await db.query(
+        "SELECT section_order FROM pages WHERE slug = 'what-we-do'"
+      );
+      const order = wwdRows.length && Array.isArray(wwdRows[0].section_order) ? wwdRows[0].section_order : [];
+
+      const { rows: linkRows } = await db.query(
+        "SELECT section_key FROM content WHERE section_key LIKE '%.button_link' AND content = $1",
+        [SR_COPY_SLUG]
+      );
+      const ids = linkRows
+        .map((r) => r.section_key.replace(/\.button_link$/, ''))
+        .filter((id) => order.includes(id));
+
+      if (ids.length === 0) {
+        console.log('Sale readiness What We Do wording: no sale-readiness section on What We Do yet, nothing to correct.');
+      } else {
+        let changed = 0;
+        for (const id of ids) {
+          const res = await db.query(
+            'UPDATE content SET content = $1, updated_at = NOW() WHERE section_key = $2 AND content = $3',
+            [NEW_SUBTEXT, `${id}.subtext`, OLD_SUBTEXT]
+          );
+          changed += res.rowCount;
+        }
+        console.log(
+          `Sale readiness What We Do wording: ${changed} of ${ids.length} section(s) corrected (${ids.join(', ')}); ` +
+          'a section left alone had been edited in the CMS or was already correct, and the CMS wins.'
+        );
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [SR_COPY_MARKER, 'true']
+        );
       }
     }
   }

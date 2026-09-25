@@ -265,7 +265,17 @@ test('no new price, no new checkout and no new conversion label', () => {
   // £500 is the existing public price of the existing entry offer. Any OTHER
   // figure on this page would be a new published price, which the brief
   // forbids: "Do not create a new public sale-readiness package price."
-  const figures = [...view.matchAll(/£\s?[\d][\d,]*/g)].map((m) => m[0].replace(/\s/g, ''));
+  //
+  // ONE EXCEPTION, and it is pinned to its exact sentence rather than
+  // allowed in general. Tom's approved copy of 25/09/2026 in "We stay in
+  // your corner" says nobody should spend £5,000 on something that can
+  // competently be done for £500. That is an illustration of wasted
+  // specialist cost, not an Arrington price. The sentence is removed before
+  // the scan, so any £ figure anywhere else still fails exactly as before.
+  const ILLUSTRATION = 'nobody should spend £5,000 on something that can competently be done for £500, simply because they are in the middle of a sale';
+  assert.ok(view.includes(ILLUSTRATION), 'the approved £5,000 illustration has changed; re-check it is still not a price before widening this');
+  const scanned = view.replace(ILLUSTRATION, '');
+  const figures = [...scanned.matchAll(/£\s?[\d][\d,]*/g)].map((m) => m[0].replace(/\s/g, ''));
   assert.ok(figures.length > 0, 'the £500 entry price has gone from the page');
   assert.deepStrictEqual(
     [...new Set(figures)],
@@ -307,6 +317,14 @@ test('the professional boundary is stated on the page, not just in a contract', 
   // specialists whose work is not ours and say we work alongside them. The
   // page falling completely silent on the limits of the engagement is still
   // a failure, and that is the property worth keeping.
+  //
+  // REWORDED ON 25/09/2026, and the assertion follows the wording rather than
+  // the other way round. Tom's copy rebuild replaced "we will tell you plainly
+  // and work alongside them" with "Where the job genuinely needs an
+  // accountant, a solicitor, a valuer or another specialist, use one." The
+  // property is unchanged: the page names the specialists whose work is not
+  // ours and sends the owner to them. So the four names are still required,
+  // and the sentence that names them must still direct the owner to use one.
   const view = emitted(VIEW);
   for (const specialist of ['solicitor', 'accountant', 'valuer', 'specialist']) {
     assert.ok(
@@ -314,9 +332,14 @@ test('the professional boundary is stated on the page, not just in a contract', 
       `the boundary no longer names a ${specialist}`
     );
   }
+  const boundary = view
+    .replace(/<[^>]+>/g, ' ')
+    .split(/(?<=[.!?])\s+/)
+    .find((s) => /\bvaluer\b/i.test(s));
+  assert.ok(boundary, 'no sentence names a valuer');
   assert.ok(
-    /work alongside them/i.test(view),
-    'the page no longer says we work alongside the specialists it names'
+    /\buse one\b/i.test(boundary),
+    `the sentence naming the specialists no longer sends the owner to them: ${boundary && boundary.trim()}`
   );
 });
 
@@ -443,18 +466,16 @@ test('the cream treatment is kept, on the section that now carries it', () => {
   assert.strictEqual(paperCount, 1, 'the warm paper surface is now used more than once, so it no longer breaks the page');
 });
 
-test('technology is a means, and the commercial problem is named first', () => {
-  const view = emitted(VIEW);
-  const techLine = view.split('\n').find((l) => /\bAI\b/.test(l) && /<li>/.test(l));
-  assert.ok(techLine, 'the technology line has gone from the implementation list');
-  assert.ok(
-    /commercial problem comes first/i.test(techLine),
-    'the technology line no longer subordinates technology to the commercial problem'
-  );
-  // Business problem first also means technology is not the page's opening
-  // pitch. Nothing about AI or systems may appear above the H1.
-  const aboveH1 = view.slice(0, view.indexOf('<h1'));
-  assert.ok(!/\bAI\b|shared workspace/i.test(aboveH1), 'technology appears before the page headline');
+test('technology is not pitched on this page', () => {
+  // REVERSED ON 25/09/2026. This used to require an AI line in the
+  // implementation list, subordinated to the commercial problem. Tom removed
+  // both the list and the AI paragraph: technology-as-a-means is an Arrington
+  // principle generally, but it is unnecessary on this page. So the property
+  // is now the stronger one: nothing on the page pitches AI, systems or a
+  // shared workspace at all.
+  const body = bodyOf(VIEW).replace(/<[^>]+>/g, ' ');
+  const hit = body.match(/\bAI\b|artificial intelligence|shared workspace|\bsystems\b/i);
+  assert.ok(!hit, `the page pitches technology again: "${hit && hit[0]}"`);
 });
 
 test('it renders in the site shell, with no inline styles', () => {
@@ -784,7 +805,11 @@ test('What We Do gains a route in, appended and guarded', () => {
   assert.ok(seed.includes(marker), 'the What We Do sale readiness link migration is missing');
 
   const block = seed.slice(seed.indexOf(marker));
-  const migration = block.slice(0, block.indexOf('Arrington AI Workspace: ingest'));
+  // Bounded at the wording-correction migration that follows it (25/09/2026),
+  // which DOES update a content row and is guarded in its own test below.
+  // Without this bound, that block's UPDATE would be attributed to this one.
+  const migration = block.slice(0, block.indexOf('SALE READINESS: What We Do wording correction'));
+  assert.ok(migration.length < block.length, 'the wording-correction migration has moved or gone; this slice is no longer bounded');
 
   // The destination slug, pinned here so renaming the route breaks a test
   // rather than the link. The CMS button-link <select> cannot offer this
@@ -845,11 +870,259 @@ test('What We Do gains a route in, appended and guarded', () => {
   // No price, no timeframe, no valuation claim in the copy it writes: the
   // destination page carries the commercial detail, and 02 ARRINGTON
   // COMMERCIAL POSITION governs what may be said about it.
-  const copy = migration.slice(migration.indexOf('const rows = ['), migration.indexOf('for (const [key, value]'));
+  // Comments stripped first: the note recording why the wording was corrected
+  // on 25/09/2026 has to name the "valuation implication" it removed, and a
+  // raw scan flags that explanation instead of the copy. Same rule as
+  // emitted() and cssRules() above.
+  const copy = migration
+    .slice(migration.indexOf('const rows = ['), migration.indexOf('for (const [key, value]'))
+    .replace(/\/\/[^\n]*/g, '');
   assert.ok(
     !/£|\bweeks?\b|\bmonths?\b|valuation|multiple|broker/i.test(copy),
     'the What We Do link copy has gained a price, timeframe or valuation claim'
   );
   // "we", not "I" — Tom's pronoun decision of 15/09/2026.
   assert.ok(!/\bI \b/.test(copy), 'the What We Do link copy uses first person singular');
+});
+
+// ---------------------------------------------------------------------------
+// THE APPROVED COPY SET OF 25/09/2026.
+//
+// Tom reviewed the middle of this page line by line and found generic,
+// invented consultancy copy written to fill a structure, plus a second
+// description of the Commercial Review. He rebuilt it from his own
+// commercial thinking and approved the result as one set. These tests pin
+// the DECISIONS in that set (what must be there, what must be gone), not
+// every word, so that an ordinary later CMS-style copy edit is not blocked
+// but a decision cannot be quietly reversed.
+// ---------------------------------------------------------------------------
+
+const visibleText = () => bodyOf(VIEW).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+
+test('the buyer section is exactly Tom\'s five points, with no sixth', () => {
+  const body = bodyOf(VIEW);
+  const start = body.indexOf('What a buyer will want to understand');
+  const end = body.indexOf('</div>\n        </div>', start);
+  assert.ok(start > -1 && end > start, 'the buyer section has gone');
+  const section = body.slice(start, end);
+
+  const leads = [...section.matchAll(/<span class="sr-item-lead">([^<]+)<\/span>/g)].map((m) => m[1]);
+  assert.deepStrictEqual(
+    leads,
+    [
+      'Owner dependency',
+      'Whether the numbers tell the true story',
+      'Revenue distribution and deal risk',
+      'What is actually adding value',
+      'Transferability'
+    ],
+    'the buyer points are no longer exactly Tom\'s five, in his order'
+  );
+
+  // Tom's own introductory principle, verbatim.
+  assert.ok(
+    section.includes('A potential buyer will almost always come in with the same underlying questions, even if they phrase them differently. Owners often answer some of them well, but frequently fail to frame the business in the way a buyer needs to understand it.'),
+    'the buyer section intro is no longer Tom\'s principle'
+  );
+  // His wording correction at approval: loss-making, not loss leading.
+  assert.ok(section.includes('Bloated or loss-making parts of a business'), 'Tom\'s "loss-making" correction has been lost');
+  assert.ok(!/loss leading/i.test(section), '"loss leading" is back, which Tom corrected at approval');
+  // The anchors of each principle, so a point cannot be hollowed out while
+  // keeping its heading.
+  for (const anchor of ['unplanned absence', '100 hours a week for free', 'one customer, one supplier or one relationship', 'commercially savage', 'explainable, and then transferable']) {
+    assert.ok(section.includes(anchor), `a buyer point has lost its substance: "${anchor}"`);
+  }
+});
+
+test('the odd fifth buyer point runs full width, and only on the grid', () => {
+  // Tom: do not invent a sixth point; make the fifth full width if that is
+  // the cleanest deliberate layout, and preserve responsive behaviour.
+  const css = cssRules(VIEW);
+  assert.ok(
+    /\.sr-grid\s*>\s*\.sr-item:last-child:nth-child\(odd\)\s*\{[^}]*grid-column:\s*1\s*\/\s*-1/.test(css),
+    'the odd last buyer item no longer spans the grid'
+  );
+  // Mobile is untouched: the grid still collapses to one column.
+  assert.ok(
+    /@media[^{]*\{[\s\S]*?\.sr-grid\s*\{[^}]*grid-template-columns:\s*1fr/.test(css),
+    'the buyer grid no longer collapses to one column on mobile'
+  );
+});
+
+test('the Commercial Review is explained on its own page, not restated here', () => {
+  // Tom: do not maintain two descriptions of one product. This section says
+  // why the existing Review is relevant and links to the canonical page.
+  const body = bodyOf(VIEW);
+  const start = body.indexOf('<h2>Where the Commercial Review comes in</h2>');
+  const end = body.indexOf('<h2>What happens after the Review</h2>');
+  assert.ok(start > -1, 'the "Where the Commercial Review comes in" heading has gone');
+  assert.ok(end > start, 'the "What happens after the Review" section has gone or moved above it');
+  const section = body.slice(start, end);
+
+  assert.ok(
+    section.includes('The £500 Commercial Review is where we look at the business through the eyes of a potential buyer'),
+    'the Review\'s relevance statement has gone'
+  );
+  assert.ok(section.includes('href="/where-to-start/commercial-review"'), 'the section no longer links to the canonical Commercial Review page');
+
+  // The product mechanics must not come back anywhere on the page.
+  const text = visibleText();
+  for (const [rx, what] of [
+    [/business days?/i, 'the delivery timeline'],
+    [/credited|credit\b/i, 'the £500 credit'],
+    [/six[- ]month/i, 'the six-month check-in'],
+    [/written assessment|written report/i, 'the written-report mechanics'],
+    [/What the Commercial Review establishes/, 'the old section heading']
+  ]) {
+    assert.ok(!rx.test(text), `the page restates ${what}, which lives on the Commercial Review page`);
+  }
+  assert.ok(!/class="sr-step"|class="sr-price"/.test(body), 'the numbered-step or price-block presentation is back');
+});
+
+test('after the Review: judged on value to the seller, with no shopping list', () => {
+  const body = bodyOf(VIEW);
+  const start = body.indexOf('<h2>What happens after the Review</h2>');
+  const end = body.indexOf('<h2>We stay in your corner</h2>');
+  assert.ok(start > -1 && end > start, 'the after-the-Review section has gone or moved');
+  const section = body.slice(start, end);
+
+  assert.ok(section.includes('The Review tells us where the problems are.'), 'the section no longer opens on Tom\'s principle');
+  assert.ok(section.includes('We do not fix things simply because they could be improved.'), 'the "not simply because they could be improved" principle has gone');
+  assert.ok(section.includes('Any further work is agreed separately'), 'further work is no longer said to be agreed separately');
+  // No list of work types, and no defence of the absence of a package price.
+  assert.ok(!/<ul|<li/.test(section), 'an implementation shopping list is back');
+  assert.ok(!/retainer|package price/i.test(visibleText()), 'the page defends the absence of a retainer or package price again');
+});
+
+test('"We stay in your corner" carries Tom\'s proposition, with the Brand OS fixes', () => {
+  const body = bodyOf(VIEW);
+  const start = body.indexOf('<h2>We stay in your corner</h2>');
+  const section = body.slice(start, body.indexOf('</div>', body.indexOf('surface-paper', start)));
+  assert.ok(start > -1, 'the "We stay in your corner" section has gone');
+
+  const pinned = [
+    // "the whole way through" was tightened to our role, not the transaction.
+    'fight for your commercial interests for as long as we are involved',
+    // Tom's own framing: the experience is Arrington's value, not Tom as the product.
+    'Tom has been through the process himself, and that experience is part of the value of having us in your corner.',
+    // Fragment fixed into a sentence (Brand OS copy standard).
+    'we want to do it first, finding the weaknesses that could cost you money',
+    // Fire line translated (Brand OS BANNED LANGUAGE), Tom's approved wording.
+    'There is no point fixing the roof if the foundations are giving way.',
+    // Second fragment fixed.
+    'We protect every point and every penny.',
+    // The outcome, with the price disclaimer attached.
+    'What a buyer finally pays is theirs to decide, not ours.'
+  ];
+  for (const phrase of pinned) {
+    assert.ok(section.includes(phrase), `an approved line in "We stay in your corner" has changed: "${phrase}"`);
+  }
+  // The outcome line is the section's closing thought.
+  const paras = [...section.matchAll(/<p>([\s\S]*?)<\/p>/g)].map((m) => m[1]);
+  assert.ok(/theirs to decide, not ours\.$/.test(paras[paras.length - 1].trim()), 'the outcome line is no longer the closing thought of the section');
+
+  // Removed wording must not return.
+  const text = visibleText();
+  for (const [rx, what] of [
+    [/pretending to be something/i, '"You do not need us pretending to be something we\'re not", which is not Tom\'s voice'],
+    [/the whole way through/i, '"the whole way through", tightened to our involvement'],
+    [/part of what you are getting/i, 'the Tom-as-the-product framing'],
+    [/\bon fire\b|\bfirefight|\bfires?\b|\bblaze\b|\bburn(ing)?\b/i, 'a fire-based metaphor, banned by the Brand Operating System']
+  ]) {
+    assert.ok(!rx.test(text), `the page carries ${what}`);
+  }
+});
+
+test('the deleted sections and deleted lines stay deleted', () => {
+  const text = visibleText();
+  for (const [needle, what] of [
+    ['What should be stronger afterwards', 'the "What should be stronger afterwards" section'],
+    ['Before we start, we agree what needs to improve', 'the agree-what-to-improve framing Tom rejected'],
+    ['The things you have not got to', 'the sixth buyer point, which was not Tom\'s thinking'],
+    ['What the work can involve afterwards', 'the old implementation-list heading'],
+    ['the better position to be in', 'the ranking of one route above the other'],
+    ['before buying anything', 'the ambiguous "before buying anything"'],
+    ['Thirty minutes, no charge.', 'the fragment opening the closing paragraph']
+  ]) {
+    assert.ok(!text.includes(needle), `${what} is back`);
+  }
+});
+
+test('the route cards say time to act, and "before paying for a review"', () => {
+  const text = visibleText();
+  assert.ok(text.includes('Nothing is under way yet, which gives you time to act.'), 'the preparing-ahead card no longer frames the advantage as time to act');
+  assert.ok(text.includes('Speak to us before paying for a review, because'), 'the already-selling card no longer says "before paying for a review"');
+});
+
+test('the closing paragraph does not repeat the footer prompt below it', () => {
+  // The footer override directly below already says "Tell us where the
+  // business is now and what you are thinking about doing next". Saying it
+  // twice back to back is the defect the override was built to remove.
+  const body = bodyOf(VIEW);
+  const final = body.slice(body.indexOf('sr-final'));
+  assert.ok(final.includes('The conversation takes thirty minutes and costs nothing. We will say plainly whether this is work worth doing yet'), 'the approved closing paragraph has changed');
+  assert.ok(!/Tell us where the business is/i.test(final), 'the closing paragraph repeats the footer\'s prompt again');
+  const route = read('routes/saleReadiness.js');
+  assert.ok(/Tell us where the business is now/.test(route), 'sanity: the footer override no longer carries the prompt, so this check is measuring nothing');
+});
+
+test('the owner-dependency section is a short bridge, not the argument again', () => {
+  const body = bodyOf(VIEW);
+  const start = body.indexOf('If the business depends on you, start there');
+  const block = body.slice(start, body.indexOf('sr-final'));
+  const paras = [...block.matchAll(/<p>([\s\S]*?)<\/p>/g)].map((m) => m[1].trim());
+  assert.deepStrictEqual(
+    paras,
+    ['If the business owns you, it is going to be very difficult to sell it. And the business cannot sell you with it. It is worth knowing how much of it still comes back to you.'],
+    'the owner-dependency section is no longer the approved single bridge paragraph'
+  );
+  // The explanation lives in the buyer section now; it must not be restated.
+  for (const restated of ['only works because you are there every day', 'separate the business from the owner', 'every decision, customer problem']) {
+    assert.ok(!block.includes(restated), `the owner-dependency section restates the argument again: "${restated}"`);
+  }
+});
+
+test('the Owner Dependency Quiz is timed at five minutes wherever this work states it', () => {
+  // The quiz's own page is the evidence: "Takes about 5 minutes". Two places
+  // said two minutes; both were corrected on 25/09/2026. The positive control
+  // guards the evidence itself, so this cannot pass by the quiz page changing.
+  const quiz = read('views/owner-dependency-quiz.ejs');
+  assert.ok(/Takes about <span>5 minutes<\/span>/.test(quiz), 'sanity: the quiz page no longer says 5 minutes; re-check the evidence before trusting this test');
+
+  assert.ok(visibleText().includes('The Owner Dependency Quiz, about five minutes, no charge.'), 'the sale-readiness page no longer says about five minutes');
+  assert.ok(!/two minutes/i.test(visibleText()), 'the sale-readiness page says two minutes again');
+
+  const hub = read('views/owner-check.ejs');
+  const card = hub.slice(hub.indexOf('<h2>Owner Dependency Quiz</h2>'), hub.indexOf('</div>', hub.indexOf('<h2>Owner Dependency Quiz</h2>')));
+  assert.ok(/About 5 minutes/.test(card), 'the Owner Check hub no longer times the quiz at about 5 minutes');
+  assert.ok(!/About 2 minutes/.test(card), 'the Owner Check hub says 2 minutes again');
+});
+
+test('the What We Do wording correction is guarded so a CMS edit wins', () => {
+  const seed = read('db/seed.js');
+  const start = seed.indexOf('SALE READINESS: What We Do wording correction');
+  assert.ok(start > -1, 'the What We Do wording-correction migration has gone');
+  const migration = seed.slice(start, seed.indexOf('Arrington AI Workspace: ingest', start));
+
+  const OLD = 'A business that could run without you is worth more to a buyer and easier to own in the meantime.';
+  const NEW = 'A business that could run without you is easier for somebody else to take over and better to own in the meantime.';
+  assert.ok(migration.includes(OLD) && migration.includes(NEW), 'the migration no longer carries the old and approved wording');
+
+  // Only the exact old value is rewritten, so a CMS edit is never overwritten.
+  assert.ok(
+    /UPDATE content SET content = \$1, updated_at = NOW\(\) WHERE section_key = \$2 AND content = \$3/.test(migration),
+    'the update no longer requires the exact old value, so it could overwrite a CMS edit'
+  );
+  // Scoped by destination, never by a hardcoded instance id.
+  assert.ok(/button_link' AND content = \$1/.test(migration), 'the migration no longer finds the section by its destination');
+  assert.ok(!/intervention__\d+/.test(migration.replace(/\/\/[^\n]*/g, '')), 'the migration hardcodes an instance id');
+  // Run once.
+  assert.ok(/what-we-do\.sale_readiness_link_copy_2026-09-25/.test(migration), 'the run-once marker has gone');
+
+  // A fresh database gets the approved wording from the original migration's
+  // default, and the unevidenced valuation line is nowhere in its rows.
+  const creator = seed.slice(seed.indexOf('what-we-do.sale_readiness_link_2026-09-25'), start);
+  const rows = creator.slice(creator.indexOf('const rows = ['), creator.indexOf('for (const [key, value]'));
+  assert.ok(rows.includes(NEW), 'a fresh database no longer gets the approved What We Do wording');
+  assert.ok(!/worth more/i.test(rows), 'a fresh database gets the unevidenced "worth more" wording again');
 });
