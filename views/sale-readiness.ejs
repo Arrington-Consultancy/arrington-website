@@ -115,10 +115,20 @@
             display: flex;
             flex-direction: column;
         }
-        /* The already-selling card carries the accent edge because its route
-           is the primary CTA site-wide (the conversation). This is emphasis
-           on the ROUTE, not a claim that one reader matters more. */
-        .sr-route--now { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+        /* EQUAL WEIGHT AT REST, deliberately. These two cards are not a
+           primary and a secondary choice: they are two equally valid routes,
+           and which one applies is decided by the visitor's situation, not by
+           us. So neither card carries an accent edge and both buttons use the
+           same treatment.
+
+           It used to work the other way. The already-selling card had
+           border-color: color-mix(accent 45%, border) and a solid btn-primary,
+           on the reasoning that the conversation is the primary CTA site-wide.
+           Tom inspected the live page on 25/09/2026 and called it: emphasis on
+           the ROUTE is indistinguishable, on screen, from a claim that one
+           reader's situation matters more. Moving between the two cards showed
+           two different highlighted states, so whichever card the pointer was
+           over looked like the chosen one. */
         /* 0.72rem matches this page's own .sr-label and the site's existing
            small-label convention (Owner Check's .check-card-learn is 0.75rem).
            It was 0.68rem, which measured 10.88px on the rendered page and was
@@ -134,24 +144,58 @@
            stretched over the card, so a click anywhere in the card activates
            that same anchor. See the EJS comment on the markup for why this is
            done here rather than by wrapping the card or adding a JS handler. */
-        .sr-route { position: relative; cursor: pointer; transition: border-color 0.2s, background-color 0.2s; }
+        <%# background-color was in this transition list until 25/09/2026 and
+            is dropped with the hover fill it existed for: the card's
+            background no longer changes in any state, so transitioning it
+            animated nothing and implied a fill someone might go looking for. %>
+        .sr-route { position: relative; cursor: pointer; transition: border-color 0.2s; }
         .sr-route-link::after {
             content: '';
             position: absolute;
             inset: 0;
             border-radius: 6px;
         }
-        /* The card reacts as one object, so it reads as clickable before the
-           visitor finds the button. */
-        .sr-route:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 5%, transparent); }
+        /* HOVER IS AN AFFORDANCE, NOT A SELECTION. The card still has to read
+           as clickable before the visitor finds the button, so the border
+           brightens and the cursor changes. That is all it does.
+
+           Three things used to happen on hover and together they made the
+           hovered card look chosen: the border went to full var(--accent), a
+           5% accent wash filled the card, and the button was repainted (the
+           outline button FILLED SOLID GOLD, the primary button darkened). The
+           fill was the worst of them, because a solid gold button is exactly
+           how this site marks a primary action, so hovering the left card
+           promoted it and leaving promoted the right one instead.
+
+           The border now goes to a mid-strength mix rather than the full
+           accent, so it is visibly warmer without looking like the focus ring
+           below it.
+
+           THE STRETCHED LINK MAKES CARD HOVER AND BUTTON HOVER THE SAME
+           EVENT, and deleting .sr-route:hover .btn-outline did NOT fix the
+           fill. The anchor's ::after covers the whole card, so a pointer
+           anywhere on the card is over the ANCHOR, and the site's own
+           .btn-outline:hover fires from the far corner of the card. Reading
+           the stylesheet said this was fixed; a computed-style check in a real
+           browser showed the button still painting rgb(196,122,58) with black
+           text. So the fill is cancelled explicitly for these two buttons,
+           which is the whole point of the correction: no state reachable by
+           pointing at a card may look like choosing it.
+
+           :focus-visible deliberately KEEPS the fill, and is declared after
+           so it wins when a button is both focused and hovered. Hover is
+           decoration and could be dropped; a visible focus state is how a
+           keyboard user knows where they are. */
+        .sr-route:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); }
+        .sr-route-link:hover { background: transparent; color: var(--accent); }
+        .sr-route-link:focus-visible { background: var(--accent); color: var(--black); }
         /* Keyboard focus lands on the button, which is inside the card, so the
            ring is drawn at CARD level. Without this a keyboard user would see
-           a focus ring on a button while the whole card is what activates. */
+           a focus ring on a button while the whole card is what activates.
+           Deliberately kept at FULL accent plus an outline: unlike hover, a
+           focus ring must be unmistakable, and only one card can hold focus
+           at a time so there is no hierarchy to imply. */
         .sr-route:focus-within { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: 3px; }
-        /* The button keeps its own hover colours rather than inheriting the
-           card's, so it still reads as the control it is. */
-        .sr-route:hover .btn-outline { background: var(--accent); color: var(--black); }
-        .sr-route:hover .btn-primary { background: var(--accent-hover); border-color: var(--accent-hover); }
         @media (prefers-reduced-motion: reduce) { .sr-route { transition: none; } }
         /* Reduced side padding inside the route cards only. At the 700px
            column each card is about 337px wide, and the site's standard
@@ -352,12 +396,16 @@
                     </div>
                 </div>
 
-                <div class="sr-route sr-route--now">
+                <%# No sr-route--now modifier: see the equal-weight note in the
+                    stylesheet. The class and its rule were both removed on
+                    25/09/2026 rather than the rule being emptied, because a
+                    class that styles nothing invites someone to "restore" it. %>
+                <div class="sr-route">
                     <span class="sr-route-label">A sale is already under way</span>
                     <h3>You are already selling</h3>
                     <p>There is an offer on the table, or conversations have started. Speak to us before buying anything, because some of what a buyer asks about cannot be put right inside a live process.</p>
                     <div class="sr-route-actions">
-                        <a href="/book-a-30-minute-conversation" class="btn btn-primary sr-route-link">Book a 30 minute conversation</a>
+                        <a href="/book-a-30-minute-conversation" class="btn btn-outline sr-route-link">Book a 30 minute conversation</a>
                     </div>
                 </div>
             </div>

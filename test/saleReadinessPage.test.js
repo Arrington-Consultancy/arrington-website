@@ -30,6 +30,15 @@ const emitted = (p) => read(p)
   .replace(/<%#[\s\S]*?%>/g, '')
   .replace(/<%\s*\/\*[\s\S]*?\*\/\s*%>/g, '');
 
+// The same rule one level further in: `emitted` strips EJS comments, which are
+// never served, but the page's <style> block carries CSS comments that ARE
+// served and that necessarily quote the rules a decision forbids. A scan for a
+// forbidden rule therefore matches the paragraph explaining why it was removed.
+// That happened on 25/09/2026, to the hover test below, on the commit that
+// removed the rule its own comment named. Any assertion about which CSS rules
+// EXIST uses this; anything about what is served uses `emitted`.
+const cssRules = (p) => emitted(p).replace(/\/\*[\s\S]*?\*\//g, '');
+
 // Everything from <main> onwards, i.e. what a visitor is actually served,
 // with the page's own <style> block excluded. Needed for any assertion about
 // POSITION or COUNT: `.sr-cred` and `.surface-paper` are both declared in the
@@ -101,23 +110,122 @@ test('it is not promoted on the homepage and no existing route was demoted for i
   );
 });
 
-test('the primary route is the conversation and the secondary is the existing £500 review', () => {
+test('the two routes carry equal visual weight, neither preferred', () => {
+  // REVERSED ON 25/09/2026, and the old version is described here rather than
+  // deleted so the decision is readable. This test used to be called "the
+  // primary route is the conversation and the secondary is the existing £500
+  // review", and it PINNED the hierarchy: btn-primary on the conversation,
+  // btn-outline on the review, and an assertion that the conversation had not
+  // been "demoted" to an outline button.
+  //
+  // Tom inspected the live page and rejected that framing: these are two
+  // equally valid routes chosen by the visitor's situation, not a primary and
+  // a secondary. So the assertions are inverted. Both destinations are still
+  // pinned exactly as before, because the DESTINATIONS were never the issue
+  // and losing one while restyling would be easy and silent.
   const view = emitted(VIEW);
 
-  // Primary CTA: btn-primary, pointing at the existing conversation page.
   assert.ok(
-    /href="\/book-a-30-minute-conversation" class="btn btn-primary/.test(view),
-    'Book a 30 minute conversation is not the primary button'
+    /href="\/book-a-30-minute-conversation" class="btn btn-outline sr-route-link"/.test(view),
+    'the conversation route is not the shared outline treatment'
   );
-  // Secondary: the EXISTING Commercial Review page, which carries its own
+  // Still the EXISTING Commercial Review page, which carries its own
   // checkout. Not a second checkout here.
   assert.ok(
-    /href="\/where-to-start\/commercial-review" class="btn btn-outline/.test(view),
-    'the £500 Commercial Review is not offered as the secondary route'
+    /href="\/where-to-start\/commercial-review" class="btn btn-outline sr-route-link"/.test(view),
+    'the £500 Commercial Review route is not the shared outline treatment'
+  );
+
+  // The property itself, rather than two separate spot checks: inside the
+  // routes block every card button carries the SAME class list. Written this
+  // way so adding a third route card cannot reintroduce a hierarchy by
+  // escaping two hardcoded assertions.
+  const body = bodyOf(VIEW);
+  const routes = body.slice(body.indexOf('sr-routes'), body.indexOf('What a buyer will want'));
+  const classes = [...routes.matchAll(/<a [^>]*class="([^"]*sr-route-link[^"]*)"/g)].map((m) => m[1].trim());
+  assert.equal(classes.length, 2, `expected 2 route buttons, found ${classes.length}`);
+  assert.equal(
+    new Set(classes).size, 1,
+    `the route buttons no longer share one treatment: ${JSON.stringify(classes)}`
   );
   assert.ok(
-    !/href="\/book-a-30-minute-conversation" class="btn btn-outline/.test(view),
-    'the conversation has been demoted to the secondary button'
+    !classes.some((c) => /\bbtn-primary\b/.test(c)),
+    'a route button is a solid primary again, which is how this site marks a preferred action'
+  );
+
+  // Equal at rest at CARD level too: no per-card modifier class, since that is
+  // what carried the accent edge on one of the two.
+  assert.ok(!/sr-route--/.test(routes), 'a route card carries a modifier class again');
+  assert.ok(!/\.sr-route--/.test(view), 'a route card modifier rule is back in the stylesheet');
+});
+
+test('hovering a route card indicates clickability without selecting it', () => {
+  // The specific defect Tom saw: moving the pointer between the two cards
+  // swapped which one looked chosen. Three rules caused it and all three are
+  // asserted gone, because removing any two of them still leaves the effect.
+  const view = cssRules(VIEW);
+  const hover = view.match(/\.sr-route:hover\s*\{[^}]*\}/g) || [];
+  assert.ok(hover.length, 'the card hover rule has gone entirely, so the card no longer reads as clickable');
+
+  const hoverCss = hover.join(' ');
+
+  // 1. No repainting of the button on card hover. This was the worst of the
+  //    three: a filled gold button is how this site marks a primary action.
+  assert.ok(
+    !/\.sr-route:hover\s+\.btn/.test(view),
+    'card hover repaints the button again, which reads as selecting that route'
+  );
+  // 2. No fill on the card itself.
+  assert.ok(
+    !/background/.test(hoverCss),
+    'card hover fills the card again, which reads as selecting that route'
+  );
+  // 3. Border brightening only, and restrained: a mix, not the full accent,
+  //    so hover cannot be mistaken for the focus state.
+  assert.ok(/border-color/.test(hoverCss), 'card hover no longer brightens the border, so there is no affordance at all');
+  assert.ok(
+    /border-color:\s*color-mix\(/.test(hoverCss),
+    'card hover uses a flat colour rather than a restrained mix'
+  );
+  assert.ok(
+    !/border-color:\s*var\(--accent\)\s*;/.test(hoverCss),
+    'card hover is back to the full accent border, which matches the focus state'
+  );
+
+  // 4. THE ONE THE OTHER THREE MISS, and the reason this test is not enough
+  //    on its own. The stretched link's ::after covers the whole card, so a
+  //    pointer anywhere on the card is over the ANCHOR and the site's own
+  //    .btn-outline:hover fires from the far corner. Deleting
+  //    .sr-route:hover .btn-outline satisfies assertion 1 and leaves the
+  //    button filling solid gold, which is exactly the defect. Verified in a
+  //    real browser on 25/09/2026 with a computed-style read: before this
+  //    override the button painted rgb(196,122,58) on black text while
+  //    every source assertion above was green.
+  assert.ok(
+    /\.sr-route-link:hover\s*\{[^}]*background:\s*transparent/.test(view),
+    'the stretched link fills the button on card hover again; cancelling .sr-route:hover .btn is not enough'
+  );
+  // And the cancellation must not take the focus state with it.
+  const fv = (view.match(/\.sr-route-link:focus-visible\s*\{[^}]*\}/) || [''])[0];
+  assert.ok(fv, 'the route button has no :focus-visible state, so a keyboard user sees no button feedback');
+  assert.ok(/background:\s*var\(--accent\)/.test(fv), 'the route button no longer fills on keyboard focus');
+  // Declared AFTER :hover, or a focused-and-hovered button loses its focus
+  // fill to the cancellation above.
+  assert.ok(
+    view.indexOf('.sr-route-link:focus-visible') > view.indexOf('.sr-route-link:hover'),
+    'the :focus-visible rule is declared before :hover, so hover cancels the focus fill'
+  );
+
+  // Accessibility is NOT what was being restrained. The focus ring must stay
+  // unmistakable, and it is drawn at card level because the card is what
+  // activates.
+  const focus = (view.match(/\.sr-route:focus-within\s*\{[^}]*\}/) || [''])[0];
+  assert.ok(focus, 'keyboard focus is no longer shown at card level');
+  assert.ok(/outline:/.test(focus), 'the focus ring outline has gone');
+  assert.ok(/var\(--accent\)/.test(focus), 'the focus ring is no longer drawn in the accent colour');
+  assert.ok(
+    /prefers-reduced-motion/.test(view),
+    'the reduced-motion guard on the card transition has gone'
   );
 });
 
