@@ -387,6 +387,49 @@ test('canonical and indexing behaviour are deliberate', () => {
   );
 });
 
+test('the footer enquiry copy is overridden for this page only', () => {
+  // Tom, against the live page on 25/09/2026: the footer form should not talk
+  // about pressure here. It is the GLOBAL contact block, so the fix has to be
+  // a per-page override rather than a content edit, and both halves matter.
+  const route = read('routes/saleReadiness.js');
+  // Comments stripped for the wording check, and that is the point rather
+  // than a convenience: the comment explaining this fix has to quote the
+  // sentence it replaces, so a raw scan flags the explanation instead of the
+  // copy. Same rule the price-framing scan uses. Structure is checked against
+  // the raw source, wording against the code only.
+  const code = route
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+
+  // Half one: this page supplies its own heading, body and placeholder, and
+  // they do not mention pressure.
+  assert.ok(/SALE_READINESS_CONTACT/.test(route), 'the per-page contact override has gone');
+  for (const field of ['heading', 'body', 'messagePlaceholder']) {
+    assert.ok(
+      new RegExp(`${field}:\\s*'`).test(route),
+      `the override no longer sets ${field}`
+    );
+  }
+  assert.ok(!/pressure/i.test(code), 'the sale-readiness footer copy mentions pressure again');
+  assert.ok(
+    /pageContact: \{ \.\.\.pageContact, \.\.\.SALE_READINESS_CONTACT \}/.test(route),
+    'the override is no longer spread over the shared pageContact, so other fields may be lost'
+  );
+
+  // Half two, and the one that actually protects the rest of the site: this
+  // must never become an edit to the shared contact.* rows, which would
+  // rewrite the footer on every page. The route may read content, but it must
+  // not write it.
+  assert.ok(
+    !/UPDATE\s+content|INSERT\s+INTO\s+content/i.test(route),
+    'the sale-readiness route now writes to the global content table'
+  );
+  assert.ok(
+    !/contact\.heading|contact\.body/.test(route),
+    'the route references the global contact rows directly; the override must be local to this page'
+  );
+});
+
 test('the two changes the brief deferred were not made', () => {
   // "Do not wire succession answers into Product Guide routing or change the
   // Market Ready Test commercial CTA in this build. Those remain separate
