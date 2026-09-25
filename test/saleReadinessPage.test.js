@@ -599,22 +599,149 @@ test('the illustrative image is used once, optimised, and never as evidence', ()
   }
 });
 
-test('the two changes the brief deferred were not made', () => {
-  // "Do not wire succession answers into Product Guide routing or change the
-  // Market Ready Test commercial CTA in this build. Those remain separate
-  // commercial decisions." Guarding a deferral is worth a test because both
-  // are one small edit away and both were recommended in the review that
-  // preceded this build.
+test('the Product Guide deferral still holds', () => {
+  // "Do not wire succession answers into Product Guide routing in this build.
+  // That remains a separate commercial decision." Still deferred, and still
+  // one small edit away, so it is still worth a test.
+  //
+  // THIS TEST USED TO GUARD TWO DEFERRALS. The second, that the Market Ready
+  // Test result page gain no route on to the sale readiness page, was
+  // REVERSED BY TOM ON 25/09/2026 in his own words: "i dont wnat to add more
+  // to the main menu but this could be a great route to market. should this
+  // be in a subsection on what we do page and then a link on the sales ready
+  // quiz page?" The assertion that forbade it is replaced by the test below,
+  // which asserts the link is there, rather than deleted, so the history of
+  // the decision stays readable from the test file.
   const guide = read('lib/productGuide.js');
   const scoring = guide.slice(guide.indexOf('function computeRecommendation'));
   assert.ok(
     !/succession/.test(scoring),
     'succession has been wired into the Product Guide recommendation, which the brief deferred'
   );
+});
 
+test('the Market Ready Test result page routes on to this page', () => {
+  // Tom's decision of 25/09/2026, reversing the build brief's deferral. The
+  // reasoning worth keeping: the result page's own closing block already
+  // argued this page's case ("what a buyer is likely to question and what is
+  // worth strengthening before you approach the market") with nowhere to send
+  // anybody, and a reader who has just been scored out of 100 on exactly that
+  // question is the highest-intent visitor on the site.
   const mrtResult = read('views/market-ready-test-result.ejs');
+
   assert.ok(
-    !mrtResult.includes(PATH) && !/where-to-start/.test(mrtResult),
-    'the Market Ready Test result page has gained a commercial CTA, which the brief deferred'
+    mrtResult.includes(`href="${PATH}"`),
+    'the Market Ready Test result page no longer links to the sale readiness page'
   );
+
+  // Inside the closing block, not orphaned somewhere above the score.
+  const nextStep = mrtResult.slice(mrtResult.indexOf('class="mrt-next-step"'));
+  assert.ok(
+    nextStep.includes(PATH),
+    'the sale readiness link is on the result page but outside the closing next-step block'
+  );
+
+  // Not a third button. Two CTAs are the actions on that page; a third would
+  // compete with both while sending the reader away rather than into a
+  // conversation, which is the opposite of what the block is for.
+  assert.ok(
+    !/<a[^>]+href="\/get-your-business-ready-to-sell"[^>]*class="[^"]*\bbtn\b/.test(mrtResult)
+      && !/class="[^"]*\bbtn\b[^"]*"[^>]+href="\/get-your-business-ready-to-sell"/.test(mrtResult),
+    'the sale readiness link on the result page has become a button, competing with the two real CTAs'
+  );
+
+  // Styled. An inline link left to the browser renders default blue, which is
+  // a bug that has already reached production once on the sale readiness page
+  // itself, so it is pinned rather than trusted.
+  assert.ok(
+    /\.mrt-more a\s*\{[^}]*color:\s*var\(--accent\)/.test(mrtResult),
+    'the result page contextual link has no accent colour rule, so it will render default browser blue'
+  );
+
+  // The existing CTAs are untouched: the brief that deferred this said not to
+  // CHANGE the commercial CTA, and adding a route beside it is not the same
+  // thing as repointing it.
+  assert.ok(
+    mrtResult.includes('Ask Tom to review my result') && mrtResult.includes('href="/#conversation"'),
+    'an existing Market Ready Test CTA was changed; this decision added a link beside them, it did not repoint them'
+  );
+});
+
+test('What We Do gains a route in, appended and guarded', () => {
+  // The other half of Tom's 25/09/2026 decision. The page stays out of the
+  // main navigation; this is the organic route in.
+  const seed = read('db/seed.js');
+  const marker = 'what-we-do.sale_readiness_link_2026-09-25';
+
+  assert.ok(seed.includes(marker), 'the What We Do sale readiness link migration is missing');
+
+  const block = seed.slice(seed.indexOf(marker));
+  const migration = block.slice(0, block.indexOf('Arrington AI Workspace: ingest'));
+
+  // The destination slug, pinned here so renaming the route breaks a test
+  // rather than the link. The CMS button-link <select> cannot offer this
+  // value (it lists `pages` rows only and this is a code route), so nothing
+  // in the admin UI would reveal a broken slug.
+  assert.ok(
+    migration.includes("SR_SLUG = 'get-your-business-ready-to-sell'"),
+    'the migration no longer points at the sale readiness route'
+  );
+  assert.ok(
+    PATH === '/get-your-business-ready-to-sell',
+    'the route path and the slug the migration writes have diverged'
+  );
+
+  // Appended, never inserted at a position: the live section_order is in the
+  // production database and cannot be read from here, so any other position
+  // would be a guess about a page nobody here can see.
+  assert.ok(
+    /order\.concat\(\[linkId\]\)/.test(migration),
+    'the What We Do link is no longer appended to the existing section order'
+  );
+
+  // A new instance, so nothing already on that page is edited or replaced.
+  assert.ok(
+    /'intervention__' \+ n/.test(migration),
+    'the migration no longer allocates a fresh intervention instance'
+  );
+  assert.ok(
+    !/UPDATE content/.test(migration),
+    'the migration updates existing content rows; it must only add a new instance'
+  );
+
+  // Idempotent on a redeploy, and not a second link beside a hand-built one.
+  assert.ok(/ON CONFLICT \(section_key\) DO NOTHING/.test(migration), 'content rows are not conflict-guarded');
+
+  // The duplicate-link guard, pinned to its MECHANISM rather than its name.
+  // A first version of this assertion was just /alreadyLinked/, which matches
+  // the identifier whether the guard does anything or not: planting
+  // `const alreadyLinked = false && existingRows.some(...)` left it green.
+  // That is the asserting-something-adjacent-to-the-property failure this
+  // codebase has recorded repeatedly, so the exact assignment is pinned and
+  // the query it reads from is pinned with it.
+  //
+  // STATED LIMIT: this is still a source check. The behaviour itself can only
+  // be established against a real database, and was, by hand on 25/09/2026 on
+  // a throwaway database: with the marker row deleted and the link left in
+  // place, the real `node db/seed.js` logged "the page already links to it",
+  // left section_order at 8 entries and left exactly one link to the page.
+  assert.ok(
+    /const alreadyLinked = existingRows\.some\(/.test(migration),
+    'the duplicate-link guard is no longer read straight from the query result'
+  );
+  assert.ok(
+    /button_link' AND content = \$1/.test(migration),
+    'the guard no longer looks the destination up by its button_link value'
+  );
+
+  // No price, no timeframe, no valuation claim in the copy it writes: the
+  // destination page carries the commercial detail, and 02 ARRINGTON
+  // COMMERCIAL POSITION governs what may be said about it.
+  const copy = migration.slice(migration.indexOf('const rows = ['), migration.indexOf('for (const [key, value]'));
+  assert.ok(
+    !/£|\bweeks?\b|\bmonths?\b|valuation|multiple|broker/i.test(copy),
+    'the What We Do link copy has gained a price, timeframe or valuation claim'
+  );
+  // "we", not "I" — Tom's pronoun decision of 15/09/2026.
+  assert.ok(!/\bI \b/.test(copy), 'the What We Do link copy uses first person singular');
 });
