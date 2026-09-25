@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <%- include('partials/google-tag') %>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thank you | Arrington Consultancy</title>
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="csrf-token" content="<%= csrfToken %>">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <%# Event snippet for the Contact conversion page, an event on the one
+        Google tag at the top of <head> (never a second tag). Rendered ONLY for a
+        token the server issued after storing a real enquiry (see
+        routes/thankYou.js and lib/contactConversion.js); a bare visit to
+        /thank-you gets no snippet at all. The id is checked against
+        [A-Za-z0-9_-] before it gets here, so it is safe inside the string.
+        The spent-list and the address swap are what stop a refresh from
+        firing it again. %>
+    <% if (conversion) { %>
+    <script nonce="<%= nonce %>">
+        (function () {
+            var id = '<%= conversion.id %>';
+            var KEY = 'arrContactConversionsSent';
+            var sent = [];
+            try {
+                sent = JSON.parse(sessionStorage.getItem(KEY) || '[]');
+                if (!Array.isArray(sent)) sent = [];
+            } catch (e) { sent = []; }
+            if (sent.indexOf(id) === -1) {
+                gtag('event', 'conversion', { 'send_to': 'AW-18129914078/vCKKCKjSna0cEN6RgsVD', 'transaction_id': id });
+                try { sent.push(id); sessionStorage.setItem(KEY, JSON.stringify(sent.slice(-20))); } catch (e) {}
+            }
+            try { history.replaceState(null, '', '/thank-you'); } catch (e) {}
+        })();
+    </script>
+    <% } %>
+    <style nonce="<%= nonce %>">
+        :root {
+            <% for (const [prop, val] of Object.entries(theme.vars)) { %>
+            <%= prop %>: <%= val %>;
+            <% } %>
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: 'DM Sans', sans-serif; background: var(--black); color: var(--text); line-height: 1.6; }
+        <%- include('partials/site-chrome-styles') %>
+
+        h1, h2, h3 { font-family: 'DM Serif Display', serif; font-weight: 400; color: var(--text-bright); line-height: 1.2; margin: 0; }
+        p { color: var(--text); margin: 0 0 1.2rem; }
+        .btn { display: inline-block; font-family: 'DM Sans', sans-serif; font-size: 0.92rem; font-weight: 600; padding: 0.6rem 1.5rem; border-radius: 3px; text-decoration: none; cursor: pointer; border: 1px solid transparent; }
+        .btn-outline { background: transparent; color: var(--accent); border-color: var(--accent); }
+        .btn-outline:hover, .btn-outline:focus-visible { background: var(--accent); color: var(--black); }
+
+        main { max-width: 700px; margin: 0 auto; padding: calc(var(--site-chrome) + 3.5rem) 1.5rem 4.5rem; }
+        h1 { font-size: clamp(1.9rem, 4.5vw, 2.4rem); margin-bottom: 1rem; }
+        .ty-lede { font-size: 1.12rem; color: var(--text-bright); margin-bottom: 2rem; }
+    </style>
+</head>
+<body>
+    <%- include('partials/site-header', { currentPage: { slug: 'thank-you' }, navPages, canEdit: false, content, pageContact }) %>
+
+    <main>
+        <h1>Thank you</h1>
+        <p class="ty-lede">We will get back to you shortly.</p>
+        <a class="btn btn-outline" href="/">Back to the homepage</a>
+    </main>
+
+    <%- include('partials/site-footer', { canEdit: false, pageContact, content }) %>
+    <script nonce="<%= nonce %>">
+        <%- include('partials/site-chrome-script') %>
+    </script>
+</body>
+</html>

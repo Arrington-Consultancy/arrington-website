@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en-GB">
 <head>
+    <%- include('partials/google-tag') %>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Get your business ready to sell | Arrington Consultancy</title>
@@ -20,23 +21,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
-    <%# The site-wide Ads/GA4 base tag every other page carries. No new
-        conversion action and no new label is introduced here: the only
-        conversions this page can fire are the two existing site-wide ones in
-        site-chrome-script (contact click, contact form submit), exactly as on
-        every other page. Tom's build instruction of 25/09/2026 is that Google
-        Ads campaigns and settings are not changed by this build, and they are
-        not. %>
-    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18129914078"></script>
-    <script nonce="<%= nonce %>">
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', 'AW-18129914078');
-        <% if (ga4Id) { %>
-        gtag('config', '<%= ga4Id %>');
-        <% } %>
-    </script>
     <%# Deliberately NO Product/Offer schema partial here, unlike the four
         Where to Start offer pages. Those describe a purchasable offer at a
         published price. This page introduces no new priced offer, so marking

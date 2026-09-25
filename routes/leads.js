@@ -9,6 +9,7 @@ const db = require('../db/pool');
 const { verifyTurnstileToken } = require('../lib/turnstile');
 const { parseAttribution, describeAttribution } = require('../lib/leadAttribution');
 const { parseHeardAbout, describeHeardAbout } = require('../lib/heardAbout');
+const { issueToken, THANK_YOU_PATH } = require('../lib/contactConversion');
 
 const router = express.Router();
 
@@ -149,7 +150,10 @@ router.post('/api/leads', publicFormLimiter, async (req, res) => {
       [name, email, phone, message, preferredTime, signupSource(req.body), JSON.stringify(attribution), heardAbout, heardAboutOther]
     );
 
-    res.json({ ok: true });
+    // Issued only here, after the row is stored, so /thank-you can fire the
+    // Ads conversion for a real enquiry and nothing else. The honeypot
+    // answer above carries no token on purpose. See lib/contactConversion.js.
+    res.json({ ok: true, thankYou: `${THANK_YOU_PATH}?c=${issueToken()}` });
 
     const heardAboutLine = describeHeardAbout(heardAbout, heardAboutOther);
     notify({

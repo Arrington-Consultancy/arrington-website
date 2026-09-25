@@ -93,14 +93,27 @@ document.querySelectorAll('a[href^="tel:"], a[href^="mailto:"], a[href^="https:/
             if (!res.ok) throw new Error(result.error || 'Something went wrong.');
             form.reset();
             status.textContent = 'Thanks. I will get back to you shortly.';
+            // The Ads "Contact" conversion is NOT fired here. It fires on
+            // /thank-you, once, and only with the token the server issues after
+            // the enquiry is stored (lib/contactConversion.js), so a refresh or a
+            // direct visit to that page counts nothing. Anything unexpected in
+            // thankYou falls back to the bare page, which thanks the visitor and
+            // counts nothing.
+            const next = (typeof result.thankYou === 'string' && /^\/thank-you\?c=[A-Za-z0-9._-]+$/.test(result.thankYou))
+                ? result.thankYou : '/thank-you';
+            let gone = false;
+            const go = () => { if (!gone) { gone = true; location.assign(next); } };
+            // GA4's own event stays on the form's page, with the redirect waiting
+            // for it to be handed over (or a second at most if gtag is blocked).
             if (typeof gtag === 'function') {
-                gtag('event', 'conversion', { 'send_to': 'AW-18129914078/vCKKCKjSna0cEN6RgsVD' });
-                gtag('event', 'contact_form_submit', { event_category: 'contact', page_path: location.pathname });
+                gtag('event', 'contact_form_submit', { event_category: 'contact', page_path: location.pathname, event_callback: go });
             }
+            setTimeout(go, 1000);
         } catch (err) {
             status.textContent = err.message || 'Something went wrong. Please try again.';
             status.classList.add('lead-form-error');
-        } finally {
+            // Re-enabled only on failure: on success the button stays off
+            // until the page changes, so a second click cannot send it twice.
             btn.disabled = false;
         }
     });

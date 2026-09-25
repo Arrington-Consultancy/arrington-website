@@ -13,7 +13,7 @@ const BCRYPT_ROUNDS = 12;
 const router = express.Router();
 
 // Reserved slugs that cannot be used as page slugs
-const RESERVED_SLUGS = ['login', 'logout', 'health', 'api', 'img', 'js', 'css', 'public', 'main'];
+const RESERVED_SLUGS = ['login', 'logout', 'health', 'api', 'img', 'js', 'css', 'public', 'main', 'thank-you'];
 
 // Valid section templates (matches routes/content.js and server.js)
 const VALID_TEMPLATES = ['hero','credentials','biography','intervention','approach','insights','fourcards','documents','casestudy','casestudy2','assessment','filter','proofstrip','offerpair','heromontage','contact','googlereviews','article','utlibrary','builtproof'];

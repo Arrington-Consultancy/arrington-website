@@ -22,6 +22,7 @@ const commercialGapsReview = require('./routes/commercialGapsReview');
 const whereToStart = require('./routes/whereToStart');
 const productGuide = require('./routes/productGuide');
 const saleReadiness = require('./routes/saleReadiness');
+const thankYou = require('./routes/thankYou');
 const scott = require('./routes/scott');
 const workspace = require('./routes/workspace');
 const { hasWorkspaceAccess } = require('./lib/workspace/access');
@@ -772,6 +773,11 @@ app.use(productGuide.router);
 // a homepage block for it without a new decision; test/saleReadinessPage.test.js
 // fails if either appears.
 saleReadiness.mountPageRoute(app, generateCsrfToken);
+
+// /thank-you: where the footer contact form lands after a stored enquiry, and
+// the only place the Google Ads Contact conversion fires (routes/thankYou.js).
+// Ahead of the /:slug catch-all like the pages above.
+thankYou.mountPageRoute(app, generateCsrfToken);
 
 // Scott AI Demonstration — private, invited-access-only fictional-company
 // demo (see routes/scott.js, lib/scott/**). Same registration pattern as

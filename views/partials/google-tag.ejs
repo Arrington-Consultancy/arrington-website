@@ -1,0 +1,33 @@
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-18129914078"></script>
+<script nonce="<%= nonce %>">
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'AW-18129914078');
+</script>
+<% if (typeof ga4Id !== 'undefined' && ga4Id) { %><script nonce="<%= nonce %>">
+  gtag('config', '<%= ga4Id %>');
+</script>
+<% } %><%# THE SITE'S ONE GOOGLE TAG. Included as the first thing inside <head>
+    on every public page, and nowhere else: Google allows one Google tag per
+    page, so a page must never carry a second copy of the loader or of the
+    config call. test/googleTag.test.js enforces both.
+
+    The snippet above is Google Ads' own, verbatim, with ONE change the site
+    cannot do without: nonce="..." on the inline script. The strict CSP in
+    server.js refuses any inline script without the per-request nonce, so
+    Google's text as pasted would be blocked and the tag would never run.
+
+    The GA4 config sits in a separate script so Google's snippet stays as
+    supplied. It shares the same loader (a Google tag serves both); it only
+    renders when GA4_MEASUREMENT_ID is set.
+
+    Deliberately NOT on the Scott portal or the Arrington AI Workspace: both
+    are login-only internal areas, and a page_view from the Workspace would
+    send real client and contact names in page titles to Google.
+
+    Conversion EVENTS are not here. The Contact conversion fires only on
+    /thank-you after a stored enquiry (views/thank-you.ejs); the contact-click
+    conversion lives in site-chrome-script. %>
