@@ -5860,72 +5860,45 @@ previews, which is what keeps the preview line out of the clearance model.
   leads with empty months. Contacts was used instead. Worth fixing on its
   own terms rather than for this page.
 
-## Sale readiness campaign page (built and live 25/09/2026)
+## Sale readiness page
 
-`/get-your-business-ready-to-sell`: a campaign landing page for social and
-(if Tom configures it) Google Ads traffic. Code: `routes/saleReadiness.js`,
-`views/sale-readiness.ejs`, tests in `test/saleReadinessPage.test.js`. A code
-route, not a CMS page, so "not in the main navigation" rests on the page not
-being in `navPages` rather than on a flippable database flag. The trade-off:
-its copy is a code edit, not a CMS edit.
+`/get-your-business-ready-to-sell` is a campaign landing page for social and
+paid traffic. It is a code route (`routes/saleReadiness.js`,
+`views/sale-readiness.ejs`, tests in `test/saleReadinessPage.test.js`), not a
+CMS page: its copy is changed in code, and keeping it out of the navigation
+depends on it never being added to `navPages`.
 
-**Standing decisions, all Tom's, all pinned by tests:**
+- Keep it out of the main navigation and off the homepage. It is indexable
+  but stays out of `sitemap.xml`.
+- It is reached through contextual links: a section on What We Do and a link
+  on the Market Ready Test result page. The CMS button-link dropdown lists
+  only `pages` rows, so it cannot offer this code route; saving that What We
+  Do section in the CMS will repoint its button.
+- The two route cards carry equal visual weight at rest and on hover; neither
+  may look preferred. Each card is a stretched link, so hovering the card is
+  hovering its button: cancel the button's hover fill explicitly for these
+  cards, and confirm hover states with computed styles in a browser rather
+  than by reading the CSS.
+- Describe the Commercial Review only on its own page. Here, say why it is
+  relevant and link to it; do not restate its price mechanics, timeline or
+  credit.
+- Publish no price on this page other than the existing Commercial Review
+  price. The one illustrative figure that is allowed is pinned by the price
+  test.
+- "We stay in your corner" sits directly on the page background: no card and
+  no paper surface. Separate it with a readable measure and spacing and, at
+  most, a restrained gold detail.
 
-- Not in the main navigation and not promoted on the homepage. Indexable, but
-  deliberately NOT in `sitemap.xml`.
-- Two organic routes in, added 25/09/2026: a guarded `intervention` section
-  appended to What We Do (production instance `intervention__25`), and an
-  inline link in the Market Ready Test result page's closing block. The
-  CMS button-link dropdown lists `pages` rows only, so it cannot offer this
-  code route: saving that What We Do section in the CMS would silently
-  repoint its button.
-- The two "Which of these is you?" route cards carry EQUAL visual weight.
-  They are two valid routes chosen by the visitor's situation, not a primary
-  and a secondary. The stretched link makes card hover and button hover one
-  event, so the button's fill is cancelled explicitly for these two buttons;
-  deleting the card-hover rule alone did not stop it, which only a
-  computed-style read in a real browser showed.
-- The Commercial Review is explained ONCE, on its own page. This page says
-  only why it is relevant and links there.
-- Only the £500 price appears as a price. The "£5,000 … £500" line in "We
-  stay in your corner" is an illustration of wasted specialist cost, pinned
-  to its exact sentence in the price test.
-- The Brand OS fire-metaphor ban applies: Tom's "building is on fire" line
-  was translated to "the foundations are giving way".
-- "We stay in your corner" sits directly on the page background, NOT in a
-  card. It was the page's one cream paper panel until Tom inspected it live
-  on 25/09/2026: too heavy against the navy, and it read like a generic
-  information card. Its replacement is deliberately restrained: ordinary
-  body text (12.08:1 on the live Oxford theme), a 62ch measure (70
-  characters on the widest line in DM Sans), one short gold rule under the
-  heading, and spacing rather than a container. The page now carries no
-  paper surface at all. A test guards against the card coming back.
-- Tom's proof line on the Market Ready Test result page is "Tom Arrington
-  bought, built and sold his own business in a seven-figure exit, after
-  nearly twenty years of running it himself." The earlier plural "owner run
-  businesses" overstated the controlled evidence.
+## Writing and reviewing website copy
 
-**Copy provenance.** The middle of the page (the five buyer points, "Where
-the Commercial Review comes in", "What happens after the Review", "We stay
-in your corner") was rebuilt on 25/09/2026 from Tom's own commercial
-thinking, supplied point by point and approved as one set. It replaced
-generic copy that had been written to fill the brief's structure.
-
-**PROCESS CORRECTION (Tom, 25/09/2026), and it applies beyond this page.**
-Where a controlled brief asks for copy but does not contain the underlying
-commercial thinking, STOP and ask for the thinking. Do not fill the gap with
-plausible consultancy language: that is how six generic buyer points, an
-invented measurement list and an implementation shopping list reached the
-live page and had to be corrected line by line. The opposite mistake is also
-ruled out: do not rewrite sound approved copy merely because an alternative
-can be produced. When reviewing copy, separate (1) factual errors, (2) Brand
-OS or controlled-authority violations, (3) genuine commercial or UX problems,
-and (4) optional stylistic rewrites, and change nothing in (4) without a
-specific reason and Tom's approval. Check every string against the current
-Brand Operating System in Drive before it ships, not against this file's
-record of it.
-
-**Known leftovers, deliberately not touched:** the stylesheet still carries
-rules for markup the rebuild deleted (`.sr-step*`, `.sr-price*`, `.sr-dots*`).
-They style nothing. Removing them was held back because the implementation
-brief said no improvements beyond the approved set.
+- Where a brief asks for copy but does not contain the underlying commercial
+  thinking, stop and ask Tom for it. Do not fill the gap with plausible
+  consultancy language.
+- Do not rewrite sound approved copy merely because an alternative can be
+  produced.
+- When reviewing copy, sort each issue as (1) a factual error, (2) a Brand
+  Operating System or controlled-authority violation, (3) a genuine
+  commercial or UX problem, or (4) an optional stylistic rewrite. Change
+  nothing in (4) without a specific reason and Tom's approval.
+- Check every string against the current Brand Operating System in Drive
+  before it ships, not against a record of it in this file.
