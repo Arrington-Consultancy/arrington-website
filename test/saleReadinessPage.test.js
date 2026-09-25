@@ -1139,3 +1139,32 @@ test('the What We Do wording correction is guarded so a CMS edit wins', () => {
   assert.ok(rows.includes(NEW), 'a fresh database no longer gets the approved What We Do wording');
   assert.ok(!/worth more/i.test(rows), 'a fresh database gets the unevidenced "worth more" wording again');
 });
+
+test('running text keeps one readable measure, the Review pair sits together, the card is even', () => {
+  // Tom's approved visual pass. Three layout rules, no copy.
+  const css = cssRules(VIEW);
+  const body = bodyOf(VIEW);
+
+  // 1. The two Review sections and the full-width fifth buyer point share the
+  //    corner section's measure, so no running text spans the full column.
+  assert.ok(/\.sr-section\.sr-prose\s*>\s*p\s*\{[^}]*max-width:\s*62ch/.test(css), 'the Review sections lost their readable measure');
+  assert.ok(/\.sr-grid\s*>\s*\.sr-item:last-child:nth-child\(odd\)\s+p\s*\{[^}]*max-width:\s*62ch/.test(css), 'the full-width fifth buyer point\'s text lost its readable measure');
+  assert.ok(/\.sr-corner-body\s*\{[^}]*max-width:\s*62ch/.test(css), 'the corner section no longer shares the same measure');
+  for (const heading of ['Where the Commercial Review comes in', 'What happens after the Review']) {
+    const at = body.indexOf(`<h2>${heading}</h2>`);
+    const opener = body.slice(body.lastIndexOf('<div class="sr-section', at), at);
+    assert.ok(/\bsr-prose\b/.test(opener), `"${heading}" no longer carries the readable measure`);
+  }
+
+  // 2. The second Review section follows the first at half the usual gap,
+  //    on both widths.
+  const at = body.indexOf('<h2>What happens after the Review</h2>');
+  assert.ok(/\bsr-pair-next\b/.test(body.slice(body.lastIndexOf('<div class="sr-section', at), at)), 'the Review sections are no longer paired');
+  const base = Number((css.match(/\.sr-section\s*\{\s*margin-top:\s*([\d.]+)rem/) || [])[1]);
+  const paired = Number((css.match(/\.sr-section\.sr-pair-next\s*\{\s*margin-top:\s*([\d.]+)rem/) || [])[1]);
+  assert.ok(base && paired && Math.abs(paired - base / 2) < 0.01, `the paired gap is no longer half the section gap (${paired} vs ${base})`);
+  assert.ok(/@media[^{]*\{\s*\.sr-section\.sr-pair-next\s*\{\s*margin-top:/.test(css), 'the paired gap has no mobile value');
+
+  // 3. A card's last element adds no margin inside its padding.
+  assert.ok(/\.sr-card\s*>\s*:last-child\s*\{[^}]*margin-bottom:\s*0/.test(css), 'the card padding is uneven again');
+});

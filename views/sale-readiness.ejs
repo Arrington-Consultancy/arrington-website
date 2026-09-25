@@ -304,6 +304,31 @@
             background: var(--accent);
         }
         .sr-corner-body { max-width: 62ch; }
+
+        /* ONE READABLE MEASURE FOR RUNNING TEXT (Tom, 25/09/2026). At the full
+           column these sections ran to 91 to 95 characters a line in DM Sans,
+           well past comfortable reading, and the narrower corner section made
+           the difference visible as a jump in the right edge. The same 62ch
+           measure now applies to the two Review sections and to the TEXT of
+           the full-width fifth buyer point; that item's gold rule still spans
+           the grid, so it keeps reading as a deliberate closing item. Mobile
+           is narrower than 62ch already, so nothing changes there. */
+        .sr-section.sr-prose > p { max-width: 62ch; }
+        .sr-grid > .sr-item:last-child:nth-child(odd) p { max-width: 62ch; }
+
+        /* THE TWO REVIEW SECTIONS READ AS ONE STEP: the Review, then what
+           happens after it. The gap between them is half the gap between
+           unrelated sections, so the short first one no longer reads as an
+           orphan. */
+        .sr-section.sr-pair-next { margin-top: 1.625rem; }
+        @media (max-width: 760px) {
+            .sr-section.sr-pair-next { margin-top: 1.05rem; }
+        }
+
+        /* Even padding in a card. The last element's paragraph margin sat
+           inside the card on top of its padding, leaving more space below the
+           last line than above the first. */
+        .sr-card > :last-child { margin-bottom: 0; }
         .sr-corner-body p:last-child { margin-top: 1.9rem; margin-bottom: 0; }
         @media (max-width: 760px) {
             .sr-section.sr-corner { margin-top: 2.9rem; }
@@ -491,7 +516,7 @@
             the existing Review is relevant here, and link to the canonical
             page for the mechanics, so there are never two descriptions of
             one product to drift apart. %>
-        <div class="sr-section">
+        <div class="sr-section sr-prose">
             <h2>Where the Commercial Review comes in</h2>
             <p>The £500 Commercial Review is where we look at the business through the eyes of a potential buyer and identify what is genuinely worth dealing with before the buyer gets the chance to pick it apart.</p>
             <p class="sr-aside"><a href="/where-to-start/commercial-review">How the Commercial Review works <span aria-hidden="true">&rarr;</span></a></p>
@@ -501,7 +526,7 @@
             problems are already named in the buyer section, and listing them
             again as work we could do reads as an upsell. The AI and technology
             paragraph went too, as unnecessary on this page. %>
-        <div class="sr-section">
+        <div class="sr-section sr-prose sr-pair-next">
             <h2>What happens after the Review</h2>
             <p>The Review tells us where the problems are. Then we decide what is actually worth fixing before a buyer arrives.</p>
             <p>Everything after that is judged on one question: will dealing with it strengthen what the business offers a buyer, protect its value, improve its value, or materially help the sale complete?</p>
