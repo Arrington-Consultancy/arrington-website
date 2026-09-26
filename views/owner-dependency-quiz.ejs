@@ -368,6 +368,22 @@
         .odr-email-status.is-error { color: var(--odr-red); }
         .odr-privacy-note { font-size: 0.82rem; color: var(--text-muted); margin: 0.75rem 0 0; }
         .odr-privacy-note a { color: var(--text-muted); text-underline-offset: 0.16em; }
+        /* The intro's market evidence: supporting text, one step quieter than
+           the intro it follows, with only the figure picked out in the same
+           gold as ".odr-meta span". The citation under the button takes the
+           privacy note's small muted treatment, so a source reads as a source
+           rather than as another call to action.
+           The size is set by the button, not by the evidence: measured with
+           the real fonts on 26/09/2026, "Start the quiz" had 204px to spare
+           on a 390x844 phone, and this setting wraps to seven lines there
+           and leaves it about 34px, with room left if a device wraps to
+           eight. At 0.94rem it wrapped to eight lines and the button fell
+           off the screen. Do not enlarge it. */
+        .odr-evidence { font-size: 0.9rem; line-height: 1.5; color: var(--text-muted); margin: 0 0 1.2rem; }
+        .odr-evidence strong { color: var(--accent); font-weight: 700; }
+        .odr-source { font-size: 0.82rem; color: var(--text-muted); margin: 0.9rem 0 0; }
+        .odr-source a { color: var(--text-muted); text-underline-offset: 0.16em; }
+        .odr-source a:hover, .odr-source a:focus-visible { color: var(--text); }
 
         .odr-cta {
             margin-top: 2.5rem;
@@ -400,7 +416,23 @@
             <p class="odr-meta">Takes about <span>5 minutes</span>. No email required. Results shown immediately.</p>
             <p>A business can look healthy on the outside and still carry too much through one person. This short quiz asks eight practical questions about how your business actually runs day to day, and gives you a plain, honest look at where dependency on you might be building up.</p>
             <p>This is not a personality test and not a professional diagnosis. It is a starting point for your own judgement, based on the same patterns we see across owner run businesses.</p>
+            <%# MARKET EVIDENCE, approved by Tom on 26/09/2026 under the Owner
+                Dependency Market Evidence brief in the Website handoff, which
+                holds the decision, the sources and the guardrails. Two limits
+                matter more than the copy, and test/ownerDependencyEvidence.test.js
+                pins both:
+                - The figure is a measure of who holds day-to-day control. It is
+                  NOT a count of owner-dependent businesses, and nothing here may
+                  say it is, or attach a valuation, sale-probability, failure-rate
+                  or causal claim to it.
+                - It stays small enough that "Start the quiz" is still on the
+                  first screen of a 390x844 phone. The evidence is here to be
+                  trusted, not to become the page, so no chart, callout or
+                  display numeral. The citation sits AFTER the button so the
+                  first link a visitor meets is the quiz, not a way off it. %>
+            <p class="odr-evidence">The Government's 2024 Small Business Survey found that <strong>69%</strong> of UK businesses with 1 to 249 employees had no director in day-to-day control who was not also an owner or partner. That does not make them badly run or overly reliant on their owners. It shows how often day-to-day control stays with the people who own the business.</p>
             <button type="button" class="btn btn-primary" id="odr-start">Start the quiz</button>
+            <p class="odr-source">Source: Department for Business and Trade, <a href="https://www.gov.uk/government/statistics/small-business-survey-2024-businesses-with-employees/longitudinal-small-business-survey-2024-sme-employers-businesses-with-1-to-249-employees" data-evidence-source="dbt-lsbs-2024">Longitudinal Small Business Survey 2024: SME employers</a>, published September 2025.</p>
         </section>
 
         <!-- QUIZ -->

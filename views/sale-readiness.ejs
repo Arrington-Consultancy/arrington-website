@@ -337,6 +337,10 @@
             padding-bottom: 2px;
         }
         .sr-aside a:hover, .sr-aside a:focus-visible { border-bottom-color: var(--accent); }
+        /* The evidence line under the buyer grid holds the same 62ch measure
+           as the fifth buyer point above it, rather than running the full
+           width of the grid. */
+        .sr-evidence { max-width: 62ch; }
 
         /* MOBILE IS A DESIGN STATE, NOT A STACKED DESKTOP (Build Protocol).
            Everything below is about making 390px scannable rather than
@@ -491,6 +495,17 @@
                     <p>This is not simply about having procedures written down. To hand a business over properly, the recurring actions, judgements and decisions that currently live in your head have to be explainable, and then transferable to somebody else.</p>
                 </div>
             </div>
+            <%# INDEPENDENT EVIDENCE, closing the buyer points rather than
+                opening a section of its own: no heading, no button, one line.
+                Approved by Tom on 26/09/2026 under the Owner Dependency Market
+                Evidence brief in the Website handoff, which holds the source
+                and guardrails. It keeps both halves of the British Business
+                Bank's wording (the owner OR a single customer), which is what
+                ties it to the first and third points above, and it says "among
+                the reasons" because that page gives several. It must never be
+                strengthened into a verdict on price, value or whether a sale
+                will happen. test/ownerDependencyEvidence.test.js pins it. %>
+            <p class="sr-aside sr-evidence">The British Business Bank's <a href="https://www.british-business-bank.co.uk/business-guidance/guidance-articles/business-essentials/selling-your-business" data-evidence-source="bbb-selling-your-business">guidance on selling a business</a> lists a business that relies on its owner or a single customer among the reasons an exit may not be viable.</p>
         </div>
 
         <%# THE COMMERCIAL REVIEW IS EXPLAINED ONCE, ON ITS OWN PAGE. Until

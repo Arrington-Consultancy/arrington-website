@@ -68,6 +68,22 @@ document.querySelectorAll('a[href^="tel:"], a[href^="mailto:"], a[href^="https:/
     });
 });
 
+// A click on a cited evidence source: any link carrying data-evidence-source.
+// Pages built on this script have no outbound-link tracking of their own, so
+// without this nobody could tell whether visitors check the evidence, or
+// whether a citation placed beside a call to action is drawing people off it.
+// The parameter is evidence_source rather than source, which GA4 treats as a
+// traffic-source field. The links open in the same tab; GA4 sends events by
+// beacon where the browser supports it, so the page unloading does not
+// normally lose the event.
+document.querySelectorAll('a[data-evidence-source]').forEach(a => {
+    a.addEventListener('click', () => {
+        if (typeof gtag === 'function') {
+            gtag('event', 'evidence_source_click', { event_category: 'evidence', evidence_source: a.dataset.evidenceSource, page_path: location.pathname });
+        }
+    });
+});
+
 // Footer contact/booking form.
 (function () {
     const form = document.getElementById('leadForm');
