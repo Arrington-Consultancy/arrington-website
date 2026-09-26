@@ -341,6 +341,15 @@
             transform: translateY(-7px) rotate(-45deg);
         }
 
+        /* The nav is a fixed element with its own stacking context, so the
+           hamburger's z-index only counts inside the nav and the open menu
+           (105) used to cover the whole bar, X included: the only way out
+           was to tap a link. While the menu is open the bar sits above it,
+           so the logo and the X stay visible and the X closes the menu. */
+        nav.menu-open {
+            z-index: 106;
+        }
+
         /* ---- MOBILE MENU ---- */
         .mobile-menu {
             display: none;
@@ -4936,10 +4945,12 @@
         const btn = document.getElementById('navHamburger');
         const menu = document.getElementById('mobileMenu');
         if (!btn || !menu) return;
+        const navBar = document.getElementById('nav');
 
         btn.addEventListener('click', () => {
             const open = btn.classList.toggle('open');
             menu.classList.toggle('open', open);
+            if (navBar) navBar.classList.toggle('menu-open', open);
             btn.setAttribute('aria-expanded', open);
             document.body.style.overflow = open ? 'hidden' : '';
         });
@@ -4949,6 +4960,7 @@
             a.addEventListener('click', () => {
                 btn.classList.remove('open');
                 menu.classList.remove('open');
+                if (navBar) navBar.classList.remove('menu-open');
                 btn.setAttribute('aria-expanded', 'false');
                 document.body.style.overflow = '';
             });

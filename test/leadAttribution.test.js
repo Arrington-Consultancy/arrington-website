@@ -99,3 +99,23 @@ test('the contact-click label is still fired by the contact links themselves', (
     assert.match(src, /a\[href\^="tel:"\][\s\S]{0,900}h_2rCJeH8aYcEN6RgsVD/, `${view} contact links still use the click label`);
   }
 });
+
+// Found 26/09/2026 on the sale-readiness journey: a landing page with more
+// than one query parameter was stored as "...&amp;utm_source=...", because the
+// tag stripper escapes the text it keeps.
+test('a landing page, referrer or campaign keeps its ampersands as ampersands', () => {
+  const out = parseAttribution({
+    landing_page: '/get-your-business-ready-to-sell?gclid=abc&utm_source=google&utm_medium=cpc',
+    referrer: 'https://www.google.com/search?q=sell+my+business&hl=en',
+    utm_campaign: 'Sale & Exit'
+  });
+  assert.equal(out.landing_page, '/get-your-business-ready-to-sell?gclid=abc&utm_source=google&utm_medium=cpc');
+  assert.equal(out.referrer, 'https://www.google.com/search?q=sell+my+business&hl=en');
+  assert.equal(out.utm_campaign, 'Sale & Exit');
+  assert.ok(describeAttribution(out).join('\n').includes('?gclid=abc&utm_source=google&utm_medium=cpc'));
+});
+
+test('decoding the ampersand lets no markup back in', () => {
+  const out = parseAttribution({ utm_source: '<script>alert(1)</script>google', utm_medium: 'a<b>c', utm_campaign: '&lt;img src=x&gt;' });
+  for (const v of Object.values(out)) assert.ok(!/<[a-z!/]/i.test(v), v);
+});

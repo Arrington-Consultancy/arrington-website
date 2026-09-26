@@ -154,6 +154,15 @@ nav.scrolled {
     transform: translateY(-7px) rotate(-45deg);
 }
 
+/* The nav is a fixed element with its own stacking context, so the
+   hamburger's z-index only counts inside the nav and the open menu
+   (105) used to cover the whole bar, X included: the only way out
+   was to tap a link. While the menu is open the bar sits above it,
+   so the logo and the X stay visible and the X closes the menu. */
+nav.menu-open {
+    z-index: 106;
+}
+
 /* ---- MOBILE MENU ---- */
 .mobile-menu {
     display: none;

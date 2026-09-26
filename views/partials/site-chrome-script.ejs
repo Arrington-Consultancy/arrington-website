@@ -158,10 +158,12 @@ window.addEventListener('scroll', () => {
     const btn = document.getElementById('navHamburger');
     const menu = document.getElementById('mobileMenu');
     if (!btn || !menu) return;
+    const navBar = document.getElementById('nav');
 
     btn.addEventListener('click', () => {
         const open = btn.classList.toggle('open');
         menu.classList.toggle('open', open);
+        if (navBar) navBar.classList.toggle('menu-open', open);
         btn.setAttribute('aria-expanded', open);
         document.body.style.overflow = open ? 'hidden' : '';
     });
@@ -170,6 +172,7 @@ window.addEventListener('scroll', () => {
         a.addEventListener('click', () => {
             btn.classList.remove('open');
             menu.classList.remove('open');
+            if (navBar) navBar.classList.remove('menu-open');
             btn.setAttribute('aria-expanded', 'false');
             document.body.style.overflow = '';
         });
