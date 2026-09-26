@@ -220,7 +220,8 @@
 
                 const data = {
                     email: document.getElementById('wtsEmail').value,
-                    website: document.getElementById('wtsWebsite').value
+                    website: document.getElementById('wtsWebsite').value,
+                    attribution: window.__leadAttribution ? window.__leadAttribution() : {}
                 };
 
                 try {

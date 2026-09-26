@@ -1105,6 +1105,11 @@ ALTER TABLE commercial_gaps_reviews ADD COLUMN IF NOT EXISTS signup_source VARCH
 -- row for the same reason as signup_source above.
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS attribution JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE commercial_gaps_reviews ADD COLUMN IF NOT EXISTS attribution JSONB NOT NULL DEFAULT '{}'::jsonb;
+-- The same object on a paid-offer checkout (26/09/2026), sent by the four
+-- Where to Start offer pages and stored when the Checkout Session is
+-- created, so a purchase that began with an ad click keeps its source after
+-- the visitor has been to Stripe and back.
+ALTER TABLE purchases ADD COLUMN IF NOT EXISTS attribution JSONB NOT NULL DEFAULT '{}'::jsonb;
 
 -- "How did you hear about us?" (19/09/2026), the optional question on the
 -- footer contact form. Two columns rather than one free-text field, so the

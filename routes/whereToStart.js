@@ -27,6 +27,8 @@ const themes = require('../db/themes');
 const { getStripeClient, getStripeKeyStatus } = require('../lib/stripeClient');
 const { OFFERS, FULL_REVIEW_PURCHASE_MODE, getOffer, buildCheckoutSessionParams } = require('../lib/whereToStartOffers');
 const { getSiteShellData } = require('../lib/navShell');
+const { parseAttribution, describeAttribution } = require('../lib/leadAttribution');
+const { purchaseConversionFor } = require('../lib/purchaseConversion');
 
 const router = express.Router();
 
@@ -184,7 +186,7 @@ function mountPageRoute(app, generateCsrfToken) {
       let purchase = null;
       if (sessionId) {
         const { rows } = await db.query(
-          'SELECT offer_id, status, amount_pence, currency FROM purchases WHERE stripe_session_id = $1',
+          'SELECT id, offer_id, status, amount_pence, currency FROM purchases WHERE stripe_session_id = $1',
           [sessionId]
         );
         purchase = rows[0] || null;
@@ -197,7 +199,10 @@ function mountPageRoute(app, generateCsrfToken) {
         content,
         pageContact,
         purchase,
-        offer: purchase ? getOffer(purchase.offer_id) : null
+        offer: purchase ? getOffer(purchase.offer_id) : null,
+        // null unless the label is set AND the webhook has marked this
+        // purchase paid; see lib/purchaseConversion.js.
+        purchaseConversion: purchaseConversionFor(purchase, req.app.locals.googleAdsPurchaseConversionLabel)
       });
     } catch (err) {
       next(err);
@@ -267,12 +272,21 @@ router.post('/api/checkout/:offerId', checkoutLimiter, async (req, res) => {
       creditAppliedPence
     });
 
+    // Where the buyer came from (landing page, referrer, utm_*, Google Ads
+    // click id), captured in the browser on the first page of the visit and
+    // allowlisted here exactly as for an enquiry. Stored on the row so a
+    // paid purchase keeps its source after the round trip through Stripe.
+    // The click id also goes on the Stripe session, so it survives on
+    // Stripe's side if our row is ever in question.
+    const attribution = parseAttribution(body.attribution);
+    if (attribution.gclid) params.metadata.gclid = attribution.gclid;
+
     const session = await stripe.checkout.sessions.create(params);
 
     await db.query(
-      `INSERT INTO purchases (offer_id, email, list_price_pence, amount_pence, credit_applied_pence, currency, status, stripe_session_id, credited_toward_id)
-       VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, NULL)`,
-      [offer.id, email, offer.pricePence, chargeAmountPence, creditAppliedPence, offer.currency, session.id]
+      `INSERT INTO purchases (offer_id, email, list_price_pence, amount_pence, credit_applied_pence, currency, status, stripe_session_id, credited_toward_id, attribution)
+       VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, NULL, $8)`,
+      [offer.id, email, offer.pricePence, chargeAmountPence, creditAppliedPence, offer.currency, session.id, JSON.stringify(attribution)]
     );
 
     // The £500 credit is only ever marked consumed (credited_toward_id set
@@ -354,7 +368,7 @@ function mountWebhook(app) {
           `UPDATE purchases
            SET status = 'paid', stripe_payment_intent_id = $1, updated_at = NOW()
            WHERE stripe_session_id = $2
-           RETURNING id, offer_id, email, list_price_pence, amount_pence, credit_applied_pence, currency`,
+           RETURNING id, offer_id, email, list_price_pence, amount_pence, credit_applied_pence, currency, attribution`,
           [session.payment_intent || '', session.id]
         );
         const purchase = rows[0];
@@ -400,6 +414,7 @@ function mountWebhook(app) {
                 ? `£${(purchase.credit_applied_pence / 100).toFixed(2)} Commercial Review credit applied automatically (matched by email).`
                 : '',
               `Stripe session: ${session.id}`,
+              ...describeAttribution(purchase.attribution),
               '',
               purchase.offer_id === 'full_review_website_build'
                 ? 'Next step: book the review conversation, then use the findings to shape the website build.'

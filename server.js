@@ -67,6 +67,18 @@ console.log('Google Ads: PDF request conversion label ' + (app.locals.googleAdsP
   ? 'set (' + app.locals.googleAdsPdfConversionLabel.length + ' chars); PDF requests count as their own conversion'
   : 'not set; PDF requests fire no Ads conversion (they no longer share the contact-click label)'));
 
+// Google Ads conversion label for a paid Where to Start offer ("Paid offer
+// purchase", added 26/09/2026). It fires on the confirmation page only for a
+// purchase the Stripe webhook has already marked paid, never on the redirect
+// alone. Unset means no purchase conversion is sent at all, so merging this
+// changes nothing until the label is set on the service. Same validation as
+// the PDF label, for the same reason.
+const googleAdsPurchaseConversionLabel = (process.env.GOOGLE_ADS_PURCHASE_CONVERSION_LABEL || '').trim();
+app.locals.googleAdsPurchaseConversionLabel = /^[A-Za-z0-9_-]+$/.test(googleAdsPurchaseConversionLabel) ? googleAdsPurchaseConversionLabel : '';
+console.log('Google Ads: paid offer purchase conversion label ' + (app.locals.googleAdsPurchaseConversionLabel
+  ? 'set (' + app.locals.googleAdsPurchaseConversionLabel.length + ' chars); a confirmed paid purchase counts as a conversion'
+  : 'not set; purchases fire no Ads conversion'));
+
 // Fail fast if SESSION_SECRET is missing in production — we never want to
 // fall back to a hardcoded dev secret on the real domain.
 if (isProd && !process.env.SESSION_SECRET) {

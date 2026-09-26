@@ -821,6 +821,39 @@ Stripe-hosted Checkout Sessions are used; card details never touch this app.
 - **Verified Stripe session shape:** live POST to `/api/checkout/full_review_website_build` created sandbox session `cs_test_a18Jg5vZnubqQIhZvWokK1A4hseyf8aXD8Gomta1DH01F7WbePewbTsaST`; `amount_total=340000`, `currency=gbp`, `livemode=false`, `metadata.offer_id=full_review_website_build`, `list_price_pence=340000`, `credit_applied_pence=0`, `invoice_creation.enabled=true`, `integration_identifier=arrington_wts_fnfadymw`, `cancel_url=https://www.arringtonconsultancy.com/where-to-start/full-review-website-build`.
 - **Tests at implementation:** JS syntax checks passed; `npm test` passed 51/51; EJS direct renders passed for Where to Start hub, Commercial Review, Commercial Review and Implementation, and Commercial Review + Website Build templates with the old public `Full Commercial Review` wording absent.
 
+**Paid offer purchase measurement (built 26/09/2026, NOT enabled).** Tom
+created a Google Ads conversion action "Paid offer purchase" (label
+`XRZmCOv0joYdEN6RgsVD`, set as Secondary) covering all four paid offers. The
+commercial hierarchy is deliberate: a contact enquiry stays the Primary
+acquisition signal, and a purchase is a stronger downstream outcome reported
+beside it, not a replacement for it. The website side:
+
+- The four offer pages send the visit's `attribution` object with the
+  checkout request; `routes/whereToStart.js` runs it through
+  `parseAttribution()` and stores it in `purchases.attribution` (JSONB,
+  standalone `ALTER` in `db/schema.sql`), and copies `gclid` onto the Stripe
+  session's metadata. Tom's paid-notification email carries the same
+  `Source:` / `Landing page:` / click id lines as an enquiry.
+- The confirmation page fires the conversion only when
+  `GOOGLE_ADS_PURCHASE_CONVERSION_LABEL` is set on the service AND the
+  purchase row is already `paid`, which only the verified webhook writes
+  (`lib/purchaseConversion.js`). A pending page reloads itself and fires once
+  the webhook lands. Value is what was charged (the credited £2,500 reports
+  £2,000), transaction id is `wts-<row id>` (never the Stripe id), and a
+  sessionStorage spent-list stops a refresh resending it.
+- **Unset, nothing fires**, and the boot log says so. Enabling it is setting
+  that variable to `XRZmCOv0joYdEN6RgsVD`, Tom's decision, after merge.
+- Verified in a real browser against a local server with the Stripe network
+  call stubbed and the real webhook signature check: a `gclid` and campaign
+  captured on the first page reached the paid row and the Stripe metadata,
+  nothing fired while pending, exactly one conversion fired after the signed
+  webhook, a refresh sent nothing, unknown and hostile session ids got no
+  snippet, zero CSP violations, and with the label unset a paid page carried
+  no snippet. `test/purchaseConversion.test.js`.
+- Not done: an offline-conversion upload for a purchase whose confirmation
+  page never loaded (buyer closed Stripe's tab). The stored `gclid` is what
+  would make that possible later.
+
 **Still not proven, now that live mode is on:** one complete live payment chain
 end to end (payment complete, webhook 200, purchase row paid, customer email,
 owner notification, confirmation page) and separately the £500 to £2,500/£3,400

@@ -6,6 +6,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Payment confirmation | Arrington Consultancy</title>
     <meta name="robots" content="noindex, nofollow">
+    <%# Event snippet for the Paid offer purchase conversion, an event on the
+        one Google tag at the top of <head> (never a second tag). The route
+        passes purchaseConversion ONLY when GOOGLE_ADS_PURCHASE_CONVERSION_LABEL
+        is set and the Stripe webhook has already marked this purchase paid
+        (lib/purchaseConversion.js); a pending, unknown or unpaid session gets
+        no snippet at all. Every value is built server-side from a validated
+        label, our own row id and the charged amount, so nothing from the
+        address reaches the script. The spent-list stops a refresh sending it
+        twice; Google also de-duplicates on the transaction id. %>
+    <% if (typeof purchaseConversion !== 'undefined' && purchaseConversion) { %>
+    <script nonce="<%= nonce %>">
+        (function () {
+            var id = '<%= purchaseConversion.transactionId %>';
+            var KEY = 'arrPurchaseConversionsSent';
+            var sent = [];
+            try {
+                sent = JSON.parse(sessionStorage.getItem(KEY) || '[]');
+                if (!Array.isArray(sent)) sent = [];
+            } catch (e) { sent = []; }
+            if (sent.indexOf(id) === -1) {
+                gtag('event', 'conversion', {
+                    'send_to': '<%= purchaseConversion.sendTo %>',
+                    'value': <%= purchaseConversion.value %>,
+                    'currency': '<%= purchaseConversion.currency %>',
+                    'transaction_id': id
+                });
+                try { sent.push(id); sessionStorage.setItem(KEY, JSON.stringify(sent.slice(-20))); } catch (e) {}
+            }
+        })();
+    </script>
+    <% } %>
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
