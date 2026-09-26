@@ -22,6 +22,7 @@ const commercialGapsReview = require('./routes/commercialGapsReview');
 const whereToStart = require('./routes/whereToStart');
 const productGuide = require('./routes/productGuide');
 const saleReadiness = require('./routes/saleReadiness');
+const { legacyRedirect } = require('./lib/legacyRedirect');
 const thankYou = require('./routes/thankYou');
 const scott = require('./routes/scott');
 const workspace = require('./routes/workspace');
@@ -450,9 +451,7 @@ app.get('/owner-dependency-quiz', async (req, res, next) => {
   }
 });
 
-app.get('/owner-dependency-review', (req, res) => {
-  res.redirect(301, '/owner-dependency-quiz');
-});
+app.get('/owner-dependency-review', legacyRedirect('/owner-dependency-quiz'));
 
 // What We Have Done, What the Work Looks Like and What Business Owners Say
 // were merged into a single Evidence page (30/07/2026, Tom's brief — see
@@ -461,24 +460,12 @@ app.get('/owner-dependency-review', (req, res) => {
 // /:slug catch-all so a request never falls through to the (now deleted)
 // page row. Anchors send returning visitors straight to the right part of
 // Evidence rather than just its top.
-app.get('/what-we-have-done', (req, res) => {
-  res.redirect(301, '/evidence');
-});
-app.get('/what-the-work-looks-like', (req, res) => {
-  res.redirect(301, '/evidence#documents');
-});
-app.get('/what-business-owners-say', (req, res) => {
-  res.redirect(301, '/evidence#googlereviews');
-});
-app.get('/30-minute-conversation', (req, res) => {
-  res.redirect(301, '/book-a-30-minute-conversation');
-});
-app.get('/about', (req, res) => {
-  res.redirect(301, '/about-us');
-});
-app.get('/contact', (req, res) => {
-  res.redirect(301, '/#conversation');
-});
+app.get('/what-we-have-done', legacyRedirect('/evidence'));
+app.get('/what-the-work-looks-like', legacyRedirect('/evidence#documents'));
+app.get('/what-business-owners-say', legacyRedirect('/evidence#googlereviews'));
+app.get('/30-minute-conversation', legacyRedirect('/book-a-30-minute-conversation'));
+app.get('/about', legacyRedirect('/about-us'));
+app.get('/contact', legacyRedirect('/#conversation'));
 
 // Owner Check — library/hub page for short self-assessment tools (currently
 // Owner Dependency Quiz, with a second check to follow). Not a CMS page:
