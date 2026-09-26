@@ -108,7 +108,7 @@ document.querySelectorAll('a[data-evidence-source]').forEach(a => {
             const result = await res.json();
             if (!res.ok) throw new Error(result.error || 'Something went wrong.');
             form.reset();
-            status.textContent = 'Thanks. I will get back to you shortly.';
+            status.textContent = 'Thanks. We will get back to you shortly.';
             // The Ads "Contact" conversion is NOT fired here. It fires on
             // /thank-you, once, and only with the token the server issues after
             // the enquiry is stored (lib/contactConversion.js), so a refresh or a
