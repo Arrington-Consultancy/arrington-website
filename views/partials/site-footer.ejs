@@ -29,7 +29,13 @@
         <% } %>
         <h2 class="section-heading"><%- pageContact.heading %></h2>
         <p><%- pageContact.body %></p>
-        <form class="lead-form" id="leadForm">
+        <form class="lead-form" id="leadForm" method="post" action="/api/leads">
+            <%# method/action/_csrf are the fallback for when the form's script
+                never runs: the browser then posts the form itself and
+                routes/leads.js answers with /thank-you. The script path is
+                unchanged. Without them the browser sent a GET to this page,
+                putting the enquiry in the address bar and the server logs. %>
+            <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
             <div class="lead-hp" aria-hidden="true">
                 <label>Leave this field blank<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
             </div>

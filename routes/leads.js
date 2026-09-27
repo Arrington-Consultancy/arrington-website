@@ -120,10 +120,21 @@ function makeDownloadUrl(doc) {
 // Honeypot field ('website') is left blank by real visitors; a filled-in value
 // means a bot, so we pretend success without touching the database.
 router.post('/api/leads', publicFormLimiter, async (req, res) => {
+  // The footer form normally posts JSON from its script. When that script
+  // never runs (blocked, failed to load), the browser posts the form itself,
+  // form-encoded, and gets a page back instead of JSON: /thank-you after a
+  // stored enquiry, the reason in plain text if it was refused. Until
+  // 27/09/2026 the form had no method, so that case sent the visitor's name,
+  // email and message to the page address as a GET, where it sat in the
+  // server logs and was never stored.
+  const plainForm = !req.is('application/json');
+  const refuse = (status, error) => (plainForm
+    ? res.status(status).type('text/plain').send(`${error} Please go back and try again.`)
+    : res.status(status).json({ error }));
   try {
     const body = req.body || {};
     if (plainText(body.website)) {
-      return res.json({ ok: true });
+      return plainForm ? res.redirect(303, THANK_YOU_PATH) : res.json({ ok: true });
     }
 
     const name = plainText(body.name).slice(0, 200);
@@ -133,10 +144,10 @@ router.post('/api/leads', publicFormLimiter, async (req, res) => {
     const preferredTime = plainText(body.preferred_time).slice(0, 255);
 
     if (!name || !email) {
-      return res.status(400).json({ error: 'Name and email are required.' });
+      return refuse(400, 'Name and email are required.');
     }
     if (!isValidEmail(email)) {
-      return res.status(400).json({ error: 'Please enter a valid email address.' });
+      return refuse(400, 'Please enter a valid email address.');
     }
 
     const attribution = parseAttribution(body.attribution);
@@ -153,7 +164,9 @@ router.post('/api/leads', publicFormLimiter, async (req, res) => {
     // Issued only here, after the row is stored, so /thank-you can fire the
     // Ads conversion for a real enquiry and nothing else. The honeypot
     // answer above carries no token on purpose. See lib/contactConversion.js.
-    res.json({ ok: true, thankYou: `${THANK_YOU_PATH}?c=${issueToken()}` });
+    const thankYou = `${THANK_YOU_PATH}?c=${issueToken()}`;
+    if (plainForm) res.redirect(303, thankYou);
+    else res.json({ ok: true, thankYou });
 
     const heardAboutLine = describeHeardAbout(heardAbout, heardAboutOther);
     notify({
@@ -174,7 +187,7 @@ router.post('/api/leads', publicFormLimiter, async (req, res) => {
     });
   } catch (err) {
     console.error('Lead submission error:', err);
-    res.status(500).json({ error: 'Something went wrong. Please try again or email us directly.' });
+    if (!res.headersSent) refuse(500, 'Something went wrong. Please try again or email us directly.');
   }
 });
 

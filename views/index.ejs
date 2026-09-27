@@ -2782,6 +2782,41 @@
             text-underline-offset: 3px;
         }
 
+        .article-next {
+            margin-top: 2.5rem;
+            padding: 1.75rem 1.6rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+        }
+
+        .article-next-heading {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.5rem;
+            font-weight: 400;
+            color: var(--text-bright);
+            line-height: 1.25;
+            margin: 0;
+        }
+
+        .article-next p {
+            margin: 0.6rem 0 0;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        .article-next-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.85rem;
+            margin-top: 1.25rem;
+        }
+
+        @media (max-width: 480px) {
+            .article-next { padding: 1.4rem 1.2rem; }
+            .article-next-actions { flex-direction: column; }
+            .article-next-actions .btn { text-align: center; }
+        }
+
         /* ---- USEFUL THINKING LIBRARY (editorial index) ---- */
         .utlibrary-inner {
             max-width: 780px;
@@ -4559,6 +4594,20 @@
             <% if (_relText && _relSafe) { %>
             <p class="article-related">Related: <a href="<%= _relLink %>"><%- content[_k + '.related_text'] %></a></p>
             <% } %>
+            <%# Every article ends with a next step. Until 27/09/2026 a reader who
+                finished one got a back link and, at most, a related article:
+                nothing asked them to do anything. The wording is the approved
+                Useful Thinking bridge (the intervention section seeded on the
+                /useful-thinking index, db/seed.js), plus the site's own
+                booking button text, so no new copy is introduced here. %>
+            <div class="article-next">
+                <h2 class="article-next-heading">If any of this sounds familiar</h2>
+                <p>One straightforward question is usually enough to work out whether a commercial review would help.</p>
+                <div class="article-next-actions">
+                    <a href="/owner-dependency-quiz" class="btn btn-primary" data-article-next="quiz">Take the Owner Dependency Quiz</a>
+                    <a href="/book-a-30-minute-conversation" class="btn btn-outline" data-article-next="conversation">Book a 30 minute conversation</a>
+                </div>
+            </div>
         </div>
     </div>
 </section>
@@ -4722,6 +4771,16 @@
                 });
             } else {
                 console.warn('[Tracking] gtag not loaded, calendar_booking_click not sent');
+            }
+        });
+    });
+
+    // The next step closing every Useful Thinking article (quiz or
+    // conversation), so it can be seen whether articles send anyone onward.
+    document.querySelectorAll('a[data-article-next]').forEach(a => {
+        a.addEventListener('click', () => {
+            if (typeof gtag === 'function') {
+                gtag('event', 'article_next_click', { event_category: 'useful_thinking', next_step: a.dataset.articleNext, page_path: location.pathname });
             }
         });
     });

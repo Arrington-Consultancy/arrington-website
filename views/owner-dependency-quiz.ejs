@@ -392,9 +392,14 @@
         }
         .odr-cta-actions { display: flex; gap: 0.85rem; flex-wrap: wrap; margin-top: 1.25rem; }
 
+        .odr-cta-early { margin: -1rem 0 2rem; }
+        .odr-cta-early[hidden] { display: none; }
+        .odr-cta-early p { margin: 0 0 1rem; }
+
         @media (max-width: 480px) {
             .odr-cta-actions { flex-direction: column; }
             .odr-cta-actions .btn { text-align: center; }
+            .odr-cta-early .btn { display: block; text-align: center; }
             .odr-result-item { padding: 0.85rem 0; }
             .odr-result-head { gap: 0.6rem; align-items: center; }
             .odr-result-head h3 { font-size: 0.92rem; }
@@ -466,6 +471,17 @@
                 <div class="odr-score-num" id="odr-score-num">0 / 16</div>
                 <div class="odr-score-band" id="odr-score-band">Low dependency</div>
                 <p class="odr-score-body" id="odr-score-body"></p>
+            </div>
+
+            <%# The conversation offer, beside the score, for any result above
+                Low dependency (shown by the script below). It was only at the
+                very end, after sharing, eight result rows, a disclaimer and the
+                email form, and went via the booking page to the form. This one
+                goes straight to the enquiry form at the foot of this page.
+                Same sentence and button text as the closing block. %>
+            <div class="odr-cta-early" id="odr-cta-early" hidden>
+                <p>A straightforward 30 minute conversation is usually enough to work out whether a commercial review would actually help, with no pressure either way.</p>
+                <a href="#conversation" class="btn btn-primary" id="odr-cta-early-book">Book a 30 minute conversation</a>
             </div>
 
             <div class="odr-share">
@@ -817,6 +833,7 @@
             document.getElementById('odr-score-num').textContent = total + ' / 16';
             document.getElementById('odr-score-band').textContent = band.label;
             document.getElementById('odr-score-body').textContent = band.body;
+            document.getElementById('odr-cta-early').hidden = band === BANDS[0];
 
             document.getElementById('odr-results-list').innerHTML = rows.map(function (r) {
                 return '<div class="odr-result-item">' +
@@ -1037,7 +1054,13 @@
 
         document.getElementById('odr-cta-book').addEventListener('click', function () {
             if (typeof gtag === 'function') {
-                gtag('event', 'dependency_quiz_cta_click', { event_category: 'tool' });
+                gtag('event', 'dependency_quiz_cta_click', { event_category: 'tool', cta_position: 'end' });
+            }
+        });
+
+        document.getElementById('odr-cta-early-book').addEventListener('click', function () {
+            if (typeof gtag === 'function') {
+                gtag('event', 'dependency_quiz_cta_click', { event_category: 'tool', cta_position: 'score' });
             }
         });
 
