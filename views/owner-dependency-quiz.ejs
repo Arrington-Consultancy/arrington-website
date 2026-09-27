@@ -67,7 +67,11 @@
         main {
             max-width: 640px;
             margin: 0 auto;
-            padding: calc(var(--site-chrome) + 2.5rem) 1.5rem 5rem;
+            /* Bottom 2.5rem, not 5rem (Tom, 27/09/2026): it stacks on the
+               enquiry section's own 5rem top padding, and after the intro's
+               small citation line the two read as 161px of empty navy.
+               The enquiry section's spacing is global and stays as it is. */
+            padding: calc(var(--site-chrome) + 2.5rem) 1.5rem 2.5rem;
         }
         /* Screen transitions call scrollIntoView() on the newly-active
            .odr-screen — without this, the browser scrolls its top edge

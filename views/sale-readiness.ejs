@@ -288,6 +288,12 @@
             background: var(--accent);
         }
         .sr-corner-body { max-width: 62ch; }
+        /* The copy falls into groups: stance and credibility, the approach,
+           protecting the owner's money, then the outcome. On a phone six
+           equally spaced paragraphs read as one dense block (Tom, 27/09/2026),
+           so a group opens with a larger gap. The paragraph margin collapses
+           into this, giving about 32px against 19px within a group. */
+        .sr-corner-body .sr-corner-group { margin-top: 2rem; }
 
         /* ONE READABLE MEASURE FOR RUNNING TEXT (Tom, 25/09/2026). At the full
            column these sections ran to 91 to 95 characters a line in DM Sans,
@@ -528,7 +534,7 @@
         <div class="sr-section sr-prose sr-pair-next">
             <h2>What happens after the Review</h2>
             <p>The Review tells us where the problems are. Then we decide what is actually worth fixing before a buyer arrives.</p>
-            <p>Everything after that is judged on one question: will dealing with it strengthen what the business offers a buyer, protect its value, improve its value, or materially help the sale complete?</p>
+            <p>Every piece of work has to earn its place. Will it protect the value of the business, strengthen what a buyer is actually buying, or materially help the sale complete?</p>
             <p>We spend your time and money where there is a commercial reason to. We do not fix things simply because they could be improved.</p>
             <p>Any further work is agreed separately, once the Review has established what is worth doing and where the value is.</p>
         </div>
@@ -565,9 +571,10 @@
             <div class="sr-corner-body">
                 <p>Selling a business can be brutal, both emotionally and commercially. We stay alongside you and fight for your commercial interests for as long as we are involved.</p>
                 <p>Tom has been through the process himself, and that experience is part of the value of having us in your corner.</p>
-                <p>Before a buyer gets the chance to pick the business apart, we want to do it first, finding the weaknesses that could cost you money and strengthening what the buyer is actually going to be paying for.</p>
+                <p class="sr-corner-group">Before a buyer gets the chance to pick the business apart, we want to do it first, finding the weaknesses that could cost you money and strengthening what the buyer is actually going to be paying for.</p>
                 <p>In a sale, the business itself is the product. We want to make that product as strong as is commercially sensible, but every intervention has to earn its place. There is no point fixing the roof if the foundations are giving way.</p>
-                <p>We protect every point and every penny. Where the job genuinely needs an accountant, a solicitor, a valuer or another specialist, use one. But nobody should spend £5,000 on something that can competently be done for £500, simply because they are in the middle of a sale. We question the costs and the decisions, and we protect your money as though it were our own.</p>
+                <p class="sr-corner-group">We protect every point and every penny. Where the job genuinely needs an accountant, a solicitor, a valuer or another specialist, use one.</p>
+                <p>But nobody should spend £5,000 on something that can competently be done for £500, simply because they are in the middle of a sale. We question the costs and the decisions, and we protect your money as though it were our own.</p>
                 <p>What we care about is that you come out of it knowing somebody fought your corner and protected every penny of value the business deserved. What a buyer finally pays is theirs to decide, not ours.</p>
             </div>
         </div>
