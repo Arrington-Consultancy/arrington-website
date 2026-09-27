@@ -5755,6 +5755,21 @@ the target is unique, then replace, then `find_text` the new string to prove it
 landed. `occurrencesChanged` must be exactly 1. The returned `documentTitle` on
 every read is a free check that you are in the document you think you are.
 
+### When Zapier hits its task limit: fall back at once (Tom, 27/09/2026)
+
+Every Zapier action counts as a task (a check, a replace, an append and a
+read-back is four), and the account has a monthly allowance. When a call
+returns "reached its task limit", do not retry it and do not stop to ask:
+file the write-back straight away as a standalone Google Doc in the same Drive
+folder as the record it belongs to, titled `WEBSITE AND HOSTING WRITE-BACK -
+<subject>, <date>` (or the matching record's name), stating that it is to be
+appended to that record and why it could not be. Read it back to confirm it
+saved, then carry on and tell Tom which notes are waiting to be merged. The
+Google Drive connector cannot edit a Doc's text (`update_file` is metadata
+only), and rebuilding a record as a new file would change its id and lose its
+formatting, so this is the only bypass. Merge the waiting notes into the live
+record once Zapier has tasks again.
+
 ### Two live constraints any implementation must respect
 
 From the Decision Log, both easy to breach by accident:
