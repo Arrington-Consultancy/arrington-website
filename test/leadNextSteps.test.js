@@ -7,9 +7,11 @@
 // 2. The Owner Dependency Quiz offers the conversation beside the score for
 //    any result above Low dependency, straight to the enquiry form on that
 //    page, instead of only at the very end of the results.
-// 3. The footer enquiry form still works when its script never runs. It had
-//    no method, so the browser sent the enquiry to the page address as a GET:
-//    nothing was stored, and the visitor's details sat in the server logs.
+// 3. (Reversed 30/09/2026.) The footer form was given a method="post"
+//    fallback for when its script never runs. That was the route contact-form
+//    spam tools used to store sales pitches and fire the Ads conversion, so
+//    the fallback is gone and only the script can submit. See
+//    test/leadScreening.test.js.
 const { test } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
@@ -92,86 +94,16 @@ test('the early offer is hidden for Low dependency and shown for every other ban
   assert.match(src, /cta_position: 'end'/);
 });
 
-// ---- 3. footer form works without its script -----------------------------
+// ---- 3. only the script can submit an enquiry ----------------------------
 
-test('the footer form posts itself to /api/leads, with its CSRF token, when the script never runs', async () => {
+test('the footer form has no method or action, so a tool calling form.submit() stores nothing', async () => {
   const themes = require('../db/themes');
   const html = await ejs.renderFile(path.join(root, 'views', 'thank-you.ejs'), {
     nonce: 'n', csrfToken: 'tok-123', ga4Id: '', theme: themes.dark, navPages: [], content: {},
     pageContact: { heading: 'h', body: 'b', label: '', headerCtaText: 'Start a conversation', submitText: 'Send', messagePlaceholder: 'm' },
     heardAboutOptions: [], conversion: null
   });
-  assert.match(html, /<form class="lead-form" id="leadForm" method="post" action="\/api\/leads">/);
-  assert.match(html, /<input type="hidden" name="_csrf" value="tok-123">/);
-});
-
-function loadLeadsRouter(inserts) {
-  const poolPath = require.resolve('../db/pool');
-  const leadsPath = require.resolve('../routes/leads');
-  const savedPool = require.cache[poolPath];
-  const savedLeads = require.cache[leadsPath];
-  require.cache[poolPath] = {
-    id: poolPath, filename: poolPath, loaded: true,
-    exports: { query: async (sql, params) => { if (/INSERT INTO leads/.test(sql)) inserts.push(params); return { rows: [] }; } }
-  };
-  delete require.cache[leadsPath];
-  const router = require('../routes/leads');
-  if (savedPool) require.cache[poolPath] = savedPool; else delete require.cache[poolPath];
-  if (savedLeads) require.cache[leadsPath] = savedLeads; else delete require.cache[leadsPath];
-  return router;
-}
-
-function post(port, body, type) {
-  return new Promise((resolve, reject) => {
-    const req = http.request({ port, path: '/api/leads', method: 'POST', headers: { 'Content-Type': type } }, (res) => {
-      let data = '';
-      res.on('data', (c) => { data += c; });
-      res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body: data }));
-    });
-    req.on('error', reject);
-    req.end(body);
-  });
-}
-
-test('the lead route answers a plain form post with pages, and a script post with JSON as before', async () => {
-  const saved = process.env.GMAIL_APP_PASSWORD;
-  delete process.env.GMAIL_APP_PASSWORD;
-  const inserts = [];
-  const app = express();
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: false }));
-  app.use(loadLeadsRouter(inserts));
-  const server = app.listen(0);
-  const { port } = server.address();
-  const form = 'application/x-www-form-urlencoded';
-  try {
-    const ok = await post(port, 'name=Ann+Owner&email=ann%40example.invalid&message=Hello', form);
-    assert.strictEqual(ok.status, 303, 'a stored enquiry redirects');
-    assert.match(ok.headers.location, /^\/thank-you\?c=[A-Za-z0-9._-]+$/, 'to /thank-you with the token, like the script path');
-    assert.strictEqual(inserts.length, 1, 'and the enquiry was stored');
-    assert.strictEqual(inserts[0][0], 'Ann Owner');
-
-    const trap = await post(port, 'website=spam&name=Bot&email=bot%40example.invalid', form);
-    assert.strictEqual(trap.status, 303);
-    assert.strictEqual(trap.headers.location, '/thank-you', 'the honeypot gets the bare page, no token');
-    assert.strictEqual(inserts.length, 1, 'and nothing is stored');
-
-    const bad = await post(port, 'name=Ann&email=', form);
-    assert.strictEqual(bad.status, 400);
-    assert.match(bad.headers['content-type'], /^text\/plain/);
-    assert.match(bad.body, /Name and email are required\. Please go back and try again\./);
-
-    const json = await post(port, JSON.stringify({ name: 'Ann', email: 'ann@example.invalid' }), 'application/json');
-    assert.strictEqual(json.status, 200, 'the script path is unchanged');
-    const parsed = JSON.parse(json.body);
-    assert.strictEqual(parsed.ok, true);
-    assert.match(parsed.thankYou, /^\/thank-you\?c=/);
-
-    const jsonBad = await post(port, JSON.stringify({ name: 'Ann' }), 'application/json');
-    assert.strictEqual(jsonBad.status, 400);
-    assert.deepStrictEqual(JSON.parse(jsonBad.body), { error: 'Name and email are required.' });
-  } finally {
-    server.close();
-    if (saved !== undefined) process.env.GMAIL_APP_PASSWORD = saved;
-  }
+  assert.match(html, /<form class="lead-form" id="leadForm">/);
+  assert.ok(!/id="leadForm"[^>]*(method|action)=/.test(html), 'the native post fallback is back');
+  assert.ok(!html.includes('name="_csrf"'), 'no hidden CSRF field for a native post');
 });

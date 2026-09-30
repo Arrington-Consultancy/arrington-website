@@ -10,6 +10,7 @@ const { verifyTurnstileToken } = require('../lib/turnstile');
 const { parseAttribution, describeAttribution } = require('../lib/leadAttribution');
 const { parseHeardAbout, describeHeardAbout } = require('../lib/heardAbout');
 const { issueToken, THANK_YOU_PATH } = require('../lib/contactConversion');
+const { screenEnquiry } = require('../lib/leadScreening');
 
 const router = express.Router();
 
@@ -120,21 +121,22 @@ function makeDownloadUrl(doc) {
 // Honeypot field ('website') is left blank by real visitors; a filled-in value
 // means a bot, so we pretend success without touching the database.
 router.post('/api/leads', publicFormLimiter, async (req, res) => {
-  // The footer form normally posts JSON from its script. When that script
-  // never runs (blocked, failed to load), the browser posts the form itself,
-  // form-encoded, and gets a page back instead of JSON: /thank-you after a
-  // stored enquiry, the reason in plain text if it was refused. Until
-  // 27/09/2026 the form had no method, so that case sent the visitor's name,
-  // email and message to the page address as a GET, where it sat in the
-  // server logs and was never stored.
-  const plainForm = !req.is('application/json');
-  const refuse = (status, error) => (plainForm
-    ? res.status(status).type('text/plain').send(`${error} Please go back and try again.`)
-    : res.status(status).json({ error }));
+  // Only the form's own script can submit an enquiry: it posts JSON. A
+  // form-encoded post is refused and stores nothing (30/09/2026). From
+  // 27/09 to 30/09 the form carried method="post" as a fallback for a
+  // visitor whose script never ran, and that is exactly the route the
+  // contact-form spam tools took: they call form.submit(), which skips the
+  // script, so three sales pitches were stored, emailed and sent to
+  // /thank-you with a conversion token. Before 27/09 the same tools sent a
+  // GET to the page and achieved nothing, which is the behaviour restored.
+  if (!req.is('application/json')) {
+    return res.status(400).type('text/plain')
+      .send('This form needs JavaScript. Please go back and use the email address or phone number on the page instead.');
+  }
   try {
     const body = req.body || {};
     if (plainText(body.website)) {
-      return plainForm ? res.redirect(303, THANK_YOU_PATH) : res.json({ ok: true });
+      return res.json({ ok: true });
     }
 
     const name = plainText(body.name).slice(0, 200);
@@ -144,11 +146,18 @@ router.post('/api/leads', publicFormLimiter, async (req, res) => {
     const preferredTime = plainText(body.preferred_time).slice(0, 255);
 
     if (!name || !email) {
-      return refuse(400, 'Name and email are required.');
+      return res.status(400).json({ error: 'Name and email are required.' });
     }
     if (!isValidEmail(email)) {
-      return refuse(400, 'Please enter a valid email address.');
+      return res.status(400).json({ error: 'Please enter a valid email address.' });
     }
+
+    // A sales pitch is still stored and still emailed (marked), so a real
+    // enquiry that reads like one is never lost. What it does NOT get is the
+    // conversion token: the visitor sees the same thank-you page, but the
+    // Ads conversion never fires. See lib/leadScreening.js.
+    const screening = screenEnquiry({ name, preferredTime, message });
+    const screenedReason = screening.suspect ? `sales_pitch: ${screening.reasons.join(', ')}` : '';
 
     const attribution = parseAttribution(body.attribution);
     // Optional, so an unanswered question is '' and never blocks the
@@ -156,22 +165,25 @@ router.post('/api/leads', publicFormLimiter, async (req, res) => {
     // only alongside Other; see lib/heardAbout.js.
     const { heardAbout, heardAboutOther } = parseHeardAbout(body);
     await db.query(
-      `INSERT INTO leads (kind, name, email, phone, message, preferred_time, signup_source, attribution, heard_about, heard_about_other)
-       VALUES ('contact', $1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9)`,
-      [name, email, phone, message, preferredTime, signupSource(req.body), JSON.stringify(attribution), heardAbout, heardAboutOther]
+      `INSERT INTO leads (kind, name, email, phone, message, preferred_time, signup_source, attribution, heard_about, heard_about_other, screened_reason)
+       VALUES ('contact', $1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10)`,
+      [name, email, phone, message, preferredTime, signupSource(req.body), JSON.stringify(attribution), heardAbout, heardAboutOther, screenedReason]
     );
 
-    // Issued only here, after the row is stored, so /thank-you can fire the
-    // Ads conversion for a real enquiry and nothing else. The honeypot
-    // answer above carries no token on purpose. See lib/contactConversion.js.
-    const thankYou = `${THANK_YOU_PATH}?c=${issueToken()}`;
-    if (plainForm) res.redirect(303, thankYou);
-    else res.json({ ok: true, thankYou });
+    // Issued only here, after the row is stored, and only for an enquiry
+    // that was not screened as a pitch, so /thank-you fires the Ads
+    // conversion for a real enquiry and nothing else. The honeypot answer
+    // above carries no token either. See lib/contactConversion.js.
+    const thankYou = screening.suspect ? THANK_YOU_PATH : `${THANK_YOU_PATH}?c=${issueToken()}`;
+    res.json({ ok: true, thankYou });
 
     const heardAboutLine = describeHeardAbout(heardAbout, heardAboutOther);
     notify({
-      subject: `New website enquiry from ${name}`,
+      subject: screening.suspect
+        ? `Filtered as a sales pitch: ${name}`
+        : `New website enquiry from ${name}`,
       text: [
+        screening.suspect && `This looks like a sales pitch, so it was NOT counted as a Google Ads conversion. It is stored in the admin Leads panel. If it is a genuine enquiry, just reply as normal. (Signals: ${screening.reasons.join(', ')})`,
         `Name: ${name}`,
         `Email: ${email}`,
         phone && `Phone: ${phone}`,
@@ -187,7 +199,7 @@ router.post('/api/leads', publicFormLimiter, async (req, res) => {
     });
   } catch (err) {
     console.error('Lead submission error:', err);
-    if (!res.headersSent) refuse(500, 'Something went wrong. Please try again or email us directly.');
+    if (!res.headersSent) res.status(500).json({ error: 'Something went wrong. Please try again or email us directly.' });
   }
 });
 

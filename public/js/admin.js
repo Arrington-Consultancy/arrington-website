@@ -935,6 +935,9 @@
                     : lead.kind === 'commercial_gaps' ? 'Commercial Gaps Review'
                     : 'Contact / booking';
                 const parts = [`<span class="log-action">${escapeHtml(kindLabel)}</span><br>`];
+                // Screened as a sales pitch: stored and emailed, but never
+                // counted as an Ads conversion (lib/leadScreening.js).
+                if (lead.screened_reason) parts.push('<em>Filtered as a likely sales pitch (not counted in Google Ads)</em><br>');
                 if (lead.name) parts.push(`<strong>${escapeHtml(lead.name)}</strong> `);
                 parts.push(`${escapeHtml(lead.email)}<br>`);
                 if (lead.phone) parts.push(`${escapeHtml(lead.phone)}<br>`);

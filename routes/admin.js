@@ -71,7 +71,7 @@ router.get('/leads', requireCapability('view_activity'), async (req, res) => {
   try {
     const { rows } = await db.query(
       `SELECT id, kind, name, email, phone, message, preferred_time, document, signup_source, attribution,
-              heard_about, heard_about_other, created_at
+              heard_about, heard_about_other, screened_reason, created_at
        FROM leads ORDER BY created_at DESC LIMIT 100`
     );
     // One short "where did this come from" phrase per row, derived here so

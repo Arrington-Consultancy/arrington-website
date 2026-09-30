@@ -1125,6 +1125,11 @@ ALTER TABLE purchases ADD COLUMN IF NOT EXISTS attribution JSONB NOT NULL DEFAUL
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS heard_about VARCHAR(40) NOT NULL DEFAULT '';
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS heard_about_other VARCHAR(255) NOT NULL DEFAULT '';
 
+-- Why a footer enquiry was screened as a sales pitch (30/09/2026), '' when it
+-- was not. A screened enquiry is still stored and emailed; it just never gets
+-- the Ads conversion token. See lib/leadScreening.js.
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS screened_reason VARCHAR(255) NOT NULL DEFAULT '';
+
 -- Erasure register (30/08/2026).
 --
 -- Evidence that a specific erasure request was carried out, designed so
