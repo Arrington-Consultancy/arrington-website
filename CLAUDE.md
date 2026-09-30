@@ -10,6 +10,12 @@ This site was handed over to Tom Arrington to self-manage. Read `HANDOVER.md` fi
 - ~~**Loose end:** the bare `arringtonconsultancy.co.uk` apex still needs adding as a custom domain in Railway.~~ **Resolved.** All four custom domains are bound in Railway with valid certificates. Since commit `00c2b91` (16/08/2026) both `.co.uk` hostnames permanently redirect to the canonical host rather than serving the site (see Custom domains).
 - On the same day the 19 agreed copy-review changes were applied to the live site (see Copy review below).
 
+## How to report to Tom (Tom, 30/09/2026)
+
+Tom skims long replies. Keep every report brief: the few points that
+matter, then at most ONE decision for him at a time. Detail goes in
+commits and this file, not in the chat.
+
 ## Governance: start from the current Drive authorities (added 30/08/2026)
 
 Before material Arrington work, read the current controlled Google Drive
