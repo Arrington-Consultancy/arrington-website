@@ -39,7 +39,7 @@ const between = (html, from, to) => {
 const QUIZ = 'views/owner-dependency-quiz.ejs';
 const SALE = 'views/sale-readiness.ejs';
 
-const QUIZ_EVIDENCE = "The Government's 2024 Small Business Survey found that 69% of UK businesses with 1 to 249 employees had no director in day-to-day control who was not also an owner or partner. That does not make them badly run or overly reliant on their owners. It shows how often day-to-day control stays with the people who own the business.";
+const QUIZ_EVIDENCE = "The Government's 2024 Small Business Survey found that 69% of UK businesses with 1 to 249 employees had no director in day to day control who was not also an owner or partner. That does not make them badly run or overly reliant on their owners. It shows how often day to day control stays with the people who own the business.";
 const QUIZ_SOURCE = 'Source: Department for Business and Trade, Longitudinal Small Business Survey 2024: SME employers, published September 2025.';
 const DBT_URL = 'https://www.gov.uk/government/statistics/small-business-survey-2024-businesses-with-employees/longitudinal-small-business-survey-2024-sme-employers-businesses-with-1-to-249-employees';
 const SALE_EVIDENCE = "The British Business Bank's guidance on selling a business lists a business that relies on its owner or a single customer among the reasons an exit may not be viable.";
@@ -53,6 +53,10 @@ test('the quiz intro carries the approved evidence and its source, word for word
   const evidence = paragraphWithClass(intro, 'odr-evidence');
   assert.ok(evidence, 'the evidence paragraph has gone from the quiz intro');
   assert.strictEqual(words(evidence), QUIZ_EVIDENCE, 'the quiz evidence wording has changed from the approved text');
+  // Tom, 30/09/2026: no hyphens in the evidence. DM Sans draws a hyphen
+  // wide enough to read as a dash on a phone, so "day-to-day" became
+  // "day to day", matching the intro's own "runs day to day".
+  assert.ok(!words(evidence).includes('-'), 'a hyphen is back in the quiz evidence');
   // The figure is the only emphasis, so nothing else in the sentence is
   // quietly promoted into a headline claim.
   assert.deepStrictEqual(evidence.match(/<strong>[^<]*<\/strong>/g), ['<strong>69%</strong>']);
