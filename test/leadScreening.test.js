@@ -168,3 +168,32 @@ test('a screened enquiry is emailed with a marked subject, and the column exists
   assert.match(fs.readFileSync(path.join(__dirname, '..', 'routes', 'admin.js'), 'utf8'), /screened_reason, created_at/);
   assert.match(fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'admin.js'), 'utf8'), /lead\.screened_reason/);
 });
+
+// ---- the contact record -------------------------------------------------------
+
+test('a screened pitch never becomes a contact, and one an earlier sync built is removed', { skip: !process.env.DATABASE_URL && 'set DATABASE_URL' }, async () => {
+  const db = require('../db/pool');
+  const { syncFromLeads } = require('../lib/crm/contacts');
+  const tag = `screen-${Date.now()}`;
+  const pitchEmail = `${tag}-pitch@example.invalid`;
+  const realEmail = `${tag}-real@example.invalid`;
+  try {
+    const { rows: [pitch] } = await db.query(
+      `INSERT INTO leads (kind, name, email, message) VALUES ('contact', 'Pitch', $1, 'SEO') RETURNING id`, [pitchEmail]);
+    await db.query(`INSERT INTO leads (kind, name, email, message) VALUES ('contact', 'Owner', $1, 'Help')`, [realEmail]);
+    await syncFromLeads();
+    const count = async (e) => (await db.query('SELECT COUNT(*)::int AS n FROM crm_contacts WHERE email = $1', [e])).rows[0].n;
+    assert.strictEqual(await count(pitchEmail), 1, 'before screening, the earlier sync built a contact');
+
+    await db.query(`UPDATE leads SET screened_reason = 'sales_pitch: test' WHERE id = $1`, [pitch.id]);
+    const result = await syncFromLeads();
+    assert.ok(result.prunedPitchContacts >= 1);
+    assert.strictEqual(await count(pitchEmail), 0, 'the pitch contact is removed');
+    assert.strictEqual(await count(realEmail), 1, 'a real contact is untouched');
+    await syncFromLeads();
+    assert.strictEqual(await count(pitchEmail), 0, 'and it does not come back');
+  } finally {
+    await db.query('DELETE FROM crm_contacts WHERE email IN ($1, $2)', [pitchEmail, realEmail]);
+    await db.query('DELETE FROM leads WHERE email IN ($1, $2)', [pitchEmail, realEmail]);
+  }
+});

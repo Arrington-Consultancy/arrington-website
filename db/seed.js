@@ -7141,13 +7141,35 @@ async function seed() {
   } catch (err) {
     console.error('ANNA CSV ingest failed (boot continues):', err.message);
   }
+  // Screen footer enquiries stored before screening existed (30/09/2026),
+  // so the sales pitches of 28 to 30 September are marked in the admin
+  // panel and leave the contact record. Same rule as new enquiries, so it
+  // is idempotent: a row already screened, or one that does not read as a
+  // pitch, is left alone. Never fatal.
+  try {
+    const { screenEnquiry } = require('../lib/leadScreening');
+    const { rows: unscreened } = await db.query(
+      `SELECT id, name, preferred_time, message FROM leads WHERE kind = 'contact' AND screened_reason = ''`
+    );
+    let screened = 0;
+    for (const r of unscreened) {
+      const result = screenEnquiry({ name: r.name, preferredTime: r.preferred_time, message: r.message });
+      if (!result.suspect) continue;
+      await db.query(`UPDATE leads SET screened_reason = $1 WHERE id = $2 AND screened_reason = ''`,
+        [`sales_pitch: ${result.reasons.join(', ')}`, r.id]);
+      screened += 1;
+    }
+    if (screened) console.log(`Lead screening: marked ${screened} earlier enquiry row(s) as sales pitches.`);
+  } catch (err) {
+    console.error('Lead screening backfill failed (boot continues):', err.message);
+  }
   // Contacts (CRM): rebuild from the lead history. Idempotent, and it
   // populates from everything already captured rather than starting
   // empty on the day it was switched on. Never fatal: a contact index
   // that cannot rebuild must not stop the website booting.
   try {
     const crmResult = await require('../lib/crm/contacts').syncFromLeads();
-    console.log(`Contacts: ${crmResult.contactsTouched} contact record(s) from ${crmResult.leadsScanned} lead row(s), ${crmResult.eventsAdded} new interaction(s).`);
+    console.log(`Contacts: ${crmResult.contactsTouched} contact record(s) from ${crmResult.leadsScanned} lead row(s), ${crmResult.eventsAdded} new interaction(s)${crmResult.prunedPitchContacts ? `, ${crmResult.prunedPitchContacts} sales-pitch contact(s) removed` : ''}.`);
   } catch (err) {
     console.error('Contacts sync failed (boot continues):', err.message);
   }
