@@ -1,0 +1,65 @@
+# Production page inspection. The Claude build sandbox cannot reach the public
+# site (egress policy), so this runs on a GitHub runner, which can: it opens
+# the real production URLs in Chromium at desktop and phone sizes, records
+# status, errors and overflow, takes full-page screenshots, and commits the
+# lot to the production-qa branch (a single-commit orphan branch, replaced
+# each run, so it never grows). The sandbox then fetches that branch and
+# reads the screenshots. Triggered by hand after a deployment has reported
+# SUCCESS on Railway; it changes nothing on the site.
+name: Production QA
+
+on:
+  workflow_dispatch:
+    inputs:
+      paths:
+        description: Comma-separated paths to inspect
+        required: true
+        default: "/,/business-consultant-cornwall,/business-consultant-devon"
+      label:
+        description: Short label for this run (used in the results folder name)
+        required: false
+        default: "manual"
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.47.0
+          npx playwright install --with-deps chromium
+
+      - name: Inspect production pages
+        env:
+          QA_PATHS: ${{ github.event.inputs.paths }}
+          OUT_DIR: ${{ github.workspace }}/qa-out
+        run: node scripts/productionQa.js
+
+      - name: Publish results to the production-qa branch
+        env:
+          LABEL: ${{ github.event.inputs.label }}
+        run: |
+          set -e
+          STAMP="$(date -u +%Y%m%dT%H%M%SZ)-$(echo "$LABEL" | tr -c 'A-Za-z0-9-' '-' | sed 's/-*$//')"
+          mkdir -p /tmp/qa && cp -r qa-out /tmp/qa/run
+          git config user.name "production-qa"
+          git config user.email "production-qa@users.noreply.github.com"
+          git checkout --orphan production-qa
+          git rm -rfq . 2>/dev/null || true
+          git clean -fdxq
+          mkdir -p "runs/$STAMP"
+          cp -r /tmp/qa/run/. "runs/$STAMP/"
+          echo "$STAMP" > LATEST
+          git add -A
+          git commit -qm "Production QA $STAMP"
+          git push --force origin production-qa
+          echo "Results in runs/$STAMP on branch production-qa"
