@@ -5950,6 +5950,35 @@ and the approach steps as blank.** That is the scroll-reveal animation
 Devon page, and not a rendering fault; scroll the page in Playwright before
 screenshotting.
 
+### The Cornwall ad group (01/10/2026)
+
+Tom: "Don't we need an advert for Cornwall page?" Yes: over the previous
+30 days "business consultancy cornwall" was the biggest keyword in
+Leads-Search-1 (8 clicks, £89) and every click landed on the homepage.
+Built the same day via Windsor, same campaign and budget, no new spend:
+
+- Ad group **Cornwall**, id `197647339661`, in Leads-Search-1
+  (`23814976526`), default max CPC £12 (what the Cornwall clicks were
+  already costing).
+- Keywords: business consultancy cornwall (phrase + exact), business
+  consultant cornwall (phrase + exact), small business consultant cornwall,
+  business growth consultant cornwall, management consultant cornwall,
+  business owner help cornwall (all phrase).
+- Ad `826565109013`: the live ad's approved copy with Cornwall headlines
+  ("Working Across Cornwall", "From Saltash To Newquay") and a Cornwall
+  first description, final URL `/business-consultant-cornwall`, display
+  path `/cornwall`.
+- The seven enabled Cornwall keywords in the general ad group
+  (`196492356455`) were **paused, not removed**, so their history survives
+  and the change reverses by re-enabling them: criterion ids
+  2408166660390, 2495391133193, 2485915404377, 2482463791669,
+  2487372944341, 2487760518939, 2490426324671.
+
+The general ad group also lists dozens of zero-impression EXACT rows
+("companies house", rival accountancy firm names, "how to start a herbal
+tea business uk"). Those are almost certainly ad-group negatives that
+Windsor's keyword report does not distinguish from positives. Left alone.
+
 ## Sale readiness page
 
 `/get-your-business-ready-to-sell` is a campaign landing page for social and
