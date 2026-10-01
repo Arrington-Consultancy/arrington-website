@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Windsor_ai__get_connectors",
+      "mcp__Windsor_ai__get_fields",
+      "mcp__Windsor_ai__get_data",
+      "mcp__Windsor_ai__list_actions",
+      "mcp__Windsor_ai__execute_action",
+      "mcp__Railway__list-deployments",
+      "mcp__Railway__get-logs",
+      "mcp__Railway__get-service-metrics",
+      "mcp__Railway__http-error-rate",
+      "mcp__Railway__http-requests",
+      "mcp__Railway__http-response-time",
+      "mcp__Railway__list-variables",
+      "mcp__Railway__describe-service",
+      "mcp__Railway__get-status",
+      "mcp__Claude_Code_Remote__send_later",
+      "mcp__Claude_Code_Remote__get_trigger",
+      "mcp__Claude_Code_Remote__list_triggers",
+      "mcp__Claude_Code_Remote__update_trigger",
+      "mcp__Google_Drive__search_files",
+      "mcp__Google_Drive__read_file_content",
+      "mcp__Google_Drive__get_file_metadata",
+      "mcp__Google_Drive__list_recent_files",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git fetch *)",
+      "Bash(git status*)",
+      "Bash(git log *)",
+      "Bash(git diff *)",
+      "Bash(node --test *)",
+      "Bash(npm test*)"
+    ]
+  }
+}
