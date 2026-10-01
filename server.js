@@ -222,7 +222,11 @@ app.use(helmet({
         "'self'",
         'data:',
         'https://www.googletagmanager.com',
-        'https://www.google-analytics.com',
+        // Same regional GA4 hosts as connectSrc: GA4 falls back to an
+        // image pixel when fetch/sendBeacon is unavailable.
+        'https://*.google-analytics.com',
+        'https://*.analytics.google.com',
+        'https://stats.g.doubleclick.net',
         'https://www.googleadservices.com',
         'https://googleads.g.doubleclick.net',
         'https://www.google.com',
@@ -233,7 +237,15 @@ app.use(helmet({
       connectSrc: [
         "'self'",
         'https://www.googletagmanager.com',
-        'https://www.google-analytics.com',
+        // GA4 sends hits from UK and EU visitors to a regional host
+        // (region1.google-analytics.com) and sometimes to
+        // *.analytics.google.com, not only www.google-analytics.com. With
+        // only the www host allowed, engagement hits were blocked by this
+        // policy and GA4 recorded a fraction of visits at 0 seconds
+        // (found 01/10/2026). Wildcards cover every regional host.
+        'https://*.google-analytics.com',
+        'https://*.analytics.google.com',
+        'https://stats.g.doubleclick.net',
         'https://www.googleadservices.com',
         'https://googleads.g.doubleclick.net',
         'https://www.google.com',
