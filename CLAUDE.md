@@ -6006,12 +6006,15 @@ CRLF line endings (rows edited through the CMS textarea carry them, and an
 exact LF match cannot find them): a follow-up (marker `...01b`) normalised
 line endings and **still did not match**, so the live body is not the July
 wording at all and the sandbox cannot read the live page to see what it is.
-A second follow-up (marker `...01c`) logs the row's actual value in the
-deploy log and rewrites it only if it still opens with the sentence Tom
-quoted in his finding ("we carry out a ... commercial review"), which is the
-sentence he asked to change. **Two lessons: normalise line endings in any
-exact-value guard on a row Tom may have edited, and when a guard misses on
-production, log the value before guessing again.**
+A second follow-up (marker `...01c`) logged the row's actual value in the
+deploy log and rewrote it only if it still opened with the sentence Tom
+quoted in his finding. **Resolved (deploy `181a5cf9`):** the live body was
+the July sentence with the word "proper" removed in the CMS ("we carry out
+a <strong>commercial review.</strong>"), exactly as Tom had quoted it, so
+both exact matches missed by one word. It now reads "the next step is the
+Commercial Review, £500." **Two lessons: when a guard misses on production,
+log the value before guessing again; and Tom's own quotation of live copy
+is better evidence of the live value than the July snapshot.**
 
 Findings 3 and 4 needed no change: the four lines Tom asked to preserve are
 untouched (two are the global footer `contact.body`), and the towns line is
