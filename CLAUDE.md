@@ -5918,6 +5918,71 @@ previews, which is what keeps the preview line out of the clearance model.
   leads with empty months. Contacts was used instead. Worth fixing on its
   own terms rather than for this page.
 
+## Production inspection: the Website & Hosting worker closes its own loop (01/10/2026)
+
+**Three different facts, never to be conflated in a report:**
+
+1. **Successful deployment**: Railway lists the deployment as SUCCESS and the
+   boot log shows the app started (and any seed migration line). Proves the
+   code shipped and the migrations ran. Says nothing about what a visitor sees.
+2. **HTTP availability**: the production URL answers 200 with the expected
+   title, h1 and canonical. Proves the page is served. Says nothing about
+   layout.
+3. **Rendered visual inspection**: the real production page opened in a real
+   browser at desktop and phone sizes, screenshots read by a person or by
+   this worker, overflow and errors recorded. This is the only one that
+   answers "does it look right".
+
+**The sandbox cannot do 3, or even 2, directly.** Investigated on
+01/10/2026 rather than assumed: `curl` through the agent proxy gets a 403
+CONNECT (organisation egress policy) for `www.arringtonconsultancy.com`,
+the `WebFetch` tool reports `EGRESS_BLOCKED` for the same host, and this
+session exposes no browser, Chrome or computer-use tools. Zapier's webhook
+GET would work but spends a task and the account is out of tasks. The one
+route that works without anyone's help: **GitHub Actions runners have open
+internet.**
+
+**The route, now standard:** `.github/workflows/production-qa.yml` runs
+`scripts/productionQa.js` on a runner: it opens each production URL in
+Chromium at 1440px and iPhone 13, scrolls every reveal, records HTTP
+status, final URL, title, first h1, canonical, page errors, console
+errors and horizontal overflow, and takes a full-page capture plus a
+first-screen (viewport) capture per size. Results are committed to the
+`production-qa` branch (a single-commit orphan branch replaced on each
+run, so the repository never grows), under `runs/<stamp>-<label>/` with
+`report.md`, `report.json` and the PNGs; `LATEST` names the newest run.
+It changes nothing on the site.
+
+**Operating sequence for any visible change:** inspect evidence,
+implement, test locally (rebuild plus Playwright), deploy, confirm the
+Railway deployment is SUCCESS and read its seed line, then trigger the
+workflow (`mcp__github__actions_run_trigger`, `production-qa.yml`, ref
+`main`, inputs `paths` and `label`), wait about 90 seconds, then:
+
+```bash
+git fetch origin production-qa
+RUN=$(git show origin/production-qa:LATEST)
+git show "origin/production-qa:runs/$RUN/report.md"
+git show "origin/production-qa:runs/$RUN/<slug>-mobile-top.png" > /tmp/x.png   # then Read it
+```
+
+Read the screenshots with the Read tool, correct if needed, redeploy,
+re-run. **A full-page capture can draw the fixed nav mid-image** (a
+Chromium stitching artefact, seen on the first run); the `-top.png`
+first-screen capture is the truthful view of the nav and hero. Only after
+reading the production captures may a report say the production page was
+visually verified; before that it may say only that the deployment
+succeeded or that the page answers 200.
+
+First real run, 01/10/2026 (run 36881319904, label `first-run`): home,
+Cornwall and Devon, all six captures 200, zero errors, no overflow, and the
+two landing pages confirmed showing the full-bleed hero, the compact proof
+block and the priced step 2. **The simplest alternative stays open to Tom:**
+adding `www.arringtonconsultancy.com` to the environment's allowed domains
+(cloud environment menu in the session title bar, Edit, Network access)
+would let the sandbox's own Playwright load production directly; the
+workflow works either way.
+
 ## Business Consultant Cornwall page (01/10/2026)
 
 `/business-consultant-cornwall` is a public organic-search page, built on

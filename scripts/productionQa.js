@@ -58,11 +58,11 @@ function slug(p) {
         for (let y = 0; y < h; y += 350) { await page.evaluate((yy) => window.scrollTo(0, yy), y); await page.waitForTimeout(90); }
         await page.waitForTimeout(600);
         await page.evaluate(() => window.scrollTo(0, 0));
-        // The nav is fixed and hides on scroll down, showing again on scroll
-        // up with a transition. A full-page capture stitches the page with
-        // the viewport resized, so a fixed element can land mid-image; the
-        // separate viewport capture below is what a visitor actually sees
-        // first, nav included, once the transition has settled.
+        // The nav is position: fixed. A full-page capture resizes the
+        // viewport to the page height and stitches, and Chromium can draw a
+        // fixed element wherever the capture's internal scroll left it, so
+        // the nav landed mid-image on the first run. The plain viewport
+        // capture below is what a visitor actually sees first, nav included.
         await page.waitForTimeout(1200);
         const top = `${slug(p)}-${size}-top.png`;
         await page.screenshot({ path: path.join(OUT, top), fullPage: false });
