@@ -3584,6 +3584,100 @@ async function seed() {
     }
   }
 
+  // Migration: the same two corrections on the Devon landing page
+  // (01/10/2026, Tom's instruction after the Cornwall review pass: "apply the
+  // same controlled treatment so Devon and Cornwall are commercially and
+  // visually consistent", strictly limited to the two issues). Checked
+  // first rather than copied mechanically: the Cornwall page was a byte copy
+  // of these Devon rows made the same morning, the first Cornwall pass
+  // matched all six proof rows exactly, and the Devon step 2 body is the one
+  // the Cornwall copy carried ("we carry out a <strong>commercial
+  // review.</strong>", "proper" removed in the CMS). Same page purpose (a paid
+  // Search landing page), same hero treatment, same templates, same copy, so
+  // the same evidence applies and the same treatment follows. Nothing else
+  // on the Devon page is touched. Home page only read; own marker; exact or
+  // opening-sentence guards so a CMS edit wins.
+  {
+    const DEVON_MARKER = 'site.devon_review_pass_2026-10-01';
+    const { rows: dvMarker } = await db.query('SELECT 1 FROM content WHERE section_key = $1', [DEVON_MARKER]);
+    if (dvMarker.length === 0) {
+      const baseOf = (id) => {
+        const m = /^([a-z0-9]+)(?:__(\d+))?$/.exec(id || '');
+        return m ? m[1] : null;
+      };
+      const orderOf = async (slug) => {
+        const { rows } = await db.query('SELECT section_order FROM pages WHERE slug = $1', [slug]);
+        return rows.length && Array.isArray(rows[0].section_order) ? rows[0].section_order : null;
+      };
+      const getContent = async (key) => {
+        const { rows } = await db.query('SELECT content FROM content WHERE section_key = $1', [key]);
+        return rows.length ? rows[0].content : null;
+      };
+      const updateExact = async (key, from, to) => {
+        const r = await db.query('UPDATE content SET content = $1 WHERE section_key = $2 AND content = $3', [to, key, from]);
+        return r.rowCount;
+      };
+      const insertIfAbsent = async (key, value) => {
+        const r = await db.query('INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING', [key, value]);
+        return r.rowCount;
+      };
+      const notes = [];
+      const dvOrder = await orderOf('business-consultant-devon');
+      if (!dvOrder) {
+        notes.push('no Devon page on this database; nothing to do');
+      } else {
+        const dvCase = dvOrder.find((id) => baseOf(id) === 'casestudy');
+        const dvApproach = dvOrder.find((id) => baseOf(id) === 'approach');
+        const mainOrder = (await orderOf('main')) || [];
+        const mainCase = mainOrder.find((id) => baseOf(id) === 'casestudy');
+        const mainResult = mainCase ? await getContent(`${mainCase}.phase_3_body`) : null;
+        if (!dvCase) {
+          notes.push('no casestudy instance on the Devon page; proof block left alone');
+        } else if (!mainCase || !mainResult || !mainResult.includes('Twenty four months, start to sale')) {
+          notes.push('home page casestudy is not in its approved compact form; proof block left alone');
+        } else {
+          const OLD = {
+            phase_1_label: '<strong>The starting point</strong>',
+            phase_1_body: 'Tom was brought into an <strong>insolvent Devon business</strong> to help rescue it.<br /><br />\n\nIt had no VAT provision, unpaid staff and serious financial problems.',
+            phase_2_label: '<strong>What changed</strong>',
+            phase_2_body: 'Tom rebuilt the structure, restored financial control and stabilised the business.<br /><br />\n\nIt became a company capable of operating and growing without depending on constant intervention.',
+            phase_3_label: '<strong>The outcome</strong>',
+            phase_3_body: 'The turnaround succeeded.<br /><br />\n\nSeparately, Tom built, grew and sold his own business in a <strong>seven-figure exit.</strong>'
+          };
+          let changed = 0;
+          for (const field of Object.keys(OLD)) {
+            const to = await getContent(`${mainCase}.${field}`);
+            if (to === null) continue;
+            changed += await updateExact(`${dvCase}.${field}`, OLD[field], to);
+          }
+          let linked = 0;
+          for (const field of ['link_text', 'link_href']) {
+            const to = await getContent(`${mainCase}.${field}`);
+            if (to) linked += await insertIfAbsent(`${dvCase}.${field}`, to);
+          }
+          notes.push(`${dvCase}: ${changed} of 6 proof row(s) replaced with the home page's compact copy from ${mainCase} (a row left alone had been edited in the CMS, which wins), ${linked} link row(s) added`);
+        }
+        if (!dvApproach) {
+          notes.push('no approach instance on the Devon page; step 2 left alone');
+        } else {
+          const bodyKey = `${dvApproach}.step_2_body`;
+          const current = await getContent(bodyKey);
+          const t = await updateExact(`${dvApproach}.step_2_title`, '<strong>We review</strong>', '<strong>Commercial Review</strong>');
+          const b = await db.query(
+            "UPDATE content SET content = $1 WHERE section_key = $2 AND replace(content, E'\\r\\n', E'\\n') LIKE 'If we both think it is worth exploring further, we carry out a %commercial review%'",
+            ['If we both think it is worth exploring further, the next step is the <strong>Commercial Review, £500.</strong><br /><br />\n\nWe listen, go through the business and the evidence, and write it up: what we found, what we would do about it, and what to do first.', bodyKey]
+          );
+          let l = 0;
+          l += await insertIfAbsent(`${dvApproach}.step_2_link_text`, 'What the review covers');
+          l += await insertIfAbsent(`${dvApproach}.step_2_link_href`, '/where-to-start/commercial-review');
+          notes.push(`${dvApproach}: step 2 title ${t ? 'renamed' : 'left alone'}, body was ${current === null ? '(no row)' : JSON.stringify(current)} and is ${b.rowCount ? 'now naming the Commercial Review and its price' : 'left alone because it no longer opens with the old sentence'}, ${l} link row(s) added`);
+        }
+      }
+      await insertIfAbsent(DEVON_MARKER, new Date().toISOString());
+      console.log(`Devon review pass: ${notes.join('; ')}.`);
+    }
+  }
+
   // Migration: tighten SEO snippets flagged in the 17/08/2026 audit. The
   // visible page titles and article copy stay intact; this only updates search
   // metadata where it is blank, too long for a clean result, or still contains

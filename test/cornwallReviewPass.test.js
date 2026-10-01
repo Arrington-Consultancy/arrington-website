@@ -19,11 +19,25 @@ const path = require('path');
 const seed = fs.readFileSync(path.join(__dirname, '..', 'db', 'seed.js'), 'utf8');
 const view = fs.readFileSync(path.join(__dirname, '..', 'views', 'index.ejs'), 'utf8');
 
+// Each pass is its own block in db/seed.js. A block runs from its marker
+// declaration to the next pass's marker declaration (or the SEO-snippets
+// migration that follows them all), so a later pass never bleeds into an
+// earlier one's assertions.
+const BLOCK_STARTS = [
+  "const REVIEW_MARKER = 'site.cornwall_review_pass_2026-10-01'",
+  "const REVIEW_MARKER_B = 'site.cornwall_review_pass_2026-10-01b'",
+  "const REVIEW_MARKER_C = 'site.cornwall_review_pass_2026-10-01c'",
+  "const DEVON_MARKER = 'site.devon_review_pass_2026-10-01'",
+  '// Migration: tighten SEO snippets flagged in the 17/08/2026 audit'
+];
+function passBlock(startText) {
+  const start = seed.indexOf(startText);
+  assert.ok(start > 0, `${startText} exists`);
+  const ends = BLOCK_STARTS.map((t) => seed.indexOf(t, start + 1)).filter((i) => i > start);
+  return seed.slice(start, Math.min(...ends));
+}
 function migration() {
-  const start = seed.indexOf("const REVIEW_MARKER = 'site.cornwall_review_pass_2026-10-01'");
-  assert.ok(start > 0, 'the review-pass migration exists');
-  const end = seed.indexOf('// Migration: tighten SEO snippets flagged in the 17/08/2026 audit', start);
-  return seed.slice(start, end);
+  return passBlock(BLOCK_STARTS[0]);
 }
 
 test('the migration is guarded by its marker and matches rows on their exact current value', () => {
@@ -107,20 +121,31 @@ test('the follow-up matches the old step 2 body with line endings normalised, be
   // Production logged "body left alone" on the first pass: the row had been
   // through the CMS textarea and carried CRLF, and an exact LF match cannot
   // find it. The follow-up normalises before comparing and is a one-shot.
-  const start = seed.indexOf("const REVIEW_MARKER_B = 'site.cornwall_review_pass_2026-10-01b'");
-  assert.ok(start > 0, 'the follow-up exists');
-  const block = seed.slice(start, seed.indexOf('// Migration: tighten SEO snippets flagged in the 17/08/2026 audit', start));
+  const block = passBlock("const REVIEW_MARKER_B = 'site.cornwall_review_pass_2026-10-01b'");
   assert.match(block, /replace\(content, E'\\\\r\\\\n', E'\\\\n'\) = \$3/);
   assert.match(block, /Commercial Review, £500\./);
   assert.ok(!/updateExact|business-consultant-devon|mainCase/.test(block), 'the follow-up touches one Cornwall row only');
 });
 
 test('the second follow-up matches only a body that still opens with the sentence from the finding', () => {
-  const start = seed.indexOf("const REVIEW_MARKER_C = 'site.cornwall_review_pass_2026-10-01c'");
-  assert.ok(start > 0, 'the second follow-up exists');
-  const block = seed.slice(start, seed.indexOf('// Migration: tighten SEO snippets flagged in the 17/08/2026 audit', start));
+  const block = passBlock("const REVIEW_MARKER_C = 'site.cornwall_review_pass_2026-10-01c'");
   assert.match(block, /LIKE 'If we both think it is worth exploring further, we carry out a %commercial review%'/);
   assert.match(block, /Commercial Review, £500\./);
   assert.ok(!/business-consultant-devon|mainCase/.test(block), 'one Cornwall row only');
   assert.match(block, /JSON\.stringify\(current\)/, 'it logs the value it found');
+});
+
+test('the Devon pass applies the same two corrections, reads the home page only, and touches nothing else on Devon', () => {
+  const block = passBlock("const DEVON_MARKER = 'site.devon_review_pass_2026-10-01'");
+  assert.match(block, /includes\('Twenty four months, start to sale'\)/);
+  assert.match(block, /LIKE 'If we both think it is worth exploring further, we carry out a %commercial review%'/);
+  assert.match(block, /'<strong>Commercial Review<\/strong>'/);
+  assert.match(block, /Commercial Review, £500\./);
+  assert.ok(!/updateExact\(`\$\{mainCase\}/.test(block) && !/business-consultant-cornwall/.test(block), 'home page read only, Cornwall untouched');
+  // Only the six proof rows, the two case links, step 2 title/body and its two link rows are written.
+  const keys = block.match(/`\$\{dv(?:Case|Approach)\}\.[a-z0-9_]+`|\$\{field\}/g) || [];
+  const named = keys.filter((k) => !k.includes('${field}')).map((k) => k.replace(/`|\$\{dv(?:Case|Approach)\}\./g, ''));
+  assert.deepEqual([...new Set(named)].sort(), ['step_2_body', 'step_2_link_href', 'step_2_link_text', 'step_2_title']);
+  const writes = block.split('\n').filter((l) => /updateExact\(|insertIfAbsent\(|UPDATE content/.test(l) && !/const /.test(l)).join('\n');
+  for (const phrase of ['seven-figure', 'to help rescue it', 'Tom rebuilt']) assert.ok(!writes.includes(phrase), `${phrase} must not be written`);
 });

@@ -6018,9 +6018,21 @@ is better evidence of the live value than the July snapshot.**
 
 Findings 3 and 4 needed no change: the four lines Tom asked to preserve are
 untouched (two are the global footer `contact.body`), and the towns line is
-one natural sentence. **Reported, not changed: the Devon landing page
-(`business-consultant-devon`) still carries the founder-story phases and the
-old step 2**, since it was out of scope.
+one natural sentence.
+
+**The Devon landing page got the same two corrections the same day** (Tom:
+"apply the same controlled treatment so Devon and Cornwall are commercially
+and visually consistent", strictly those two issues). Checked before copying:
+the Cornwall rows were a byte copy of Devon's made that morning, so the
+evidence and the context (a paid Search landing page, same hero treatment,
+same templates) are the same. Migration marker `site.devon_review_pass_2026-10-01`,
+same shape, with the step 2 body matched on its opening sentence because the
+live Devon row is the one without "proper". Nothing else on the Devon page
+was touched. One nuance for the record: "built, grew and sold his own
+business in a seven-figure exit" IS approved copy on the sale readiness page
+(`views/sale-readiness.ejs`, pinned by its test); it was removed from the two
+landing pages because Tom's finding named it as founder emphasis there, not
+because the claim is unapproved.
 
 **A full-page screenshot of either landing page shows the case study phases
 and the approach steps as blank.** That is the scroll-reveal animation
