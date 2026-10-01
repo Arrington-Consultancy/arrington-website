@@ -6019,10 +6019,15 @@ point at some other region silently. Cornwall's place id, for next time,
 is `ChIJyQ4nv_C3akgRcUVL2YU8Qm4`. Categories were deliberately not
 touched: a category change can send the listing back into verification.
 
-**Four of the five reviews are unanswered** (Nick, Dan, S L, Cheryl; only
-Tristan's has a reply). Replying is Tom's voice and his decision; Windsor
-can post a reply (`reply_to_review`, public, replaces any existing reply)
-once he gives the words. The review link for new asks is
+**All five reviews now carry an owner reply** (01/10/2026). The four
+missing ones were posted through Windsor `reply_to_review` on Tom's
+approval, in his own register: two short plain sentences, no insight
+line, matching the reply he had written himself for Tristan. A first
+draft with a neat second sentence per reply was rejected by Tom as
+"very AI"; the lesson is that a review reply is speech, not copy, and
+should say less. A reply is public and `reply_to_review` replaces any
+existing one, so never call it on a review without Tom's words.
+The review link for new asks is
 `https://search.google.com/local/writereview?placeid=ChIJYf49saEhrmgRStXTX_3VXB4`.
 Windsor can also publish posts, so a Useful Thinking article can be posted
 to the listing with a LEARN_MORE button once Tom wants that.
