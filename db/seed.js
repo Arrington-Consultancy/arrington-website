@@ -3220,6 +3220,182 @@ async function seed() {
     if (devonFixCount > 0) console.log(`Business Consultant Devon: corrected voice / removed fire metaphor on ${devonFixCount} row(s).`);
   }
 
+  // Migration: Business Consultant Cornwall, a public organic-search page
+  // (01/10/2026, Tom's decision after the first Search Console read: the one
+  // local term with any volume, "cornwall business consultant", sat at
+  // position 24 and the site had no Cornwall page at all). Built from the
+  // hidden Google Ads landing page business-consultant-devon, which carries
+  // the approved copy for exactly this shape of page: hero, Tom's story in
+  // third person, what happens next, areas we work. Its rows are READ and
+  // copied onto freshly allocated instance ids; nothing on the Devon page is
+  // written, so the ads page stays as it is. Three rows are replaced with the
+  // Cornwall wording Tom confirmed on 01/10/2026 (the towns list is his, with
+  // Newquay added at his request). The page is not hidden, so it joins the
+  // sitemap, and show_in_nav is false, so the top menu is unchanged; it is
+  // reached from a contextual block appended to About Us, the same way the
+  // Devon page is.
+  //
+  // Guarded on a marker row rather than on the page's absence, so a page Tom
+  // later deletes in the CMS stays deleted. Skips cleanly, saying why, on a
+  // database that has no Devon page to copy from.
+  {
+    const CORNWALL_MARKER = 'site.cornwall_page_2026-10-01';
+    const CORNWALL_SLUG = 'business-consultant-cornwall';
+    const { rows: cwMarker } = await db.query('SELECT 1 FROM content WHERE section_key = $1', [CORNWALL_MARKER]);
+    const { rows: cwExisting } = await db.query('SELECT 1 FROM pages WHERE slug = $1', [CORNWALL_SLUG]);
+    const { rows: devonRows } = await db.query(
+      "SELECT section_order, sort_order FROM pages WHERE slug = 'business-consultant-devon'"
+    );
+    if (cwMarker.length === 0 && cwExisting.length === 0 && devonRows.length === 0) {
+      console.log('Business Consultant Cornwall: no business-consultant-devon page to copy from; skipped.');
+    } else if (cwMarker.length === 0 && cwExisting.length === 0) {
+      const devonOrder = Array.isArray(devonRows[0].section_order) ? devonRows[0].section_order : [];
+      const baseOf = (id) => {
+        const m = /^([a-z0-9]+)(?:__(\d+))?$/.exec(id || '');
+        return m ? m[1] : null;
+      };
+      const sourceFor = (tpl) => devonOrder.find((id) => baseOf(id) === tpl) || null;
+      const sources = {
+        hero: sourceFor('hero'),
+        casestudy: sourceFor('casestudy'),
+        approach: sourceFor('approach'),
+        biography: sourceFor('biography')
+      };
+      const missing = Object.keys(sources).filter((k) => !sources[k]);
+      if (missing.length) {
+        console.log(`Business Consultant Cornwall: Devon page has no ${missing.join(', ')} instance to copy; skipped.`);
+      } else {
+        const used = new Set();
+        const { rows: allOrders } = await db.query('SELECT section_order FROM pages');
+        for (const r of allOrders) {
+          if (Array.isArray(r.section_order)) r.section_order.forEach((s) => used.add(s));
+        }
+        const { rows: prefixes } = await db.query(
+          "SELECT DISTINCT split_part(section_key, '.', 1) AS instance_id FROM content"
+        );
+        prefixes.forEach((r) => used.add(r.instance_id));
+        const allocate = (tpl) => {
+          if (!used.has(tpl)) { used.add(tpl); return tpl; }
+          for (let n = 2; n <= 99; n++) {
+            const id = `${tpl}__${n}`;
+            if (!used.has(id)) { used.add(id); return id; }
+          }
+          return null;
+        };
+
+        const ids = {
+          hero: allocate('hero'),
+          casestudy: allocate('casestudy'),
+          approach: allocate('approach'),
+          biography: allocate('biography')
+        };
+        const aboutLinkId = allocate('intervention');
+
+        if (Object.values(ids).some((v) => !v) || !aboutLinkId) {
+          console.log('Business Consultant Cornwall: could not allocate instance ids; skipped.');
+        } else {
+          // Copy every content row of each source instance onto the new id.
+          // The Devon rows are only ever read here.
+          let copied = 0;
+          for (const tpl of Object.keys(ids)) {
+            const { rows } = await db.query(
+              "SELECT section_key, content FROM content WHERE split_part(section_key, '.', 1) = $1",
+              [sources[tpl]]
+            );
+            for (const r of rows) {
+              const field = r.section_key.slice(r.section_key.indexOf('.') + 1);
+              await db.query(
+                'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+                [`${ids[tpl]}.${field}`, r.content || '']
+              );
+              copied++;
+            }
+          }
+          // The Devon hero's own photo, if it has one, so the two pages match.
+          // A missing source row simply leaves the new hero on the site
+          // default photo via the /img/:key fallback.
+          await db.query(
+            `INSERT INTO images (image_key, data, mime_type)
+             SELECT $1, data, mime_type FROM images WHERE image_key = $2
+             ON CONFLICT (image_key) DO NOTHING`,
+            [`headshot__${ids.hero}`, `headshot__${sources.hero}`]
+          );
+
+          // The Cornwall wording. Three rows only; everything else is the
+          // approved Devon copy as it stands.
+          const set = async (key, value) => {
+            await db.query(
+              'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content',
+              [key, value]
+            );
+          };
+          await set(`${ids.hero}.heading`,
+            'Business consultant<br />\nfor <strong>owner run businesses</strong><br />\nin Cornwall');
+          await set(`${ids.biography}.heading`, 'Working across Cornwall');
+          await set(`${ids.biography}.col_1_p1`,
+            'We work with owner run businesses across <strong>Cornwall, including Saltash, Liskeard, Bodmin, Truro, Falmouth, Newquay and the surrounding area.</strong>');
+
+          const sectionOrder = [ids.hero, ids.casestudy, ids.approach, ids.biography];
+          const sortOrder = Number(devonRows[0].sort_order || 0) + 1;
+          await db.query('UPDATE pages SET sort_order = sort_order + 1 WHERE sort_order >= $1', [sortOrder]);
+          await db.query(
+            `INSERT INTO pages (slug, title, sort_order, hidden, show_in_nav, section_order, hidden_sections, deleted_sections,
+                                meta_title, meta_description, meta_keywords, noindex)
+             VALUES ($1, $2, $3, false, false, $4::jsonb, '[]'::jsonb, '[]'::jsonb, $5, $6, $7, false)`,
+            [
+              CORNWALL_SLUG,
+              'Business Consultant Cornwall',
+              sortOrder,
+              JSON.stringify(sectionOrder),
+              'Business Consultant Cornwall | Arrington Consultancy',
+              'Business consultant for owner run businesses across Cornwall, from Saltash to Newquay. An outside view on owner dependency and what to change first.',
+              'business consultant Cornwall, business consultancy Cornwall, owner run business Cornwall'
+            ]
+          );
+
+          // Contextual link from About Us, appended as its own block so no
+          // existing section on that page is touched. Skipped if About Us
+          // already carries a button to this page.
+          let aboutNote = 'About Us has no page row, no link added';
+          const { rows: aboutRows } = await db.query("SELECT section_order FROM pages WHERE slug = 'about-us'");
+          if (aboutRows.length) {
+            const aboutOrder = Array.isArray(aboutRows[0].section_order) ? aboutRows[0].section_order : [];
+            const { rows: linkRows } = await db.query(
+              "SELECT 1 FROM content WHERE section_key LIKE '%.button_link' AND content = $1 AND split_part(section_key, '.', 1) = ANY($2::text[])",
+              [CORNWALL_SLUG, aboutOrder]
+            );
+            if (linkRows.length) {
+              aboutNote = 'About Us already links to it';
+            } else {
+              await set(`${aboutLinkId}.heading`, 'Working across Cornwall');
+              await set(`${aboutLinkId}.subtext`,
+                'We work with owner run businesses across Cornwall as well as Devon, from Saltash to Newquay, in person or remotely.');
+              await set(`${aboutLinkId}.button_text`, 'Business consultant in Cornwall');
+              await set(`${aboutLinkId}.button_link`, CORNWALL_SLUG);
+              await db.query('UPDATE pages SET section_order = $1::jsonb WHERE slug = $2',
+                [JSON.stringify([...aboutOrder, aboutLinkId]), 'about-us']);
+              aboutNote = `About Us link added as ${aboutLinkId}`;
+            }
+          }
+
+          await db.query(
+            'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+            [CORNWALL_MARKER, new Date().toISOString()]
+          );
+          console.log(`Business Consultant Cornwall: page created at /${CORNWALL_SLUG} as [${sectionOrder.join(', ')}] from Devon instances [${Object.values(sources).join(', ')}], ${copied} content row(s) copied; ${aboutNote}.`);
+        }
+      }
+    } else if (cwMarker.length === 0 && cwExisting.length > 0) {
+      // A page with this slug already exists (made by hand in the CMS). Leave
+      // it alone and stamp the marker so this never fires on it.
+      await db.query(
+        'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+        [CORNWALL_MARKER, 'adopted existing page']
+      );
+      console.log('Business Consultant Cornwall: page already exists; adopted without changes.');
+    }
+  }
+
   // Migration: tighten SEO snippets flagged in the 17/08/2026 audit. The
   // visible page titles and article copy stay intact; this only updates search
   // metadata where it is blank, too long for a clean result, or still contains

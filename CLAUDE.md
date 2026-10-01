@@ -5917,6 +5917,39 @@ previews, which is what keeps the preview line out of the clearance model.
   leads with empty months. Contacts was used instead. Worth fixing on its
   own terms rather than for this page.
 
+## Business Consultant Cornwall page (01/10/2026)
+
+`/business-consultant-cornwall` is a public organic-search page, built on
+Tom's decision after the first Search Console read (the one local term with
+any volume, "cornwall business consultant", sat at position 24 and the site
+had no Cornwall page). It is a normal `pages` row, not hidden (so it is in
+the sitemap) and `show_in_nav = false` (so the top menu is unchanged), reached
+from a contextual `intervention` block appended to About Us.
+
+**No new copy was written beyond three rows.** The seed migration (marker
+`site.cornwall_page_2026-10-01`) copies the hero, Tom's third-person story,
+"What happens next" and "Areas we work" rows from the hidden Google Ads
+landing page `business-consultant-devon` onto freshly allocated instance ids,
+plus that hero's photo, then replaces the hero heading ("in Cornwall"), the
+areas heading and the areas sentence. The towns are Tom's own list of
+01/10/2026, Newquay included: Saltash, Liskeard, Bodmin, Truro, Falmouth,
+Newquay. The Devon page is only ever read, so the ads landing page is
+unchanged. Because the rows are copied at migration time, the Cornwall page
+starts from whatever the Devon rows say on production that day; after that
+the two pages are independent CMS copy and an edit to one does not reach the
+other. The marker, not the page's absence, is the guard, so a page Tom
+deletes in the CMS stays deleted. `test/businessConsultantCornwall.test.js`.
+
+The organic prize is small and was reported as such: 18 impressions in six
+months for the Cornwall term. The page exists because it is cheap, not
+because it will move the numbers on its own.
+
+**A full-page screenshot of either landing page shows the case study phases
+and the approach steps as blank.** That is the scroll-reveal animation
+(`.case-phase` sits at opacity 0 until scrolled into view), identical on the
+Devon page, and not a rendering fault; scroll the page in Playwright before
+screenshotting.
+
 ## Sale readiness page
 
 `/get-your-business-ready-to-sell` is a campaign landing page for social and
