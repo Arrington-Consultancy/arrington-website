@@ -80,6 +80,22 @@ console.log('Google Ads: paid offer purchase conversion label ' + (app.locals.go
   ? 'set (' + app.locals.googleAdsPurchaseConversionLabel.length + ' chars); a confirmed paid purchase counts as a conversion'
   : 'not set; purchases fire no Ads conversion'));
 
+// Microsoft Clarity (session recordings and heatmaps), added 01/10/2026 on
+// Tom's decision. The whole thing is gated on CLARITY_PROJECT_ID: unset, no
+// script renders and the CSP carries no Clarity host, so an unconfigured
+// deploy is byte-identical to before. The id is a public identifier (it is
+// in the page source of every Clarity site), not a secret, and is validated
+// to Clarity's own alphabet so nothing else can reach the rendered script
+// or the policy. Rendered by views/partials/clarity-tag.ejs, which is
+// included from the Google tag partial so it reaches every public page and
+// none of the login-only areas (Scott, the Workspace) for the same reason
+// the Google tag does not.
+const clarityProjectId = (process.env.CLARITY_PROJECT_ID || '').trim();
+app.locals.clarityProjectId = /^[a-z0-9]{4,32}$/.test(clarityProjectId) ? clarityProjectId : '';
+console.log('Microsoft Clarity: ' + (app.locals.clarityProjectId
+  ? 'project id set (' + app.locals.clarityProjectId.length + ' chars); recordings and heatmaps on for public pages'
+  : (clarityProjectId ? 'CLARITY_PROJECT_ID is set but is not a valid project id; Clarity is OFF' : 'not configured; no Clarity script, no Clarity CSP hosts')));
+
 // Fail fast if SESSION_SECRET is missing in production — we never want to
 // fall back to a hardcoded dev secret on the real domain.
 if (isProd && !process.env.SESSION_SECRET) {
@@ -212,7 +228,10 @@ app.use(helmet({
         'https://www.googletagmanager.com',
         'https://www.googleadservices.com',
         'https://challenges.cloudflare.com',
-        ...(googleSigninClientId ? ['https://accounts.google.com/gsi/client'] : [])
+        ...(googleSigninClientId ? ['https://accounts.google.com/gsi/client'] : []),
+        // Microsoft Clarity: the loader comes from www.clarity.ms and the
+        // tag it fetches from scripts.clarity.ms. Gated like the gsi hosts.
+        ...(app.locals.clarityProjectId ? ['https://www.clarity.ms', 'https://scripts.clarity.ms'] : [])
       ],
       // Google Ads conversion and remarketing endpoints are sent as pixels or
       // beacons, so they need img-src/connect-src and nothing else. These hosts
@@ -233,7 +252,8 @@ app.use(helmet({
         'https://www.google.com',
         'https://ad.doubleclick.net',
         'https://www.google.co.uk',
-        'https://lh3.googleusercontent.com'
+        'https://lh3.googleusercontent.com',
+        ...(app.locals.clarityProjectId ? ['https://*.clarity.ms', 'https://c.bing.com'] : [])
       ],
       connectSrc: [
         "'self'",
@@ -251,7 +271,10 @@ app.use(helmet({
         'https://googleads.g.doubleclick.net',
         'https://www.google.com',
         'https://ad.doubleclick.net',
-        ...(googleSigninClientId ? ['https://accounts.google.com/gsi/'] : [])
+        ...(googleSigninClientId ? ['https://accounts.google.com/gsi/'] : []),
+        // Clarity sends its recordings to a regional collector under
+        // *.clarity.ms and links the session to Bing's cookie via c.bing.com.
+        ...(app.locals.clarityProjectId ? ['https://*.clarity.ms', 'https://c.bing.com'] : [])
       ],
       frameSrc: [
         "'self'",

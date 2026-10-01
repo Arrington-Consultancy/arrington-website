@@ -10,7 +10,7 @@
 <% if (typeof ga4Id !== 'undefined' && ga4Id) { %><script nonce="<%= nonce %>">
   gtag('config', '<%= ga4Id %>');
 </script>
-<% } %><%# THE SITE'S ONE GOOGLE TAG. Included as the first thing inside <head>
+<% } %><%- include('clarity-tag') %><%# THE SITE'S ONE GOOGLE TAG. Included as the first thing inside <head>
     on every public page, and nowhere else: Google allows one Google tag per
     page, so a page must never carry a second copy of the loader or of the
     config call. test/googleTag.test.js enforces both.
@@ -30,4 +30,8 @@
 
     Conversion EVENTS are not here. The Contact conversion fires only on
     /thank-you after a stored enquiry (views/thank-you.ejs); the contact-click
-    conversion lives in site-chrome-script. %>
+    conversion lives in site-chrome-script.
+
+    Microsoft Clarity rides along from here (partials/clarity-tag.ejs) so it
+    reaches exactly the pages this tag reaches and no others. It renders
+    nothing unless CLARITY_PROJECT_ID is set. %>

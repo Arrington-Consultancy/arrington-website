@@ -802,6 +802,7 @@ npm run dev
 - **Required env vars:** `DATABASE_URL` (auto-set by addon), `SESSION_SECRET`, `RAILWAY_ENVIRONMENT` (auto-set)
 - **`GMAIL_APP_PASSWORD`** — Gmail SMTP app password for lead/quiz/Market Ready Test notification emails (see Lead capture section). Optional locally; `notify()` no-ops with a console warning if unset. **It is also what makes the workspace's failed-unlock security alert able to ring** (finding H3): with it unset that alarm is inert, and the boot line now says so rather than leaving the operator to find out during an attack.
 - **`GOOGLE_ADS_PDF_CONVERSION_LABEL`** — optional. The Google Ads conversion label (text after `AW-18129914078/`) for a successful gated-PDF request. Unset means PDF requests fire no Ads conversion; they stopped sharing the contact-click label on 11/09/2026 (see Lead capture).
+- **`CLARITY_PROJECT_ID`** — optional. Microsoft Clarity project id (public, not a secret). Unset means no Clarity script and no Clarity CSP hosts; see "Microsoft Clarity" below.
 - **`WORKSPACE_ALERT_EMAIL`** — where the workspace's failed-unlock security alert goes. Optional; falls back to the built-in owner address. It deliberately does **not** fall back to the `contact.email` CMS row (finding H1): that row is editable by anyone holding `edit_content`, which is exactly the account the alarm exists to warn about, so the default was retargetable by the attacker.
 - **Bootstrap env vars (first boot only):** `NAT_PASSWORD`, `TOM_PASSWORD` — remove from Railway after the first successful deploy seeds the user rows
 - **Production detection:** checks for `RAILWAY_ENVIRONMENT` or `NODE_ENV=production`
@@ -6063,6 +6064,43 @@ traffic enquired, because it was dropping UK visits until the CSP fix of the
 same day; the admin Leads panel's Source column is the place to check.
 Organic Facebook is 10 to 100 views a post. Nothing has been posted on any
 channel since 5 August.
+
+## Microsoft Clarity (added 01/10/2026, inert until the id is set)
+
+Session recordings and heatmaps, on Tom's decision, to answer the one
+question no other tool here can: what a visitor actually does on a page
+once they land. Built like the Google prefill: **everything is gated on
+`CLARITY_PROJECT_ID`**. Unset, no script renders and the CSP carries no
+Clarity host, so the deploy is byte-identical to before; an invalid value
+is treated as unset and the boot line `Microsoft Clarity:` says which of
+the three states applies. The id is validated to `^[a-z0-9]{4,32}$` and
+put in `app.locals`, so no view threads it (the fourteen-views lesson).
+
+`views/partials/clarity-tag.ejs` is Microsoft's snippet plus the nonce,
+and it is included from `google-tag.ejs` rather than from each view, so
+it reaches exactly the pages the Google tag reaches (every public page,
+including login) and never Scott or the Workspace. CSP, all gated on the
+same value: `www.clarity.ms` and `scripts.clarity.ms` in scriptSrc,
+`*.clarity.ms` and `c.bing.com` in connectSrc and imgSrc. The Privacy page
+describes it (recordings of the page, inputs masked, no contact details).
+`test/clarityTag.test.js`. Verified over real HTTP on a throwaway
+database in all three states: unset, set (one nonced script, the id in
+the page, the hosts in the header, on seven public pages and not on
+`/scott/login`), and invalid (treated as unset).
+
+**Setting it up is Tom's two minutes:** clarity.microsoft.com, new
+project for `www.arringtonconsultancy.com`, copy the project id from the
+project's settings, set `CLARITY_PROJECT_ID` on the `arrington-prototype`
+service. The Windsor `microsoft_clarity` connector can then read the
+dashboards from here. Any CSP report naming a Clarity host afterwards means
+Microsoft has added a collector domain and the lists above need it.
+
+**Two pre-existing test failures seen on this run, neither this change's:**
+`test/workspace/receivablesRetrieval.test.js` case 4 (the pinned-date rot
+already recorded above) and `test/workspace/zohoInvoiceClient.test.js`
+"createInvoice POSTs one line item", whose fixture carries a fixed due
+date that is now in the past, so the client's own "due date must be today
+or later" guard refuses it. Both fail identically with this change stashed.
 
 ## Sale readiness page
 
