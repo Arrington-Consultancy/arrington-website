@@ -3094,6 +3094,12 @@
             text-underline-offset: 0.16em;
         }
 
+        /* Cloudflare Turnstile sits between the privacy note and the Send
+           button. The widget brings its own chrome; this just gives it room. */
+        .lead-turnstile {
+            margin: 0 0 1.1rem;
+        }
+
         .lead-form input::placeholder,
         .lead-form textarea::placeholder {
             color: var(--text-muted);
@@ -4888,6 +4894,10 @@
             } catch (err) {
                 status.textContent = err.message || 'Something went wrong. Please try again or email us directly.';
                 status.classList.add('lead-form-error');
+                // A Turnstile token is single-use, so a retry would reuse a spent
+                // token and be rejected as a duplicate. Reset the widget to fetch
+                // a fresh one. No-op on pages/builds without Turnstile.
+                if (window.turnstile) { try { window.turnstile.reset(); } catch (e) {} }
                 // Re-enabled only on failure: on success the button stays off
                 // until the page changes, so a second click cannot send it twice.
                 btn.disabled = false;

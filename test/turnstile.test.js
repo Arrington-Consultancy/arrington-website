@@ -90,3 +90,36 @@ describe('verifyTurnstileToken', () => {
     delete require.cache[require.resolve('../lib/turnstile')];
   });
 });
+
+// The footer enquiry form's block policy. The property that matters for a
+// primary conversion form: a genuine visitor is never turned away by a check
+// that could not run, while a token Cloudflare actively rejected is stopped.
+describe('turnstileBlocks', () => {
+  const { turnstileBlocks } = require('../lib/turnstile');
+
+  test('a verified token does not block', () => {
+    assert.equal(turnstileBlocks({ success: true }), false);
+  });
+
+  test('a token Cloudflare rejected blocks', () => {
+    assert.equal(turnstileBlocks({ success: false, reason: 'invalid-input-response' }), true);
+    assert.equal(turnstileBlocks({ success: false, reason: 'timeout-or-duplicate' }), true);
+    assert.equal(turnstileBlocks({ success: false, reason: 'verification_failed' }), true);
+  });
+
+  test('a missing token does NOT block (fail open for a widget that never loaded)', () => {
+    assert.equal(turnstileBlocks({ success: false, reason: 'missing_token' }), false);
+  });
+
+  test('an unconfigured or unreachable check does NOT block (fail open on infrastructure)', () => {
+    assert.equal(turnstileBlocks({ success: false, reason: 'not_configured' }), false);
+    assert.equal(turnstileBlocks({ success: false, reason: 'verify_request_failed' }), false);
+    assert.equal(turnstileBlocks({ success: false, reason: 'siteverify_http_503' }), false);
+  });
+
+  test('a null or malformed result does not block', () => {
+    assert.equal(turnstileBlocks(null), false);
+    assert.equal(turnstileBlocks(undefined), false);
+    assert.equal(turnstileBlocks({ success: false }), true); // no reason = treated as a real rejection
+  });
+});

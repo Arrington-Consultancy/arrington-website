@@ -54,6 +54,16 @@ app.locals.googleSigninClientId = googleSigninClientId;
 // same module rather than trusting whatever the form posts back.
 app.locals.heardAboutOptions = require('./lib/heardAbout').OPTIONS;
 
+// Cloudflare Turnstile public site key for the footer enquiry form. On
+// app.locals for the same reason as the options above: the footer partial
+// that renders the widget is included from fourteen views, so threading it
+// through each include is fourteen chances to miss one. Empty when no key is
+// configured, in which case the footer renders no widget and the /api/leads
+// check fails open (see routes/leads.js). The standalone assessment tools
+// still pass their own `turnstileSiteKey` per render; this is the default
+// that reaches the shared footer everywhere.
+app.locals.turnstileSiteKey = TURNSTILE_SITE_KEY;
+
 // Google Ads conversion label for a gated PDF request. Until 11/09/2026 a
 // successful PDF request fired the same conversion label as a phone, email
 // or WhatsApp click, so a document download counted as a contact. It now

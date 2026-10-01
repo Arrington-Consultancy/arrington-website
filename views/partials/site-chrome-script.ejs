@@ -128,6 +128,10 @@ document.querySelectorAll('a[data-evidence-source]').forEach(a => {
         } catch (err) {
             status.textContent = err.message || 'Something went wrong. Please try again.';
             status.classList.add('lead-form-error');
+            // A Turnstile token is single-use, so a retry would reuse a spent
+            // token and be rejected as a duplicate. Reset the widget to fetch
+            // a fresh one. No-op on pages/builds without Turnstile.
+            if (window.turnstile) { try { window.turnstile.reset(); } catch (e) {} }
             // Re-enabled only on failure: on success the button stays off
             // until the page changes, so a second click cannot send it twice.
             btn.disabled = false;

@@ -81,6 +81,19 @@
                 <input type="text" name="heard_about_other" id="leadHeardAboutOther" placeholder="Where did you hear about us?" maxlength="200">
             </div>
             <p class="lead-privacy-note">We use your details to respond to your enquiry. Read our <a href="/privacy">Privacy</a> page.</p>
+            <%# Cloudflare Turnstile (01/10/2026). Implicit render: the api.js
+                script below auto-renders this element and injects a hidden
+                cf-turnstile-response field into the form, which the submit
+                script already serialises with the rest of the form, so no
+                change to that script is needed to SEND the token. For most
+                visitors it clears itself in under a second; the server fails
+                open when it is absent or cannot be checked. Rendered only when
+                a site key is configured, so local/unconfigured builds show no
+                widget. turnstileSiteKey reaches this shared partial via
+                app.locals (see server.js). %>
+            <% if (typeof turnstileSiteKey !== 'undefined' && turnstileSiteKey) { %>
+            <div class="lead-turnstile cf-turnstile" data-sitekey="<%= turnstileSiteKey %>" data-theme="dark" data-action="contact"></div>
+            <% } %>
             <button type="submit" class="btn btn-primary"><%= pageContact.submitText %></button>
             <p class="lead-form-status" id="leadFormStatus" aria-live="polite"></p>
         </form>
@@ -103,3 +116,21 @@
         <%= content['footer.name'] || '' %>
     </div>
 </footer>
+<%# Load the Turnstile script once per page, and only when the footer widget
+    above is present. The standalone assessment tools already load api.js in
+    their own <head>; the guard stops a second copy loading there, while CMS
+    pages (which had no Turnstile before) get it from here. The already-loaded
+    script auto-renders the footer .cf-turnstile either way. nonce comes from
+    res.locals, like every other nonced block. %>
+<% if (typeof turnstileSiteKey !== 'undefined' && turnstileSiteKey) { %>
+<script nonce="<%= nonce %>">
+  (function () {
+    if (document.querySelector('script[src^="https://challenges.cloudflare.com/turnstile/v0/api.js"]')) return;
+    var s = document.createElement('script');
+    s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+    s.async = true;
+    s.defer = true;
+    document.head.appendChild(s);
+  })();
+</script>
+<% } %>
