@@ -6042,6 +6042,14 @@ tool**: LinkedIn's API exposes company pages only, so the personal profile,
 which is the one channel with real reach (posts of 1,000+ views against the
 company page's 9 followers and 32 to 89 views a post), is read from the
 export LinkedIn offers under profile, Analytics, Post impressions, Export.
+Tom does that export monthly into the 10 Social Media Drive folder.
+**Publishing to the personal profile works the other way round:** the Zapier
+LinkedIn app (connection "Tom Arrington", authorised 01/10/2026, action
+`share`) can post to Tom's own profile. It is a send path, not a read path,
+and every post still needs Tom's approval of the exact words first, per the
+social operating manual. Facebook paid is OFF on Tom's decision of
+01/10/2026 (five campaigns paused, two ended in August) and stays off until
+an enquiry can be traced to it.
 
 **Facebook paid spend, May to September 2026: £871 in total**, all of it
 boosts and page promotion, nothing running after 20 September. The Drive
