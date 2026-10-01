@@ -114,3 +114,13 @@ test('the follow-up matches the old step 2 body with line endings normalised, be
   assert.match(block, /Commercial Review, £500\./);
   assert.ok(!/updateExact|business-consultant-devon|mainCase/.test(block), 'the follow-up touches one Cornwall row only');
 });
+
+test('the second follow-up matches only a body that still opens with the sentence from the finding', () => {
+  const start = seed.indexOf("const REVIEW_MARKER_C = 'site.cornwall_review_pass_2026-10-01c'");
+  assert.ok(start > 0, 'the second follow-up exists');
+  const block = seed.slice(start, seed.indexOf('// Migration: tighten SEO snippets flagged in the 17/08/2026 audit', start));
+  assert.match(block, /LIKE 'If we both think it is worth exploring further, we carry out a %commercial review%'/);
+  assert.match(block, /Commercial Review, £500\./);
+  assert.ok(!/business-consultant-devon|mainCase/.test(block), 'one Cornwall row only');
+  assert.match(block, /JSON\.stringify\(current\)/, 'it logs the value it found');
+});

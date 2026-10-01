@@ -5998,15 +5998,20 @@ three internal link guards accepted `//evil.example`**, a protocol-relative
 URL that leaves the site; they now refuse a second leading slash.
 `test/cornwallReviewPass.test.js`.
 
-**Rows edited in the CMS carry CRLF, and an exact LF match never finds
-them.** The first pass logged "step 2 title renamed, body left alone" on
-production: the six case study rows (written by a migration, LF) matched,
-the step body (edited through the CMS textarea on the Devon page, CRLF,
-inherited by the Cornwall copy) did not, so for a few minutes the live step
-read "Commercial Review" over the old body. A same-day follow-up (marker
-`...2026-10-01b`) matches with `replace(content, E'\r\n', E'\n')` and
-fixed it. **Any future exact-value guard on a row Tom may have edited in the
-CMS must normalise line endings the same way**, or it will silently skip.
+**The step 2 body did not match on production, twice.** The first pass
+logged "step 2 title renamed, body left alone": the six case study rows
+(written by a migration) matched, the step body did not, so for a while the
+live step read "Commercial Review" over the old body. The first guess was
+CRLF line endings (rows edited through the CMS textarea carry them, and an
+exact LF match cannot find them): a follow-up (marker `...01b`) normalised
+line endings and **still did not match**, so the live body is not the July
+wording at all and the sandbox cannot read the live page to see what it is.
+A second follow-up (marker `...01c`) logs the row's actual value in the
+deploy log and rewrites it only if it still opens with the sentence Tom
+quoted in his finding ("we carry out a ... commercial review"), which is the
+sentence he asked to change. **Two lessons: normalise line endings in any
+exact-value guard on a row Tom may have edited, and when a guard misses on
+production, log the value before guessing again.**
 
 Findings 3 and 4 needed no change: the four lines Tom asked to preserve are
 untouched (two are the global footer `contact.body`), and the towns line is

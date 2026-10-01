@@ -3544,6 +3544,46 @@ async function seed() {
     }
   }
 
+  // Second follow-up, same day. The CRLF reading above was wrong: with line
+  // endings normalised the row still did not match, so the live body is not
+  // the July wording at all. It cannot be read from the build sandbox, so this
+  // block does two things on the next deploy. It logs the row's current value
+  // with line breaks escaped (public page copy, nothing sensitive), so the log
+  // says what is actually there. And it updates the row if, and only if, the
+  // body still OPENS with the sentence Tom quoted in the review finding ("If
+  // we both think it is worth exploring further, we carry out a ... commercial
+  // review"), with or without "proper", with or without the strong tag. That
+  // is the sentence he asked to change, so matching it is applying his
+  // instruction; a body that no longer opens with it has been rewritten in the
+  // CMS and is left alone. One row, one shot, own marker.
+  {
+    const REVIEW_MARKER_C = 'site.cornwall_review_pass_2026-10-01c';
+    const { rows: rvcMarker } = await db.query('SELECT 1 FROM content WHERE section_key = $1', [REVIEW_MARKER_C]);
+    if (rvcMarker.length === 0) {
+      const { rows: cwRows } = await db.query("SELECT section_order FROM pages WHERE slug = 'business-consultant-cornwall'");
+      const cwOrder = cwRows.length && Array.isArray(cwRows[0].section_order) ? cwRows[0].section_order : [];
+      const cwApproach = cwOrder.find((id) => /^approach(?:__\d+)?$/.test(id));
+      let note = 'no Cornwall approach instance; nothing to do';
+      if (cwApproach) {
+        const key = `${cwApproach}.step_2_body`;
+        const { rows: cur } = await db.query('SELECT content FROM content WHERE section_key = $1', [key]);
+        const current = cur.length ? cur[0].content : null;
+        const shown = current === null ? '(no row)' : JSON.stringify(current);
+        const newBody = 'If we both think it is worth exploring further, the next step is the <strong>Commercial Review, £500.</strong><br /><br />\n\nWe listen, go through the business and the evidence, and write it up: what we found, what we would do about it, and what to do first.';
+        const r = await db.query(
+          "UPDATE content SET content = $1 WHERE section_key = $2 AND replace(content, E'\\r\\n', E'\\n') LIKE 'If we both think it is worth exploring further, we carry out a %commercial review%'",
+          [newBody, key]
+        );
+        note = `${key} was ${shown}; ${r.rowCount ? 'now names the Commercial Review and its price' : 'left alone because it no longer opens with the sentence from the review finding'}`;
+      }
+      await db.query(
+        'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+        [REVIEW_MARKER_C, new Date().toISOString()]
+      );
+      console.log(`Cornwall review pass, second follow-up: ${note}.`);
+    }
+  }
+
   // Migration: tighten SEO snippets flagged in the 17/08/2026 audit. The
   // visible page titles and article copy stay intact; this only updates search
   // metadata where it is blank, too long for a clean result, or still contains
