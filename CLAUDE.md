@@ -6032,7 +6032,12 @@ was touched. One nuance for the record: "built, grew and sold his own
 business in a seven-figure exit" IS approved copy on the sale readiness page
 (`views/sale-readiness.ejs`, pinned by its test); it was removed from the two
 landing pages because Tom's finding named it as founder emphasis there, not
-because the claim is unapproved.
+because the claim is unapproved. Production log, deploy `a2e38718`: 6 of 6
+proof rows replaced, step 2 body corrected. Controlled write-back filed in
+Drive (standalone, awaiting merge into the Worker Handoff when Zapier has
+tasks): "WEBSITE AND HOSTING WRITE-BACK - Cornwall and Devon landing page
+review pass, hero fix and internal link guard fix, 1 October 2026", id
+`16fEDJ905azb_nxFpvlhezUg2cKYnxB6SldKmeB7Gd-c`.
 
 **A full-page screenshot of either landing page shows the case study phases
 and the approach steps as blank.** That is the scroll-reveal animation
