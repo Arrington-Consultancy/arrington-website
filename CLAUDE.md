@@ -5979,6 +5979,46 @@ The general ad group also lists dozens of zero-impression EXACT rows
 tea business uk"). Those are almost certainly ad-group negatives that
 Windsor's keyword report does not distinguish from positives. Left alone.
 
+## Google Business Profile (01/10/2026)
+
+The listing exists, is verified, and is connected through the Windsor
+`google_my_business` connector (account `locations/3855282927663970981`,
+place id `ChIJYf49saEhrmgRStXTX_3VXB4`, Maps link
+`https://maps.google.com/maps?cid=2187858803206378826`). It is the local
+pack lever for "business consultant plymouth" type searches: 70 to 100
+views a month on Search and Maps over the last six months and about one
+website click a month. Primary category "Business development service",
+hours Mon to Sat 9 to 5, WhatsApp, LinkedIn, Facebook and Instagram
+attributes set, **zero reviews ever, zero posts ever**.
+
+On Tom's "Yes fix" of 01/10/2026 the description was rewritten from the
+Brand OS (the approved short company description opens it, then the
+audience, the Commercial Review as the main offer, website builds and AI
+workers where they solve a real problem, Plymouth, the free conversation;
+723 characters against Google's 750 cap, no banned words, no em dashes)
+and the five offers from `lib/whereToStartOffers.js` were set as services
+with their public prices and their catalogue descriptions verbatim (the
+free conversation carries no description because none is approved).
+Both read back from Google; Google holds them as pending edits for its
+own review. The old description was off-brand ("elite UK advisory firm",
+"institutional-grade", "exit planning, and property & asset advisory",
+"Wharton AI certification") and is gone.
+
+**Not done: Cornwall is still absent from the service area** (Devon,
+Plymouth, Ivybridge, United Kingdom). `update_service_area` needs a Google
+Maps place id for Cornwall and this sandbox cannot reach Google Maps,
+the Places API or any geocoder to look one up; a guessed id would point
+at some other region silently, so none was tried. Tom adds Cornwall in
+the Business Profile app (Edit profile, Service area) or supplies the
+place id. Categories were deliberately not touched: a category change can
+send the listing back into verification.
+
+**Reviews are Tom's alone.** The review link is
+`https://search.google.com/local/writereview?placeid=ChIJYf49saEhrmgRStXTX_3VXB4`;
+the four testimonial clients are the obvious first asks. Windsor can
+reply to reviews and publish posts, so a Useful Thinking article can be
+posted to the listing with a LEARN_MORE button once Tom wants that.
+
 ## Sale readiness page
 
 `/get-your-business-ready-to-sell` is a campaign landing page for social and
