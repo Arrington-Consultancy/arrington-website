@@ -3509,6 +3509,41 @@ async function seed() {
     }
   }
 
+  // Follow-up to the review pass (same day). On production the pass logged
+  // "step 2 title renamed, body left alone": the body's exact value did not
+  // match while every other row did. The six case study rows had been written
+  // by a migration (LF line breaks); the approach rows on the Devon page had
+  // been through the CMS edit modal, whose textarea submits CRLF, and the
+  // Cornwall copy inherited that. An exact match on an LF string can never
+  // find a CRLF row. This block matches the old value with line endings
+  // normalised on both sides and writes the intended body. Still a one-shot
+  // behind its own marker, still only the one row, still a no-op if Tom has
+  // since edited it to anything else.
+  {
+    const REVIEW_MARKER_B = 'site.cornwall_review_pass_2026-10-01b';
+    const { rows: rvbMarker } = await db.query('SELECT 1 FROM content WHERE section_key = $1', [REVIEW_MARKER_B]);
+    if (rvbMarker.length === 0) {
+      const { rows: cwRows } = await db.query("SELECT section_order FROM pages WHERE slug = 'business-consultant-cornwall'");
+      const cwOrder = cwRows.length && Array.isArray(cwRows[0].section_order) ? cwRows[0].section_order : [];
+      const cwApproach = cwOrder.find((id) => /^approach(?:__\d+)?$/.test(id));
+      let note = 'no Cornwall approach instance; nothing to do';
+      if (cwApproach) {
+        const oldBody = 'If we both think it is worth exploring further, we carry out a <strong>proper commercial review.</strong><br /><br />\n\nYou get an honest view of what is working, what is getting in the way and where the biggest commercial improvements can be made.';
+        const newBody = 'If we both think it is worth exploring further, the next step is the <strong>Commercial Review, £500.</strong><br /><br />\n\nWe listen, go through the business and the evidence, and write it up: what we found, what we would do about it, and what to do first.';
+        const r = await db.query(
+          "UPDATE content SET content = $1 WHERE section_key = $2 AND replace(content, E'\\r\\n', E'\\n') = $3",
+          [newBody, `${cwApproach}.step_2_body`, oldBody]
+        );
+        note = `${cwApproach}.step_2_body ${r.rowCount ? 'now names the Commercial Review and its price (matched with line endings normalised)' : 'left alone: not the old wording, so a CMS edit stands'}`;
+      }
+      await db.query(
+        'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+        [REVIEW_MARKER_B, new Date().toISOString()]
+      );
+      console.log(`Cornwall review pass, follow-up: ${note}.`);
+    }
+  }
+
   // Migration: tighten SEO snippets flagged in the 17/08/2026 audit. The
   // visible page titles and article copy stay intact; this only updates search
   // metadata where it is blank, too long for a clean result, or still contains

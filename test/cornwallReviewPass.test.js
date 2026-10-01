@@ -102,3 +102,15 @@ test('every internal link guard in the view refuses a protocol-relative href', (
   assert.equal(guards.length, 3, 'three internal link guards in the view');
   for (const g of guards) assert.ok(g.includes('(?!\\/)'), `guard without the lookahead: ${g}`);
 });
+
+test('the follow-up matches the old step 2 body with line endings normalised, behind its own marker', () => {
+  // Production logged "body left alone" on the first pass: the row had been
+  // through the CMS textarea and carried CRLF, and an exact LF match cannot
+  // find it. The follow-up normalises before comparing and is a one-shot.
+  const start = seed.indexOf("const REVIEW_MARKER_B = 'site.cornwall_review_pass_2026-10-01b'");
+  assert.ok(start > 0, 'the follow-up exists');
+  const block = seed.slice(start, seed.indexOf('// Migration: tighten SEO snippets flagged in the 17/08/2026 audit', start));
+  assert.match(block, /replace\(content, E'\\\\r\\\\n', E'\\\\n'\) = \$3/);
+  assert.match(block, /Commercial Review, £500\./);
+  assert.ok(!/updateExact|business-consultant-devon|mainCase/.test(block), 'the follow-up touches one Cornwall row only');
+});

@@ -5998,6 +5998,16 @@ three internal link guards accepted `//evil.example`**, a protocol-relative
 URL that leaves the site; they now refuse a second leading slash.
 `test/cornwallReviewPass.test.js`.
 
+**Rows edited in the CMS carry CRLF, and an exact LF match never finds
+them.** The first pass logged "step 2 title renamed, body left alone" on
+production: the six case study rows (written by a migration, LF) matched,
+the step body (edited through the CMS textarea on the Devon page, CRLF,
+inherited by the Cornwall copy) did not, so for a few minutes the live step
+read "Commercial Review" over the old body. A same-day follow-up (marker
+`...2026-10-01b`) matches with `replace(content, E'\r\n', E'\n')` and
+fixed it. **Any future exact-value guard on a row Tom may have edited in the
+CMS must normalise line endings the same way**, or it will silently skip.
+
 Findings 3 and 4 needed no change: the four lines Tom asked to preserve are
 untouched (two are the global footer `contact.body`), and the towns line is
 one natural sentence. **Reported, not changed: the Devon landing page
