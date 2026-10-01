@@ -6032,6 +6032,30 @@ The review link for new asks is
 Windsor can also publish posts, so a Useful Thinking article can be posted
 to the listing with a LEARN_MORE button once Tom wants that.
 
+## Social media connectors and what they showed (01/10/2026)
+
+Windsor now also reads the Facebook page (`facebook_organic`, account
+`1063317753533130`), the LinkedIn company page (`linkedin_organic`,
+`128404067`) and Meta Ads (`facebook`, ad account `23446341`). Instagram is
+not connected. **Tom's personal LinkedIn profile cannot be connected by any
+tool**: LinkedIn's API exposes company pages only, so the personal profile,
+which is the one channel with real reach (posts of 1,000+ views against the
+company page's 9 followers and 32 to 89 views a post), is read from the
+export LinkedIn offers under profile, Analytics, Post impressions, Export.
+
+**Facebook paid spend, May to September 2026: £871 in total**, all of it
+boosts and page promotion, nothing running after 20 September. The Drive
+social records had this as a £1.45 boost, which was one of seven campaigns.
+The two that matter: a "New Leads campaign" at £398 with a WhatsApp
+destination, 858 link clicks and no recorded conversation started; and the
+4am-message post at £328, which is the only one that sent people to the site
+(1,346 link clicks, 1,020 landing page views, about 32p each). Page promotion
+cost £76 for seven followers (17 to 24). GA4 cannot say whether any of that
+traffic enquired, because it was dropping UK visits until the CSP fix of the
+same day; the admin Leads panel's Source column is the place to check.
+Organic Facebook is 10 to 100 views a post. Nothing has been posted on any
+channel since 5 August.
+
 ## Sale readiness page
 
 `/get-your-business-ready-to-sell` is a campaign landing page for social and
