@@ -319,7 +319,7 @@ Every page exposes a full set of SEO fields, editable per-page (and gated on the
 
 **Sitemap + robots:** `server.js` serves a dynamic `/sitemap.xml` (lists only public pages: not hidden, not `noindex`, not `page_access`-restricted; each with a `lastmod` from `updated_at`) and `/robots.txt` (allows all, disallows `/login`, points at the sitemap). Both build URLs from the request host so they work on any domain.
 
-**Google Search Console (pending Tom action, flagged 09/06/2026):** the sitemap is live but should be submitted once in Search Console (search.google.com/search-console → add/verify the `https://www.arringtonconsultancy.com` URL-prefix property → Sitemaps → submit `sitemap.xml`) so Google crawls faster. Tom signs in with his Google Ads account. If ownership verification stalls, Nat can add the HTML-tag verification (the CSP `scriptSrc` already allows the Google domains). No code change needed; the sitemap self-updates.
+**Google Search Console: verified and connected (01/10/2026).** Both the domain property (`sc-domain:arringtonconsultancy.com`) and the URL-prefix property are verified and readable through the Windsor.ai connector (`searchconsole`), so organic queries, pages and daily totals can be pulled without Tom opening Search Console. First 90-day read, 01/10/2026: 13 organic clicks in total; the site ranks top two for the bare phrase "business consultancy" but on a handful of impressions; local terms such as "cornwall business consultant" sit around position 22; Useful Thinking articles barely surface. Organic is not a lead source today and the paid campaign is where the enquiries come from. The old note here asking Tom to submit the sitemap is superseded.
 
 ## Content editing
 
