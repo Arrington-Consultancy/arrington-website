@@ -6004,14 +6004,14 @@ own review. The old description was off-brand ("elite UK advisory firm",
 "institutional-grade", "exit planning, and property & asset advisory",
 "Wharton AI certification") and is gone.
 
-**Not done: Cornwall is still absent from the service area** (Devon,
-Plymouth, Ivybridge, United Kingdom). `update_service_area` needs a Google
-Maps place id for Cornwall and this sandbox cannot reach Google Maps,
-the Places API or any geocoder to look one up; a guessed id would point
-at some other region silently, so none was tried. Tom adds Cornwall in
-the Business Profile app (Edit profile, Service area) or supplies the
-place id. Categories were deliberately not touched: a category change can
-send the listing back into verification.
+**Cornwall is on the service area since 01/10/2026** (Devon, Cornwall,
+Plymouth, Ivybridge, United Kingdom), added by Tom in the Business Profile
+UI and read back through Windsor. It had to be Tom because
+`update_service_area` needs a Google Maps place id and this sandbox cannot
+reach Google Maps, the Places API or any geocoder; a guessed id would
+point at some other region silently. Cornwall's place id, for next time,
+is `ChIJyQ4nv_C3akgRcUVL2YU8Qm4`. Categories were deliberately not
+touched: a category change can send the listing back into verification.
 
 **Reviews are Tom's alone.** The review link is
 `https://search.google.com/local/writereview?placeid=ChIJYf49saEhrmgRStXTX_3VXB4`;
