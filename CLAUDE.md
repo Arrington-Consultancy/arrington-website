@@ -5960,6 +5960,50 @@ a flex box, so `Book your <strong>30-minute conversation</strong>` rendered as
 page as well; `.btn strong { display: contents }` fixes both.
 `test/heroCover.test.js`.
 
+**Review pass (01/10/2026, Tom's findings, each checked against the Brand OS
+before acting).** Two held up and are applied by a guarded migration in
+`db/seed.js` (marker `site.cornwall_review_pass_2026-10-01`, exact-value
+matches so a CMS edit wins, home and Devon pages only ever read):
+
+1. **The proof block was a founder story.** "Tom" three times, "to help
+   rescue it" (the Brand OS says Arrington is "not a rescue service for
+   failing businesses") and a "seven-figure exit" that appears in no
+   controlled website proof (it is a fact Tom uses in his own outreach, but
+   the Brand OS wants evidenced case studies over claims and "founder led,
+   not founder dependent"). The turnaround story is kept, because "case
+   studies, evidenced results and specific commercial experience matter more
+   than vague claims", in the compact business-centred form Tom approved for
+   the home page on 15/09/2026, copied at migration time from whichever
+   casestudy instance carries it there, with its link to the full Evidence
+   case study. The section's own heading and "we" subtext stay as the
+   credibility line. The two controlled lines Tom quoted ("More than 20
+   years' experience...", "Built, scaled and exited...") were not used
+   instead: the first is already the hero's second line, and a line is
+   weaker than the evidence.
+2. **Step 2 did not say the Commercial Review is the £500 product.** "We
+   carry out a proper commercial review" read as a free next step, which is
+   the "sales trap" the Brand OS rules out, and its second sentence repeated
+   the hero's "what is working, what is getting in the way" line. It now
+   reads "the next step is the Commercial Review, £500." followed by the
+   sentence already live on What We Do, with a text link "What the review
+   covers" to `/where-to-start/commercial-review` and no button, so the hero
+   CTA keeps the hierarchy. Step title "We review" became "Commercial
+   Review", per Tom's stated journey.
+
+To carry that link the `approach` template gained optional
+`step_N_link_text` / `step_N_link_href` keys (render-guarded like the case
+study link; nothing renders on existing instances; labels in `admin.js`,
+empty keys in `db/lorem.js`). **Writing the guard's test found that all
+three internal link guards accepted `//evil.example`**, a protocol-relative
+URL that leaves the site; they now refuse a second leading slash.
+`test/cornwallReviewPass.test.js`.
+
+Findings 3 and 4 needed no change: the four lines Tom asked to preserve are
+untouched (two are the global footer `contact.body`), and the towns line is
+one natural sentence. **Reported, not changed: the Devon landing page
+(`business-consultant-devon`) still carries the founder-story phases and the
+old step 2**, since it was out of scope.
+
 **A full-page screenshot of either landing page shows the case study phases
 and the approach steps as blank.** That is the scroll-reveal animation
 (`.case-phase` sits at opacity 0 until scrolled into view), identical on the

@@ -2143,6 +2143,24 @@
             border-bottom-color: var(--accent);
         }
 
+        /* Optional link under an approach step: same quiet treatment as the
+           case study link, kept as its own class so the home page's
+           .page-main .case-more compaction never reaches it. */
+        .step-link {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+        .step-link a {
+            color: var(--accent);
+            text-decoration: none;
+            border-bottom: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+            padding-bottom: 2px;
+        }
+        .step-link a:hover,
+        .step-link a:focus-visible {
+            border-bottom-color: var(--accent);
+        }
+
         /* HOME PAGE ONLY: the two case studies are compact proof summaries
            there, and the full tellings live on Evidence. Measured on an
            iPhone 13 before choosing these numbers: the section padding, the
@@ -3781,6 +3799,21 @@
 
 <% if (_tpl === 'approach') { %>
 <% const _k = _iid; %>
+<%
+  // Optional text link under a step (added 01/10/2026 so the Cornwall landing
+  // page's "Commercial Review, £500" step can point at the review page).
+  // Step bodies are sanitised to strong/p/br/em on save, so a link cannot
+  // live inside the body; it is its own pair of keys, step_N_link_text and
+  // step_N_link_href, and renders only when both are set and the href is a
+  // root-relative path with an optional fragment and no traversal, the same
+  // guard as the case study link. Nothing renders on existing instances.
+  const _approachLink = (k, n) => {
+    const text = (content[k + '.step_' + n + '_link_text'] || '').replace(/<[^>]+>/g, '').trim();
+    const href = (content[k + '.step_' + n + '_link_href'] || '').trim();
+    const ok = text && /^\/(?!\/)[A-Za-z0-9._\-\/]*(?:#[A-Za-z0-9_\-]+)?$/.test(href) && !href.includes('..');
+    return ok ? { text, href } : null;
+  };
+%>
 <!-- APPROACH -->
 <section class="approach<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
     <div class="section-inner cms-section" data-section="<%= _k %>">
@@ -3796,16 +3829,22 @@
                 <div class="step-number">01</div>
                 <h3><%- content[_k + '.step_1_title'] %></h3>
                 <p><%- content[_k + '.step_1_body'] %></p>
+                <% const _stepLink1 = _approachLink(_k, 1); %>
+                <% if (_stepLink1) { %><p class="step-link"><a href="<%= _stepLink1.href %>"><%= _stepLink1.text %> <span aria-hidden="true">&rarr;</span></a></p><% } %>
             </div>
             <div class="step">
                 <div class="step-number">02</div>
                 <h3><%- content[_k + '.step_2_title'] %></h3>
                 <p><%- content[_k + '.step_2_body'] %></p>
+                <% const _stepLink2 = _approachLink(_k, 2); %>
+                <% if (_stepLink2) { %><p class="step-link"><a href="<%= _stepLink2.href %>"><%= _stepLink2.text %> <span aria-hidden="true">&rarr;</span></a></p><% } %>
             </div>
             <div class="step">
                 <div class="step-number">03</div>
                 <h3><%- content[_k + '.step_3_title'] %></h3>
                 <p><%- content[_k + '.step_3_body'] %></p>
+                <% const _stepLink3 = _approachLink(_k, 3); %>
+                <% if (_stepLink3) { %><p class="step-link"><a href="<%= _stepLink3.href %>"><%= _stepLink3.text %> <span aria-hidden="true">&rarr;</span></a></p><% } %>
             </div>
         </div>
     </div>
@@ -4158,10 +4197,12 @@
               // an internal link and may carry a #fragment to the section it
               // points at. Validated at render like the documents paths: root
               // relative, optional fragment, no traversal, so a bad value
-              // renders nothing rather than reaching an href.
+              // renders nothing rather than reaching an href. A second leading
+              // slash is refused too (01/10/2026): //evil.example is a
+              // protocol-relative URL and would leave the site.
               const _csMoreText = (content[_k + '.link_text'] || '').replace(/<[^>]+>/g, '').trim();
               const _csMoreHref = (content[_k + '.link_href'] || '').trim();
-              const _csMoreOk = _csMoreText && /^\/[A-Za-z0-9._\-\/]*(?:#[A-Za-z0-9_\-]+)?$/.test(_csMoreHref) && !_csMoreHref.includes('..');
+              const _csMoreOk = _csMoreText && /^\/(?!\/)[A-Za-z0-9._\-\/]*(?:#[A-Za-z0-9_\-]+)?$/.test(_csMoreHref) && !_csMoreHref.includes('..');
             %>
             <% if (_csMoreOk) { %>
             <p class="case-more"><a href="<%= _csMoreHref %>"><%= _csMoreText %> <span aria-hidden="true">&rarr;</span></a></p>
@@ -4265,10 +4306,12 @@
               // an internal link and may carry a #fragment to the section it
               // points at. Validated at render like the documents paths: root
               // relative, optional fragment, no traversal, so a bad value
-              // renders nothing rather than reaching an href.
+              // renders nothing rather than reaching an href. A second leading
+              // slash is refused too (01/10/2026): //evil.example is a
+              // protocol-relative URL and would leave the site.
               const _csMoreText = (content[_k + '.link_text'] || '').replace(/<[^>]+>/g, '').trim();
               const _csMoreHref = (content[_k + '.link_href'] || '').trim();
-              const _csMoreOk = _csMoreText && /^\/[A-Za-z0-9._\-\/]*(?:#[A-Za-z0-9_\-]+)?$/.test(_csMoreHref) && !_csMoreHref.includes('..');
+              const _csMoreOk = _csMoreText && /^\/(?!\/)[A-Za-z0-9._\-\/]*(?:#[A-Za-z0-9_\-]+)?$/.test(_csMoreHref) && !_csMoreHref.includes('..');
             %>
             <% if (_csMoreOk) { %>
             <p class="case-more"><a href="<%= _csMoreHref %>"><%= _csMoreText %> <span aria-hidden="true">&rarr;</span></a></p>

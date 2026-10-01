@@ -3396,6 +3396,119 @@ async function seed() {
     }
   }
 
+  // Migration: Cornwall landing page review pass (01/10/2026). Tom reviewed
+  // the live page and raised findings to investigate rather than apply
+  // blindly; each was checked against the Brand Operating System in Drive
+  // before anything was written. Two were supported:
+  //
+  //   1. The "Real commercial experience" block read as a founder story: Tom
+  //      named three times, "to help rescue it" (the Brand OS says Arrington
+  //      is "not a rescue service for failing businesses") and a
+  //      "seven-figure exit" claim that appears in none of the controlled
+  //      website proof. The Brand OS wants "case studies, evidenced results
+  //      and specific commercial experience" over vague claims, and a company
+  //      that is "founder led, not founder dependent". So the turnaround
+  //      story stays, in the compact business-centred form Tom approved for
+  //      the home page on 15/09/2026: the three phases and the link on to
+  //      the full Evidence case study are copied from whichever casestudy
+  //      instance carries that copy on the home page. The section's own
+  //      heading and "we" subtext are kept as the credibility line.
+  //   2. "We carry out a proper commercial review" did not tell a cold paid
+  //      visitor that the Commercial Review is the £500 product, which is
+  //      the opposite of the Brand OS's "a sensible conversation, not a sales
+  //      trap". Step 2 now names it and the price in the wording already
+  //      live on What We Do, with a text link to the review page and no
+  //      button, so it does not compete with the hero CTA. The old second
+  //      sentence also repeated the hero's "what is working, what is getting
+  //      in the way" line almost word for word.
+  //
+  // Every write matches the row's exact current value, so a CMS edit wins.
+  // The home page and the Devon landing page are only ever read. Guarded on a
+  // marker rather than on the values, so it runs once.
+  {
+    const REVIEW_MARKER = 'site.cornwall_review_pass_2026-10-01';
+    const { rows: rvMarker } = await db.query('SELECT 1 FROM content WHERE section_key = $1', [REVIEW_MARKER]);
+    if (rvMarker.length === 0) {
+      const baseOf = (id) => {
+        const m = /^([a-z0-9]+)(?:__(\d+))?$/.exec(id || '');
+        return m ? m[1] : null;
+      };
+      const orderOf = async (slug) => {
+        const { rows } = await db.query('SELECT section_order FROM pages WHERE slug = $1', [slug]);
+        return rows.length && Array.isArray(rows[0].section_order) ? rows[0].section_order : null;
+      };
+      const getContent = async (key) => {
+        const { rows } = await db.query('SELECT content FROM content WHERE section_key = $1', [key]);
+        return rows.length ? rows[0].content : null;
+      };
+      const updateExact = async (key, from, to) => {
+        const r = await db.query('UPDATE content SET content = $1 WHERE section_key = $2 AND content = $3', [to, key, from]);
+        return r.rowCount;
+      };
+      const insertIfAbsent = async (key, value) => {
+        const r = await db.query('INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING', [key, value]);
+        return r.rowCount;
+      };
+      const notes = [];
+      const cwOrder = await orderOf('business-consultant-cornwall');
+      if (!cwOrder) {
+        notes.push('no Cornwall page on this database; nothing to do');
+      } else {
+        const cwCase = cwOrder.find((id) => baseOf(id) === 'casestudy');
+        const cwApproach = cwOrder.find((id) => baseOf(id) === 'approach');
+
+        // 1. The proof block, copied from the home page's approved compact copy.
+        const mainOrder = (await orderOf('main')) || [];
+        const mainCase = mainOrder.find((id) => baseOf(id) === 'casestudy');
+        const mainResult = mainCase ? await getContent(`${mainCase}.phase_3_body`) : null;
+        if (!cwCase) {
+          notes.push('no casestudy instance on the Cornwall page; proof block left alone');
+        } else if (!mainCase || !mainResult || !mainResult.includes('Twenty four months, start to sale')) {
+          notes.push('home page casestudy is not in its approved compact form; proof block left alone');
+        } else {
+          const OLD = {
+            phase_1_label: '<strong>The starting point</strong>',
+            phase_1_body: 'Tom was brought into an <strong>insolvent Devon business</strong> to help rescue it.<br /><br />\n\nIt had no VAT provision, unpaid staff and serious financial problems.',
+            phase_2_label: '<strong>What changed</strong>',
+            phase_2_body: 'Tom rebuilt the structure, restored financial control and stabilised the business.<br /><br />\n\nIt became a company capable of operating and growing without depending on constant intervention.',
+            phase_3_label: '<strong>The outcome</strong>',
+            phase_3_body: 'The turnaround succeeded.<br /><br />\n\nSeparately, Tom built, grew and sold his own business in a <strong>seven-figure exit.</strong>'
+          };
+          let changed = 0;
+          for (const field of Object.keys(OLD)) {
+            const to = await getContent(`${mainCase}.${field}`);
+            if (to === null) continue;
+            changed += await updateExact(`${cwCase}.${field}`, OLD[field], to);
+          }
+          let linked = 0;
+          for (const field of ['link_text', 'link_href']) {
+            const to = await getContent(`${mainCase}.${field}`);
+            if (to) linked += await insertIfAbsent(`${cwCase}.${field}`, to);
+          }
+          notes.push(`${cwCase}: ${changed} of 6 proof row(s) replaced with the home page's compact copy from ${mainCase} (a row left alone had been edited in the CMS, which wins), ${linked} link row(s) added`);
+        }
+
+        // 2. Step 2 names the Commercial Review and its price.
+        if (!cwApproach) {
+          notes.push('no approach instance on the Cornwall page; step 2 left alone');
+        } else {
+          const t = await updateExact(`${cwApproach}.step_2_title`, '<strong>We review</strong>', '<strong>Commercial Review</strong>');
+          const b = await updateExact(
+            `${cwApproach}.step_2_body`,
+            'If we both think it is worth exploring further, we carry out a <strong>proper commercial review.</strong><br /><br />\n\nYou get an honest view of what is working, what is getting in the way and where the biggest commercial improvements can be made.',
+            'If we both think it is worth exploring further, the next step is the <strong>Commercial Review, £500.</strong><br /><br />\n\nWe listen, go through the business and the evidence, and write it up: what we found, what we would do about it, and what to do first.'
+          );
+          let l = 0;
+          l += await insertIfAbsent(`${cwApproach}.step_2_link_text`, 'What the review covers');
+          l += await insertIfAbsent(`${cwApproach}.step_2_link_href`, '/where-to-start/commercial-review');
+          notes.push(`${cwApproach}: step 2 title ${t ? 'renamed' : 'left alone'}, body ${b ? 'now names the Commercial Review and its price' : 'left alone'}, ${l} link row(s) added`);
+        }
+      }
+      await insertIfAbsent(REVIEW_MARKER, new Date().toISOString());
+      console.log(`Cornwall review pass: ${notes.join('; ')}.`);
+    }
+  }
+
   // Migration: tighten SEO snippets flagged in the 17/08/2026 audit. The
   // visible page titles and article copy stay intact; this only updates search
   // metadata where it is blank, too long for a clean result, or still contains

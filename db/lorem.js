@@ -45,7 +45,13 @@ const lorem = {
     'step_2_title': 'Dolor sit amet',
     'step_2_body': 'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
     'step_3_title': 'Consectetur',
-    'step_3_body': 'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.'
+    'step_3_body': 'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.',
+    'step_1_link_text': '',
+    'step_1_link_href': '',
+    'step_2_link_text': '',
+    'step_2_link_href': '',
+    'step_3_link_text': '',
+    'step_3_link_href': ''
   },
   insights: {
     'label': 'Lorem ipsum',
