@@ -5989,7 +5989,13 @@ pack lever for "business consultant plymouth" type searches: 70 to 100
 views a month on Search and Maps over the last six months and about one
 website click a month. Primary category "Business development service",
 hours Mon to Sat 9 to 5, WhatsApp, LinkedIn, Facebook and Instagram
-attributes set, **zero reviews ever, zero posts ever**.
+attributes set, **five reviews, all five stars** (March to June 2026:
+Tristan at Framed Aesthetics, Nick Shapiro, Dan Fry, S L, Cheryl Stivey),
+zero posts ever. **Only the first review has an owner reply.** The first
+read on 01/10/2026 used a `last_2y` date preset and returned no rows,
+which was reported to Tom as "zero reviews"; an explicit `date_from` /
+`date_to` range returned all five. Read the Reviews table with an
+explicit range, never a preset.
 
 On Tom's "Yes fix" of 01/10/2026 the description was rewritten from the
 Brand OS (the approved short company description opens it, then the
@@ -6013,11 +6019,13 @@ point at some other region silently. Cornwall's place id, for next time,
 is `ChIJyQ4nv_C3akgRcUVL2YU8Qm4`. Categories were deliberately not
 touched: a category change can send the listing back into verification.
 
-**Reviews are Tom's alone.** The review link is
-`https://search.google.com/local/writereview?placeid=ChIJYf49saEhrmgRStXTX_3VXB4`;
-the four testimonial clients are the obvious first asks. Windsor can
-reply to reviews and publish posts, so a Useful Thinking article can be
-posted to the listing with a LEARN_MORE button once Tom wants that.
+**Four of the five reviews are unanswered** (Nick, Dan, S L, Cheryl; only
+Tristan's has a reply). Replying is Tom's voice and his decision; Windsor
+can post a reply (`reply_to_review`, public, replaces any existing reply)
+once he gives the words. The review link for new asks is
+`https://search.google.com/local/writereview?placeid=ChIJYf49saEhrmgRStXTX_3VXB4`.
+Windsor can also publish posts, so a Useful Thinking article can be posted
+to the listing with a LEARN_MORE button once Tom wants that.
 
 ## Sale readiness page
 
