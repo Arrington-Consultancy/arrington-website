@@ -9,7 +9,9 @@
 //     because on the real site they are real),
 //   - horizontal overflow (document wider than the viewport),
 //   - the <title>, the first h1 and the canonical href,
-//   - a full-page screenshot per size.
+//   - a full-page screenshot per size, plus a first-screen (viewport)
+//     capture, which is what a visitor sees first and shows the fixed nav
+//     where it really sits.
 // Output goes to OUT_DIR as report.json, report.md and PNGs. The workflow
 // commits that directory to the production-qa branch so the sandbox can
 // fetch it and the screenshots can be read there.
@@ -47,7 +49,7 @@ function slug(p) {
       page.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(m.text().slice(0, 200)); });
       page.on('pageerror', (e) => pageErrors.push(String(e).slice(0, 200)));
       const url = BASE + p;
-      const r = { path: p, size, url, status: null, finalUrl: null, title: null, h1: null, canonical: null, overflow: null, height: null, consoleErrors, pageErrors, screenshot: null, error: null };
+      const r = { path: p, size, url, status: null, finalUrl: null, title: null, h1: null, canonical: null, overflow: null, height: null, consoleErrors, pageErrors, screenshot: null, topScreenshot: null, error: null };
       try {
         const resp = await page.goto(url, { waitUntil: 'load', timeout: 60000 });
         r.status = resp ? resp.status() : null;
@@ -56,7 +58,15 @@ function slug(p) {
         for (let y = 0; y < h; y += 350) { await page.evaluate((yy) => window.scrollTo(0, yy), y); await page.waitForTimeout(90); }
         await page.waitForTimeout(600);
         await page.evaluate(() => window.scrollTo(0, 0));
-        await page.waitForTimeout(300);
+        // The nav is fixed and hides on scroll down, showing again on scroll
+        // up with a transition. A full-page capture stitches the page with
+        // the viewport resized, so a fixed element can land mid-image; the
+        // separate viewport capture below is what a visitor actually sees
+        // first, nav included, once the transition has settled.
+        await page.waitForTimeout(1200);
+        const top = `${slug(p)}-${size}-top.png`;
+        await page.screenshot({ path: path.join(OUT, top), fullPage: false });
+        r.topScreenshot = top;
         Object.assign(r, await page.evaluate(() => ({
           title: document.title,
           h1: (document.querySelector('h1') || {}).textContent ? document.querySelector('h1').textContent.replace(/\s+/g, ' ').trim() : null,
@@ -89,7 +99,7 @@ function slug(p) {
     lines.push(`- Horizontal overflow: ${r.overflow === null ? 'unknown' : r.overflow ? 'YES' : 'no'}; page height ${r.height}px`);
     lines.push(`- Page errors: ${r.pageErrors.length}${r.pageErrors.length ? ' (' + r.pageErrors.join(' | ') + ')' : ''}`);
     lines.push(`- Console errors: ${r.consoleErrors.length}${r.consoleErrors.length ? ' (' + r.consoleErrors.join(' | ') + ')' : ''}`);
-    lines.push(`- Screenshot: ${r.screenshot || 'none'}${r.error ? `; ERROR: ${r.error}` : ''}`);
+    lines.push(`- Screenshots: full page ${r.screenshot || 'none'}, first screen ${r.topScreenshot || 'none'}${r.error ? `; ERROR: ${r.error}` : ''}`);
     lines.push('');
   }
   fs.writeFileSync(path.join(OUT, 'report.md'), lines.join('\n'));
