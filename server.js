@@ -17,6 +17,7 @@ const authRoutes = require('./routes/auth');
 const contentRoutes = require('./routes/content');
 const adminRoutes = require('./routes/admin');
 const leadRoutes = require('./routes/leads');
+const cspReportRoutes = require('./routes/cspReport');
 const marketReadyTest = require('./routes/marketReadyTest');
 const commercialGapsReview = require('./routes/commercialGapsReview');
 const whereToStart = require('./routes/whereToStart');
@@ -260,7 +261,12 @@ app.use(helmet({
       ],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
-      frameAncestors: ["'self'"]
+      frameAncestors: ["'self'"],
+      // Visitors' browsers report anything this policy blocks to
+      // routes/cspReport.js, so a blocked third-party host (the GA4
+      // regional-host fault of 01/10/2026) is visible in the admin panel
+      // and the boot log instead of silently losing data.
+      reportUri: ['/api/csp-report']
     }
   },
   hsts: isProd ? {
@@ -681,6 +687,10 @@ const { generateCsrfToken, doubleCsrfProtection } = doubleCsrf({
     return req.headers['x-csrf-token'] || req.body._csrf;
   }
 });
+
+// Browsers POST CSP violation reports with no token, so this is mounted
+// ahead of the CSRF middleware. It is the only route that is.
+app.use(cspReportRoutes);
 
 // Apply CSRF to all non-GET routes
 app.use((req, res, next) => {

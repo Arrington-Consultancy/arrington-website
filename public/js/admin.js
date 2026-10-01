@@ -1079,20 +1079,41 @@
     }
 
     // CSP violations loader
-    detailLoaders['cmsCspDetail'] = () => {
+    detailLoaders['cmsCspDetail'] = async () => {
         if (!cspEntries) return;
         const violations = window.__cspViolations || [];
+        let html = '<div class="cms-detail-title">This page, your browser</div>';
         if (violations.length === 0) {
-            cspEntries.innerHTML = '<span class="cms-log-empty">No CSP violations on this page. Reload to refresh.</span>';
-            return;
+            html += '<span class="cms-log-empty">No CSP violations on this page. Reload to refresh.</span>';
+        } else {
+            html += violations.map(v => {
+                const where = v.source ? `${escapeHtml(v.source)}:${v.line}` : '';
+                return `<div class="cms-log-entry">
+                    <span class="log-action">${escapeHtml(v.directive)}</span><br>
+                    <span class="log-time">blocked: ${escapeHtml(v.blocked)}${where ? ' — ' + where : ''}</span>
+                </div>`;
+            }).join('');
         }
-        cspEntries.innerHTML = violations.map(v => {
-            const where = v.source ? `${escapeHtml(v.source)}:${v.line}` : '';
-            return `<div class="cms-log-entry">
-                <span class="log-action">${escapeHtml(v.directive)}</span><br>
-                <span class="log-time">blocked: ${escapeHtml(v.blocked)}${where ? ' — ' + where : ''}</span>
-            </div>`;
-        }).join('');
+        // What visitors' browsers reported, last 30 days. This is the list
+        // that matters: a third-party host the policy blocks for everyone
+        // (GA4's regional hosts, 01/10/2026) shows up here and nowhere else.
+        html += '<div class="cms-detail-title">All visitors, last 30 days</div>';
+        try {
+            const res = await fetch('/api/admin/csp-reports', { headers: { 'X-CSRF-Token': csrfToken } });
+            const data = await res.json();
+            const reports = data.reports || [];
+            if (reports.length === 0) {
+                html += '<span class="cms-log-empty">Nothing reported by visitors.</span>';
+            } else {
+                html += reports.map(r => `<div class="cms-log-entry">
+                    <span class="log-action">${escapeHtml(r.directive)}</span> &times; ${Number(r.count) || 0}<br>
+                    <span class="log-time">blocked: ${escapeHtml(r.blocked_uri)}${r.example_page ? ' on ' + escapeHtml(r.example_page) : ''} &middot; last ${escapeHtml(new Date(r.last_seen).toLocaleString())}</span>
+                </div>`).join('');
+            }
+        } catch (err) {
+            html += '<span class="cms-log-error">Failed to load visitor reports.</span>';
+        }
+        cspEntries.innerHTML = html;
     };
 
     // ---- USER MANAGEMENT ----

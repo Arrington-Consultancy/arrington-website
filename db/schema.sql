@@ -1154,3 +1154,19 @@ CREATE TABLE IF NOT EXISTS crm_erasures (
     erased_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_crm_erasures_hash ON crm_erasures (email_hash);
+
+-- Content Security Policy reports from visitors' browsers (01/10/2026).
+-- Written by POST /api/csp-report (routes/cspReport.js), read by the admin
+-- panel's CSP violations pane and summarised in the boot log. Rows older
+-- than 30 days are pruned at boot. See the route for why these exist.
+CREATE TABLE IF NOT EXISTS csp_reports (
+    id SERIAL PRIMARY KEY,
+    directive VARCHAR(80) NOT NULL,
+    blocked_uri VARCHAR(500) NOT NULL DEFAULT '',
+    document_uri VARCHAR(500) NOT NULL DEFAULT '',
+    source_file VARCHAR(500) NOT NULL DEFAULT '',
+    line_number INTEGER,
+    user_agent VARCHAR(300) NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_csp_reports_created ON csp_reports (created_at);

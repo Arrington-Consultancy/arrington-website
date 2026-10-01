@@ -67,6 +67,27 @@ router.get('/log', requireCapability('view_activity'), async (req, res) => {
 });
 
 // Leads & booking requests (footer form + gated PDF downloads)
+// CSP reports from visitors' browsers, last 30 days, grouped by what was
+// blocked. The pane's own list only covers the admin's browser; this is
+// what everyone else hit. See routes/cspReport.js.
+router.get('/csp-reports', requireCapability('view_csp'), async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT directive, blocked_uri, COUNT(*)::int AS count, MAX(created_at) AS last_seen,
+              MIN(document_uri) AS example_page
+       FROM csp_reports
+       WHERE created_at > NOW() - INTERVAL '30 days'
+       GROUP BY directive, blocked_uri
+       ORDER BY MAX(created_at) DESC
+       LIMIT 100`
+    );
+    res.json({ reports: rows });
+  } catch (err) {
+    console.error('CSP reports list error:', err);
+    res.status(500).json({ error: 'Failed to load CSP reports' });
+  }
+});
+
 router.get('/leads', requireCapability('view_activity'), async (req, res) => {
   try {
     const { rows } = await db.query(

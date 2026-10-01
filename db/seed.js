@@ -7174,6 +7174,23 @@ async function seed() {
     console.error('Contacts sync failed (boot continues):', err.message);
   }
 
+  // CSP reports: keep 30 days, and say on every boot what visitors' browsers
+  // have reported in the last 7, so a blocked third-party host is in the
+  // deploy log rather than silent (the GA4 fault of 01/10/2026 ran five
+  // weeks unseen). Never fatal.
+  try {
+    await db.query(`DELETE FROM csp_reports WHERE created_at < NOW() - INTERVAL '30 days'`);
+    const { rows } = await db.query(
+      `SELECT directive, blocked_uri, COUNT(*)::int AS count
+       FROM csp_reports WHERE created_at > NOW() - INTERVAL '7 days'
+       GROUP BY directive, blocked_uri ORDER BY count DESC LIMIT 10`
+    );
+    if (!rows.length) console.log('CSP reports: none from visitors in the last 7 days.');
+    else console.log(`CSP reports, last 7 days: ${rows.map((r) => `${r.directive} blocked ${r.blocked_uri} (${r.count})`).join('; ')}`);
+  } catch (err) {
+    console.error('CSP reports summary failed (boot continues):', err.message);
+  }
+
   console.log('Seed complete.');
 }
 
