@@ -6,7 +6,7 @@ const sanitizeHtml = require('sanitize-html');
 const nodemailer = require('nodemailer');
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const db = require('../db/pool');
-const { verifyTurnstileToken } = require('../lib/turnstile');
+const { verifyTurnstileToken, turnstileBlocks } = require('../lib/turnstile');
 const { parseAttribution, describeAttribution } = require('../lib/leadAttribution');
 const { parseHeardAbout, describeHeardAbout } = require('../lib/heardAbout');
 const { issueToken, THANK_YOU_PATH } = require('../lib/contactConversion');
@@ -150,6 +150,18 @@ router.post('/api/leads', publicFormLimiter, async (req, res) => {
     }
     if (!isValidEmail(email)) {
       return res.status(400).json({ error: 'Please enter a valid email address.' });
+    }
+
+    // Cloudflare Turnstile (added 01/10/2026). The widget injects a hidden
+    // cf-turnstile-response field into the form, so the token arrives in the
+    // JSON body without the submit script having to handle it. We block only
+    // when a supplied token is actively rejected (bot or replay); a missing
+    // token or an unverifiable one passes, so a genuine visitor whose widget
+    // could not load still gets through to the honeypot and pitch screening
+    // below. See lib/turnstile.js turnstileBlocks for the full reasoning.
+    const turnstile = await verifyTurnstileToken(plainText(body['cf-turnstile-response']).slice(0, 2000), req.ip);
+    if (turnstileBlocks(turnstile)) {
+      return res.status(400).json({ error: 'That did not pass our spam check. Please reload the page and try again, or email us directly using the address below.' });
     }
 
     // A sales pitch is still stored and still emailed (marked), so a real

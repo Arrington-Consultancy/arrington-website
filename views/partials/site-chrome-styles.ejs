@@ -478,6 +478,12 @@ button.btn {
     text-underline-offset: 0.16em;
 }
 
+/* Cloudflare Turnstile sits between the privacy note and the Send button.
+   The widget brings its own ~300x65 chrome; this just gives it room. */
+.lead-turnstile {
+    margin: 0 0 1.1rem;
+}
+
 .lead-form input::placeholder,
 .lead-form textarea::placeholder {
     color: var(--text-muted);

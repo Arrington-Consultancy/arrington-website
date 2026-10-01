@@ -495,6 +495,48 @@ An optional one-tap "Continue with Google" button on the four public checks (Pro
 - The footer contact form deliberately does NOT carry the button (decision pending with Tom): it is sitewide, so the Google script would load on every page, and a contact form that suggests signing in adds friction for people who just want to type.
 - The Privacy page (`views/privacy.ejs`) carries an accurate description of what the button does and does not do.
 
+## Footer enquiry form: Turnstile (added 01/10/2026)
+
+Cloudflare Turnstile on the footer enquiry form, the one form ad traffic
+lands on. Added after a Google Ads invalid-traffic follow-up, on top of the
+form's existing defences (honeypot, JSON-only submission since 30/09, sales-
+pitch screening, server-issued conversion token), as the one remaining layer
+against a bot that runs the real script and sends a proper JSON fetch.
+
+- **Implicit render.** The widget is a `.cf-turnstile` div in the shared
+  footer (`views/partials/site-footer.ejs`), gated on a site key being set.
+  Cloudflare injects a hidden `cf-turnstile-response` input into the form, and
+  the existing submit script already serialises the whole form with
+  `FormData`, so the token reaches `/api/leads` with no change to how the form
+  is SENT. The submit handlers (the duplicated pair, `site-chrome-script.ejs`
+  and `index.ejs`) only gained a `turnstile.reset()` on failure, because a
+  token is single-use and a retry would otherwise reuse a spent one.
+- **Site key via `app.locals.turnstileSiteKey`** (`server.js`), the same
+  fourteen-views reasoning as `heardAboutOptions`: the footer partial is
+  included everywhere and threading a local through each include is fourteen
+  chances to miss one. The standalone tools still pass their own
+  `turnstileSiteKey` per render.
+- **The script loads once per page.** A small nonced guard in the footer
+  injects `challenges.cloudflare.com/turnstile/v0/api.js` only if it is not
+  already present, so the assessment tools (which load it in their own head)
+  do not get a second copy while CMS pages, which had no Turnstile before, get
+  it from the footer. CSP already allowed the Turnstile script and frame
+  hosts globally, so no CSP change was needed.
+- **The server policy is FAIL OPEN, deliberately** (`lib/turnstile.js`
+  `turnstileBlocks`, called in `routes/leads.js`). An enquiry is blocked ONLY
+  when a token was supplied and Cloudflare actively rejected it (bad or
+  already-used = a real bot/replay signal). A missing token, an unconfigured
+  key, or a siteverify network failure all PASS, because those are exactly the
+  cases that would turn away a genuine visitor whose widget was blocked by a
+  privacy extension or never loaded. Tom's stated priority was never losing a
+  genuine enquiry, and the honeypot plus pitch screening still apply in those
+  cases. To tighten to fail-closed later, change `turnstileBlocks` (and its
+  tests). For most visitors the widget clears itself in under a second with no
+  interaction; a small minority get one tick-box; nobody gets an image puzzle.
+- **Tests:** `test/turnstile.test.js` — the `turnstileBlocks` policy in both
+  directions (a rejected token blocks; missing/unconfigured/unreachable pass),
+  alongside the existing `verifyTurnstileToken` contract tests.
+
 ## Mobile navigation (hamburger)
 
 At ≤900px the desktop nav CTA and the separate `.page-menu` bar are both hidden. In their place:
