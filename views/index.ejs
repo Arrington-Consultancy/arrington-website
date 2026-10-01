@@ -585,22 +585,23 @@
         }
 
         /* ---- FULL-BLEED HERO: image as background, text overlaid, carried
-             over from the /homepage-concept design exploration. Scoped to the
-             three genuine page-opening heroes (homepage, Business Consultant
-             Devon, 30 Minute Conversation). About Us's hero instance sits at
-             the BOTTOM of that page as a closing section, not an opening one,
-             so it keeps the side-by-side hero-photo layout — full-bleed only
-             makes sense as a first impression. ---- */
-        .hero[data-section-id="hero"],
-        .hero[data-section-id="hero__3"],
-        .hero[data-section-id="hero__4"] {
+             over from the /homepage-concept design exploration. Applied via
+             the .hero-cover class, which the hero markup below adds for the
+             page-opening heroes listed in HERO_COVER_IDS (homepage, 30 Minute
+             Conversation, Business Consultant Devon, Business Consultant
+             Cornwall). About Us's hero instance sits at the BOTTOM of that
+             page as a closing section, not an opening one, so it keeps the
+             side-by-side hero-photo layout: full-bleed only makes sense as a
+             first impression. Until 01/10/2026 these rules named three
+             instance ids directly, which is why the Cornwall page launched
+             with the side-by-side hero and did not match the home page. ---- */
+        .hero.hero-cover {
             min-height: 100vh;
             align-items: flex-end;
             overflow: hidden;
         }
 
-        .hero[data-section-id="hero__3"]::after,
-        .hero[data-section-id="hero__4"]::after {
+        .hero.hero-cover:not([data-section-id="hero"])::after {
             content: '';
             position: absolute;
             inset: 0;
@@ -627,33 +628,25 @@
             pointer-events: none;
         }
 
-        .hero[data-section-id="hero"] .hero-inner,
-        .hero[data-section-id="hero__3"] .hero-inner,
-        .hero[data-section-id="hero__4"] .hero-inner {
+        .hero.hero-cover .hero-inner {
             display: block;
             max-width: none;
             width: 100%;
             padding: 9.5rem 2rem 4.5rem;
         }
 
-        .hero[data-section-id="hero"] .hero-text,
-        .hero[data-section-id="hero__3"] .hero-text,
-        .hero[data-section-id="hero__4"] .hero-text {
+        .hero.hero-cover .hero-text {
             position: relative;
             z-index: 2;
             max-width: 1100px;
             margin: 0 auto;
         }
 
-        .hero[data-section-id="hero"] .hero-text .sub,
-        .hero[data-section-id="hero__3"] .hero-text .sub,
-        .hero[data-section-id="hero__4"] .hero-text .sub {
+        .hero.hero-cover .hero-text .sub {
             max-width: 560px;
         }
 
-        .hero[data-section-id="hero"] .hero-photo,
-        .hero[data-section-id="hero__3"] .hero-photo,
-        .hero[data-section-id="hero__4"] .hero-photo {
+        .hero.hero-cover .hero-photo {
             position: absolute;
             inset: 0;
             z-index: 0;
@@ -669,6 +662,7 @@
         .hero[data-section-id="hero"] .hero-photo img { object-position: 60% 40%; }
         .hero[data-section-id="hero__3"] .hero-photo img { object-position: 65% 50%; }
         .hero[data-section-id="hero__4"] .hero-photo img { object-position: 60% 40%; }
+        .hero[data-section-id="hero__6"] .hero-photo img { object-position: 60% 40%; }
 
         /* Homepage hero only (15/08/2026): bind the supporting sentence,
            CTA and credibility line into one sequence — message, action,
@@ -761,15 +755,12 @@
         }
 
         @media (max-width: 700px) {
-            .hero[data-section-id="hero"],
-            .hero[data-section-id="hero__3"],
-            .hero[data-section-id="hero__4"] { min-height: 92vh; }
+            .hero.hero-cover { min-height: 92vh; }
             .hero[data-section-id="hero"] .hero-photo img { object-position: 70% 45%; }
             .hero[data-section-id="hero__3"] .hero-photo img { object-position: 75% 50%; }
             .hero[data-section-id="hero__4"] .hero-photo img { object-position: 70% 45%; }
-            .hero[data-section-id="hero"] .hero-inner,
-            .hero[data-section-id="hero__3"] .hero-inner,
-            .hero[data-section-id="hero__4"] .hero-inner { padding: 6.5rem 1.25rem 3.5rem; }
+            .hero[data-section-id="hero__6"] .hero-photo img { object-position: 70% 45%; }
+            .hero.hero-cover .hero-inner { padding: 6.5rem 1.25rem 3.5rem; }
         }
 
         /* ---- BUTTONS ---- */
@@ -791,6 +782,15 @@
             background: var(--accent);
             color: var(--black);
         }
+
+        /* A button is a flex box, so a <strong> inside its label becomes a
+           flex item of its own and the space either side of it collapses:
+           "Book your <strong>30-minute conversation</strong>" rendered as
+           "Book your30-minute conversation" on desktop and as two stacked
+           fragments on a phone (seen on the Devon and Cornwall landing
+           pages, 01/10/2026). display: contents dissolves the strong box so
+           the label is one run of text again; the bold weight still applies. */
+        .btn strong { display: contents; }
 
         .btn-primary:hover {
             background: var(--accent-hover);
@@ -3503,9 +3503,17 @@
   const _heroProofText = (content[_k + '.proof_text'] || '').replace(/<[^>]+>/g, '').trim();
   const _heroProofHref = (content[_k + '.proof_href'] || '').trim();
   const _heroProofHrefValid = /^#[A-Za-z0-9_-]+(?:__[0-9]+)?$/.test(_heroProofHref);
+  // Page-opening heroes that get the full-bleed treatment (.hero-cover in
+  // the CSS above): home, 30 Minute Conversation, Business Consultant Devon,
+  // Business Consultant Cornwall. Instance ids are stable on production
+  // (confirmed from the 01/10/2026 deploy log for the Cornwall page). A new
+  // landing page whose hero should match the home page is added here, in one
+  // place, rather than to every selector.
+  const HERO_COVER_IDS = ['hero', 'hero__3', 'hero__4', 'hero__6'];
+  const _heroCover = HERO_COVER_IDS.includes(_iid);
 %>
 <!-- HERO -->
-<section class="hero<%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
+<section class="hero<%= _heroCover ? ' hero-cover' : '' %><%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">
     <div class="hero-inner">
         <div class="hero-text cms-section" data-section="<%= _k %>">
             <% if (canEdit) { %><button class="cms-edit-btn" data-section="<%= _k %>" title="Edit section">&#9998;</button><% } %>

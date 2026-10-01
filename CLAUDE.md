@@ -5945,6 +5945,21 @@ The organic prize is small and was reported as such: 18 impressions in six
 months for the Cornwall term. The page exists because it is cheap, not
 because it will move the numbers on its own.
 
+**The hero must match the home page, and until 01/10/2026 it did not.** Tom's
+first reaction to the live page: "the page is not consonant with my home
+page". The full-bleed hero (photo as background, text overlaid) was keyed in
+`views/index.ejs` to three instance ids (`hero`, `hero__3`, `hero__4`), so the
+Cornwall hero, `hero__6` on production (from the deploy log), fell back to the
+side-by-side layout. The treatment is now a class, `.hero-cover`, added by the
+hero markup for the ids in `HERO_COVER_IDS` in that file. **A new landing page
+whose hero should look like the home page is added to that one list.** The
+About Us hero (`hero__2`, a closing section) and Websites and AI (`hero__5` on
+production) stay side-by-side on purpose. Found at the same time: a button is
+a flex box, so `Book your <strong>30-minute conversation</strong>` rendered as
+"your30-minute" on desktop and as stacked fragments on a phone, on the Devon
+page as well; `.btn strong { display: contents }` fixes both.
+`test/heroCover.test.js`.
+
 **A full-page screenshot of either landing page shows the case study phases
 and the approach steps as blank.** That is the scroll-reveal animation
 (`.case-phase` sits at opacity 0 until scrolled into view), identical on the
