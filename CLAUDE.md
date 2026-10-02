@@ -6443,6 +6443,24 @@ search terms report by ad group after a week: every term containing a city
 name should sit in that city's group, and anything containing a city name
 with no impressions anywhere is a keyword to add to that city group.
 
+**This is a test with two dated judgement calls, on Tom's instruction
+("if we are testing this we need to remember to look and make a judgment
+call later").** Two one-shot Routines were created from this session on
+02/10/2026: `trig_01CtJvzMdC8LppvRw7A9pW5S` fires 09/10/2026 08:30 UK (the
+first search-terms-by-ad-group read: is each city term landing in its own
+group, is anything irrelevant spending) and `trig_01XqfXNm6757kNNh4i8HNkJ9`
+fires 30/10/2026 08:30 UK (the four-week call: form fills and cost per form
+fill by city group, the asset labels that settle brand versus "Speak To Tom
+Arrington", whether there is enough volume to move to Target CPA, and whether
+Ready to Sell is still at zero). Both notify Tom by push and email. **One
+limit, stated rather than discovered on the day:** a Routine created from a
+cloud session cannot carry connectors on this account (the `connectors`
+parameter is refused), so the fired session will have no Windsor tools. Each
+prompt therefore opens by checking for Windsor and, if absent, tells Tom and
+lists the questions to paste into a session that has it. If Tom recreates
+either Routine from the claude.ai Routines UI with Windsor attached, the
+review runs unattended.
+
 ## Google Business Profile (01/10/2026)
 
 The listing exists, is verified, and is connected through the Windsor
