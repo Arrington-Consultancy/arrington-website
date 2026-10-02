@@ -6256,6 +6256,36 @@ suite with `DATABASE_URL`: 1492 pass, 2 fail, both the documented
 pre-existing ones (`receivablesRetrieval` case 4 pinned-date rot, and the
 `createInvoice` past-due-date fixture). `test/businessConsultantExeter.test.js`.
 
+**Live on production (merge `9a32b8e`, PR #193, deployment `7eb325a0` ran the
+seed and is REMOVED, `6a1a4f18` serves):** "page created at
+/business-consultant-exeter as [hero__7, casestudy__9, approach__4,
+biography__9] from Devon instances [hero__4, casestudy, approach, biography],
+31 content row(s) copied; proof block already in its corrected form; step 2
+already names the Commercial Review." Production QA run
+`20261002T093906Z-exeter-launch`: 200 at both sizes, zero page errors, no
+overflow, captures read and the full-bleed hero, compact proof block and £500
+step confirmed on the live page before the ad group was enabled.
+
+**The Exeter ad group (02/10/2026), built via Windsor in Leads-Search-1,
+same budget, no new spend:** ad group **Exeter**, id `200381443883`, default
+max CPC £12. Keywords: business consultant exeter (phrase + exact), business
+consultancy exeter (phrase + exact), small business consultant exeter,
+management consultant exeter, business advice exeter, business advisor
+exeter, business support exeter (all phrase). Ad `826647697890`: the Cornwall
+ad's approved copy with Exeter headlines ("Working In And Around Exeter",
+"From Exmouth To Tiverton") and an Exeter first description, final URL
+`/business-consultant-exeter`, display path `/exeter`. The general ad group's
+own "business consultant exeter" keyword (criterion `621689455585`) was
+already paused. **Advice/support vocabulary added the same day**, because the
+search terms report showed owners typing "business advice" and "business
+support" and the campaign bidding only on "consultant": the Cornwall group
+(`197647339661`) gained business advice cornwall, business advisor cornwall,
+business support cornwall, small business advice cornwall; the general group
+(`196492356455`) gained business advice devon, business advisor devon,
+business advice plymouth, small business advice (all phrase). Note
+"cornwall council business support" and "the growth hub cornwall" remain
+campaign negatives, so free council support searches stay excluded.
+
 ## Google Business Profile (01/10/2026)
 
 The listing exists, is verified, and is connected through the Windsor
