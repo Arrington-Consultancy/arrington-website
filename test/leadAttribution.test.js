@@ -93,10 +93,19 @@ test('the PDF request no longer fires the contact-click Google Ads label', () =>
   assert.ok(block.includes('googleAdsPdfConversionLabel'), 'a PDF conversion fires only when its own label is configured');
 });
 
-test('the contact-click label is still fired by the contact links themselves', () => {
+// Tom, 02/10/2026: "people dont ring, i dont want the phone in there as a
+// conversion, i only want a form filled in by a business owner". The click
+// label is gone from the site entirely; the GA4 click events stay so the
+// behaviour is still visible without being something Google optimises for.
+test('a phone, email or WhatsApp tap is a GA4 event and never an Ads conversion', () => {
   for (const view of ['views/index.ejs', 'views/partials/site-chrome-script.ejs']) {
     const src = read(view);
-    assert.match(src, /a\[href\^="tel:"\][\s\S]{0,900}h_2rCJeH8aYcEN6RgsVD/, `${view} contact links still use the click label`);
+    assert.ok(!src.includes('h_2rCJeH8aYcEN6RgsVD'), `${view} still fires the retired contact-click Ads conversion`);
+    const start = src.indexOf('a[href^="tel:"]');
+    assert.ok(start > 0, `${view} lost the contact-link click handler`);
+    const block = src.slice(start, start + 900);
+    assert.ok(!/gtag\('event',\s*'conversion'/.test(block), `${view} contact links fire an Ads conversion`);
+    assert.ok(block.includes("kind + '_click'"), `${view} lost the GA4 contact click event`);
   }
 });
 

@@ -54,15 +54,18 @@ window.__leadAttribution = (function () {
     return function () { return cached || {}; };
 })();
 
-// Google Ads conversion: visitor tapped a phone, email or WhatsApp link.
-// Runs after the reassembly above so the href prefixes are live.
+// A tap on a phone, email or WhatsApp link is recorded as a GA4 event only.
+// It is NOT a Google Ads conversion: on Tom's decision of 02/10/2026 the only
+// conversion the business pays Google to find is a completed enquiry form
+// (fired on /thank-you). People do not ring; a tap on a number is not a
+// lead, and counting it as one pointed bidding at the wrong outcome. Runs
+// after the reassembly above so the href prefixes are live.
 document.querySelectorAll('a[href^="tel:"], a[href^="mailto:"], a[href^="https://wa.me/"], a[href^="https://api.whatsapp.com/"]').forEach(a => {
     a.addEventListener('click', () => {
         const kind = a.href.indexOf('tel:') === 0 ? 'phone'
             : a.href.indexOf('mailto:') === 0 ? 'email'
             : 'whatsapp';
         if (typeof gtag === 'function') {
-            gtag('event', 'conversion', { 'send_to': 'AW-18129914078/h_2rCJeH8aYcEN6RgsVD' });
             gtag('event', kind + '_click', { event_category: 'contact', page_path: location.pathname });
         }
     });

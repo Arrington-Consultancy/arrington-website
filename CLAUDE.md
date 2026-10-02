@@ -575,7 +575,7 @@ The footer's email address and phone number are obfuscated server-side so naive 
 Tom runs Google Ads campaigns pointing at the site. Conversion tracking is wired up directly in `views/index.ejs` (no GTM) so it lives on every page the EJS template renders (`/` and every `/:slug`).
 
 - **Base tag: one per page, in one place.** Google Ads' own snippet lives in `views/partials/google-tag.ejs` and is included as the FIRST thing inside `<head>` on every public view (`test/googleTag.test.js` enforces it). Never paste the loader or `gtag('config', 'AW-18129914078')` into a template: Google allows one Google tag per page. The only change to Google's text is `nonce="..."` on the inline script, without which the strict CSP blocks it. GA4's config is a separate nonced script beside it. Deliberately absent from the Scott portal and the Workspace (login-only; Workspace page titles carry real client names).
-- **Contact-click conversion event** fires on click of any `tel:`, `mailto:` or WhatsApp anchor, calling `gtag('event','conversion',{send_to:'AW-18129914078/h_2rCJeH8aYcEN6RgsVD'})`. The listener is attached **after** the email/phone reassembly inside the same nonced script block, so by the time it queries `a[href^="tel:"], a[href^="mailto:"]` the obfuscated anchors have real hrefs and will be picked up. New contact links anywhere on the page get auto-tracked too.
+- **Contact-click conversion: RETIRED 02/10/2026.** Until that date a click on any `tel:`, `mailto:` or WhatsApp anchor fired `gtag('event','conversion',{send_to:'AW-18129914078/h_2rCJeH8aYcEN6RgsVD'})`. Tom's decision, verbatim: *"people dont ring, i dont want the phone in there as a conversion, i only want a form filled in by a business owner as something"*. Both copies of the site chrome script (`views/index.ejs` and `views/partials/site-chrome-script.ejs`) no longer fire it, so the Ads action "phone + email clicks" records nothing from the site from that deploy on, whatever its Primary/Secondary setting in the Ads UI. The click listener itself stays and still sends the GA4 events `phone_click`, `email_click` and `whatsapp_click`, so GA4 can still show whether anyone taps; that is observation, not something Google bids on. **The footer form is now the only Google Ads conversion the site fires** (plus the two optional label-gated ones below, both unset). Pinned by `test/leadAttribution.test.js` and `test/thankYouConversion.test.js`. Do not reinstate the click label without Tom's decision.
 - **Contact form conversion event** (`vCKKCKjSna0cEN6RgsVD`) fires ONLY on `/thank-you` (`routes/thankYou.js`, `views/thank-you.ejs`). A successful `POST /api/leads` returns a signed 30-minute token (`lib/contactConversion.js`, HMAC on `SESSION_SECRET`) issued only after the row is stored; the form redirects to `/thank-you?c=<token>`, and the page renders the snippet only for a valid token, with the token's id as `transaction_id`, then drops the token from the address and marks it spent in sessionStorage. So a refresh, a direct visit, the back button, a forged link, a failed or invalid submission and the honeypot all count nothing; a copied link reopened elsewhere within 30 minutes repeats the same `transaction_id`, which Google Ads de-duplicates. The GA4 `contact_form_submit` event still fires on the form's own page before the redirect. `test/thankYouConversion.test.js`.
 - **Redirects must keep the query string**, or an ad click arrives without its `gclid`/`utm_*` and Google's tag never sees it. The host/HTTPS redirect keeps it (`req.url`); the seven retired-URL redirects (`/what-we-have-done`, `/contact`, `/about` and the rest) go through `lib/legacyRedirect.js`, which puts the query before any `#fragment`. Until 26/09/2026 those seven dropped it, and Google's ad crawler had fetched `/what-we-have-done` on 18/09. Any new fixed-target redirect on a public URL should use the same helper; `test/legacyRedirectQuery.test.js` fails otherwise.
 - **CSP allowlist** in `server.js` already permits the required Google domains in `scriptSrc`, `imgSrc`, `connectSrc`, and `frameSrc`: `www.googletagmanager.com`, `www.googleadservices.com`, `www.google-analytics.com`, `googleads.g.doubleclick.net`, `td.doubleclick.net`. Don't strip these unless the ad campaign ends.
@@ -6421,13 +6421,17 @@ Brand versus Tom personally is left to the data: each ad carries both
 and the asset performance labels in three to four weeks say which one does
 the work.
 
-**The conversion-value finding, still Tom's to fix in the Ads UI:** over the
+**The conversion-value finding, and what was done about it:** over the
 90 days to 02/10 the click action "phone + email clicks" recorded 2
 conversions at £50 each and the form action "Contact" recorded 1 at £1, both
 counting as primary. Tom's stated worth of a form fill is £100 and he wants
-to pay for nothing else. Windsor cannot edit conversion actions. The fix is
-Goals, Conversions: Contact value £100 and the only Primary action; phone +
-email clicks Secondary. Bidding is Manual CPC; the agreed path is four weeks
+to pay for nothing else. Windsor cannot edit conversion actions, but the
+site side is ours: **the click conversion no longer fires at all** (same
+day, see "Google Ads conversion tracking" above), so the only conversion
+Google can see from the site is the form. What remains Tom's in the Ads UI is
+Goals, Conversions: set Contact's value to £100 and confirm it is Primary;
+"phone + email clicks" can be left (it will show no recent conversions) or
+removed. Bidding is Manual CPC; the agreed path is four weeks
 of Manual CPC with the city routing in place, then Target CPA on the form
 starting near the observed cost per form fill (about £227 over 90 days) and
 stepping down towards £100, because a target set straight to £100 against a
