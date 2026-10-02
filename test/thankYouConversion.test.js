@@ -77,8 +77,9 @@ test('neither copy of the site chrome script fires the Contact conversion on the
     // It redirects to the server's tokened URL, validated, with a bare fallback.
     assert.match(src, /\/\^\\\/thank-you\\\?c=\[A-Za-z0-9\._-\]\+\$\/\.test\(result\.thankYou\)/, f);
     assert.match(src, /location\.assign\(next\)/, f);
-    // The click conversion is a different action and must be untouched.
-    assert.ok(src.includes('AW-18129914078/h_2rCJeH8aYcEN6RgsVD'), `${f} lost the contact-click conversion`);
+    // The only Ads conversion the site fires is the form, on /thank-you
+    // (02/10/2026: the phone/email/WhatsApp click conversion was retired).
+    assert.ok(!src.includes('h_2rCJeH8aYcEN6RgsVD'), `${f} still fires the retired contact-click conversion`);
   }
 });
 

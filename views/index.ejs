@@ -4831,27 +4831,21 @@
         return function () { return cached || {}; };
     })();
 
-    // Google Ads conversion: visitor tapped a phone, email or WhatsApp link.
-    // Runs after the reassembly above so the href prefixes are live.
-    // The three kinds currently share one Ads conversion label (Ads can't
-    // separate them yet - see the measurement doc for what needs creating
-    // there), but each fires its own distinct GA4 event alongside it so
-    // GA4 can already answer "which contact method do people actually use".
+    // A tap on a phone, email or WhatsApp link is recorded as a GA4 event
+    // only (phone_click / email_click / whatsapp_click), so GA4 can still
+    // answer "which contact method do people use". It is NOT a Google Ads
+    // conversion: on Tom's decision of 02/10/2026 the only conversion the
+    // business pays Google to find is a completed enquiry form, fired on
+    // /thank-you. People do not ring; a tap on a number is not a lead, and
+    // counting it as one pointed bidding at the wrong outcome. Runs after
+    // the reassembly above so the href prefixes are live.
     document.querySelectorAll('a[href^="tel:"], a[href^="mailto:"], a[href^="https://wa.me/"], a[href^="https://api.whatsapp.com/"]').forEach(a => {
         a.addEventListener('click', () => {
             const kind = a.href.indexOf('tel:') === 0 ? 'phone'
                 : a.href.indexOf('mailto:') === 0 ? 'email'
                 : 'whatsapp';
-            console.log('[Google Ads] conversion fired:', {
-                action: 'AW-18129914078/h_2rCJeH8aYcEN6RgsVD',
-                trigger: kind + ' link click',
-                href: a.href
-            });
             if (typeof gtag === 'function') {
-                gtag('event', 'conversion', { 'send_to': 'AW-18129914078/h_2rCJeH8aYcEN6RgsVD' });
                 gtag('event', kind + '_click', { event_category: 'contact', page_path: location.pathname });
-            } else {
-                console.warn('[Google Ads] gtag not loaded, conversion not sent');
             }
         });
     });
