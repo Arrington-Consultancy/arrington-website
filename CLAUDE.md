@@ -6441,7 +6441,24 @@ conversions, valuation and listing intent) was proposed for pausing and is
 NOT paused: Tom has not decided. `GOOGLE_ADS_PURCHASE_CONVERSION_LABEL`
 remains unset.
 
-Budget unchanged. **Reverse by re-enabling the six criterion ids and removing
+**Budget raised to £30 a day on Tom's instruction (02/10/2026, "set it
+higher, we need to up the amount").** This is the first budget change made by
+this worker and it was authorised in words, after Tom confirmed that two of
+the three form fills the campaign produced became buyers (Reece bought, Will
+is about to; the third was someone selling to Arrington), so the funnel
+converts and the constraint was volume: at £15 a day the ads were off for
+about a third of each day and produced roughly one form a month. £30 was
+chosen rather than higher because at £23 the account lost about 35% of
+impressions to budget, which puts the point where the current keywords run out
+of unspent demand near £35 a day; beyond that, more money buys little until
+the keyword set widens. Set via Windsor `set_campaign_budget` on campaign
+`23814976526` (its own budget, id `15558112699`, not shared), read back as 30.
+Expected: about two forms a month at roughly the same cost per form, and a
+30 October read with enough forms to judge on. The conversion VALUE in the
+Ads UI stays Tom's to set (£100 or any single figure; on Manual CPC and Target
+CPA it changes reporting only, never bidding).
+
+**Reverse by re-enabling the six criterion ids and removing
 the three negatives**; the Plymouth group pauses like any other. Check the
 search terms report by ad group after a week: every term containing a city
 name should sit in that city's group, and anything containing a city name
