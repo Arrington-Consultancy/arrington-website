@@ -14,7 +14,7 @@ on:
       paths:
         description: Comma-separated paths to inspect
         required: true
-        default: "/,/business-consultant-cornwall,/business-consultant-devon,/business-consultant-exeter"
+        default: "/,/business-consultant-cornwall,/business-consultant-devon,/business-consultant-exeter,/business-consultant-plymouth"
       label:
         description: Short label for this run (used in the results folder name)
         required: false

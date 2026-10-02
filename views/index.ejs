@@ -140,6 +140,14 @@
           provider: { '@type': 'Organization', name: 'Arrington Consultancy', url: 'https://www.arringtonconsultancy.com/' },
           areaServed: [{ '@type': 'City', name: 'Exeter' }, { '@type': 'AdministrativeArea', name: 'Devon' }],
           url: seo.canonical
+        },
+        'business-consultant-plymouth': {
+          '@context': 'https://schema.org',
+          '@type': 'Service',
+          name: 'Business consultant Plymouth',
+          provider: { '@type': 'Organization', name: 'Arrington Consultancy', url: 'https://www.arringtonconsultancy.com/' },
+          areaServed: [{ '@type': 'City', name: 'Plymouth' }, { '@type': 'AdministrativeArea', name: 'Devon' }],
+          url: seo.canonical
         }
       };
       const _schemaExtra = isUsefulThinkingArticle
@@ -676,6 +684,7 @@
            to the body's page class instead. Same photo as the Devon and
            Cornwall heroes, same crop. */
         .page-business-consultant-exeter .hero.hero-cover .hero-photo img { object-position: 60% 40%; }
+        .page-business-consultant-plymouth .hero.hero-cover .hero-photo img { object-position: 60% 40%; }
 
         /* Homepage hero only (15/08/2026): bind the supporting sentence,
            CTA and credibility line into one sequence — message, action,
@@ -774,6 +783,7 @@
             .hero[data-section-id="hero__4"] .hero-photo img { object-position: 70% 45%; }
             .hero[data-section-id="hero__6"] .hero-photo img { object-position: 70% 45%; }
             .page-business-consultant-exeter .hero.hero-cover .hero-photo img { object-position: 70% 45%; }
+            .page-business-consultant-plymouth .hero.hero-cover .hero-photo img { object-position: 70% 45%; }
             .hero.hero-cover .hero-inner { padding: 6.5rem 1.25rem 3.5rem; }
         }
 
@@ -3555,7 +3565,7 @@
   // A new landing page whose hero should match the home page is added to
   // one of these two lists, in one place, rather than to every selector.
   const HERO_COVER_IDS = ['hero', 'hero__3', 'hero__4', 'hero__6'];
-  const HERO_COVER_SLUGS = ['business-consultant-exeter'];
+  const HERO_COVER_SLUGS = ['business-consultant-exeter', 'business-consultant-plymouth'];
   const _heroCover = HERO_COVER_IDS.includes(_iid)
     || (HERO_COVER_SLUGS.includes(currentPage.slug) && _iid === sectionOrder[0]);
 %>
