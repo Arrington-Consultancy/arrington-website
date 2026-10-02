@@ -6502,11 +6502,12 @@ rather than the claim: a shared list's effect is read from
 `campaign_shared_set_campaign`, never inferred from search terms. Consequence
 for the negatives added above: the Leads-Search-1 `coach` / `coaching`
 campaign negatives duplicate the Core list and are harmless; the Ready to
-Sell valuation negatives were genuinely missing. **The one thing left for
-Tom:** apply Irrelevant Traffic and Core to Ready to Sell - Search (Tools,
-Shared library, Exclusion lists, tick both, Apply to campaigns), checking
-first that Irrelevant Traffic's "how to" and Core's "marketing" entries do
-not block a term he wants there. The Ads UI also shows a "Conflicting
+Sell valuation negatives were genuinely missing. **Done by Tom in the Ads UI the same
+hour:** Irrelevant Traffic and Core are now applied to Ready to Sell - Search
+as well, read back from `campaign_shared_set` (both ENABLED on all three
+Arrington campaigns; the WSA list stays on the WSA campaign only). Known
+consequence, accepted: Irrelevant Traffic's "how to" entry now stops "how to
+sell my business" style searches reaching Ready to Sell. The Ads UI also shows a "Conflicting
 negative keywords" notice; open it to read which keyword and negative clash
 before accepting Google's "Apply", because that fix removes negatives.
  Check the
