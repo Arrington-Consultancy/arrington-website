@@ -31,8 +31,12 @@ test('the About Us closing hero (hero__2) is not a cover hero', () => {
   assert.ok(!coverIds().includes('hero__2'));
 });
 
-test('the hero markup adds the class from the list', () => {
-  assert.match(view, /const _heroCover = HERO_COVER_IDS\.includes\(_iid\);/);
+test('the hero markup adds the class from the id list, or by slug for a page-opening hero', () => {
+  // Two routes in (02/10/2026): a known instance id, or a slug in
+  // HERO_COVER_SLUGS whose hero is first in section_order. The slug route
+  // exists because a migration-seeded landing page gets its hero id
+  // allocated on production, which is how Cornwall launched side-by-side.
+  assert.match(view, /const _heroCover = HERO_COVER_IDS\.includes\(_iid\)\s*\|\|\s*\(HERO_COVER_SLUGS\.includes\(currentPage\.slug\) && _iid === sectionOrder\[0\]\);/);
   assert.match(view, /<section class="hero<%= _heroCover \? ' hero-cover' : '' %>/);
 });
 
