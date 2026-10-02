@@ -6220,6 +6220,45 @@ reading one as a live positive keyword.
 Arrington copy, so the Brand OS fire-language rule does not bite, but it is
 worth knowing it is there.
 
+**Tom decided all three the same afternoon ("Do 2 and 3 together... clean up
+point 1 while you're there"), and the routing is now complete:**
+
+- General has two new enabled ads, `826706397073` (from the paused
+  `826508973811`) and `826666570443` (from the paused `826470011985`), final
+  URL `/business-consultant-devon`, display path `/devon`, built only from
+  headlines and descriptions already live in the account with every city
+  headline removed, including "Devon And Cornwall Consultant" and "Serving
+  Devon and Cornwall". The descriptions are unchanged; "Owner run business in
+  Devon or Cornwall" is a description and the approved service-area line.
+  **Google allows three enabled responsive search ads per ad group**: the
+  second new ad was refused until the two old ones were paused, so the order
+  is pause first, then create.
+- `business owner overwhelmed` and `business depends on me` are paused in
+  General and enabled in the Owner Dependency ad group `205823125812`.
+- The paused city keywords in General stay, for history and reversibility.
+  Budget unchanged.
+
+**Verified structure, read back from the account:** six enabled ads.
+General -> `/business-consultant-devon`; Plymouth `826693229731` ->
+`/business-consultant-plymouth`; Exeter `826652939727` ->
+`/business-consultant-exeter`; Cornwall `826652925267` ->
+`/business-consultant-cornwall`; Owner Dependency `826455631671` ->
+`/owner-dependency-quiz`. Production QA run
+`20261002T112348Z-ads-landing-urls`: all five landing pages 200 at desktop
+and iPhone 13, zero page errors, no overflow, the right h1 on each.
+Reversal: enable the two old General ads and pause the two new ones; enable
+the two keywords in General and pause them in the Owner Dependency group.
+Nothing was deleted. Write-back: "WEBSITE AND HOSTING WRITE-BACK -
+Leads-Search-1 routing completed: General to the Devon page,
+owner-dependency terms to the quiz, 2 October 2026", id
+`1-FvQVz_rJLKG5M2KjaGeyO2-vrWiJWZhfidv6mghsf4`.
+
+**A Windsor read-back trap, hit here:** a `get_data` call with identical
+parameters returns the CACHED job (same `job_id`), so a read-back issued
+after a write can show the pre-write state and look like the write failed.
+Change the query shape (a different `date_preset` or an extra field) to force
+a fresh pull; `force_refresh` is not available on the trial plan.
+
 ### Ready to Sell: what "done right" turned out to mean (02/10/2026)
 
 Tom: "ready to sell could work if done right... we need different search
