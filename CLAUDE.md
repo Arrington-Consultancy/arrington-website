@@ -6459,7 +6459,48 @@ Ads UI stays Tom's to set (£100 or any single figure; on Manual CPC and Target
 CPA it changes reporting only, never bidding).
 
 **Reverse by re-enabling the six criterion ids and removing
-the three negatives**; the Plymouth group pauses like any other. Check the
+the three negatives**; the Plymouth group pauses like any other.
+
+**Account-wide negatives and keyword sweep (02/10/2026, Tom: "across all
+campaigns do we need a sweep of negative keywords and also keywords to
+add?").** Read: every search term over 4 July to 2 October for the two
+spending campaigns, Leads-Search-1 and Ready to Sell (Owner Dependency Quiz
+is paused; the WSA campaigns are another business and are never touched),
+plus both campaigns' negative lists. Only 17 search terms had a click in 90
+days. Every clicked firm-name term (prydis, slr, azets, phillips frith, rt
+marke, ten consultancy) was already a campaign negative, added after the
+click. Applied: Leads-Search-1 campaign negatives `lean manufacturing`,
+`business agents`, `marketing consultancy`, `marketing consultant`, `digital
+transformation`, `coach`, `coaching` (all phrase; "business coach cornwall"
+had cost a click, and coach/coaching were already in the account's shared
+Core negative list, so this follows an existing decision rather than making
+one); Ready to Sell campaign negatives `valuation`, `value a`, `value of a`,
+`calculator`, `tax implications`, `for free`, `letting agency`, `online` (all
+phrase; the Brand OS brokerage rule, and the search terms report showed
+"how to value a gym business", "free company valuation calculator" and the
+like reaching it); General ad group keywords added `business operations
+consultant`, `business growth consultant`, `business efficiency consultant`
+(phrase; each appeared in the search terms report, fits the existing
+"business improvement consultant" pattern, and the campaign's Devon and
+Cornwall presence targeting keeps them local). Not added, judgement calls
+left alone: turnaround/restructuring terms (Arrington has done turnarounds
+but the Brand OS says it is not a rescue service), "change management
+consultant", "business development consultant" (usually a sales role).
+
+**The account holds three shared negative keyword lists that are NOT
+attached to these campaigns**: "Irrelevant Traffic" (307 terms),
+"Arrington Consultancy - Core Negative Keywords" (45) and "negative" (34,
+WSA student terms). Proven by behaviour, not inference: "coach" is in the
+Core list and "business coach cornwall" still bought a click in
+Leads-Search-1; "valuation" and "calculator" are in Irrelevant Traffic and
+"free company valuation calculator" still reached Ready to Sell. Windsor has
+no action to attach a shared list. Attaching Irrelevant Traffic and Core to
+Leads-Search-1 and Ready to Sell in the Ads UI (campaign, Settings,
+Negative keyword lists) would retire most of the per-term negatives above in
+one move; it is Tom's to do, and before doing it check the Core list's
+"marketing" entry does not block a term he wants. The "negative" list is
+WSA's and must not be attached to Arrington campaigns.
+ Check the
 search terms report by ad group after a week: every term containing a city
 name should sit in that city's group, and anything containing a city name
 with no impressions anywhere is a keyword to add to that city group.
