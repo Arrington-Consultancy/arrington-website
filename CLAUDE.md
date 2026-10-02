@@ -6166,6 +6166,45 @@ and the approach steps as blank.** That is the scroll-reveal animation
 Devon page, and not a rendering fault; scroll the page in Playwright before
 screenshotting.
 
+### Ready to Sell: what "done right" turned out to mean (02/10/2026)
+
+Tom: "ready to sell could work if done right... we need different search
+intent for sale ready preparation, or we need to phrase the page differently
+or both." Checked against the campaign's first week (created 26/09, read to
+02/10) before changing anything.
+
+**The preparation intent is already there, and almost nobody searches it.**
+The ad group `200829793655` holds 22 keywords, 20 of them phrase or exact
+preparation and exit vocabulary (business exit planning, business exit
+strategy, business succession planning, get business ready for sale,
+business sale readiness, preparing a business for sale, improve business
+before selling, and so on), all enabled. The first read of this file missed
+them because Windsor's keyword report lists only keywords with impressions.
+Across all 20, five impressions in seven days. The campaign's 145 impressions
+came almost entirely from the two broad keywords (paused 26/09 to 30/09) and
+from `selling a business` (phrase), the one broker-intent keyword: shown to
+one searcher in eight, losing up to 90% of auctions on rank to brokers, and
+the Brand OS says Arrington is not a broker. The ad (`825986544474`) and the
+page (`/get-your-business-ready-to-sell`, h1 "Get your business ready to
+sell", lede about owner dependence and transferability) already speak the
+preparation language; the mismatch was never the wording, it is that the
+owner who should prepare does not search for it in Devon and Cornwall in any
+volume, and searches for a broker later.
+
+**Applied:** `selling a business` paused (criterion `10270011`); campaign
+negatives `broker`, `brokers`, `agents`, `listing`, `listings` (phrase) on top
+of the valuation set added earlier the same day and the two shared lists Tom
+attached. Budget £7.50 a day unchanged. The campaign is now a cheap net for
+the rare genuine preparation search and will spend very little; the 30
+October review reads whether that intent exists at all.
+
+**The page is not the lever for Search**, so no copy change was proposed:
+rewording a page cannot create searches. Where wording would matter is the
+channel that reaches this owner before they decide, which is Tom's own
+LinkedIn (1,000+ views a post) with the sale readiness page under it, and the
+Owner Dependency Quiz, whose "business relies on me" vocabulary is the same
+owner a year earlier. Both need Tom's words, not the builder's.
+
 ### The Cornwall ad group (01/10/2026)
 
 Tom: "Don't we need an advert for Cornwall page?" Yes: over the previous
