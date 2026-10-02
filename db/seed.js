@@ -4042,6 +4042,192 @@ async function seed() {
   }
   console.log('Images seeded.');
 
+  // Migration: two copy corrections on the Exeter landing page (02/10/2026,
+  // Tom's instruction, Exeter and the new Plymouth page only). Step 2 reads
+  // "the £500 Commercial Review." rather than "the Commercial Review, £500.",
+  // and step 3's closing line drops "No pressure." because the section's own
+  // label already says "No pressure. No sales pitch." (the smallest change
+  // that removes the repetition; "No obligation." stays). Both are substring
+  // replacements guarded on the substring being present, so a CMS edit that
+  // has already moved the row is left alone, and both are applied again to
+  // the Plymouth copy below so the order the two migrations run in does not
+  // matter. The Devon and Cornwall pages carry the same two lines and are
+  // deliberately NOT touched: the instruction named Exeter and Plymouth.
+  const applyLandingCopyCorrections = async (approachId) => {
+    const out = [];
+    const r1 = await db.query(
+      `UPDATE content SET content = replace(content, 'the <strong>Commercial Review, £500.</strong>', 'the <strong>£500 Commercial Review.</strong>')
+       WHERE section_key = $1 AND content LIKE '%the <strong>Commercial Review, £500.</strong>%'`,
+      [`${approachId}.step_2_body`]
+    );
+    out.push(`step 2 ${r1.rowCount ? 'now reads "the £500 Commercial Review."' : 'left alone (already corrected or edited)'}`);
+    const r2 = await db.query(
+      `UPDATE content SET content = replace(content, 'No obligation. No pressure.', 'No obligation.')
+       WHERE section_key = $1 AND content LIKE '%No obligation. No pressure.%'`,
+      [`${approachId}.step_3_body`]
+    );
+    out.push(`step 3 ${r2.rowCount ? 'closing line now "No obligation."' : 'left alone (already corrected or edited)'}`);
+    return out.join(', ');
+  };
+  {
+    const EXETER_FIX_MARKER = 'site.exeter_copy_corrections_2026-10-02';
+    const { rows: exFixMarker } = await db.query('SELECT 1 FROM content WHERE section_key = $1', [EXETER_FIX_MARKER]);
+    if (exFixMarker.length === 0) {
+      const { rows: exPage } = await db.query("SELECT section_order FROM pages WHERE slug = 'business-consultant-exeter'");
+      const exOrder = exPage.length && Array.isArray(exPage[0].section_order) ? exPage[0].section_order : null;
+      const exApproach = exOrder ? exOrder.find((id) => /^approach(?:__\d+)?$/.test(id)) : null;
+      if (!exApproach) {
+        console.log('Exeter copy corrections: no Exeter page with an approach instance on this database; nothing to do.');
+      } else {
+        const note = await applyLandingCopyCorrections(exApproach);
+        console.log(`Exeter copy corrections: ${exApproach}: ${note}.`);
+      }
+      await db.query(
+        'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+        [EXETER_FIX_MARKER, new Date().toISOString()]
+      );
+    }
+  }
+
+  // Migration: Business Consultant Plymouth (02/10/2026). Tom's instruction:
+  // "Exeter is now the controlled template for this geographic landing-page
+  // family", so this copies the EXETER page as it stands at migration time
+  // (not Devon), onto freshly allocated ids, and rewrites exactly the three
+  // location rows: the hero heading ("in Plymouth"), the areas heading and
+  // the areas sentence. The surrounding places are the Plymouth area rather
+  // than a mechanical copy of Exeter's list. The two copy corrections above
+  // are applied to the new approach instance as well, so the page carries
+  // them whichever order the migrations ran in. Full-bleed hero comes from
+  // HERO_COVER_SLUGS in views/index.ejs, keyed to the slug, so the allocated
+  // hero id does not matter. No About Us block. Marker-guarded; a page Tom
+  // deletes stays deleted; a hand-made page with the slug is adopted.
+  {
+    const PLYMOUTH_MARKER = 'site.plymouth_page_2026-10-02';
+    const PLYMOUTH_SLUG = 'business-consultant-plymouth';
+    const { rows: plMarker } = await db.query('SELECT 1 FROM content WHERE section_key = $1', [PLYMOUTH_MARKER]);
+    const { rows: plExisting } = await db.query('SELECT 1 FROM pages WHERE slug = $1', [PLYMOUTH_SLUG]);
+    const { rows: exeterRows } = await db.query(
+      "SELECT section_order, sort_order, meta_title, meta_description, meta_keywords FROM pages WHERE slug = 'business-consultant-exeter'"
+    );
+    if (plMarker.length === 0 && plExisting.length === 0 && exeterRows.length === 0) {
+      console.log('Business Consultant Plymouth: no business-consultant-exeter page to copy from; skipped.');
+    } else if (plMarker.length === 0 && plExisting.length === 0) {
+      const exeterOrder = Array.isArray(exeterRows[0].section_order) ? exeterRows[0].section_order : [];
+      const baseOf = (id) => {
+        const m = /^([a-z0-9]+)(?:__(\d+))?$/.exec(id || '');
+        return m ? m[1] : null;
+      };
+      const sourceFor = (tpl) => exeterOrder.find((id) => baseOf(id) === tpl) || null;
+      const sources = {
+        hero: sourceFor('hero'),
+        casestudy: sourceFor('casestudy'),
+        approach: sourceFor('approach'),
+        biography: sourceFor('biography')
+      };
+      const missing = Object.keys(sources).filter((k) => !sources[k]);
+      if (missing.length) {
+        console.log(`Business Consultant Plymouth: Exeter page has no ${missing.join(', ')} instance to copy; skipped.`);
+      } else {
+        const used = new Set();
+        const { rows: allOrders } = await db.query('SELECT section_order FROM pages');
+        for (const r of allOrders) {
+          if (Array.isArray(r.section_order)) r.section_order.forEach((s) => used.add(s));
+        }
+        const { rows: prefixes } = await db.query(
+          "SELECT DISTINCT split_part(section_key, '.', 1) AS instance_id FROM content"
+        );
+        prefixes.forEach((r) => used.add(r.instance_id));
+        const allocate = (tpl) => {
+          if (!used.has(tpl)) { used.add(tpl); return tpl; }
+          for (let n = 2; n <= 99; n++) {
+            const id = `${tpl}__${n}`;
+            if (!used.has(id)) { used.add(id); return id; }
+          }
+          return null;
+        };
+        const ids = {
+          hero: allocate('hero'),
+          casestudy: allocate('casestudy'),
+          approach: allocate('approach'),
+          biography: allocate('biography')
+        };
+        if (Object.values(ids).some((v) => !v)) {
+          console.log('Business Consultant Plymouth: could not allocate instance ids; skipped.');
+        } else {
+          // Copy every content row of each Exeter instance onto the new id.
+          // The Exeter rows are only ever read here.
+          let copied = 0;
+          for (const tpl of Object.keys(ids)) {
+            const { rows } = await db.query(
+              "SELECT section_key, content FROM content WHERE split_part(section_key, '.', 1) = $1",
+              [sources[tpl]]
+            );
+            for (const r of rows) {
+              const field = r.section_key.slice(r.section_key.indexOf('.') + 1);
+              await db.query(
+                'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+                [`${ids[tpl]}.${field}`, r.content || '']
+              );
+              copied++;
+            }
+          }
+          // The Exeter hero's photo, so the landing pages match; a missing
+          // source row leaves the new hero on the default via /img/:key.
+          await db.query(
+            `INSERT INTO images (image_key, data, mime_type)
+             SELECT $1, data, mime_type FROM images WHERE image_key = $2
+             ON CONFLICT (image_key) DO NOTHING`,
+            [`headshot__${ids.hero}`, `headshot__${sources.hero}`]
+          );
+
+          // The Plymouth wording. Three rows only.
+          const set = async (key, value) => {
+            await db.query(
+              'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content',
+              [key, value]
+            );
+          };
+          await set(`${ids.hero}.heading`,
+            'Business consultant<br />\nfor <strong>owner run businesses</strong><br />\nin Plymouth');
+          await set(`${ids.biography}.heading`, 'Working in and around Plymouth');
+          await set(`${ids.biography}.col_1_p1`,
+            'We work with owner run businesses across <strong>Plymouth and the surrounding area, including Plympton, Plymstock, Saltash, Torpoint, Ivybridge and Tavistock.</strong>');
+
+          const fixNote = await applyLandingCopyCorrections(ids.approach);
+
+          const sectionOrder = [ids.hero, ids.casestudy, ids.approach, ids.biography];
+          const sortOrder = Number(exeterRows[0].sort_order || 0) + 1;
+          await db.query('UPDATE pages SET sort_order = sort_order + 1 WHERE sort_order >= $1', [sortOrder]);
+          await db.query(
+            `INSERT INTO pages (slug, title, sort_order, hidden, show_in_nav, section_order, hidden_sections, deleted_sections,
+                                meta_title, meta_description, meta_keywords, noindex)
+             VALUES ($1, $2, $3, false, false, $4::jsonb, '[]'::jsonb, '[]'::jsonb, $5, $6, $7, false)`,
+            [
+              PLYMOUTH_SLUG,
+              'Business Consultant Plymouth',
+              sortOrder,
+              JSON.stringify(sectionOrder),
+              'Business Consultant Plymouth | Arrington Consultancy',
+              'Business consultant for owner run businesses in Plymouth and the surrounding area. An outside view on owner dependency and what to change first.',
+              'business consultant Plymouth, business consultancy Plymouth, owner run business Plymouth'
+            ]
+          );
+          await db.query(
+            'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+            [PLYMOUTH_MARKER, new Date().toISOString()]
+          );
+          console.log(`Business Consultant Plymouth: page created at /${PLYMOUTH_SLUG} as [${sectionOrder.join(', ')}] from Exeter instances [${Object.values(sources).join(', ')}], ${copied} content row(s) copied; ${fixNote}.`);
+        }
+      }
+    } else if (plMarker.length === 0 && plExisting.length > 0) {
+      await db.query(
+        'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+        [PLYMOUTH_MARKER, 'adopted existing page']
+      );
+      console.log('Business Consultant Plymouth: page already exists; adopted without changes.');
+    }
+  }
+
   // Migration: swap known old logo assets for the transparent cropped stacked
   // Arrington Consultancy lockup. Only replaces exact known hashes, so a
   // later CMS upload is preserved.
