@@ -6166,6 +6166,60 @@ and the approach steps as blank.** That is the scroll-reveal animation
 Devon page, and not a rendering fault; scroll the page in Playwright before
 screenshotting.
 
+### Full-configuration check of the city routing (02/10/2026, afternoon)
+
+Tom asked for the geographic overlap to be inspected from the full keyword
+and negative structure rather than the traffic report, with push-back if the
+diagnosis was wrong. Read with Windsor `options: {"include_inactive": true}`,
+which is the only way to see keywords and negatives that have never served
+(the metrics report hides them; that is what misled the Ready to Sell read).
+165 criteria across Leads-Search-1.
+
+**The city routing is clean; no further restructuring is needed.** General
+(`196492356455`) has every Plymouth, Exeter and Cornwall positive keyword
+PAUSED, in both capitalisations, and holds the three phrase negatives
+`plymouth`, `exeter`, `cornwall` (criterion ids 117785694, 33479160,
+30649340). The city groups hold 9 to 10 enabled keywords each and nothing
+else. General's enabled set is Devon vocabulary (business consultancy devon
+phrase and exact, business consultant devon, management consultant Devon,
+business advice devon, business advisor devon, small business consultant
+Devon, business growth consultant devon, business owner help devon) plus the
+non-geographic set. Tom's description of General "still containing" city
+keywords was true only of paused rows, kept deliberately so their history
+survives and the change reverses. Note for readers of the include_inactive
+report: ad-group NEGATIVES appear in it as `keyword_status ENABLED` rows
+(the exact-match firm names, `business`, `small business`, and the three
+city phrases); cross-check against `ad_group_criterion_negative` before
+reading one as a live positive keyword.
+
+**Three judgement calls found, reported to Tom and NOT acted on:**
+
+1. General carries two owner-dependency keywords, `business owner
+   overwhelmed` and `business depends on me` (phrase, landing on the
+   homepage), while the Owner Dependency ad group (`205823125812`, landing
+   on the quiz) carries `overwhelmed business owner`, `business relies on
+   me` and six similar. Phrase match is loose enough that both can enter
+   the same auction. By Tom's principle (owner-dependency intent to the
+   quiz) the two should move; but that group has had zero impressions in
+   six months, so this is attribution hygiene, not spend.
+2. General's two live ads (`826508973811`, `826470011985`) still carry the
+   headlines "Business Consultant Cornwall", "Business Consultant Plymouth",
+   "Business Consultant Exeter" and "Business Consultancy Exeter". The
+   negatives stop a city SEARCH reaching General, so this is not
+   cannibalisation, but Google can still choose a city headline for a Devon
+   searcher and send them to the homepage. Removing them means new ads
+   (Windsor cannot edit an ad in place), which is ad copy and Tom's call.
+   The fire-metaphor headlines exist only on the two paused General ads.
+3. General lands on the homepage, while `/business-consultant-devon`
+   exists, is hidden for exactly this purpose, and was corrected yesterday
+   to match the city pages. No ad in the campaign points at it. Pointing
+   General at the Devon page would complete the pattern (Devon intent to
+   the Devon page) and is also a new-ad change for Tom to decide.
+
+`business firefighting` is an enabled General keyword. It is targeting, not
+Arrington copy, so the Brand OS fire-language rule does not bite, but it is
+worth knowing it is there.
+
 ### Ready to Sell: what "done right" turned out to mean (02/10/2026)
 
 Tom: "ready to sell could work if done right... we need different search
