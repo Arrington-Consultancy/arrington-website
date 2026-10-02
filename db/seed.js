@@ -3728,6 +3728,235 @@ async function seed() {
     if (seoFixCount > 0) console.log(`SEO audit: checked/tightened metadata on ${seoFixCount} page row(s).`);
   }
 
+  // Migration: Business Consultant Exeter, a public search landing page
+  // (02/10/2026). The Google Ads gap analysis of that day showed Exeter as
+  // the largest single source of ad impressions over 90 days (127, against
+  // Plymouth's 68 and Falmouth's 30) with seven clicks and no enquiry, and the
+  // keyword "business consultant exeter" shown 31 times and clicked zero
+  // times, because nothing on the ad or the page said Exeter. Tom's decision:
+  // build it the way Cornwall was built the day before.
+  //
+  // Same shape as the Cornwall migration above, with two lessons from it
+  // applied. The rows are copied from the Devon landing page AS IT STANDS AT
+  // MIGRATION TIME, which on production already carries the review-pass
+  // corrections (the compact business-centred proof block and the step 2
+  // that names the Commercial Review at £500), so the page lands with the
+  // corrected copy rather than needing a second pass. And the hero's
+  // full-bleed treatment is keyed to this page's SLUG in views/index.ejs
+  // (HERO_COVER_SLUGS), not to an instance id that cannot be known before
+  // the allocator runs here, so it cannot launch side-by-side as Cornwall
+  // did. Three rows are replaced with the Exeter wording (hero heading, the
+  // areas heading and the areas sentence); everything else is the approved
+  // Devon copy as it stands. The Devon page is only ever read. No block is
+  // added to About Us: that page already carries a "Working across Cornwall"
+  // block and a third regional block would read as a list; the page is in
+  // the sitemap and is the landing page for its own ad group.
+  //
+  // Guarded on a marker row rather than on the page's absence, so a page Tom
+  // later deletes in the CMS stays deleted. Skips cleanly, saying why, on a
+  // database that has no Devon page to copy from.
+  {
+    const EXETER_MARKER = 'site.exeter_page_2026-10-02';
+    const EXETER_SLUG = 'business-consultant-exeter';
+    const { rows: exMarker } = await db.query('SELECT 1 FROM content WHERE section_key = $1', [EXETER_MARKER]);
+    const { rows: exExisting } = await db.query('SELECT 1 FROM pages WHERE slug = $1', [EXETER_SLUG]);
+    const { rows: exDevonRows } = await db.query(
+      "SELECT section_order, sort_order FROM pages WHERE slug = 'business-consultant-devon'"
+    );
+    if (exMarker.length === 0 && exExisting.length === 0 && exDevonRows.length === 0) {
+      console.log('Business Consultant Exeter: no business-consultant-devon page to copy from; skipped.');
+    } else if (exMarker.length === 0 && exExisting.length === 0) {
+      const devonOrder = Array.isArray(exDevonRows[0].section_order) ? exDevonRows[0].section_order : [];
+      const baseOf = (id) => {
+        const m = /^([a-z0-9]+)(?:__(\d+))?$/.exec(id || '');
+        return m ? m[1] : null;
+      };
+      const sourceFor = (tpl) => devonOrder.find((id) => baseOf(id) === tpl) || null;
+      const sources = {
+        hero: sourceFor('hero'),
+        casestudy: sourceFor('casestudy'),
+        approach: sourceFor('approach'),
+        biography: sourceFor('biography')
+      };
+      const missing = Object.keys(sources).filter((k) => !sources[k]);
+      if (missing.length) {
+        console.log(`Business Consultant Exeter: Devon page has no ${missing.join(', ')} instance to copy; skipped.`);
+      } else {
+        const used = new Set();
+        const { rows: allOrders } = await db.query('SELECT section_order FROM pages');
+        for (const r of allOrders) {
+          if (Array.isArray(r.section_order)) r.section_order.forEach((s) => used.add(s));
+        }
+        const { rows: prefixes } = await db.query(
+          "SELECT DISTINCT split_part(section_key, '.', 1) AS instance_id FROM content"
+        );
+        prefixes.forEach((r) => used.add(r.instance_id));
+        const allocate = (tpl) => {
+          if (!used.has(tpl)) { used.add(tpl); return tpl; }
+          for (let n = 2; n <= 99; n++) {
+            const id = `${tpl}__${n}`;
+            if (!used.has(id)) { used.add(id); return id; }
+          }
+          return null;
+        };
+
+        const ids = {
+          hero: allocate('hero'),
+          casestudy: allocate('casestudy'),
+          approach: allocate('approach'),
+          biography: allocate('biography')
+        };
+
+        if (Object.values(ids).some((v) => !v)) {
+          console.log('Business Consultant Exeter: could not allocate instance ids; skipped.');
+        } else {
+          // Copy every content row of each source instance onto the new id.
+          // The Devon rows are only ever read here.
+          let copied = 0;
+          for (const tpl of Object.keys(ids)) {
+            const { rows } = await db.query(
+              "SELECT section_key, content FROM content WHERE split_part(section_key, '.', 1) = $1",
+              [sources[tpl]]
+            );
+            for (const r of rows) {
+              const field = r.section_key.slice(r.section_key.indexOf('.') + 1);
+              await db.query(
+                'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+                [`${ids[tpl]}.${field}`, r.content || '']
+              );
+              copied++;
+            }
+          }
+          // The Devon hero's own photo, if it has one, so the three landing
+          // pages match. A missing source row leaves the new hero on the
+          // site default photo via the /img/:key fallback.
+          await db.query(
+            `INSERT INTO images (image_key, data, mime_type)
+             SELECT $1, data, mime_type FROM images WHERE image_key = $2
+             ON CONFLICT (image_key) DO NOTHING`,
+            [`headshot__${ids.hero}`, `headshot__${sources.hero}`]
+          );
+
+          // The Exeter wording. Three rows only.
+          const set = async (key, value) => {
+            await db.query(
+              'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO UPDATE SET content = EXCLUDED.content',
+              [key, value]
+            );
+          };
+          await set(`${ids.hero}.heading`,
+            'Business consultant<br />\nfor <strong>owner run businesses</strong><br />\nin Exeter');
+          await set(`${ids.biography}.heading`, 'Working in and around Exeter');
+          await set(`${ids.biography}.col_1_p1`,
+            'We work with owner run businesses across <strong>Exeter and the surrounding area, including Exmouth, Crediton, Tiverton, Cullompton, Honiton and Newton Abbot.</strong>');
+
+          // Belt and braces on the two Cornwall corrections. On production the
+          // Devon rows already carry them (deploy a2e38718, 01/10/2026), so
+          // this is a no-op there and the log says so. It exists because a
+          // database where the Devon review pass did not fire (a rebuild from
+          // the July snapshot, where the pass stamps its marker on the empty
+          // first boot) would otherwise seed the founder story and the
+          // unpriced step 2 onto a THIRD page. Same guards as the Devon pass:
+          // exact old values, home page only read, a CMS edit wins.
+          const getContent = async (key) => {
+            const { rows } = await db.query('SELECT content FROM content WHERE section_key = $1', [key]);
+            return rows.length ? rows[0].content : null;
+          };
+          const updateExact = async (key, from, to) => {
+            const r = await db.query('UPDATE content SET content = $1 WHERE section_key = $2 AND content = $3', [to, key, from]);
+            return r.rowCount;
+          };
+          const insertIfAbsent = async (key, value) => {
+            const r = await db.query('INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING', [key, value]);
+            return r.rowCount;
+          };
+          const fixNotes = [];
+          const copiedPhase1 = (await getContent(`${ids.casestudy}.phase_1_body`)) || '';
+          if (/to help rescue it|seven-figure exit/.test(copiedPhase1 + ((await getContent(`${ids.casestudy}.phase_3_body`)) || ''))) {
+            const { rows: mainRows } = await db.query("SELECT section_order FROM pages WHERE slug = 'main'");
+            const mainOrder = mainRows.length && Array.isArray(mainRows[0].section_order) ? mainRows[0].section_order : [];
+            const mainCase = mainOrder.find((id) => baseOf(id) === 'casestudy');
+            const mainResult = mainCase ? await getContent(`${mainCase}.phase_3_body`) : null;
+            if (!mainCase || !mainResult || !mainResult.includes('Twenty four months, start to sale')) {
+              fixNotes.push('WARNING: copied proof block is the founder story and the home page has no approved compact copy to replace it with');
+            } else {
+              const OLD = {
+                phase_1_label: '<strong>The starting point</strong>',
+                phase_1_body: 'Tom was brought into an <strong>insolvent Devon business</strong> to help rescue it.<br /><br />\n\nIt had no VAT provision, unpaid staff and serious financial problems.',
+                phase_2_label: '<strong>What changed</strong>',
+                phase_2_body: 'Tom rebuilt the structure, restored financial control and stabilised the business.<br /><br />\n\nIt became a company capable of operating and growing without depending on constant intervention.',
+                phase_3_label: '<strong>The outcome</strong>',
+                phase_3_body: 'The turnaround succeeded.<br /><br />\n\nSeparately, Tom built, grew and sold his own business in a <strong>seven-figure exit.</strong>'
+              };
+              let changed = 0;
+              for (const field of Object.keys(OLD)) {
+                const to = await getContent(`${mainCase}.${field}`);
+                if (to === null) continue;
+                changed += await updateExact(`${ids.casestudy}.${field}`, OLD[field], to);
+              }
+              let linked = 0;
+              for (const field of ['link_text', 'link_href']) {
+                const to = await getContent(`${mainCase}.${field}`);
+                if (to) linked += await insertIfAbsent(`${ids.casestudy}.${field}`, to);
+              }
+              fixNotes.push(`proof block was the founder story: ${changed} of 6 row(s) replaced with the home page's compact copy from ${mainCase}, ${linked} link row(s) added`);
+            }
+          } else {
+            fixNotes.push('proof block already in its corrected form');
+          }
+          const step2 = (await getContent(`${ids.approach}.step_2_body`)) || '';
+          if (/we carry out a .{0,30}commercial review/.test(step2.replace(/\r\n/g, '\n'))) {
+            await updateExact(`${ids.approach}.step_2_title`, '<strong>We review</strong>', '<strong>Commercial Review</strong>');
+            await db.query(
+              "UPDATE content SET content = $1 WHERE section_key = $2 AND replace(content, E'\\r\\n', E'\\n') LIKE 'If we both think it is worth exploring further, we carry out a %commercial review%'",
+              ['If we both think it is worth exploring further, the next step is the <strong>Commercial Review, £500.</strong><br /><br />\n\nWe listen, go through the business and the evidence, and write it up: what we found, what we would do about it, and what to do first.', `${ids.approach}.step_2_body`]
+            );
+            await insertIfAbsent(`${ids.approach}.step_2_link_text`, 'What the review covers');
+            await insertIfAbsent(`${ids.approach}.step_2_link_href`, '/where-to-start/commercial-review');
+            fixNotes.push('step 2 did not name the Commercial Review at £500: corrected');
+          } else {
+            fixNotes.push('step 2 already names the Commercial Review');
+          }
+
+          const sectionOrder = [ids.hero, ids.casestudy, ids.approach, ids.biography];
+          // Directly after the Cornwall page when it exists, else after Devon.
+          const { rows: cwSort } = await db.query("SELECT sort_order FROM pages WHERE slug = 'business-consultant-cornwall'");
+          const after = cwSort.length ? Number(cwSort[0].sort_order || 0) : Number(exDevonRows[0].sort_order || 0);
+          const sortOrder = after + 1;
+          await db.query('UPDATE pages SET sort_order = sort_order + 1 WHERE sort_order >= $1', [sortOrder]);
+          await db.query(
+            `INSERT INTO pages (slug, title, sort_order, hidden, show_in_nav, section_order, hidden_sections, deleted_sections,
+                                meta_title, meta_description, meta_keywords, noindex)
+             VALUES ($1, $2, $3, false, false, $4::jsonb, '[]'::jsonb, '[]'::jsonb, $5, $6, $7, false)`,
+            [
+              EXETER_SLUG,
+              'Business Consultant Exeter',
+              sortOrder,
+              JSON.stringify(sectionOrder),
+              'Business Consultant Exeter | Arrington Consultancy',
+              'Business consultant for owner run businesses in Exeter and the surrounding area. An outside view on owner dependency and what to change first.',
+              'business consultant Exeter, business consultancy Exeter, owner run business Exeter'
+            ]
+          );
+
+          await db.query(
+            'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+            [EXETER_MARKER, new Date().toISOString()]
+          );
+          console.log(`Business Consultant Exeter: page created at /${EXETER_SLUG} as [${sectionOrder.join(', ')}] from Devon instances [${Object.values(sources).join(', ')}], ${copied} content row(s) copied; ${fixNotes.join('; ')}.`);
+        }
+      }
+    } else if (exMarker.length === 0 && exExisting.length > 0) {
+      // A page with this slug already exists (made by hand in the CMS). Leave
+      // it alone and stamp the marker so this never fires on it.
+      await db.query(
+        'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+        [EXETER_MARKER, 'adopted existing page']
+      );
+      console.log('Business Consultant Exeter: page already exists; adopted without changes.');
+    }
+  }
+
   // Migration: set a site-wide default Open Graph image (01/08/2026, per
   // Tom's review follow-up — every page was rendering with no og:image at
   // all, so shared links had no preview anywhere). Uses the existing logo

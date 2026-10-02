@@ -132,6 +132,14 @@
           provider: { '@type': 'Organization', name: 'Arrington Consultancy', url: 'https://www.arringtonconsultancy.com/' },
           areaServed: [{ '@type': 'AdministrativeArea', name: 'Cornwall' }],
           url: seo.canonical
+        },
+        'business-consultant-exeter': {
+          '@context': 'https://schema.org',
+          '@type': 'Service',
+          name: 'Business consultant Exeter',
+          provider: { '@type': 'Organization', name: 'Arrington Consultancy', url: 'https://www.arringtonconsultancy.com/' },
+          areaServed: [{ '@type': 'City', name: 'Exeter' }, { '@type': 'AdministrativeArea', name: 'Devon' }],
+          url: seo.canonical
         }
       };
       const _schemaExtra = isUsefulThinkingArticle
@@ -663,6 +671,11 @@
         .hero[data-section-id="hero__3"] .hero-photo img { object-position: 65% 50%; }
         .hero[data-section-id="hero__4"] .hero-photo img { object-position: 60% 40%; }
         .hero[data-section-id="hero__6"] .hero-photo img { object-position: 60% 40%; }
+        /* Slug-keyed cover heroes (see HERO_COVER_SLUGS in the hero markup):
+           the instance id is allocated at deploy time, so the crop is keyed
+           to the body's page class instead. Same photo as the Devon and
+           Cornwall heroes, same crop. */
+        .page-business-consultant-exeter .hero.hero-cover .hero-photo img { object-position: 60% 40%; }
 
         /* Homepage hero only (15/08/2026): bind the supporting sentence,
            CTA and credibility line into one sequence — message, action,
@@ -760,6 +773,7 @@
             .hero[data-section-id="hero__3"] .hero-photo img { object-position: 75% 50%; }
             .hero[data-section-id="hero__4"] .hero-photo img { object-position: 70% 45%; }
             .hero[data-section-id="hero__6"] .hero-photo img { object-position: 70% 45%; }
+            .page-business-consultant-exeter .hero.hero-cover .hero-photo img { object-position: 70% 45%; }
             .hero.hero-cover .hero-inner { padding: 6.5rem 1.25rem 3.5rem; }
         }
 
@@ -3530,11 +3544,20 @@
   // Page-opening heroes that get the full-bleed treatment (.hero-cover in
   // the CSS above): home, 30 Minute Conversation, Business Consultant Devon,
   // Business Consultant Cornwall. Instance ids are stable on production
-  // (confirmed from the 01/10/2026 deploy log for the Cornwall page). A new
-  // landing page whose hero should match the home page is added here, in one
-  // place, rather than to every selector.
+  // (confirmed from the 01/10/2026 deploy log for the Cornwall page).
+  //
+  // HERO_COVER_SLUGS is the second route in (02/10/2026): a landing page
+  // whose hero is seeded by a migration gets its instance id allocated on
+  // production at deploy time, so it cannot be listed here in advance. The
+  // Cornwall page launched side-by-side for exactly that reason. For a slug
+  // in this list the page's OPENING hero (first in section_order) is a cover
+  // hero whatever id it was given; a hero further down such a page is not.
+  // A new landing page whose hero should match the home page is added to
+  // one of these two lists, in one place, rather than to every selector.
   const HERO_COVER_IDS = ['hero', 'hero__3', 'hero__4', 'hero__6'];
-  const _heroCover = HERO_COVER_IDS.includes(_iid);
+  const HERO_COVER_SLUGS = ['business-consultant-exeter'];
+  const _heroCover = HERO_COVER_IDS.includes(_iid)
+    || (HERO_COVER_SLUGS.includes(currentPage.slug) && _iid === sectionOrder[0]);
 %>
 <!-- HERO -->
 <section class="hero<%= _heroCover ? ' hero-cover' : '' %><%= (hiddenSections || []).includes(_iid) ? ' cms-section-hidden' : '' %>" data-section-id="<%= _iid %>">

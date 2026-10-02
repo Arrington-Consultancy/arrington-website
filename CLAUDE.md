@@ -6195,6 +6195,67 @@ The general ad group also lists dozens of zero-impression EXACT rows
 tea business uk"). Those are almost certainly ad-group negatives that
 Windsor's keyword report does not distinguish from positives. Left alone.
 
+## Business Consultant Exeter page and ad group (02/10/2026)
+
+Built on Tom's decision after the Google Ads gap analysis of 02/10/2026
+(Windsor, 4 July to 1 October): Exeter was the largest single source of
+Leads-Search-1 impressions (127 against Plymouth 68, Falmouth 30), seven
+clicks, no enquiry, and "business consultant exeter" shown 31 times and
+clicked zero times because nothing on the ad or the page said Exeter. The
+same read found the other gaps worth knowing: half the itemised Leads-Search-1
+spend (£85 of £162) went to people searching for their own accountant by
+name (Prydis, SLR, Azets, Phillips Frith and the rest, each negatived only
+after a paid click, so it is whack-a-mole on phrase match); owners search
+"business advice / advisor / support" and the campaign bid only on
+"consultant"; impression share 42% with 35% "lost to budget" that is really
+Google rationing a £23 budget against £12 to £15 clicks (spend averages
+£7.60 a day); organic is about 100 impressions in 90 days, mostly brand. The
+"Ready to Sell" campaign (26/09, £7.50 a day, broad match) was catching
+valuation and listing intent ("sale for hotel", "how to value a gym
+business"); watch it against the Brand OS brokerage rule.
+
+`/business-consultant-exeter` is the Cornwall pattern (marker
+`site.exeter_page_2026-10-02`, rows copied from the Devon landing page onto
+freshly allocated ids, three rows rewritten: hero heading "in Exeter", areas
+heading "Working in and around Exeter", areas sentence with the towns
+Exmouth, Crediton, Tiverton, Cullompton, Honiton, Newton Abbot, which are
+drawn from the Ads location report rather than confirmed by Tom). No About Us
+block was added (a third regional block would read as a list); the page is in
+the sitemap and is the landing page for its own ad group. **Two things from
+the Cornwall launch are built in rather than fixed afterwards**, on Tom's
+instruction ("make sure you dont fuck up the copy and the look of it like you
+did in the cornwall page"):
+
+1. **The hero is a cover hero by SLUG.** `HERO_COVER_SLUGS` in
+   `views/index.ejs` makes the page-opening hero (`_iid === sectionOrder[0]`)
+   full-bleed for a listed slug whatever instance id the allocator gives it
+   on production, with the photo crop keyed to `.page-business-consultant-exeter`.
+   Cornwall launched side-by-side because the treatment was keyed to an
+   id nobody could know before the deploy. A new landing page goes in
+   `HERO_COVER_SLUGS`, not `HERO_COVER_IDS`.
+2. **The copy guard.** After copying, the migration checks the proof block
+   and step 2 it received. If the Devon rows still carried the founder story
+   it replaces them with the home page's approved compact copy (same OLD
+   values and same source as the Devon review pass) and makes step 2 name the
+   Commercial Review at £500; otherwise it logs "already in its corrected
+   form". On production the Devon rows were corrected on 01/10, so the guard
+   is expected to be a no-op, and the deploy line says which.
+
+Verified on a production-shaped rebuild (July snapshot loaded over the empty
+first boot's schema, every migration replayed): Exeter differs from Devon in
+exactly the three rewritten rows; the guard watched correcting a founder-story
+copy (6 of 6 rows) and standing down when the rows were already right; a
+redeploy is a silent no-op; Playwright at 1440px and iPhone 13 shows the
+full-bleed hero, the compact proof block with its Evidence link, the £500
+step with "What the review covers", no overflow. **A replay from the July
+snapshot runs the 01/10 review passes BEFORE the 15/09 home page compaction
+(file order), so on such a rebuild the Devon and Cornwall proof blocks stay
+in the founder-story form; production ran them in date order and is
+correct. Do not read that local state as a production defect.** The full
+suite with `DATABASE_URL`: 1492 pass, 2 fail, both the documented
+pre-existing ones (`receivablesRetrieval` case 4 pinned-date rot, and the
+`createInvoice` past-due-date fixture). `test/businessConsultantExeter.test.js`.
+
 ## Google Business Profile (01/10/2026)
 
 The listing exists, is verified, and is connected through the Windsor
