@@ -6286,6 +6286,61 @@ business advice plymouth, small business advice (all phrase). Note
 "cornwall council business support" and "the growth hub cornwall" remain
 campaign negatives, so free council support searches stay excluded.
 
+## Business Consultant Plymouth page, and two copy corrections (02/10/2026)
+
+Tom: "Exeter is the model." `/business-consultant-plymouth` is an exact
+structural and commercial duplicate of the live Exeter page, built the same
+afternoon. **Exeter is now the controlled template for this geographic
+landing-page family**, so the migration (marker `site.plymouth_page_2026-10-02`)
+copies the EXETER page's rows as they stand at migration time, not Devon's,
+onto freshly allocated ids, and rewrites exactly three location rows: hero
+heading "in Plymouth", areas heading "Working in and around Plymouth", and
+the areas sentence (Plympton, Plymstock, Saltash, Torpoint, Ivybridge,
+Tavistock: Plymouth-area places rather than a copy of Exeter's list, chosen
+by the builder, not confirmed by Tom). Cover hero by slug (`HERO_COVER_SLUGS`),
+crops on `.page-business-consultant-plymouth`, structured data (City Plymouth,
+Devon), production QA default paths. Exeter is only ever read. No About Us
+block. Before building, production was checked for a conflicting
+implementation: no route, migration, CMS page or metadata existed, and the
+production inspection workflow confirmed the URL was a genuine 404 (run
+`20261002T094902Z-plymouth-preflight`).
+
+**Two copy corrections, Exeter and Plymouth only** (Tom's instruction; Devon
+and Cornwall carry the same two lines and were deliberately not touched):
+step 2 now reads "the next step is the <strong>£500 Commercial Review.</strong>"
+(was "Commercial Review, £500."), and step 3's closing line is "No obligation."
+(was "No obligation. No pressure.", which repeated the section label "No
+pressure. No sales pitch."; dropping the repeated clause was the smallest
+sensible change). Applied by `applyLandingCopyCorrections` in `db/seed.js`:
+substring replacements guarded on the substring being present, so a CMS edit
+wins; run on Exeter under marker `site.exeter_copy_corrections_2026-10-02` and
+on the Plymouth copy inside its own migration, so the order does not matter
+(on production Exeter was corrected first and the Plymouth copy inherited it,
+logged as "left alone (already corrected or edited)").
+
+**Live on production** (merge `b599beb`, PR #195; deployment `63a6bc8a` ran the
+seed and is REMOVED, `6eccee51` serves): "Exeter copy corrections:
+approach__4: step 2 now reads "the £500 Commercial Review.", step 3 closing
+line now "No obligation."" and "Business Consultant Plymouth: page created at
+/business-consultant-plymouth as [hero__8, casestudy__10, approach__5,
+biography__10] from Exeter instances [hero__7, casestudy__9, approach__4,
+biography__9], 31 content row(s) copied". Production QA run
+`20261002T095740Z-plymouth-launch`: Plymouth and Exeter both 200 at desktop
+and phone, zero page errors, no overflow; the captures were read and show the
+full-bleed hero, the compact proof block, "the £500 Commercial Review." and
+"No obligation." on both pages, and the Plymouth areas line. Verified locally
+first on the production-shaped rebuild (Plymouth differs from Exeter in
+exactly the three location rows; a redeploy is a no-op; 45/45 landing page
+tests). `test/businessConsultantPlymouth.test.js`.
+
+**No Plymouth ad group was created with the page**, on Tom's instruction: the
+Plymouth destination is verified first, and a full overlap audit of the
+Search campaign (ad groups, keywords, match types, negatives, location
+targeting, ads, final URLs) is reported with a proposed routing structure
+before any ad group goes live, because the general ad group still carries
+live Plymouth and Exeter keywords (see the audit note in the Ads section
+above once written). The authorised budget is not to be increased.
+
 ## Google Business Profile (01/10/2026)
 
 The listing exists, is verified, and is connected through the Windsor
