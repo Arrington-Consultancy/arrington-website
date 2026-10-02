@@ -6487,19 +6487,28 @@ left alone: turnaround/restructuring terms (Arrington has done turnarounds
 but the Brand OS says it is not a rescue service), "change management
 consultant", "business development consultant" (usually a sales role).
 
-**The account holds three shared negative keyword lists that are NOT
-attached to these campaigns**: "Irrelevant Traffic" (307 terms),
-"Arrington Consultancy - Core Negative Keywords" (45) and "negative" (34,
-WSA student terms). Proven by behaviour, not inference: "coach" is in the
-Core list and "business coach cornwall" still bought a click in
-Leads-Search-1; "valuation" and "calculator" are in Irrelevant Traffic and
-"free company valuation calculator" still reached Ready to Sell. Windsor has
-no action to attach a shared list. Attaching Irrelevant Traffic and Core to
-Leads-Search-1 and Ready to Sell in the Ads UI (campaign, Settings,
-Negative keyword lists) would retire most of the per-term negatives above in
-one move; it is Tom's to do, and before doing it check the Core list's
-"marketing" entry does not block a term he wants. The "negative" list is
-WSA's and must not be attached to Arrington campaigns.
+**The account's shared negative keyword lists, checked properly (corrected
+the same hour).** Three exist: "Irrelevant Traffic" (308 terms), "Arrington
+Consultancy - Core Negative Keywords" (46) and "negative" (34, WSA student
+terms, attached to a WSA campaign only). The first version of this note said
+none was attached to the Arrington campaigns and called that "proven by
+behaviour"; Tom's own screenshot of the Exclusion lists page showed both
+applied to two campaigns, and the `campaign_shared_set` report then showed
+which: **Leads-Search-1 and the paused Owner Dependency Quiz campaign have
+both lists; Ready to Sell has neither.** The "business coach cornwall" click
+in Leads-Search-1 therefore predates the attachment or is otherwise
+unexplained; it was not evidence of anything, and the lesson is recorded
+rather than the claim: a shared list's effect is read from
+`campaign_shared_set_campaign`, never inferred from search terms. Consequence
+for the negatives added above: the Leads-Search-1 `coach` / `coaching`
+campaign negatives duplicate the Core list and are harmless; the Ready to
+Sell valuation negatives were genuinely missing. **The one thing left for
+Tom:** apply Irrelevant Traffic and Core to Ready to Sell - Search (Tools,
+Shared library, Exclusion lists, tick both, Apply to campaigns), checking
+first that Irrelevant Traffic's "how to" and Core's "marketing" entries do
+not block a term he wants there. The Ads UI also shows a "Conflicting
+negative keywords" notice; open it to read which keyword and negative clash
+before accepting Google's "Apply", because that fix removes negatives.
  Check the
 search terms report by ad group after a week: every term containing a city
 name should sit in that city's group, and anything containing a city name
