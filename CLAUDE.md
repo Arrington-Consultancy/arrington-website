@@ -6333,13 +6333,79 @@ first on the production-shaped rebuild (Plymouth differs from Exeter in
 exactly the three location rows; a redeploy is a no-op; 45/45 landing page
 tests). `test/businessConsultantPlymouth.test.js`.
 
-**No Plymouth ad group was created with the page**, on Tom's instruction: the
-Plymouth destination is verified first, and a full overlap audit of the
-Search campaign (ad groups, keywords, match types, negatives, location
-targeting, ads, final URLs) is reported with a proposed routing structure
-before any ad group goes live, because the general ad group still carries
-live Plymouth and Exeter keywords (see the audit note in the Ads section
-above once written). The authorised budget is not to be increased.
+### The Search campaign routing audit, and the structure now live (02/10/2026)
+
+Tom's instruction before any Plymouth ad activity: a full overlap and
+cannibalisation audit of Leads-Search-1 (ad groups, keywords, match types,
+negatives, location targeting and options, ads, final URLs), reported with a
+proposed structure before material changes, no budget increase. Principle:
+explicit Plymouth / Exeter / Cornwall intent goes to that city's ad and page;
+broader Devon or non-city intent to General (homepage); owner-dependency
+intent to the Owner Dependency Quiz.
+
+**What the audit found (read-only, Windsor).** Location targeting is Devon,
+Cornwall and 13 named towns including Exeter and Plymouth, on PRESENCE (people
+physically there), which is right. No broad-match keyword is live in
+Leads-Search-1 (the old broad geo keywords are REMOVED), and no geographic
+negative existed anywhere, so nothing stopped General taking a city query.
+Live overlap: General still held **five enabled Plymouth keywords** ("business
+consultant Plymouth" 132 impressions over six months, "business consultancy
+plymouth", "management consultant plymouth", "small business consultant
+plymouth", "business advice plymouth"), all landing on the homepage, and
+**"business consultant Exeter" (capital E, criterion 2487373346061) was still
+ENABLED** with 141 impressions: on 01/10 only its lower-case twin was paused.
+**The account carries many keyword pairs differing only in capitalisation;
+pausing one leaves the other live. Pause both forms.** Cornwall was clean (all
+six General Cornwall keywords paused). The Owner Dependency Quiz CAMPAIGN is
+paused, but duplicates every geographic term (phrase and exact) plus bare
+"business consultant"; if it is ever re-enabled, strip its geographic
+keywords first. The Owner Dependency AD GROUP inside Leads-Search-1
+(`205823125812`, eight "business relies on me" phrases, lands on the quiz)
+has had zero impressions in six months and overlaps nothing. Ready to Sell is
+separate intent; its two broad keywords are paused. One corrupted keyword
+exists in General, "business advisor Plymouthbusiness consultant Devon"
+(two keywords pasted as one), paused; harmless, worth removing in the UI.
+Budget read £15 a day on 02/10 against £23 on earlier reads; changed by
+someone other than this worker and left alone.
+
+**Why pausing keywords alone was not enough:** Google's keyword selection
+takes an exact keyword identical to the query first, then a phrase or broad
+keyword identical to the query, otherwise Ad Rank. Identical phrase keywords
+in General and a city group therefore tie and the established General ad wins
+most auctions; and General's generic phrase keywords ("business improvement
+consultant") can still match "business improvement consultant plymouth". Only
+an ad-group negative on General makes the routing a rule. The accepted side
+effect: a city query matching none of the city group's keywords gets no ad
+rather than a General ad; at this volume that is a handful of impressions,
+visible in the search terms report within days, fixed by widening the city
+group's keywords, not by removing the negative.
+
+**Applied on Tom's approval of all three, in order, then read back:**
+
+1. Paused (not removed) the six city keywords in General `196492356455`:
+   criterion ids 586550417750, 2487761159699, 2487760518899, 2487760518699,
+   2487760519099 (Plymouth) and 2487373346061 (Exeter). General's enabled set
+   is now: business consultant devon, business consultancy devon (phrase and
+   exact), business advisor devon, management consultant Devon, business
+   improvement consultant (phrase and exact), business owner overwhelmed,
+   business systems help, business process consultant.
+2. Ad-group negatives on General only: `exeter`, `plymouth`, `cornwall`
+   (phrase). Campaign-level negatives unchanged.
+3. Ad group **Plymouth**, id `199432809543`, in Leads-Search-1, default max
+   CPC £12, enabled. Keywords: business consultant plymouth (phrase + exact),
+   business consultancy plymouth (phrase + exact), small business consultant
+   plymouth, management consultant plymouth, business advice plymouth,
+   business advisor plymouth, business support plymouth (phrase). Ad
+   `826650861810`: the Cornwall/Exeter approved copy with Plymouth headlines
+   ("Working In And Around Plymouth", "From Plympton To Tavistock") and a
+   Plymouth first description, final URL `/business-consultant-plymouth`,
+   display path `/plymouth`. Enabled only after the page was verified live.
+
+Budget unchanged. **Reverse by re-enabling the six criterion ids and removing
+the three negatives**; the Plymouth group pauses like any other. Check the
+search terms report by ad group after a week: every term containing a city
+name should sit in that city's group, and anything containing a city name
+with no impressions anywhere is a keyword to add to that city group.
 
 ## Google Business Profile (01/10/2026)
 
