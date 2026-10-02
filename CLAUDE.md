@@ -6401,11 +6401,65 @@ group's keywords, not by removing the negative.
    Plymouth first description, final URL `/business-consultant-plymouth`,
    display path `/plymouth`. Enabled only after the page was verified live.
 
+**Ads lead to the conversation, not the price (Tom, 02/10/2026, same
+afternoon).** Tom's direction: *"keep £500 off the advert, we need to engage
+people, if i talk to them they will buy. thats the bridge we need."* The
+advert's job is to start the conversation; the £500 Commercial Review is said
+on the page, in step 2, after they have arrived. The three city ads each
+carried one description naming the price and the headline "A Proper
+Commercial Review". Windsor cannot edit an ad in place, so each city group got
+a replacement ad using only lines already approved and live in the account
+(description "Clear structure. Less noise. Real progress. Speak directly to
+Tom Arrington.", headline "Speak To Tom Arrington"), enabled, and the priced
+ad paused: Cornwall `826652925267` replaces `826565109013`; Exeter
+`826652939727` replaces `826647697890`; Plymouth `826693229731` replaces
+`826650861810`. The one General ad carrying the £500 line, `826641159329`,
+was paused (General keeps two other enabled ads). No live advert names the
+price. **Do not put the price back into ad copy without Tom's decision.**
+Brand versus Tom personally is left to the data: each ad carries both
+("Arrington Consultancy" and "Speak To Tom Arrington"), nothing is pinned,
+and the asset performance labels in three to four weeks say which one does
+the work.
+
+**The conversion-value finding, still Tom's to fix in the Ads UI:** over the
+90 days to 02/10 the click action "phone + email clicks" recorded 2
+conversions at £50 each and the form action "Contact" recorded 1 at £1, both
+counting as primary. Tom's stated worth of a form fill is £100 and he wants
+to pay for nothing else. Windsor cannot edit conversion actions. The fix is
+Goals, Conversions: Contact value £100 and the only Primary action; phone +
+email clicks Secondary. Bidding is Manual CPC; the agreed path is four weeks
+of Manual CPC with the city routing in place, then Target CPA on the form
+starting near the observed cost per form fill (about £227 over 90 days) and
+stepping down towards £100, because a target set straight to £100 against a
+£227 reality makes Smart Bidding stop showing the ads. Target CPA still bills
+per click; it does not bill per form fill. Ready to Sell (£7.50 a day, zero
+conversions, valuation and listing intent) was proposed for pausing and is
+NOT paused: Tom has not decided. `GOOGLE_ADS_PURCHASE_CONVERSION_LABEL`
+remains unset.
+
 Budget unchanged. **Reverse by re-enabling the six criterion ids and removing
 the three negatives**; the Plymouth group pauses like any other. Check the
 search terms report by ad group after a week: every term containing a city
 name should sit in that city's group, and anything containing a city name
 with no impressions anywhere is a keyword to add to that city group.
+
+**This is a test with two dated judgement calls, on Tom's instruction
+("if we are testing this we need to remember to look and make a judgment
+call later").** Two one-shot Routines were created from this session on
+02/10/2026: `trig_01CtJvzMdC8LppvRw7A9pW5S` fires 09/10/2026 08:30 UK (the
+first search-terms-by-ad-group read: is each city term landing in its own
+group, is anything irrelevant spending) and `trig_01XqfXNm6757kNNh4i8HNkJ9`
+fires 30/10/2026 08:30 UK (the four-week call: form fills and cost per form
+fill by city group, the asset labels that settle brand versus "Speak To Tom
+Arrington", whether there is enough volume to move to Target CPA, and whether
+Ready to Sell is still at zero). Both notify Tom by push and email. **One
+limit, stated rather than discovered on the day:** a Routine created from a
+cloud session cannot carry connectors on this account (the `connectors`
+parameter is refused), so the fired session will have no Windsor tools. Each
+prompt therefore opens by checking for Windsor and, if absent, tells Tom and
+lists the questions to paste into a session that has it. If Tom recreates
+either Routine from the claude.ai Routines UI with Windsor attached, the
+review runs unattended.
 
 ## Google Business Profile (01/10/2026)
 
