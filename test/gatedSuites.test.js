@@ -32,6 +32,7 @@ const TEST_ROOT = __dirname;
 const GATED = [
   { file: 'waiSeedMode.test.js', name: 'two-pass seed', arms: 'WAI_SEED_TEST_DATABASE_URL' },
   { file: 'quizNotifications.test.js', name: 'one email per quiz completion over HTTP', arms: 'QUIZ_TEST_DATABASE_URL (a throwaway database; the suite seeds it and starts its own server)' },
+  { file: 'marketReadyNotifications.test.js', name: 'one email per Market Ready Test submission over HTTP', arms: 'QUIZ_TEST_DATABASE_URL (same throwaway database; its own port)' },
   { file: 'scott/adversarialApi.test.js', name: 'Scott adversarial HTTP', arms: 'SCOTT_TEST_BASE_URL + SCOTT_DEMO_STAFF_PASSWORD, against a running server' },
   { file: 'scott/progressionApi.test.js', name: 'Scott progression over real HTTP', arms: 'SCOTT_PROGRESSION_BASE_URL + SCOTT_PROGRESSION_TOM_PASSWORD + SCOTT_DEMO_STAFF_PASSWORD, against a running server' },
   { file: 'scott/liveAiPressure.test.js', name: 'Scott live-AI pressure (SPENDS MONEY)', arms: 'RUN_SCOTT_LIVE_AI=true + ANTHROPIC_API_KEY + ENABLE_SCOTT_AI=true' },

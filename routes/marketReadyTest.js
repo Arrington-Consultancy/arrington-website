@@ -395,19 +395,21 @@ const requestReviewLimiter = rateLimit({
   message: { error: 'Too many requests. Please try again later.' }
 });
 
-// Share/copy clicks are anonymous, low-friction actions and can happen
-// several times in one visit (someone might try more than one platform) —
-// same pattern and limits as the Owner Dependency Quiz's share-notify.
-const shareNotifyLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 30,
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req) => ipKeyGenerator(req),
-  message: { error: 'Too many requests.' }
-});
-
-const VALID_SHARE_PLATFORMS = ['linkedin', 'facebook', 'x', 'copy_text', 'copy_link'];
+// The submission id the browser sends with /api/market-ready-test/submit.
+// Minted once per assessment when the review screen is first shown and kept
+// in the saved progress across a retry, so one assessment has one id however
+// many submit requests it produces. Anything else is treated as "no id" and
+// a server-derived key stands in, so a page cached from before the id
+// existed still gets one notification rather than none or many.
+const SUBMISSION_ID_RE = /^[a-f0-9]{32}$/;
+function submissionKey(body, req, businessName, optionIndices) {
+  const supplied = String((body && body.submissionId) || '').toLowerCase();
+  if (SUBMISSION_ID_RE.test(supplied)) return supplied;
+  const hour = Math.floor(Date.now() / (60 * 60 * 1000));
+  return 'derived-' + crypto.createHash('sha256')
+    .update(`${req.ip}|${hour}|${businessName}|${optionIndices.join(',')}`)
+    .digest('hex').slice(0, 48);
+}
 
 // What the client needs to render the questions — text and options only,
 // never the scores, so the rubric stays server-side (same principle as the
@@ -556,13 +558,41 @@ router.post('/api/market-ready-test/submit', assessmentLimiter, async (req, res)
       answerText: QUESTIONS[i].options[optIndex].text
     }));
 
+    // ONE SUBMISSION, ONE EMAIL, decided here and not in the browser (Tom,
+    // 03/10/2026, the same principle as the Owner Dependency Quiz). Every
+    // request used to mint a fresh result token and write a fresh row, so a
+    // retry after a lost response, a double click on the submit button or a
+    // repeated request produced a second submission, a second lead row and a
+    // second owner email for the same assessment. The insert now claims the
+    // submission id under a unique index: only the request that lands the
+    // row sends anything, and a later request for the same id is answered
+    // with the result URL that already exists, so the visitor still reaches
+    // their result and nothing is stored or sent twice. Claimed only after
+    // verification so a failed attempt cannot burn the id.
+    const submissionId = submissionKey(body, req, businessName, optionIndices);
     const resultToken = crypto.randomBytes(24).toString('hex');
-    await db.query(
+    const inserted = await db.query(
       `INSERT INTO market_ready_submissions
-       (result_token, status, first_name, last_name, business_name, email, phone, location, industry, employee_count, turnover_band, sale_timeframe, answers, context, consent_tom_review, consent_marketing, report)
-       VALUES ($1, 'completed', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
-      [resultToken, firstName, lastName, businessName, email, phone, location, industry, employeeCount, turnoverBand, saleTimeframe, JSON.stringify(answersForStorage), context, consentTomReview, consentMarketing, JSON.stringify(report)]
+       (result_token, status, first_name, last_name, business_name, email, phone, location, industry, employee_count, turnover_band, sale_timeframe, answers, context, consent_tom_review, consent_marketing, report, submission_id)
+       VALUES ($1, 'completed', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+       ON CONFLICT (submission_id) DO NOTHING
+       RETURNING result_token`,
+      [resultToken, firstName, lastName, businessName, email, phone, location, industry, employeeCount, turnoverBand, saleTimeframe, JSON.stringify(answersForStorage), context, consentTomReview, consentMarketing, JSON.stringify(report), submissionId]
     );
+    if (inserted.rows.length === 0) {
+      const existing = await db.query(
+        'SELECT result_token FROM market_ready_submissions WHERE submission_id = $1',
+        [submissionId]
+      );
+      if (existing.rows.length === 0) {
+        throw new Error('submission claim conflicted but no row found');
+      }
+      // Logged by id only (never a name, business or answer) so a duplicate
+      // on production is visible in the deploy log without a mailbox.
+      console.log(`Market Ready Test submission ${submissionId.slice(0, 12)}: duplicate request, existing result returned, no notification sent`);
+      return res.json({ ok: true, resultUrl: `/market-ready-test/result/${existing.rows[0].result_token}`, duplicate: true });
+    }
+    console.log(`Market Ready Test submission ${submissionId.slice(0, 12)}: ${report.overall_score}/100, one notification sent`);
 
     const resultPath = `/market-ready-test/result/${resultToken}`;
     const resultUrl = `${SITE_ORIGIN}${resultPath}`;
@@ -722,44 +752,11 @@ router.post('/api/market-ready-test/request-review', requestReviewLimiter, async
   }
 });
 
-// POST /api/market-ready-test/share-notify — fire-and-forget owner heads-up
-// when a visitor shares or copies their result. Sharing itself stays
-// anonymous (no separate identity captured here), same pattern as the Owner
-// Dependency Quiz's share-notify — the only difference is this one confirms
-// the token is real first, so the notification can include which business.
-router.post('/api/market-ready-test/share-notify', shareNotifyLimiter, async (req, res) => {
-  try {
-    const body = req.body || {};
-    const token = plainText(body.token, 64);
-    const platform = plainText(body.platform, 30);
-
-    if (!VALID_SHARE_PLATFORMS.includes(platform)) {
-      return res.status(400).json({ error: 'Invalid data.' });
-    }
-    if (!/^[a-f0-9]{48}$/.test(token)) {
-      return res.status(400).json({ error: 'Invalid data.' });
-    }
-
-    res.json({ ok: true });
-
-    if (transporter) {
-      const { rows } = await db.query(
-        'SELECT business_name, report FROM market_ready_submissions WHERE result_token = $1 AND status = $2',
-        [token, 'completed']
-      );
-      if (rows.length === 0) return;
-      const submission = rows[0];
-      transporter.sendMail({
-        from: NOTIFY_FROM,
-        to: NOTIFY_FROM,
-        subject: `Market Ready Test — shared (${platform})`,
-        text: `${submission.business_name || 'Someone'}'s Market Ready Test result was shared via ${platform}.\n\nScore: ${submission.report?.overall_score}/100 (${submission.report?.rating})\nResult link: ${SITE_ORIGIN}/market-ready-test/result/${token}`
-      }).catch(err => console.error('Market Ready Test share-notify email failed:', err.message));
-    }
-  } catch (err) {
-    console.error('Market Ready Test share-notify error:', err);
-    res.status(500).json({ error: 'Something went wrong.' });
-  }
-});
+// There is deliberately no /api/market-ready-test/share-notify any more
+// (03/10/2026). Until then every Share on LinkedIn, Share on Facebook, Share
+// on X, Copy result text and Copy quiz link click on a result page emailed
+// Tom, by design. Share and copy clicks are engagement, not completions:
+// they are recorded as the GA4 event market_ready_test_share (with the
+// platform) in views/market-ready-test-result.ejs and generate no email.
 
 module.exports = { router, mountPageRoute };

@@ -151,6 +151,16 @@ CREATE TABLE IF NOT EXISTS market_ready_submissions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_market_ready_created_at ON market_ready_submissions (created_at DESC);
+-- One row per assessment attempt, decided by the server (03/10/2026). The
+-- browser mints submission_id once for an assessment and keeps it across
+-- a retry, and the submit route inserts ON CONFLICT (submission_id) DO
+-- NOTHING, so a retry after a lost response, a double click or a repeated
+-- request lands on the row already written and is answered with the
+-- existing result URL, with no second lead and no second email. Standalone
+-- ALTER plus index so an existing database gets the column (CREATE TABLE IF
+-- NOT EXISTS is skipped once the table exists). NULL on rows from before.
+ALTER TABLE market_ready_submissions ADD COLUMN IF NOT EXISTS submission_id VARCHAR(64);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_market_ready_submission_id ON market_ready_submissions (submission_id);
 
 -- Commercial Gaps Review (AI) — third Owner Check tool, feature-branch build
 -- (see routes/commercialGapsReview.js). Unlike the Owner Dependency Quiz and
