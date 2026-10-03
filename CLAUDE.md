@@ -10,6 +10,17 @@ This site was handed over to Tom Arrington to self-manage. Read `HANDOVER.md` fi
 - ~~**Loose end:** the bare `arringtonconsultancy.co.uk` apex still needs adding as a custom domain in Railway.~~ **Resolved.** All four custom domains are bound in Railway with valid certificates. Since commit `00c2b91` (16/08/2026) both `.co.uk` hostnames permanently redirect to the canonical host rather than serving the site (see Custom domains).
 - On the same day the 19 agreed copy-review changes were applied to the live site (see Copy review below).
 
+## This file is the record for the code; business state here is a copy (03/10/2026)
+
+Every business fact in this file (a decision, a budget, a price, a position,
+what a page may say) is a copy of a controlled Google Drive record, kept here
+so a code session has context. Where the two disagree, Drive wins and this
+file is corrected, never the other way round. Chats are temporary in every
+tool: a retired chat is replaced from the WORKER START BLOCK and the Handoff
+Log, never from a transcript. Rule: "WORKING CHATS ARE TEMPORARY" in 00A
+ARRINGTON MASTER AI RULEBOOK; mechanics for this repository under "One live
+Website & Hosting session" in the Governance section below.
+
 ## How to report to Tom (Tom, 30/09/2026)
 
 Tom skims long replies. Keep every report brief: the few points that
@@ -126,13 +137,25 @@ write-backs were already filed. It is archived, not deleted, so it can be
 unarchived and read if a question about July to September work ever needs
 its transcript. The live Website & Hosting worker is now the session on
 branch `claude/new-session-hbgp04`, titled "Arrington Website & Hosting
-worker". **Rule:** one website session at a time. When a session's context
-has grown to the point of compaction, or a new one is started for any
-reason, the old one is retired the same way: check its branch against
-`main`, check its write-backs are filed, archive it, and record the
-handover here. Two live sessions on one repository means two workers
-reading different records, which is how a budget was reverted and a page
-was corrected twice.
+worker". **Rule:** one website session at a time. Two live sessions on one
+repository means two workers reading different records, which is how a
+budget was reverted and a page was corrected twice.
+
+**Retiring and replacing a chat, any tool (Tom's continuity decision,
+03/10/2026; the rule is "WORKING CHATS ARE TEMPORARY" in 00A ARRINGTON
+MASTER AI RULEBOOK, which wins over this paragraph).** A chat is a temporary
+execution workspace; the worker continues, and replacing a chat creates,
+renames or retires no worker. Retire a chat when its context has grown to
+compaction, when it has outgrown its record, at a milestone, or whenever a
+fresh start is wanted. In that order: run `/goodnight` (commit and push, this
+file corrected, the Drive write-back made or filed standalone); check the
+branch against `main` (unshallow the clone first, see below); archive the
+session rather than deleting it; and end the outgoing chat with one line per
+material item not yet in the record, naming the record it goes to. Nothing
+else is handed over. The replacement starts from the WORKER START BLOCK and
+the Handoff Log's current state, and must not ask for, accept or summarise
+the previous chat's transcript. Record the handover here in one paragraph
+like the one above.
 
 The same morning, on Tom's "yes", ten more finished cloud sessions were
 archived after each one's branch was checked against `main` (clone

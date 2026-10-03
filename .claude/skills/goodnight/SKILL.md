@@ -1,12 +1,13 @@
 ---
 name: goodnight
-description: End-of-session "wind down and tuck in" for this project. Ensures two things are true before Tom logs off: (1) the work is committed and pushed to the GitHub remote, and (2) CLAUDE.md (and HANDOVER.md where relevant) reflect the current state of the project. Idempotent and safe to re-run. Never deploys to the live site, never force-pushes, never commits real secrets.
+description: End-of-session "wind down and tuck in" for this project. Ensures two things are true before Tom logs off: (1) the work is committed and pushed to the GitHub remote, and (2) CLAUDE.md (and HANDOVER.md where relevant) reflect the current state of the project, and (3) anything material to the business is written back to the Drive record. Idempotent and safe to re-run. Never deploys to the live site, never force-pushes, never commits real secrets.
 ---
 
 # /goodnight — tuck the project in before logging off
 
 Run this at the end of a working session. It makes two things true for the
-current project, then prints a short summary. It is idempotent: if something is
+current project (three since 3 October 2026: the Drive write-back is part of
+it), then prints a short summary. It is idempotent: if something is
 already done, confirm it and move on. Do the steps in order.
 
 Read `WORKING-METHOD.md` in the project root if you have not already: it explains
@@ -81,12 +82,38 @@ Backups) instead of pretending git covered it.
 Keep the house style: UK English, UK dates (DD/MM/YYYY), no em dashes in anything
 a visitor might read.
 
+## 2b. Drive write-back (the 00A "Good night" protocol)
+
+`CLAUDE.md` is the record for the code. Anything material this session did to
+the BUSINESS (a decision Tom made, a change to a live page's copy or offer, a
+Google Ads change, a position that moved, a review finding) is written back to
+the controlled Google Drive record before the session ends, or the next chat
+will not know it happened:
+
+1. Append a dated entry to the relevant Worker Handoff Log (Website & Hosting
+   for repository work; Google Ads for anything in the Ads account), stating
+   what changed, the evidence, and the next controlled action.
+2. If the Drive tools cannot edit the Log (Zapier at its task limit), file a
+   standalone Google Doc in the same folder titled
+   `WEBSITE AND HOSTING WRITE-BACK - <subject>, <date>` (or the matching Log's
+   name), read it back, and say in the report that it is waiting to be merged.
+3. If nothing material to the business happened, say so in one line.
+
+If this session is being RETIRED (context near compaction, a milestone, or a
+fresh start): also confirm the branch has nothing unmerged against `main`,
+and end with one line per material item not yet in the record, naming the
+record it will go to. Nothing else is handed over; the replacement starts from
+the WORKER START BLOCK and the Handoff Log. See "WORKING CHATS ARE TEMPORARY"
+in 00A ARRINGTON MASTER AI RULEBOOK.
+
 ## 3. Report
 
 Print a short summary:
 
 - what was committed, and confirmation it is pushed (with the remote URL);
 - which documentation files were updated and what was added;
+- which Drive record received the write-back, or that it is filed standalone
+  and waiting to be merged, or that nothing material to the business happened;
 - anything needing Tom's attention: a secret found and quarantined, a push
   conflict, a change that is committed but **not yet deployed to the live site**,
   or content edits that want a CMS backup.

@@ -32,6 +32,19 @@ has replied. The full block is "WORKER START BLOCK" in Drive.
   write back to the Google Ads Handoff Log, not the website one. One session
   at a time on that account.
 
+## Chats are temporary; the worker and the record are not
+
+A chat in any tool is a temporary execution workspace. Retiring one and
+starting another neither creates, renames nor retires a worker. Before a
+chat is retired, anything material it did is written back to the record it
+belongs to (business state to the Worker Handoff Log in Drive, technical
+rules to `CLAUDE.md`), per the "Good night" protocol in 00A ARRINGTON MASTER
+AI RULEBOOK. A replacement chat starts from the WORKER START BLOCK and the
+Handoff Log's current state only: do not ask for, accept or summarise a
+transcript of the previous chat. One live conversation per worker per
+record at a time. The rule itself is "WORKING CHATS ARE TEMPORARY" in 00A;
+this is a pointer, not a second copy.
+
 ## Standing rules that do not change by tool
 
 - Never put a secret in code, git, Drive or chat.

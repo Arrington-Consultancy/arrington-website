@@ -95,6 +95,14 @@ Treat it as the project's memory, and note what that means:
 If you are a Claude and you have just changed how something works, ask yourself
 whether `CLAUDE.md` is now wrong. If it is, fix it in the same session.
 
+**Added 3 October 2026 (Tom):** `CLAUDE.md` is the memory for the CODE. Business
+state (positions, decisions, worker authority, what the site and the adverts may
+say) lives in the controlled Google Drive record, and anything of that kind
+recorded here is a copy; Drive wins. Chats are temporary in every tool: when one
+is retired, its material work is written back first and its replacement starts
+from the WORKER START BLOCK and the Handoff Log, never from a transcript. See
+"WORKING CHATS ARE TEMPORARY" in 00A ARRINGTON MASTER AI RULEBOOK.
+
 ### 4. End every session with `/goodnight`
 
 This is the habit that makes the other three stick.
