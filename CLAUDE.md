@@ -5938,6 +5938,19 @@ only), and rebuilding a record as a new file would change its id and lose its
 formatting, so this is the only bypass. Merge the waiting notes into the live
 record once Zapier has tasks again.
 
+### "No default connection" is not "out of tasks" (03/10/2026)
+
+On 03/10/2026 a Google Docs call failed with "No default connection is set
+for Google Docs" while `inspect_zapier_actions` showed one connection
+(tom@arringtonconsultancy.com, created 15/09/2026). That is a different
+failure from the task limit: `list_zapier_connections` for the app, then
+`manage_zapier_connections` with that `connection_id` as
+`default_connection_id`, and the next call runs. Check this before
+concluding Zapier is unavailable. The same morning the 00A section
+WORKING CHATS ARE TEMPORARY, START BLOCK item 6 and the Decision Log entry
+were all written in place this way and read back, so the continuity rule
+is live in Drive, not proposed.
+
 ### Two live constraints any implementation must respect
 
 From the Decision Log, both easy to breach by accident:
