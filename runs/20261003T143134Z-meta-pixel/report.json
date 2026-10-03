@@ -1,0 +1,124 @@
+{
+  "ranAt": "2026-10-03T14:31:34.180Z",
+  "base": "https://www.arringtonconsultancy.com",
+  "results": [
+    {
+      "path": "/",
+      "size": "desktop",
+      "url": "https://www.arringtonconsultancy.com/",
+      "status": 200,
+      "finalUrl": "https://www.arringtonconsultancy.com/",
+      "title": "Business Consultancy Devon & Cornwall | Arrington Consultancy",
+      "h1": "You’ve built something you’re proud of. So why does everything still run through you?",
+      "canonical": "https://www.arringtonconsultancy.com/",
+      "overflow": false,
+      "height": 5277,
+      "consoleErrors": [
+        "Permissions policy violation: picture-in-picture is not allowed in this document.",
+        "%c%d font-size:0;color:transparent NaN",
+        "%c%d font-size:0;color:transparent NaN"
+      ],
+      "pageErrors": [],
+      "screenshot": "home-desktop.png",
+      "topScreenshot": "home-desktop-top.png",
+      "error": null
+    },
+    {
+      "path": "/",
+      "size": "mobile",
+      "url": "https://www.arringtonconsultancy.com/",
+      "status": 200,
+      "finalUrl": "https://www.arringtonconsultancy.com/",
+      "title": "Business Consultancy Devon & Cornwall | Arrington Consultancy",
+      "h1": "You’ve built something you’re proud of. So why does everything still run through you?",
+      "canonical": "https://www.arringtonconsultancy.com/",
+      "overflow": false,
+      "height": 5788,
+      "consoleErrors": [
+        "Permissions policy violation: picture-in-picture is not allowed in this document.",
+        "%c%d font-size:0;color:transparent NaN",
+        "%c%d font-size:0;color:transparent NaN"
+      ],
+      "pageErrors": [],
+      "screenshot": "home-mobile.png",
+      "topScreenshot": "home-mobile-top.png",
+      "error": null
+    },
+    {
+      "path": "/privacy",
+      "size": "desktop",
+      "url": "https://www.arringtonconsultancy.com/privacy",
+      "status": 200,
+      "finalUrl": "https://www.arringtonconsultancy.com/privacy",
+      "title": "Privacy | Arrington Consultancy",
+      "h1": "How we use information from this website",
+      "canonical": "https://www.arringtonconsultancy.com/privacy",
+      "overflow": false,
+      "height": 3126,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "privacy-desktop.png",
+      "topScreenshot": "privacy-desktop-top.png",
+      "error": null
+    },
+    {
+      "path": "/privacy",
+      "size": "mobile",
+      "url": "https://www.arringtonconsultancy.com/privacy",
+      "status": 200,
+      "finalUrl": "https://www.arringtonconsultancy.com/privacy",
+      "title": "Privacy | Arrington Consultancy",
+      "h1": "How we use information from this website",
+      "canonical": "https://www.arringtonconsultancy.com/privacy",
+      "overflow": false,
+      "height": 4858,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "privacy-mobile.png",
+      "topScreenshot": "privacy-mobile-top.png",
+      "error": null
+    },
+    {
+      "path": "/thank-you",
+      "size": "desktop",
+      "url": "https://www.arringtonconsultancy.com/thank-you",
+      "status": 200,
+      "finalUrl": "https://www.arringtonconsultancy.com/thank-you",
+      "title": "Thank you | Arrington Consultancy",
+      "h1": "Thank you",
+      "canonical": null,
+      "overflow": false,
+      "height": 1573,
+      "consoleErrors": [
+        "Permissions policy violation: picture-in-picture is not allowed in this document.",
+        "%c%d font-size:0;color:transparent NaN",
+        "%c%d font-size:0;color:transparent NaN"
+      ],
+      "pageErrors": [],
+      "screenshot": "thank-you-desktop.png",
+      "topScreenshot": "thank-you-desktop-top.png",
+      "error": null
+    },
+    {
+      "path": "/thank-you",
+      "size": "mobile",
+      "url": "https://www.arringtonconsultancy.com/thank-you",
+      "status": 200,
+      "finalUrl": "https://www.arringtonconsultancy.com/thank-you",
+      "title": "Thank you | Arrington Consultancy",
+      "h1": "Thank you",
+      "canonical": null,
+      "overflow": false,
+      "height": 1804,
+      "consoleErrors": [
+        "Permissions policy violation: picture-in-picture is not allowed in this document.",
+        "%c%d font-size:0;color:transparent NaN",
+        "%c%d font-size:0;color:transparent NaN"
+      ],
+      "pageErrors": [],
+      "screenshot": "thank-you-mobile.png",
+      "topScreenshot": "thank-you-mobile-top.png",
+      "error": null
+    }
+  ]
+}
