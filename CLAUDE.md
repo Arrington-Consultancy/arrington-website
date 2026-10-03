@@ -101,7 +101,18 @@ but as the Google Ads Worker, reading and writing back to the Google Ads
 Handoff Log, one session at a time. On 2 October 2026 a morning session
 raised Leads-Search-1 to £30 a day on Tom's instruction and a midday
 session, not having read it, "restored" £15 as drift. Live at 06:40 UTC on
-3 October the budget was £15. Reported to Tom for decision, not changed.
+3 October the budget was £15. Reported to Tom, who decided on 3 October
+("first restore to £30 a day budget"): set to £30 via Windsor at about 07:55
+UK and read back as £30, campaign enabled. **£30 a day is the authorised
+Leads-Search-1 budget; a future read of £30 is not drift.** Write-back filed
+standalone in Drive beside the Handoff Log ("GOOGLE ADS WRITE-BACK -
+Leads-Search-1 budget restored to £30 a day on Tom's decision, 3 October
+2026", id `18MzNWfSdSOwj2UIwjo6myXpPhDz47Nzld1hSfycmeys`), to be merged into
+the Handoff Log when Zapier has tasks. The evidence behind it: Leads-Search-1
+click-through was 12 to 14% (good), clicks cost £8 to £12, and the campaign
+was flagged "limited by budget", so the constraint was budget and cost per
+click, not ad quality; Google's "spend benchmarks" peer card pools national
+consultancy advertisers and is not a like-for-like comparison.
 
 **One live Website & Hosting session (03/10/2026).** The record drift above
 had a second cause besides the Ads worker: two Claude Code sessions were
@@ -122,6 +133,21 @@ reason, the old one is retired the same way: check its branch against
 handover here. Two live sessions on one repository means two workers
 reading different records, which is how a budget was reverted and a page
 was corrected twice.
+
+The same morning, on Tom's "yes", ten more finished cloud sessions were
+archived after each one's branch was checked against `main` (clone
+unshallowed first; a shallow clone reports "no merge base" and cannot
+answer the question): CLAUDE.md (2 Oct), Pembroke Street diagnosis review,
+the AI Workspace v0.1 governance review, the Scott v0.2 bounded closure,
+New Website worker for Arrington, GitHub Connection, and four World Student
+Advisors sessions (Claude configuration file, Business Brain Social media
+maker, Zapier offline conversion, iPhone system audit). Nothing was
+unmerged on any arrington-website branch except a later quality-control
+edit to `review/workspace-v0.1-governance-review-2026-08-30.md` on
+`governance/workspace-v01-review`, left on its branch as a historical
+record. The WSA branches were not checked from here (other repository);
+the WSA website worker session, which stays live, should check its own.
+Two live cloud sessions remain: this one and the WSA website worker.
 
 ## Brand, voice and strategy: Google Drive is the authority, not this file
 
