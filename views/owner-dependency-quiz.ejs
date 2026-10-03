@@ -721,11 +721,34 @@
         // never during the quiz itself. The widget is (re)rendered fresh
         // each time this screen is shown so a retake after "Restart" always
         // gets an unused token.
+        //
+        // One completion, one id, one onVerified (03/10/2026). Turnstile's
+        // callback fires every time the widget issues a token, not only the
+        // first time: it refreshes an expired token in the background a few
+        // minutes later and calls back again. Before this guard, that
+        // re-ran showResults and re-posted the completion with a fresh,
+        // valid token, so one quiz produced several owner emails. Now each
+        // showing of this screen mints a completion id and accepts exactly
+        // one callback; the server de-duplicates on the id as well, so the
+        // browser is a first line and not the only one.
         var turnstileToken = null;
         var turnstileWidgetId = null;
+        var completionId = null;
+        var verifiedThisScreen = false;
+        function newCompletionId() {
+            var bytes = new Uint8Array(16);
+            if (window.crypto && window.crypto.getRandomValues) {
+                window.crypto.getRandomValues(bytes);
+            } else {
+                for (var i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+            }
+            return Array.prototype.map.call(bytes, function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+        }
         function showVerifyScreen(onVerified) {
             document.getElementById('odr-verify-error').hidden = true;
             turnstileToken = null;
+            completionId = newCompletionId();
+            verifiedThisScreen = false;
             showScreen(verifyEl);
 
             function render() {
@@ -742,6 +765,8 @@
                     sitekey: siteKey,
                     callback: function (token) {
                         turnstileToken = token;
+                        if (verifiedThisScreen) return;
+                        verifiedThisScreen = true;
                         onVerified();
                     },
                     'error-callback': function () {
@@ -1024,13 +1049,15 @@
             // Owner notification fires here, on completion, regardless of
             // whether the visitor goes on to request an emailed copy below —
             // this is the quiz's one and only notification trigger (see
-            // routes/leads.js POST /api/quiz/complete-notify).
+            // routes/leads.js POST /api/quiz/complete-notify). The
+            // completion id is what lets the server send one email for this
+            // completion however many times this request reaches it.
             (function () {
                 var csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
                 fetch('/api/quiz/complete-notify', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
-                    body: JSON.stringify({ score: total, band: band.label, resultsText: fullResultsText, turnstileToken: turnstileToken })
+                    body: JSON.stringify({ completionId: completionId, score: total, band: band.label, resultsText: fullResultsText, turnstileToken: turnstileToken })
                 }).catch(function () {});
             })();
 
@@ -1090,21 +1117,14 @@
             el.hidden = false;
         }
 
+        // Share and copy clicks are engagement, not completions: recorded
+        // as a GA4 event (with the platform) and nothing else. Until
+        // 03/10/2026 each click also posted to the server, which emailed
+        // Tom every time, so trying the buttons produced a separate email
+        // per click about the same result. No server call here any more.
         function trackShare(platform) {
             if (typeof gtag === 'function') {
                 gtag('event', 'dependency_quiz_share', { event_category: 'tool', platform: platform });
-            }
-            if (lastResult) {
-                var csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-                fetch('/api/quiz/share-notify', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
-                    body: JSON.stringify({
-                        platform: platform,
-                        score: lastResult.total,
-                        band: lastResult.band.label
-                    })
-                }).catch(function () {});
             }
         }
 

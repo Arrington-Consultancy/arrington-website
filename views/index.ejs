@@ -5122,10 +5122,16 @@
         });
     })();
 
+    // Smooth scroll for in-page anchors. The href is read at CLICK time, not
+    // at load: see the same handler in partials/site-chrome-script.ejs for
+    // why (the quiz's share buttons start as href="#" and are given a real
+    // URL later; cancelling those clicks left the share windows unopened).
     document.querySelectorAll('a[href^="#"]').forEach(a => {
         a.addEventListener('click', e => {
+            const href = a.getAttribute('href') || '';
+            if (href.charAt(0) !== '#' || href.length < 2) return;
             e.preventDefault();
-            const target = document.querySelector(a.getAttribute('href'));
+            const target = document.querySelector(href);
             if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
     });

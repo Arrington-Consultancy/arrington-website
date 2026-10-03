@@ -6668,6 +6668,88 @@ lists the questions to paste into a session that has it. If Tom recreates
 either Routine from the claude.ai Routines UI with Windsor attached, the
 review runs unattended.
 
+## Owner Dependency Quiz: one email per completion, none for sharing (03/10/2026)
+
+Tom's test journey the night before produced a string of separate emails:
+several "Owner Dependency Quiz completed", plus "Share on Facebook", "Share on
+LinkedIn" and "Copy quiz link". Required behaviour, his words: one internal
+email per completed quiz, engagement actions generate none, the server
+authoritative rather than the browser.
+
+**Two mechanisms, and neither was quite his diagnosis.** The share and copy
+emails were not a bug: `POST /api/quiz/share-notify` emailed on every click
+BY DESIGN (a 2025 "heads-up that the tool is being shared"), 30 an hour. The
+repeated "completed" emails came from where the completion request was
+fired: inside Turnstile's `callback`, which runs every time the widget
+issues a token, including its own background refresh of an expired token a
+few minutes later (`refresh-expired` defaults to auto). Each re-run called
+`showResults()` again and posted the completion again with a fresh, valid
+token, so Cloudflare accepted each one and each one emailed. A refresh of the
+page was never the cause: the quiz is client state and a reload lands on the
+intro.
+
+**What changed.**
+- `routes/leads.js`: every completion request carries a `completionId`
+  (32 hex, minted in the browser when the verification screen is shown, so one
+  completion has one id however many requests it produces). After Turnstile
+  passes, the server claims the id in the new `quiz_completions` table
+  (`INSERT ... ON CONFLICT DO NOTHING RETURNING`, primary key on the id); only
+  the request that lands the claim writes the lead row and sends the email,
+  every later one is answered `{ ok: true, duplicate: true }` with nothing
+  stored and nothing sent. The claim is made AFTER verification so a failed
+  attempt never burns the id. A stale page sending no id gets a server-derived
+  key (hash of ip, hour and result text, never stored in the clear) so it still
+  gets one email rather than none or many. Each outcome is logged as
+  `Quiz completion <id>: N/16, one notification sent` or
+  `... duplicate request ignored` (id and score only, never the text), so
+  production behaviour is visible in the Railway log without a mailbox.
+- `/api/quiz/share-notify` is deleted, along with its limiter. Share and copy
+  clicks stay recorded as the GA4 event `dependency_quiz_share` with the
+  platform; they generate no email and no server call.
+- `views/owner-dependency-quiz.ejs`: the Turnstile callback accepts one call
+  per showing of the verification screen (`verifiedThisScreen`), reset on a
+  retake so a second genuine completion gets its own id and its own email.
+  Browser guard first, database second; the database decides.
+- Untouched, deliberately: scoring, the results screen, `email-results` (the
+  visitor's own copy, which already did not email Tom), attribution, GA4
+  events, Google Ads (the quiz fires no Ads conversion).
+
+**Found on the way and fixed: the share buttons opened nothing.** The global
+smooth-scroll handler (`a[href^="#"]`, both copies: `site-chrome-script.ejs`
+and `index.ejs`) matched the share anchors at load, when they are
+`href="#"`, and on click ran `preventDefault()` before `querySelector`
+threw on the facebook/linkedin/x URL they are given later. So on production
+a share click sent Tom an email and opened no share window. The handler now
+reads the href at click time and stands down when it no longer starts with
+`#`. The Market Ready Test result page has the same anchors and the same
+chrome script, so it is fixed by the same change. Its own
+`/api/market-ready-test/share-notify` still emails per share click and was
+NOT changed (out of the instruction's scope; flagged to Tom).
+
+**Verified before deploy, without sending an email.** `test/quizNotifications.test.js`
+(15: a source half, and an HTTP half gated on `QUIZ_TEST_DATABASE_URL`,
+declared in `gatedSuites`) runs the real seed and server on a throwaway
+database with `GMAIL_APP_PASSWORD` unset and counts the "skipping lead
+notification email" lines as the emails that would have gone: one completion
+is one; the same id with a refreshed token is zero more; an exact replay is
+refused by verification; six concurrent requests for one id send exactly one;
+a failed verification does not burn the id; a stale page with no id gets one
+and only one; a retake gets its own; the five share actions are 404s with no
+email; a page revisit sends nothing. Watched red with the claim planted to
+always win. Cloudflare is unreachable from the sandbox, so the server runs
+with `test/helpers/turnstileStubPreload.js` (opt-in, test-only) answering
+for the siteverify URL the way Cloudflare does: a token passes once and is
+duplicate afterwards. The real quiz page was then driven in Chromium with a
+fake `window.turnstile` that calls back twice: one completion request, one
+email, seven share clicks with zero server calls and seven GA4 events, a
+reload sending nothing, a retake sending its one, and after the anchor fix
+three share windows actually opening. `test/smoothScrollShareAnchors.test.js`
+pins the anchor fix in both copies.
+
+**Production verification is one real completion by Tom**, which should
+produce exactly one email and one `Quiz completion ...: one notification
+sent` line in the Railway log, with his share clicks producing nothing.
+
 ## Google Business Profile (01/10/2026)
 
 The listing exists, is verified, and is connected through the Windsor

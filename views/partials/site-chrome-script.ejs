@@ -202,10 +202,18 @@ window.addEventListener('scroll', () => {
     });
 })();
 
+// Smooth scroll for in-page anchors. The href is read at CLICK time, not
+// at load: the Owner Dependency Quiz's share buttons start as href="#" and
+// are given their real facebook/linkedin/x URL once a result exists, and
+// until 03/10/2026 this handler cancelled those clicks (preventDefault ran
+// first, then querySelector threw on the URL), so the share windows never
+// opened. An anchor whose href no longer starts with # is left alone.
 document.querySelectorAll('a[href^="#"]').forEach(a => {
     a.addEventListener('click', e => {
+        const href = a.getAttribute('href') || '';
+        if (href.charAt(0) !== '#' || href.length < 2) return;
         e.preventDefault();
-        const target = document.querySelector(a.getAttribute('href'));
+        const target = document.querySelector(href);
         if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
 });

@@ -80,20 +80,6 @@ const publicFormLimiter = rateLimit({
   message: { error: 'Too many requests. Please try again later.' }
 });
 
-// Share/copy clicks are anonymous, low-friction and can happen several times
-// in a single session (someone might click all three platforms plus both
-// copy buttons while deciding). Kept on its own limiter, separate from
-// publicFormLimiter, so a curious visitor clicking around can't burn the
-// budget meant for genuine leads (contact form, PDF requests, email-results).
-const shareNotifyLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 30,
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req) => ipKeyGenerator(req),
-  message: { error: 'Too many requests.' }
-});
-
 // The signed download link gets a looser but still-bounded limiter — enough
 // headroom for a slow connection retrying a large PDF, tight enough to make
 // token brute-forcing impractical within the 15 minute expiry.
@@ -270,16 +256,64 @@ async function getContactDetails() {
   }
 }
 
-// POST /api/quiz/complete-notify — fires exactly once, the moment a visitor
-// finishes the Owner Dependency Quiz (before they've been offered the
-// separate, optional "email me my results" choice below). This is the
-// quiz's one and only owner-notification trigger, and it does not depend on
-// the visitor supplying any contact details — the quiz never asks for a
-// name or email until after a result exists, so this always reports them as
-// not provided. /api/quiz/email-results below deliberately no longer emails
-// Tom itself (see its own comment), so a visitor who both finishes the quiz
-// and requests a copy of their result still only ever generates the one
-// owner notification from this route, not two.
+// The completion id the browser sends with /api/quiz/complete-notify. It is
+// minted client-side when the verification screen is shown, so one quiz
+// completion has exactly one id however many requests it produces. Any
+// other shape (absent, wrong length, non-hex) is treated as "no id" and a
+// server-derived key is used instead, so a page cached from before the id
+// existed still gets one notification rather than none or many.
+const COMPLETION_ID_RE = /^[a-f0-9]{32}$/;
+function completionKey(body, req, resultsText) {
+  const supplied = String((body && body.completionId) || '').toLowerCase();
+  if (COMPLETION_ID_RE.test(supplied)) return supplied;
+  // Fallback for a stale page: the same visitor sending the same result in
+  // the same hour is one completion. Not a privacy record (the ip is hashed
+  // with the text, never stored), and never reached by the current page.
+  const hour = Math.floor(Date.now() / (60 * 60 * 1000));
+  return 'derived-' + crypto.createHash('sha256').update(`${req.ip}|${hour}|${resultsText}`).digest('hex').slice(0, 48);
+}
+
+// Claims the completion. Returns true if THIS request owns it, false if an
+// earlier request already did. The primary key on quiz_completions is the
+// whole mechanism: two requests racing for the same id cannot both insert,
+// whatever order they arrive in, so the decision is the database's and not
+// the browser's.
+async function claimQuizCompletion(key, score, band) {
+  const { rows } = await db.query(
+    `INSERT INTO quiz_completions (completion_id, score, band) VALUES ($1, $2, $3)
+     ON CONFLICT (completion_id) DO NOTHING RETURNING completion_id`,
+    [key, score, band]
+  );
+  return rows.length === 1;
+}
+
+// POST /api/quiz/complete-notify — the Owner Dependency Quiz's one and only
+// owner-notification trigger. Called by the browser the moment a visitor
+// finishes the quiz (before the separate, optional "email me my results"
+// choice below). It does not depend on the visitor supplying any contact
+// details — the quiz never asks for a name or email until after a result
+// exists, so this always reports them as not provided.
+//
+// ONE EMAIL PER COMPLETION, decided here and not in the browser (Tom,
+// 03/10/2026, after a single test journey flooded his inbox). Until that
+// date the browser called this route from the Turnstile callback, and the
+// callback fires every time the widget issues a token, including its own
+// background refresh of an expired one a few minutes later, so one
+// completion could produce several valid requests, each passing
+// verification with a fresh token and each sending an email. Now every
+// request carries a completion id; the first request to claim the id in
+// quiz_completions writes the lead and sends the email, and every later
+// request for the same id (a refreshed token, a repeated fetch, a retry) is
+// answered ok with nothing stored and nothing sent. Turnstile stays as the
+// second layer: an exact replay of a spent token is refused by Cloudflare
+// before the claim is even attempted, and a failed verification never
+// consumes the id, so a genuine retry after a verification hiccup still
+// gets its one notification.
+//
+// /api/quiz/email-results below deliberately does not email Tom (see its
+// own comment), and share/copy clicks no longer reach the server at all, so
+// a visitor who finishes the quiz, requests a copy and shares it three times
+// generates exactly one owner notification.
 router.post('/api/quiz/complete-notify', publicFormLimiter, async (req, res) => {
   try {
     const body = req.body || {};
@@ -311,6 +345,17 @@ router.post('/api/quiz/complete-notify', publicFormLimiter, async (req, res) => 
       return res.status(400).json({ error: 'Verification failed. Please try again.' });
     }
 
+    // Server-authoritative de-duplication (see the route comment). Claimed
+    // only after verification so a failed attempt cannot burn the id.
+    const key = completionKey(body, req, resultsText);
+    const claimed = await claimQuizCompletion(key, score, band);
+    if (!claimed) {
+      // Logged (id and score only, never the text) so a duplicate on
+      // production is visible in the deploy log without a mailbox.
+      console.log(`Quiz completion ${key.slice(0, 12)}: duplicate request ignored, no notification sent`);
+      return res.json({ ok: true, duplicate: true });
+    }
+
     await db.query(
       `INSERT INTO leads (kind, name, email, message) VALUES ('quiz_results', '', '', $1)`,
       [resultsText]
@@ -318,6 +363,7 @@ router.post('/api/quiz/complete-notify', publicFormLimiter, async (req, res) => 
 
     res.json({ ok: true });
 
+    console.log(`Quiz completion ${key.slice(0, 12)}: ${score}/16, one notification sent`);
     notify({
       subject: `Owner Dependency Quiz completed — ${score}/16 (${band})`,
       text: [
@@ -407,48 +453,13 @@ router.post('/api/quiz/email-results', publicFormLimiter, async (req, res) => {
   }
 });
 
-const VALID_SHARE_PLATFORMS = ['linkedin', 'facebook', 'x', 'copy_text', 'copy_link'];
-const SHARE_PLATFORM_LABELS = {
-  linkedin: 'Share on LinkedIn',
-  facebook: 'Share on Facebook',
-  x: 'Share on X',
-  copy_text: 'Copy result text',
-  copy_link: 'Copy quiz link'
-};
-
-// POST /api/quiz/share-notify — fire-and-forget owner heads-up when a
-// visitor clicks a share/copy action on the results page. Sharing stays
-// anonymous by design (no email collected), so this never touches the leads
-// table — there's no visitor identity to record, just a live notification
-// so the owner knows the tool is being shared.
-router.post('/api/quiz/share-notify', shareNotifyLimiter, async (req, res) => {
-  try {
-    const body = req.body || {};
-    const platform = plainText(body.platform).slice(0, 30);
-    const band = plainText(body.band).slice(0, 60);
-    const score = Number(body.score);
-
-    if (!VALID_SHARE_PLATFORMS.includes(platform)) {
-      return res.status(400).json({ error: 'Invalid data.' });
-    }
-    if (!Number.isInteger(score) || score < 0 || score > 16) {
-      return res.status(400).json({ error: 'Invalid data.' });
-    }
-    if (!VALID_BANDS.includes(band)) {
-      return res.status(400).json({ error: 'Invalid data.' });
-    }
-
-    res.json({ ok: true });
-
-    notify({
-      subject: `Owner Dependency Quiz — ${SHARE_PLATFORM_LABELS[platform]}`,
-      text: `Someone clicked "${SHARE_PLATFORM_LABELS[platform]}" on the Owner Dependency Quiz.\n\nScore: ${score}/16 (${band})`
-    });
-  } catch (err) {
-    console.error('Share-notify error:', err);
-    res.status(500).json({ error: 'Something went wrong.' });
-  }
-});
+// There is deliberately no /api/quiz/share-notify any more (03/10/2026).
+// Until then every Share on LinkedIn, Share on Facebook, Share on X, Copy
+// result text and Copy quiz link click emailed Tom, by design, so one
+// visitor trying the buttons produced a string of separate emails about
+// the same result. Share and copy clicks are engagement, not completions:
+// they stay recorded as the GA4 event dependency_quiz_share (with the
+// platform) in views/owner-dependency-quiz.ejs, and generate no email.
 
 // GET /documents/download — serves a gated PDF only with a valid, unexpired
 // signed token from the request above. The files live outside public/ so
