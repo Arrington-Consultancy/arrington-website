@@ -108,7 +108,15 @@ describe('over HTTP: one email per completion, none for sharing', { skip: TEST_D
   async function session() {
     const res = await fetch(`${BASE}/owner-dependency-quiz`);
     assert.equal(res.status, 200);
-    const cookie = (res.headers.get('set-cookie') || '').split(';')[0];
+    // Keep the name=value of each cookie the page set, last one per name
+    // winning, which is what a browser does (the Market Ready Test page sets
+    // _csrf twice; the browser keeps the second and the meta tag matches it).
+    const jar = new Map();
+    for (const c of (res.headers.getSetCookie ? res.headers.getSetCookie() : [res.headers.get('set-cookie') || ''])) {
+      const pair = c.split(';')[0];
+      if (pair.includes('=')) jar.set(pair.split('=')[0], pair);
+    }
+    const cookie = Array.from(jar.values()).join('; ');
     const html = await res.text();
     const token = html.match(/name="csrf-token" content="([^"]+)"/)[1];
     return { cookie, token };

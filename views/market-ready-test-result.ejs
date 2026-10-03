@@ -311,13 +311,15 @@
             el.hidden = false;
         }
 
+        // Share and copy clicks are engagement, not completions: recorded
+        // as a GA4 event (with the platform) and nothing else. Until
+        // 03/10/2026 each click also posted to the server, which emailed
+        // Tom every time, so trying the buttons produced a separate email
+        // per click about the same result. No server call here any more.
         function notifyShare(platform) {
-            var csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-            fetch('/api/market-ready-test/share-notify', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
-                body: JSON.stringify({ token: resultToken, platform: platform })
-            }).catch(function () {});
+            if (typeof gtag === 'function') {
+                gtag('event', 'market_ready_test_share', { event_category: 'tool', platform: platform });
+            }
         }
 
         ['mrt-share-linkedin', 'mrt-share-facebook', 'mrt-share-x'].forEach(function (id) {

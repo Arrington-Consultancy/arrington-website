@@ -6762,6 +6762,66 @@ his share clicks producing nothing. Write-back filed standalone in Drive:
 "WEBSITE AND HOSTING WRITE-BACK - Owner Dependency Quiz: one owner email per
 completion, none for sharing, 3 October 2026".
 
+### The Market Ready Test gets the same principle, with a different fix (03/10/2026)
+
+Tom: "apply the same principle to the Market Ready Test... Inspect its
+implementation first rather than assuming it is identical." It was not.
+
+**Sharing was the same**: `/api/market-ready-test/share-notify` emailed on
+every share or copy click. Deleted with its limiter; the result page fires
+the GA4 event `market_ready_test_share` (with the platform) instead, which it
+did not have before, so the engagement is still recorded and nothing emails.
+
+**Completion was a different weakness.** The test's submit is fired by the
+"Get my New Owner Ready Score" button, not by Turnstile's callback (the
+callback only enables the button), so a refreshed token never re-submitted.
+What could duplicate it was the ordinary retry: every submit minted a fresh
+`result_token` and wrote a fresh row with no server-side idempotency, so a
+lost response (the server processed it, the browser never heard), the
+error-screen "Try again" that follows, or a fast double click produced a
+second submission, a second lead row and a second owner email for the same
+assessment. `request-review` was already idempotent and is untouched.
+
+**The fix, same principle, keyed differently.** The browser mints a
+`submissionId` the first time the review screen is shown and keeps it in the
+saved progress (`localStorage`, so it survives a retry and a reload), cleared
+with the progress on success so a later, separate assessment gets its own.
+The insert carries it into a new nullable `submission_id` column under a
+unique index (standalone `ALTER` plus `CREATE UNIQUE INDEX`, in that order, so
+an existing database gets the column before anything names it) with
+`ON CONFLICT (submission_id) DO NOTHING RETURNING result_token`. A conflict
+reads the existing row and answers `{ ok, resultUrl, duplicate: true }` with
+the result URL that already exists, so the visitor still lands on their result
+and nothing is stored or sent twice. Claimed after verification, so a failed
+attempt never burns the id; a stale page with no id gets a derived key. The
+submit click also spends its Turnstile token before the request, the browser's
+own first line against a double click. Logged as
+`Market Ready Test submission <id>: N/100, one notification sent` or
+`... duplicate request, existing result returned, no notification sent`, id
+only, never the business or the answers.
+
+**Verified without sending an email**: `test/marketReadyNotifications.test.js`
+(15, HTTP half gated on `QUIZ_TEST_DATABASE_URL`, declared in `gatedSuites`):
+submit is one email, one row, one lead; a retry with a fresh token is the SAME
+result URL, no email, no second row; an exact replay is refused; five
+concurrent requests give one row, one email and five visitors on the same
+result; a failed verification does not burn the id; a stale page with no id
+gets one and only one; a separate assessment gets its own; the result page
+reloads sending nothing; the five share actions are 404s. Watched red with the
+conflict branch planted unreachable. In Chromium, with the first submit's
+response deliberately dropped after the server had processed it: error screen,
+"Try again", same id with a new token, the same result page, one email, one
+row, progress cleared, six share clicks with zero server calls and six GA4
+events, a reload sending nothing.
+
+**A test trap worth knowing:** the Market Ready Test page sets the `_csrf`
+cookie twice (the route's own `generateCsrfToken` and a second call during
+render). A browser keeps the last one and the meta tag matches it; a test
+that joins every Set-Cookie header, or takes the first, gets 403
+`invalid csrf token` on every POST and looks like a CSRF regression. Both
+notification suites now keep the last cookie per name, as a browser does.
+Harmless on the live site and not changed here.
+
 ## Google Business Profile (01/10/2026)
 
 The listing exists, is verified, and is connected through the Windsor

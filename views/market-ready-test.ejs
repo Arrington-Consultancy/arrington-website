@@ -612,8 +612,27 @@
         // token is never reused past its first submit attempt.
         var turnstileToken = null;
         var turnstileWidgetId = null;
+        // One assessment, one submission id (03/10/2026). Minted the first
+        // time the review screen is shown and saved with the progress, so a
+        // retry after an error, a lost response or a reload sends the SAME
+        // id, and the server answers it with the result that already exists
+        // instead of writing and emailing a second one. Cleared with the
+        // progress on success, so a later, separate assessment gets its own.
+        function newSubmissionId() {
+            var bytes = new Uint8Array(16);
+            if (window.crypto && window.crypto.getRandomValues) {
+                window.crypto.getRandomValues(bytes);
+            } else {
+                for (var i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+            }
+            return Array.prototype.map.call(bytes, function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+        }
         function renderTurnstileWidget() {
             turnstileToken = null;
+            if (!/^[a-f0-9]{32}$/.test(String(state.submissionId || ''))) {
+                state.submissionId = newSubmissionId();
+                saveProgress();
+            }
             document.getElementById('mrt-review-submit').disabled = true;
             document.getElementById('mrt-verify-error').hidden = true;
 
@@ -663,6 +682,12 @@
         // ---- Submit ----
         document.getElementById('mrt-review-submit').addEventListener('click', function () {
             if (!turnstileToken) return;
+            // A token is single-use: a second click before the response
+            // would be refused by verification anyway, and the server
+            // de-duplicates on the submission id as well. Clearing it here
+            // is the browser's own first line against a double click.
+            var tokenForThisSubmit = turnstileToken;
+            turnstileToken = null;
             showScreen('mrt-loading');
             startLoadingMessages();
 
@@ -688,7 +713,8 @@
                     context: state.context,
                     consentTomReview: state.consentTom,
                     consentMarketing: state.consentMarketing,
-                    turnstileToken: turnstileToken
+                    submissionId: state.submissionId,
+                    turnstileToken: tokenForThisSubmit
                 })
             }).then(function (res) {
                 return res.json().catch(function () { return {}; }).then(function (data) {
