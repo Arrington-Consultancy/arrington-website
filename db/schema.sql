@@ -104,6 +104,22 @@ CREATE TABLE IF NOT EXISTS leads (
 );
 CREATE INDEX IF NOT EXISTS idx_leads_created_at ON leads (created_at DESC);
 
+-- One row per completed Owner Dependency Quiz, keyed by the completion id
+-- the browser mints when the verification screen is shown (or a server-
+-- derived key for a page that predates the id). The primary key is what
+-- makes the owner notification fire once: routes/leads.js claims the row
+-- with INSERT ... ON CONFLICT DO NOTHING and only a claim that lands
+-- writes the lead and sends the email. A refreshed Turnstile token, a
+-- repeated request or a retried fetch for the same completion finds the
+-- row taken and is answered ok with nothing sent (03/10/2026).
+CREATE TABLE IF NOT EXISTS quiz_completions (
+    completion_id VARCHAR(64) PRIMARY KEY,
+    score SMALLINT NOT NULL,
+    band VARCHAR(60) NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_quiz_completions_created ON quiz_completions (created_at);
+
 -- Market Ready Test — standalone, unpublished tool (not part of the
 -- pages/content CMS). Holds the business details, the ten multiple-choice
 -- answers, the optional free-text context, and the deterministically
