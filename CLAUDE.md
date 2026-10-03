@@ -103,6 +103,26 @@ raised Leads-Search-1 to £30 a day on Tom's instruction and a midday
 session, not having read it, "restored" £15 as drift. Live at 06:40 UTC on
 3 October the budget was £15. Reported to Tom for decision, not changed.
 
+**One live Website & Hosting session (03/10/2026).** The record drift above
+had a second cause besides the Ads worker: two Claude Code sessions were
+both acting as the website worker on this repository. The original,
+"Arrington Website worker" (created 25/07/2026, branch
+`claude/session-a26f0613-wi8t5w`, 660k tokens of context by the end), was
+retired on 03/10/2026 on Tom's instruction. Nothing was lost in retiring
+it: its branch had no commit that is not on `main` (its last work is PR
+#211 and the write-back in PR #212), and its CLAUDE.md sections and Drive
+write-backs were already filed. It is archived, not deleted, so it can be
+unarchived and read if a question about July to September work ever needs
+its transcript. The live Website & Hosting worker is now the session on
+branch `claude/new-session-hbgp04`, titled "Arrington Website & Hosting
+worker". **Rule:** one website session at a time. When a session's context
+has grown to the point of compaction, or a new one is started for any
+reason, the old one is retired the same way: check its branch against
+`main`, check its write-backs are filed, archive it, and record the
+handover here. Two live sessions on one repository means two workers
+reading different records, which is how a budget was reverted and a page
+was corrected twice.
+
 ## Brand, voice and strategy: Google Drive is the authority, not this file
 
 This repo governs the **code**. It does not govern brand, tone, positioning,
