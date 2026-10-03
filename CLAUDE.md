@@ -6746,9 +6746,21 @@ reload sending nothing, a retake sending its one, and after the anchor fix
 three share windows actually opening. `test/smoothScrollShareAnchors.test.js`
 pins the anchor fix in both copies.
 
-**Production verification is one real completion by Tom**, which should
-produce exactly one email and one `Quiz completion ...: one notification
-sent` line in the Railway log, with his share clicks producing nothing.
+**Live on production:** PR #209, merge `adc9ea3`, deployment `ebebb2aa`
+SUCCESS (its racing twin `5e4b96b3` carries the commit hash and is REMOVED,
+as always), boot log `Tables created/verified` so `quiz_completions` exists.
+Production QA run `20261003T052324Z-quiz-notify`: `/owner-dependency-quiz`
+and `/market-ready-test` both 200 at desktop and phone, zero page errors, no
+overflow. The console errors in that run are all third-party and identical on
+both pages (Google Identity Services and Turnstile injecting inline styles,
+and GSI reporting `The given origin is not allowed for the given client ID`,
+which means the Continue with Google button may not be serving on production
+and is a separate item for Tom to check in the Google Cloud console). **The
+final proof is one real completion by Tom**: exactly one email and one
+`Quiz completion ...: one notification sent` line in the Railway log, with
+his share clicks producing nothing. Write-back filed standalone in Drive:
+"WEBSITE AND HOSTING WRITE-BACK - Owner Dependency Quiz: one owner email per
+completion, none for sharing, 3 October 2026".
 
 ## Google Business Profile (01/10/2026)
 
