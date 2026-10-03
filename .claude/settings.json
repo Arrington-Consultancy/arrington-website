@@ -33,5 +33,30 @@
       "Bash(node --test *)",
       "Bash(npm test*)"
     ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/driveFirstHook.sh SessionStart",
+            "timeout": 10,
+            "statusMessage": "Loading the Arrington Drive-first rule"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/driveFirstHook.sh UserPromptSubmit",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
   }
 }
