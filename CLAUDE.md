@@ -68,6 +68,41 @@ or scope.
 This section sets the starting position only; the rest of this file
 stays the practical project manual.
 
+## Drive-first is enforced by the tools, not by memory (03/10/2026)
+
+Tom: every worker, in every tool, checks the relevant Drive record before
+acting, and a pasted instruction is not sure-fire because it depends on
+being remembered. So the rule now lives where each tool loads it without
+being asked:
+
+- **Claude Code (this repository, cloud or local):** `.claude/settings.json`
+  carries two hooks run by the harness. `SessionStart` injects the full
+  Drive-first rule into the model's context at the start of every session;
+  `UserPromptSubmit` injects a one-line check on every message. Both run
+  `scripts/driveFirstHook.sh`, which only prints hook JSON. `settings.json`
+  is deliberately un-ignored (`.gitignore` line `!.claude/settings.json`)
+  so a fresh clone carries the hooks.
+- **Codex:** `AGENTS.md` at the repository root, loaded automatically, says
+  the same and names which worker a session is (website versus Google Ads)
+  and where each writes back.
+- **claude.ai or ChatGPT chats:** no file is loaded automatically. Tom uses
+  a Project per worker whose instructions are the WORKER START BLOCK in
+  Drive (folder of the Worker Handoff Logs), with the Drive connector
+  attached; a plain chat gets the block pasted as the first message.
+
+**What every route requires, and what Tom checks:** the first reply quotes
+the title and last-updated date of each authority read, the heading and
+date of the last Handoff Log entry, and the next controlled action, and
+makes no live change until Tom replies. A first reply that starts work or
+quotes a stale date is a failed check: restart.
+
+**Worker of record for Google Ads:** any tool may change the Ads account,
+but as the Google Ads Worker, reading and writing back to the Google Ads
+Handoff Log, one session at a time. On 2 October 2026 a morning session
+raised Leads-Search-1 to £30 a day on Tom's instruction and a midday
+session, not having read it, "restored" £15 as drift. Live at 06:40 UTC on
+3 October the budget was £15. Reported to Tom for decision, not changed.
+
 ## Brand, voice and strategy: Google Drive is the authority, not this file
 
 This repo governs the **code**. It does not govern brand, tone, positioning,
