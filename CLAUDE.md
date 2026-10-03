@@ -7074,6 +7074,40 @@ already recorded above) and `test/workspace/zohoInvoiceClient.test.js`
 date that is now in the past, so the client's own "due date must be today
 or later" guard refuses it. Both fail identically with this change stashed.
 
+## Meta pixel (added 03/10/2026, Tom's decision, inert until the id is set)
+
+Tom, from the Meta Events Manager: "thinking it might be worth it for future
+campaigns". The one real benefit before any campaign runs is the audience: a
+pixel installed now builds a custom audience of website visitors that a later
+Facebook test can retarget rather than starting cold. Slow at this traffic
+(Meta wants 1,000 visitors before lookalikes work), so it is a cheap asset,
+not a quick one. Facebook paid stays OFF (Tom's decision of 01/10/2026).
+
+Built exactly like Clarity: **everything gated on `META_PIXEL_ID`** (a public
+identifier, validated to 10 to 20 digits, put in `app.locals`, no view
+threads it). Unset, no script and no Facebook CSP host, so the deploy is
+byte-identical to before. `views/partials/meta-pixel.ejs` is Meta's snippet
+plus the nonce, minus the noscript image's `style="display:none"` (the strict
+CSP refuses inline style attributes), included from `google-tag.ejs` so it
+reaches every public page and never Scott or the Workspace. PageView
+everywhere; the **Lead** event fires only on `/thank-you` inside the same
+once-per-token guard as the Google Ads Contact conversion, guarded on `fbq`
+existing, with the token id as `eventID` so Meta de-duplicates a repeat.
+CSP, all gated on the id: `connect.facebook.net` in scriptSrc,
+`www.facebook.com` in imgSrc and connectSrc. The Privacy page describes it
+and says no such adverts run at present. `test/metaPixel.test.js` (7).
+Verified over real HTTP on a throwaway database in all three states (unset,
+set, invalid): one init per public page when set, none on `/scott/login`, no
+inline style attribute, no Lead on a bare thank-you visit.
+
+The dataset is "Arrington Consultancy Website", pixel id `4580412922274063`,
+created by Tom in Events Manager on 03/10/2026 (the partner-platform card on
+the Events Manager overview cannot be used for a custom-coded site; the
+manual route is the green plus, Web, Connect, Meta pixel only, install code
+manually). The two older datasets, "Arrington Consultancy Social" and
+"Arrington Consultancy Workspace", belong to the two read-only apps and
+must not be used as the website pixel.
+
 ## Sale readiness page
 
 `/get-your-business-ready-to-sell` is a campaign landing page for social and

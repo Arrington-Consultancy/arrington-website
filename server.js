@@ -106,6 +106,22 @@ console.log('Microsoft Clarity: ' + (app.locals.clarityProjectId
   ? 'project id set (' + app.locals.clarityProjectId.length + ' chars); recordings and heatmaps on for public pages'
   : (clarityProjectId ? 'CLARITY_PROJECT_ID is set but is not a valid project id; Clarity is OFF' : 'not configured; no Clarity script, no Clarity CSP hosts')));
 
+// Meta pixel, added 03/10/2026 on Tom's decision ("worth it for future
+// campaigns"): a pixel installed now builds a custom audience of site
+// visitors that a later Facebook test can retarget. Same shape as Clarity:
+// gated entirely on META_PIXEL_ID (a public identifier, in the page source
+// of every site that carries a pixel, not a secret), validated to digits so
+// nothing else reaches the rendered script or the policy, rendered by
+// views/partials/meta-pixel.ejs from the Google tag partial so it reaches
+// every public page and no login-only area. PageView on every public page;
+// the Lead event fires only on /thank-you after a stored enquiry
+// (views/thank-you.ejs), mirroring the Google Ads Contact conversion.
+const metaPixelId = (process.env.META_PIXEL_ID || '').trim();
+app.locals.metaPixelId = /^[0-9]{10,20}$/.test(metaPixelId) ? metaPixelId : '';
+console.log('Meta pixel: ' + (app.locals.metaPixelId
+  ? 'pixel id set (' + app.locals.metaPixelId.length + ' digits); PageView on public pages, Lead on /thank-you'
+  : (metaPixelId ? 'META_PIXEL_ID is set but is not a valid pixel id; the pixel is OFF' : 'not configured; no pixel script, no Facebook CSP hosts')));
+
 // Fail fast if SESSION_SECRET is missing in production — we never want to
 // fall back to a hardcoded dev secret on the real domain.
 if (isProd && !process.env.SESSION_SECRET) {
@@ -241,7 +257,10 @@ app.use(helmet({
         ...(googleSigninClientId ? ['https://accounts.google.com/gsi/client'] : []),
         // Microsoft Clarity: the loader comes from www.clarity.ms and the
         // tag it fetches from scripts.clarity.ms. Gated like the gsi hosts.
-        ...(app.locals.clarityProjectId ? ['https://www.clarity.ms', 'https://scripts.clarity.ms'] : [])
+        ...(app.locals.clarityProjectId ? ['https://www.clarity.ms', 'https://scripts.clarity.ms'] : []),
+        // Meta pixel: fbevents.js and its per-pixel config both come from
+        // connect.facebook.net. Gated on the pixel id like Clarity.
+        ...(app.locals.metaPixelId ? ['https://connect.facebook.net'] : [])
       ],
       // Google Ads conversion and remarketing endpoints are sent as pixels or
       // beacons, so they need img-src/connect-src and nothing else. These hosts
@@ -263,7 +282,9 @@ app.use(helmet({
         'https://ad.doubleclick.net',
         'https://www.google.co.uk',
         'https://lh3.googleusercontent.com',
-        ...(app.locals.clarityProjectId ? ['https://*.clarity.ms', 'https://c.bing.com'] : [])
+        ...(app.locals.clarityProjectId ? ['https://*.clarity.ms', 'https://c.bing.com'] : []),
+        // Meta pixel events are sent as an image request to www.facebook.com/tr.
+        ...(app.locals.metaPixelId ? ['https://www.facebook.com'] : [])
       ],
       connectSrc: [
         "'self'",
@@ -284,7 +305,9 @@ app.use(helmet({
         ...(googleSigninClientId ? ['https://accounts.google.com/gsi/'] : []),
         // Clarity sends its recordings to a regional collector under
         // *.clarity.ms and links the session to Bing's cookie via c.bing.com.
-        ...(app.locals.clarityProjectId ? ['https://*.clarity.ms', 'https://c.bing.com'] : [])
+        ...(app.locals.clarityProjectId ? ['https://*.clarity.ms', 'https://c.bing.com'] : []),
+        // Meta pixel falls back to fetch/sendBeacon to www.facebook.com/tr.
+        ...(app.locals.metaPixelId ? ['https://www.facebook.com'] : [])
       ],
       frameSrc: [
         "'self'",

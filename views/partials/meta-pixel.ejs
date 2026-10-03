@@ -1,0 +1,26 @@
+<% if (typeof metaPixelId !== 'undefined' && metaPixelId) { %><script nonce="<%= nonce %>">
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '<%= metaPixelId %>');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" alt="" src="https://www.facebook.com/tr?id=<%= metaPixelId %>&ev=PageView&noscript=1"></noscript>
+<% } %><%# Meta pixel (03/10/2026, Tom's decision: build the audience now so a
+    future Facebook campaign can retarget site visitors rather than start
+    cold). Meta's own snippet with two changes: nonce="..." on the inline
+    script (the strict CSP refuses inline script without it) and the
+    noscript image without its style="display:none" attribute (the CSP
+    refuses inline style attributes; a 1x1 image with no style is harmless).
+    Renders only when META_PIXEL_ID is set on the service (server.js
+    validates it and puts it in app.locals, so no view threads it). Included
+    from google-tag.ejs so it reaches exactly the pages the Google tag
+    reaches: every public page, never Scott or the Workspace. PageView
+    everywhere; the Lead event fires only on /thank-you after a stored
+    enquiry, beside the Google Ads conversion. No Facebook campaign is
+    running; this collects an audience and nothing bids on it. %>

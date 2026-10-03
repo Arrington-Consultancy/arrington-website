@@ -31,6 +31,10 @@
             } catch (e) { sent = []; }
             if (sent.indexOf(id) === -1) {
                 gtag('event', 'conversion', { 'send_to': 'AW-18129914078/vCKKCKjSna0cEN6RgsVD', 'transaction_id': id });
+                // Meta pixel Lead, only when the pixel is configured (fbq exists
+                // only then). Same once-per-token guard as the Google conversion;
+                // eventID lets Meta de-duplicate a repeat of the same enquiry.
+                if (typeof fbq === 'function') { try { fbq('track', 'Lead', {}, { eventID: id }); } catch (e) {} }
                 try { sent.push(id); sessionStorage.setItem(KEY, JSON.stringify(sent.slice(-20))); } catch (e) {}
             }
             try { history.replaceState(null, '', '/thank-you'); } catch (e) {}

@@ -10,7 +10,7 @@
 <% if (typeof ga4Id !== 'undefined' && ga4Id) { %><script nonce="<%= nonce %>">
   gtag('config', '<%= ga4Id %>');
 </script>
-<% } %><%- include('clarity-tag') %><%# THE SITE'S ONE GOOGLE TAG. Included as the first thing inside <head>
+<% } %><%- include('clarity-tag') %><%- include('meta-pixel') %><%# THE SITE'S ONE GOOGLE TAG. Included as the first thing inside <head>
     on every public page, and nowhere else: Google allows one Google tag per
     page, so a page must never carry a second copy of the loader or of the
     config call. test/googleTag.test.js enforces both.
@@ -35,4 +35,6 @@
 
     Microsoft Clarity rides along from here (partials/clarity-tag.ejs) so it
     reaches exactly the pages this tag reaches and no others. It renders
-    nothing unless CLARITY_PROJECT_ID is set. %>
+    nothing unless CLARITY_PROJECT_ID is set. The Meta pixel
+    (partials/meta-pixel.ejs) rides along the same way and renders nothing
+    unless META_PIXEL_ID is set. %>
