@@ -7100,6 +7100,20 @@ Verified over real HTTP on a throwaway database in all three states (unset,
 set, invalid): one init per public page when set, none on `/scott/login`, no
 inline style attribute, no Lead on a bare thank-you visit.
 
+**Live on production, 03/10/2026:** `META_PIXEL_ID` set on the service by
+this worker (Railway MCP `set-variables`), deployment `4357daaa` SUCCESS with
+commit `e7011ed`, boot line `Meta pixel: pixel id set (16 digits); PageView
+on public pages, Lead on /thank-you`. Production QA run
+`20261003T143134Z-meta-pixel`: home, Privacy and thank-you all 200 at desktop
+and phone, zero page errors, no overflow. The home and thank-you pages now
+report three console messages that were absent from every earlier run
+(`%c%d font-size:0;color:transparent NaN` twice and a picture-in-picture
+permissions-policy notice): those are Meta's own `fbevents.js` writing to the
+console, which is evidence the script loaded and ran on production, not a
+fault. Whether PageView events are arriving at Meta is read in Events
+Manager, not from here. Write-back appended to the Website & Hosting
+Handoff Log in place (Zapier, 3 October 2026 entry), read back.
+
 The dataset is "Arrington Consultancy Website", pixel id `4580412922274063`,
 created by Tom in Events Manager on 03/10/2026 (the partner-platform card on
 the Events Manager overview cannot be used for a custom-coded site; the
