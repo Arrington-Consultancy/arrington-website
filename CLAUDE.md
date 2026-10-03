@@ -6857,6 +6857,19 @@ that joins every Set-Cookie header, or takes the first, gets 403
 notification suites now keep the last cookie per name, as a browser does.
 Harmless on the live site and not changed here.
 
+**Live on production:** PR #211, merge `d7e2280`; the serving deployment is
+`987a9be7` (built from `a06bf79`, an AGENTS.md commit another session pushed
+to main a minute after the merge, which sits on top of it), booted clean with
+`Tables created/verified`, so `submission_id` and its unique index exist.
+Production QA run `20261003T063930Z-mrt-notify`: `/market-ready-test` and
+`/owner-dependency-quiz` both 200 at desktop and phone, zero page errors, no
+overflow. Full suite before merge: 1534 pass, 2 fail, the two documented
+pre-existing failures. Write-back filed standalone in Drive: "WEBSITE AND
+HOSTING WRITE-BACK - Market Ready Test: one owner email per submission, none
+for sharing, 3 October 2026". **The final proof is one real submission by
+Tom**: one owner email, one `Market Ready Test submission ...: one
+notification sent` line in the Railway log, share clicks producing nothing.
+
 ## Google Business Profile (01/10/2026)
 
 The listing exists, is verified, and is connected through the Windsor
