@@ -7247,6 +7247,20 @@ a phone tap sending `phone_click` only, and the four rule-made copies still
 on every page view. After Tom deletes the rules, rerun with `submit=0`: a
 page load must then send no `generate_lead` at all.
 
+**The Google Ads Contact conversion was NOT added to the form success
+(addendum of 06/10/2026, challenged).** It already fires once per real
+submission on `/thank-you` (server-issued token, `transaction_id`), and a
+second call on the form page would count every enquiry twice. Proved live
+instead: audit run `20261006T131220Z-tag-audit-ads-conversion` (`submit=1`,
+`ads=1`, Meta still blocked) shows zero requests carrying label
+`vCKKCKjSna0cEN6RgsVD` on the homepage, the start-up page and a phone tap,
+and on one TEST TRACKING enquiry exactly one conversion, carried by
+Google's usual three requests (`googleadservices.com/pagead/conversion`,
+`googleads.g.doubleclick.net/pagead/viewthroughconversion`,
+`google.com/pagead/1p-conversion`). That run recorded one real conversion in
+the Ads account on 06/10/2026, from the TEST TRACKING lead. `ads=1` costs a
+real conversion each time it runs: use it only to prove the conversion.
+
 ## Sale readiness page
 
 `/get-your-business-ready-to-sell` is a campaign landing page for social and
