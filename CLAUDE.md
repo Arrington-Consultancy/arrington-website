@@ -7153,6 +7153,13 @@ reasons as the sale readiness page below.
   service, result or credential. The accountancy line says "when you need an
   accountant" rather than offering accountancy. The test pins the five
   exactly.
+- **The website is offered as a later step** (Tom, 06/10/2026: "add it and
+  link the website page as well"): one line directly after the deliverables,
+  "we build websites too. That comes after the set-up review, not instead of
+  it", linking OUT to `/where-to-start/website-build` and `/websites-and-ai`.
+  No price on this page (the £999 stays on its own page, so this page keeps
+  one price), and never beside the deliverables, because the page argues for
+  settling the idea before spending money. Pinned by the page test.
 - **Proof claims are only the ones already live:** the homepage hero proof
   line, the sale readiness page's "built, grew and sold his own business in a
   seven-figure exit", and the Brand OS 20-years line.

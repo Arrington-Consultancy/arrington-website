@@ -147,3 +147,18 @@ test('brand rules: UK English, we, no em dashes, no fire metaphors, no coaching 
   assert.ok(text.includes('More than 20 years of experience inside real businesses across Devon and Cornwall sits behind the work.'), 'the approved Brand OS proof line is missing');
   assert.ok(!/\b(?:MBA|PhD|award|award-winning|chartered|certified|accredited)\b/i.test(text), 'an unapproved credential is on the page');
 });
+
+test('the website offer is linked as a later step, after the deliverables, with no second price', () => {
+  // Tom, 06/10/2026: "add it and link the website page as well". The line
+  // sits after the deliverables list, links OUT to the Website Build offer
+  // page and the Websites and AI page, and carries no price of its own.
+  const body = bodyOf(VIEW);
+  const next = body.match(/<p class="su-aside su-next">([\s\S]*?)<\/p>/);
+  assert.ok(next, 'the website line is missing');
+  assert.ok(next[1].includes('href="/where-to-start/website-build"'), 'the Website Build link is missing');
+  assert.ok(next[1].includes('href="/websites-and-ai"'), 'the Websites and AI link is missing');
+  assert.ok(!/£/.test(next[1]), 'the website line carries a price');
+  assert.ok(body.indexOf('su-includes') < body.indexOf('su-next'), 'the website line sits before the deliverables');
+  assert.ok(/after the set-up review, not instead of it/.test(next[1]), 'the line no longer says the website comes after the review');
+});
+

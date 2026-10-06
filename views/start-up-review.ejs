@@ -108,6 +108,14 @@
         .su-final p { max-width: 62ch; }
         .su-final-actions { display: flex; flex-wrap: wrap; gap: 0.9rem; margin-top: 1.6rem; }
         .su-aside { font-size: 0.92rem; color: var(--text-muted); margin-top: 1.6rem; }
+        .su-aside a {
+            color: var(--accent);
+            text-decoration: none;
+            border-bottom: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+            padding-bottom: 2px;
+        }
+        .su-aside a:hover, .su-aside a:focus-visible { border-bottom-color: var(--accent); }
+        .su-next { max-width: 62ch; }
 
         @media (max-width: 760px) {
             main { padding-top: calc(var(--site-chrome) + 1.75rem); }
@@ -203,6 +211,14 @@
                     <li><strong>Marketing advice.</strong> Where your first customers are likely to come from, and what is worth spending on to reach them.</li>
                 </ul>
             </div>
+            <%# THE WEBSITE AS A LATER STEP (Tom, 06/10/2026: "add it and link
+                the website page as well"). Placed after the deliverables, never
+                beside them, because the page argues for settling the idea before
+                spending money and a website offer next to that would read as the
+                thing being warned against. No price here: the £999 lives on its
+                own page, so this page keeps one price. Both links go OUT to
+                existing pages; nothing on the site links IN to this page. %>
+            <p class="su-aside su-next">If the review ends with a business worth building, we build websites too. That comes after the set-up review, not instead of it. See the <a href="/where-to-start/website-build">Website Build</a>, or how we approach <a href="/websites-and-ai">websites and AI</a>.</p>
         </div>
 
         <%# HONESTY. The Brand Operating System: "Commercial truth matters
