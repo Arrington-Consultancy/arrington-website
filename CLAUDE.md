@@ -7347,6 +7347,18 @@ for 600 or bolder. `test/sansSerifOnly.test.js` fails on any serif family, or
 on DM Sans or Source Sans, in any view or the admin stylesheet. Not covered:
 the four case study PDFs and notification emails, which carry their own fonts.
 
+## No dashes on the site (06/10/2026)
+
+Tom: "there shouldnt be really any dashs on the site unless theres no other
+way". Live inspection now counts em and en dashes in each page's visible
+text (`scripts/productionQa.js`). The last two on public pages are gone: the
+"&mdash;" before every testimonial name (`views/index.ejs`, previously an
+exemption awaiting Tom) and one sentence in the 13th Useful Thinking article
+("Of course I treated them differently. The alternative was...", punctuation
+only, guarded exact-substring migration in `db/seed.js`). The exemption list
+in `test/noEmDashes.test.js` is now empty. Hyphenated words elsewhere on the
+site (outside the start-up page) are not swept; that is CMS copy.
+
 ## Writing and reviewing website copy
 
 - Where a brief asks for copy but does not contain the underlying commercial

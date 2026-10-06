@@ -39,25 +39,6 @@ const EM_DASH = /—|&mdash;|&#8212;|&#x2014;/;
 // above it in the file, which would either stop exempting the real line or
 // start exempting an innocent one.
 const AWAITING_TOM = [
-  {
-    file: 'db/seed.js',
-    contains: 'the alternative was pretending a job title made their judgement identical',
-    reason:
-      'A sentence inside a published Useful Thinking article, written by Tom, already ' +
-      'live on the public site. Editing it would be a change to public Arrington copy ' +
-      'made from a demonstration branch, which is exactly what this work is ring-fenced ' +
-      'from. The dash genuinely should go, so it is raised with Tom rather than removed ' +
-      'quietly: it is his sentence and his site.'
-  },
-  {
-    file: 'views/index.ejs',
-    contains: 'intervention-quote-attribution',
-    reason:
-      'Testimonial attribution dash before a name. A comma reads wrong there, so the fix ' +
-      'is either dropping the dash entirely or keeping it as a typographic convention ' +
-      'rather than prose. That is a visible change to live public copy and a style call, ' +
-      'so it is Tom\'s to make, not mine.'
-  }
 ];
 
 function isExempt(relPath, line) {

@@ -3808,7 +3808,7 @@
         <p class="intervention-quote-text"><%- content[_k + '.subtext'] %></p>
         <div class="intervention-quote-attribution-row">
             <% if (_quoteInitial) { %><div class="intervention-quote-avatar" aria-hidden="true"><%= _quoteInitial %></div><% } %>
-            <p class="intervention-quote-attribution">&mdash; <%- content[_k + '.quote_attribution'] %></p>
+            <p class="intervention-quote-attribution"><%- content[_k + '.quote_attribution'] %></p>
         </div>
         <% if (currentPage.slug === 'main' && googleReviews) { %>
         <a href="/evidence#googlereviews" class="intervention-google-rating">

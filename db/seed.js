@@ -2953,7 +2953,7 @@ async function seed() {
           'We ran a business 24 hours a day, 365 days a year. I did that for two decades. In that environment, exceptional situations are not particularly exceptional. Eventually something happens that isn’t quite covered by the rulebook and somebody has to make a judgement call.',
           'And a judgement call is just that. Some people are exceptionally good at them. Others aren’t.',
           'That creates an uncomfortable problem when two people have exactly the same job. You might trust one operator to make a decision outside the normal remit of their role because you know how they think under pressure. Another person might be loyal, hardworking and useful to the business in plenty of other ways, but you wouldn’t want them making the same call.',
-          'Of course I treated them differently — the alternative was pretending a job title made their judgement identical.',
+          'Of course I treated them differently. The alternative was pretending a job title made their judgement identical.',
           'Businesses often try to solve that problem with more rules. Put another procedure in place, add another approval, make everybody ask a manager before doing something. Eventually you can create an enormous structure simply because admitting that you trust one person’s judgement more than another person’s feels wrong. But where is the line between management and hierarchy when two people are technically doing the same role?',
           'And in business and in life, you pull at one string to solve a problem and create another. Put too many controls around people and decisions start travelling back up the hierarchy until eventually everyone comes to the owner.',
           'I don’t think the answer is simply telling people to use their initiative either. That is easy advice to give when it isn’t your insurance renewal, customer or reputation sitting on the other side of somebody else’s decision.',
@@ -2992,6 +2992,21 @@ async function seed() {
 
       console.log(`Useful Thinking: 13th article published (${a14}, ${THIRTEENTH_PUBLISHED_ARTICLE.slug}).`);
     }
+  }
+
+  // Migration: no dashes on the site (Tom, 06/10/2026: "there shouldnt be
+  // really any dashs on the site unless theres no other way"). The one em
+  // dash left in published copy was in the 13th Useful Thinking article.
+  // Punctuation only, Tom's words unchanged. Exact-substring replace, so it
+  // is a no-op once applied and leaves a CMS edit of the sentence alone.
+  {
+    const oldSentence = 'Of course I treated them differently \u2014 the alternative was pretending a job title made their judgement identical.';
+    const newSentence = 'Of course I treated them differently. The alternative was pretending a job title made their judgement identical.';
+    const { rowCount } = await db.query(
+      "UPDATE content SET content = replace(content, $1, $2) WHERE section_key LIKE '%.body' AND position($1 in content) > 0",
+      [oldSentence, newSentence]
+    );
+    if (rowCount > 0) console.log(`Useful Thinking: removed the em dash from the 13th article (${rowCount} row).`);
   }
 
   // Migration: fourteenth Useful Thinking article, "The Most Expensive
