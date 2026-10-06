@@ -17,7 +17,7 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Poppins:wght@500;600&display=swap" rel="stylesheet">
     <%- include('partials/where-to-start-schema', {
         nonce,
         path: '/where-to-start/full-review-website-build',
@@ -35,13 +35,13 @@
         @media (prefers-reduced-motion: reduce) {
             * { transition: none !important; animation: none !important; }
         }
-        body { margin: 0; font-family: 'Poppins', sans-serif; background: var(--black); color: var(--text); line-height: 1.6; }
+        body { margin: 0; font-family: 'DM Sans', sans-serif; background: var(--black); color: var(--text); line-height: 1.6; }
         <%- include('partials/site-chrome-styles') %>
 
-        h1, h2 { font-family: 'Poppins', sans-serif; font-weight: 500; color: var(--text-bright); line-height: 1.2; margin: 0; }
+        h1, h2 { font-family: 'Poppins', 'DM Sans', sans-serif; font-weight: 400; color: var(--text-bright); line-height: 1.2; margin: 0; }
         p { color: var(--text); margin: 0; }
         .wts-label { display: block; margin-bottom: 1rem; color: var(--accent); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
-        .btn { display: inline-block; max-width: 100%; padding: 0.6rem 1.5rem; border: 1px solid transparent; border-radius: 3px; font-family: 'Poppins', sans-serif; font-size: 0.92rem; font-weight: 600; text-decoration: none; cursor: pointer; }
+        .btn { display: inline-block; max-width: 100%; padding: 0.6rem 1.5rem; border: 1px solid transparent; border-radius: 3px; font-family: 'DM Sans', sans-serif; font-size: 0.92rem; font-weight: 600; text-decoration: none; cursor: pointer; }
         .btn-primary { background: var(--accent); color: var(--black); border-color: var(--accent); }
         .btn-primary:hover, .btn-primary:focus-visible { background: var(--accent-hover); border-color: var(--accent-hover); }
         .btn-primary:disabled { opacity: 0.6; cursor: default; }
@@ -53,7 +53,7 @@
         .wts-back:hover { color: var(--accent); }
         .wts-hero-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 1rem 1.5rem; margin-bottom: 1.2rem; }
         .wts-hero-head h1 { font-size: clamp(1.9rem, 4.5vw, 2.45rem); }
-        .wts-price { margin-left: auto; color: var(--accent); font-family: 'Poppins', sans-serif; font-weight: 500; font-size: clamp(2.4rem, 6vw, 3rem); line-height: 1; }
+        .wts-price { margin-left: auto; color: var(--accent); font-family: 'Poppins', 'DM Sans', sans-serif; font-size: clamp(2.4rem, 6vw, 3rem); line-height: 1; }
         .wts-lede { max-width: 570px; margin-bottom: 1.5rem; color: var(--text-bright); font-size: 1.12rem; }
         /* Main-site continuity fix (22/08/2026) — same bordered-panel device
            as Owner Check's .check-card, replacing the plain top-rule
@@ -61,14 +61,14 @@
            fuller rationale. */
         .wts-card { border: 1px solid var(--border); border-radius: 6px; padding: 2rem 2.25rem; margin-top: 2rem; }
         .wts-card-item + .wts-card-item { margin-top: 1.75rem; padding-top: 1.75rem; border-top: 1px solid var(--border); }
-        .wts-card h2 { margin-bottom: 1.2rem; color: var(--accent); font-family: 'Poppins', sans-serif; font-size: 1.02rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+        .wts-card h2 { margin-bottom: 1.2rem; color: var(--accent); font-family: 'DM Sans', sans-serif; font-size: 1.02rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
         .wts-card p { font-size: 1.02rem; margin-bottom: 0; }
         .wts-card.surface-paper { background: var(--surface-paper); }
         .wts-includes { margin: 0; padding: 0; list-style: none; }
         .wts-includes li { position: relative; margin-bottom: 0.7rem; padding-left: 1.4rem; font-size: 1.02rem; }
         .wts-includes li::before { content: ''; position: absolute; left: 0; top: 0.65em; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
         .wts-evidence-section { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border); }
-        .wts-evidence-section h2 { margin-bottom: 1.2rem; color: var(--accent); font-family: 'Poppins', sans-serif; font-size: 1.02rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+        .wts-evidence-section h2 { margin-bottom: 1.2rem; color: var(--accent); font-family: 'DM Sans', sans-serif; font-size: 1.02rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 
         /* EVIDENCE — same real-document treatment as the £2,500 page. This
            is the biggest purchase on the page and the only one sold with no
@@ -78,7 +78,7 @@
         .wts-evidence-card { display: flex; flex-direction: column; align-items: center; text-align: center; text-decoration: none; padding: 1.5rem 1.25rem; border: 1px solid var(--border); border-radius: 3px; }
         .wts-evidence-card:hover, .wts-evidence-card:focus-visible { border-color: var(--accent); }
         .wts-evidence-thumb { width: 100%; max-width: 190px; height: auto; border-radius: 2px; border: 1px solid var(--border); box-shadow: 0 10px 26px rgba(0,0,0,0.45); margin-bottom: 1.1rem; }
-        .wts-evidence-title { font-family: 'Poppins', sans-serif; font-weight: 500; font-size: 1.1rem; color: var(--text-bright); margin-bottom: 0.4rem; }
+        .wts-evidence-title { font-family: 'Poppins', 'DM Sans', sans-serif; font-size: 1.1rem; color: var(--text-bright); margin-bottom: 0.4rem; }
         .wts-evidence-card p { font-size: 0.9rem; color: var(--text-muted); margin: 0; max-width: 22rem; }
         .wts-direct-proof { margin-top: 1.2rem; margin-bottom: 0; color: var(--text-muted); }
         .wts-direct-proof a { color: var(--accent); font-weight: 700; }
@@ -92,7 +92,7 @@
         .wts-form-section h2 { margin-bottom: 0.5rem; font-size: 1.42rem; }
         .wts-form-note { margin-bottom: 1.6rem; color: var(--text-muted); font-size: 0.92rem; }
         .wts-form label { display: block; margin-bottom: 0.4rem; color: var(--text-muted); font-size: 0.88rem; }
-        .wts-form input[type="email"] { width: 100%; margin-bottom: 1.4rem; padding: 0.9rem 1rem; border: 1px solid var(--border); border-radius: 3px; background: transparent; color: var(--text-bright); font-family: 'Poppins', sans-serif; font-size: 1rem; }
+        .wts-form input[type="email"] { width: 100%; margin-bottom: 1.4rem; padding: 0.9rem 1rem; border: 1px solid var(--border); border-radius: 3px; background: transparent; color: var(--text-bright); font-family: 'DM Sans', sans-serif; font-size: 1rem; }
         .wts-form input[type="email"]:focus { outline: none; border-color: var(--accent); }
         .wts-website-field { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
         .wts-form-status { margin-top: 1rem; font-size: 0.92rem; }

@@ -375,7 +375,7 @@
 }
 
 .cms-template-label {
-    font-family: 'Poppins', sans-serif; font-weight: 500;
+    font-family: 'Poppins', 'DM Sans', sans-serif;
     font-size: 1rem;
     color: #f0ece6;
     margin-top: 0.25rem;
@@ -484,7 +484,7 @@
 }
 
 .cms-modal-title {
-    font-family: 'Poppins', sans-serif; font-weight: 500;
+    font-family: 'Poppins', 'DM Sans', sans-serif;
     font-size: 1.2rem;
     color: #f0ece6;
 }
@@ -530,7 +530,7 @@
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 4px;
     color: #f0ece6;
-    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 0.9rem;
     line-height: 1.6;
     resize: vertical;
@@ -558,7 +558,7 @@
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 4px;
     color: #f0ece6;
-    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 0.9rem;
     line-height: 1.6;
     outline: none;
@@ -734,7 +734,7 @@
     border: none;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     color: var(--text-bright);
-    font-family: 'Poppins', sans-serif;
+    font-family: 'DM Sans', sans-serif;
     font-size: 0.72rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -800,7 +800,7 @@
     border: none;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     color: var(--accent);
-    font-family: 'Poppins', sans-serif;
+    font-family: 'DM Sans', sans-serif;
     font-size: 0.78rem;
     font-weight: 600;
     padding: 0.75rem 1.25rem;

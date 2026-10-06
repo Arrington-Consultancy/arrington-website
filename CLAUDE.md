@@ -225,7 +225,7 @@ Single-page website for Arrington Business Consultancy (Tom Arrington), with a C
 - **Auth:** bcrypt (cost 12) + express-session + connect-pg-simple
 - **Security:** helmet (strict CSP with per-request nonces), HSTS, app-level HTTPS redirect, express-rate-limit (both login and authed writes), csrf-csrf (double-submit), cookie-parser, sanitize-html
 - **Logging:** morgan (combined in prod, dev format locally, skips `/img/*`)
-- **Fonts:** Google Fonts (DM Sans, DM Serif Display)
+- **Fonts:** Google Fonts: Poppins for headings, DM Sans for body text (see Fonts below)
 - **No build step**
 
 ## Architecture
@@ -7340,20 +7340,27 @@ depends on it never being added to `navPages`.
   no paper surface. Separate it with a readable measure and spacing and, at
   most, a restrained gold detail.
 
-## Fonts: Poppins only (06/10/2026)
+## Fonts: Poppins headings, DM Sans body (06/10/2026)
 
 The Brand OS FONT RULE says sans serif only, Poppins first, and names
-website assets. Every public page had set its headings in DM Serif Display
-and its body in DM Sans; Scott used Playfair Display and Source Sans 3; the
-Workspace used the system stack. Tom: "Change the lot I ditched that font
-for a reason." Everything is now Poppins (400, 500, 600, 700 and 400 italic
-from Google Fonts): public site, `public/css/admin.css`, Scott
-(`views/scott/partials/styles.ejs`) and the Workspace
-(`views/workspace/partials/styles.ejs`, Poppins first in its stack). Heading
-rules that used the serif are Poppins Medium (500) unless they already asked
-for 600 or bolder. `test/sansSerifOnly.test.js` fails on any serif family, or
-on DM Sans or Source Sans, in any view or the admin stylesheet. Not covered:
-the four case study PDFs and notification emails, which carry their own fonts.
+website assets. Until 06/10/2026 every public page set its headings in DM
+Serif Display; Scott used Playfair Display and Source Sans 3. Settled the
+same day in three steps, all Tom's: serif headings to Poppins ("we
+shouldn't be using that font should we?"); then Poppins everywhere ("change
+the lot"); then, after seeing it live on his phone ("not completely sold on
+the new look"), **Poppins for headings and DM Sans for body text**, on the
+recommendation that Poppins is wide and round at paragraph length while it
+works well large. That is the current state, across the public site,
+`public/css/admin.css`, Scott (`views/scott/partials/styles.ejs`, headings
+Poppins, body DM Sans) and the Workspace (`views/workspace/partials/styles.ejs`,
+DM Sans first in its stack). Poppins is the only face on the Brand OS list
+that can be served on the web: Aptos and Calibri are licensed Microsoft
+fonts. DM Sans is sans serif but not on the named list, which Tom accepted.
+`test/sansSerifOnly.test.js` fails on any serif, on any face other than
+Poppins and DM Sans, and if a page uses a face it does not load. Poppins
+runs wider than the old serif, so the home hero's credential line now wraps
+on a phone (`.hero-proof-strip span`). Not covered: the four case study
+PDFs and notification emails, which carry their own fonts.
 
 ## No dashes on the site (06/10/2026)
 
