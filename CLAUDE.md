@@ -7332,6 +7332,17 @@ depends on it never being added to `navPages`.
   no paper surface. Separate it with a readable measure and spacing and, at
   most, a restrained gold detail.
 
+## Fonts: sans serif only (06/10/2026)
+
+The Brand OS FONT RULE says sans serif only, Poppins first, and names
+website assets. Every public page had set its headings in DM Serif Display.
+On Tom's confirmation ("we shouldn't be using that font should we?") the
+headings are now `'Poppins', 'DM Sans', sans-serif` (weights 500 and 600
+loaded from Google Fonts) across all public views and `public/css/admin.css`;
+body text stays DM Sans. `test/sansSerifOnly.test.js` fails on any serif
+family in a public view. The Scott demo keeps its own Playfair Display: it is
+a fictional company with its own look, left as a separate decision for Tom.
+
 ## Writing and reviewing website copy
 
 - Where a brief asks for copy but does not contain the underlying commercial

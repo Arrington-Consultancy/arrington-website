@@ -17,7 +17,7 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Poppins:wght@500;600&display=swap" rel="stylesheet">
     <%- include('partials/where-to-start-schema', {
         nonce,
         path: '/where-to-start/full-review-website-build',
@@ -38,7 +38,7 @@
         body { margin: 0; font-family: 'DM Sans', sans-serif; background: var(--black); color: var(--text); line-height: 1.6; }
         <%- include('partials/site-chrome-styles') %>
 
-        h1, h2 { font-family: 'DM Serif Display', serif; font-weight: 400; color: var(--text-bright); line-height: 1.2; margin: 0; }
+        h1, h2 { font-family: 'Poppins', 'DM Sans', sans-serif; font-weight: 400; color: var(--text-bright); line-height: 1.2; margin: 0; }
         p { color: var(--text); margin: 0; }
         .wts-label { display: block; margin-bottom: 1rem; color: var(--accent); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
         .btn { display: inline-block; max-width: 100%; padding: 0.6rem 1.5rem; border: 1px solid transparent; border-radius: 3px; font-family: 'DM Sans', sans-serif; font-size: 0.92rem; font-weight: 600; text-decoration: none; cursor: pointer; }
@@ -53,7 +53,7 @@
         .wts-back:hover { color: var(--accent); }
         .wts-hero-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 1rem 1.5rem; margin-bottom: 1.2rem; }
         .wts-hero-head h1 { font-size: clamp(1.9rem, 4.5vw, 2.45rem); }
-        .wts-price { margin-left: auto; color: var(--accent); font-family: 'DM Serif Display', serif; font-size: clamp(2.4rem, 6vw, 3rem); line-height: 1; }
+        .wts-price { margin-left: auto; color: var(--accent); font-family: 'Poppins', 'DM Sans', sans-serif; font-size: clamp(2.4rem, 6vw, 3rem); line-height: 1; }
         .wts-lede { max-width: 570px; margin-bottom: 1.5rem; color: var(--text-bright); font-size: 1.12rem; }
         /* Main-site continuity fix (22/08/2026) — same bordered-panel device
            as Owner Check's .check-card, replacing the plain top-rule
@@ -78,7 +78,7 @@
         .wts-evidence-card { display: flex; flex-direction: column; align-items: center; text-align: center; text-decoration: none; padding: 1.5rem 1.25rem; border: 1px solid var(--border); border-radius: 3px; }
         .wts-evidence-card:hover, .wts-evidence-card:focus-visible { border-color: var(--accent); }
         .wts-evidence-thumb { width: 100%; max-width: 190px; height: auto; border-radius: 2px; border: 1px solid var(--border); box-shadow: 0 10px 26px rgba(0,0,0,0.45); margin-bottom: 1.1rem; }
-        .wts-evidence-title { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--text-bright); margin-bottom: 0.4rem; }
+        .wts-evidence-title { font-family: 'Poppins', 'DM Sans', sans-serif; font-size: 1.1rem; color: var(--text-bright); margin-bottom: 0.4rem; }
         .wts-evidence-card p { font-size: 0.9rem; color: var(--text-muted); margin: 0; max-width: 22rem; }
         .wts-direct-proof { margin-top: 1.2rem; margin-bottom: 0; color: var(--text-muted); }
         .wts-direct-proof a { color: var(--accent); font-weight: 700; }

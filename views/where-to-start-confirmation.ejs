@@ -40,7 +40,7 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Poppins:wght@500;600&display=swap" rel="stylesheet">
     <style nonce="<%= nonce %>">
         :root {
             <% for (const [prop, val] of Object.entries(theme.vars)) { %>
@@ -51,7 +51,7 @@
         body { margin: 0; font-family: 'DM Sans', sans-serif; background: var(--black); color: var(--text); line-height: 1.6; }
         <%- include('partials/site-chrome-styles') %>
 
-        h1, h2 { font-family: 'DM Serif Display', serif; font-weight: 400; color: var(--text-bright); line-height: 1.22; margin: 0 0 1rem; }
+        h1, h2 { font-family: 'Poppins', 'DM Sans', sans-serif; font-weight: 400; color: var(--text-bright); line-height: 1.22; margin: 0 0 1rem; }
         p { color: var(--text); margin: 0 0 1.2rem; }
         .btn { display: inline-block; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 600; padding: 0.9rem 1.9rem; border-radius: 3px; text-decoration: none; cursor: pointer; border: 1px solid transparent; }
         .btn-outline { background: transparent; color: var(--text-bright); border-color: var(--border); }
