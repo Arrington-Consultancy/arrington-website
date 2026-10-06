@@ -6680,7 +6680,11 @@ day, see "Google Ads conversion tracking" above), so the only conversion
 Google can see from the site is the form. What remains Tom's in the Ads UI is
 Goals, Conversions: set Contact's value to £100 and confirm it is Primary;
 "phone + email clicks" can be left (it will show no recent conversions) or
-removed. Bidding is Manual CPC; the agreed path is four weeks
+removed. **Done 06/10/2026:** Tom applied it through Google Ads AI Advisor,
+Contact default value 1.0 to 100.0 GBP, Primary unchanged (true), "Changes
+applied successfully". The Advisor also reported Contact as Unverified with
+its last conversion on 4 September; the TEST TRACKING conversion of
+06/10/2026 had not reached its data yet. Bidding is Manual CPC; the agreed path is four weeks
 of Manual CPC with the city routing in place, then Target CPA on the form
 starting near the observed cost per form fill (about £227 over 90 days) and
 stepping down towards £100, because a target set straight to £100 against a
