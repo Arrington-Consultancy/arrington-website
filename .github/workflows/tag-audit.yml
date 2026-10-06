@@ -12,6 +12,10 @@ on:
         description: "1 to also send ONE TEST TRACKING enquiry (Ads and Meta requests blocked)"
         required: false
         default: "0"
+      ads:
+        description: "1 to let the test enquiry's Google Ads requests through (records ONE real conversion)"
+        required: false
+        default: "0"
       label:
         description: Short label for this run
         required: false
@@ -38,6 +42,7 @@ jobs:
       - name: Audit live tags
         env:
           SUBMIT: ${{ github.event.inputs.submit }}
+          ADS: ${{ github.event.inputs.ads }}
           OUT_DIR: ${{ github.workspace }}/qa-out
         run: node scripts/tagAudit.js
 

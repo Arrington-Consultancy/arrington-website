@@ -27,6 +27,12 @@ const { chromium, devices } = require('playwright');
 const BASE = process.env.QA_BASE_URL || 'https://www.arringtonconsultancy.com';
 const OUT = process.env.OUT_DIR || path.join(process.cwd(), 'qa-out');
 const SUBMIT = process.env.SUBMIT === '1';
+// ADS=1 lets the test enquiry's Google Ads requests through (Meta stays
+// blocked), so the Contact conversion on /thank-you can be seen leaving the
+// browser. It then records ONE real conversion in the Ads account: use it
+// only when asked to prove that conversion.
+const ADS = process.env.ADS === '1';
+const CONTACT_LABEL = 'vCKKCKjSna0cEN6RgsVD';
 const START_UP = '/start-up-idea-review?utm_source=google&utm_medium=cpc&utm_campaign=Start-Up-Search';
 
 fs.mkdirSync(OUT, { recursive: true });
@@ -54,15 +60,22 @@ async function step(browser, name, fn, opts = {}) {
   const hits = [];
   const blocked = [];
   const scripts = [];
-  if (opts.blockAdsAndMeta) {
-    await ctx.route(/googleadservices\.com|googleads\.g\.doubleclick\.net|google\.com\/(pagead|ccm)|facebook\.(com|net)/, (route) => {
+  if (opts.blockAdsAndMeta || opts.blockMeta) {
+    const pattern = opts.blockAdsAndMeta
+      ? /googleadservices\.com|googleads\.g\.doubleclick\.net|google\.com\/(pagead|ccm)|facebook\.(com|net)/
+      : /facebook\.(com|net)/;
+    await ctx.route(pattern, (route) => {
       blocked.push(route.request().url().slice(0, 140));
       route.abort();
     });
   }
   const page = await ctx.newPage();
+  const adsConversions = [];
   page.on('request', (req) => {
     const url = req.url();
+    if (/googleadservices\.com\/pagead|google\.com\/pagead|googleads\.g\.doubleclick\.net\/pagead/.test(url) && url.includes(CONTACT_LABEL)) {
+      adsConversions.push({ host: new URL(url).host, path: new URL(url).pathname, url: url.slice(0, 200) });
+    }
     if (/google-analytics\.com\/g\/collect|analytics\.google\.com\/g\/collect/.test(url)) {
       for (const h of parseHits(url, req.postData())) hits.push(h);
     }
@@ -86,7 +99,7 @@ async function step(browser, name, fn, opts = {}) {
   await ctx.close();
   const summary = {};
   for (const h of hits) summary[h.en] = (summary[h.en] || 0) + 1;
-  return { name, eventCounts: summary, generate_lead: hits.filter((h) => h.en === 'generate_lead'), hits, scripts, blocked: blocked.length, ...(extra || {}) };
+  return { name, eventCounts: summary, generate_lead: hits.filter((h) => h.en === 'generate_lead'), adsConversions, hits, scripts, blocked: blocked.length, ...(extra || {}) };
 }
 
 async function scrollThrough(page) {
@@ -124,7 +137,7 @@ async function scrollThrough(page) {
   }));
 
   if (SUBMIT) {
-    results.push(await step(browser, 'ONE test enquiry from the start-up page (TEST TRACKING), Ads and Meta requests blocked', async (page) => {
+    results.push(await step(browser, 'ONE test enquiry from the start-up page (TEST TRACKING), ' + (ADS ? 'Google Ads allowed, Meta blocked' : 'Ads and Meta requests blocked'), async (page) => {
       await page.goto(BASE + START_UP, { waitUntil: 'networkidle' });
       await page.waitForTimeout(4000);
       await page.fill('#leadForm [name="name"]', 'TEST TRACKING');
@@ -140,7 +153,7 @@ async function scrollThrough(page) {
         finalUrl = 'did not reach /thank-you: ' + (await page.textContent('#leadFormStatus').catch(() => '?'));
       }
       return { finalUrl };
-    }, { blockAdsAndMeta: true }));
+    }, ADS ? { blockMeta: true } : { blockAdsAndMeta: true }));
   }
 
   await browser.close();
@@ -153,6 +166,8 @@ async function scrollThrough(page) {
     for (const g of r.generate_lead) md.push('  - page_location ' + g.dl + ' params ' + JSON.stringify(g.params));
     const camp = r.hits.find((h) => h.en === 'page_view');
     if (camp) md.push('- page_view page_location: ' + camp.dl);
+    md.push('- Google Ads Contact conversion requests (label ' + CONTACT_LABEL + '): ' + r.adsConversions.length);
+    for (const a of r.adsConversions) md.push('  - ' + a.host + a.path);
     if (r.finalUrl) md.push('- after submit: ' + r.finalUrl);
     if (r.blocked) md.push('- Ads/Meta requests blocked: ' + r.blocked);
     if (r.note) md.push('- note: ' + r.note);
