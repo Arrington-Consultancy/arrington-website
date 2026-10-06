@@ -6687,7 +6687,8 @@ stepping down towards £100, because a target set straight to £100 against a
 £227 reality makes Smart Bidding stop showing the ads. Target CPA still bills
 per click; it does not bill per form fill. Ready to Sell (£7.50 a day, zero
 conversions, valuation and listing intent) was proposed for pausing and is
-NOT paused: Tom has not decided. `GOOGLE_ADS_PURCHASE_CONVERSION_LABEL`
+NOT paused. **Tom decided 06/10/2026: leave it running until the 30 October
+review**, which already covers it (Routine `trig_01XqfXNm6757kNNh4i8HNkJ9`). `GOOGLE_ADS_PURCHASE_CONVERSION_LABEL`
 remains unset.
 
 **Budget raised to £30 a day on Tom's instruction (02/10/2026, "set it
