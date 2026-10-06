@@ -7217,6 +7217,14 @@ reasons as the sale readiness page below.
   by Tom's line, one paragraph for who you'd be talking to. Facts unchanged:
   only the approved proof, £500 and £999. Cause stated to Tom: not the model;
   the first draft reused approved lines without reading his voice file.
+- **Photo and breaker (06/10/2026).** Tom: the page was "too texty". The
+  hero now carries the real photo of Tom at his desk (the Websites and AI
+  photo, served statically from `public/img/startup/tom-at-desk.{jpg,webp}`
+  so a CMS change to that page's hero cannot move it): text over the dark
+  left side on desktop, photo above the text on a phone. The £500 section is
+  a full width band on the warm paper surface (scope, which is what that
+  surface is reserved for), led by Tom's line set large. No AI-generated or
+  stock people on this page; a different photo of Tom is a file swap.
 - **£500 is a new price point for a new audience** and must never be framed
   as a reduction (the test scans for it). Recording it in 02 COMMERCIAL
   POSITION and 01 CURRENT OPERATING POSITION is their owners' job, not this

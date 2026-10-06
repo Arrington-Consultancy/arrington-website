@@ -40,7 +40,31 @@
         .btn-primary { background: var(--accent); color: var(--black); border-color: var(--accent); }
         .btn-primary:hover, .btn-primary:focus-visible { background: var(--accent-hover); border-color: var(--accent-hover); }
 
-        main { max-width: 700px; margin: 0 auto; padding: calc(var(--site-chrome) + 2.5rem) 1.5rem 5rem; }
+        main { padding: 0 0 5rem; }
+        .su-wrap { max-width: 700px; margin: 0 auto; padding: 0 1.5rem; }
+
+        /* HERO WITH TOM'S PHOTO (06/10/2026). Tom: the page was "too texty".
+           The photo is the real one of Tom at his desk already used on
+           Websites and AI (no AI-generated or stock people on this page). It
+           is dark on the left with Tom on the right, so on desktop the text
+           sits over the dark side behind a gradient; on a phone the photo
+           sits above the text, cropped to Tom, fading into the page. */
+        .su-hero { position: relative; overflow: hidden; background: var(--black); display: flex; align-items: center; min-height: 640px; padding: calc(var(--site-chrome) + 3.5rem) 1.5rem 4rem; }
+        .su-hero-photo { position: absolute; top: var(--site-chrome); right: 0; bottom: 0; left: 0; margin: 0; }
+        .su-hero-photo img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 72% 12%; }
+        .su-hero-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, var(--black) 0%, var(--black) 28%, color-mix(in srgb, var(--black) 60%, transparent) 52%, color-mix(in srgb, var(--black) 10%, transparent) 78%, transparent 100%), linear-gradient(0deg, var(--black) 0%, transparent 22%); }
+        .su-hero-inner { position: relative; z-index: 1; width: 100%; max-width: 1100px; margin: 0 auto; }
+        .su-hero-text { max-width: 590px; }
+
+        /* THE £500 BAND: the one breaker mid-page, on the site's warm paper
+           surface, which is reserved for genuinely tangible scope (this is
+           exactly what the £500 buys). Tom's own line leads it, set large. */
+        .su-band { margin-top: 3.5rem; padding: 3.25rem 0 3.5rem; }
+        .su-band .su-section { margin-top: 0; }
+        .su-pull { font-size: clamp(1.5rem, 3.2vw, 2rem); font-weight: 600; line-height: 1.25; color: var(--text-bright); margin: 0 0 1.75rem; max-width: 22ch; }
+        .su-band .su-price-fig { color: var(--surface-paper-text); }
+        .su-band .su-dots li::before { background: var(--surface-paper-text); }
+        .su-band .su-card { background: color-mix(in srgb, var(--surface-paper) 70%, white 30%); }
 
         /* The same page grammar as the sale readiness landing page
            (views/sale-readiness.ejs), which Tom reviewed live on 25/09/2026:
@@ -52,7 +76,7 @@
         .su-hero-actions { margin-bottom: 0; }
 
         .su-cred {
-            margin-top: 2.5rem;
+            margin-top: 0;
             padding: 1.5rem 0;
             border-top: 1px solid var(--border);
             border-bottom: 1px solid var(--border);
@@ -107,7 +131,12 @@
         .su-price-fig-minor { font-size: 1.5rem; color: var(--text-bright); }
 
         @media (max-width: 760px) {
-            main { padding-top: calc(var(--site-chrome) + 1.75rem); }
+            .su-hero { display: block; min-height: 0; padding: var(--site-chrome) 0 0; }
+            .su-hero-photo { position: relative; top: auto; height: 64vw; max-height: 380px; }
+            .su-hero-photo img { object-position: 66% 25%; }
+            .su-hero-photo::after { background: linear-gradient(0deg, var(--black) 0%, color-mix(in srgb, var(--black) 40%, transparent) 30%, transparent 60%); }
+            .su-hero-inner { padding: 0 1.5rem 0.5rem; margin-top: -1.5rem; }
+            .su-band { margin-top: 2.5rem; padding: 2.5rem 0 2.75rem; }
             .su-section { margin-top: 2.1rem; }
             .su-section > h2 { margin-bottom: 0.7rem; }
             .su-section > .su-intro { margin-bottom: 1.2rem; }
@@ -124,21 +153,32 @@
         nav highlights as active. Header and footer are the site's own. %>
     <%- include('partials/site-header', { currentPage: { slug: 'start-up-idea-review' }, navPages, canEdit: false, content, pageContact }) %>
 
-    <main>
-        <%# HERO. The headline is Tom's own (06/10/2026). Rewritten the same
-            day in Tom's voice (Professional Tom Voice Programme and Arrington
-            Voice rules in Drive): fewer, fuller paragraphs, a hook that names
-            the mistakes a new owner is about to make, no dashes, and nothing
-            under the headline that repeats it. Facts are only the approved
-            ones: built, grew and sold his own business in a seven figure exit,
-            more than 20 years in Devon and Cornwall businesses, £500 and £999. %>
-        <span class="su-label">Startup idea review</span>
-        <h1>Before you put your money into a startup, have the idea looked at with fresh eyes with 20 years' experience of building and scaling businesses.</h1>
-        <p class="su-lede">The expensive mistakes in a new business usually happen early. A name you have to change six months in, a company structure that doesn't suit how you'll actually pay yourself, a bank account set up the wrong way, or marketing money spent before you know who your customers are. We go through all of it with you before you commit, for a fixed £500, and the first conversation costs you nothing.</p>
-        <div class="su-hero-actions">
-            <a href="#conversation" class="btn btn-primary">Tell us about the idea</a>
+    <%# HERO. The headline is Tom's own (06/10/2026). Rewritten the same
+        day in Tom's voice (Professional Tom Voice Programme and Arrington
+        Voice rules in Drive): fewer, fuller paragraphs, a hook that names
+        the mistakes a new owner is about to make, no dashes, and nothing
+        under the headline that repeats it. Facts are only the approved
+        ones: built, grew and sold his own business in a seven figure exit,
+        more than 20 years in Devon and Cornwall businesses, £500 and £999. %>
+    <header class="su-hero">
+        <picture class="su-hero-photo">
+            <source srcset="/img/startup/tom-at-desk.webp" type="image/webp">
+            <img src="/img/startup/tom-at-desk.jpg" alt="Tom Arrington at his desk" width="1672" height="941" fetchpriority="high">
+        </picture>
+        <div class="su-hero-inner">
+            <div class="su-hero-text">
+                <span class="su-label">Startup idea review</span>
+                <h1>Before you put your money into a startup, have the idea looked at with fresh eyes with 20 years' experience of building and scaling businesses.</h1>
+                <p class="su-lede">The expensive mistakes in a new business usually happen early. A name you have to change six months in, a company structure that doesn't suit how you'll actually pay yourself, a bank account set up the wrong way, or marketing money spent before you know who your customers are. We go through all of it with you before you commit, for a fixed £500, and the first conversation costs you nothing.</p>
+                <div class="su-hero-actions">
+                    <a href="#conversation" class="btn btn-primary">Tell us about the idea</a>
+                </div>
+            </div>
         </div>
+    </header>
 
+    <main>
+        <div class="su-wrap">
         <div class="su-cred">
             <p>Oxford Saïd, Distinction. 5.0 on Google reviews.</p>
             <p>The owner run businesses we usually work with have been trading for years. This is for the step before that.</p>
@@ -157,7 +197,12 @@
             separate things. Arrington gives no regulated financial or
             accountancy advice, so items three and four say what to sort out
             with a bank and with an accountant. %>
+        </div>
+
+        <section class="su-band surface-paper">
+        <div class="su-wrap">
         <div class="su-section">
+            <p class="su-pull">We treat your money as if it's our own.</p>
             <h2>What the £500 setup review covers</h2>
             <div class="su-price-row">
                 <span class="su-price-fig">£500</span>
@@ -172,8 +217,12 @@
                     <li><strong>Marketing advice.</strong> Where your first customers are most likely to come from, and what's actually worth spending to reach them.</li>
                 </ul>
             </div>
-            <p class="su-get-lead"><strong>We treat your money as if it's our own.</strong> You get a straight view of the idea from someone who has built, grown and sold a business, clear answers on all five areas worked out for your idea, and a clear next step at the end of it.</p>
+            <p class="su-get-lead">You get a straight view of the idea from someone who has built, grown and sold a business, clear answers on all five areas worked out for your idea, and a clear next step at the end of it.</p>
         </div>
+        </div>
+        </section>
+
+        <div class="su-wrap">
 
         <%# THE WEBSITE BUILD, BELOW THE REVIEW (Tom, 06/10/2026). Tom's words:
             "HTML site a completely customisable non templated sites". £999 is
@@ -207,6 +256,7 @@
                 <a href="#conversation" class="btn btn-primary">Tell us about the idea</a>
             </div>
             <p class="su-aside">Rather talk? The phone number and WhatsApp are at the bottom of the page.</p>
+        </div>
         </div>
     </main>
 

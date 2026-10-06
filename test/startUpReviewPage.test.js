@@ -22,7 +22,7 @@ const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 const emitted = (p) => read(p)
   .replace(/<%#[\s\S]*?%>/g, '')
   .replace(/<%\s*\/\*[\s\S]*?\*\/\s*%>/g, '');
-const bodyOf = (p) => { const v = emitted(p); return v.slice(v.indexOf('<main>')); };
+const bodyOf = (p) => { const v = emitted(p); return v.slice(v.indexOf('<body>')); };
 
 const PATH = '/start-up-idea-review';
 const VIEW = 'views/start-up-review.ejs';
