@@ -16,6 +16,10 @@ on:
         description: "1 to let the test enquiry's Google Ads requests through (records ONE real conversion)"
         required: false
         default: "0"
+      extra_paths:
+        description: "Further pages to load, comma-separated"
+        required: false
+        default: "/what-we-do,/business-consultant-plymouth"
       label:
         description: Short label for this run
         required: false
@@ -43,6 +47,7 @@ jobs:
         env:
           SUBMIT: ${{ github.event.inputs.submit }}
           ADS: ${{ github.event.inputs.ads }}
+          EXTRA_PATHS: ${{ github.event.inputs.extra_paths }}
           OUT_DIR: ${{ github.workspace }}/qa-out
         run: node scripts/tagAudit.js
 

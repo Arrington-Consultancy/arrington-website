@@ -121,6 +121,15 @@ async function scrollThrough(page) {
     await scrollThrough(page);
   }));
 
+  // Any further pages to load (comma-separated paths), e.g. two ordinary
+  // site pages, so a page-load rule shows up beyond the two named above.
+  for (const extra of (process.env.EXTRA_PATHS || '').split(',').map((x) => x.trim()).filter(Boolean)) {
+    results.push(await step(browser, extra + ' load and scroll', async (page) => {
+      await page.goto(BASE + extra, { waitUntil: 'networkidle' });
+      await scrollThrough(page);
+    }));
+  }
+
   results.push(await step(browser, 'phone tap on the homepage', async (page) => {
     await page.goto(BASE + '/', { waitUntil: 'networkidle' });
     await page.waitForTimeout(3000);
