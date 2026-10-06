@@ -115,7 +115,10 @@
             padding-bottom: 2px;
         }
         .su-aside a:hover, .su-aside a:focus-visible { border-bottom-color: var(--accent); }
-        .su-next { max-width: 62ch; }
+        .su-next { max-width: 62ch; margin-top: 1.1rem; }
+        .su-website > p { max-width: 62ch; }
+        .su-website > h2 + p { margin-bottom: 1rem; }
+        .su-price-fig-minor { font-size: 1.5rem; color: var(--text-bright); }
 
         @media (max-width: 760px) {
             main { padding-top: calc(var(--site-chrome) + 1.75rem); }
@@ -211,14 +214,27 @@
                     <li><strong>Marketing advice.</strong> Where your first customers are likely to come from, and what is worth spending on to reach them.</li>
                 </ul>
             </div>
-            <%# THE WEBSITE AS A LATER STEP (Tom, 06/10/2026: "add it and link
-                the website page as well"). Placed after the deliverables, never
-                beside them, because the page argues for settling the idea before
-                spending money and a website offer next to that would read as the
-                thing being warned against. No price here: the £999 lives on its
-                own page, so this page keeps one price. Both links go OUT to
-                existing pages; nothing on the site links IN to this page. %>
-            <p class="su-aside su-next">If the review ends with a business worth building, we build websites too. That comes after the set-up review, not instead of it. See the <a href="/where-to-start/website-build">Website Build</a>, or how we approach <a href="/websites-and-ai">websites and AI</a>.</p>
+        </div>
+
+        <%# THE WEBSITE BUILD, BELOW THE REVIEW (Tom, 06/10/2026: "slip the
+            website build into that page, it needs to sit below the £500
+            review, we can build you new website for £999"). Its own section,
+            directly after the £500 review and visually smaller than it: the
+            figure is muted and there is no button, so the review stays the
+            page's main offer and the enquiry form its one call to action.
+            £999 is the approved public Website Build price
+            (lib/whereToStartOffers.js) and must never be framed as a
+            reduction. The description line is that offer's approved catalogue
+            wording. Both links go OUT to existing pages; nothing on the site
+            links IN to this page. %>
+        <div class="su-section su-website">
+            <h2>A new website</h2>
+            <p>When the business is ready for one, we can build you a new website.</p>
+            <div class="su-price-row">
+                <span class="su-price-fig su-price-fig-minor">£999</span>
+                <p>Fixed. A recorded planning conversation to agree what it needs to do, a complete first version, and one structured round of changes before launch.</p>
+            </div>
+            <p class="su-aside su-next">See the <a href="/where-to-start/website-build">Website Build</a>, or how we approach <a href="/websites-and-ai">websites and AI</a>.</p>
         </div>
 
         <%# HONESTY. The Brand Operating System: "Commercial truth matters

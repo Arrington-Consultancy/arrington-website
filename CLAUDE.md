@@ -7153,13 +7153,15 @@ reasons as the sale readiness page below.
   service, result or credential. The accountancy line says "when you need an
   accountant" rather than offering accountancy. The test pins the five
   exactly.
-- **The website is offered as a later step** (Tom, 06/10/2026: "add it and
-  link the website page as well"): one line directly after the deliverables,
-  "we build websites too. That comes after the set-up review, not instead of
-  it", linking OUT to `/where-to-start/website-build` and `/websites-and-ai`.
-  No price on this page (the £999 stays on its own page, so this page keeps
-  one price), and never beside the deliverables, because the page argues for
-  settling the idea before spending money. Pinned by the page test.
+- **The £999 Website Build sits in its own section directly below the £500
+  review** (Tom, 06/10/2026: "it needs to sit below the £500 review, we can
+  build you new website for £999"; this replaced the same morning's
+  no-price "later step" line). Heading "A new website", Tom's line, the
+  muted £999 figure with the offer's approved catalogue description, and
+  text links OUT to `/where-to-start/website-build` and `/websites-and-ai`.
+  No button, so the review stays the main offer and the enquiry form the
+  one call to action. The page carries exactly two prices, £500 and £999,
+  and the test fails on any other figure or any reduction framing.
 - **Proof claims are only the ones already live:** the homepage hero proof
   line, the sale readiness page's "built, grew and sold his own business in a
   seven-figure exit", and the Brand OS 20-years line.

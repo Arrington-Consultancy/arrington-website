@@ -99,11 +99,13 @@ test('the call to action is the existing enquiry form, with no checkout and no n
   assert.ok(!read('views/partials/site-footer.ejs').includes('start-up'), 'the shared footer has been special-cased for this page');
 });
 
-test('the price is stated once as a fixed figure and never framed as a reduction', () => {
+test('the prices are the two approved fixed figures and never framed as a reduction', () => {
   const body = bodyOf(VIEW);
   assert.ok(body.includes('£500'), 'the £500 price is missing');
   assert.ok(!/£[0-9,]+\s*(?:<\/?[a-z]+>\s*)*(?:separately|normally|usually|rrp)|save £|was £|discount|introductory|50%|half price|launch (?:price|offer)|limited time/i.test(body), 'the price is framed as a reduction or a time-limited offer');
-  assert.ok(!/£(?!500\b)[0-9][0-9,]*/.test(body), 'a second price appeared on the page');
+  // Tom, 06/10/2026: the £999 Website Build sits below the £500 review.
+  // Those two approved public prices, and no other figure.
+  assert.ok(!/£(?!(?:500|999)\b)[0-9][0-9,]*/.test(body), 'an unapproved price appeared on the page');
 });
 
 test('the five deliverables are exactly the ones Tom named, and the placeholder is gone', () => {
@@ -148,17 +150,24 @@ test('brand rules: UK English, we, no em dashes, no fire metaphors, no coaching 
   assert.ok(!/\b(?:MBA|PhD|award|award-winning|chartered|certified|accredited)\b/i.test(text), 'an unapproved credential is on the page');
 });
 
-test('the website offer is linked as a later step, after the deliverables, with no second price', () => {
-  // Tom, 06/10/2026: "add it and link the website page as well". The line
-  // sits after the deliverables list, links OUT to the Website Build offer
-  // page and the Websites and AI page, and carries no price of its own.
+test('the £999 website build sits in its own section below the £500 review', () => {
+  // Tom, 06/10/2026: "slip the website build into that page, it needs to sit
+  // below the £500 review, we can build you new website for £999". Its own
+  // section, directly after the review, with no button so the enquiry form
+  // stays the one call to action, and links OUT to both website pages.
   const body = bodyOf(VIEW);
-  const next = body.match(/<p class="su-aside su-next">([\s\S]*?)<\/p>/);
-  assert.ok(next, 'the website line is missing');
-  assert.ok(next[1].includes('href="/where-to-start/website-build"'), 'the Website Build link is missing');
-  assert.ok(next[1].includes('href="/websites-and-ai"'), 'the Websites and AI link is missing');
-  assert.ok(!/£/.test(next[1]), 'the website line carries a price');
-  assert.ok(body.indexOf('su-includes') < body.indexOf('su-next'), 'the website line sits before the deliverables');
-  assert.ok(/after the set-up review, not instead of it/.test(next[1]), 'the line no longer says the website comes after the review');
+  const site = body.match(/<div class="su-section su-website">([\s\S]*?)\n        <\/div>/);
+  assert.ok(site, 'the website section is missing');
+  assert.ok(site[1].includes('£999'), 'the website section does not state £999');
+  assert.ok(!site[1].includes('£500'), 'the website section repeats the review price');
+  assert.ok(/we can build you a new website/i.test(site[1]), "Tom's line is missing");
+  assert.ok(site[1].includes('href="/where-to-start/website-build"'), 'the Website Build link is missing');
+  assert.ok(site[1].includes('href="/websites-and-ai"'), 'the Websites and AI link is missing');
+  assert.ok(!/class="btn/.test(site[1]), 'the website section carries a button competing with the enquiry form');
+  const review = body.indexOf('What the £500 set-up review includes');
+  const website = body.indexOf('su-website');
+  const next = body.indexOf('What you will get from us');
+  assert.ok(review < body.indexOf('su-includes') && body.indexOf('su-includes') < website, 'the website section is not below the review');
+  assert.ok(website < next, 'the website section is not directly below the review');
 });
 
