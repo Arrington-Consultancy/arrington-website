@@ -122,7 +122,7 @@ test('the five deliverables are exactly the ones Tom named, and the placeholder 
   assert.strictEqual((list[1].match(/<li>/g) || []).length, 5, 'a deliverable was added or removed');
   // The offer is named consistently: the set-up review, never a programme,
   // package, course or workshop.
-  assert.ok(/£500 set-up review/.test(body), 'the offer is no longer called the £500 set-up review');
+  assert.ok(/£500 setup review/.test(body), 'the offer is no longer called the £500 setup review');
   assert.ok(!/\b(programme|package|workshop|bootcamp|masterclass)\b/i.test(body.replace(/<[^>]+>/g, ' ')), 'the offer is framed as a programme or package');
 });
 
@@ -131,6 +131,13 @@ test('brand rules: UK English, we, no em dashes, no fire metaphors, no coaching 
   const route = read(ROUTE);
   const served = body + ' ' + route.match(/START_UP_REVIEW_CONTACT\s*=\s*\{[\s\S]*?\};/)[0];
   assert.ok(!served.includes('—'), 'an em dash is on the page');
+  // Tom, 06/10/2026: "there shouldnt be really any dashs on the site unless
+  // theres no other way". No en dash, and no hyphenated word in what a
+  // visitor reads (startup, setup, seven figure). The URL keeps its hyphens.
+  const visible = served.replace(/<[^>]+>/g, ' ');
+  assert.ok(!visible.includes('–'), 'an en dash is on the page');
+  const hyphenated = visible.match(/[A-Za-z]+-[A-Za-z]+/g) || [];
+  assert.deepStrictEqual(hyphenated, [], `hyphenated words on the page: ${hyphenated.join(', ')}`);
   assert.ok(!/\bfire|firefight|burning|flames?\b/i.test(served), 'a fire metaphor is on the page');
   // First person is reserved for Useful Thinking; a start-up page is "we".
   const text = served.replace(/<[^>]+>/g, ' ');
@@ -148,7 +155,7 @@ test('brand rules: UK English, we, no em dashes, no fire metaphors, no coaching 
     assert.ok(!promise.test(text), `an overpromise is on the page: ${promise}`);
   }
   // Proof claims are the approved ones only.
-  assert.ok(text.includes('Tom Arrington built, grew and sold his own business in a seven-figure exit.'), 'the approved operator proof line is missing');
+  assert.ok(text.includes('Tom Arrington built, grew and sold his own business in a seven figure exit.'), 'the approved operator proof line is missing');
   assert.ok(text.includes('More than 20 years of experience inside real businesses across Devon and Cornwall sits behind the work.'), 'the approved Brand OS proof line is missing');
   assert.ok(!/\b(?:MBA|PhD|award|award-winning|chartered|certified|accredited)\b/i.test(text), 'an unapproved credential is on the page');
 });
@@ -168,7 +175,7 @@ test('the £999 website build sits in its own section below the £500 review', (
   assert.ok(site[1].includes('href="/where-to-start/website-build"'), 'the Website Build link is missing');
   assert.ok(site[1].includes('href="/websites-and-ai"'), 'the Websites and AI link is missing');
   assert.ok(!/class="btn/.test(site[1]), 'the website section carries a button competing with the enquiry form');
-  const review = body.indexOf('What the £500 set-up review includes');
+  const review = body.indexOf('What the £500 setup review includes');
   const website = body.indexOf('su-website');
   const next = body.indexOf('Who you would be talking to');
   assert.ok(review < body.indexOf('su-includes') && body.indexOf('su-includes') < website, 'the website section is not below the review');

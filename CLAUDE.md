@@ -7199,6 +7199,14 @@ reasons as the sale readiness page below.
   "(landed on ...)". No new conversion action, checkout, lead kind or table.
   Verified on a throwaway database: an enquiry sent from the page stores
   `landing_page: /start-up-idea-review`.
+- **No dashes (Tom, 06/10/2026: "there shouldnt be really any dashs on the
+  site unless theres no other way").** The page has no em or en dash, and
+  no hyphenated word a visitor reads: "startup", "setup", "seven figure
+  exit". The gold rule under "Who you would be talking to" was removed too,
+  as it read as a dash. The URL keeps its hyphens. The test fails on any
+  hyphenated word in the visible text. `scripts/productionQa.js` now reports
+  every em or en dash in each live page's visible text, which is the only
+  way to check CMS copy from here.
 - **£500 is a new price point for a new audience** and must never be framed
   as a reduction (the test scans for it). Recording it in 02 COMMERCIAL
   POSITION and 01 CURRENT OPERATING POSITION is their owners' job, not this

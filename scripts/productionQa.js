@@ -62,7 +62,7 @@ function slug(p) {
       page.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(m.text().slice(0, 200)); });
       page.on('pageerror', (e) => pageErrors.push(String(e).slice(0, 200)));
       const url = BASE + p;
-      const r = { path: p, size, url, status: null, finalUrl: null, title: null, h1: null, canonical: null, robotsMeta: null, xRobotsTag: null, selfLinks: null, inSitemap: sitemap.includes('<loc>' + BASE + p + '</loc>'), overflow: null, height: null, consoleErrors, pageErrors, screenshot: null, topScreenshot: null, error: null };
+      const r = { path: p, size, url, status: null, finalUrl: null, title: null, h1: null, canonical: null, robotsMeta: null, xRobotsTag: null, selfLinks: null, inSitemap: sitemap.includes('<loc>' + BASE + p + '</loc>'), overflow: null, height: null, dashes: null, consoleErrors, pageErrors, screenshot: null, topScreenshot: null, error: null };
       try {
         const resp = await page.goto(url, { waitUntil: 'load', timeout: 60000 });
         r.status = resp ? resp.status() : null;
@@ -90,7 +90,11 @@ function slug(p) {
           // should have none in the shared header or footer.
           selfLinks: [...document.querySelectorAll('a[href]')].filter((a) => a.getAttribute('href') === location.pathname).length,
           overflow: document.documentElement.scrollWidth > window.innerWidth,
-          height: document.body.scrollHeight
+          height: document.body.scrollHeight,
+          // Every em or en dash in the text a visitor reads, with a little
+          // context, so CMS copy the sandbox cannot read is checked live
+          // (Tom, 06/10/2026: no dashes on the site). Added 06/10/2026.
+          dashes: (document.body.innerText.match(/.{0,40}[\u2013\u2014].{0,40}/g) || []).map((x) => x.replace(/\s+/g, ' ').trim())
         })));
         const file = `${slug(p)}-${size}.png`;
         await page.screenshot({ path: path.join(OUT, file), fullPage: true });
@@ -115,6 +119,7 @@ function slug(p) {
     lines.push(`- First h1: ${r.h1 || '(none)'}`);
     lines.push(`- Canonical: ${r.canonical || '(none)'}`);
     lines.push(`- Robots: meta ${r.robotsMeta || '(none)'}; X-Robots-Tag ${r.xRobotsTag || '(none)'}; in sitemap.xml: ${r.inSitemap ? 'yes' : 'no'}; links to itself on the page: ${r.selfLinks === null ? 'unknown' : r.selfLinks}`);
+    lines.push(`- Em or en dashes in the visible text: ${r.dashes ? r.dashes.length : 'unknown'}${r.dashes && r.dashes.length ? ' (' + r.dashes.join(' | ') + ')' : ''}`);
     lines.push(`- Horizontal overflow: ${r.overflow === null ? 'unknown' : r.overflow ? 'YES' : 'no'}; page height ${r.height}px`);
     lines.push(`- Page errors: ${r.pageErrors.length}${r.pageErrors.length ? ' (' + r.pageErrors.join(' | ') + ')' : ''}`);
     lines.push(`- Console errors: ${r.consoleErrors.length}${r.consoleErrors.length ? ' (' + r.consoleErrors.join(' | ') + ')' : ''}`);
