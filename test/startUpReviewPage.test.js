@@ -160,7 +160,8 @@ test('the £999 website build sits in its own section below the £500 review', (
   assert.ok(site, 'the website section is missing');
   assert.ok(site[1].includes('£999'), 'the website section does not state £999');
   assert.ok(!site[1].includes('£500'), 'the website section repeats the review price');
-  assert.ok(/we can build you a new website/i.test(site[1]), "Tom's line is missing");
+  assert.ok(/an HTML site built from scratch, not from a template, and completely customisable/.test(site[1]), "Tom's line is missing");
+  assert.ok(!/take advantage|special offer|limited/i.test(site[1]), 'the £999 reads as a promotion');
   assert.ok(site[1].includes('href="/where-to-start/website-build"'), 'the Website Build link is missing');
   assert.ok(site[1].includes('href="/websites-and-ai"'), 'the Websites and AI link is missing');
   assert.ok(!/class="btn/.test(site[1]), 'the website section carries a button competing with the enquiry form');

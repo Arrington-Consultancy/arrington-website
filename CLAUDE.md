@@ -7156,7 +7156,10 @@ reasons as the sale readiness page below.
 - **The £999 Website Build sits in its own section directly below the £500
   review** (Tom, 06/10/2026: "it needs to sit below the £500 review, we can
   build you new website for £999"; this replaced the same morning's
-  no-price "later step" line). Heading "A new website", Tom's line, the
+  no-price "later step" line). Heading "A website for your start-up", Tom's
+  line ("an HTML site built from scratch, not from a template, and
+  completely customisable"; his "take advantage of our offer" left out so
+  the £999 never reads as a promotion), the
   muted £999 figure with the offer's approved catalogue description, and
   text links OUT to `/where-to-start/website-build` and `/websites-and-ai`.
   No button, so the review stays the main offer and the enquiry form the
