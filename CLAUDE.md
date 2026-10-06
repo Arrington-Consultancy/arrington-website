@@ -7207,6 +7207,16 @@ reasons as the sale readiness page below.
   hyphenated word in the visible text. `scripts/productionQa.js` now reports
   every em or en dash in each live page's visible text, which is the only
   way to check CMS copy from here.
+- **Rewritten in Tom's voice (06/10/2026).** Tom: the first copy was
+  "passive, uninspiring... little sentences and lots of paragraphs". Rewritten
+  against "Professional Tom Voice Programme - EVOLVING" and "Arrington Voice
+  rules" in Drive (read for this), plus the Brand OS: a hook lede naming the
+  early mistakes the review prevents, "How it works" as one paragraph with
+  Tom's approved aside "about 30 minutes (always more)" instead of a numbered
+  card, warmer deliverable lines, "What you get" folded into one paragraph led
+  by Tom's line, one paragraph for who you'd be talking to. Facts unchanged:
+  only the approved proof, £500 and £999. Cause stated to Tom: not the model;
+  the first draft reused approved lines without reading his voice file.
 - **£500 is a new price point for a new audience** and must never be framed
   as a reduction (the test scans for it). Recording it in 02 COMMERCIAL
   POSITION and 01 CURRENT OPERATING POSITION is their owners' job, not this

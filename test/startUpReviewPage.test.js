@@ -155,8 +155,8 @@ test('brand rules: UK English, we, no em dashes, no fire metaphors, no coaching 
     assert.ok(!promise.test(text), `an overpromise is on the page: ${promise}`);
   }
   // Proof claims are the approved ones only.
-  assert.ok(text.includes('Tom Arrington built, grew and sold his own business in a seven figure exit.'), 'the approved operator proof line is missing');
-  assert.ok(text.includes('More than 20 years of experience inside real businesses across Devon and Cornwall sits behind the work.'), 'the approved Brand OS proof line is missing');
+  assert.ok(text.includes('Tom Arrington built, grew and sold his own business in a seven figure exit'), 'the approved operator proof is missing');
+  assert.ok(text.includes('more than 20 years inside real businesses across Devon and Cornwall'), 'the approved Brand OS proof is missing');
   assert.ok(!/\b(?:MBA|PhD|award|award-winning|chartered|certified|accredited)\b/i.test(text), 'an unapproved credential is on the page');
 });
 
@@ -175,9 +175,9 @@ test('the £999 website build sits in its own section below the £500 review', (
   assert.ok(site[1].includes('href="/where-to-start/website-build"'), 'the Website Build link is missing');
   assert.ok(site[1].includes('href="/websites-and-ai"'), 'the Websites and AI link is missing');
   assert.ok(!/class="btn/.test(site[1]), 'the website section carries a button competing with the enquiry form');
-  const review = body.indexOf('What the £500 setup review includes');
+  const review = body.indexOf('What the £500 setup review covers');
   const website = body.indexOf('su-website');
-  const next = body.indexOf('Who you would be talking to');
+  const next = body.indexOf("Who you'd be talking to");
   assert.ok(review < body.indexOf('su-includes') && body.indexOf('su-includes') < website, 'the website section is not below the review');
   assert.ok(website < next, 'the website section is not directly below the review');
 });

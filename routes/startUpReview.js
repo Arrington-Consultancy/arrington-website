@@ -76,7 +76,7 @@ async function loadThemeAndShell() {
 // paragraph break, since the footer renders this field unescaped.
 const START_UP_REVIEW_CONTACT = {
   heading: 'Tell us about the idea',
-  body: 'What the business would do, who would pay for it, and where you are with it. A few lines is enough.<br /><br />We reply to arrange a conversation and give you an honest view of where the idea stands.',
+  body: 'What the business would do, who you think will pay for it and how far you\'ve got. A few lines is plenty.<br /><br />We\'ll come back to you to arrange a conversation, and you\'ll get a straight view of where the idea stands.',
   messagePlaceholder: 'What the business would do, and where you are with it'
 };
 

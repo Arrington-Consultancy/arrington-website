@@ -9,7 +9,7 @@
         X-Robots-Tag header from the route. Not in the sitemap, not in the
         navigation, not linked from anywhere else. See routes/startUpReview.js. %>
     <meta name="robots" content="noindex">
-    <meta name="description" content="A £500 setup review for a startup idea, from someone who has built, grown and sold real businesses over 20 years in Devon and Cornwall. Starts with a conversation.">
+    <meta name="description" content="Have your startup idea looked at before you put your money in. A fixed £500 setup review from someone who has built, grown and sold his own business. The first conversation is free.">
     <link rel="canonical" href="https://www.arringtonconsultancy.com/start-up-idea-review">
     <meta property="og:type" content="website">
     <meta property="og:title" content="Startup idea review | Arrington Consultancy">
@@ -64,16 +64,8 @@
         .su-section > h2 { font-size: 1.4rem; margin-bottom: 0.9rem; }
         .su-section > .su-intro { font-size: 1rem; color: var(--text-muted); margin-bottom: 1.6rem; max-width: 62ch; }
 
-        /* How the review works: three numbered steps, because this genuinely
-           is a sequence (the Ads landing-page standard's "approach" block). */
         .su-card { border: 1px solid var(--border); border-radius: 6px; padding: 1.9rem 2rem; }
         .su-card > :last-child { margin-bottom: 0; }
-        .su-step { display: grid; grid-template-columns: auto 1fr; gap: 1rem; }
-        .su-step + .su-step { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
-        .su-step-num { font-family: 'DM Serif Display', serif; font-size: 1.6rem; color: var(--accent); opacity: 0.45; line-height: 1; }
-        .su-step h3 { font-size: 1.1rem; margin-bottom: 0.4rem; }
-        .su-step p { font-size: 0.97rem; margin: 0; }
-        .su-step p + p { margin-top: 0.6rem; }
 
         .su-price-row {
             display: flex; align-items: baseline; gap: 0.9rem; flex-wrap: wrap;
@@ -109,8 +101,7 @@
         }
         .su-aside a:hover, .su-aside a:focus-visible { border-bottom-color: var(--accent); }
         .su-next { max-width: 62ch; margin-top: 1.1rem; }
-        .su-get-h { font-size: 1.1rem; margin: 1.9rem 0 0.5rem; }
-        .su-get-lead { color: var(--text-bright); margin: 0 0 1rem; max-width: 62ch; }
+        .su-get-lead { color: var(--text-bright); margin: 1.6rem 0 0; max-width: 62ch; }
         .su-website > p { max-width: 62ch; }
         .su-website > h2 + p { margin-bottom: 1rem; }
         .su-price-fig-minor { font-size: 1.5rem; color: var(--text-bright); }
@@ -122,7 +113,6 @@
             .su-section > .su-intro { margin-bottom: 1.2rem; }
             .su-cred { margin-top: 2rem; padding: 1.25rem 0; }
             .su-card { padding: 1.4rem 1.25rem; }
-            .su-step + .su-step { margin-top: 1.25rem; padding-top: 1.25rem; }
             .su-final { margin-top: 2.5rem; padding-top: 1.9rem; }
             .su-hero-actions .btn, .su-final-actions .btn { width: 100%; text-align: center; }
         }
@@ -135,14 +125,16 @@
     <%- include('partials/site-header', { currentPage: { slug: 'start-up-idea-review' }, navPages, canEdit: false, content, pageContact }) %>
 
     <main>
-        <%# HERO. The headline is Tom's own (06/10/2026), "building" chosen by
-            him. Tom asked that nothing below it repeat it, so the lede keeps
-            only the price and the region, and the proof line keeps the
-            homepage proof's last two items without "two decades building,
-            buying and selling", which the headline now says. %>
+        <%# HERO. The headline is Tom's own (06/10/2026). Rewritten the same
+            day in Tom's voice (Professional Tom Voice Programme and Arrington
+            Voice rules in Drive): fewer, fuller paragraphs, a hook that names
+            the mistakes a new owner is about to make, no dashes, and nothing
+            under the headline that repeats it. Facts are only the approved
+            ones: built, grew and sold his own business in a seven figure exit,
+            more than 20 years in Devon and Cornwall businesses, £500 and £999. %>
         <span class="su-label">Startup idea review</span>
         <h1>Before you put your money into a startup, have the idea looked at with fresh eyes with 20 years' experience of building and scaling businesses.</h1>
-        <p class="su-lede">A £500 setup review for your startup idea, in Devon and Cornwall.</p>
+        <p class="su-lede">The expensive mistakes in a new business usually happen early. A name you have to change six months in, a company structure that doesn't suit how you'll actually pay yourself, a bank account set up the wrong way, or marketing money spent before you know who your customers are. We go through all of it with you before you commit, for a fixed £500, and the first conversation costs you nothing.</p>
         <div class="su-hero-actions">
             <a href="#conversation" class="btn btn-primary">Tell us about the idea</a>
         </div>
@@ -152,125 +144,69 @@
             <p>The owner run businesses we usually work with have been trading for years. This is for the step before that.</p>
         </div>
 
-        <%# APPROACH: the Ads landing-page standard's step block, adapted.
-            Three steps because that is the actual sequence. Step 3 points at
-            the deliverables block below rather than describing them, because
-            the deliverables are Tom's to confirm. %>
+        <%# HOW IT WORKS: one paragraph rather than a numbered card. The
+            "about 30 minutes (always more)" aside is Tom's own, approved in
+            the voice programme on 05/10/2026. %>
         <div class="su-section">
-            <h2>How the review works</h2>
-            <div class="su-card">
-                <div class="su-step">
-                    <span class="su-step-num">1</span>
-                    <div>
-                        <h3>Tell us about the idea</h3>
-                        <p>Use the form at the bottom of this page. What the business would do, who would pay for it, and where you are with it. A few lines about the idea is all we need to start.</p>
-                    </div>
-                </div>
-                <div class="su-step">
-                    <span class="su-step-num">2</span>
-                    <div>
-                        <h3>A straight first conversation, at no charge</h3>
-                        <p>We ask the questions we would ask before putting our own money in. You come away with a clear view of where the idea stands.</p>
-                    </div>
-                </div>
-                <div class="su-step">
-                    <span class="su-step-num">3</span>
-                    <div>
-                        <h3>The setup review</h3>
-                        <p>If it would help, we go through the idea and the setup with you properly, for a fixed £500. What that covers is set out below.</p>
-                    </div>
-                </div>
-            </div>
+            <h2>How it works</h2>
+            <p>Tell us about the idea using the form at the bottom of the page. A few lines is plenty: what the business would do, who you think will pay for it and how far you've got. We'll then sit down with you for about 30 minutes (always more) and ask the questions we'd ask before putting our own money in, so you come away knowing where the idea really stands. If the review is the right next step, we go through the idea and the setup with you properly, for a fixed £500.</p>
         </div>
 
-        <%# WHAT THE £500 SET-UP REVIEW INCLUDES. The four items are Tom's,
-            given on 06/10/2026 ("Brand guidance, company structure advice,
-            banking advice, accountancy advice", then "Marketing advice" as
-            the fifth), in his order. The one-line
-            gloss under each says what the item covers in plain words; none
-            adds a service, a result or a credential. Tom's first list ended "etc";
-            nothing was added for it, and the fifth item is the one he named. The
-            accountancy line is deliberately "when you need an accountant"
-            rather than accountancy itself: the Brand OS says where the job
-            genuinely needs an accountant or a solicitor, use one.
-            Reworded 06/10/2026 (brief relayed by Tom): Arrington does not give
-            regulated financial or accountancy advice, so the third and fourth
-            items read "What to sort out with a bank" and "What to sort out
-            with an accountant" rather than "Banking advice" and "Accountancy
-            advice". %>
+        <%# WHAT THE £500 REVIEW COVERS. The five items are Tom's, given on
+            06/10/2026, in his order. A list because they are genuinely five
+            separate things. Arrington gives no regulated financial or
+            accountancy advice, so items three and four say what to sort out
+            with a bank and with an accountant. %>
         <div class="su-section">
-            <h2>What the £500 setup review includes</h2>
+            <h2>What the £500 setup review covers</h2>
             <div class="su-price-row">
                 <span class="su-price-fig">£500</span>
-                <p>Fixed. Agreed before any work starts. The first conversation is free.</p>
+                <p>Fixed and agreed before any work starts.</p>
             </div>
             <div class="su-card">
                 <ul class="su-dots su-includes" data-deliverables="5">
-                    <li><strong>Brand guidance.</strong> The name, the look and how you describe what you do, settled before you spend money on any of them.</li>
-                    <li><strong>Company structure advice.</strong> Sole trader, partnership or limited company, and what each one means for you.</li>
-                    <li><strong>What to sort out with a bank.</strong> Setting the business up to get paid and to pay out cleanly from day one.</li>
-                    <li><strong>What to sort out with an accountant.</strong> What records you need from the start, and when you need an accountant.</li>
-                    <li><strong>Marketing advice.</strong> Where your first customers are likely to come from, and what is worth spending on to reach them.</li>
+                    <li><strong>Brand guidance.</strong> Your name, your look and how you describe what you do, settled before you pay to put them on anything.</li>
+                    <li><strong>Company structure advice.</strong> Sole trader, partnership or limited company, and which one actually suits the way you plan to run the business and pay yourself.</li>
+                    <li><strong>What to sort out with a bank.</strong> Getting set up to take payments and pay out cleanly from your very first sale.</li>
+                    <li><strong>What to sort out with an accountant.</strong> The records worth keeping from day one, and when it's worth bringing an accountant in.</li>
+                    <li><strong>Marketing advice.</strong> Where your first customers are most likely to come from, and what's actually worth spending to reach them.</li>
                 </ul>
             </div>
-            <%# WHAT YOU GET (Tom, 06/10/2026): what the review gives, stated
-                positively, after he asked for no list of what we will not do.
-                The lead line is Tom's own words. %>
-            <h3 class="su-get-h">What you get</h3>
-            <p class="su-get-lead">We treat your money as if it's our own.</p>
-            <ul class="su-dots">
-                <li>A straight view of your idea from someone who has built, grown and sold a business.</li>
-                <li>Clear answers on the five setup areas, worked out for your idea.</li>
-                <li>A clear next step, whatever the review finds.</li>
-            </ul>
+            <p class="su-get-lead"><strong>We treat your money as if it's our own.</strong> You get a straight view of the idea from someone who has built, grown and sold a business, clear answers on all five areas worked out for your idea, and a clear next step at the end of it.</p>
         </div>
 
-        <%# THE WEBSITE BUILD, BELOW THE REVIEW (Tom, 06/10/2026: "slip the
-            website build into that page, it needs to sit below the £500
-            review, we can build you new website for £999"; wording Tom's of the
-            same day: "HTML site a completely customisable non templated
-            sites". "Take advantage of our offer" was left out because the
-            £999 must never read as a promotion). Its own section,
-            directly after the £500 review and visually smaller than it: the
-            figure is muted and there is no button, so the review stays the
-            page's main offer and the enquiry form its one call to action.
-            £999 is the approved public Website Build price
-            (lib/whereToStartOffers.js) and must never be framed as a
-            reduction. The description line is that offer's approved catalogue
-            wording. Both links go OUT to existing pages; nothing on the site
-            links IN to this page. %>
+        <%# THE WEBSITE BUILD, BELOW THE REVIEW (Tom, 06/10/2026). Tom's words:
+            "HTML site a completely customisable non templated sites". £999 is
+            the approved public Website Build price (lib/whereToStartOffers.js),
+            never framed as a reduction or an offer that ends. Visually smaller
+            than the review: muted figure, no button. Links go OUT only. %>
         <div class="su-section su-website">
             <h2>A website for your startup</h2>
-            <p>Use our Website Build for your startup: an HTML site built from scratch, not from a template, and completely customisable.</p>
+            <p>Once the idea is sound, we can build the website too: an HTML site built from scratch, not from a template, and completely customisable. You'll have a recorded planning conversation to agree what it needs to do, a complete first version and one structured round of changes before launch.</p>
             <div class="su-price-row">
                 <span class="su-price-fig su-price-fig-minor">£999</span>
-                <p>Fixed. A recorded planning conversation to agree what it needs to do, a complete first version, and one structured round of changes before launch.</p>
+                <p>Fixed.</p>
             </div>
             <p class="su-aside su-next">See the <a href="/where-to-start/website-build">Website Build</a>, or how we approach <a href="/websites-and-ai">websites and AI</a>.</p>
         </div>
 
-        <%# BACKGROUND. Both sentences are controlled copy already live on the
-            site: the first is the sale readiness page's credibility line
-            (approved by Tom on 25/09/2026, from the Business Consultant Devon
-            page's own row), the second is the Brand Operating System's PROOF
-            wording as published on the same page. Nothing is added. %>
+        <%# WHO YOU WOULD BE TALKING TO. Third person for Tom's story, per the
+            Brand OS. Proof is the approved operator proof only. %>
         <div class="su-section su-who">
-            <h2>Who you would be talking to</h2>
-            <p>Tom Arrington built, grew and sold his own business in a seven figure exit.</p>
-            <p>More than 20 years of experience inside real businesses across Devon and Cornwall sits behind the work.</p>
-            <p>The review is a conversation with Tom about your idea.</p>
+            <h2>Who you'd be talking to</h2>
+            <p>Tom Arrington built, grew and sold his own business in a seven figure exit, and has spent more than 20 years inside real businesses across Devon and Cornwall. He's been where you are, with his own money on the line, which is why the review starts with the questions he'd want answered himself.</p>
         </div>
 
-        <%# FINAL CALL TO ACTION: a conversation, through the existing footer
-            enquiry form (#conversation), which is the only form on the site
-            that fires the Contact conversion. No checkout on this page. %>
+        <%# FINAL CALL TO ACTION: the existing footer enquiry form
+            (#conversation), the only form that fires the Contact conversion.
+            No checkout on this page. %>
         <div class="su-final">
             <h2>Tell us about the idea</h2>
-            <p>Three or four lines is enough. We reply to arrange a conversation, and we say plainly whether a paid review would be worth your money.</p>
+            <p>A few lines is plenty to start. We'll come back to you to arrange a conversation, and you'll get a straight answer on whether the review is worth your money.</p>
             <div class="su-final-actions">
                 <a href="#conversation" class="btn btn-primary">Tell us about the idea</a>
             </div>
-            <p class="su-aside">Prefer to talk? The phone number and WhatsApp are at the bottom of the page.</p>
+            <p class="su-aside">Rather talk? The phone number and WhatsApp are at the bottom of the page.</p>
         </div>
     </main>
 
