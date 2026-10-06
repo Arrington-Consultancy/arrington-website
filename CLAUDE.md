@@ -7170,6 +7170,18 @@ reasons as the sale readiness page below.
   POSITION and 01 CURRENT OPERATING POSITION is their owners' job, not this
   worker's.
 
+**Live on production, 06/10/2026:** merged as `13b6d97` (fast-forward),
+deployment `bde0d626` SUCCESS (its racing twin `4c460d88` REMOVED, as
+always). Inspection run `20261006T064414Z-start-up-launch`: 200 at desktop
+and iPhone 13, robots meta `noindex`, `X-Robots-Tag: noindex`, not in
+`sitemap.xml`, zero links to itself, no overflow, no page errors; the
+homepage in the same run is in the sitemap (positive control) and unchanged.
+Write-backs appended to the Website & Hosting Handoff Log and, with the URL,
+to the Google Ads Handoff Log. The full suite before merge: 1532 tests, 1526
+pass, 3 fail: the two documented pre-existing failures plus `crmErasure`,
+which fails only when a local server shares the test database and passed
+9/9 alone.
+
 The production inspection script (`scripts/productionQa.js`) gained a
 `Robots:` line the same day (robots meta, `X-Robots-Tag`, whether the path is
 in the live `sitemap.xml`, and how many anchors on the page point at the page
