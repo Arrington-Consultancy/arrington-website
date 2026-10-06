@@ -106,18 +106,18 @@ test('the price is stated once as a fixed figure and never framed as a reduction
   assert.ok(!/£(?!500\b)[0-9][0-9,]*/.test(body), 'a second price appeared on the page');
 });
 
-test('the four deliverables are exactly the ones Tom named, and the placeholder is gone', () => {
+test('the five deliverables are exactly the ones Tom named, and the placeholder is gone', () => {
   // Tom, 06/10/2026: "£500 set-up review. Brand guidance, company structure
   // advice, banking advice, accountancy advice". Four items, his order,
   // nothing added for his trailing "etc". The placeholder that held this
   // space on the preview must not survive into the published page.
   const body = bodyOf(VIEW);
   assert.ok(!/data-placeholder|To be confirmed by Tom|must not be published/.test(body), 'the deliverables placeholder is still on the page');
-  const list = body.match(/<ul class="su-dots su-includes" data-deliverables="4">([\s\S]*?)<\/ul>/);
+  const list = body.match(/<ul class="su-dots su-includes" data-deliverables="5">([\s\S]*?)<\/ul>/);
   assert.ok(list, 'the deliverables list is missing');
   const leads = [...list[1].matchAll(/<strong>([^<]+)<\/strong>/g)].map((m) => m[1]);
-  assert.deepStrictEqual(leads, ['Brand guidance.', 'Company structure advice.', 'Banking advice.', 'Accountancy advice.']);
-  assert.strictEqual((list[1].match(/<li>/g) || []).length, 4, 'a deliverable was added or removed');
+  assert.deepStrictEqual(leads, ['Brand guidance.', 'Company structure advice.', 'Banking advice.', 'Accountancy advice.', 'Marketing advice.']);
+  assert.strictEqual((list[1].match(/<li>/g) || []).length, 5, 'a deliverable was added or removed');
   // The offer is named consistently: the set-up review, never a programme,
   // package, course or workshop.
   assert.ok(/£500 set-up review/.test(body), 'the offer is no longer called the £500 set-up review');
