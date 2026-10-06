@@ -7165,6 +7165,11 @@ reasons as the sale readiness page below.
   No button, so the review stays the main offer and the enquiry form the
   one call to action. The page carries exactly two prices, £500 and £999,
   and the test fails on any other figure or any reduction framing.
+- **No "banking advice" or "accountancy advice"** (06/10/2026, brief
+  relayed by Tom: Arrington gives no regulated financial or accountancy
+  advice). Those two deliverables read "What to sort out with a bank" and
+  "What to sort out with an accountant". Any image on the page is a real
+  photo of Tom only, never AI-generated or stock people.
 - **Proof claims are only the ones already live:** the homepage hero proof
   line, the sale readiness page's "built, grew and sold his own business in a
   seven-figure exit", and the Brand OS 20-years line.
@@ -7199,6 +7204,43 @@ The production inspection script (`scripts/productionQa.js`) gained a
 in the live `sitemap.xml`, and how many anchors on the page point at the page
 itself), so a hidden page can be confirmed hidden from the same run that
 confirms it is served.
+
+## GA4 generate_lead: what it is and where the false ones came from (06/10/2026)
+
+Brief from the Google Ads worker, relayed by Tom: GA4 showed 392 to 432
+`generate_lead` on 4 October with no real enquiry. Tom's rule: **the only
+lead is a completed contact form.**
+
+**Cause, found by reading the live Google tag config rather than guessed:**
+GA4 property `G-HE163L1JCS` carries **four identical Admin "Create event"
+rules**, each "when `page_view` and `page_location` contains `""`, create
+`generate_lead`". A blank "contains" matches every page, so every page view
+produced four leads (exactly 4x page views on every page in GA4). The site's
+code never sent the event. These rules can only be deleted in GA4 Admin
+(Data display, Events, Create event); nothing in this repository or its
+tools can reach them. The 4 October spike itself was 104 homepage views
+against about 15 on a normal day, almost certainly a bot burst.
+
+**The site side, live from `cde89b7`:** `generate_lead` is sent from one
+place, the footer form's success path after `/api/leads` has stored the
+enquiry (both copies, `site-chrome-script.ejs` and `index.ejs`), with
+`form_name: 'footer_enquiry'` and `page_location` = the page the form was
+sent from, so start-up leads separate by page. Phone, email and WhatsApp
+taps send only `phone_click` / `email_click` / `whatsapp_click`.
+`test/generateLeadTracking.test.js` pins all three, watched red.
+
+**How it was proved:** `.github/workflows/tag-audit.yml` runs
+`scripts/tagAudit.js` on a runner, loads live pages in Chromium and records
+every GA4 hit the browser sends (and the Google tag scripts it downloads,
+which is where the four rules were read). `submit=1` also sends ONE
+enquiry named TEST TRACKING with every Google Ads and Meta request aborted,
+so a test can never register an Ads or Meta conversion; it still stores a
+lead and emails Tom. Run `20261006T092826Z-tag-audit-test-submit`: one
+site `generate_lead` (form_name footer_enquiry, page_location
+`/start-up-idea-review?utm_source=google&utm_medium=cpc&utm_campaign=Start-Up-Search`),
+a phone tap sending `phone_click` only, and the four rule-made copies still
+on every page view. After Tom deletes the rules, rerun with `submit=0`: a
+page load must then send no `generate_lead` at all.
 
 ## Sale readiness page
 
