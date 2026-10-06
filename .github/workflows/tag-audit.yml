@@ -1,0 +1,62 @@
+# Live tag audit (scripts/tagAudit.js). The build sandbox cannot reach the
+# public site or Google, so this runs on a GitHub runner: it loads live pages
+# in Chromium and records every GA4 hit the browser sends. Results go to the
+# production-qa branch like the page inspection. With submit=1 it also sends
+# ONE enquiry named TEST TRACKING, with Ads and Meta requests blocked.
+name: Tag audit
+
+on:
+  workflow_dispatch:
+    inputs:
+      submit:
+        description: "1 to also send ONE TEST TRACKING enquiry (Ads and Meta requests blocked)"
+        required: false
+        default: "0"
+      label:
+        description: Short label for this run
+        required: false
+        default: "tag-audit"
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.47.0
+          npx playwright install --with-deps chromium
+
+      - name: Audit live tags
+        env:
+          SUBMIT: ${{ github.event.inputs.submit }}
+          OUT_DIR: ${{ github.workspace }}/qa-out
+        run: node scripts/tagAudit.js
+
+      - name: Publish results to the production-qa branch
+        env:
+          LABEL: ${{ github.event.inputs.label }}
+        run: |
+          set -e
+          STAMP="$(date -u +%Y%m%dT%H%M%SZ)-$(echo "$LABEL" | tr -c 'A-Za-z0-9-' '-' | sed 's/-*$//')"
+          mkdir -p /tmp/qa && cp -r qa-out /tmp/qa/run
+          git config user.name "production-qa"
+          git config user.email "production-qa@users.noreply.github.com"
+          git checkout --orphan production-qa
+          git rm -rfq . 2>/dev/null || true
+          git clean -fdxq
+          mkdir -p "runs/$STAMP"
+          cp -r /tmp/qa/run/. "runs/$STAMP/"
+          echo "$STAMP" > LATEST
+          git add -A
+          git commit -qm "Production QA $STAMP"
+          git push --force origin production-qa
+          echo "Results in runs/$STAMP on branch production-qa"
