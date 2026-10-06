@@ -9,7 +9,7 @@
         X-Robots-Tag header from the route. Not in the sitemap, not in the
         navigation, not linked from anywhere else. See routes/startUpReview.js. %>
     <meta name="robots" content="noindex">
-    <meta name="description" content="A £500 guided review of a start-up idea, from someone who has built, grown and sold real businesses over 20 years in Devon and Cornwall. Starts with a conversation.">
+    <meta name="description" content="A £500 set-up review for a start-up idea, from someone who has built, grown and sold real businesses over 20 years in Devon and Cornwall. Starts with a conversation.">
     <link rel="canonical" href="https://www.arringtonconsultancy.com/start-up-idea-review">
     <meta property="og:type" content="website">
     <meta property="og:title" content="Start-up idea review | Arrington Consultancy">
@@ -76,34 +76,20 @@
         .su-step p { font-size: 0.97rem; margin: 0; }
         .su-step p + p { margin-top: 0.6rem; }
 
-        /* WHAT THE £500 INCLUDES. The deliverables are Tom's to confirm and
-           are not written here. The placeholder is visibly a placeholder on
-           the preview (dashed accent border, "to be confirmed" label), so it
-           cannot be mistaken for finished copy. The page must not go live
-           while .su-placeholder exists; the test pins that the placeholder
-           and the forbidden "go live" state cannot coexist silently. */
         .su-price-row {
             display: flex; align-items: baseline; gap: 0.9rem; flex-wrap: wrap;
             margin-bottom: 1.25rem;
         }
         .su-price-fig { font-family: 'DM Serif Display', serif; font-size: 1.9rem; color: var(--accent); line-height: 1; }
         .su-price-row p { margin: 0; font-size: 0.94rem; color: var(--text-muted); }
-        .su-placeholder {
-            border: 2px dashed color-mix(in srgb, var(--accent) 70%, transparent);
-            border-radius: 6px;
-            padding: 1.4rem 1.5rem;
-        }
-        .su-placeholder-label {
-            display: block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em;
-            font-weight: 700; color: var(--accent); margin-bottom: 0.6rem;
-        }
-        .su-placeholder p { margin: 0; font-size: 0.97rem; color: var(--text-muted); }
 
         /* Accent-dot list, the site's existing list treatment (Owner Check,
            sale readiness) rather than the browser's default discs. */
         .su-dots { list-style: none; padding: 0; margin: 0; max-width: 62ch; }
         .su-dots li { position: relative; padding-left: 1.15rem; margin-bottom: 0.85rem; font-size: 0.98rem; color: var(--text); }
         .su-dots li:last-child { margin-bottom: 0; }
+        .su-dots strong { color: var(--text-bright); font-weight: 700; }
+        .su-includes { max-width: none; }
         .su-dots li::before {
             content: ''; position: absolute; left: 0; top: 0.6em;
             width: 5px; height: 5px; border-radius: 50%; background: var(--accent);
@@ -131,7 +117,6 @@
             .su-cred { margin-top: 2rem; padding: 1.25rem 0; }
             .su-card { padding: 1.4rem 1.25rem; }
             .su-step + .su-step { margin-top: 1.25rem; padding-top: 1.25rem; }
-            .su-placeholder { padding: 1.2rem 1.1rem; }
             .su-final { margin-top: 2.5rem; padding-top: 1.9rem; }
             .su-hero-actions .btn, .su-final-actions .btn { width: 100%; text-align: center; }
         }
@@ -152,7 +137,7 @@
             page that is not already approved. %>
         <span class="su-label">Start-up idea review</span>
         <h1>Before you put your money into a start-up, have the idea looked at properly.</h1>
-        <p class="su-lede">A £500 guided review of your start-up idea, from someone who has built, grown and sold real businesses over 20 years in Devon and Cornwall.</p>
+        <p class="su-lede">A £500 set-up review for your start-up idea, from someone who has built, grown and sold real businesses over 20 years in Devon and Cornwall.</p>
         <div class="su-hero-actions">
             <a href="#conversation" class="btn btn-primary">Tell us about the idea</a>
         </div>
@@ -186,29 +171,35 @@
                 <div class="su-step">
                     <span class="su-step-num">3</span>
                     <div>
-                        <h3>The guided review</h3>
-                        <p>If it would help, we go through the idea with you properly, for a fixed £500. What that covers is set out below.</p>
+                        <h3>The set-up review</h3>
+                        <p>If it would help, we go through the idea and the set-up with you properly, for a fixed £500. What that covers is set out below.</p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <%# WHAT THE £500 INCLUDES: PLACEHOLDER. Tom's instruction, verbatim:
-            "TO BE CONFIRMED BY TOM. Draft the page with a clearly marked
-            placeholder for the deliverables, and ask Tom for them. Don't fill
-            it in yourself." So nothing here describes what the review
-            delivers. When Tom confirms the deliverables they replace the
-            .su-placeholder block, and the test that forbids publishing with
-            the placeholder present is updated at the same time. %>
+        <%# WHAT THE £500 SET-UP REVIEW INCLUDES. The four items are Tom's,
+            given on 06/10/2026 ("Brand guidance, company structure advice,
+            banking advice, accountancy advice"), in his order. The one-line
+            gloss under each says what the item covers in plain words; none
+            adds a service, a result or a credential. Tom's list ended "etc";
+            nothing was added for it, so a fifth item is his to name. The
+            accountancy line is deliberately "when you need an accountant"
+            rather than accountancy itself: the Brand OS says where the job
+            genuinely needs an accountant or a solicitor, use one. %>
         <div class="su-section">
-            <h2>What the £500 includes</h2>
+            <h2>What the £500 set-up review includes</h2>
             <div class="su-price-row">
                 <span class="su-price-fig">£500</span>
                 <p>Fixed. Agreed before any work starts. The first conversation is free.</p>
             </div>
-            <div class="su-placeholder" data-placeholder="deliverables">
-                <span class="su-placeholder-label">To be confirmed by Tom</span>
-                <p>The deliverables of the £500 review go here. This block is a placeholder on the preview and must not be published.</p>
+            <div class="su-card">
+                <ul class="su-dots su-includes" data-deliverables="4">
+                    <li><strong>Brand guidance.</strong> The name, the look and how you describe what you do, settled before you spend money on any of them.</li>
+                    <li><strong>Company structure advice.</strong> Sole trader, partnership or limited company, and what each one means for you.</li>
+                    <li><strong>Banking advice.</strong> Setting the business up to get paid and to pay out cleanly from day one.</li>
+                    <li><strong>Accountancy advice.</strong> What records you need from the start, and when you need an accountant.</li>
+                </ul>
             </div>
         </div>
 
