@@ -118,7 +118,7 @@ test('the five deliverables are exactly the ones Tom named, and the placeholder 
   const list = body.match(/<ul class="su-dots su-includes" data-deliverables="5">([\s\S]*?)<\/ul>/);
   assert.ok(list, 'the deliverables list is missing');
   const leads = [...list[1].matchAll(/<strong>([^<]+)<\/strong>/g)].map((m) => m[1]);
-  assert.deepStrictEqual(leads, ['Brand guidance.', 'Company structure advice.', 'Banking advice.', 'Accountancy advice.', 'Marketing advice.']);
+  assert.deepStrictEqual(leads, ['Brand guidance.', 'Company structure advice.', 'What to sort out with a bank.', 'What to sort out with an accountant.', 'Marketing advice.']);
   assert.strictEqual((list[1].match(/<li>/g) || []).length, 5, 'a deliverable was added or removed');
   // The offer is named consistently: the set-up review, never a programme,
   // package, course or workshop.
