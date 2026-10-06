@@ -7225,6 +7225,17 @@ reasons as the sale readiness page below.
   a full width band on the warm paper surface (scope, which is what that
   surface is reserved for), led by Tom's line set large. No AI-generated or
   stock people on this page; a different photo of Tom is a file swap.
+- **Final pass, then frozen for the Ads test (06/10/2026, commit `d8e1a80`).**
+  Agreed with Tom after a ChatGPT website worker reviewed the day's changes
+  as a sounding board only (two rounds, debate, no edits by it). Headline
+  "fresh eyes and 20 years'" (the live page had "with" twice until this
+  commit); the operator proof now leads the top line; "Who you'd be talking
+  to" shortened so it does not repeat that proof; the duplicate closing "Tell
+  us about the idea" section removed, so the page runs into the footer form;
+  phone photo shortened (48vw, max 300px) so Tom and the whole headline are
+  on the first screen; "really" cut; company structure line routes the tax
+  question to the accountant ("what to check with an accountant before you
+  register"). After this, no edits while the start-up Ads test runs.
 - **£500 is a new price point for a new audience** and must never be framed
   as a reduction (the test scans for it). Recording it in 02 COMMERCIAL
   POSITION and 01 CURRENT OPERATING POSITION is their owners' job, not this
