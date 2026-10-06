@@ -88,8 +88,10 @@ test('the call to action is the existing enquiry form, with no checkout and no n
   // The route's own comments necessarily name the things it must not
   // contain, so the scans below run over its code only.
   const route = read(ROUTE).replace(/^\s*\/\/.*$/gm, '');
-  const ctas = body.match(/href="#conversation"/g) || [];
-  assert.ok(ctas.length >= 2, 'the hero and the final call to action should both go to the footer form');
+  // The hero button goes to the footer form. No second closing section (Tom,
+  // 06/10/2026): "Who you'd be talking to" runs straight into the form.
+  assert.ok(/class="su-hero-actions">\s*<a href="#conversation"/.test(body), 'the hero call to action no longer goes to the footer form');
+  assert.ok(!/class="su-final"/.test(body), 'the duplicate closing call to action section is back');
   assert.ok(!/\/api\/checkout|stripe|checkout\.session|data-offer=/i.test(body + route), 'a checkout appeared on the start-up page');
   assert.ok(!/AW-18129914078|gtag\(\s*'event'\s*,\s*'conversion'/.test(body + route), 'a Google Ads conversion call appeared on the start-up page');
   // The footer copy override replaces only the three per-page fields, so the
@@ -157,6 +159,11 @@ test('brand rules: UK English, we, no em dashes, no fire metaphors, no coaching 
   // Proof claims are the approved ones only.
   assert.ok(text.includes('Tom Arrington built, grew and sold his own business in a seven figure exit'), 'the approved operator proof is missing');
   assert.ok(text.includes('more than 20 years inside real businesses across Devon and Cornwall'), 'the approved Brand OS proof is missing');
+  // The final pass of 06/10/2026, agreed with Tom after the ChatGPT sounding board.
+  assert.ok(text.includes("looked at with fresh eyes and 20 years' experience"), 'the headline lost its "and"');
+  assert.ok(text.includes('what to check with an accountant before you register'), 'the company structure line no longer routes tax to the accountant');
+  assert.ok(text.includes('You come away with answers on all five that apply to your idea, and a clear next step.'), 'the what you get line changed');
+  assert.ok(!/\breally\b/i.test(text), '"really" is back on the page');
   assert.ok(!/\b(?:MBA|PhD|award|award-winning|chartered|certified|accredited)\b/i.test(text), 'an unapproved credential is on the page');
 });
 

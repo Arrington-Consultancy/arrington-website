@@ -112,10 +112,6 @@
 
         .su-section.su-who > h2 { margin-bottom: 1.4rem; }
 
-        .su-final { border-top: 1px solid var(--border); padding-top: 2.5rem; margin-top: 3.5rem; }
-        .su-final h2 { font-size: 1.4rem; margin-bottom: 0.6rem; }
-        .su-final p { max-width: 62ch; }
-        .su-final-actions { display: flex; flex-wrap: wrap; gap: 0.9rem; margin-top: 1.6rem; }
         .su-aside { font-size: 0.92rem; color: var(--text-muted); margin-top: 1.6rem; }
         .su-aside a {
             color: var(--accent);
@@ -132,7 +128,7 @@
 
         @media (max-width: 760px) {
             .su-hero { display: block; min-height: 0; padding: var(--site-chrome) 0 0; }
-            .su-hero-photo { position: relative; top: auto; height: 64vw; max-height: 380px; }
+            .su-hero-photo { position: relative; top: auto; height: 48vw; max-height: 300px; }
             .su-hero-photo img { object-position: 66% 25%; }
             .su-hero-photo::after { background: linear-gradient(0deg, var(--black) 0%, color-mix(in srgb, var(--black) 40%, transparent) 30%, transparent 60%); }
             .su-hero-inner { padding: 0 1.5rem 0.5rem; margin-top: -1.5rem; }
@@ -142,8 +138,7 @@
             .su-section > .su-intro { margin-bottom: 1.2rem; }
             .su-cred { margin-top: 2rem; padding: 1.25rem 0; }
             .su-card { padding: 1.4rem 1.25rem; }
-            .su-final { margin-top: 2.5rem; padding-top: 1.9rem; }
-            .su-hero-actions .btn, .su-final-actions .btn { width: 100%; text-align: center; }
+            .su-hero-actions .btn { width: 100%; text-align: center; }
         }
     </style>
 </head>
@@ -168,7 +163,7 @@
         <div class="su-hero-inner">
             <div class="su-hero-text">
                 <span class="su-label">Startup idea review</span>
-                <h1>Before you put your money into a startup, have the idea looked at with fresh eyes with 20 years' experience of building and scaling businesses.</h1>
+                <h1>Before you put your money into a startup, have the idea looked at with fresh eyes and 20 years' experience of building and scaling businesses.</h1>
                 <p class="su-lede">The expensive mistakes in a new business usually happen early. A name you have to change six months in, a company structure that doesn't suit how you'll actually pay yourself, a bank account set up the wrong way, or marketing money spent before you know who your customers are. We go through all of it with you before you commit, for a fixed £500, and the first conversation costs you nothing.</p>
                 <div class="su-hero-actions">
                     <a href="#conversation" class="btn btn-primary">Tell us about the idea</a>
@@ -180,7 +175,7 @@
     <main>
         <div class="su-wrap">
         <div class="su-cred">
-            <p>Oxford Saïd, Distinction. 5.0 on Google reviews.</p>
+            <p>Tom Arrington built, grew and sold his own business in a seven figure exit. Oxford Saïd, Distinction. 5.0 on Google reviews.</p>
             <p>The owner run businesses we usually work with have been trading for years. This is for the step before that.</p>
         </div>
 
@@ -189,7 +184,7 @@
             the voice programme on 05/10/2026. %>
         <div class="su-section">
             <h2>How it works</h2>
-            <p>Tell us about the idea using the form at the bottom of the page. A few lines is plenty: what the business would do, who you think will pay for it and how far you've got. We'll then sit down with you for about 30 minutes (always more) and ask the questions we'd ask before putting our own money in, so you come away knowing where the idea really stands. If the review is the right next step, we go through the idea and the setup with you properly, for a fixed £500.</p>
+            <p>Tell us about the idea using the form at the bottom of the page. A few lines is plenty: what the business would do, who you think will pay for it and how far you've got. We'll then sit down with you for about 30 minutes (always more) and ask the questions we'd ask before putting our own money in, so you come away knowing where the idea stands. If the review is the right next step, we go through the idea and the setup with you properly, for a fixed £500.</p>
         </div>
 
         <%# WHAT THE £500 REVIEW COVERS. The five items are Tom's, given on
@@ -211,13 +206,13 @@
             <div class="su-card">
                 <ul class="su-dots su-includes" data-deliverables="5">
                     <li><strong>Brand guidance.</strong> Your name, your look and how you describe what you do, settled before you pay to put them on anything.</li>
-                    <li><strong>Company structure advice.</strong> Sole trader, partnership or limited company, and which one actually suits the way you plan to run the business and pay yourself.</li>
+                    <li><strong>Company structure advice.</strong> Sole trader, partnership or limited company, which one suits the way you plan to run the business, and what to check with an accountant before you register.</li>
                     <li><strong>What to sort out with a bank.</strong> Getting set up to take payments and pay out cleanly from your very first sale.</li>
                     <li><strong>What to sort out with an accountant.</strong> The records worth keeping from day one, and when it's worth bringing an accountant in.</li>
                     <li><strong>Marketing advice.</strong> Where your first customers are most likely to come from, and what's actually worth spending to reach them.</li>
                 </ul>
             </div>
-            <p class="su-get-lead">You get a straight view of the idea from someone who has built, grown and sold a business, clear answers on all five areas worked out for your idea, and a clear next step at the end of it.</p>
+            <p class="su-get-lead">You come away with answers on all five that apply to your idea, and a clear next step.</p>
         </div>
         </div>
         </section>
@@ -243,20 +238,12 @@
             Brand OS. Proof is the approved operator proof only. %>
         <div class="su-section su-who">
             <h2>Who you'd be talking to</h2>
-            <p>Tom Arrington built, grew and sold his own business in a seven figure exit, and has spent more than 20 years inside real businesses across Devon and Cornwall. He's been where you are, with his own money on the line, which is why the review starts with the questions he'd want answered himself.</p>
+            <p>Tom has spent more than 20 years inside real businesses across Devon and Cornwall. He's had his own money on the line, so the review starts with the questions he'd want answered himself.</p>
         </div>
 
-        <%# FINAL CALL TO ACTION: the existing footer enquiry form
-            (#conversation), the only form that fires the Contact conversion.
-            No checkout on this page. %>
-        <div class="su-final">
-            <h2>Tell us about the idea</h2>
-            <p>A few lines is plenty to start. We'll come back to you to arrange a conversation, and you'll get a straight answer on whether the review is worth your money.</p>
-            <div class="su-final-actions">
-                <a href="#conversation" class="btn btn-primary">Tell us about the idea</a>
-            </div>
-            <p class="su-aside">Rather talk? The phone number and WhatsApp are at the bottom of the page.</p>
-        </div>
+        <%# No closing call to action section (Tom, 06/10/2026): the footer
+            enquiry form follows directly, and the only form that fires the
+            Contact conversion. No checkout on this page. %>
         </div>
     </main>
 
