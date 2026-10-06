@@ -25,6 +25,18 @@ const { chromium, devices } = require('playwright');
 
 const BASE = process.env.QA_BASE_URL || 'https://www.arringtonconsultancy.com';
 const PATHS = (process.env.QA_PATHS || '/').split(',').map((p) => p.trim()).filter(Boolean);
+
+// Whether each inspected path is listed in the live sitemap. Fetched once,
+// so a hidden page (noindex, out of the sitemap) can be confirmed absent
+// from the same run that confirms it is served. Added 06/10/2026.
+async function sitemapText() {
+  try {
+    const res = await fetch(BASE + '/sitemap.xml');
+    return res.ok ? await res.text() : '';
+  } catch (e) {
+    return '';
+  }
+}
 const OUT = process.env.OUT_DIR || path.join(process.cwd(), 'qa-out');
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -38,6 +50,7 @@ function slug(p) {
 }
 
 (async () => {
+  const sitemap = await sitemapText();
   const browser = await chromium.launch();
   const results = [];
   for (const p of PATHS) {
@@ -49,10 +62,11 @@ function slug(p) {
       page.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(m.text().slice(0, 200)); });
       page.on('pageerror', (e) => pageErrors.push(String(e).slice(0, 200)));
       const url = BASE + p;
-      const r = { path: p, size, url, status: null, finalUrl: null, title: null, h1: null, canonical: null, overflow: null, height: null, consoleErrors, pageErrors, screenshot: null, topScreenshot: null, error: null };
+      const r = { path: p, size, url, status: null, finalUrl: null, title: null, h1: null, canonical: null, robotsMeta: null, xRobotsTag: null, selfLinks: null, inSitemap: sitemap.includes('<loc>' + BASE + p + '</loc>'), overflow: null, height: null, consoleErrors, pageErrors, screenshot: null, topScreenshot: null, error: null };
       try {
         const resp = await page.goto(url, { waitUntil: 'load', timeout: 60000 });
         r.status = resp ? resp.status() : null;
+        r.xRobotsTag = resp ? (resp.headers()['x-robots-tag'] || null) : null;
         r.finalUrl = page.url();
         const h = await page.evaluate(() => document.body.scrollHeight);
         for (let y = 0; y < h; y += 350) { await page.evaluate((yy) => window.scrollTo(0, yy), y); await page.waitForTimeout(90); }
@@ -71,6 +85,10 @@ function slug(p) {
           title: document.title,
           h1: (document.querySelector('h1') || {}).textContent ? document.querySelector('h1').textContent.replace(/\s+/g, ' ').trim() : null,
           canonical: (document.querySelector('link[rel="canonical"]') || {}).href || null,
+          robotsMeta: (document.querySelector('meta[name="robots"]') || {}).content || null,
+          // Anchors on this page pointing at this same path: a hidden page
+          // should have none in the shared header or footer.
+          selfLinks: [...document.querySelectorAll('a[href]')].filter((a) => a.getAttribute('href') === location.pathname).length,
           overflow: document.documentElement.scrollWidth > window.innerWidth,
           height: document.body.scrollHeight
         })));
@@ -96,6 +114,7 @@ function slug(p) {
     lines.push(`- Title: ${r.title || '(none)'}`);
     lines.push(`- First h1: ${r.h1 || '(none)'}`);
     lines.push(`- Canonical: ${r.canonical || '(none)'}`);
+    lines.push(`- Robots: meta ${r.robotsMeta || '(none)'}; X-Robots-Tag ${r.xRobotsTag || '(none)'}; in sitemap.xml: ${r.inSitemap ? 'yes' : 'no'}; links to itself on the page: ${r.selfLinks === null ? 'unknown' : r.selfLinks}`);
     lines.push(`- Horizontal overflow: ${r.overflow === null ? 'unknown' : r.overflow ? 'YES' : 'no'}; page height ${r.height}px`);
     lines.push(`- Page errors: ${r.pageErrors.length}${r.pageErrors.length ? ' (' + r.pageErrors.join(' | ') + ')' : ''}`);
     lines.push(`- Console errors: ${r.consoleErrors.length}${r.consoleErrors.length ? ' (' + r.consoleErrors.join(' | ') + ')' : ''}`);
