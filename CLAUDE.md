@@ -7182,6 +7182,11 @@ reasons as the sale readiness page below.
   remaining negative lines (no business plan needed, "lost nothing but half
   an hour", "if we do not think a paid review would help") became positive
   ones, and the test fails if any returns.
+- **Headline is Tom's (06/10/2026):** "Before you put your money into a
+  start-up, have the idea looked at with fresh eyes and 20 years'
+  experience of building and scaling businesses." Nothing directly below
+  it repeats it: the lede is just the price and region, and the proof line
+  drops "Two decades building, buying and selling businesses".
 - **Proof claims are only the ones already live:** the homepage hero proof
   line, the sale readiness page's "built, grew and sold his own business in a
   seven-figure exit", and the Brand OS 20-years line.
