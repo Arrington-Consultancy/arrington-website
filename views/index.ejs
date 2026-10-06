@@ -171,8 +171,8 @@
     <% }); %>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Poppins:wght@500;600&display=swap">
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Poppins:wght@500;600&display=swap" rel="stylesheet">
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <meta name="csrf-token" content="<%= csrfToken %>">
     <% if (user) { %>
     <meta name="page-slug" content="<%= currentPage.slug %>">
@@ -250,7 +250,7 @@
         }
 
         body {
-            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
             color: var(--text);
             background: var(--black);
             line-height: 1.7;
@@ -289,7 +289,7 @@
         }
 
         .nav-logo {
-            font-family: 'Poppins', 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif; font-weight: 500;
             font-size: 1.15rem;
             color: var(--text-bright);
             text-decoration: none;
@@ -396,7 +396,7 @@
         }
 
         .mobile-menu a {
-            font-family: 'Poppins', 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif; font-weight: 500;
             font-size: 1.4rem;
             color: var(--text-muted);
             text-decoration: none;
@@ -409,7 +409,7 @@
         }
 
         .mobile-menu .mobile-menu-sublink {
-            font-family: 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif;
             font-size: 0.95rem;
             font-weight: 500;
             color: var(--text-muted);
@@ -430,7 +430,7 @@
         }
 
         .mobile-menu .mobile-menu-cta {
-            font-family: 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif;
             font-size: 0.9rem;
             font-weight: 600;
             letter-spacing: 0.04em;
@@ -462,7 +462,7 @@
         }
 
         .hero-text .hero-heading {
-            font-family: 'Poppins', 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif; font-weight: 500;
             font-size: clamp(2.2rem, 4.5vw, 3.2rem);
             color: var(--text-bright);
             line-height: 1.12;
@@ -866,7 +866,7 @@
         }
 
         .section-heading {
-            font-family: 'Poppins', 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif; font-weight: 500;
             font-size: clamp(1.7rem, 3vw, 2.2rem);
             color: var(--text-bright);
             margin-bottom: 1rem;
@@ -902,7 +902,7 @@
         }
 
         .stat-callout .stat-num {
-            font-family: 'Poppins', 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif;
             font-size: 1.5rem;
             font-weight: 700;
             color: var(--accent);
@@ -930,7 +930,7 @@
 
         /* ---- PULL QUOTE ---- */
         .intervention-quote-mark {
-            font-family: 'Poppins', 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif; font-weight: 500;
             font-size: 3rem;
             color: var(--accent);
             line-height: 0.4;
@@ -939,7 +939,7 @@
         }
 
         .intervention-quote-text {
-            font-family: 'Poppins', 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif; font-weight: 500;
             font-style: italic;
             font-size: 1.4rem;
             color: var(--text-bright);
@@ -961,7 +961,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: 'Poppins', 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif; font-weight: 500;
             font-size: 1rem;
             color: var(--accent);
             flex-shrink: 0;
@@ -1035,7 +1035,7 @@
         }
 
         .credential-block h3 {
-            font-family: 'Poppins', 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif; font-weight: 500;
             font-size: 1.1rem;
             color: var(--text-bright);
             margin-bottom: 0.5rem;
@@ -1048,7 +1048,7 @@
         }
 
         .credential-stat {
-            font-family: 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif;
             font-weight: 500;
             font-size: 2.3rem;
             letter-spacing: -0.01em;
@@ -1129,7 +1129,7 @@
         }
 
         .step-number {
-            font-family: 'Poppins', 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif; font-weight: 500;
             font-size: 2rem;
             color: var(--accent);
             opacity: 0.4;
@@ -1138,7 +1138,7 @@
         }
 
         .step h3 {
-            font-family: 'Poppins', 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif; font-weight: 500;
             font-size: 1.1rem;
             color: var(--text-bright);
             margin-bottom: 0.75rem;
@@ -1277,7 +1277,7 @@
         }
 
         .insight-card h3 {
-            font-family: 'Poppins', 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif; font-weight: 500;
             font-size: 1.05rem;
             color: var(--text-bright);
             margin-bottom: 0.75rem;
@@ -1361,14 +1361,14 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: 'Poppins', 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif; font-weight: 500;
             font-size: 1.1rem;
             color: var(--accent);
             flex-shrink: 0;
         }
 
         .fourcard-number {
-            font-family: 'Poppins', 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif; font-weight: 500;
             font-size: 2rem;
             color: var(--accent);
             opacity: 0.4;
@@ -1376,7 +1376,7 @@
         }
 
         .fourcard h3 {
-            font-family: 'Poppins', 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif; font-weight: 500;
             font-size: 1.05rem;
             color: var(--text-bright);
             margin-bottom: 0.75rem;
@@ -1418,7 +1418,7 @@
         }
 
         .google-reviews-score {
-            font-family: 'Poppins', 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif; font-weight: 500;
             font-size: 1.3rem;
             color: var(--text-bright);
         }
@@ -1777,7 +1777,7 @@
            below, which is a class-plus-element selector and would otherwise
            win and render the price at body size in body grey. */
         .offer-item .offer-price {
-            font-family: 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif;
             font-weight: 500;
             font-size: 2.3rem;
             letter-spacing: -0.01em;
@@ -1787,7 +1787,7 @@
         }
 
         .offer-item h3 {
-            font-family: 'Poppins', 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif; font-weight: 500;
             font-size: 1.15rem;
             color: var(--text-bright);
             line-height: 1.35;
@@ -1943,7 +1943,7 @@
         }
 
         .document-number {
-            font-family: 'Poppins', 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif; font-weight: 500;
             font-size: 1.6rem;
             color: var(--accent);
             opacity: 0.4;
@@ -1957,7 +1957,7 @@
            depend on which level the outline happened to need. */
         .document-card h2,
         .document-card h3 {
-            font-family: 'Poppins', 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif; font-weight: 500;
             font-size: 1.3rem;
             color: var(--text-bright);
             line-height: 1.3;
@@ -2111,7 +2111,7 @@
         .phase-capstone {
             display: block;
             margin-top: 0.85rem;
-            font-family: 'Poppins', 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif; font-weight: 500;
             font-size: 1.2rem;
             color: var(--text-bright);
         }
@@ -2133,7 +2133,7 @@
         }
 
         .casestudy2-intro {
-            font-family: 'Poppins', 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif; font-weight: 500;
             font-size: clamp(1.15rem, 2vw, 1.35rem);
             color: var(--text-bright);
             line-height: 1.55;
@@ -2247,7 +2247,7 @@
         }
 
         .casestudy2-included-heading {
-            font-family: 'Poppins', 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif; font-weight: 500;
             font-size: 1.2rem;
             color: var(--text-bright);
             margin: 0 0 1rem;
@@ -2473,7 +2473,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: 'Poppins', 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif; font-weight: 500;
             font-size: 1.4rem;
             color: var(--accent);
             flex-shrink: 0;
@@ -2756,7 +2756,7 @@
         }
 
         .proof-client {
-            font-family: 'Poppins', 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif; font-weight: 500;
             font-size: 1.2rem;
             color: var(--text-bright);
             line-height: 1.3;
@@ -2840,9 +2840,9 @@
         }
 
         .article-next-heading {
-            font-family: 'Poppins', 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif;
             font-size: 1.5rem;
-            font-weight: 400;
+            font-weight: 500;
             color: var(--text-bright);
             line-height: 1.25;
             margin: 0;
@@ -2921,7 +2921,7 @@
         }
 
         .utlibrary-featured-title {
-            font-family: 'Poppins', 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif; font-weight: 500;
             font-size: 2rem;
             color: var(--text-bright);
             margin: 0 0 1rem;
@@ -2959,7 +2959,7 @@
         }
 
         .utlibrary-item-title {
-            font-family: 'Poppins', 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif; font-weight: 500;
             font-size: 1.4rem;
             color: var(--text-bright);
             margin: 0 0 0.6rem;
@@ -3188,7 +3188,7 @@
         }
 
         .doc-modal h3 {
-            font-family: 'Poppins', 'DM Sans', sans-serif;
+            font-family: 'Poppins', sans-serif; font-weight: 500;
             font-size: 1.4rem;
             margin-bottom: 0.6rem;
             color: var(--text-bright);
@@ -5209,7 +5209,7 @@
 </div>
 <style nonce="<%= nonce %>">
     .client-logout { position: fixed; bottom: 1rem; right: 1rem; z-index: 100; }
-    .client-logout-btn { background: var(--charcoal); color: var(--text); border: 1px solid var(--border); padding: 0.4rem 0.9rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+    .client-logout-btn { background: var(--charcoal); color: var(--text); border: 1px solid var(--border); padding: 0.4rem 0.9rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer; font-family: 'Poppins', sans-serif; }
     .client-logout-btn:hover { background: var(--mid-grey); }
 </style>
 <% } %>

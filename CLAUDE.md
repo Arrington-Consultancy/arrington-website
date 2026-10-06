@@ -7332,16 +7332,20 @@ depends on it never being added to `navPages`.
   no paper surface. Separate it with a readable measure and spacing and, at
   most, a restrained gold detail.
 
-## Fonts: sans serif only (06/10/2026)
+## Fonts: Poppins only (06/10/2026)
 
 The Brand OS FONT RULE says sans serif only, Poppins first, and names
-website assets. Every public page had set its headings in DM Serif Display.
-On Tom's confirmation ("we shouldn't be using that font should we?") the
-headings are now `'Poppins', 'DM Sans', sans-serif` (weights 500 and 600
-loaded from Google Fonts) across all public views and `public/css/admin.css`;
-body text stays DM Sans. `test/sansSerifOnly.test.js` fails on any serif
-family in a public view. The Scott demo keeps its own Playfair Display: it is
-a fictional company with its own look, left as a separate decision for Tom.
+website assets. Every public page had set its headings in DM Serif Display
+and its body in DM Sans; Scott used Playfair Display and Source Sans 3; the
+Workspace used the system stack. Tom: "Change the lot I ditched that font
+for a reason." Everything is now Poppins (400, 500, 600, 700 and 400 italic
+from Google Fonts): public site, `public/css/admin.css`, Scott
+(`views/scott/partials/styles.ejs`) and the Workspace
+(`views/workspace/partials/styles.ejs`, Poppins first in its stack). Heading
+rules that used the serif are Poppins Medium (500) unless they already asked
+for 600 or bolder. `test/sansSerifOnly.test.js` fails on any serif family, or
+on DM Sans or Source Sans, in any view or the admin stylesheet. Not covered:
+the four case study PDFs and notification emails, which carry their own fonts.
 
 ## Writing and reviewing website copy
 

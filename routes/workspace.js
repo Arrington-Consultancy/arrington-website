@@ -605,7 +605,7 @@ function mountPageRoute(app, generateCsrfToken) {
       // This page is never cached and never logs the token value.
       res.setHeader('Cache-Control', 'no-store');
       res.send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Zoho Invoice connected</title>
-<style nonce="${nonce}">body{font-family:system-ui,sans-serif;max-width:640px;margin:4rem auto;padding:0 1.5rem}
+<style nonce="${nonce}">body{font-family:'Poppins',system-ui,sans-serif;max-width:640px;margin:4rem auto;padding:0 1.5rem}
 code{background:#f4f4f4;padding:.25rem .5rem;border-radius:4px;word-break:break-all;display:block;margin:1rem 0;font-size:.9rem}
 .note{color:#555;font-size:.9rem;margin-top:2rem}</style></head>
 <body><h1>Zoho Invoice connected</h1>
@@ -722,7 +722,7 @@ code{background:#f4f4f4;padding:.25rem .5rem;border-radius:4px;word-break:break-
       const esc = (v) => String(v).replace(/</g, '&lt;').replace(/>/g, '&gt;');
       res.setHeader('Cache-Control', 'no-store');
       res.send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Gmail connected</title>
-<style nonce="${nonce}">body{font-family:system-ui,sans-serif;max-width:640px;margin:4rem auto;padding:0 1.5rem}
+<style nonce="${nonce}">body{font-family:'Poppins',system-ui,sans-serif;max-width:640px;margin:4rem auto;padding:0 1.5rem}
 code{background:#f4f4f4;padding:.25rem .5rem;border-radius:4px;word-break:break-all;display:block;margin:1rem 0;font-size:.9rem}
 .note{color:#555;font-size:.9rem;margin-top:2rem}</style></head>
 <body><h1>Gmail connected</h1>
