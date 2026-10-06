@@ -138,9 +138,10 @@ test('brand rules: UK English, we, no em dashes, no fire metaphors, no coaching 
   for (const banned of ['solutions', 'synergy', 'leverage', 'empower', 'journey', 'holistic', 'tailored', 'bespoke', 'transformational', 'world class', 'unlock your potential', 'mentor', 'coach you', 'coaching programme', 'accountability']) {
     assert.ok(!new RegExp(`\\b${banned.replace(/ /g, '\\s+')}\\b`, 'i').test(text), `banned or coaching language on the page: ${banned}`);
   }
-  // "coaching" may appear only as a thing the review is not.
-  const coaching = text.match(/coaching/gi) || [];
-  assert.ok(coaching.length <= 1 && /not coaching/i.test(text), 'coaching language has crept in beyond the "not coaching" statement');
+  assert.ok(!/coaching/i.test(text), 'coaching language on the page');
+  // Tom, 06/10/2026: "we embrace what people need, we don't tell them what we
+  // won't do". No list of what the review is not.
+  assert.ok(!/what you will not|\bit is not (a|coaching|advice)/i.test(text), 'the page lists what the review is not');
   for (const promise of [/guarantee/i, /will succeed/i, /double your/i, /proven (?:formula|system|method)/i, /get funded/i, /investor ready/i]) {
     assert.ok(!promise.test(text), `an overpromise is on the page: ${promise}`);
   }
@@ -167,7 +168,7 @@ test('the £999 website build sits in its own section below the £500 review', (
   assert.ok(!/class="btn/.test(site[1]), 'the website section carries a button competing with the enquiry form');
   const review = body.indexOf('What the £500 set-up review includes');
   const website = body.indexOf('su-website');
-  const next = body.indexOf('What you will get from us');
+  const next = body.indexOf('Who you would be talking to');
   assert.ok(review < body.indexOf('su-includes') && body.indexOf('su-includes') < website, 'the website section is not below the review');
   assert.ok(website < next, 'the website section is not directly below the review');
 });

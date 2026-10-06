@@ -7144,8 +7144,8 @@ reasons as the sale readiness page below.
   contain the path. Reached only from the start-up ads.
 - **Structure** follows the Ads operating manual's landing-page order adapted
   for a start-up: hero, how the review works (three steps), what the £500
-  set-up review includes, what you will and will not get, who you would be
-  talking to, final call to action. No case study, because no approved case
+  set-up review includes, the £999 website, who you would be talking to,
+  final call to action. No case study, because no approved case
   study is about a start-up.
 - **The five deliverables are Tom's words of 06/10/2026**, in his order:
   brand guidance, company structure advice, banking advice, accountancy
@@ -7170,6 +7170,11 @@ reasons as the sale readiness page below.
   advice). Those two deliverables read "What to sort out with a bank" and
   "What to sort out with an accountant". Any image on the page is a real
   photo of Tom only, never AI-generated or stock people.
+- **No "what we will not do" (Tom, 06/10/2026):** "we stay away from
+  negatives... we embrace what people need, we don't tell them what we
+  won't do, that's the brand". The "What you will get from us, and what you
+  will not" section and "It is not a report generated from a form" were
+  removed, and the test fails if a list of what the review is not returns.
 - **Proof claims are only the ones already live:** the homepage hero proof
   line, the sale readiness page's "built, grew and sold his own business in a
   seven-figure exit", and the Brand OS 20-years line.
