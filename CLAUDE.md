@@ -7122,6 +7122,60 @@ manually). The two older datasets, "Arrington Consultancy Social" and
 "Arrington Consultancy Workspace", belong to the two read-only apps and
 must not be used as the website pixel.
 
+## Start-up idea review page: hidden Google Ads landing page (06/10/2026)
+
+`/start-up-idea-review` is the landing page for Tom's start-up test, decided
+on 06/10/2026 (Google Ads Worker Handoff Log, entries of 6 October 2026, and
+the Website & Hosting Handoff Log): a separate £500 set-up review of a
+start-up idea, tested through a dedicated Google Ads campaign. The main site
+and the existing ads stay aimed at established owner run businesses, and
+start-up searches were excluded from Leads-Search-1 the same morning, so this
+page is the only place start-up traffic goes. It is a code route
+(`routes/startUpReview.js`, `views/start-up-review.ejs`,
+`test/startUpReviewPage.test.js`), built the same way and for the same
+reasons as the sale readiness page below.
+
+- **Hidden by construction, and the test pins every part of it:** noindex as
+  a `<meta name="robots">` tag and as an `X-Robots-Tag` header from the route;
+  not in `navPages`, the header, the footer or `sitemap.xml`; not
+  robots-disallowed (the Ads crawler must be able to fetch a landing page, and
+  a disallow would stop any crawler seeing the noindex); and no other `.ejs`,
+  `.js` or `.sql` file under `views`, `lib`, `db`, `public/js` or `routes` may
+  contain the path. Reached only from the start-up ads.
+- **Structure** follows the Ads operating manual's landing-page order adapted
+  for a start-up: hero, how the review works (three steps), what the £500
+  set-up review includes, what you will and will not get, who you would be
+  talking to, final call to action. No case study, because no approved case
+  study is about a start-up.
+- **The five deliverables are Tom's words of 06/10/2026**, in his order:
+  brand guidance, company structure advice, banking advice, accountancy
+  advice, marketing advice. Each carries a one-line gloss that adds no
+  service, result or credential. The accountancy line says "when you need an
+  accountant" rather than offering accountancy. The test pins the five
+  exactly.
+- **Proof claims are only the ones already live:** the homepage hero proof
+  line, the sale readiness page's "built, grew and sold his own business in a
+  seven-figure exit", and the Brand OS 20-years line.
+- **The call to action is the existing footer enquiry form**, with the
+  per-page heading/body/placeholder override the sale readiness route uses
+  ("Tell us about the idea"). Form, endpoint, attribution capture and the
+  Google Ads Contact conversion are unchanged. A start-up enquiry is told
+  apart by its stored `attribution.landing_page` (this path), which the owner
+  email prints as `Landing page:` and the admin Leads panel shows as
+  "(landed on ...)". No new conversion action, checkout, lead kind or table.
+  Verified on a throwaway database: an enquiry sent from the page stores
+  `landing_page: /start-up-idea-review`.
+- **£500 is a new price point for a new audience** and must never be framed
+  as a reduction (the test scans for it). Recording it in 02 COMMERCIAL
+  POSITION and 01 CURRENT OPERATING POSITION is their owners' job, not this
+  worker's.
+
+The production inspection script (`scripts/productionQa.js`) gained a
+`Robots:` line the same day (robots meta, `X-Robots-Tag`, whether the path is
+in the live `sitemap.xml`, and how many anchors on the page point at the page
+itself), so a hidden page can be confirmed hidden from the same run that
+confirms it is served.
+
 ## Sale readiness page
 
 `/get-your-business-ready-to-sell` is a campaign landing page for social and
