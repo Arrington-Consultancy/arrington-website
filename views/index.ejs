@@ -777,6 +777,9 @@
         }
 
         @media (max-width: 700px) {
+            /* Poppins runs wider than the old serif, so the longest
+               credential overran a phone screen (06/10/2026). */
+            .hero-proof-strip span { white-space: normal; }
             .hero.hero-cover { min-height: 92vh; }
             .hero[data-section-id="hero"] .hero-photo img { object-position: 70% 45%; }
             .hero[data-section-id="hero__3"] .hero-photo img { object-position: 75% 50%; }
