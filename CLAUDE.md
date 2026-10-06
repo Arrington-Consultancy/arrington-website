@@ -7259,6 +7259,18 @@ a phone tap sending `phone_click` only, and the four rule-made copies still
 on every page view. After Tom deletes the rules, rerun with `submit=0`: a
 page load must then send no `generate_lead` at all.
 
+**CLOSED, passed (06/10/2026).** The Google Ads worker deleted the four
+rules at about 14:20. Run `20261006T132551Z-tag-audit-after-rules-deleted`
+(no test enquiry): homepage, the start-up page with the Start-Up-Search
+utm, `/what-we-do` and `/business-consultant-plymouth` each sent 0
+`generate_lead` and 0 Contact conversion requests, and a phone tap sent
+`phone_click` only. `extra_paths` on the tag audit loads further pages.
+Write-back appended to the Website & Hosting Handoff Log; the Google Ads
+Handoff Log copy is filed standalone ("GOOGLE ADS WRITE-BACK - Lead
+tracking rerun passed, job closed, 6 October 2026", id
+`1CT0ItD95MWvwUP65BdEpp434O76xpooeEp0WIx7EBIg`) because Zapier hit its task
+limit, to be merged when it has tasks.
+
 **The Google Ads Contact conversion was NOT added to the form success
 (addendum of 06/10/2026, challenged).** It already fires once per real
 submission on `/thank-you` (server-issued token, `transaction_id`), and a
