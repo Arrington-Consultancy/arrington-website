@@ -6872,7 +6872,13 @@ overflow. The console errors in that run are all third-party and identical on
 both pages (Google Identity Services and Turnstile injecting inline styles,
 and GSI reporting `The given origin is not allowed for the given client ID`,
 which means the Continue with Google button may not be serving on production
-and is a separate item for Tom to check in the Google Cloud console). **The
+and is a separate item for Tom to check in the Google Cloud console).
+**Closed 06/10/2026:** the OAuth client (project `directed-mender-507119-f9`,
+"Arrington Consultancy", Web application) already lists
+`https://www.arringtonconsultancy.com` as its only JavaScript origin, and Tom
+tapped Continue with Google on the live quiz on his phone and it filled his
+email. The GSI message is the inspection runner's headless browser, not a
+fault visitors see; read it as noise in future QA reports. **The
 final proof is one real completion by Tom**: exactly one email and one
 `Quiz completion ...: one notification sent` line in the Railway log, with
 his share clicks producing nothing. Write-back filed standalone in Drive:
