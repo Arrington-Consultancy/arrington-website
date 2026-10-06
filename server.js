@@ -23,6 +23,7 @@ const commercialGapsReview = require('./routes/commercialGapsReview');
 const whereToStart = require('./routes/whereToStart');
 const productGuide = require('./routes/productGuide');
 const saleReadiness = require('./routes/saleReadiness');
+const startUpReview = require('./routes/startUpReview');
 const { legacyRedirect } = require('./lib/legacyRedirect');
 const thankYou = require('./routes/thankYou');
 const scott = require('./routes/scott');
@@ -850,6 +851,18 @@ app.use(productGuide.router);
 // a homepage block for it without a new decision; test/saleReadinessPage.test.js
 // fails if either appears.
 saleReadiness.mountPageRoute(app, generateCsrfToken);
+
+// Start-up idea review: a HIDDEN Google Ads landing page (see
+// routes/startUpReview.js for the brief). Registered here so it is matched
+// ahead of the generic /:slug CMS catch-all. No router: its only action is
+// the existing footer enquiry form.
+//
+// Tom's decision of 06/10/2026: not in the navigation, not in the footer,
+// not in the sitemap, noindex, linked from nowhere else on the site, reached
+// only from the start-up ads. Do not add a nav entry, a sitemap entry or a
+// link to it anywhere without a new decision; test/startUpReviewPage.test.js
+// fails if any appears.
+startUpReview.mountPageRoute(app, generateCsrfToken);
 
 // /thank-you: where the footer contact form lands after a stored enquiry, and
 // the only place the Google Ads Contact conversion fires (routes/thankYou.js).

@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <%- include('partials/google-tag') %>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Start-up idea review | Arrington Consultancy</title>
+    <%# HIDDEN LANDING PAGE (Tom, 06/10/2026). noindex here and as an
+        X-Robots-Tag header from the route. Not in the sitemap, not in the
+        navigation, not linked from anywhere else. See routes/startUpReview.js. %>
+    <meta name="robots" content="noindex">
+    <meta name="description" content="A £500 guided review of a start-up idea, from someone who has built, grown and sold real businesses over 20 years in Devon and Cornwall. Starts with a conversation.">
+    <link rel="canonical" href="https://www.arringtonconsultancy.com/start-up-idea-review">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Start-up idea review | Arrington Consultancy">
+    <meta property="og:description" content="Before you put your money into a start-up, have the idea looked at by someone who has built, grown and sold real businesses.">
+    <meta property="og:url" content="https://www.arringtonconsultancy.com/start-up-idea-review">
+    <meta property="og:image" content="https://www.arringtonconsultancy.com/img/logo">
+    <meta name="csrf-token" content="<%= csrfToken %>">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <%# No Product/Offer schema, deliberately: the page is noindex and the
+        offer's deliverables are not yet confirmed. %>
+    <style nonce="<%= nonce %>">
+        :root {
+            <% for (const [prop, val] of Object.entries(theme.vars)) { %>
+            <%= prop %>: <%= val %>;
+            <% } %>
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: 'DM Sans', sans-serif; background: var(--black); color: var(--text); line-height: 1.6; }
+        <%- include('partials/site-chrome-styles') %>
+
+        h1, h2, h3 { font-family: 'DM Serif Display', serif; font-weight: 400; color: var(--text-bright); line-height: 1.2; margin: 0; }
+        p { color: var(--text); margin: 0 0 1.2rem; }
+
+        .btn { display: inline-block; font-family: 'DM Sans', sans-serif; font-size: 0.92rem; font-weight: 600; padding: 0.6rem 1.5rem; border-radius: 3px; text-decoration: none; cursor: pointer; border: 1px solid transparent; }
+        .btn-primary { background: var(--accent); color: var(--black); border-color: var(--accent); }
+        .btn-primary:hover, .btn-primary:focus-visible { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+        main { max-width: 700px; margin: 0 auto; padding: calc(var(--site-chrome) + 2.5rem) 1.5rem 5rem; }
+
+        /* The same page grammar as the sale readiness landing page
+           (views/sale-readiness.ejs), which Tom reviewed live on 25/09/2026:
+           label, headline, lede, a single primary button, then a de-boxed
+           credibility line with hairline rules. Nothing new is invented here. */
+        .su-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; color: var(--accent); margin-bottom: 1rem; display: block; }
+        h1 { font-size: clamp(1.9rem, 4.5vw, 2.4rem); margin-bottom: 1.2rem; }
+        .su-lede { font-size: 1.12rem; color: var(--text-bright); margin-bottom: 1.6rem; max-width: 62ch; }
+        .su-hero-actions { margin-bottom: 0; }
+
+        .su-cred {
+            margin-top: 2.5rem;
+            padding: 1.5rem 0;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+        .su-cred p { margin: 0; font-size: 1.02rem; color: var(--text-bright); }
+        .su-cred p + p { margin-top: 0.5rem; color: var(--text); font-size: 0.97rem; }
+
+        .su-section { margin-top: 3.25rem; }
+        .su-section > h2 { font-size: 1.4rem; margin-bottom: 0.9rem; }
+        .su-section > .su-intro { font-size: 1rem; color: var(--text-muted); margin-bottom: 1.6rem; max-width: 62ch; }
+        .su-section.su-prose > p { max-width: 62ch; }
+
+        /* How the review works: three numbered steps, because this genuinely
+           is a sequence (the Ads landing-page standard's "approach" block). */
+        .su-card { border: 1px solid var(--border); border-radius: 6px; padding: 1.9rem 2rem; }
+        .su-card > :last-child { margin-bottom: 0; }
+        .su-step { display: grid; grid-template-columns: auto 1fr; gap: 1rem; }
+        .su-step + .su-step { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+        .su-step-num { font-family: 'DM Serif Display', serif; font-size: 1.6rem; color: var(--accent); opacity: 0.45; line-height: 1; }
+        .su-step h3 { font-size: 1.1rem; margin-bottom: 0.4rem; }
+        .su-step p { font-size: 0.97rem; margin: 0; }
+        .su-step p + p { margin-top: 0.6rem; }
+
+        /* WHAT THE £500 INCLUDES. The deliverables are Tom's to confirm and
+           are not written here. The placeholder is visibly a placeholder on
+           the preview (dashed accent border, "to be confirmed" label), so it
+           cannot be mistaken for finished copy. The page must not go live
+           while .su-placeholder exists; the test pins that the placeholder
+           and the forbidden "go live" state cannot coexist silently. */
+        .su-price-row {
+            display: flex; align-items: baseline; gap: 0.9rem; flex-wrap: wrap;
+            margin-bottom: 1.25rem;
+        }
+        .su-price-fig { font-family: 'DM Serif Display', serif; font-size: 1.9rem; color: var(--accent); line-height: 1; }
+        .su-price-row p { margin: 0; font-size: 0.94rem; color: var(--text-muted); }
+        .su-placeholder {
+            border: 2px dashed color-mix(in srgb, var(--accent) 70%, transparent);
+            border-radius: 6px;
+            padding: 1.4rem 1.5rem;
+        }
+        .su-placeholder-label {
+            display: block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em;
+            font-weight: 700; color: var(--accent); margin-bottom: 0.6rem;
+        }
+        .su-placeholder p { margin: 0; font-size: 0.97rem; color: var(--text-muted); }
+
+        /* Accent-dot list, the site's existing list treatment (Owner Check,
+           sale readiness) rather than the browser's default discs. */
+        .su-dots { list-style: none; padding: 0; margin: 0; max-width: 62ch; }
+        .su-dots li { position: relative; padding-left: 1.15rem; margin-bottom: 0.85rem; font-size: 0.98rem; color: var(--text); }
+        .su-dots li:last-child { margin-bottom: 0; }
+        .su-dots li::before {
+            content: ''; position: absolute; left: 0; top: 0.6em;
+            width: 5px; height: 5px; border-radius: 50%; background: var(--accent);
+        }
+
+        /* Background: directly on the page, a short gold rule under the
+           heading, no card (the treatment Tom chose for the sale readiness
+           page's closing section on 25/09/2026). */
+        .su-section.su-who > h2::after {
+            content: ''; display: block; width: 2.5rem; height: 2px; margin-top: 0.9rem; background: var(--accent);
+        }
+        .su-section.su-who > h2 { margin-bottom: 1.4rem; }
+
+        .su-final { border-top: 1px solid var(--border); padding-top: 2.5rem; margin-top: 3.5rem; }
+        .su-final h2 { font-size: 1.4rem; margin-bottom: 0.6rem; }
+        .su-final p { max-width: 62ch; }
+        .su-final-actions { display: flex; flex-wrap: wrap; gap: 0.9rem; margin-top: 1.6rem; }
+        .su-aside { font-size: 0.92rem; color: var(--text-muted); margin-top: 1.6rem; }
+
+        @media (max-width: 760px) {
+            main { padding-top: calc(var(--site-chrome) + 1.75rem); }
+            .su-section { margin-top: 2.1rem; }
+            .su-section > h2 { margin-bottom: 0.7rem; }
+            .su-section > .su-intro { margin-bottom: 1.2rem; }
+            .su-cred { margin-top: 2rem; padding: 1.25rem 0; }
+            .su-card { padding: 1.4rem 1.25rem; }
+            .su-step + .su-step { margin-top: 1.25rem; padding-top: 1.25rem; }
+            .su-placeholder { padding: 1.2rem 1.1rem; }
+            .su-final { margin-top: 2.5rem; padding-top: 1.9rem; }
+            .su-hero-actions .btn, .su-final-actions .btn { width: 100%; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <%# currentPage carries a slug that is deliberately not in navPages: this
+        is a hidden campaign landing page (Tom, 06/10/2026), so nothing in the
+        nav highlights as active. Header and footer are the site's own. %>
+    <%- include('partials/site-header', { currentPage: { slug: 'start-up-idea-review' }, navPages, canEdit: false, content, pageContact }) %>
+
+    <main>
+        <%# HERO. The lede is Tom's own description of the offer from his
+            brief of 06/10/2026, in "we"-free third person because it is a
+            fact about Tom. The proof line is the homepage hero's live proof
+            line (content row hero.proof_line, seeded 15/08/2026), with the
+            same three items in the same order. Nothing is written for this
+            page that is not already approved. %>
+        <span class="su-label">Start-up idea review</span>
+        <h1>Before you put your money into a start-up, have the idea looked at properly.</h1>
+        <p class="su-lede">A £500 guided review of your start-up idea, from someone who has built, grown and sold real businesses over 20 years in Devon and Cornwall.</p>
+        <div class="su-hero-actions">
+            <a href="#conversation" class="btn btn-primary">Tell us about the idea</a>
+        </div>
+
+        <div class="su-cred">
+            <p>Two decades building, buying and selling businesses. Oxford Saïd, Distinction. 5.0 on Google reviews.</p>
+            <p>The owner run businesses we usually work with have been trading for years. This is for the step before that.</p>
+        </div>
+
+        <%# APPROACH: the Ads landing-page standard's step block, adapted.
+            Three steps because that is the actual sequence. Step 3 points at
+            the deliverables block below rather than describing them, because
+            the deliverables are Tom's to confirm. %>
+        <div class="su-section">
+            <h2>How the review works</h2>
+            <div class="su-card">
+                <div class="su-step">
+                    <span class="su-step-num">1</span>
+                    <div>
+                        <h3>Tell us about the idea</h3>
+                        <p>Use the form at the bottom of this page. What the business would do, who would pay for it, and where you are with it. You do not need a business plan or a pitch deck.</p>
+                    </div>
+                </div>
+                <div class="su-step">
+                    <span class="su-step-num">2</span>
+                    <div>
+                        <h3>A straight first conversation, at no charge</h3>
+                        <p>We ask the questions we would ask before putting our own money in. If we do not think a paid review would help you, we say so, and you have lost nothing but half an hour.</p>
+                    </div>
+                </div>
+                <div class="su-step">
+                    <span class="su-step-num">3</span>
+                    <div>
+                        <h3>The guided review</h3>
+                        <p>If it would help, we go through the idea with you properly, for a fixed £500. What that covers is set out below.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <%# WHAT THE £500 INCLUDES: PLACEHOLDER. Tom's instruction, verbatim:
+            "TO BE CONFIRMED BY TOM. Draft the page with a clearly marked
+            placeholder for the deliverables, and ask Tom for them. Don't fill
+            it in yourself." So nothing here describes what the review
+            delivers. When Tom confirms the deliverables they replace the
+            .su-placeholder block, and the test that forbids publishing with
+            the placeholder present is updated at the same time. %>
+        <div class="su-section">
+            <h2>What the £500 includes</h2>
+            <div class="su-price-row">
+                <span class="su-price-fig">£500</span>
+                <p>Fixed. Agreed before any work starts. The first conversation is free.</p>
+            </div>
+            <div class="su-placeholder" data-placeholder="deliverables">
+                <span class="su-placeholder-label">To be confirmed by Tom</span>
+                <p>The deliverables of the £500 review go here. This block is a placeholder on the preview and must not be published.</p>
+            </div>
+        </div>
+
+        <%# HONESTY. The Brand Operating System: "Commercial truth matters
+            more than politeness." The point of the review is the judgement,
+            and the judgement may be "not as it stands". No promise of
+            success, funding or a particular outcome anywhere on the page. %>
+        <div class="su-section su-prose">
+            <h2>What you will get from us, and what you will not</h2>
+            <p>We tell you what we think. That includes telling you if we think the idea is not worth your money as it stands, or needs changing before it is. You are paying for a straight view from someone who has done it, not for encouragement.</p>
+            <ul class="su-dots">
+                <li>It is not a business plan written for you.</li>
+                <li>It is not coaching, and it is not a course.</li>
+                <li>It is not advice on raising money, and it is not a promise that the business will work.</li>
+                <li>Where the idea needs an accountant, a solicitor or another specialist, we will say which.</li>
+            </ul>
+        </div>
+
+        <%# BACKGROUND. Both sentences are controlled copy already live on the
+            site: the first is the sale readiness page's credibility line
+            (approved by Tom on 25/09/2026, from the Business Consultant Devon
+            page's own row), the second is the Brand Operating System's PROOF
+            wording as published on the same page. Nothing is added. %>
+        <div class="su-section su-who">
+            <h2>Who you would be talking to</h2>
+            <p>Tom Arrington built, grew and sold his own business in a seven-figure exit.</p>
+            <p>More than 20 years of experience inside real businesses across Devon and Cornwall sits behind the work.</p>
+            <p>The review is a conversation with Tom about your idea. It is not a report generated from a form.</p>
+        </div>
+
+        <%# FINAL CALL TO ACTION: a conversation, through the existing footer
+            enquiry form (#conversation), which is the only form on the site
+            that fires the Contact conversion. No checkout on this page. %>
+        <div class="su-final">
+            <h2>Tell us about the idea</h2>
+            <p>Three or four lines is enough. We reply to arrange a conversation, and we say plainly whether a paid review would be worth your money.</p>
+            <div class="su-final-actions">
+                <a href="#conversation" class="btn btn-primary">Tell us about the idea</a>
+            </div>
+            <p class="su-aside">Prefer to talk? The phone number and WhatsApp are at the bottom of the page.</p>
+        </div>
+    </main>
+
+    <%- include('partials/site-footer', { canEdit: false, pageContact, content }) %>
+    <script nonce="<%= nonce %>">
+        <%- include('partials/site-chrome-script') %>
+    </script>
+</body>
+</html>
