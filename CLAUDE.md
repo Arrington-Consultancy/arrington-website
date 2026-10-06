@@ -7175,6 +7175,13 @@ reasons as the sale readiness page below.
   won't do, that's the brand". The "What you will get from us, and what you
   will not" section and "It is not a report generated from a form" were
   removed, and the test fails if a list of what the review is not returns.
+  In their place, inside the £500 section, "What you get": Tom's line "We
+  treat your money as if it's our own." and three positive points (a
+  straight view from someone who has built, grown and sold a business;
+  clear answers on the five set-up areas; a clear next step). The three
+  remaining negative lines (no business plan needed, "lost nothing but half
+  an hour", "if we do not think a paid review would help") became positive
+  ones, and the test fails if any returns.
 - **Proof claims are only the ones already live:** the homepage hero proof
   line, the sale readiness page's "built, grew and sold his own business in a
   seven-figure exit", and the Brand OS 20-years line.

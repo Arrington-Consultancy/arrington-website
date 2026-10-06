@@ -142,6 +142,8 @@ test('brand rules: UK English, we, no em dashes, no fire metaphors, no coaching 
   // Tom, 06/10/2026: "we embrace what people need, we don't tell them what we
   // won't do". No list of what the review is not.
   assert.ok(!/what you will not|\bit is not (a|coaching|advice)/i.test(text), 'the page lists what the review is not');
+  assert.ok(!/do not think a paid review|lost nothing|do not need a business plan/i.test(text + read(ROUTE)), 'a negative line has come back');
+  assert.ok(/We treat your money as if it's our own\./.test(text), "Tom's line in What you get is missing");
   for (const promise of [/guarantee/i, /will succeed/i, /double your/i, /proven (?:formula|system|method)/i, /get funded/i, /investor ready/i]) {
     assert.ok(!promise.test(text), `an overpromise is on the page: ${promise}`);
   }
