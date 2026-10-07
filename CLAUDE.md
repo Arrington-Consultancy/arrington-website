@@ -7381,10 +7381,26 @@ and Tom's decisions, 7 October 2026", id
 - **Independence:** "no supplier pays us" (Tom, 07/10/2026) always sits beside
   the disclosure of the iCabbi Marketplace listing. The listing fee runs from
   Arrington to iCabbi.
-- **Offers:** all five core offers at their approved names and prices, read
-  from `lib/whereToStartOffers.js` (Tom: "we offer all products on this page"),
-  each linking to its own page. No checkout, no conversion on this page; the
-  footer enquiry form is the call to action, with a per-page copy override.
+- **Offers (revised 07/10/2026 after the second review, Tom: "lets ditch the
+  3400 then"):** three paid offers read from `lib/whereToStartOffers.js`, each
+  with a taxi lead-in (`TAXI_OFFER_LEADS`: "Before you change system" £500,
+  "Help through the switchover" £2,500, "A website that gets the booking"
+  £999), a line to the Product Guide for everything else, and a "Tell us
+  what's going on" button. The £3,400 offer and the free-conversation card
+  are not shown. No checkout, no conversion on this page; the footer enquiry
+  form is the call to action, with a per-page copy override.
+- **Second review changes (Tom: "make all the other changes in line with what
+  you agreed"):** "We're independent of every dispatch supplier." in the hero
+  so it is on the first phone screen; the separate "Who you'd be talking to"
+  section folded into the operator paragraph (bought at 22, very nearly lost
+  it and rebuilt it, worked with the NTA); the systems line softened to "Tom
+  ran on iCabbi and knows the other main UK systems." (no evidence of
+  migration experience; strengthen only if Tom confirms he moved Abacus onto
+  iCabbi himself); smaller hero paragraph on a phone. Headings at Poppins 600
+  to match the rest of the site (`h1, h2, h3` rule, pinned by test). Still
+  open: "fixed-price" in the shared £999 catalogue description breaks the
+  no-dash rule (Tom's call, as it changes every offer page); one supporting
+  image, ideally a real Abacus-era photo from Tom.
 - **AI is never the hook:** "The phones and the office" sits below the dispatch
   and business sections.
 - **Image:** the real desk photo of Tom from the start-up page. No generated

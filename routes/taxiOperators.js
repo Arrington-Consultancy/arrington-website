@@ -37,10 +37,18 @@ const { OFFERS } = require('../lib/whereToStartOffers');
 
 const TAXI_OPERATORS_PATH = '/taxi-and-private-hire-operators';
 
-// The order the offers appear in on the page: the free conversation first,
-// then the review, the review with implementation (the closest fit to a
-// system change), the website, and the review with the website.
-const TAXI_OFFER_ORDER = ['conversation', 'commercial_review', 'full_commercial_review', 'website_build', 'full_review_website_build'];
+// Three paid offers, each with a one-line taxi lead-in above its approved
+// catalogue description (Tom, 07/10/2026, after the second review: "lets ditch
+// the 3400 then"). The £3,400 Commercial Review and Website Build is not shown
+// here; the page links to the Product Guide for it and everything else. The
+// free conversation is the call to action (a button and the footer form), not
+// a card. Names, prices and descriptions still come from the catalogue.
+const TAXI_OFFER_ORDER = ['commercial_review', 'full_commercial_review', 'website_build'];
+const TAXI_OFFER_LEADS = {
+  commercial_review: 'Before you change system',
+  full_commercial_review: 'Help through the switchover',
+  website_build: 'A website that gets the booking'
+};
 
 async function loadThemeAndShell() {
   const { rows: themeRows } = await db.query("SELECT content FROM content WHERE section_key = 'site.theme'");
@@ -61,7 +69,9 @@ const TAXI_OPERATORS_CONTACT = {
 };
 
 function taxiOffers() {
-  return TAXI_OFFER_ORDER.map((id) => OFFERS[id]).filter((o) => o && o.publicPriceApproved);
+  return TAXI_OFFER_ORDER.map((id) => OFFERS[id])
+    .filter((o) => o && o.publicPriceApproved)
+    .map((o) => ({ ...o, taxiLead: TAXI_OFFER_LEADS[o.id] }));
 }
 
 function mountPageRoute(app, generateCsrfToken) {
@@ -83,4 +93,4 @@ function mountPageRoute(app, generateCsrfToken) {
   });
 }
 
-module.exports = { mountPageRoute, TAXI_OPERATORS_PATH, TAXI_OPERATORS_CONTACT, TAXI_OFFER_ORDER, taxiOffers };
+module.exports = { mountPageRoute, TAXI_OPERATORS_PATH, TAXI_OPERATORS_CONTACT, TAXI_OFFER_ORDER, TAXI_OFFER_LEADS, taxiOffers };

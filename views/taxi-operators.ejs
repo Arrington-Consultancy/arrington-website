@@ -53,7 +53,8 @@
 
         .tx-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; color: var(--accent); margin-bottom: 1rem; display: block; }
         h1 { font-size: clamp(1.6rem, 4.6vw, 2.3rem); margin-bottom: 1.2rem; }
-        .tx-lede { font-size: 1.12rem; color: var(--text-bright); margin-bottom: 1.6rem; max-width: 62ch; }
+        .tx-lede { font-size: 1.12rem; color: var(--text-bright); margin-bottom: 0.9rem; max-width: 62ch; }
+        .tx-hero-indep { font-size: 1rem; font-weight: 700; color: var(--accent); margin-bottom: 1.6rem; }
 
         .tx-cred { padding: 1.5rem 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
         .tx-cred p { margin: 0; font-size: 1.02rem; color: var(--text-bright); }
@@ -82,6 +83,9 @@
         .tx-offer-price { font-family: 'Poppins', 'DM Sans', sans-serif; font-size: 1.25rem; color: var(--text-bright); text-align: right; font-variant-numeric: tabular-nums; }
         .tx-offer p { grid-column: 1 / -1; margin: 0; font-size: 0.95rem; }
         .tx-offer .tx-offer-more { grid-column: 1 / -1; margin-top: 0.5rem; font-size: 0.92rem; }
+        .tx-offer-lead { grid-column: 1 / -1; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700; color: var(--accent); }
+        .tx-offers-next { margin: 1.6rem 0 1.1rem; max-width: 62ch; }
+        .tx-offers-actions { margin: 0; }
 
         @media (max-width: 760px) {
             .tx-hero { display: block; min-height: 0; padding: var(--site-chrome) 0 0; }
@@ -94,6 +98,7 @@
             .tx-band { margin-top: 2.5rem; padding: 2.5rem 0 2.75rem; }
             .tx-offer { padding: 1.15rem 1.2rem; }
             .tx-hero-actions .btn { width: 100%; text-align: center; }
+            .tx-lede { font-size: 1.02rem; }
         }
     </style>
 </head>
@@ -115,6 +120,7 @@
                 <span class="tx-label">Taxi and private hire</span>
                 <h1>Choosing or changing a taxi dispatch system? Talk to an operator first.</h1>
                 <p class="tx-lede">Tom Arrington spent over 20 years in the taxi trade in Devon and Cornwall. He started as a driver, then owned and ran Abacus and Falmouth Taxis for nearly twenty years, around eight of them on iCabbi, before selling the business in 2025.</p>
+                <p class="tx-hero-indep" data-independence-hero>We're independent of every dispatch supplier.</p>
                 <div class="tx-hero-actions">
                     <a href="#conversation" class="btn btn-primary">Tell us what's going on</a>
                 </div>
@@ -127,7 +133,7 @@
         <%# INDEPENDENCE (Tom, 07/10/2026): no supplier pays us, and the
             iCabbi Marketplace listing is disclosed rather than hidden. %>
         <div class="tx-cred" data-independence>
-            <p>We're independent. We're listed on the iCabbi Marketplace because Tom ran on iCabbi for around eight years, but we don't sell software and no supplier pays us.</p>
+            <p>We're listed on the iCabbi Marketplace because Tom ran on iCabbi for around eight years. We don't sell software and no supplier pays us.</p>
             <p>We work with operators anywhere in the UK, by video call, and Tom will come and see you in person on request, with travel costs agreed before he sets off.</p>
         </div>
 
@@ -136,12 +142,12 @@
         <div class="tx-section">
             <h2>Most of the time it isn't the software</h2>
             <p>When something goes wrong in a taxi office, the dispatch system usually gets the blame. To be fair, sometimes it is the software. More often it's the setup, the pricing, the zones, the drivers, the geography or what everyone expected the system to do, and usually it's a bit of all of them. Changing the system won't fix a problem that sits in the business, and it's an expensive way to find that out.</p>
-            <p>Tom has been the operator on the other side of that table. Dealing with drivers, zone profiles, VAT, dispatch, pricing and customers, often all before lunchtime, is something only another operator really appreciates.</p>
+            <p>Tom has been the operator on the other side of that table. He bought the business at 22, very nearly lost it and rebuilt it, and he's worked with the National Taxi Association. Dealing with drivers, zone profiles, VAT, dispatch, pricing and customers, often all before lunchtime, is something only another operator really appreciates.</p>
         </div>
 
         <div class="tx-section">
             <h2>Choosing or changing a dispatch system</h2>
-            <p>Before you sign, we help you work out whether the system is the problem at all, and if it is, what the new one has to do for your operation rather than what looks good in a demo. Tom ran on iCabbi, and we know the other main UK systems and where operators tend to get caught out moving between them.</p>
+            <p>Before you sign, we help you work out whether the system is the problem at all, and if it is, what the new one has to do for your operation rather than what looks good in a demo. Tom ran on iCabbi and knows the other main UK systems.</p>
             <p>If you do change, the switchover is where the risk sits:</p>
             <ul class="tx-dots" data-switchover>
                 <li>your account customers, and how their bookings and invoices move across</li>
@@ -172,10 +178,11 @@
         </div>
         </div>
 
-        <%# ALL FIVE CORE OFFERS at their approved names, prices and catalogue
-            descriptions (Tom, 07/10/2026), read from lib/whereToStartOffers.js
-            so the page can never disagree with the offer pages. No credit
-            mechanics here: each offer page carries its own. %>
+        <%# THREE PAID OFFERS with a taxi lead-in each (Tom, 07/10/2026: the
+            £3,400 card dropped after the second review). Names, prices and
+            descriptions read from lib/whereToStartOffers.js so the page can
+            never disagree with the offer pages; the Product Guide covers the
+            rest. No credit mechanics here. %>
         <section class="tx-band surface-paper">
         <div class="tx-wrap">
         <div class="tx-section">
@@ -183,29 +190,23 @@
             <ul class="tx-offers" data-offers="<%= offers.length %>">
                 <% offers.forEach(function (o) { %>
                 <li class="tx-offer" data-offer-id="<%= o.id %>">
+                    <span class="tx-offer-lead"><%= o.taxiLead %></span>
                     <h3><%= o.name %></h3>
-                    <span class="tx-offer-price"><%= o.pricePence === 0 ? 'Free' : '£' + (o.pricePence / 100).toLocaleString('en-GB') %></span>
-                    <% if (o.id === 'conversation') { %>
-                    <p>Tell us what's going on and Tom will give you a straight view. If we're not the right fit, we'll say so and, where we can, point you to someone who is.</p>
-                    <p class="tx-offer-more"><a class="tx-link" href="#conversation">Tell us what's going on</a></p>
-                    <% } else { %>
+                    <span class="tx-offer-price"><%= '£' + (o.pricePence / 100).toLocaleString('en-GB') %></span>
                     <p><%= o.description %></p>
                     <p class="tx-offer-more"><a class="tx-link" href="<%= o.path %>">See the <%= o.name %></a></p>
-                    <% } %>
                 </li>
                 <% }) %>
             </ul>
+            <p class="tx-offers-next">Not sure which fits? Tell us what's going on and Tom will give you a straight view. For everything else we do, see the <a class="tx-link" href="/product-guide">Product Guide</a>.</p>
+            <div class="tx-offers-actions">
+                <a href="#conversation" class="btn btn-primary">Tell us what's going on</a>
+            </div>
         </div>
         </div>
         </section>
 
-        <div class="tx-wrap">
-        <div class="tx-section">
-            <h2>Who you'd be talking to</h2>
-            <p>Tom started in the trade as a driver, bought the business at 22 and spent nearly twenty years building it, very nearly losing it and rebuilding it before it sold. He's also worked with the National Taxi Association. When you talk to us about your operation, you're talking to someone who has run one.</p>
-        </div>
-        </div>
-    </main>
+</main>
 
     <%- include('partials/site-footer', { canEdit: false, pageContact, content }) %>
     <script nonce="<%= nonce %>">

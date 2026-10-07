@@ -69,28 +69,44 @@ test('the hero states the evidenced facts and the decision the searcher faces', 
   assert.ok(!/(?:built|build) (?:taxi )?websites for (?:taxi )?operators|integrat/i.test(text), 'an unevidenced integration or taxi website claim appeared');
 });
 
-test('independence is stated and the iCabbi listing disclosed, together', () => {
-  const text = visibleText(renderBody());
+test('independence is stated in the hero and the iCabbi listing disclosed beside "no supplier pays us"', () => {
+  const body = renderBody();
+  const hero = visibleText(body.slice(body.indexOf('<header class="tx-hero"'), body.indexOf('</header>')));
+  assert.ok(hero.includes("We're independent of every dispatch supplier."), 'independence is no longer on the first screen');
+  const text = visibleText(body);
   assert.ok(text.includes('no supplier pays us'), 'the independence statement is gone');
   assert.ok(text.includes('listed on the iCabbi Marketplace'), 'the iCabbi Marketplace listing is no longer disclosed');
 });
 
-test('all five core offers at their approved names and prices, read from the catalogue', () => {
+test('three taxi-framed offers from the catalogue, no £3,400, a route to the Product Guide', () => {
+  // Tom, 07/10/2026 after the second review: "lets ditch the 3400 then".
   const offers = taxiOffers();
-  assert.deepStrictEqual(offers.map((o) => o.id), ['conversation', 'commercial_review', 'full_commercial_review', 'website_build', 'full_review_website_build']);
+  assert.deepStrictEqual(offers.map((o) => o.id), ['commercial_review', 'full_commercial_review', 'website_build']);
   const body = renderBody();
   const text = visibleText(body);
-  for (const o of offers.filter((x) => x.pricePence > 0)) {
+  for (const o of offers) {
     const price = '£' + (o.pricePence / 100).toLocaleString('en-GB');
     assert.ok(text.includes(o.name) && text.includes(price), `${o.name} at ${price} is missing`);
     assert.ok(body.includes(`href="${o.path}"`), `${o.name} no longer links to its own page`);
   }
+  for (const lead of ['Before you change system', 'Help through the switchover', 'A website that gets the booking']) {
+    assert.ok(text.includes(lead), `the taxi lead-in "${lead}" is missing`);
+  }
   assert.strictEqual(OFFERS.commercial_review.pricePence, 50000);
-  // Only the approved figures, never framed as a reduction or a taxi rate.
-  assert.ok(!/£(?!(?:500|999|2,500|3,400)\b)[0-9][0-9,]*/.test(text), 'an unapproved price appeared');
+  assert.ok(!text.includes('£3,400') && !text.includes('Commercial Review and Website Build'), 'the £3,400 offer is back');
+  assert.ok(body.includes('href="/product-guide"'), 'the Product Guide route for everything else is gone');
+  assert.ok(/class="tx-offers-actions">\s*<a href="#conversation"/.test(body), 'the conversation button after the offers is gone');
+  assert.ok(!/£(?!(?:500|999|2,500)\b)[0-9][0-9,]*/.test(text), 'an unapproved price appeared');
   assert.ok(!/save £|was £|discount|introductory|50%|half price|launch (?:price|offer)|limited time|taxi rate|special offer/i.test(text), 'a price is framed as a reduction');
-  // No checkout or Ads conversion on this page; the offer pages carry their own.
   assert.ok(!/\/api\/checkout|data-offer=|AW-18129914078/.test(body + read(ROUTE)), 'a checkout or conversion appeared on the taxi page');
+});
+
+test('no repeated biography section, the extra proof sits in the operator paragraph, no migration claim', () => {
+  const text = visibleText(renderBody());
+  assert.ok(!text.includes("Who you'd be talking to"), 'the separate biography section is back');
+  assert.ok(text.includes('bought the business at 22, very nearly lost it and rebuilt it') && text.includes('National Taxi Association'), 'the extra operator proof is missing');
+  assert.ok(text.includes('Tom ran on iCabbi and knows the other main UK systems.'), 'the systems line changed');
+  assert.ok(!/caught out moving between/i.test(text), 'the unevidenced migration claim is back');
 });
 
 test('brand rules: we, no dashes, no banned words, AI not the hook', () => {
