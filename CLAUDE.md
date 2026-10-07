@@ -7395,12 +7395,24 @@ and Tom's decisions, 7 October 2026", id
   section folded into the operator paragraph (bought at 22, very nearly lost
   it and rebuilt it, worked with the NTA); the systems line softened to "Tom
   ran on iCabbi and knows the other main UK systems." (no evidence of
-  migration experience; strengthen only if Tom confirms he moved Abacus onto
-  iCabbi himself); smaller hero paragraph on a phone. Headings at Poppins 600
-  to match the rest of the site (`h1, h2, h3` rule, pinned by test). Still
-  open: "fixed-price" in the shared £999 catalogue description breaks the
-  no-dash rule (Tom's call, as it changes every offer page); one supporting
-  image, ideally a real Abacus-era photo from Tom.
+  migration experience); smaller hero paragraph on a phone. Headings at
+  Poppins 600 to match the rest of the site (`h1, h2, h3` rule, pinned by
+  test).
+- **Tom's answers of 07/10/2026 to the open items:** (1) Abacus did move onto
+  iCabbi from another system ("yes taxi book"), so the systems line now reads
+  "Tom has been through a switchover himself, moving Abacus onto iCabbi from
+  another system, and he knows the other main UK systems." The earlier system
+  is not named (the name was given loosely and only iCabbi is evidenced by
+  name). (2) "fixed-price" in the shared £999 catalogue description stays:
+  "dash is ok there as long as its just one". (3) No Abacus-era photo: "not my
+  brand any more it feels wrong", so the desk photo of Tom stays and the
+  page should not lean on Abacus branding visually. (4) Two links in, by a
+  guarded seed migration (markers `what-we-do.taxi_operators_link_2026-10-07`
+  and `evidence.taxi_operators_link_2026-10-07`): a new intervention appended
+  to What We Do, and one on Evidence directly after `biography__2` (the Abacus
+  case study). Both carry a code-route slug the CMS dropdown does not list,
+  the same trap as the sale readiness link: saving either section in the CMS
+  repoints its button.
 - **AI is never the hook:** "The phones and the office" sits below the dispatch
   and business sections.
 - **Image:** the real desk photo of Tom from the start-up page. No generated

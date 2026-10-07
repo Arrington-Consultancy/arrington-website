@@ -8013,6 +8013,134 @@ async function seed() {
   }
 
 
+  // TAXI OPERATORS PAGE: two contextual links in (07/10/2026).
+  //
+  // Tom, 07/10/2026, answering "nothing else on the site links to the taxi
+  // page yet; links from What We Do and the Abacus case study?": "ok".
+  // /taxi-and-private-hire-operators is indexable but deliberately not in the
+  // navigation (routes/taxiOperators.js), so without these an organic visitor
+  // already on the site had no way to reach it.
+  //
+  // THE PATTERN IS THE SALE READINESS ONE ABOVE, copied rather than invented:
+  // a NEW intervention instance per page, so nothing already on either page
+  // is edited, moved or replaced; a run-once marker per page; a check by
+  // destination so a link Tom built by hand is never duplicated; allocation
+  // against every page's section_order and every content prefix.
+  //
+  // Placement: on What We Do it is appended (the live order cannot be read
+  // from here). On Evidence it goes directly after biography__2, the Abacus
+  // and Falmouth Taxis case study, because that is the one section a taxi
+  // operator reading the page would act on; if that section is not on the
+  // page it is appended instead.
+  //
+  // THE SAME SILENT TRAP AS SALE READINESS: button_link holds a code-route
+  // slug the CMS dropdown does not list, so saving either section in the CMS
+  // repoints the button. Delete the marker row to re-run.
+  //
+  // Copy: "we", no dashes, no price, facts already on the taxi page only.
+  {
+    const TAXI_SLUG = 'taxi-and-private-hire-operators';
+    const TAXI_LINKS = [
+      {
+        page: 'what-we-do',
+        marker: 'what-we-do.taxi_operators_link_2026-10-07',
+        after: null,
+        rows: {
+          label: '',
+          heading: 'Run a taxi or private hire firm?',
+          subtext: 'Choosing or changing a dispatch system is a bigger decision than the demo makes it look. Tom ran Abacus and Falmouth Taxis for nearly twenty years, so you would be talking to an operator.',
+          button_text: 'Taxi and private hire'
+        }
+      },
+      {
+        page: 'evidence',
+        marker: 'evidence.taxi_operators_link_2026-10-07',
+        after: 'biography__2',
+        rows: {
+          label: '',
+          heading: 'Run a taxi or private hire firm yourself?',
+          subtext: 'We help operators choose or change a dispatch system, get through the switchover, and look at the business behind it.',
+          button_text: 'How we help operators'
+        }
+      }
+    ];
+
+    for (const link of TAXI_LINKS) {
+      const { rows: markerRows } = await db.query(
+        'SELECT 1 FROM content WHERE section_key = $1', [link.marker]
+      );
+      if (markerRows.length) continue;
+
+      const { rows: pageRows } = await db.query(
+        'SELECT section_order FROM pages WHERE slug = $1', [link.page]
+      );
+      if (pageRows.length === 0) {
+        // No page on a fresh database (Tom created both by hand). No marker,
+        // so this runs on the deployment that has the page.
+        console.log(`Taxi operators link skipped: the ${link.page} page does not exist.`);
+        continue;
+      }
+      const order = Array.isArray(pageRows[0].section_order) ? pageRows[0].section_order.slice() : [];
+
+      const { rows: existingRows } = await db.query(
+        "SELECT section_key FROM content WHERE section_key LIKE '%.button_link' AND content = $1",
+        [TAXI_SLUG]
+      );
+      if (existingRows.some((r) => order.includes(r.section_key.replace(/\.button_link$/, '')))) {
+        console.log(`Taxi operators link skipped: ${link.page} already links to it.`);
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [link.marker, 'true']
+        );
+        continue;
+      }
+
+      const { rows: allPages } = await db.query('SELECT section_order FROM pages');
+      const inUse = new Set();
+      for (const pg of allPages) {
+        if (Array.isArray(pg.section_order)) for (const id of pg.section_order) inUse.add(id);
+      }
+      const { rows: prefixRows } = await db.query(
+        "SELECT DISTINCT split_part(section_key, '.', 1) AS prefix FROM content"
+      );
+      const prefixes = new Set(prefixRows.map((r) => r.prefix));
+      let linkId = null;
+      for (let n = 2; n <= 99; n++) {
+        const candidate = 'intervention__' + n;
+        if (!inUse.has(candidate) && !prefixes.has(candidate)) { linkId = candidate; break; }
+      }
+      if (!linkId) {
+        console.log(`Taxi operators link skipped on ${link.page}: no free intervention instance id.`);
+        continue;
+      }
+
+      for (const [field, value] of Object.entries({ ...link.rows, button_link: TAXI_SLUG })) {
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [`${linkId}.${field}`, value]
+        );
+      }
+
+      const at = link.after ? order.indexOf(link.after) : -1;
+      const newOrder = at >= 0
+        ? order.slice(0, at + 1).concat([linkId], order.slice(at + 1))
+        : order.concat([linkId]);
+      await db.query(
+        'UPDATE pages SET section_order = $1::jsonb WHERE slug = $2',
+        [JSON.stringify(newOrder), link.page]
+      );
+      console.log(
+        `Taxi operators: contextual link (${linkId}) added to ${link.page} ` +
+        (at >= 0 ? `after ${link.after}` : 'at the end') + ` -> /${TAXI_SLUG}.`
+      );
+      await db.query(
+        'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+        [link.marker, 'true']
+      );
+    }
+  }
+
+
   // Arrington AI Workspace: ingest the encrypted snapshot into
   // workspace_records. A no-op when WORKSPACE_SNAPSHOT_KEY is unset, and
   // never fatal: an ingest failure records itself as a failed sync run

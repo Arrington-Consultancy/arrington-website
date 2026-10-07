@@ -105,7 +105,11 @@ test('no repeated biography section, the extra proof sits in the operator paragr
   const text = visibleText(renderBody());
   assert.ok(!text.includes("Who you'd be talking to"), 'the separate biography section is back');
   assert.ok(text.includes('bought the business at 22, very nearly lost it and rebuilt it') && text.includes('National Taxi Association'), 'the extra operator proof is missing');
-  assert.ok(text.includes('Tom ran on iCabbi and knows the other main UK systems.'), 'the systems line changed');
+  // Tom, 07/10/2026: Abacus moved onto iCabbi from another system while he
+  // ran it, so the switchover claim is his own. The earlier system is not
+  // named (only iCabbi use is evidenced by name), and no claim of moving
+  // operators between other systems is made.
+  assert.ok(text.includes('Tom has been through a switchover himself, moving Abacus onto iCabbi from another system, and he knows the other main UK systems.'), 'the systems line changed');
   assert.ok(!/caught out moving between/i.test(text), 'the unevidenced migration claim is back');
 });
 
@@ -140,4 +144,20 @@ test('headings match the rest of the site: Poppins at 600, body DM Sans', () => 
   assert.ok(/h1, h2, h3 \{ font-family: 'Poppins', 'DM Sans', sans-serif; font-weight: 600;/.test(view), 'the heading weight no longer matches the site');
   assert.ok(/family=DM\+Sans[^"]*&family=Poppins:wght@500;600/.test(view), 'the Poppins 600 file is no longer loaded');
   assert.ok(/body \{[^}]*font-family: 'DM Sans'/.test(view), 'the body is no longer DM Sans');
+});
+
+test('two contextual links in: What We Do (appended) and Evidence (after the Abacus case study)', () => {
+  // Tom, 07/10/2026: "ok" to links from What We Do and the Abacus case study.
+  const seed = read('db/seed.js');
+  const at = seed.indexOf('TAXI OPERATORS PAGE: two contextual links in');
+  assert.ok(at > 0, 'the link migration is gone');
+  const block = seed.slice(at, seed.indexOf('// Arrington AI Workspace: ingest', at));
+  assert.ok(block.includes("const TAXI_SLUG = 'taxi-and-private-hire-operators'"), 'the links no longer point at the taxi page');
+  assert.ok(PATH === '/' + 'taxi-and-private-hire-operators', 'the route was renamed without the links');
+  assert.ok(block.includes("page: 'what-we-do'") && block.includes("page: 'evidence'"), 'a link page is missing');
+  assert.ok(block.includes("after: 'biography__2'"), 'the Evidence link no longer follows the Abacus case study');
+  assert.ok(/'what-we-do\.taxi_operators_link_2026-10-07'/.test(block) && /'evidence\.taxi_operators_link_2026-10-07'/.test(block), 'a run-once marker is missing');
+  const copy = (block.match(/(?:heading|subtext|button_text): '([^']*)'/g) || []).join(' ');
+  assert.ok(!/[—–]|[A-Za-z]-[A-Za-z]/.test(copy), 'a dash or hyphenated word in the link copy');
+  assert.ok(!/£|\b(I|my|me)\b/.test(copy), 'a price or first person in the link copy');
 });
