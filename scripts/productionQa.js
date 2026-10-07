@@ -24,7 +24,9 @@ const path = require('path');
 const { chromium, devices } = require('playwright');
 
 const BASE = process.env.QA_BASE_URL || 'https://www.arringtonconsultancy.com';
-const PATHS = (process.env.QA_PATHS || '/').split(',').map((p) => p.trim()).filter(Boolean);
+// The token "sitemap" expands to every path in the live sitemap.xml, so a
+// whole-site read (the voice sweep, 07/10/2026) needs no hand-kept list.
+const RAW_PATHS = (process.env.QA_PATHS || '/').split(',').map((p) => p.trim()).filter(Boolean);
 
 // Whether each inspected path is listed in the live sitemap. Fetched once,
 // so a hidden page (noindex, out of the sitemap) can be confirmed absent
@@ -51,6 +53,8 @@ function slug(p) {
 
 (async () => {
   const sitemap = await sitemapText();
+  const fromSitemap = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1].replace(BASE, '') || '/');
+  const PATHS = [...new Set(RAW_PATHS.flatMap((p) => (p === 'sitemap' ? fromSitemap : [p])))];
   const browser = await chromium.launch();
   const results = [];
   for (const p of PATHS) {
@@ -96,6 +100,12 @@ function slug(p) {
           // (Tom, 06/10/2026: no dashes on the site). Added 06/10/2026.
           dashes: (document.body.innerText.match(/.{0,40}[\u2013\u2014].{0,40}/g) || []).map((x) => x.replace(/\s+/g, ' ').trim())
         })));
+        // The visible text of the page as a visitor reads it, desktop only,
+        // so live CMS copy (which the sandbox cannot read from the database)
+        // can be reviewed word for word. Added 07/10/2026 for the voice sweep.
+        if (size === 'desktop') {
+          fs.writeFileSync(path.join(OUT, `${slug(p)}.txt`), await page.evaluate(() => document.body.innerText));
+        }
         const file = `${slug(p)}-${size}.png`;
         await page.screenshot({ path: path.join(OUT, file), fullPage: true });
         r.screenshot = file;
