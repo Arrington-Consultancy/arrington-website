@@ -7360,7 +7360,7 @@ Google's usual three requests (`googleadservices.com/pagead/conversion`,
 the Ads account on 06/10/2026, from the TEST TRACKING lead. `ads=1` costs a
 real conversion each time it runs: use it only to prove the conversion.
 
-## Taxi and private hire operators page (built 07/10/2026, ON THE BRANCH, NOT LIVE)
+## Taxi and private hire operators page (LIVE 07/10/2026)
 
 `/taxi-and-private-hire-operators`: an indexable trade page for operators
 choosing or changing a dispatch system (`routes/taxiOperators.js`,
@@ -7393,7 +7393,21 @@ and Tom's decisions, 7 October 2026", id
 - **Delivery (Tom, 07/10/2026: "come and see you on request, ie get your
   £££"):** "by video call, and Tom will come and see you in person on request,
   with travel costs agreed before he sets off." No travel price is stated.
-  Next: ChatGPT review-only pass on the real page, then Tom decides go-live.
+  Put live on Tom's instruction ("lets put taxi site live") before the
+  ChatGPT review; that review (brief in Drive, id
+  `1cEACP1vkdcXtnsdptliL0Y9eUVL1pQ6LKq7iSqOugtA`) can still run against the
+  live page.
+- **Live, 07/10/2026:** main `08bb885`, production deployment `aba75bbc`.
+  The first inspection run returned 500 on both sizes: the production log
+  shows a database connection timeout ("Connection terminated unexpectedly")
+  at `loadThemeAndShell` about two minutes after the deploy, not a page fault.
+  Recheck run `20261007T105238Z-taxi-launch-recheck`: 200 at desktop and phone, in sitemap.xml, canonical
+  correct, no overflow, no page errors, live capture read.
+- **Railway IDs, to stop a repeat of a mistake made this day:** project
+  `55465ed5-4c24-41cd-a2cb-ee837f586477`; the PRODUCTION environment is
+  `cfa21c37-8d8a-4b4d-86a6-9a32a0f38e4f`. `c4d93e1c-c6fa-420b-95df-dc2a82795aba`
+  is STAGING. A push to main deploys both, so read production logs with the
+  production environment id, or you are reading staging's database.
 
 ## Sale readiness page
 
