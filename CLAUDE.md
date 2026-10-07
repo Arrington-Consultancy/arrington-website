@@ -912,6 +912,30 @@ Active theme stored in DB, applied via CSS variables. Affects main site and logi
 - **Security reviews** logged under `~/.claude/securityharden/reports/` (latest: `2026-06-09-full.md`, verdict LOW). Rerun via `/securityharden`.
 - **npm audit clean as of 29/08/2026** (PRs #115/#116): five findings cleared with in-range lockfile updates (body-parser 2.3.0, ip-address 10.7.0, postcss 8.5.26, nanoid 3.3.18, sanitize-html 2.17.5). **`sanitize-html` is pinned EXACTLY at 2.17.5, deliberately**: 2.17.6+ moved to htmlparser2 v12, which ships no CJS build, and production's Node cannot `require()` an ES module, so the 2.17.7 bump crashlooped a production deploy with `ERR_REQUIRE_ESM` (no visitor downtime; Railway kept the old deployment serving). 2.17.5 fixes the advisory (GHSA-vccv-cmxp-4j9h, vulnerable <=2.17.4) while keeping htmlparser2 at the v10 dual build production has always run. **Do not float this pin, and do not trust a green local test run to prove a dependency loads on production**: the dev sandbox runs Node 22, where require-of-ESM works. Lift the pin only together with a deliberate Node upgrade, tested on the production Node major.
 
+## Tom's voice: read the controlled authority in Drive every time (Tom, 07/10/2026)
+
+There is one controlled programme for how AI writes as Tom: the Drive folder
+**ARRINGTON TOM VOICE**. Start at **00 TOM VOICE - START HERE** (id
+`1aE_xTZTKKmjMOcNRD0KMfUNCxZpYmSSDT8_xMmz6hnw`), then **01A TOM VOICE - WORKER
+SPEC - EVOLVING** (id `1TcDwzUE2aKI8opWz6h6IRfYig3NPuF2M0sFDl8U-MPo`), then the
+approved examples for the type of writing.
+
+- **While a track is EVOLVING, re-read it from Drive every time** you write,
+  rewrite or materially edit something as Tom. Never work from this file, a
+  previous chat, memory or an earlier output. The rules are deliberately NOT
+  copied here, because a copy is exactly what drifts.
+- **This worker is a consumer, not an owner.** Do not change the rules, infer
+  new ones, approve examples, alter lock counts, declare a track locked, or
+  treat our own drafts as evidence. If Tom's writing seems to contradict the
+  authority, follow the authority and route the point to ARRINGTON TOM VOICE
+  WORKER. A LOCKED track changes only on Tom's approval through that worker.
+- **Where it applies on the website:** ordinary website copy ("we", Tom in the
+  third person) stays under the Brand OS and Arrington Voice rules; the worker
+  spec itself says it is not for website copy. It applies to anything
+  genuinely Tom-authored or in his first person, which means Useful Thinking.
+  Tom's approved emails may still be used as a source of facts and of his own
+  observations for website copy, which is how the taxi page uses APPROVED 03.
+
 ## Voice and tone
 
 **This section is a quick-reference summary only — the Brand Operating
