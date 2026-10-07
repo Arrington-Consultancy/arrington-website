@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <%- include('partials/google-tag') %>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taxi Dispatch System Advice from a Former Operator | Arrington Consultancy</title>
+    <%# INDEXABLE TRADE PAGE (Tom, 07/10/2026). No noindex: it is in the
+        sitemap and written for the dispatch searches. Not in the main
+        navigation. See routes/taxiOperators.js. %>
+    <meta name="description" content="Choosing or changing a taxi dispatch system? Independent advice from Tom Arrington, over 20 years in the taxi trade and eight years running on iCabbi. No supplier pays us.">
+    <link rel="canonical" href="https://www.arringtonconsultancy.com/taxi-and-private-hire-operators">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Taxi dispatch system advice from a former operator | Arrington Consultancy">
+    <meta property="og:description" content="Choosing or changing a taxi dispatch system? Talk to an operator first.">
+    <meta property="og:url" content="https://www.arringtonconsultancy.com/taxi-and-private-hire-operators">
+    <meta property="og:image" content="https://www.arringtonconsultancy.com/img/logo">
+    <meta name="csrf-token" content="<%= csrfToken %>">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Poppins:wght@500;600&display=swap" rel="stylesheet">
+    <style nonce="<%= nonce %>">
+        :root {
+            <% for (const [prop, val] of Object.entries(theme.vars)) { %>
+            <%= prop %>: <%= val %>;
+            <% } %>
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: 'DM Sans', sans-serif; background: var(--black); color: var(--text); line-height: 1.6; }
+        <%- include('partials/site-chrome-styles') %>
+
+        h1, h2, h3 { font-family: 'Poppins', 'DM Sans', sans-serif; font-weight: 400; color: var(--text-bright); line-height: 1.2; margin: 0; }
+        p { color: var(--text); margin: 0 0 1.2rem; }
+
+        .btn { display: inline-block; font-family: 'DM Sans', sans-serif; font-size: 0.92rem; font-weight: 600; padding: 0.6rem 1.5rem; border-radius: 3px; text-decoration: none; cursor: pointer; border: 1px solid transparent; }
+        .btn-primary { background: var(--accent); color: var(--black); border-color: var(--accent); }
+        .btn-primary:hover, .btn-primary:focus-visible { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+        main { padding: 0 0 5rem; }
+        .tx-wrap { max-width: 700px; margin: 0 auto; padding: 0 1.5rem; }
+
+        /* HERO: the same treatment as the start-up page, with the real photo
+           of Tom at his desk (no generated or stock people). A generated rank
+           image was considered and left out until a corrected one exists: an
+           operator would spot a roof sign on a private hire car at once. */
+        .tx-hero { position: relative; overflow: hidden; background: var(--black); display: flex; align-items: center; min-height: 640px; padding: calc(var(--site-chrome) + 3.5rem) 1.5rem 4rem; }
+        .tx-hero-photo { position: absolute; top: var(--site-chrome); right: 0; bottom: 0; left: 0; margin: 0; }
+        .tx-hero-photo img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 72% 12%; }
+        .tx-hero-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, var(--black) 0%, var(--black) 28%, color-mix(in srgb, var(--black) 60%, transparent) 52%, color-mix(in srgb, var(--black) 10%, transparent) 78%, transparent 100%), linear-gradient(0deg, var(--black) 0%, transparent 22%); }
+        .tx-hero-inner { position: relative; z-index: 1; width: 100%; max-width: 1100px; margin: 0 auto; }
+        .tx-hero-text { max-width: 590px; }
+
+        .tx-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; color: var(--accent); margin-bottom: 1rem; display: block; }
+        h1 { font-size: clamp(1.6rem, 4.6vw, 2.3rem); margin-bottom: 1.2rem; }
+        .tx-lede { font-size: 1.12rem; color: var(--text-bright); margin-bottom: 1.6rem; max-width: 62ch; }
+
+        .tx-cred { padding: 1.5rem 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+        .tx-cred p { margin: 0; font-size: 1.02rem; color: var(--text-bright); }
+        .tx-cred p + p { margin-top: 0.5rem; color: var(--text); font-size: 0.97rem; }
+
+        .tx-section { margin-top: 3.25rem; }
+        .tx-section > h2 { font-size: 1.4rem; margin-bottom: 0.9rem; }
+        .tx-section > p { max-width: 62ch; }
+
+        .tx-dots { list-style: none; padding: 0; margin: 0 0 1.4rem; max-width: 62ch; }
+        .tx-dots li { position: relative; padding-left: 1.15rem; margin-bottom: 0.75rem; font-size: 0.98rem; color: var(--text); }
+        .tx-dots li:last-child { margin-bottom: 0; }
+        .tx-dots li::before { content: ''; position: absolute; left: 0; top: 0.6em; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+
+        .tx-link { color: var(--accent); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); padding-bottom: 2px; }
+        .tx-link:hover, .tx-link:focus-visible { border-bottom-color: var(--accent); }
+
+        /* WAYS TO WORK WITH US: the one band on the paper surface, which is
+           reserved for tangible scope. All five core offers at their approved
+           prices (Tom, 07/10/2026), each linking to its own page. */
+        .tx-band { margin-top: 3.5rem; padding: 3.25rem 0 3.5rem; }
+        .tx-band .tx-section { margin-top: 0; }
+        .tx-offers { list-style: none; padding: 0; margin: 1.4rem 0 0; display: grid; gap: 0.9rem; }
+        .tx-offer { border: 1px solid var(--border); border-radius: 6px; padding: 1.3rem 1.5rem; background: color-mix(in srgb, var(--surface-paper) 70%, white 30%); display: grid; grid-template-columns: 1fr auto; gap: 0.3rem 1.25rem; align-items: baseline; }
+        .tx-offer h3 { font-size: 1.05rem; font-weight: 600; }
+        .tx-offer-price { font-family: 'Poppins', 'DM Sans', sans-serif; font-size: 1.25rem; color: var(--text-bright); text-align: right; font-variant-numeric: tabular-nums; }
+        .tx-offer p { grid-column: 1 / -1; margin: 0; font-size: 0.95rem; }
+        .tx-offer .tx-offer-more { grid-column: 1 / -1; margin-top: 0.5rem; font-size: 0.92rem; }
+
+        @media (max-width: 760px) {
+            .tx-hero { display: block; min-height: 0; padding: var(--site-chrome) 0 0; }
+            .tx-hero-photo { position: relative; top: auto; height: 48vw; max-height: 300px; }
+            .tx-hero-photo img { object-position: 66% 25%; }
+            .tx-hero-photo::after { background: linear-gradient(0deg, var(--black) 0%, color-mix(in srgb, var(--black) 40%, transparent) 30%, transparent 60%); }
+            .tx-hero-inner { padding: 0 1.5rem 0.5rem; margin-top: -1.5rem; }
+            .tx-cred { margin-top: 2rem; padding: 1.25rem 0; }
+            .tx-section { margin-top: 2.1rem; }
+            .tx-band { margin-top: 2.5rem; padding: 2.5rem 0 2.75rem; }
+            .tx-offer { padding: 1.15rem 1.2rem; }
+            .tx-hero-actions .btn { width: 100%; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <%- include('partials/site-header', { currentPage: { slug: 'taxi-and-private-hire-operators' }, navPages, canEdit: false, content, pageContact }) %>
+
+    <%# HERO. The headline names the decision the searcher is facing. Every
+        fact below it is evidenced: over 20 years in the trade starting as a
+        driver (Tom, 07/10/2026), nearly twenty years owning the business
+        (Evidence case study), around eight years on iCabbi and sold in 2025
+        (Tom's approved email of 6 July 2026). %>
+    <header class="tx-hero">
+        <picture class="tx-hero-photo">
+            <source srcset="/img/startup/tom-at-desk.webp" type="image/webp">
+            <img src="/img/startup/tom-at-desk.jpg" alt="Tom Arrington at his desk" width="1672" height="941" fetchpriority="high">
+        </picture>
+        <div class="tx-hero-inner">
+            <div class="tx-hero-text">
+                <span class="tx-label">Taxi and private hire</span>
+                <h1>Choosing or changing a taxi dispatch system? Talk to an operator first.</h1>
+                <p class="tx-lede">Tom Arrington spent over 20 years in the taxi trade in Devon and Cornwall. He started as a driver, then owned and ran Abacus and Falmouth Taxis for nearly twenty years, around eight of them on iCabbi, before selling the business in 2025.</p>
+                <div class="tx-hero-actions">
+                    <a href="#conversation" class="btn btn-primary">Tell us what's going on</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="tx-wrap">
+        <%# INDEPENDENCE (Tom, 07/10/2026): no supplier pays us, and the
+            iCabbi Marketplace listing is disclosed rather than hidden. %>
+        <div class="tx-cred" data-independence>
+            <p>We're independent. We're listed on the iCabbi Marketplace because Tom ran on iCabbi for eight years, but we don't sell software and no supplier pays us.</p>
+            <p>We work with operators anywhere in the UK, mostly by video call, and Tom will come and see you where it's worth it.</p>
+        </div>
+
+        <%# Built from Tom's approved email of 6 July 2026 (APPROVED 03 in the
+            voice folder), recast as "we" with Tom in the third person. %>
+        <div class="tx-section">
+            <h2>Most of the time it isn't the software</h2>
+            <p>When something goes wrong in a taxi office, the dispatch system usually gets the blame. To be fair, sometimes it is the software. More often it's the setup, the pricing, the zones, the drivers, the geography or what everyone expected the system to do, and usually it's a bit of all of them. Changing the system won't fix a problem that sits in the business, and it's an expensive way to find that out.</p>
+            <p>Tom has been the operator on the other side of that table. Dealing with drivers, zone profiles, VAT, dispatch, pricing and customers, often all before lunchtime, is something only another operator really appreciates.</p>
+        </div>
+
+        <div class="tx-section">
+            <h2>Choosing or changing a dispatch system</h2>
+            <p>Before you sign, we help you work out whether the system is the problem at all, and if it is, what the new one has to do for your operation rather than what looks good in a demo. Tom ran on iCabbi, and we know the other main UK systems and where operators tend to get caught out moving between them.</p>
+            <p>If you do change, the switchover is where the risk sits:</p>
+            <ul class="tx-dots" data-switchover>
+                <li>your account customers, and how their bookings and invoices move across</li>
+                <li>keeping your phone numbers and making sure calls land in the right place</li>
+                <li>getting drivers onto the new app without losing them in the process</li>
+                <li>card payments, and how fares and driver settlements work out</li>
+                <li>the notice period on the contract you're leaving</li>
+                <li>the night you switch over, and who's in the office when you do</li>
+            </ul>
+            <p>Afterwards, we help you get the most from the system you've chosen, because the setup decides most of what you get out of it.</p>
+        </div>
+
+        <div class="tx-section">
+            <h2>The business behind the system</h2>
+            <p>Often the question underneath the system is a commercial one: whether your pricing covers the work, whether account customers pay on time, how drivers are paid and kept, and how much of the business still runs through you. That's what our Commercial Review looks at, and it's the same thinking Tom used when he rebuilt his own business. <a class="tx-link" href="/evidence#biography__2">Read the Abacus and Falmouth Taxis story</a>.</p>
+        </div>
+
+        <div class="tx-section">
+            <h2>Websites for operators</h2>
+            <p>A taxi website has one job, which is getting the booking. We build HTML sites from scratch, not from a template, around the way your customers book, whether that's a phone call, your app or online, so the number and the app links are where people look for them.</p>
+        </div>
+
+        <%# AI is introduced only where it solves a real problem, never as the
+            hook (00 Brand OS, AI WORKERS). %>
+        <div class="tx-section">
+            <h2>The phones and the office</h2>
+            <p>A lot of an office's day goes on the same calls: where's my car, what's the fare, can I book for Friday. Where it genuinely helps, we can set up AI to take some of that off the controller's desk, inside rules you set and with a person stepping in whenever it matters.</p>
+        </div>
+        </div>
+
+        <%# ALL FIVE CORE OFFERS at their approved names, prices and catalogue
+            descriptions (Tom, 07/10/2026), read from lib/whereToStartOffers.js
+            so the page can never disagree with the offer pages. No credit
+            mechanics here: each offer page carries its own. %>
+        <section class="tx-band surface-paper">
+        <div class="tx-wrap">
+        <div class="tx-section">
+            <h2>Ways to work with us</h2>
+            <ul class="tx-offers" data-offers="<%= offers.length %>">
+                <% offers.forEach(function (o) { %>
+                <li class="tx-offer" data-offer-id="<%= o.id %>">
+                    <h3><%= o.name %></h3>
+                    <span class="tx-offer-price"><%= o.pricePence === 0 ? 'Free' : '£' + (o.pricePence / 100).toLocaleString('en-GB') %></span>
+                    <% if (o.id === 'conversation') { %>
+                    <p>Tell us what's going on and Tom will give you a straight view. If we're not the right fit, we'll say so and, where we can, point you to someone who is.</p>
+                    <p class="tx-offer-more"><a class="tx-link" href="#conversation">Tell us what's going on</a></p>
+                    <% } else { %>
+                    <p><%= o.description %></p>
+                    <p class="tx-offer-more"><a class="tx-link" href="<%= o.path %>">See the <%= o.name %></a></p>
+                    <% } %>
+                </li>
+                <% }) %>
+            </ul>
+        </div>
+        </div>
+        </section>
+
+        <div class="tx-wrap">
+        <div class="tx-section">
+            <h2>Who you'd be talking to</h2>
+            <p>Tom started in the trade as a driver, bought the business at 22 and spent nearly twenty years building it, very nearly losing it and rebuilding it before it sold. He's also worked with the National Taxi Association. When you talk to us about your operation, you're talking to someone who has run one.</p>
+        </div>
+        </div>
+    </main>
+
+    <%- include('partials/site-footer', { canEdit: false, pageContact, content }) %>
+    <script nonce="<%= nonce %>">
+        <%- include('partials/site-chrome-script') %>
+    </script>
+</body>
+</html>

@@ -24,6 +24,7 @@ const whereToStart = require('./routes/whereToStart');
 const productGuide = require('./routes/productGuide');
 const saleReadiness = require('./routes/saleReadiness');
 const startUpReview = require('./routes/startUpReview');
+const taxiOperators = require('./routes/taxiOperators');
 const { legacyRedirect } = require('./lib/legacyRedirect');
 const thankYou = require('./routes/thankYou');
 const scott = require('./routes/scott');
@@ -691,12 +692,13 @@ app.get('/sitemap.xml', async (req, res, next) => {
       'where-to-start/full-commercial-review': '2026-08-17',
       'where-to-start/website-build': '2026-08-17',
       'where-to-start/full-review-website-build': '2026-08-17',
-      'product-guide': '2026-08-22'
+      'product-guide': '2026-08-22',
+      'taxi-and-private-hire-operators': '2026-10-07'
     };
     // where-to-start/confirmation is deliberately excluded — private,
     // per-visitor payment status, noindex/nofollow on the page itself,
     // same treatment as the quiz/review result pages.
-    for (const slug of ['owner-check', 'owner-dependency-quiz', 'commercial-gaps-review', 'market-ready-test', 'where-to-start', 'where-to-start/commercial-review', 'where-to-start/full-commercial-review', 'where-to-start/website-build', 'where-to-start/full-review-website-build', 'product-guide']) {
+    for (const slug of ['owner-check', 'owner-dependency-quiz', 'commercial-gaps-review', 'market-ready-test', 'where-to-start', 'where-to-start/commercial-review', 'where-to-start/full-commercial-review', 'where-to-start/website-build', 'where-to-start/full-review-website-build', 'product-guide', 'taxi-and-private-hire-operators']) {
       urlEntries.push(`  <url><loc>${escapeXml(`${base}/${slug}`)}</loc><lastmod>${ASSESSMENT_ROUTE_LASTMOD[slug]}</lastmod></url>`);
     }
     res.type('application/xml').send(
@@ -863,6 +865,12 @@ saleReadiness.mountPageRoute(app, generateCsrfToken);
 // link to it anywhere without a new decision; test/startUpReviewPage.test.js
 // fails if any appears.
 startUpReview.mountPageRoute(app, generateCsrfToken);
+
+// Taxi and private hire operators: an INDEXABLE trade page (see
+// routes/taxiOperators.js). Unlike the start-up page it is in sitemap.xml and
+// carries no noindex. Not in the main navigation by design: it is a trade
+// page, not a new front door for the business. test/taxiOperatorsPage.test.js.
+taxiOperators.mountPageRoute(app, generateCsrfToken);
 
 // /thank-you: where the footer contact form lands after a stored enquiry, and
 // the only place the Google Ads Contact conversion fires (routes/thankYou.js).

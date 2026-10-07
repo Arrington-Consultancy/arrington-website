@@ -7333,6 +7333,40 @@ Google's usual three requests (`googleadservices.com/pagead/conversion`,
 the Ads account on 06/10/2026, from the TEST TRACKING lead. `ads=1` costs a
 real conversion each time it runs: use it only to prove the conversion.
 
+## Taxi and private hire operators page (built 07/10/2026, ON THE BRANCH, NOT LIVE)
+
+`/taxi-and-private-hire-operators`: an indexable trade page for operators
+choosing or changing a dispatch system (`routes/taxiOperators.js`,
+`views/taxi-operators.ejs`, `test/taxiOperatorsPage.test.js`). Built after a
+challenge round on a ChatGPT draft; Tom's decisions of 07/10/2026 are filed in
+Drive ("WEBSITE AND HOSTING WRITE-BACK - Taxi operator page: challenge round
+and Tom's decisions, 7 October 2026", id
+`1JBV0kxtoqwpeszblOuCKcaJZS4DlpSXpoWTTkCJ_OrA`).
+
+- **In the sitemap, no noindex, not in the navigation.** Not hidden like the
+  start-up page: the dispatch searches are organic as well as paid.
+- **Facts it may state, each evidenced:** over 20 years in the taxi trade,
+  starting as a driver (Tom, 07/10/2026); owned Abacus and Falmouth Taxis for
+  nearly twenty years (Evidence case study, linked at `/evidence#biography__2`);
+  around eight years on iCabbi and sold in 2025 (Tom's approved email of 6 July
+  2026, APPROVED 03 in the voice folder); worked with the NTA (same email).
+  No other dispatch supplier is named as used or known; the test fails if one is.
+- **Independence:** "no supplier pays us" (Tom, 07/10/2026) always sits beside
+  the disclosure of the iCabbi Marketplace listing. The listing fee runs from
+  Arrington to iCabbi.
+- **Offers:** all five core offers at their approved names and prices, read
+  from `lib/whereToStartOffers.js` (Tom: "we offer all products on this page"),
+  each linking to its own page. No checkout, no conversion on this page; the
+  footer enquiry form is the call to action, with a per-page copy override.
+- **AI is never the hook:** "The phones and the office" sits below the dispatch
+  and business sections.
+- **Image:** the real desk photo of Tom from the start-up page. No generated
+  image until a corrected one exists (no TAXI roof signs on private hire cars,
+  right-hand drive, no London cues), or a real Abacus-era photo from Tom.
+- **Not confirmed by Tom yet:** the line "We work with operators anywhere in
+  the UK, mostly by video call, and Tom will come and see you where it's worth
+  it." Next: ChatGPT review-only pass on the real page, then Tom decides go-live.
+
 ## Sale readiness page
 
 `/get-your-business-ready-to-sell` is a campaign landing page for social and

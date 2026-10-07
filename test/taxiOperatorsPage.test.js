@@ -1,0 +1,117 @@
+// The taxi and private hire operators page, built 07/10/2026 from Tom's
+// decisions of that day (Website & Hosting write-back "Taxi operator page:
+// challenge round and Tom's decisions, 7 October 2026"). Unlike the start-up
+// page this one is indexable and in the sitemap, but not in the navigation.
+// What is pinned: the facts it may state, the independence disclosure, all
+// five core offers at their approved prices read from the catalogue, and the
+// brand rules.
+
+const { test } = require('node:test');
+const assert = require('node:assert');
+const fs = require('node:fs');
+const path = require('node:path');
+const ejs = require('ejs');
+
+const ROOT = path.join(__dirname, '..');
+const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
+const emitted = (p) => read(p).replace(/<%#[\s\S]*?%>/g, '');
+
+const PATH = '/taxi-and-private-hire-operators';
+const VIEW = 'views/taxi-operators.ejs';
+const ROUTE = 'routes/taxiOperators.js';
+const { taxiOffers, TAXI_OPERATORS_CONTACT } = require('../routes/taxiOperators');
+const { OFFERS } = require('../lib/whereToStartOffers');
+
+// Render only the page body, with the shared partials stubbed, so the test
+// sees exactly what this view emits (including the offer loop).
+function renderBody() {
+  const src = emitted(VIEW)
+    .replace(/<%-\s*include\([^)]*\)\s*%>/g, '');
+  const html = ejs.render(src, {
+    theme: { vars: {} }, nonce: 'n', csrfToken: 't', navPages: [], content: {},
+    offers: taxiOffers(), pageContact: TAXI_OPERATORS_CONTACT
+  });
+  return html.slice(html.indexOf('<body>'));
+}
+const visibleText = (html) => html.replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ');
+
+test('the route is registered ahead of the CMS catch-all, indexable, and in the sitemap', () => {
+  const server = read('server.js');
+  assert.ok(/taxiOperators\.mountPageRoute\(app, generateCsrfToken\)/.test(server), 'the page route is not mounted');
+  assert.ok(server.indexOf('taxiOperators.mountPageRoute') < server.indexOf("app.get('/:slug'"), 'registered after the /:slug catch-all');
+  assert.ok(read(ROUTE).includes(`'${PATH}'`), `the route no longer serves ${PATH}`);
+  assert.ok(!/X-Robots-Tag/.test(read(ROUTE)), 'the route sends a robots header; this page is meant to be indexed');
+  assert.ok(!/<meta name="robots"/.test(emitted(VIEW)), 'the view carries a robots meta tag; this page is meant to be indexed');
+  const sitemapAt = server.indexOf("app.get('/sitemap.xml'");
+  const sitemapSrc = server.slice(sitemapAt, server.indexOf('</urlset>', sitemapAt));
+  assert.ok(sitemapSrc.includes("'taxi-and-private-hire-operators'"), 'the page is not in sitemap.xml');
+  assert.ok(/'taxi-and-private-hire-operators': '\d{4}-\d{2}-\d{2}'/.test(sitemapSrc), 'the page has no lastmod');
+  assert.ok(emitted(VIEW).includes(`<link rel="canonical" href="https://www.arringtonconsultancy.com${PATH}">`), 'the canonical tag is wrong or missing');
+});
+
+test('it is not in the main navigation', () => {
+  for (const f of ['views/partials/site-header.ejs', 'lib/navShell.js']) {
+    assert.ok(!read(f).includes(PATH), `${f} links to the taxi page`);
+  }
+});
+
+test('the hero states the evidenced facts and the decision the searcher faces', () => {
+  const text = visibleText(renderBody());
+  assert.ok(text.includes('Choosing or changing a taxi dispatch system? Talk to an operator first.'), 'the headline changed');
+  assert.ok(text.includes('over 20 years in the taxi trade'), 'the tenure fact Tom confirmed on 07/10/2026 is missing');
+  assert.ok(text.includes('He started as a driver'), 'the driver fact is missing');
+  assert.ok(text.includes('Abacus and Falmouth Taxis for nearly twenty years'), 'the ownership fact no longer matches the Evidence case study');
+  assert.ok(text.includes('around eight of them on iCabbi'), 'the iCabbi fact is missing or overstated');
+  assert.ok(text.includes('selling the business in 2025'), 'the sale fact is missing');
+  // Claims the evidence does not support must not appear.
+  assert.ok(!/\b(?:Autocab|Cordic|Sherlock|Cab Treasure|TaxiCaller|Taxi Butler)\b/i.test(text), 'a supplier is named as a system Tom used or knows; only iCabbi is evidenced');
+  assert.ok(!/\bPCO\b|black cab|London/i.test(text), 'London shorthand is on the page');
+  assert.ok(!/(?:built|build) (?:taxi )?websites for (?:taxi )?operators|integrat/i.test(text), 'an unevidenced integration or taxi website claim appeared');
+});
+
+test('independence is stated and the iCabbi listing disclosed, together', () => {
+  const text = visibleText(renderBody());
+  assert.ok(text.includes('no supplier pays us'), 'the independence statement is gone');
+  assert.ok(text.includes('listed on the iCabbi Marketplace'), 'the iCabbi Marketplace listing is no longer disclosed');
+});
+
+test('all five core offers at their approved names and prices, read from the catalogue', () => {
+  const offers = taxiOffers();
+  assert.deepStrictEqual(offers.map((o) => o.id), ['conversation', 'commercial_review', 'full_commercial_review', 'website_build', 'full_review_website_build']);
+  const body = renderBody();
+  const text = visibleText(body);
+  for (const o of offers.filter((x) => x.pricePence > 0)) {
+    const price = '£' + (o.pricePence / 100).toLocaleString('en-GB');
+    assert.ok(text.includes(o.name) && text.includes(price), `${o.name} at ${price} is missing`);
+    assert.ok(body.includes(`href="${o.path}"`), `${o.name} no longer links to its own page`);
+  }
+  assert.strictEqual(OFFERS.commercial_review.pricePence, 50000);
+  // Only the approved figures, never framed as a reduction or a taxi rate.
+  assert.ok(!/£(?!(?:500|999|2,500|3,400)\b)[0-9][0-9,]*/.test(text), 'an unapproved price appeared');
+  assert.ok(!/save £|was £|discount|introductory|50%|half price|launch (?:price|offer)|limited time|taxi rate|special offer/i.test(text), 'a price is framed as a reduction');
+  // No checkout or Ads conversion on this page; the offer pages carry their own.
+  assert.ok(!/\/api\/checkout|data-offer=|AW-18129914078/.test(body + read(ROUTE)), 'a checkout or conversion appeared on the taxi page');
+});
+
+test('brand rules: we, no dashes, no banned words, AI not the hook', () => {
+  const body = renderBody();
+  const own = visibleText(body)
+    // Approved catalogue descriptions are shared copy, checked where they live.
+    .replace(new RegExp(Object.values(OFFERS).map((o) => o.description).filter(Boolean).map((d) => d.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'g'), ' ');
+  const served = own + ' ' + TAXI_OPERATORS_CONTACT.heading + ' ' + TAXI_OPERATORS_CONTACT.body.replace(/<[^>]+>/g, ' ') + ' ' + TAXI_OPERATORS_CONTACT.messagePlaceholder;
+  assert.ok(!/[—–]/.test(served), 'an em or en dash is on the page');
+  const hyphenated = served.match(/[A-Za-z]+-[A-Za-z]+/g) || [];
+  assert.deepStrictEqual(hyphenated, [], `hyphenated words on the page: ${hyphenated.join(', ')}`);
+  // The customers' calls ("where's my car ... can I book for Friday") are quoted speech, not our voice.
+  assert.ok(!/\b(I|I'm|I've|my|me)\b/.test(served.replace("where's my car, what's the fare, can I book for Friday", '')), 'first person singular is on the page');
+  for (const banned of ['solutions', 'synergy', 'leverage', 'empower', 'journey', 'holistic', 'tailored', 'bespoke', 'coach', 'transformational', 'world class']) {
+    assert.ok(!new RegExp(`\\b${banned}\\b`, 'i').test(served), `banned language on the page: ${banned}`);
+  }
+  assert.ok(!/\bfire|firefight|burning|flames?\b/i.test(served), 'a fire metaphor is on the page');
+  // AI is never the hook: it must not appear in the hero or before the
+  // dispatch and business sections.
+  const hero = visibleText(body.slice(body.indexOf('<header class="tx-hero"'), body.indexOf('</header>')));
+  assert.ok(!/\bAI\b/.test(hero), 'AI appears in the hero');
+  assert.ok(body.indexOf('The phones and the office') > body.indexOf('The business behind the system'), 'the AI section moved above the business section');
+  assert.ok(body.includes('href="/evidence#biography__2"'), 'the Abacus case study link is gone');
+});
