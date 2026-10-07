@@ -931,10 +931,13 @@ approved examples for the type of writing.
   WORKER. A LOCKED track changes only on Tom's approval through that worker.
 - **Where it applies on the website:** ordinary website copy ("we", Tom in the
   third person) stays under the Brand OS and Arrington Voice rules; the worker
-  spec itself says it is not for website copy. It applies to anything
-  genuinely Tom-authored or in his first person, which means Useful Thinking.
-  Tom's approved emails may still be used as a source of facts and of his own
-  observations for website copy, which is how the taxi page uses APPROVED 03.
+  spec itself says it is not for website copy. No voice track covers Useful
+  Thinking yet (01A only calls social "closest"), so this worker does not
+  write Useful Thinking in Tom's voice: it publishes approved article text
+  exactly as Tom approved it in Drive. Where the voice folder and the website
+  authorities disagree, the Brand OS wins (01A says so). Tom's approved emails
+  may still be used as a source of facts and of his own observations for
+  website copy, which is how the taxi page uses APPROVED 03.
 
 ## Voice and tone
 
