@@ -8141,46 +8141,23 @@ async function seed() {
   }
 
 
-  // VOICE SWEEP PROBE (07/10/2026), READ ONLY. Prints the stored value of
-  // every content row whose visible text matches one of the lines the
-  // approved voice sweep changes, with the page it sits on, so the guarded
-  // migration that follows is written against production's exact values
-  // (inline tags, line breaks, CMS edits) rather than a guess. The lesson
-  // from the Cornwall step 2 body: log the live value before writing the
-  // guard. Writes nothing. Removed once the migration has shipped.
+  // VOICE SWEEP, CMS half (07/10/2026, Tom's approval in the Website &
+  // Hosting Handoff Log). The rows and the guard live in
+  // lib/voiceSweepCopy.js: every `from` is production's exact stored value,
+  // read by a read-only probe on deployment 55ddd57b, and a group is written
+  // only if every row in it still holds that value, so a later CMS edit by
+  // Tom makes the group stand down (and logs the live value) rather than
+  // being overwritten. Run once, under a marker.
   try {
-    const NEEDLES = [
-      'the work is better control', 'growth was real but the oversight', 'small decisions made every day',
-      'helping owners strengthen', 'actually taught him', 'clear positioning, consistent messaging',
-      'the reason we are here', 'the perspective we needed', 'outside perspective would have saved',
-      'most of the time goes into keeping', 'we started this because', 'seen how we work',
-      '30-minute', 'actually run, rebuilt', 'no presentations', 'helps identify what is working',
-      'the objective is simple', 'commercial review, £500', 'no obligation', 'black hole',
-      'a seven figure exit', 'nearly twenty years after tom bought', 'sold properly', 'profit margins improved',
-      'that is what structure does', 'counsellor-led', 'imagine what we could build',
-      'not dropped into a template', 'one-hour', 'book a time', 'one straightforward question', 'fifteen-year',
-      'more profit from the same workload'
-    ];
-    const strip = (v) => String(v || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
-      .replace(/&#39;|&rsquo;/g, "'").replace(/\s+/g, ' ').trim().toLowerCase();
-    const { rows: pageRows } = await db.query('SELECT slug, section_order FROM pages');
-    const where = {};
-    for (const pg of pageRows) {
-      for (const id of (Array.isArray(pg.section_order) ? pg.section_order : [])) (where[id] = where[id] || []).push(pg.slug);
+    const report = await require('../lib/voiceSweepCopy').applyVoiceSweep(db);
+    if (report) {
+      for (const g of report) {
+        console.log(`Voice sweep: ${g.name}: ${g.action}${g.written ? `, ${g.written} row(s) written` : ''}` +
+          (g.mismatched.length ? `; left alone because the live value differs: ${g.mismatched.map((m) => `${m.key}=${JSON.stringify(m.value)}`).join(' | ')}` : ''));
+      }
     }
-    const { rows } = await db.query("SELECT section_key, content FROM content WHERE section_key NOT LIKE 'site.%'");
-    let n = 0;
-    for (const r of rows) {
-      const t = strip(r.content);
-      if (!NEEDLES.some((x) => t.includes(x))) continue;
-      const prefix = r.section_key.split('.')[0];
-      const pages = where[prefix] || where[prefix.replace(/_(oxford|stat)$/, '')] || [];
-      console.log(`VOICE-PROBE ${r.section_key} [${pages.join(',') || 'orphan'}] ${JSON.stringify(r.content)}`);
-      n++;
-    }
-    console.log(`VOICE-PROBE done: ${n} matching row(s)`);
   } catch (err) {
-    console.error('VOICE-PROBE failed (boot continues):', err.message);
+    console.error('Voice sweep migration failed (boot continues):', err.message);
   }
 
 
