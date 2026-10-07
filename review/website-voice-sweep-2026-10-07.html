@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en-GB"><head><meta charset="utf-8">
+<title>Website Voice Sweep</title>
+<style>
+@font-face { font-family: 'Poppins'; font-weight: 500; src: url(poppins-latin-500-normal.woff2); }
+@font-face { font-family: 'Poppins'; font-weight: 600; src: url(poppins-latin-600-normal.woff2); }
+@font-face { font-family: 'Poppins'; font-weight: 700; src: url(poppins-latin-700-normal.woff2); }
+@font-face { font-family: 'DM Sans'; font-weight: 400; src: url(dm-sans-latin-400-normal.woff2); }
+@font-face { font-family: 'DM Sans'; font-weight: 500; src: url(dm-sans-latin-500-normal.woff2); }
+@font-face { font-family: 'DM Sans'; font-weight: 700; src: url(dm-sans-latin-700-normal.woff2); }
+:root { --navy:#0f1b2d; --ink:#1d2533; --muted:#5b6575; --gold:#b98a2e; --gold-soft:#f6efe0; --line:#dfe3ea; --keep:#eef1f5; --bg:#ffffff; }
+@page { size: A4; margin: 16mm 15mm 18mm; }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font-family:'DM Sans', sans-serif; font-size:10pt; line-height:1.5; }
+h1,h2,h3 { font-family:'Poppins', sans-serif; color:var(--navy); text-wrap:balance; }
+.cover { page-break-after: always; padding-top: 18mm; }
+.eyebrow { font-family:'Poppins'; font-weight:600; font-size:8.5pt; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); margin:0 0 6mm; }
+.cover h1 { font-size:30pt; font-weight:700; line-height:1.12; margin:0 0 5mm; }
+.cover .sub { font-size:12pt; color:var(--muted); max-width:150mm; margin:0 0 12mm; }
+.rule { width:28mm; height:2px; background:var(--gold); margin:0 0 10mm; }
+.facts { display:grid; grid-template-columns:repeat(3, 1fr); gap:5mm; margin:0 0 12mm; }
+.fact { border:1px solid var(--line); border-radius:4px; padding:4mm; }
+.fact b { display:block; font-family:'Poppins'; font-weight:600; font-size:20pt; color:var(--navy); font-variant-numeric:tabular-nums; }
+.fact span { color:var(--muted); font-size:9pt; }
+.box { background:var(--gold-soft); border-radius:4px; padding:5mm 6mm; margin:0 0 6mm; }
+.box h3 { margin:0 0 2mm; font-size:11pt; }
+.box p { margin:0 0 2mm; }
+.meta { color:var(--muted); font-size:8.5pt; margin-top:10mm; }
+h2 { font-size:15pt; font-weight:600; margin:0 0 1mm; display:flex; align-items:baseline; gap:3mm; }
+h2 .num { font-size:10pt; color:var(--gold); font-weight:600; min-width:6mm; }
+.intro h2 { margin-top:0; }
+.intro p, .intro li { max-width:170mm; }
+.intro { page-break-after: always; }
+.path { margin:0 0 1mm 9mm; color:var(--muted); font-size:8.5pt; }
+.note { margin:0 0 5mm 9mm; color:var(--muted); }
+.page-sec { margin:0 0 9mm; }
+.page-sec + .page-sec { border-top:1px solid var(--line); padding-top:7mm; }
+.item { border:1px solid var(--line); border-radius:4px; padding:3.5mm 4mm; margin:0 0 3.5mm; break-inside: avoid; }
+.item-head { display:flex; gap:2.5mm; align-items:center; margin-bottom:2mm; }
+.call { font-family:'Poppins'; font-weight:600; font-size:7.5pt; letter-spacing:.06em; text-transform:uppercase; padding:.6mm 2.2mm; border-radius:2px; }
+.call-change { background:var(--navy); color:#fff; }
+.call-yours { border:1px solid var(--gold); color:#7a5a17; }
+.call-keep { background:var(--keep); color:var(--muted); }
+.cat { font-size:8pt; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+.pair { display:grid; grid-template-columns:1fr 1fr; gap:4mm; }
+.lbl { font-family:'Poppins'; font-weight:600; font-size:7.5pt; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-bottom:1mm; }
+.cur p { margin:0; color:#4a5464; }
+.prop p { margin:0; color:var(--navy); font-weight:500; }
+.prop { border-left:2px solid var(--gold); padding-left:3mm; }
+.why { margin:2.5mm 0 0; font-size:9pt; color:var(--ink); }
+.kept { background:var(--keep); border-radius:4px; padding:3mm 4mm; margin-top:2mm; break-inside: avoid; }
+.kept-h { font-family:'Poppins'; font-weight:600; font-size:8pt; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-bottom:1mm; }
+.kept ul { margin:0; padding-left:4.5mm; }
+.kept li { margin:0 0 1mm; font-size:9pt; }
+table.pat { width:100%; border-collapse:collapse; margin:2mm 0 4mm; font-size:9pt; }
+table.pat th { text-align:left; font-family:'Poppins'; font-weight:600; font-size:8pt; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); border-bottom:1px solid var(--line); padding:1.5mm 2mm; }
+table.pat td { border-bottom:1px solid var(--line); padding:2mm; vertical-align:top; }
+ol.top li { margin-bottom:1.5mm; }
+</style></head><body>
+
+<div class="cover">
+  <p class="eyebrow">Arrington Consultancy · Website &amp; Hosting worker</p>
+  <h1>Website voice sweep</h1>
+  <p class="sub">Every public page read on the live site on 7 October 2026, line by line, against how you talk and against the brand. A plan for you to inspect. Nothing on the site has been changed.</p>
+  <div class="rule"></div>
+  <div class="facts">
+    <div class="fact"><b>34</b><span>changes I recommend</span></div>
+    <div class="fact"><b>5</b><span>your call, either way is defensible</span></div>
+    <div class="fact"><b>41</b><span>pages read, about 25,000 words</span></div>
+  </div>
+  <div class="box">
+    <h3>The one decision to make first</h3>
+    <p>What does "sound like me" mean on the website? Your voice authority (01A, 7 October) says the website is not Tom's first person: it is "we", with your story told in the third person, and the Brand OS warns against the company becoming "Tom as the product". So I have read "sound like me" as your way of talking (direct, plain, medium-length sentences, no tricks, no drama) inside "we". I have not put "I" anywhere. If you meant something else, tell me before anything changes.</p>
+  </div>
+  <div class="box">
+    <h3>If you only do five</h3>
+    <ol class="top">
+      <li>Rewrite the VAT Intervention on Evidence (and its line on the home page). It calls a named client's business a mess.</li>
+      <li>The four paid landing pages: hyphens, the stacked fragments, and bring Devon and Cornwall into line with your 2 October corrections.</li>
+      <li>The Commercial Review card on Where to Start and the Product Guide: "where the next edge may be" means nothing to an owner.</li>
+      <li>About Us: turn "The reason we are here" from five one-liners into one paragraph.</li>
+      <li>Fix the three wrong facts: the quiz "cost" claim, the "8–15 questions" line and the "one question" line on Useful Thinking.</li>
+    </ol>
+  </div>
+  <p class="meta">Read on 7 October 2026 from the live site (production inspection run 20261007T114225Z-voice-sweep), plus two pages outside the sitemap read from the code. Authorities read the same day from Drive: 00 TOM VOICE - START HERE and 01A TOM VOICE - WORKER SPEC (both last reviewed 7 October), Professional Tom Voice Programme, 00 ARRINGTON BRAND OPERATING SYSTEM (last reviewed 9 September), Arrington Voice rules.</p>
+</div>
+
+<div class="intro">
+  <h2><span class="num">1</span>How each line was judged</h2>
+  <p>Every line was asked three questions, in this order.</p>
+  <ol>
+    <li><b>Is it true and does it keep the rules?</b> A fact the page cannot back up, first person outside Useful Thinking, a dash or hyphen, a banned word, anything that implies the owner's business is broken. These are marked <b>Fact</b> or <b>Brand rule</b>.</li>
+    <li><b>Would Tom say it?</b> Your CORE voice rules: direct, plain, conversational, medium-length sentences, no groups of three for effect, no stacked fragments, no AI mannerisms. Marked <b>Style</b>.</li>
+    <li><b>Does changing it help the brand?</b> The test from the Brand OS: does it make a serious owner more likely to trust us and get in touch? If a line already works, it stays, even if I could write it differently. Marked <b>Commercial</b> where the change is about winning the enquiry.</li>
+  </ol>
+  <p><b>Change</b> means I recommend it. <b>Your call</b> means either version is defensible and it comes down to taste. <b>Keep</b> lines are listed under each page so you can see they were read, not skipped.</p>
+  <p><b>Left alone on purpose:</b> client reviews (they are speech, published as written), the fifteen Useful Thinking articles (your own approved first-person writing; there is no tested voice track for them yet, so the voice rules say they are published exactly as you approved them), the start-up page (frozen during the Ads test), prices and offer names, and the Privacy page.</p>
+
+  <h2><span class="num">2</span>What I found across the whole site</h2>
+  <p>The site is in better shape than I expected. The newest pages (What We Do, the sale readiness page, the taxi page) already sound like you. The older and more salesy pages carry five habits that give away AI writing.</p>
+  <table class="pat">
+    <tr><th>Habit</th><th>Example on the site</th><th>What I propose</th></tr>
+    <tr><td>"No X. No Y. Just Z."</td><td>"No jargon. No generic advice. Just practical insight." "No presentations. No jargon. Just an honest discussion."</td><td>One sentence each. This is the most recognisable AI pattern there is.</td></tr>
+    <tr><td>Stacked one-liners</td><td>About Us, "The reason we are here": five lines in a row.</td><td>One paragraph. Your Brand OS copy standard bans it outright.</td></tr>
+    <tr><td>Lists of three or four abstract nouns</td><td>"better control, clearer structure, stronger margin, and a business that..."</td><td>Say the outcome once. Real lists of real things (the five start-up areas, the build inclusions) stay.</td></tr>
+    <tr><td>"It's not X, it's Y"</td><td>"It wasn't about consultancy. It was about having the stomach..." "within days, not years"</td><td>Cut where it is a slogan. Keep where it removes a real worry ("not billed afterwards", "not a valuation").</td></tr>
+    <tr><td>Padding words</td><td>"actually" about 20 times, "properly" about 15, "genuine" about 10 on the commercial pages.</td><td>Keep only where they carry meaning. Fixed in the lines listed, not by a blanket sweep.</td></tr>
+  </table>
+  <p><b>Hyphens</b> (your 30 September ruling that they read as dashes in this font): 30-minute (four landing pages), day-to-day (Where to Start, Owner Check), free-text (Owner Check, Commercial Gaps Review), CRM-style (Where to Start), seven-figure (sale readiness), counsellor-led (Evidence), on-page and one-hour (Website Build pages), fifteen-year (Useful Thinking index). "fixed-price" in the £999 description stays, by your decision today. I suggest these all go in one pass.</p>
+</div>
+
+<section class="page-sec">
+  <h2><span class="num">3</span>Every page: header and footer</h2>
+  <p class="path">all pages</p>
+  <p class="note">The enquiry block at the foot of every page is the line most visitors read last.</p>
+  
+  <div class="kept"><div class="kept-h">Checked and kept</div><ul><li>"Tell us where the pressure is showing." / "You do not need a polished brief or perfect set of accounts." / "We ask a few direct questions. If a commercial review would help, we will say so. If it would not, we will say that too." Plain, honest and fit before sale, which is exactly how Tom talks to an enquiry. Keep.</li></ul></div>
+</section><section class="page-sec">
+  <h2><span class="num">4</span>Home</h2>
+  <p class="path">/</p>
+  <p class="note">The page most paid and organic visitors see first.</p>
+  <div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Fact</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>A free five minute quiz that shows where the business still depends on you, and what that is costing. No email required to see your result.</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>A free five minute quiz that shows where the business still depends on you. No email needed to see your result.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> The quiz result gives a dependency score and where the load sits. It does not put a cost on anything, so the line promises more than the quiz delivers.</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Style</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>The work is better control, clearer structure, stronger margin, and a business that leans less on the owner being in the middle of everything.</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>What you should end up with is a business that makes better money and does not need you in the middle of everything.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> The line above it already says structure and margin. A list of four abstract nouns is the AI habit the voice rules name; Tom would say the outcome in one breath.</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Brand rule</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>We walked into a business where the growth was real but the oversight was non-existent.</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>We came into a business that was growing fast, where nobody had been keeping an eye on the VAT.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> Tristan is a real client who left a five star review. "Non-existent oversight" judges him; the Brand OS says owners deserve to be understood before they are judged. Same facts, without the verdict.</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Style</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>Tom Arrington has spent over 20 years inside real businesses across Devon and Cornwall, where the small decisions made every day shaped the numbers, the people, the customers and the pressure on the owner. That experience now helps owner run businesses see which calls matter most.</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>Tom Arrington has spent over 20 years inside real businesses across Devon and Cornwall, where the small calls made every day decide the numbers and how much ends up on the owner's plate. That is what we bring: knowing which calls matter most.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> Keeps the approved proof line word for word. Cuts the list of four and says it the way Tom would across a table.</p>
+</div>
+  <div class="kept"><div class="kept-h">Checked and kept</div><ul><li>Hero: "You've built something you're proud of. So why does everything still run through you?" This is the reaction the Brand OS asks for in seconds.</li><li>Proof strip (two decades, Oxford Said, 5.0 on Google). Three real facts, not three for effect.</li><li>"We find where the business is losing time and money, and deal with the cause."</li><li>The Insolvent Turnaround block, approved by you on 15 September.</li></ul></div>
+</section><section class="page-sec">
+  <h2><span class="num">5</span>What We Do</h2>
+  <p class="path">/what-we-do</p>
+  <p class="note">Already the closest page on the site to how Tom talks. One small fix.</p>
+  <div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Style</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>Nobody sees everything in their own business. We don't pretend we would either.</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>Nobody sees everything in their own business, and we don't claim we would see everything in yours.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> As written it is not clear what "we would" refers to. One sentence says it plainly.</p>
+</div>
+  <div class="kept"><div class="kept-h">Checked and kept</div><ul><li>Opening: "You know your business better than anyone. That is exactly why parts of it are hard to see from where you are standing." This is the Brand OS collaboration standard in Tom's words.</li><li>"Change one thing in a business and something else often moves." The operating philosophy, said simply.</li><li>The four areas (The owner, The people, The numbers, And everything else) and both prices.</li><li>"Six months on." and the new taxi and sale readiness links.</li></ul></div>
+</section><section class="page-sec">
+  <h2><span class="num">6</span>About Us</h2>
+  <p class="path">/about-us</p>
+  <p class="note">Tom's story is told in the third person here, which the Brand OS requires. It reads well; the block underneath it does not.</p>
+  <div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Style</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>Soon after, Tom and his wife Hannah started Arrington Consultancy. Helping owners strengthen the structure underneath the business, so the business does not need the owner for everything.</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>Soon after, Tom and his wife Hannah started Arrington Consultancy, to help owners strengthen what sits underneath the business so it does not need them for everything.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> The second sentence has no verb. Joined, it reads as one thought.</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Style</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>...to formalise what those twenty years had actually taught him.</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>...to formalise what those twenty years had taught him.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> "Actually" adds nothing here. It appears about twenty times across the commercial pages.</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Brand rule</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>Hannah brings it back to something practical. Clear positioning, consistent messaging, and no gap between what the business says and what it does.</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>Hannah brings it back to something practical, so what the business says is clear and matches what it actually does.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> A fragment list of three marketing terms. The Brand OS copy standard bans manufactured short fragments; the point is the last item, so lead with it.</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Brand rule</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>The reason we are here. / We started this because we learned these lessons by running businesses ourselves. / Early on, an outside perspective would have saved time, money, and a lot of pressure. / Most of the time goes into keeping things running. What moves the business forward gets less attention. / The perspective we needed is the one we now bring.</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>The reason we are here. / We started this because we learned these lessons running businesses ourselves. Most of an owner's time goes on keeping things running, and the things that move the business forward get less attention. An outside view early on would have saved us time, money and a lot of pressure, and that is the view we now bring.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> Five stacked one-liners. The voice rules name "constant short sentence stacking" as an AI habit, and the Brand OS copy standard says the same. One paragraph, same content, reads like a person.</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-yours">Your call</span><span class="cat">Style</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>You've seen how we work. If something in your business is creating more pressure than it should, tell us what is going on.</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>If something in your business is creating more pressure than it should, tell us what is going on.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> On About Us the visitor has read about the people, not the work, so the opening clause does not fit.</p>
+</div>
+  <div class="kept"><div class="kept-h">Checked and kept</div><ul><li>The opening story: "At 22 Tom sold his PlayStation, TV and bike, then borrowed the rest to buy a struggling taxi firm." Concrete and his. Keep exactly.</li><li>"Those years taught him that small daily decisions make or break a company."</li><li>"Learned in the real world, then qualified in the classroom."</li></ul></div>
+</section><section class="page-sec">
+  <h2><span class="num">7</span>The four city landing pages (paid traffic)</h2>
+  <p class="path">/business-consultant-devon, -cornwall, -exeter, -plymouth</p>
+  <p class="note">These are where the Google Ads land, so they matter most commercially. Exeter and Plymouth carry your 2 October corrections; Devon and Cornwall do not yet. Changes here should be applied to all four together and the Google Ads worker told.</p>
+  <div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Brand rule</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>Book your 30-minute conversation (button), and "A 30-minute conversation" and "a straightforward 30-minute conversation" in the copy</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>Book your 30 minute conversation, and 30 minute everywhere on these pages</p></div>
+  </div>
+  <p class="why"><b>Why:</b> You ruled on 30 September that hyphens read as dashes in this font. The rest of the site already says "30 minute".</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Fact</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>The advice we give comes from businesses we have actually run, rebuilt and successfully exited.</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>The advice comes from businesses Tom has run, rebuilt and sold.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> "We" did not run them; Tom did. The proof is stronger when it is accurate, and the Brand OS wants operator proof stated plainly.</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Brand rule</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>No presentations. No jargon. Just an honest discussion about where things stand.</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>No presentation and no jargon, just an honest talk about where things stand.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> Three stacked fragments ending in "Just..." is one of the most recognisable AI patterns. Same promise, one sentence.</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Commercial</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>Devon and Cornwall only: "the next step is the Commercial Review, £500." and "No obligation. No pressure."</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>"the next step is the £500 Commercial Review." and "No obligation."</p></div>
+  </div>
+  <p class="why"><b>Why:</b> Your 2 October corrections were applied to Exeter and Plymouth only, because that is what was asked. The four pages now say the same thing two ways. Bring Devon and Cornwall into line.</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Style</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>If your business depends too heavily on you, a commercial review helps identify what is working, what is getting in the way and where the biggest improvements can be made.</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>If too much of the business depends on you, a commercial review shows what is getting in the way and what to sort out first.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> "Helps identify" is consultant language and the list of three pads it. Tom would say what you get.</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Style</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>The objective is simple: better commercial decisions, clearer structure and a business that relies less on the owner being involved in everything.</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>The aim is a business that relies less on the owner being involved in everything.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> "The objective is simple:" followed by a list of three is a stock AI construction. The last item is the whole point.</p>
+</div>
+  <div class="kept"><div class="kept-h">Checked and kept</div><ul><li>The hero ("Business consultant for owner run businesses in Devon") and its proof line.</li><li>The compact Insolvent Turnaround case study.</li><li>"Some clients prefer to meet in person. Others work with us remotely."</li><li>The town lists for each area.</li></ul></div>
+</section><section class="page-sec">
+  <h2><span class="num">8</span>Evidence</h2>
+  <p class="path">/evidence</p>
+  <p class="note">The strongest page on the site and the one with the passage I would change first.</p>
+  <div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Brand rule</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>The VAT Intervention: "Tristan had built a success, but the back office was a black hole. ... a hidden liability that was threatening to swallow the company's entire cash reserve. We didn't just find the error; we sat in the room, untangled eighteen months of forensic data... It wasn't about "consultancy". It was about having the stomach to fix the mess the owner was too busy to see."</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>Tristan had built a successful business and, like most owners, was busy running it. The VAT had been handled incorrectly for over a year, and the liability building up behind it was big enough to take the company's entire cash reserve. / We sat in the room with the figures, worked through eighteen months of data and rebuilt the reconciliation from scratch. We corrected the filing, secured the position with HMRC and saved the business from a six figure cash flow collapse.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> The most off-brand passage on the site. "The mess the owner was too busy to see" says a named client failed, which the Brand OS rules out. "Black hole", "swallow" and "It wasn't about X. It was about Y" are agency drama. Every fact and the outcome are kept.</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Style</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>Abacus: the badge "A seven figure exit / Nearly twenty years after Tom bought the business at 22", then straight after it "A seven figure exit, nearly twenty years after Tom bought the business at 22 with every penny he had."</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>Keep the sentence, drop the badge text that repeats it.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> The same fact twice in a row. The sentence is the better of the two because it has "every penny he had".</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Style</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>Years later, Abacus and Falmouth Taxis sold properly, not because everything had always gone right, but because the business had been rebuilt after things had nearly gone wrong.</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>Years later Abacus and Falmouth Taxis sold, not because everything had gone right but because it had been rebuilt after things nearly went wrong.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> "Properly" appears three times in this case study (the subtitle says "rebuilt properly", which is fine and should stay).</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Style</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>Margin case: "Profit margins improved / With no extra appointments" then "Profit margins improved with no extra appointments." then "That is what structure does."</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>Keep the badge; drop the repeated sentence and the closing slogan.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> Repeats itself, then ends on a slogan. The voice rules say conclusions are never a slogan. "More profit from the same workload, with revenue improving as well." is the better last line.</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Brand rule</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>World Student Advisors: "a free, counsellor-led service"</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>a free service run by counsellors</p></div>
+  </div>
+  <p class="why"><b>Why:</b> Hyphen, per your 30 September ruling.</p>
+</div>
+  <div class="kept"><div class="kept-h">Checked and kept</div><ul><li>"Built, very nearly lost, then rebuilt properly" and the Abacus story itself.</li><li>"The business was not struggling. It was busy and losing money it had already earned." This is the Brand OS in one line.</li><li>The four documents and their descriptions (document titles such as "90-Day Action Plan" are the names of real files and stay).</li><li>Scott: "Explaining controlled AI to a business owner in a meeting rarely lands. So we built a whole company instead."</li><li>All five reviews, exactly as written. A client quote is speech (Brand OS); Nick's "tailored" and his dash are his, not ours.</li></ul></div>
+</section><section class="page-sec">
+  <h2><span class="num">9</span>Where to Start and the offer pages</h2>
+  <p class="path">/where-to-start and the four offer pages</p>
+  <p class="note">The pages people read just before they pay. The hub is the weakest writing on the site: it sounds like a brochure, not like Tom.</p>
+  <div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Commercial</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>Commercial Review card: "A clear commercial read on where the next edge may be. ... Useful when the business has become richer, sharper or more capable than the website, offer or day-to-day operation currently shows."</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>An outside read on the business, written down. / We listen properly, then give you a written assessment, our recommendations and what to do first, within 4 business days. If you go on to either bigger option, the £500 comes off.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> "Where the next edge may be" means nothing to an owner, and the second sentence describes the website offer, not the review. Two lists of three and a hyphen. The same kicker line also appears on the Product Guide.</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-yours">Your call</span><span class="cat">Style</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>Website Build card: "A fixed-price build for businesses that are ready for more than a template. The site can include enquiry flows, payments, API integrations, CRM-style tracking or an AI assistant trained around your business..."</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>A website built from scratch, not from a template, and completely customisable. It can take enquiries and payments, connect to the systems you already use, or answer customers with an AI assistant set up around your business, where that saves time or wins the right work.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> "API integrations" and "CRM-style tracking" are jargon an owner has to translate. The first sentence uses your own words from the start-up page.</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Style</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>Implementation card: "For businesses that have already built something worth protecting and now need the next stage made easier to run: clearer decisions, follow-up that matches the standard of the business, systems around what already works and less work sitting with the owner."</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>The review goes deeper, then we stay involved while the changes are shaped and started, so less of the work sits with you.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> A list of four abstractions after a colon. The plain version says what actually happens.</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Commercial</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>Review and Website card: "...AI support, integrations and a site that helps move the business forward within days, not years."</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>We review the business first, then build the website around what it has become, so it explains what you do now and handles enquiries properly.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> "Within days, not years" is a contrast slogan and a promise no page backs up.</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Style</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>Commercial Review page: "A genuine Commercial Review in its own right. Its value is the judgement and written direction, not the size of the package around it."</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>A Commercial Review in its own right. What you are paying for is the judgement, and a written direction you can act on.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> Reads as defensive about the price. £500 is simply the price (your rule), so it does not need defending.</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Style</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>Commercial Review page: "produce a written report: assessment, recommendations, direction, and next steps."</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>produce a written report: what we found, what we would do about it and what to do first.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> Four near-synonyms. The replacement is the line already live on the landing pages, so the site says it one way.</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-yours">Your call</span><span class="cat">Style</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>Commercial Review page: "We listen for as long as it genuinely takes to understand the position, whether thirty minutes or two hours."</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>We listen for as long as it takes, whether that is thirty minutes or two hours.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> Drops "genuinely" and "the position". Close to your own "about 30 minutes (always more)".</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Style</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>Implementation page: "Substantially more time to follow the evidence and understand the detail behind the first conversation..."</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>We spend a lot more time following the evidence, including time inside the business where it helps, and work the recommendations through with you in far more depth.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> Opens on a fragment. One plain sentence.</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Style</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>Review and Website page: "They have grown, changed direction, added services, changed systems, changed customers or become materially different." and "Together, the work gives the business a fresh commercial platform for its next stage."</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>They have grown, added services or changed direction, and the website still describes the business they used to be. (Drop the "fresh commercial platform" sentence.)</p></div>
+  </div>
+  <p class="why"><b>Why:</b> "Changed" three times, then consultant language. The plain version names the actual problem.</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Commercial</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>Websites and AI page: "If we built World Student Advisors for £999, imagine what we could build for your business."</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>World Student Advisors was built for £999. Have a look, then tell us what yours needs to do.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> "Imagine what we could build" is a sales line, and the Brand OS says not salesy. Showing the example is stronger than asking them to imagine.</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Style</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>Websites and AI and the £999 page: "Not dropped into a template."</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>Built from scratch, not from a template, and completely customisable.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> A fragment. Your own words from 6 October say it better.</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-yours">Your call</span><span class="cat">Style</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>Websites and AI: "The technology matters. Understanding the business matters more."</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>The technology matters, but understanding the business matters more.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> Two clipped lines read as a slogan; one sentence reads as Tom.</p>
+</div>
+  <div class="kept"><div class="kept-h">Checked and kept</div><ul><li>The 30 Minute Conversation card: "...whether there is a real piece of work worth doing. If there is not, we will say so." Fit before sale, in Tom's words.</li><li>"Six months later we check in to see what actually changed. It is a phone call, included with the work, not another stage to book."</li><li>The scope and credit lines, and "fixed-price" in the £999 description (your ruling: one is fine).</li><li>"This is not a design agency selling a favourite style." This "not" earns its place: it is the positioning.</li></ul></div>
+</section><section class="page-sec">
+  <h2><span class="num">10</span>Owner Check and the free tools</h2>
+  <p class="path">/owner-check, quiz, Market Ready Test, Commercial Gaps Review, Product Guide</p>
+  <p class="note">Mostly sound. Two facts are wrong and the opening is an AI pattern.</p>
+  <div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Brand rule</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>Owner Check: "Sometimes it's difficult to see your own business clearly. These short checks help you step back, answer a few honest questions and understand where your biggest opportunities may be. No jargon. No generic advice. Just practical insight."</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>It is hard to see your own business clearly from the inside. These short checks ask a few honest questions and show you where to look first, with no jargon and no generic advice.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> "No X. No Y. Just Z." is the single most recognisable AI construction. Same promise, one sentence.</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Fact</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>Commercial Gaps Review: "Usually 8–15 questions, around 10 minutes."</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>Usually 11 or 12 questions, around 10 minutes.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> The code asks 11 or 12 questions. It is also the only en dash left on the live site.</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Commercial</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>Commercial Gaps Review: "This is not an online consultancy service and it will not solve the business for you. It is here to help you and us both see the issue worth investigating..."</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>It is a starting point: it helps you and us see the issue worth talking about, clearly enough to have a useful conversation.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> You told me on 6 October that we lead with what people get, not what we will not do. Same meaning, said positively.</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Brand rule</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>"free-text" (Owner Check and Commercial Gaps Review) and "day-to-day load" (Owner Check)</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>"written answers in your own words" and "day to day"</p></div>
+  </div>
+  <p class="why"><b>Why:</b> Hyphens, per your 30 September ruling. The quiz already says "day to day".</p>
+</div>
+<div class="item">
+  <div class="item-head"><span class="call call-yours">Your call</span><span class="cat">Style</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>Product Guide: "This is not a diagnostic and it does not replace Tom looking properly at the business."</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>It gives you a sensible next step. It does not replace Tom looking at the business properly.</p></div>
+  </div>
+  <p class="why"><b>Why:</b> Leads with what it does. A light touch; the honesty of the second half is worth keeping.</p>
+</div>
+  <div class="kept"><div class="kept-h">Checked and kept</div><ul><li>Owner Dependency Quiz intro, the 69% evidence paragraph and the source line, all approved by you.</li><li>Market Ready Test intro: "There are no perfect businesses and there are no perfect answers." Keep.</li><li>"Some owners simply want clarity. Others decide they'd like another pair of experienced eyes." Keep.</li></ul></div>
+</section><section class="page-sec">
+  <h2><span class="num">11</span>Useful Thinking (index page)</h2>
+  <p class="path">/useful-thinking</p>
+  <p class="note">The articles are your own first-person writing and are left exactly as you approved them (see section 1). Only the index page is ours.</p>
+  <div class="item">
+  <div class="item-head"><span class="call call-change">Change</span><span class="cat">Fact</span></div>
+  <div class="pair">
+    <div class="cur"><div class="lbl">Now</div><p>"If any of this sounds familiar / One straightforward question is usually enough to work out whether a commercial review would help." with the button "Take the Owner Dependency Quiz"</p></div>
+    <div class="prop"><div class="lbl">Proposed</div><p>"If any of this sounds familiar / Eight quick questions will show you how much still runs through you." with the same button</p></div>
+  </div>
+  <p class="why"><b>Why:</b> The line promises one question and the button opens an eight question quiz.</p>
+</div>
+  <div class="kept"><div class="kept-h">Checked and kept</div><ul><li>"That gut feeling is not guesswork." Keep.</li><li>The article summaries. They describe Tom in the third person, which is right for an index.</li></ul></div>
+</section><section class="page-sec">
+  <h2><span class="num">12</span>Pages reviewed and left alone</h2>
+  
+  <p class="note">Read in full, nothing proposed, and why.</p>
+  
+  <div class="kept"><div class="kept-h">Checked and kept</div><ul><li>Taxi and private hire operators: built and reviewed twice this week; your decisions of 7 October stand.</li><li>Start-up idea review: frozen while the start-up Google Ads test runs, by your decision of 6 October. Anything here waits for the test to finish.</li><li>Get your business ready to sell: approved by you on 25 to 27 September. One hyphen ("seven-figure") is in the hyphen list below.</li><li>30 Minute Conversation booking page and the thank-you page: short and plain. Only "Book a Time" should be "Book a time".</li><li>Privacy: a legal statement, not voice copy.</li></ul></div>
+</section>
+
+<section class="page-sec">
+  <h2><span class="num">13</span>What happens next</h2>
+  <p class="note" style="margin-left:9mm">Nothing changes until you have been through this. Mark anything you disagree with, and tell me which way to go on the "Your call" items. Then I make the changes in one batch: CMS copy by guarded migration, so any edit you have made in the CMS is never overwritten, and code pages directly. After that I check every changed page on the live site and tell the Google Ads worker that the landing pages have moved.</p>
+</section>
+</body></html>
