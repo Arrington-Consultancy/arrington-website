@@ -7363,9 +7363,10 @@ and Tom's decisions, 7 October 2026", id
 - **Image:** the real desk photo of Tom from the start-up page. No generated
   image until a corrected one exists (no TAXI roof signs on private hire cars,
   right-hand drive, no London cues), or a real Abacus-era photo from Tom.
-- **Not confirmed by Tom yet:** the line "We work with operators anywhere in
-  the UK, mostly by video call, and Tom will come and see you where it's worth
-  it." Next: ChatGPT review-only pass on the real page, then Tom decides go-live.
+- **Delivery (Tom, 07/10/2026: "come and see you on request, ie get your
+  £££"):** "by video call, and Tom will come and see you in person on request,
+  with travel costs agreed before he sets off." No travel price is stated.
+  Next: ChatGPT review-only pass on the real page, then Tom decides go-live.
 
 ## Sale readiness page
 
