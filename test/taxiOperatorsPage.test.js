@@ -115,3 +115,13 @@ test('brand rules: we, no dashes, no banned words, AI not the hook', () => {
   assert.ok(body.indexOf('The phones and the office') > body.indexOf('The business behind the system'), 'the AI section moved above the business section');
   assert.ok(body.includes('href="/evidence#biography__2"'), 'the Abacus case study link is gone');
 });
+
+test('headings match the rest of the site: Poppins at 600, body DM Sans', () => {
+  // The home and landing pages render headings at the browser's bold, which
+  // draws from the Poppins 600 file. At 400 this page's headline rendered
+  // from the 500 file and looked weaker beside them (seen live, 07/10/2026).
+  const view = read(VIEW);
+  assert.ok(/h1, h2, h3 \{ font-family: 'Poppins', 'DM Sans', sans-serif; font-weight: 600;/.test(view), 'the heading weight no longer matches the site');
+  assert.ok(/family=DM\+Sans[^"]*&family=Poppins:wght@500;600/.test(view), 'the Poppins 600 file is no longer loaded');
+  assert.ok(/body \{[^}]*font-family: 'DM Sans'/.test(view), 'the body is no longer DM Sans');
+});
