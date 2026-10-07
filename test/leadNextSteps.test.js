@@ -53,7 +53,9 @@ test('the article wording is the approved bridge copy, word for word, not new co
   const tpl = articleTemplate();
   for (const approved of [
     'If any of this sounds familiar',
-    'One straightforward question is usually enough to work out whether a commercial review would help.',
+    // Voice sweep, approved 07/10/2026: the old line promised one question
+    // above an eight question quiz.
+    'Eight quick questions will show you how much still runs through you.',
     'Take the Owner Dependency Quiz'
   ]) {
     assert.ok(seed.includes(`'${approved}'`), `"${approved}" is still the approved bridge copy in the seed`);

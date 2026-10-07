@@ -420,7 +420,7 @@ test('operator credibility is controlled copy, and sits above the two routes', (
   // decision, not the guard being weakened: the remaining sentence is still
   // pinned word for word, and the "no invented claim" test below still runs
   // over the whole page.
-  const approved = 'Tom Arrington built, grew and sold his own business in a seven-figure exit';
+  const approved = 'Tom Arrington built, grew and sold his own business in a seven figure exit'; // hyphen dropped in the voice sweep, 07/10/2026
   assert.ok(view.includes(approved), `the approved credibility wording is gone: "${approved}"`);
 
   // The removed sentence must not creep back without a decision, since it
