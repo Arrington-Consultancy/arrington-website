@@ -7500,6 +7500,37 @@ only, guarded exact-substring migration in `db/seed.js`). The exemption list
 in `test/noEmDashes.test.js` is now empty. Hyphenated words elsewhere on the
 site (outside the start-up page) are not swept; that is CMS copy.
 
+## Website voice sweep: implemented and live (07/10/2026)
+
+Tom's final approval of decisions 1 to 39 plus housekeeping (Website & Hosting
+Handoff Log, 7 October 2026). The report he approved is
+`review/website-voice-sweep-2026-10-07.pdf`. Two halves:
+
+- **Code pages** (commit `16dde9d`): home Owner Check teaser, the article
+  next-step line, Where to Start cards, the four offer pages, Owner Check,
+  Commercial Gaps Review, Product Guide, sale readiness "seven figure".
+- **CMS pages** (commit `3b4ea3c`, `lib/voiceSweepCopy.js`, marker
+  `site.voice_sweep_2026-10-07`): home, About Us, the four city landing pages
+  (Devon and Cornwall brought into line with Exeter and Plymouth), Evidence
+  (VAT, Abacus badge removed, margin case, World Student Advisors), Websites
+  and AI, booking page, Useful Thinking index. Every `from` value is
+  production's exact stored text, read first by a read-only seed probe
+  (deployment `55ddd57b`). A group writes only if every row still holds that
+  value, so a CMS edit made since makes the whole group stand down and log
+  the live value. Production (deployment `c74578a9`, REMOVED twin of serving
+  `5a360238`): all 13 groups written, 48 rows, none stood down.
+- **Verified live** in run `20261007T171935Z-voice-sweep-live-2`. That covers
+  24 pages, the four excluded pages included as controls, at desktop and
+  phone: all 200, no dashes, no overflow, no page errors. Every approved
+  line was found in the live text and no replaced line survives.
+  `scripts/productionQa.js` takes COMMA separated paths. A space separated
+  list is fetched as one URL and 404s.
+- **Left as they are, on purpose:** the home VAT summary's "six-figure"
+  (not on the approved hyphen list); "day-to-day" in the quiz and Market Ready
+  Test code; "seven-figure" on the Market Ready Test result page; orphaned CMS
+  instances. The taxi page, the start-up page, Privacy, article bodies and
+  client quotations were not touched. `test/voiceSweep.test.js`.
+
 ## Writing and reviewing website copy
 
 - Where a brief asks for copy but does not contain the underlying commercial
