@@ -7525,10 +7525,12 @@ Handoff Log, 7 October 2026). The report he approved is
   line was found in the live text and no replaced line survives.
   `scripts/productionQa.js` takes COMMA separated paths. A space separated
   list is fetched as one URL and 404s.
-- **Left as they are, on purpose:** the home VAT summary's "six-figure"
-  (not on the approved hyphen list); "day-to-day" in the quiz and Market Ready
-  Test code; "seven-figure" on the Market Ready Test result page; orphaned CMS
-  instances. The taxi page, the start-up page, Privacy, article bodies and
+- **Kept on Tom's decision (07/10/2026), do not tidy:** the single hyphens
+  in "six-figure" (home VAT summary), "day-to-day" (quiz and Market Ready Test)
+  and "seven-figure" (Market Ready Test result page). Orphaned CMS instances
+  were also left alone. The full before-and-after record is in Drive beside the
+  Handoff Log: "WEBSITE VOICE SWEEP - CHANGES MADE (BEFORE AND AFTER), 7
+  October 2026" (id `1M2nk5Bj6WCl6CPygzbPbjHanq9V11bn-xZ2M0xONLB4`). The taxi page, the start-up page, Privacy, article bodies and
   client quotations were not touched. `test/voiceSweep.test.js`.
 
 ## Writing and reviewing website copy
