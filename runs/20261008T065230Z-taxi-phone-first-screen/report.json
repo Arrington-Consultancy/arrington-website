@@ -1,0 +1,58 @@
+{
+  "ranAt": "2026-10-08T06:52:30.063Z",
+  "base": "https://www.arringtonconsultancy.com",
+  "results": [
+    {
+      "path": "/taxi-and-private-hire-operators",
+      "size": "desktop",
+      "url": "https://www.arringtonconsultancy.com/taxi-and-private-hire-operators",
+      "status": 200,
+      "finalUrl": "https://www.arringtonconsultancy.com/taxi-and-private-hire-operators",
+      "title": "Taxi Dispatch System Advice from a Former Operator | Arrington Consultancy",
+      "h1": "Choosing or changing a taxi dispatch system? Talk to an operator first.",
+      "canonical": "https://www.arringtonconsultancy.com/taxi-and-private-hire-operators",
+      "robotsMeta": null,
+      "xRobotsTag": null,
+      "selfLinks": 0,
+      "inSitemap": true,
+      "overflow": false,
+      "height": 5064,
+      "dashes": [],
+      "consoleErrors": [
+        "Permissions policy violation: picture-in-picture is not allowed in this document.",
+        "%c%d font-size:0;color:transparent NaN",
+        "%c%d font-size:0;color:transparent NaN"
+      ],
+      "pageErrors": [],
+      "screenshot": "taxi-and-private-hire-operators-desktop.png",
+      "topScreenshot": "taxi-and-private-hire-operators-desktop-top.png",
+      "error": null
+    },
+    {
+      "path": "/taxi-and-private-hire-operators",
+      "size": "mobile",
+      "url": "https://www.arringtonconsultancy.com/taxi-and-private-hire-operators",
+      "status": 200,
+      "finalUrl": "https://www.arringtonconsultancy.com/taxi-and-private-hire-operators",
+      "title": "Taxi Dispatch System Advice from a Former Operator | Arrington Consultancy",
+      "h1": "Choosing or changing a taxi dispatch system? Talk to an operator first.",
+      "canonical": "https://www.arringtonconsultancy.com/taxi-and-private-hire-operators",
+      "robotsMeta": null,
+      "xRobotsTag": null,
+      "selfLinks": 0,
+      "inSitemap": true,
+      "overflow": false,
+      "height": 6425,
+      "dashes": [],
+      "consoleErrors": [
+        "Permissions policy violation: picture-in-picture is not allowed in this document.",
+        "%c%d font-size:0;color:transparent NaN",
+        "%c%d font-size:0;color:transparent NaN"
+      ],
+      "pageErrors": [],
+      "screenshot": "taxi-and-private-hire-operators-mobile.png",
+      "topScreenshot": "taxi-and-private-hire-operators-mobile-top.png",
+      "error": null
+    }
+  ]
+}
