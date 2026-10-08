@@ -7455,8 +7455,24 @@ and Tom's decisions, 7 October 2026", id
   lede that states it. Evidence for "taxi firms" and "twenty years": Tom's own
   SOCIAL 01 and APPROVED 03. Form, endpoint, Contact conversion and
   /thank-you untouched. Verified live in run
-  `20261008T064219Z-taxi-operator-week`. On a phone the new section starts
-  below the first screen (photo, headline and lede fill it).
+  `20261008T064219Z-taxi-operator-week`.
+- **The operator's week on the first phone screen (08/10/2026, commit
+  `2a5225c`, deployment `795e5045`, run
+  `20261008T065230Z-taxi-phone-first-screen`).** Tom left it to the builder
+  ("imagine it's getting judged by a world class web designer"). The hero lede
+  is one line, "Tom Arrington spent over 20 years in the taxi trade, from
+  driver to owner, the last eight or so on iCabbi." ("the last eight": APPROVED
+  03, around 8 years on iCabbi before selling). The Abacus ownership and the
+  2025 sale moved down beside the claim they back: "Tom owned and ran Abacus
+  and Falmouth Taxis for nearly twenty years before selling it in 2025, and
+  had every one of those problems himself. None of them was the software."
+  On a phone the photo is a 38vw band cropped at 6% so Tom has headroom, and
+  the hero spacing is tighter: at 390x664 the section heading sits at 568px
+  with two lines under it (it was below the screen). **A `<picture>` is
+  inline, so a height on it does nothing without `display: block`**; the
+  taxi page's phone photo never shrank until this fix (pinned by test). The
+  start-up page has the same slip (`.su-hero-photo`, about 30px on a phone)
+  and is left alone while it is frozen for the Ads test.
 - **Railway IDs, to stop a repeat of a mistake made this day:** project
   `55465ed5-4c24-41cd-a2cb-ee837f586477`; the PRODUCTION environment is
   `cfa21c37-8d8a-4b4d-86a6-9a32a0f38e4f`. `c4d93e1c-c6fa-420b-95df-dc2a82795aba`
