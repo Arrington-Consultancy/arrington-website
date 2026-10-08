@@ -7431,6 +7431,32 @@ and Tom's decisions, 7 October 2026", id
   at `loadThemeAndShell` about two minutes after the deploy, not a page fault.
   Recheck run `20261007T105238Z-taxi-launch-recheck`: 200 at desktop and phone, in sitemap.xml, canonical
   correct, no overflow, no page errors, live capture read.
+- **Rewritten around the operator's week (08/10/2026, commit `ae085cc`,
+  deployment `f50414a7`).** Tom's brief, relayed by the Google Ads worker:
+  operators do not search for help when things go wrong (Keyword Planner:
+  under ten UK searches a month for every such phrase), so the page's job is
+  recognition. Section order now: hero, "What it usually looks like" (drivers
+  to Uber, the office running through one person, account work leaving, zone
+  prices and splits never revisited; "Tom had every one of those problems in
+  his own taxi firms, and none of them was the software"; bridge "If any of
+  that is your week, our Commercial Review starts with the business, not the
+  screen"), "Most of the time it isn't the software", the independence strip
+  (moved down from under the hero), then the rest unchanged. Offers: "The
+  first conversation is free. Tell us what's happening and we'll tell you
+  where we'd look first." above the cards; lead-ins "We find out where the
+  money, the drivers and the work are actually going." (£500) and "We stay and
+  do it with you." (£2,500); website line unchanged. Placeholder "Drivers,
+  work, money, the office, the system, all of it, whatever's going on". The
+  brief's draft was edited only where it broke a rule or a fact: full
+  sentences not fragments (Brand OS copy standard), "you" not the operator's
+  "we", Tom in the third person not "we ran taxi firms", "pays them every
+  week" not "on a Friday" (Uber's UK pay day is not evidenced), "Zone prices
+  and driver splits" not a group of three, the tenure not repeated under the
+  lede that states it. Evidence for "taxi firms" and "twenty years": Tom's own
+  SOCIAL 01 and APPROVED 03. Form, endpoint, Contact conversion and
+  /thank-you untouched. Verified live in run
+  `20261008T064219Z-taxi-operator-week`. On a phone the new section starts
+  below the first screen (photo, headline and lede fill it).
 - **Railway IDs, to stop a repeat of a mistake made this day:** project
   `55465ed5-4c24-41cd-a2cb-ee837f586477`; the PRODUCTION environment is
   `cfa21c37-8d8a-4b4d-86a6-9a32a0f38e4f`. `c4d93e1c-c6fa-420b-95df-dc2a82795aba`
