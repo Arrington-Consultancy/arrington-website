@@ -41,13 +41,19 @@ const TAXI_OPERATORS_PATH = '/taxi-and-private-hire-operators';
 // catalogue description (Tom, 07/10/2026, after the second review: "lets ditch
 // the 3400 then"). The £3,400 Commercial Review and Website Build is not shown
 // here; the page links to the Product Guide for it and everything else. The
-// free conversation is the call to action (a button and the footer form), not
-// a card. Names, prices and descriptions still come from the catalogue.
+// free conversation is a line above the cards plus the call to action (a
+// button and the footer form), not a card. Names, prices and descriptions
+// still come from the catalogue.
+//
+// The lead-ins answer the operator's situation set out at the top of the page
+// (Tom's brief of 8 October 2026, relayed by the Google Ads worker): the
+// review finds where things are going, implementation means we stay and do it
+// with you. The website line is unchanged, as the brief asked.
 const TAXI_OFFER_ORDER = ['commercial_review', 'full_commercial_review', 'website_build'];
 const TAXI_OFFER_LEADS = {
-  commercial_review: 'Before you change system',
-  full_commercial_review: 'Help through the switchover',
-  website_build: 'A website that gets the booking'
+  commercial_review: 'We find out where the money, the drivers and the work are actually going.',
+  full_commercial_review: 'We stay and do it with you.',
+  website_build: 'A website that gets the booking.'
 };
 
 async function loadThemeAndShell() {
@@ -65,7 +71,9 @@ async function loadThemeAndShell() {
 const TAXI_OPERATORS_CONTACT = {
   heading: 'Tell us what\'s going on',
   body: 'Which system you\'re on, roughly how many cars, and what\'s bothering you. A few lines is plenty.<br /><br />We\'ll come back to you to arrange a conversation with Tom, and you\'ll get a straight answer on whether we can help.',
-  messagePlaceholder: 'Which system you\'re on, and what\'s not working'
+  // Tom's brief of 8 October 2026. Only the placeholder changed; the form,
+  // its fields, the endpoint and the conversion are untouched.
+  messagePlaceholder: 'Drivers, work, money, the office, the system, all of it, whatever\'s going on'
 };
 
 function taxiOffers() {

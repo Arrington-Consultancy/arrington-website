@@ -89,9 +89,11 @@ test('three taxi-framed offers from the catalogue, no £3,400, a route to the Pr
     assert.ok(text.includes(o.name) && text.includes(price), `${o.name} at ${price} is missing`);
     assert.ok(body.includes(`href="${o.path}"`), `${o.name} no longer links to its own page`);
   }
-  for (const lead of ['Before you change system', 'Help through the switchover', 'A website that gets the booking']) {
+  // Tom's brief of 8 October 2026: each price answers the operator's situation.
+  for (const lead of ['We find out where the money, the drivers and the work are actually going.', 'We stay and do it with you.', 'A website that gets the booking.']) {
     assert.ok(text.includes(lead), `the taxi lead-in "${lead}" is missing`);
   }
+  assert.ok(text.includes("The first conversation is free. Tell us what's happening and we'll tell you where we'd look first."), 'the free conversation line is missing');
   assert.strictEqual(OFFERS.commercial_review.pricePence, 50000);
   assert.ok(!text.includes('£3,400') && !text.includes('Commercial Review and Website Build'), 'the £3,400 offer is back');
   assert.ok(body.includes('href="/product-guide"'), 'the Product Guide route for everything else is gone');
@@ -99,6 +101,36 @@ test('three taxi-framed offers from the catalogue, no £3,400, a route to the Pr
   assert.ok(!/£(?!(?:500|999|2,500)\b)[0-9][0-9,]*/.test(text), 'an unapproved price appeared');
   assert.ok(!/save £|was £|discount|introductory|50%|half price|launch (?:price|offer)|limited time|taxi rate|special offer/i.test(text), 'a price is framed as a reduction');
   assert.ok(!/\/api\/checkout|data-offer=|AW-18129914078/.test(body + read(ROUTE)), 'a checkout or conversion appeared on the taxi page');
+});
+
+test("the operator's week sits straight under the headline, bridges into the software section, and stays respectful", () => {
+  // Tom's brief of 8 October 2026 (relayed by the Google Ads worker):
+  // operators do not search for help when things go wrong, so the page's job
+  // is recognition in the first screen after the headline.
+  const body = renderBody();
+  const at = (s) => body.indexOf(s);
+  assert.ok(at('</header>') < at('What it usually looks like'), 'the new section is not after the hero');
+  assert.ok(at('What it usually looks like') < at("Most of the time it isn't the software"), 'the new section is not before the software section');
+  assert.ok(at("Most of the time it isn't the software") < at('data-independence>'), 'the independence strip moved above the operator\'s week');
+  assert.ok(at('data-independence>') < at('Choosing or changing a dispatch system</h2>'), 'the independence strip no longer leads into choosing a system');
+  const section = visibleText(body.slice(at('data-situation'), at("Most of the time it isn't the software")));
+  for (const line of [
+    'Drivers drift to Uber because the app pays them every week and you pay them when the invoices clear.',
+    "Three people's jobs run through one person in the office, usually you, and the phones go quiet the minute you step out.",
+    'Account work that used to be the backbone of your firm quietly goes somewhere else.',
+    "Tom had every one of those problems in his own taxi firms, and none of them was the software.",
+    'If any of that is your week, our Commercial Review starts with the business, not the screen.'
+  ]) {
+    assert.ok(section.includes(line), `missing: ${line}`);
+  }
+  // Tom's story stays in the third person: Arrington did not run taxi firms.
+  assert.ok(!/\bwe (?:ran|had)\b/i.test(section), 'the section says "we" ran the taxi firms');
+  // The brief's do-nots, checked across everything the page emits.
+  const served = visibleText(body) + ' ' + TAXI_OPERATORS_CONTACT.body + ' ' + TAXI_OPERATORS_CONTACT.messagePlaceholder;
+  assert.ok(!/\bfailing\b|\bfix your business\b|\bturn(?:ing)? (?:it )?around\b|\bturnaround\b/i.test(served), 'failing, fix your business or turn around is on the page');
+  assert.ok(!/\bstruggling\b/i.test(served), '"struggling" is on the page');
+  assert.ok(!/<img(?![^>]*tom-at-desk)/.test(body), 'an image other than the photo of Tom was added');
+  assert.strictEqual(TAXI_OPERATORS_CONTACT.messagePlaceholder, "Drivers, work, money, the office, the system, all of it, whatever's going on");
 });
 
 test('no repeated biography section, the extra proof sits in the operator paragraph, no migration claim', () => {

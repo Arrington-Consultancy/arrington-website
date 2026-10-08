@@ -56,7 +56,8 @@
         .tx-lede { font-size: 1.12rem; color: var(--text-bright); margin-bottom: 0.9rem; max-width: 62ch; }
         .tx-hero-indep { font-size: 1rem; font-weight: 700; color: var(--accent); margin-bottom: 1.6rem; }
 
-        .tx-cred { padding: 1.5rem 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+        .tx-cred { margin-top: 3.25rem; padding: 1.5rem 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+        .tx-bridge { color: var(--text-bright); font-weight: 500; }
         .tx-cred p { margin: 0; font-size: 1.02rem; color: var(--text-bright); }
         .tx-cred p + p { margin-top: 0.5rem; color: var(--text); font-size: 0.97rem; }
 
@@ -83,7 +84,8 @@
         .tx-offer-price { font-family: 'Poppins', 'DM Sans', sans-serif; font-size: 1.25rem; color: var(--text-bright); text-align: right; font-variant-numeric: tabular-nums; }
         .tx-offer p { grid-column: 1 / -1; margin: 0; font-size: 0.95rem; }
         .tx-offer .tx-offer-more { grid-column: 1 / -1; margin-top: 0.5rem; font-size: 0.92rem; }
-        .tx-offer-lead { grid-column: 1 / -1; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700; color: var(--accent); }
+        .tx-offer .tx-offer-lead { font-size: 1rem; font-weight: 500; color: var(--text-bright); margin-top: 0.2rem; }
+        .tx-offers-intro { margin: 0; max-width: 62ch; }
         .tx-offers-next { margin: 1.6rem 0 1.1rem; max-width: 62ch; }
         .tx-offers-actions { margin: 0; }
 
@@ -130,11 +132,19 @@
 
     <main>
         <div class="tx-wrap">
-        <%# INDEPENDENCE (Tom, 07/10/2026): no supplier pays us, and the
-            iCabbi Marketplace listing is disclosed rather than hidden. %>
-        <div class="tx-cred" data-independence>
-            <p>We're listed on the iCabbi Marketplace because Tom ran on iCabbi for around eight years. We don't sell software and no supplier pays us.</p>
-            <p>We work with operators anywhere in the UK, by video call, and Tom will come and see you in person on request, with travel costs agreed before he sets off.</p>
+        <%# THE OPERATOR'S WEEK (Tom's brief of 8 October 2026, relayed by the
+            Google Ads worker). Operators do not search for help when things go
+            wrong, so this page's job is recognition: the reader should see their
+            own week straight after the headline. The brief's draft was a list
+            of fragments; it is written here in full sentences (Brand OS copy
+            standard, 01A CORE), as "you" rather than the operator's "we", and
+            Tom's own experience in the third person. The tenure is not
+            repeated here because the hero lede states it just above. %>
+        <div class="tx-section" data-situation>
+            <h2>What it usually looks like</h2>
+            <p>Drivers drift to Uber because the app pays them every week and you pay them when the invoices clear. Three people's jobs run through one person in the office, usually you, and the phones go quiet the minute you step out. Account work that used to be the backbone of your firm quietly goes somewhere else. Zone prices and driver splits were set up years ago and never looked at since, so every job runs but the margin isn't there at the end of the month.</p>
+            <p>Tom had every one of those problems in his own taxi firms, and none of them was the software.</p>
+            <p class="tx-bridge">If any of that is your week, our Commercial Review starts with the business, not the screen.</p>
         </div>
 
         <%# Built from Tom's approved email of 6 July 2026 (APPROVED 03 in the
@@ -143,6 +153,16 @@
             <h2>Most of the time it isn't the software</h2>
             <p>When something goes wrong in a taxi office, the dispatch system usually gets the blame. To be fair, sometimes it is the software. More often it's the setup, the pricing, the zones, the drivers, the geography or what everyone expected the system to do, and usually it's a bit of all of them. Changing the system won't fix a problem that sits in the business, and it's an expensive way to find that out.</p>
             <p>Tom has been the operator on the other side of that table. He bought the business at 22, very nearly lost it and rebuilt it, and he's worked with the National Taxi Association. Dealing with drivers, zone profiles, VAT, dispatch, pricing and customers, often all before lunchtime, is something only another operator really appreciates.</p>
+        </div>
+
+        <%# INDEPENDENCE (Tom, 07/10/2026): no supplier pays us, and the
+            iCabbi Marketplace listing is disclosed rather than hidden. Moved
+            below the two sections above on 08/10/2026 so the operator's week
+            sits straight under the headline; it now leads into choosing a
+            system, where independence matters most. %>
+        <div class="tx-cred" data-independence>
+            <p>We're listed on the iCabbi Marketplace because Tom ran on iCabbi for around eight years. We don't sell software and no supplier pays us.</p>
+            <p>We work with operators anywhere in the UK, by video call, and Tom will come and see you in person on request, with travel costs agreed before he sets off.</p>
         </div>
 
         <div class="tx-section">
@@ -187,18 +207,19 @@
         <div class="tx-wrap">
         <div class="tx-section">
             <h2>Ways to work with us</h2>
+            <p class="tx-offers-intro" data-free-conversation>The first conversation is free. Tell us what's happening and we'll tell you where we'd look first.</p>
             <ul class="tx-offers" data-offers="<%= offers.length %>">
                 <% offers.forEach(function (o) { %>
                 <li class="tx-offer" data-offer-id="<%= o.id %>">
-                    <span class="tx-offer-lead"><%= o.taxiLead %></span>
                     <h3><%= o.name %></h3>
                     <span class="tx-offer-price"><%= '£' + (o.pricePence / 100).toLocaleString('en-GB') %></span>
+                    <p class="tx-offer-lead"><%= o.taxiLead %></p>
                     <p><%= o.description %></p>
                     <p class="tx-offer-more"><a class="tx-link" href="<%= o.path %>">See the <%= o.name %></a></p>
                 </li>
                 <% }) %>
             </ul>
-            <p class="tx-offers-next">Not sure which fits? Tell us what's going on and Tom will give you a straight view. For everything else we do, see the <a class="tx-link" href="/product-guide">Product Guide</a>.</p>
+            <p class="tx-offers-next">For everything else we do, see the <a class="tx-link" href="/product-guide">Product Guide</a>.</p>
             <div class="tx-offers-actions">
                 <a href="#conversation" class="btn btn-primary">Tell us what's going on</a>
             </div>
