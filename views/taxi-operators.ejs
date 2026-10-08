@@ -91,12 +91,18 @@
 
         @media (max-width: 760px) {
             .tx-hero { display: block; min-height: 0; padding: var(--site-chrome) 0 0; }
-            .tx-hero-photo { position: relative; top: auto; height: 48vw; max-height: 300px; }
-            .tx-hero-photo img { object-position: 66% 25%; }
+            /* PHONE FIRST SCREEN (08/10/2026): a shorter photo band and a
+               tighter hero so the operator's week starts on the first screen,
+               under the headline, the proof line and the button. */
+            .tx-hero-photo { display: block; position: relative; top: auto; height: 38vw; max-height: 240px; }
+            .tx-hero-photo img { object-position: 66% 6%; }
             .tx-hero-photo::after { background: linear-gradient(0deg, var(--black) 0%, color-mix(in srgb, var(--black) 40%, transparent) 30%, transparent 60%); }
-            .tx-hero-inner { padding: 0 1.5rem 0.5rem; margin-top: -1.5rem; }
+            .tx-hero-inner { padding: 0 1.5rem; margin-top: -1.5rem; }
+            h1 { margin-bottom: 1rem; }
+            .tx-hero-indep { margin-bottom: 1.25rem; }
             .tx-cred { margin-top: 2rem; padding: 1.25rem 0; }
             .tx-section { margin-top: 2.1rem; }
+            .tx-section[data-situation] { margin-top: 1.75rem; }
             .tx-band { margin-top: 2.5rem; padding: 2.5rem 0 2.75rem; }
             .tx-offer { padding: 1.15rem 1.2rem; }
             .tx-hero-actions .btn { width: 100%; text-align: center; }
@@ -107,11 +113,14 @@
 <body>
     <%- include('partials/site-header', { currentPage: { slug: 'taxi-and-private-hire-operators' }, navPages, canEdit: false, content, pageContact }) %>
 
-    <%# HERO. The headline names the decision the searcher is facing. Every
-        fact below it is evidenced: over 20 years in the trade starting as a
-        driver (Tom, 07/10/2026), nearly twenty years owning the business
-        (Evidence case study), around eight years on iCabbi and sold in 2025
-        (Tom's approved email of 6 July 2026). %>
+    <%# HERO. The headline names the decision the searcher is facing. The
+        lede is one line (08/10/2026) so that on a phone the operator's week
+        below starts on the first screen; the ownership and sale facts moved
+        down beside the claim they support. Every fact is evidenced: over 20
+        years in the trade starting as a driver (Tom, 07/10/2026), nearly
+        twenty years owning the business (Evidence case study), around eight
+        years on iCabbi and sold in 2025 (Tom's approved email of 6 July
+        2026). %>
     <header class="tx-hero">
         <picture class="tx-hero-photo">
             <source srcset="/img/startup/tom-at-desk.webp" type="image/webp">
@@ -121,7 +130,7 @@
             <div class="tx-hero-text">
                 <span class="tx-label">Taxi and private hire</span>
                 <h1>Choosing or changing a taxi dispatch system? Talk to an operator first.</h1>
-                <p class="tx-lede">Tom Arrington spent over 20 years in the taxi trade in Devon and Cornwall. He started as a driver, then owned and ran Abacus and Falmouth Taxis for nearly twenty years, around eight of them on iCabbi, before selling the business in 2025.</p>
+                <p class="tx-lede">Tom Arrington spent over 20 years in the taxi trade, from driver to owner, the last eight or so on iCabbi.</p>
                 <p class="tx-hero-indep" data-independence-hero>We're independent of every dispatch supplier.</p>
                 <div class="tx-hero-actions">
                     <a href="#conversation" class="btn btn-primary">Tell us what's going on</a>
@@ -138,12 +147,12 @@
             own week straight after the headline. The brief's draft was a list
             of fragments; it is written here in full sentences (Brand OS copy
             standard, 01A CORE), as "you" rather than the operator's "we", and
-            Tom's own experience in the third person. The tenure is not
-            repeated here because the hero lede states it just above. %>
+            Tom's own experience in the third person, with the ownership and
+            sale facts that back the claim sitting beside it. %>
         <div class="tx-section" data-situation>
             <h2>What it usually looks like</h2>
             <p>Drivers drift to Uber because the app pays them every week and you pay them when the invoices clear. Three people's jobs run through one person in the office, usually you, and the phones go quiet the minute you step out. Account work that used to be the backbone of your firm quietly goes somewhere else. Zone prices and driver splits were set up years ago and never looked at since, so every job runs but the margin isn't there at the end of the month.</p>
-            <p>Tom had every one of those problems in his own taxi firms, and none of them was the software.</p>
+            <p>Tom owned and ran Abacus and Falmouth Taxis for nearly twenty years before selling it in 2025, and had every one of those problems himself. None of them was the software.</p>
             <p class="tx-bridge">If any of that is your week, our Commercial Review starts with the business, not the screen.</p>
         </div>
 

@@ -59,10 +59,11 @@ test('the hero states the evidenced facts and the decision the searcher faces', 
   const text = visibleText(renderBody());
   assert.ok(text.includes('Choosing or changing a taxi dispatch system? Talk to an operator first.'), 'the headline changed');
   assert.ok(text.includes('over 20 years in the taxi trade'), 'the tenure fact Tom confirmed on 07/10/2026 is missing');
-  assert.ok(text.includes('He started as a driver'), 'the driver fact is missing');
+  assert.ok(text.includes('from driver to owner'), 'the driver fact is missing');
   assert.ok(text.includes('Abacus and Falmouth Taxis for nearly twenty years'), 'the ownership fact no longer matches the Evidence case study');
-  assert.ok(text.includes('around eight of them on iCabbi'), 'the iCabbi fact is missing or overstated');
-  assert.ok(text.includes('selling the business in 2025'), 'the sale fact is missing');
+  // Around eight years on iCabbi, before selling (APPROVED 03), so "the last eight or so".
+  assert.ok(text.includes('the last eight or so on iCabbi'), 'the iCabbi fact is missing or overstated');
+  assert.ok(text.includes('before selling it in 2025'), 'the sale fact is missing');
   // Claims the evidence does not support must not appear.
   assert.ok(!/\b(?:Autocab|Cordic|Sherlock|Cab Treasure|TaxiCaller|Taxi Butler)\b/i.test(text), 'a supplier is named as a system Tom used or knows; only iCabbi is evidenced');
   assert.ok(!/\bPCO\b|black cab|London/i.test(text), 'London shorthand is on the page');
@@ -118,7 +119,7 @@ test("the operator's week sits straight under the headline, bridges into the sof
     'Drivers drift to Uber because the app pays them every week and you pay them when the invoices clear.',
     "Three people's jobs run through one person in the office, usually you, and the phones go quiet the minute you step out.",
     'Account work that used to be the backbone of your firm quietly goes somewhere else.',
-    "Tom had every one of those problems in his own taxi firms, and none of them was the software.",
+    'Tom owned and ran Abacus and Falmouth Taxis for nearly twenty years before selling it in 2025, and had every one of those problems himself. None of them was the software.',
     'If any of that is your week, our Commercial Review starts with the business, not the screen.'
   ]) {
     assert.ok(section.includes(line), `missing: ${line}`);
@@ -130,6 +131,11 @@ test("the operator's week sits straight under the headline, bridges into the sof
   assert.ok(!/\bfailing\b|\bfix your business\b|\bturn(?:ing)? (?:it )?around\b|\bturnaround\b/i.test(served), 'failing, fix your business or turn around is on the page');
   assert.ok(!/\bstruggling\b/i.test(served), '"struggling" is on the page');
   assert.ok(!/<img(?![^>]*tom-at-desk)/.test(body), 'an image other than the photo of Tom was added');
+  // The phone hero photo is a <picture>, inline by default, so its height
+  // rule only applies with display: block. Without it the photo renders at
+  // full aspect and pushes the operator's week off the first phone screen.
+  const phone = read(VIEW).slice(read(VIEW).indexOf('@media (max-width: 760px)'));
+  assert.ok(/\.tx-hero-photo \{ display: block; [^}]*height: 38vw;/.test(phone), 'the phone photo band no longer has a working height');
   assert.strictEqual(TAXI_OPERATORS_CONTACT.messagePlaceholder, "Drivers, work, money, the office, the system, all of it, whatever's going on");
 });
 
