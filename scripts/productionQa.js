@@ -39,6 +39,31 @@ async function sitemapText() {
     return '';
   }
 }
+// The page's head as the SERVER sends it, read with a plain fetch and no
+// JavaScript (11/10/2026, SEO metadata brief: confirm the metadata does not
+// depend on scripts, and that each tag appears once). Also counts the Google
+// tag lines, so a metadata change can be shown not to have touched tracking.
+async function rawHead(url) {
+  const decode = (t) => t.replace(/&#34;|&quot;/g, '"').replace(/&#39;|&#x27;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+  try {
+    const res = await fetch(url, { redirect: 'follow' });
+    const html = await res.text();
+    const head = html.slice(0, html.indexOf('</head>') + 7);
+    const all = (re) => [...head.matchAll(re)].map((m) => decode(m[1].trim()));
+    return {
+      titles: all(/<title>([\s\S]*?)<\/title>/g),
+      descriptions: all(/<meta name="description" content="([^"]*)"/g),
+      canonicals: all(/<link rel="canonical" href="([^"]*)"/g),
+      ogTitles: all(/<meta property="og:title" content="([^"]*)"/g),
+      ldBlocks: (html.match(/<script type="application\/ld\+json"/g) || []).length,
+      googleTagLoaders: (html.match(/googletagmanager\.com\/gtag\/js/g) || []).length,
+      adsConfigs: (html.match(/gtag\('config', 'AW-/g) || []).length
+    };
+  } catch (e) {
+    return { error: String(e).slice(0, 200) };
+  }
+}
+
 const OUT = process.env.OUT_DIR || path.join(process.cwd(), 'qa-out');
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -57,6 +82,8 @@ function slug(p) {
   const PATHS = [...new Set(RAW_PATHS.flatMap((p) => (p === 'sitemap' ? fromSitemap : [p])))];
   const browser = await chromium.launch();
   const results = [];
+  const raws = {};
+  for (const p of PATHS) raws[p] = await rawHead(BASE + p);
   for (const p of PATHS) {
     for (const [size, opts] of SIZES) {
       const ctx = await browser.newContext(opts);
@@ -177,6 +204,7 @@ function slug(p) {
       } catch (e) {
         r.error = String(e).slice(0, 300);
       }
+      r.raw = raws[p];
       results.push(r);
       await page.close();
       await ctx.close();
@@ -193,6 +221,11 @@ function slug(p) {
     lines.push(`- Title: ${r.title || '(none)'}`);
     lines.push(`- First h1: ${r.h1 || '(none)'}`);
     lines.push(`- Canonical: ${r.canonical || '(none)'}`);
+    if (r.raw) {
+      const w = r.raw;
+      lines.push(w.error ? `- Server HTML (no JavaScript): ERROR ${w.error}` :
+        `- Server HTML (no JavaScript): ${w.titles.length} title(s) ${JSON.stringify(w.titles)}; ${w.descriptions.length} description(s) ${JSON.stringify(w.descriptions)}; ${w.canonicals.length} canonical(s) ${JSON.stringify(w.canonicals)}; ${w.ogTitles.length} og:title; ${w.ldBlocks} structured data block(s); Google tag loader ${w.googleTagLoaders}, Ads config ${w.adsConfigs}`);
+    }
     lines.push(`- Robots: meta ${r.robotsMeta || '(none)'}; X-Robots-Tag ${r.xRobotsTag || '(none)'}; in sitemap.xml: ${r.inSitemap ? 'yes' : 'no'}; links to itself on the page: ${r.selfLinks === null ? 'unknown' : r.selfLinks}`);
     lines.push(`- Em or en dashes in the visible text: ${r.dashes ? r.dashes.length : 'unknown'}${r.dashes && r.dashes.length ? ' (' + r.dashes.join(' | ') + ')' : ''}`);
     lines.push(`- Horizontal overflow: ${r.overflow === null ? 'unknown' : r.overflow ? 'YES' : 'no'}; page height ${r.height}px`);
