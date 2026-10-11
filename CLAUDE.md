@@ -7487,7 +7487,10 @@ paid traffic. It is a code route (`routes/saleReadiness.js`,
 CMS page: its copy is changed in code, and keeping it out of the navigation
 depends on it never being added to `navPages`.
 
-- Keep it out of the main navigation. **Since 11/10/2026 (Tom's approval,
+- **In the main menu since 11/10/2026** (Tom: "we need this on the menu"),
+  as "Ready to Sell" after Owner Check: a synthetic nav entry built in
+  `server.js` and `lib/navShell.js`, like Owner Check and Product Guide. All
+  eight menu items fit on one line down to 960px. **Also since 11/10/2026 (Tom's approval,
   Drive proposal "A way into the Ready to Sell page that doesn't depend on
   ads", id `1kvQYmY2kGLLVMX01nGAs7D9JWz9cwqTOTVztc36WOrw`) it is in
   `sitemap.xml`** and the homepage carries one text link to it, in the block
@@ -7637,6 +7640,39 @@ commit `a6f4dbd`, deployment `ffceea6b`, inspection run
   comment in `db/seed.js` once Tom confirms he has changed that password; the
   repository stays public for now (Railway's GitHub app has access, so going
   private would not break deploys).
+
+## SEO sweep (LIVE 11/10/2026)
+
+Tom: "we need a massive seo sweep and improvement". Audit of every sitemap page
+(run `20261011T183927Z-seo-audit`), Search Console and the Google Business
+Profile through Windsor. Proposal and findings in Drive: "WEBSITE AND HOSTING
+PROPOSAL - SEO sweep: what was fixed and what needs Tom, 11 October 2026" (id
+`1vGKCKzF315Vq4BhV6qBmupNlr_bEKaqnnKKj-IbHT2M`).
+
+- **Finding:** organic is about 550 impressions and 13 clicks in 90 days,
+  mostly brand. The technical basics were already sound. The weak points are
+  reach: the Google profile's only category is "Business development service"
+  and it shows for brand searches only; the local pages had almost no
+  internal links.
+- **Live (commit `c4051e7`, run `20261011T185303Z-seo-sweep-live`):**
+  `views/partials/site-schema.ejs` (Organization plus WebSite, rendered from
+  `google-tag.ejs` so every public page carries it; the old copy in
+  `index.ejs` is gone; sameAs is the profile's cid link and the LinkedIn,
+  Facebook and Instagram pages the profile lists; the old Maps link carried
+  Bavarian coordinates); `views/partials/page-schema.ejs` (breadcrumb, plus a
+  Service where `schemaService` is passed) on the standalone pages; a footer
+  row "Business consultant in Devon, Cornwall, Plymouth, Exeter" (a div with
+  `role="navigation"`, never a `<nav>`: every nav element is styled as the
+  fixed header); Owner Check hero 846KB to 204KB and the document and WSA
+  images recompressed in place. `test/seoSweep.test.js`.
+- `scripts/productionQa.js` now reports each page's description, structured
+  data, headings, alt text, weight and internal links (the "SEO:" lines).
+- **Waiting on Tom:** new search titles and descriptions for the home page,
+  Ready to Sell, taxi and Owner Check (copy, in the proposal); adding
+  "Business management consultant" as a Google profile category (Windsor
+  `update_categories` can do it; may trigger a Google review); profile posts;
+  reviews; Bing Places and Apple Business Connect; backlinks; request
+  indexing in Search Console.
 
 ## Writing and reviewing website copy
 
