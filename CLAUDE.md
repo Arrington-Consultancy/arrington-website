@@ -7487,9 +7487,21 @@ paid traffic. It is a code route (`routes/saleReadiness.js`,
 CMS page: its copy is changed in code, and keeping it out of the navigation
 depends on it never being added to `navPages`.
 
-- Keep it out of the main navigation and off the homepage. It is indexable
-  but stays out of `sitemap.xml`.
-- It is reached through contextual links: a section on What We Do and a link
+- Keep it out of the main navigation. **Since 11/10/2026 (Tom's approval,
+  Drive proposal "A way into the Ready to Sell page that doesn't depend on
+  ads", id `1kvQYmY2kGLLVMX01nGAs7D9JWz9cwqTOTVztc36WOrw`) it is in
+  `sitemap.xml`** and the homepage carries one text link to it, in the block
+  BELOW the enquiry form (`views/partials/home-quiz-teaser.ejs`): "Thinking
+  of selling in the next few years? Get the business ready first". Not in
+  the "What we do" block under the hero: the general ads land on the
+  homepage again, and a link there would send paid visitors away before the
+  form. The Google Ads worker pauses the Ready to Sell ads the day this went
+  live. Same day: six plainer lines (reading age about 11.9 to 11.3), and
+  both "Book a 30 minute conversation" buttons go to `#conversation` (the form
+  on the page) rather than to the 30 Minute Conversation page. The British
+  Business Bank line stays word for word: its plainer version dropped the
+  source's own hedges, which `test/ownerDependencyEvidence.test.js` protects.
+- It is also reached through contextual links: a section on What We Do and a link
   on the Market Ready Test result page. The CMS button-link dropdown lists
   only `pages` rows, so it cannot offer this code route; saving that What We
   Do section in the CMS will repoint its button.
@@ -7607,10 +7619,16 @@ commit `a6f4dbd`, deployment `ffceea6b`, inspection run
   paragraph, so emptying a field in the CMS leaves no gap.
 - **Untouched:** the Contact conversion, `/thank-you`, `routes/leads.js`, the
   Google tag. `test/contactFormConversionPass.test.js`.
-- **Since 2 October no paid clicks land on the homepage** (General ads go to
-  the Devon page, city ads to their pages), so the shared form and the city
-  pages carry the 30 days unless Tom points the General ads back at the
-  homepage, which the Google Ads worker has recommended (Tom to confirm).
+- **The general Google Ads land on the homepage again from 11/10/2026**
+  (Google Ads worker, on Tom's approval; all four forms ever received came
+  from the homepage). The homepage and the shared form are therefore the
+  main pages for the 30 days; Cornwall, Plymouth and Exeter ads still go to
+  their own pages. The Start-Up campaign is paused.
+- **Ad landing pages and the sitemap (checked live 11/10/2026):** none is in
+  the menu. Taxi, Devon, Cornwall, Plymouth and Exeter are in `sitemap.xml`
+  and indexable; `/start-up-idea-review` is noindex and out of it by design.
+  **Devon is in the live sitemap**, so it is no longer `hidden`, whatever
+  older notes in this file say.
 - **The live inspection now measures** how far down the form starts, the
   first button's target, whether the PDF box is open unprompted and the
   Clarity tag (`scripts/productionQa.js`).
