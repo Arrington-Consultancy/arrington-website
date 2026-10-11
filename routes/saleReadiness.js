@@ -12,7 +12,9 @@
 // readiness must not become a competing top-level Arrington proposition or
 // duplicate the existing Commercial Review." So:
 //
-//   - it is NOT in the main navigation, and must not be added to it
+//   - it is in the main navigation since 11/10/2026 (Tom: "we need this on
+//     the menu"), as a synthetic entry after Owner Check, built in
+//     server.js and lib/navShell.js. Until then it was kept out.
 //   - it is NOT promoted in the homepage's upper sections. CHANGED 11/10/2026
 //     on Tom's approval: the page is now in sitemap.xml, and the homepage
 //     carries one text link to it in the block below the enquiry form

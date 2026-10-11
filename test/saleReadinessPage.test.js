@@ -71,21 +71,22 @@ test('the route is registered ahead of the CMS catch-all', () => {
   assert.ok(route.includes(PATH), `the route no longer serves ${PATH}`);
 });
 
-test('it is not in the main navigation, and no synthetic nav entry was added', () => {
-  // Both nav loops live in one partial. A link in either one puts this page
-  // in the main navigation on desktop or mobile.
+test('it is in the main navigation as one synthetic entry, after Owner Check', () => {
+  // CHANGED 11/10/2026, Tom: "we need this on the menu". Until then this test
+  // pinned the page OUT of the navigation (the 25/09/2026 brief). It is now a
+  // synthetic entry like Owner Check and Product Guide, built in the same two
+  // places, which must stay in step. The header partial still hardcodes no
+  // link to it: the entry reaches both nav loops through navPages.
   const header = emitted('views/partials/site-header.ejs');
-  assert.ok(!header.includes(PATH), 'a sale-readiness link is in the main navigation');
-  assert.ok(!/ready-to-sell|sale-readiness/i.test(header), 'a sale-readiness nav link is in the header partial');
-
-  // Owner Check and Product Guide are synthetic nav entries built in two
-  // places that must stay in step. Neither may gain a third for this page.
+  assert.ok(!header.includes(PATH), 'the header partial hardcodes a sale-readiness link instead of using navPages');
   for (const f of ['server.js', 'lib/navShell.js']) {
     const src = read(f);
     assert.ok(
-      !/saleReadinessNavEntry|readyToSellNavEntry/.test(src),
-      `${f} builds a synthetic nav entry for the sale-readiness page`
+      /readyToSellNavEntry = \{ slug: 'get-your-business-ready-to-sell', title: 'Ready to Sell'/.test(src),
+      `${f} does not build the Ready to Sell nav entry`
     );
+    assert.ok(/ownerCheckNavEntry, readyToSellNavEntry\]/.test(src), `${f} no longer places Ready to Sell after Owner Check`);
+    assert.ok(/ownerCheckNavEntry, readyToSellNavEntry, \.\.\./.test(src), `${f} no longer places Ready to Sell after Owner Check`);
   }
 
   // The positive half: the two nav entries that ARE meant to exist still do,

@@ -1013,10 +1013,15 @@ async function renderPage(req, res, next, pageSlug) {
     // array used only by the two nav loops in index.ejs; falls back to
     // appending at the end if 'what-we-do' is ever renamed or removed.
     const ownerCheckNavEntry = { slug: 'owner-check', title: 'Owner Check', nav_label: '', hidden: false, show_in_nav: true };
+    // Ready to Sell (11/10/2026, Tom: "we need this on the menu") is a third
+    // synthetic entry, a code route like Owner Check, placed straight after
+    // it. Same construction and fallback; lib/navShell.js builds the same
+    // list for the standalone pages and must stay in step.
+    const readyToSellNavEntry = { slug: 'get-your-business-ready-to-sell', title: 'Ready to Sell', nav_label: '', hidden: false, show_in_nav: true };
     const whatWeDoIndex = allPages.findIndex(p => p.slug === 'what-we-do');
     const navPagesWithOwnerCheck = whatWeDoIndex === -1
-      ? [...allPages, ownerCheckNavEntry]
-      : [...allPages.slice(0, whatWeDoIndex + 1), ownerCheckNavEntry, ...allPages.slice(whatWeDoIndex + 1)];
+      ? [...allPages, ownerCheckNavEntry, readyToSellNavEntry]
+      : [...allPages.slice(0, whatWeDoIndex + 1), ownerCheckNavEntry, readyToSellNavEntry, ...allPages.slice(whatWeDoIndex + 1)];
 
     // Product Guide (22/08/2026) — this nav slot used to be "Where to
     // Start" (linking to /where-to-start), renamed per the site refinement
