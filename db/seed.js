@@ -8161,6 +8161,24 @@ async function seed() {
   }
 
 
+  // PLAINER LINES ON THE FOUR CITY LANDING PAGES (11/10/2026, Tom's approval
+  // of the Website & Hosting proposal "More Google Ads visitors to the
+  // contact form"). Same guard as the voice sweep: a page is written only if
+  // every row still holds the value production was left with on 07/10/2026,
+  // otherwise it stands down and logs the live value. Run once, under a marker.
+  try {
+    const report = await require('../lib/landingPlainCopy').applyLandingPlainCopy(db);
+    if (report) {
+      for (const g of report) {
+        console.log(`Landing page plain copy: ${g.name}: ${g.action}${g.written ? `, ${g.written} row(s) written` : ''}` +
+          (g.mismatched.length ? `; left alone because the live value differs: ${g.mismatched.map((m) => `${m.key}=${JSON.stringify(m.value)}`).join(' | ')}` : ''));
+      }
+    }
+  } catch (err) {
+    console.error('Landing page plain copy migration failed (boot continues):', err.message);
+  }
+
+
   // Arrington AI Workspace: ingest the encrypted snapshot into
   // workspace_records. A no-op when WORKSPACE_SNAPSHOT_KEY is unset, and
   // never fatal: an ingest failure records itself as a failed sync run

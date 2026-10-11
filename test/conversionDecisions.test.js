@@ -52,27 +52,39 @@ test('decision 1: the Websites and AI page itself is untouched and still reachab
   assert.ok(/'websites-and-ai'/.test(server), 'the websites-and-ai route/entry vanished from server.js');
 });
 
-test('decisions 2 and 7: the quiz leads the post-hero slot and the Product Guide is still there', () => {
-  const index = emitted('views/index.ejs');
-  const teaser = index.slice(index.indexOf('class="pg-teaser'), index.indexOf('class="pg-teaser') + 1400);
-
-  assert.ok(/href="\/owner-dependency-quiz"/.test(teaser), 'the quiz is not the route in the post-hero slot');
-  assert.ok(/btn btn-primary/.test(teaser), 'the quiz CTA is not the primary button in that slot');
-
-  // Decision 1 forbids demoting the Product Guide, so it must still be here,
-  // and decision 7 says the entry points must not compete equally, so it must
-  // NOT be a second primary button.
+// Decision 2 (the quiz leads the slot directly under the homepage hero) was
+// SUPERSEDED by Tom on 11/10/2026: the first thing under the headline now
+// leads to the enquiry form, and the quiz block moved below the form and the
+// call, email and WhatsApp details (Website & Hosting proposal "More Google
+// Ads visitors to the contact form"). What decisions 2 and 7 still require
+// holds: the quiz keeps a homepage block with the primary button, the
+// Product Guide keeps its route there, and the two do not compete equally.
+test('decisions 2 and 7, as changed on 11/10/2026: the quiz block sits below the form, homepage only', () => {
+  const teaser = emitted('views/partials/home-quiz-teaser.ejs');
+  assert.ok(/href="\/owner-dependency-quiz"/.test(teaser), 'the quiz block lost its route to the quiz');
+  assert.ok(/btn btn-primary/.test(teaser), 'the quiz CTA is not the primary button in its block');
   assert.ok(/href="\/product-guide"/.test(teaser), 'the Product Guide lost its route out of this block');
-  const primaries = teaser.match(/btn-primary/g) || [];
-  assert.strictEqual(primaries.length, 1, 'the block has more than one primary CTA, so the entry points compete equally again');
+  assert.strictEqual((teaser.match(/btn-primary/g) || []).length, 1, 'the block has more than one primary CTA');
+  assert.ok(teaser.includes('Not ready to talk yet?'), 'the block label changed');
+
+  // Not under the hero any more.
+  const index = emitted('views/index.ejs');
+  assert.ok(!/<section class="pg-teaser/.test(index) && !/<div class="pg-teaser/.test(index), 'the quiz block is back in the homepage section loop');
+
+  // In the footer, after the form and the contact details, homepage only.
+  const footer = emitted('views/partials/site-footer.ejs');
+  const inc = footer.indexOf("include('home-quiz-teaser')");
+  assert.ok(inc > 0, 'the footer no longer includes the quiz block');
+  assert.ok(footer.indexOf('id="leadForm"') < inc && footer.indexOf('class="contact-details"') < inc, 'the quiz block is above the form or the contact details');
+  assert.ok(inc < footer.indexOf('class="footer-links"'), 'the quiz block fell below the footer links');
+  assert.ok(/currentPage\.slug === 'main'\) \{ %>\s*<%- include\('home-quiz-teaser'\) %>/.test(footer), 'the quiz block is not limited to the homepage');
 });
 
 test('decision 2: no claim is made about the quiz that the quiz page does not make', () => {
   // The quiz is 32 questions. An earlier draft of this block nearly said "ten
   // questions, two minutes", which was invented. Both claims that survive are
   // the quiz page's own controlled wording.
-  const index = emitted('views/index.ejs');
-  const teaser = index.slice(index.indexOf('class="pg-teaser'), index.indexOf('class="pg-teaser') + 1400);
+  const teaser = emitted('views/partials/home-quiz-teaser.ejs');
   assert.ok(!/\b(ten|10|twelve|12|five|5)\s+questions\b/i.test(teaser), 'the teaser states a question count');
   assert.ok(/five minute/i.test(teaser), 'the teaser dropped the quiz page\'s own "five minute" framing');
 

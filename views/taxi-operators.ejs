@@ -152,7 +152,11 @@
         <div class="tx-section" data-situation>
             <h2>What it usually looks like</h2>
             <p>Drivers drift to Uber because the app pays them every week and you pay them when the invoices clear. Three people's jobs run through one person in the office, usually you, and the phones go quiet the minute you step out. Account work that used to be the backbone of your firm quietly goes somewhere else. Zone prices and driver splits were set up years ago and never looked at since, so every job runs but the margin isn't there at the end of the month.</p>
-            <p>Tom owned and ran Abacus and Falmouth Taxis for nearly twenty years before selling it in 2025, and had every one of those problems himself. None of them was the software.</p>
+            <%# Tom's story moved up here on 11/10/2026 (Tom's approval of the
+                conversion proposal): for an operator it is the strongest
+                reason to trust us, so it sits in the first section rather than
+                the third. Same approved facts, now in one place. %>
+            <p>Tom owned and ran Abacus and Falmouth Taxis for nearly twenty years before selling it in 2025. He bought the business at 22, very nearly lost it and rebuilt it, and he had every one of those problems himself. None of them was the software. <a class="tx-link" href="/evidence#biography__2">Read the Abacus and Falmouth Taxis story</a>.</p>
             <p class="tx-bridge">If any of that is your week, our Commercial Review starts with the business, not the screen.</p>
         </div>
 
@@ -160,8 +164,8 @@
             voice folder), recast as "we" with Tom in the third person. %>
         <div class="tx-section">
             <h2>Most of the time it isn't the software</h2>
-            <p>When something goes wrong in a taxi office, the dispatch system usually gets the blame. To be fair, sometimes it is the software. More often it's the setup, the pricing, the zones, the drivers, the geography or what everyone expected the system to do, and usually it's a bit of all of them. Changing the system won't fix a problem that sits in the business, and it's an expensive way to find that out.</p>
-            <p>Tom has been the operator on the other side of that table. He bought the business at 22, very nearly lost it and rebuilt it, and he's worked with the National Taxi Association. Dealing with drivers, zone profiles, VAT, dispatch, pricing and customers, often all before lunchtime, is something only another operator really appreciates.</p>
+            <p>When something goes wrong in a taxi office, the dispatch system usually gets the blame. Sometimes it is the software. More often it's the setup, the pricing, the zones or what everyone expected the system to do. Changing the system won't fix a problem that sits in the business, and it's an expensive way to find that out.</p>
+            <p>Tom has also worked with the National Taxi Association. Dealing with drivers, zone profiles, VAT, dispatch and customers, often all before lunchtime, is something only another operator really appreciates.</p>
         </div>
 
         <%# INDEPENDENCE (Tom, 07/10/2026): no supplier pays us, and the
@@ -170,7 +174,7 @@
             sits straight under the headline; it now leads into choosing a
             system, where independence matters most. %>
         <div class="tx-cred" data-independence>
-            <p>We're listed on the iCabbi Marketplace because Tom ran on iCabbi for around eight years. We don't sell software and no supplier pays us.</p>
+            <p>We're listed on the iCabbi Marketplace, but we don't sell software and no supplier pays us.</p>
             <p>We work with operators anywhere in the UK, by video call, and Tom will come and see you in person on request, with travel costs agreed before he sets off.</p>
         </div>
 
@@ -189,14 +193,12 @@
             <p>Afterwards, we help you get the most from the system you've chosen, because the setup decides most of what you get out of it.</p>
         </div>
 
-        <div class="tx-section">
-            <h2>The business behind the system</h2>
-            <p>Often the question underneath the system is a commercial one: whether your pricing covers the work, whether account customers pay on time, how drivers are paid and kept, and how much of the business still runs through you. That's what our Commercial Review looks at, and it's the same thinking Tom used when he rebuilt his own business. <a class="tx-link" href="/evidence#biography__2">Read the Abacus and Falmouth Taxis story</a>.</p>
-        </div>
-
+        <%# "The business behind the system" was removed on 11/10/2026 (Tom's
+            approval): it repeated "What it usually looks like" point for
+            point, and its Abacus link moved up beside Tom's story. %>
         <div class="tx-section">
             <h2>Websites for operators</h2>
-            <p>A taxi website has one job, which is getting the booking. We build HTML sites from scratch, not from a template, around the way your customers book, whether that's a phone call, your app or online, so the number and the app links are where people look for them.</p>
+            <p>A taxi website has one job, which is getting the booking. We build yours around the way your customers book, whether that's a phone call, your app or online, so they find your number or your app straight away and book with you rather than the next firm on the list.</p>
         </div>
 
         <%# AI is introduced only where it solves a real problem, never as the
@@ -208,10 +210,13 @@
         </div>
 
         <%# THREE PAID OFFERS with a taxi lead-in each (Tom, 07/10/2026: the
-            £3,400 card dropped after the second review). Names, prices and
-            descriptions read from lib/whereToStartOffers.js so the page can
-            never disagree with the offer pages; the Product Guide covers the
-            rest. No credit mechanics here. %>
+            £3,400 card dropped after the second review). Names and prices
+            read from lib/whereToStartOffers.js so the page can never disagree
+            with the offer pages; the Product Guide covers the rest. No credit
+            mechanics here. The longer catalogue description is not shown on
+            this page since 11/10/2026 (Tom's approval, to bring the page
+            under about 700 words); it stays on each offer page, one click
+            away. %>
         <section class="tx-band surface-paper">
         <div class="tx-wrap">
         <div class="tx-section">
@@ -223,7 +228,6 @@
                     <h3><%= o.name %></h3>
                     <span class="tx-offer-price"><%= '£' + (o.pricePence / 100).toLocaleString('en-GB') %></span>
                     <p class="tx-offer-lead"><%= o.taxiLead %></p>
-                    <p><%= o.description %></p>
                     <p class="tx-offer-more"><a class="tx-link" href="<%= o.path %>">See the <%= o.name %></a></p>
                 </li>
                 <% }) %>

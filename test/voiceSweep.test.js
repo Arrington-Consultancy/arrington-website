@@ -92,7 +92,8 @@ test('kept lines are kept, and excluded pages are untouched', () => {
 
 test('the code-rendered half carries the approved wording and none of the old lines', () => {
   const checks = [
-    ['views/index.ejs', 'A free five minute quiz that shows where the business still depends on you. No email needed to see your result.', 'and what that is costing'],
+    // The homepage quiz block moved into its own partial on 11/10/2026 (below the form).
+    ['views/partials/home-quiz-teaser.ejs', 'A free five minute quiz that shows where the business still depends on you. No email needed to see your result.', 'and what that is costing'],
     ['views/index.ejs', 'Eight quick questions will show you how much still runs through you.', 'One straightforward question'],
     ['views/where-to-start.ejs', 'An outside read on the business, written down.', 'where the next edge may be'],
     ['views/where-to-start.ejs', 'If you go on to either bigger option, the £500 comes off.', 'richer, sharper or more capable'],

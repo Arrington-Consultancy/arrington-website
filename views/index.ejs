@@ -3139,6 +3139,14 @@
             border-color: var(--accent);
         }
 
+        /* What happens next, under the button (11/10/2026). */
+        .lead-form-next {
+            margin: 0.9rem 0 0;
+            font-size: 0.9rem;
+            line-height: 1.55;
+            color: var(--text);
+        }
+
         .lead-form-status {
             margin: 0.9rem 0 0;
             font-size: 0.85rem;
@@ -3649,45 +3657,12 @@
 </section>
 <% } %>
 
-<% /* Principal diagnostic route, homepage only, immediately below the hero,
-      hardcoded (not a CMS section) so it lands without depending on CMS
-      state. Uses the midnight surface so it reads as a distinct zone rather
-      than another slab of the same navy. Restricted to
-      currentPage.slug === 'main' and the base hero instance so it never
-      appears on other pages that reuse the hero template (Business
-      Consultant Devon, the booking page).
-
-      CHANGED 14/09/2026 on Tom's approved decisions 2 and 7. This slot used
-      to carry the Product Guide alone. The Owner Dependency Quiz is now the
-      principal diagnostic route and takes the lead here, which is what
-      "promote the existing quiz much higher on the homepage" means in the
-      highest slot available below the hero.
-
-      The Product Guide is NOT demoted out of existence and NOT removed: it
-      keeps its place in the main navigation (decision 1) and keeps a named
-      route in this same block for the visitor who does not know what they
-      need. What changes is the hierarchy between them, per decision 7, so
-      the entry points stop competing equally.
-
-      Two gold buttons do not collide here: the hero's CTA is the principal
-      HUMAN route and this is the principal DIAGNOSTIC route, and the
-      midnight surface separates them.
-
-      Every claim below is the site's own existing, controlled wording from
-      the quiz page itself (a free five minute quiz, no email required to see
-      the result), not a new claim written for this block. The quiz is 32
-      questions, so no question count is stated. */ %>
-<% if (_tpl === 'hero' && _iid === 'hero' && currentPage.slug === 'main') { %>
-<section class="pg-teaser surface-midnight">
-    <div class="pg-teaser-inner">
-        <p class="pg-teaser-label">The quickest place to start</p>
-        <h2 class="pg-teaser-heading">Owner Dependency Quiz</h2>
-        <p class="pg-teaser-body">A free five minute quiz that shows where the business still depends on you. No email needed to see your result.</p>
-        <a href="/owner-dependency-quiz" class="btn btn-primary">Take the quiz</a>
-        <p class="pg-teaser-alt">Not sure what you need? <a href="/product-guide">Use the Product Guide</a>.</p>
-    </div>
-</section>
-<% } %>
+<%# The Owner Dependency Quiz block used to sit here, directly under the
+    homepage hero (decision 2 of 14/09/2026). Tom approved moving it below the
+    enquiry form on 11/10/2026, so the first thing under the headline leads to
+    the form rather than away from it. It now renders from
+    views/partials/home-quiz-teaser.ejs, included by the shared footer on the
+    homepage only. Its styles stay in this file (.pg-teaser). %>
 
 <% if (_tpl === 'credentials') { %>
 <% const _k = _iid; %>
@@ -3750,14 +3725,19 @@
             </picture>
         </div>
         <% } %>
+        <%# An empty paragraph renders nothing (11/10/2026), so a line removed in
+            the CMS leaves no gap. Before this every paragraph was always
+            emitted, empty or not. %>
         <div class="problem-grid">
             <div class="problem-right">
-                <p><%- content[_k + '.col_1_p1'] %></p>
-                <p><%- content[_k + '.col_1_p2'] %></p>
+                <% ['col_1_p1', 'col_1_p2'].forEach(function (_f) { if ((content[_k + '.' + _f] || '').trim()) { %>
+                <p><%- content[_k + '.' + _f] %></p>
+                <% } }); %>
             </div>
             <div class="problem-right">
-                <p><%- content[_k + '.col_2_p1'] %></p>
-                <p><%- content[_k + '.col_2_p2'] %></p>
+                <% ['col_2_p1', 'col_2_p2'].forEach(function (_f) { if ((content[_k + '.' + _f] || '').trim()) { %>
+                <p><%- content[_k + '.' + _f] %></p>
+                <% } }); %>
             </div>
         </div>
     </div>

@@ -119,11 +119,14 @@ test("the operator's week sits straight under the headline, bridges into the sof
     'Drivers drift to Uber because the app pays them every week and you pay them when the invoices clear.',
     "Three people's jobs run through one person in the office, usually you, and the phones go quiet the minute you step out.",
     'Account work that used to be the backbone of your firm quietly goes somewhere else.',
-    'Tom owned and ran Abacus and Falmouth Taxis for nearly twenty years before selling it in 2025, and had every one of those problems himself. None of them was the software.',
+    // Tom's story moved up into this section on 11/10/2026 (his approval of
+    // the conversion proposal), with the Abacus story link beside it.
+    'Tom owned and ran Abacus and Falmouth Taxis for nearly twenty years before selling it in 2025. He bought the business at 22, very nearly lost it and rebuilt it, and he had every one of those problems himself. None of them was the software. Read the Abacus and Falmouth Taxis story',
     'If any of that is your week, our Commercial Review starts with the business, not the screen.'
   ]) {
     assert.ok(section.includes(line), `missing: ${line}`);
   }
+  assert.ok(body.slice(at('data-situation'), at("Most of the time it isn't the software")).includes('href="/evidence#biography__2"'), 'the Abacus story link is not beside Tom\'s story');
   // Tom's story stays in the third person: Arrington did not run taxi firms.
   assert.ok(!/\bwe (?:ran|had)\b/i.test(section), 'the section says "we" ran the taxi firms');
   // The brief's do-nots, checked across everything the page emits.
@@ -170,7 +173,7 @@ test('brand rules: we, no dashes, no banned words, AI not the hook', () => {
   // dispatch and business sections.
   const hero = visibleText(body.slice(body.indexOf('<header class="tx-hero"'), body.indexOf('</header>')));
   assert.ok(!/\bAI\b/.test(hero), 'AI appears in the hero');
-  assert.ok(body.indexOf('The phones and the office') > body.indexOf('The business behind the system'), 'the AI section moved above the business section');
+  assert.ok(body.indexOf('The phones and the office') > body.indexOf('Choosing or changing a dispatch system</h2>'), 'the AI section moved above the dispatch section');
   assert.ok(body.includes('href="/evidence#biography__2"'), 'the Abacus case study link is gone');
 });
 
@@ -198,4 +201,28 @@ test('two contextual links in: What We Do (appended) and Evidence (after the Aba
   const copy = (block.match(/(?:heading|subtext|button_text): '([^']*)'/g) || []).join(' ');
   assert.ok(!/[—–]|[A-Za-z]-[A-Za-z]/.test(copy), 'a dash or hyphenated word in the link copy');
   assert.ok(!/£|\b(I|my|me)\b/.test(copy), 'a price or first person in the link copy');
+});
+
+test('11/10/2026 conversion pass: shorter page, the repeat section gone, what the website gets the operator', () => {
+  // Tom approved the proposal "More Google Ads visitors to the contact form"
+  // on 11/10/2026, keeping the "Afterwards" sentence at the end of the
+  // dispatch section because it is the only offer of help after a switchover.
+  const body = renderBody();
+  const text = visibleText(body);
+  assert.ok(!text.includes('The business behind the system'), 'the section that repeated the operator\'s week is back');
+  assert.ok(!/HTML sites?|from scratch/i.test(text), 'the website line is about how it is built again, not what the operator gets');
+  assert.ok(text.includes('so they find your number or your app straight away and book with you rather than the next firm on the list.'), 'the website line changed');
+  const dispatch = visibleText(body.slice(body.indexOf('Choosing or changing a dispatch system</h2>'), body.indexOf('Websites for operators')));
+  assert.ok(dispatch.trim().endsWith("Afterwards, we help you get the most from the system you've chosen, because the setup decides most of what you get out of it."), 'the after-switchover help is not at the end of the dispatch section');
+  assert.ok(text.includes("We're listed on the iCabbi Marketplace, but we don't sell software and no supplier pays us."), 'the independence line changed');
+  assert.ok(!text.includes('To be fair'), 'the old software paragraph is back');
+  // The catalogue descriptions stay on the offer pages, not on this one.
+  for (const o of Object.values(OFFERS)) {
+    if (o.description) assert.ok(!text.includes(o.description), `the ${o.id} catalogue description is back on the taxi page`);
+  }
+  // Page copy, hero to the end of the offers, was 894 words on 11/10/2026
+  // and about 714 after this pass. A ceiling, so it cannot quietly grow back.
+  const copy = visibleText(body.slice(body.indexOf('<header class="tx-hero"'), body.indexOf('class="tx-offers-actions"')));
+  const words = (copy.match(/[A-Za-z0-9£][A-Za-z0-9'’,£.]*/g) || []).length;
+  assert.ok(words <= 730, `the taxi page copy is ${words} words`);
 });

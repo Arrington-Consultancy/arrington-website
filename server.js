@@ -1196,7 +1196,7 @@ async function renderPage(req, res, next, pageSlug) {
       heading: content['contact.heading'],
       body: content['contact.body'],
       messagePlaceholder: 'Tell us where the pressure is showing',
-      submitText: 'Send'
+      submitText: 'Ask Tom to get in touch'
     };
     if (pageSlug === 'websites-and-ai') {
       pageContact.headerCtaText = plainText(content['wai.header_cta_text']) || pageContact.headerCtaText;

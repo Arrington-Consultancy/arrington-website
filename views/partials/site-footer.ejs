@@ -95,6 +95,10 @@
             <div class="lead-turnstile cf-turnstile" data-sitekey="<%= turnstileSiteKey %>" data-theme="dark" data-action="contact"></div>
             <% } %>
             <button type="submit" class="btn btn-primary"><%= pageContact.submitText %></button>
+            <%# What happens next, right by the button (Tom, 11/10/2026: approved
+                wording and the reply time he can promise). Shared by every
+                page that uses this footer. %>
+            <p class="lead-form-next">Tom reads every enquiry himself and replies personally, usually within one working day. The first conversation is free and there's no obligation.</p>
             <p class="lead-form-status" id="leadFormStatus" aria-live="polite"></p>
         </form>
         <p class="lead-form-alt">Prefer to call, email or WhatsApp instead?</p>
@@ -106,6 +110,11 @@
             <% } %>
         </div>
     </div>
+    <%# Homepage only: the Owner Dependency Quiz block sits below the form and
+        the call, email and WhatsApp details (Tom, 11/10/2026). %>
+    <% if (typeof currentPage !== 'undefined' && currentPage && currentPage.slug === 'main') { %>
+    <%- include('home-quiz-teaser') %>
+    <% } %>
     <div class="footer-links">
         <a href="/useful-thinking">For more on how we think, see Useful Thinking</a>
         <a href="/privacy">Privacy</a>
