@@ -28,51 +28,9 @@
     <meta name="twitter:title" content="<%= seo.ogTitle %>">
     <% if (seo.ogDescription) { %><meta name="twitter:description" content="<%= seo.ogDescription %>"><% } %>
     <% if (seo.ogImage) { %><meta name="twitter:image" content="<%= seo.ogImage %>"><% } %>
-    <%# ---- Structured data (Schema.org). Verified facts only: legal name,
-         trading name, company number, phone, email, service area.
-         No aggregateRating/Review here: Google's own review-snippet policy
-         disqualifies markup where the reviewed entity controls the reviews
-         shown about itself on its own site - including via a Google Business
-         reviews widget, which is exactly what the reviews section is. That
-         data is real (pulled live from Google), but it's not eligible for
-         review-snippet structured data on this domain regardless. ---- %>
-    <script type="application/ld+json" nonce="<%= nonce %>">
-    {
-      "@context": "https://schema.org",
-      "@type": ["Organization", "ProfessionalService"],
-      "name": "Arrington Consultancy",
-      "legalName": "Arrington Business Consultancy Ltd",
-      "alternateName": "Arrington Business Consultancy Ltd",
-      "url": "https://www.arringtonconsultancy.com/",
-      "telephone": "+441752477026",
-      "email": "tom@arringtonconsultancy.com",
-      "identifier": {
-        "@type": "PropertyValue",
-        "propertyID": "GB:CompanyNumber",
-        "value": "17122684"
-      },
-      "areaServed": [
-        { "@type": "AdministrativeArea", "name": "Devon" },
-        { "@type": "AdministrativeArea", "name": "Cornwall" }
-      ],
-      "founder": {
-        "@type": "Person",
-        "name": "Tom Arrington",
-        "jobTitle": "Managing Director"
-      },
-      "sameAs": [
-        "https://www.google.com/maps/place/Arrington+Business+Consultancy/data=!4m7!3m6!1s0x68ae21a1b13dfe61:0x1e5cd5fd5fd3d54a!8m2!3d47.73855!4d12.5088275!16s%2Fg%2F11z309prfq!19sChIJYf49saEhrmgRStXTX_3VXB4"
-      ]
-    }
-    </script>
-    <script type="application/ld+json" nonce="<%= nonce %>">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "Arrington Consultancy",
-      "url": "https://www.arringtonconsultancy.com/"
-    }
-    </script>
+    <%# Organization and WebSite structured data render site-wide from
+         partials/site-schema.ejs (through partials/google-tag.ejs) since
+         11/10/2026. Page-level schema follows. %>
     <% if (currentPage.slug === 'about-us') { %>
     <script type="application/ld+json" nonce="<%= nonce %>">
     {
@@ -80,11 +38,7 @@
       "@type": "Person",
       "name": "Tom Arrington",
       "jobTitle": "Managing Director",
-      "worksFor": {
-        "@type": "Organization",
-        "name": "Arrington Consultancy",
-        "url": "https://www.arringtonconsultancy.com/"
-      },
+      "worksFor": { "@id": "https://www.arringtonconsultancy.com/#organization" },
       "url": "https://www.arringtonconsultancy.com/about-us"
     }
     </script>
@@ -3251,6 +3205,28 @@
             font-size: 0.78rem;
             letter-spacing: 0.06em;
             color: var(--text-muted);
+        }
+
+        .footer-areas {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.3rem 1rem;
+            padding: 0 2rem;
+            margin-bottom: 0.9rem;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        .footer-areas a {
+            color: var(--text-muted);
+            text-decoration: none;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .footer-areas a:hover {
+            color: var(--text-bright);
+            border-bottom-color: var(--text-bright);
         }
 
         .footer-links {

@@ -16,7 +16,10 @@ const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) =>
   e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]);
 
 test('unset: nothing that names facebook or fbq renders', () => {
-  const html = render({ nonce: 'n' });
+  // The site-wide structured data (partials/site-schema.ejs, 11/10/2026)
+  // lists the Facebook page as one of the business's profiles. That is a
+  // link in data, not the pixel, so it is set aside before the check.
+  const html = render({ nonce: 'n' }).replace(/<script type="application\/ld\+json"[^>]*>[\s\S]*?<\/script>/g, '');
   assert.ok(!/facebook|fbq/i.test(html));
 });
 

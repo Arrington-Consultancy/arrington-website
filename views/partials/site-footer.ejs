@@ -115,6 +115,18 @@
     <% if (typeof currentPage !== 'undefined' && currentPage && currentPage.slug === 'main') { %>
     <%- include('home-quiz-teaser') %>
     <% } %>
+    <%# The four local pages, linked from every page (SEO sweep, 11/10/2026).
+        Before this Exeter and Plymouth had no internal link at all and Devon
+        and Cornwall one each, so search engines saw them as unimportant. %>
+    <%# A div with role="navigation", not a <nav>: the site styles every
+        nav element as the fixed header bar. %>
+    <div class="footer-areas" role="navigation" aria-label="Areas we cover">
+        <span>Business consultant in</span>
+        <a href="/business-consultant-devon">Devon</a>
+        <a href="/business-consultant-cornwall">Cornwall</a>
+        <a href="/business-consultant-plymouth">Plymouth</a>
+        <a href="/business-consultant-exeter">Exeter</a>
+    </div>
     <div class="footer-links">
         <a href="/useful-thinking">For more on how we think, see Useful Thinking</a>
         <a href="/privacy">Privacy</a>

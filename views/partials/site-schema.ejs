@@ -1,0 +1,60 @@
+<%# STRUCTURED DATA FOR THE BUSINESS ITSELF (Schema.org). Rendered from
+    partials/google-tag.ejs, so it reaches every public page and no internal
+    one, the same as the Google tag. Moved here from views/index.ejs on
+    11/10/2026 (SEO sweep): until then only the CMS pages carried it, so the
+    standalone pages (Owner Check, the checks, Ready to Sell, the taxi page,
+    the offer pages) told search engines nothing about who runs them.
+
+    Verified facts only: legal name, trading name, company number, phone,
+    email, service area, the founder, and the profiles the Google Business
+    Profile itself lists (read through Windsor on 11/10/2026). The
+    description is the Brand Operating System's approved short company
+    description, verbatim. The Maps link is the profile's own cid link; the
+    old link carried map coordinates in Bavaria from a search viewport.
+
+    No aggregateRating or Review: Google's review-snippet policy rules out
+    markup where the business controls the reviews shown about itself on its
+    own site, which is what the reviews section is. %>
+<%
+  const _org = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': ['Organization', 'ProfessionalService'],
+        '@id': 'https://www.arringtonconsultancy.com/#organization',
+        name: 'Arrington Consultancy',
+        legalName: 'Arrington Business Consultancy Ltd',
+        alternateName: 'Arrington Business Consultancy',
+        description: 'We use 20 years of business experience to help owner run businesses grow and become less reliant on the owner.',
+        url: 'https://www.arringtonconsultancy.com/',
+        logo: 'https://www.arringtonconsultancy.com/img/logo-nav.webp',
+        image: 'https://www.arringtonconsultancy.com/img/headshot',
+        telephone: '+441752477026',
+        email: 'tom@arringtonconsultancy.com',
+        identifier: { '@type': 'PropertyValue', propertyID: 'GB:CompanyNumber', value: '17122684' },
+        areaServed: [
+          { '@type': 'AdministrativeArea', name: 'Devon' },
+          { '@type': 'AdministrativeArea', name: 'Cornwall' },
+          { '@type': 'City', name: 'Plymouth' },
+          { '@type': 'City', name: 'Exeter' }
+        ],
+        founder: { '@type': 'Person', name: 'Tom Arrington', jobTitle: 'Managing Director' },
+        sameAs: [
+          'https://maps.google.com/maps?cid=2187858803206378826',
+          'https://www.linkedin.com/company/128404067/',
+          'https://www.facebook.com/profile.php?id=61574741098361',
+          'https://www.instagram.com/arrington.consultancy/'
+        ]
+      },
+      {
+        '@type': 'WebSite',
+        '@id': 'https://www.arringtonconsultancy.com/#website',
+        name: 'Arrington Consultancy',
+        url: 'https://www.arringtonconsultancy.com/',
+        inLanguage: 'en-GB',
+        publisher: { '@id': 'https://www.arringtonconsultancy.com/#organization' }
+      }
+    ]
+  };
+%>
+<script type="application/ld+json" nonce="<%= nonce %>"><%- JSON.stringify(_org).replace(/</g, '\\u003c') %></script>

@@ -1,0 +1,28 @@
+<%# PAGE-LEVEL STRUCTURED DATA for the standalone (code route) pages, added
+    in the SEO sweep of 11/10/2026. The CMS pages build theirs in
+    views/index.ejs and the Where to Start pages in where-to-start-schema.ejs;
+    these pages had none. A breadcrumb (Home, then this page) always; a
+    Service as well when schemaService names one. The business itself is
+    described once, site-wide, by partials/site-schema.ejs, and the Service
+    points at it by @id rather than repeating it.
+    Takes: schemaName, schemaPath, and optionally schemaService. %>
+<%
+  const _pageUrl = 'https://www.arringtonconsultancy.com' + schemaPath;
+  const _graph = [{
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.arringtonconsultancy.com/' },
+      { '@type': 'ListItem', position: 2, name: schemaName, item: _pageUrl }
+    ]
+  }];
+  if (typeof schemaService !== 'undefined' && schemaService) {
+    _graph.push({
+      '@type': 'Service',
+      name: schemaService,
+      provider: { '@id': 'https://www.arringtonconsultancy.com/#organization' },
+      areaServed: [{ '@type': 'AdministrativeArea', name: 'Devon' }, { '@type': 'AdministrativeArea', name: 'Cornwall' }],
+      url: _pageUrl
+    });
+  }
+%>
+<script type="application/ld+json" nonce="<%= nonce %>"><%- JSON.stringify({ '@context': 'https://schema.org', '@graph': _graph }).replace(/</g, '\\u003c') %></script>

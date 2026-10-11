@@ -14,6 +14,7 @@
         carries social share buttons, so a shared link must not become an
         indexed page about someone's business. %>
     <link rel="canonical" href="https://www.arringtonconsultancy.com/market-ready-test">
+    <%- include('partials/page-schema', { schemaName: 'Market Ready Test', schemaPath: '/market-ready-test' }) %>
     <meta name="csrf-token" content="<%= csrfToken %>">
     <meta name="turnstile-site-key" content="<%= turnstileSiteKey %>">
     <link rel="icon" href="/favicon.ico" sizes="any">
