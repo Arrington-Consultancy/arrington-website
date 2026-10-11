@@ -7522,6 +7522,14 @@ depends on it never being added to `navPages`.
   `20261011T190634Z-rts-expandable`): phone page 7,222px to 5,754px, the form
   8.9 to 6.7 screens down. The old two-column grid and its full-width fifth
   item are gone; a list has no slot that invites a sixth point.
+- **Real photo of Tom at the top (11/10/2026, Tom chose it).** Tom wanted
+  an image at the top. The AI illustration ("owner-watching") stays above
+  the quiz, because his 25/09/2026 rule keeps it away from the hero and the
+  credibility lines. The hero (`.sr-hero`, before `<main>`) carries
+  `/img/startup/tom-at-desk`, with the same treatment as the taxi and
+  start-up pages. `test/saleReadinessPage.test.js` pins both: the
+  illustration appears once, in its section, and the hero shows the real
+  photo and never the illustration.
 - Describe the Commercial Review only on its own page. Here, say why it is
   relevant and link to it; do not restate its price mechanics, timeline or
   credit.

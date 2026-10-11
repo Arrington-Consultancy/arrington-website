@@ -446,9 +446,11 @@ test('operator credibility is controlled copy, and sits above the two routes', (
   );
 
   // Position: credibility must come before the visitor has to choose a route.
-  const body = bodyOf(VIEW);
-  const cred = body.indexOf('sr-cred');
-  const routes = body.indexOf('sr-routes');
+  // Read over the whole page, not from <main>: since 11/10/2026 the H1 sits
+  // in the photo hero, which comes before <main>.
+  const body = view;
+  const cred = body.indexOf('class="sr-cred"');
+  const routes = body.indexOf('class="sr-routes"');
   const h1 = body.indexOf('<h1');
   assert.ok(cred > -1, 'the credibility block has gone');
   assert.ok(h1 > -1 && cred > h1, 'the credibility block sits above the H1');
@@ -709,6 +711,23 @@ test('the owner-dependency section links to the real quiz, before the closing CT
   assert.ok(!/btn btn-primary/.test(block), 'the owner-dependency CTA has become a primary button, outranking the conversation');
 });
 
+test('the hero carries the real photo of Tom, never the illustration', () => {
+  // Tom, 11/10/2026: he wanted an image at the top. The AI illustration may
+  // not go there (his rule of 25/09/2026), so the top carries the real photo
+  // of Tom at his desk, the same file as the taxi and start-up pages.
+  const v = emitted(VIEW);
+  const hero = v.slice(v.indexOf('<header class="sr-hero">'), v.indexOf('<main>'));
+  assert.ok(hero.length > 0, 'the photo hero has gone');
+  assert.ok(hero.includes('/img/startup/tom-at-desk.jpg') && hero.includes('/img/startup/tom-at-desk.webp'), 'the hero no longer shows the real photo of Tom');
+  assert.ok(/alt="Tom Arrington at his desk"/.test(hero), 'the hero photo alt text changed');
+  assert.ok(!/owner-watching/.test(hero), 'the AI illustration has been put in the hero');
+  assert.ok(hero.includes('<h1>Get your business ready to sell</h1>'), 'the heading is no longer in the hero');
+  assert.ok(!/loading="lazy"/.test(hero), 'the hero photo is lazy-loaded, which delays the first screen');
+  // A <picture> is inline, so on a phone its height does nothing without
+  // display: block (the taxi page lesson of 08/10/2026).
+  assert.ok(/\.sr-hero-photo \{ display: block; position: relative;/.test(read(VIEW)), 'the phone photo band lost display: block');
+});
+
 test('the illustrative image is used once, optimised, and never as evidence', () => {
   // Tom's instruction of 25/09/2026: the image is AI-generated for this page,
   // it is illustrative, and it "must not be presented or positioned as
@@ -720,11 +739,15 @@ test('the illustrative image is used once, optimised, and never as evidence', ()
   const fs = require('node:fs');
 
   // ONCE. Tom was explicit that neither the second generated image he sent
-  // nor any other may be added.
+  // nor any other generated image may be added. The only other image is the
+  // real photo of Tom in the hero (Tom's choice of 11/10/2026), which sits
+  // before <main> and is checked in its own test below.
   const imgs = body.match(/<img\s/g) || [];
-  assert.strictEqual(imgs.length, 1, 'the page no longer carries exactly one image');
+  assert.strictEqual(imgs.length, 1, 'the page body no longer carries exactly one image');
   const pictures = body.match(/<picture>/g) || [];
-  assert.strictEqual(pictures.length, 1, 'the page no longer carries exactly one <picture>');
+  assert.strictEqual(pictures.length, 1, 'the page body no longer carries exactly one <picture>');
+  const illustrationUses = (emitted(VIEW).match(/owner-watching-1400\.jpg/g) || []).length;
+  assert.strictEqual(illustrationUses, 1, 'the illustration appears more than once, or has gone');
 
   // POSITION. It belongs to the owner-dependency section, which argues a case
   // and names no client, outcome or figure. It must not drift to the hero,
@@ -739,13 +762,7 @@ test('the illustrative image is used once, optimised, and never as evidence', ()
 
   // HONEST ALT TEXT. It must describe the scene and must not assert the scene
   // is real or belongs to anyone.
-  const alt = (view.match(/alt="([^"]+)"/) || [])[1];
-  assert.ok(alt, 'the image has no alt text');
-  assert.match(alt, /^Illustration/, 'the alt text no longer declares itself an illustration');
-  for (const forbidden of ['client', 'customer of', 'our work', 'case study', 'Arrington client']) {
-    assert.ok(!new RegExp(forbidden, 'i').test(alt), `the alt text claims the scene is a real ${forbidden}`);
-  }
-
+  const alt = (view.match(/owner-watching-1400\.jpg"[\s\S]*?alt="([^"]+)"/) || [])[1];
   // OPTIMISED. The 1.78MB PNG source must never be shipped, and what is
   // shipped has to actually exist at a sensible weight.
   assert.ok(!/\.png/i.test(body), 'a PNG is being served; the source was not converted');

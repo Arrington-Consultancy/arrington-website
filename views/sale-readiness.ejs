@@ -60,7 +60,20 @@
            therefore the same height already, and the difference in weight is
            the fill rather than the size. */
 
-        main { max-width: 700px; margin: 0 auto; padding: calc(var(--site-chrome) + 2.5rem) 1.5rem 5rem; }
+        main { max-width: 700px; margin: 0 auto; padding: 0 1.5rem 5rem; }
+
+        /* HERO WITH TOM'S REAL PHOTO (Tom, 11/10/2026). He wanted an image
+           at the top; the AI illustration lower down cannot go there (his
+           rule of 25/09/2026, see its comment), so the top carries the real
+           photo of Tom at his desk, the same file and treatment as the taxi
+           and start-up pages: photo across the width, the words on its dark
+           left side. On a phone the photo is a short band above the words. */
+        .sr-hero { position: relative; overflow: hidden; background: var(--black); display: flex; align-items: center; min-height: 560px; padding: calc(var(--site-chrome) + 3.5rem) 1.5rem 3rem; }
+        .sr-hero-photo { position: absolute; top: var(--site-chrome); right: 0; bottom: 0; left: 0; margin: 0; }
+        .sr-hero-photo img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 72% 12%; }
+        .sr-hero-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, var(--black) 0%, var(--black) 28%, color-mix(in srgb, var(--black) 60%, transparent) 52%, color-mix(in srgb, var(--black) 10%, transparent) 78%, transparent 100%), linear-gradient(0deg, var(--black) 0%, transparent 22%); }
+        .sr-hero-inner { position: relative; z-index: 1; width: 100%; max-width: 1100px; margin: 0 auto; }
+        .sr-hero-text { max-width: 560px; }
 
         .sr-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; color: var(--accent); margin-bottom: 1rem; display: block; }
         h1 { font-size: clamp(1.9rem, 4.5vw, 2.4rem); margin-bottom: 1.2rem; }
@@ -381,7 +394,12 @@
            merely narrow: single columns, tighter section rhythm, smaller
            card padding, and full-width controls. */
         @media (max-width: 760px) {
-            main { padding-top: calc(var(--site-chrome) + 1.75rem); }
+            .sr-hero { display: block; min-height: 0; padding: var(--site-chrome) 0 0; }
+            /* A <picture> is inline, so the height needs display: block. */
+            .sr-hero-photo { display: block; position: relative; top: auto; height: 38vw; max-height: 240px; }
+            .sr-hero-photo img { object-position: 66% 6%; }
+            .sr-hero-photo::after { background: linear-gradient(0deg, var(--black) 0%, color-mix(in srgb, var(--black) 40%, transparent) 30%, transparent 60%); }
+            .sr-hero-inner { padding: 0 1.5rem; margin-top: -1.5rem; }
             .sr-routes { grid-template-columns: 1fr; gap: 1rem; }
             .sr-dots--two { columns: 1; }
             .sr-dots li { margin-bottom: 0.7rem; }
@@ -404,10 +422,21 @@
         what the Build Protocol's assessment/tool rule requires. %>
     <%- include('partials/site-header', { currentPage: { slug: 'get-your-business-ready-to-sell' }, navPages, canEdit: false, content, pageContact }) %>
 
+    <header class="sr-hero">
+        <picture class="sr-hero-photo">
+            <source srcset="/img/startup/tom-at-desk.webp" type="image/webp">
+            <img src="/img/startup/tom-at-desk.jpg" alt="Tom Arrington at his desk" width="1672" height="941" fetchpriority="high">
+        </picture>
+        <div class="sr-hero-inner">
+            <div class="sr-hero-text">
+                <span class="sr-label">Sale readiness</span>
+                <h1>Get your business ready to sell</h1>
+                <p class="sr-lede">Make the business stronger and less reliant on you, so somebody else could take it over. That work pays whether you sell or keep it.</p>
+            </div>
+        </div>
+    </header>
+
     <main>
-        <span class="sr-label">Sale readiness</span>
-        <h1>Get your business ready to sell</h1>
-        <p class="sr-lede">Make the business stronger and less reliant on you, so somebody else could take it over. That work pays whether you sell or keep it.</p>
 
         <%# OPERATOR CREDIBILITY, and every sentence here is controlled copy
             already published elsewhere on the site rather than written for
@@ -651,8 +680,10 @@
                 photo in index.ejs is described as "representative of" its
                 case study rather than as a record of it.
 
-                One image only, on Tom's instruction. Do not add the second
-                generated image he sent, or any other, to this page.
+                One illustration only, on Tom's instruction. Do not add the
+                second generated image he sent, or any other generated image.
+                The only other image is the real photo of Tom in the hero
+                (Tom's choice of 11/10/2026, instead of moving this one up).
 
                 Sizes: the column caps at 700px, so 1400 is the 2x case and
                 700 the 1x; nothing larger is ever served. The 1.78MB PNG
