@@ -39,10 +39,10 @@ test('the after-the-Review test is Tom\'s wording, and the paragraph before it i
 const CORNER_TEXT = [
   'Selling a business can be brutal, both emotionally and commercially. We stay alongside you and fight for your commercial interests for as long as we are involved.',
   'Tom has been through the process himself, and that experience is part of the value of having us in your corner.',
-  'Before a buyer gets the chance to pick the business apart, we want to do it first, finding the weaknesses that could cost you money and strengthening what the buyer is actually going to be paying for.',
+  'We find the weak spots that could cost you money, and strengthen what the buyer will actually be paying for.',
   'In a sale, the business itself is the product. We want to make that product as strong as is commercially sensible, but every intervention has to earn its place. There is no point fixing the roof if the foundations are giving way.',
   'We protect every point and every penny. Where the job genuinely needs an accountant, a solicitor, a valuer or another specialist, use one. But nobody should spend £5,000 on something that can competently be done for £500, simply because they are in the middle of a sale. We question the costs and the decisions, and we protect your money as though it were our own.',
-  'What we care about is that you come out of it knowing somebody fought your corner and protected every penny of value the business deserved. What a buyer finally pays is theirs to decide, not ours.'
+  'What matters to us is that you come out of it knowing somebody fought your corner and protected every penny the business was worth. What a buyer finally pays is theirs to decide, not ours.'
 ].join(' ');
 
 test('"We stay in your corner" keeps every word, with the money paragraph split after "use one."', () => {

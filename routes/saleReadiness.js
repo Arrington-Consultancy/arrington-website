@@ -13,7 +13,12 @@
 // duplicate the existing Commercial Review." So:
 //
 //   - it is NOT in the main navigation, and must not be added to it
-//   - it is NOT promoted on the homepage
+//   - it is NOT promoted in the homepage's upper sections. CHANGED 11/10/2026
+//     on Tom's approval: the page is now in sitemap.xml, and the homepage
+//     carries one text link to it in the block below the enquiry form
+//     (views/partials/home-quiz-teaser.ejs), so it has a way in that does
+//     not depend on the Ready to Sell ads, which the Google Ads worker
+//     pauses the day this goes live. Still not in the menu.
 //   - the existing entry-point hierarchy (decision 7 of 14/09/2026) is
 //     unchanged: Owner Dependency Quiz stays the main diagnostic route and
 //     Book a Conversation the main human route

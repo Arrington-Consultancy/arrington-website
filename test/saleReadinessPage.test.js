@@ -97,9 +97,23 @@ test('it is not in the main navigation, and no synthetic nav entry was added', (
   }
 });
 
-test('it is not promoted on the homepage and no existing route was demoted for it', () => {
+test('on the homepage it is one link below the form, and no existing route was demoted for it', () => {
+  // CHANGED 11/10/2026 on Tom's approval. Until then the page was not linked
+  // from the homepage at all. The general Google Ads land on the homepage
+  // again from that day, so the one link sits in the block below the enquiry
+  // form, never in the sections above it, where it would send paid visitors
+  // away before they reach the form.
   const index = emitted('views/index.ejs');
-  assert.ok(!index.includes(PATH), 'the sale-readiness page is linked from the homepage template');
+  assert.ok(!index.includes(PATH), 'the sale-readiness page is linked from the homepage sections above the form');
+  const teaser = emitted('views/partials/home-quiz-teaser.ejs');
+  assert.strictEqual(teaser.split(PATH).length - 1, 1, 'the homepage block below the form does not carry exactly one link to the page');
+  assert.ok(
+    teaser.includes(`Thinking of selling in the next few years? <a href="${PATH}">Get the business ready first`),
+    'the approved wording of the homepage link has changed'
+  );
+  assert.ok(!/<a href="\/get-your-business-ready-to-sell" class="btn/.test(teaser), 'the homepage link has become a button and competes with the form');
+  const footer = read('views/partials/site-footer.ejs');
+  assert.ok(footer.indexOf("include('home-quiz-teaser')") > footer.indexOf('</form>'), 'the block carrying the link is no longer below the form');
 
   // Decision 7 of 14/09/2026 stands: the quiz keeps the post-hero slot. If
   // this page had been slipped in there, the quiz link would have gone with
@@ -126,7 +140,7 @@ test('the two routes carry equal visual weight, neither preferred', () => {
   const view = emitted(VIEW);
 
   assert.ok(
-    /href="\/book-a-30-minute-conversation" class="btn btn-outline sr-route-link"/.test(view),
+    /href="#conversation" class="btn btn-outline sr-route-link"/.test(view),
     'the conversation route is not the shared outline treatment'
   );
   // Still the EXISTING Commercial Review page, which carries its own
@@ -240,7 +254,7 @@ test('an owner already selling is sent to a conversation, never to checkout', ()
   const block = view.slice(start, view.indexOf('</div>', view.indexOf('sr-route-actions', start)));
 
   assert.ok(
-    block.includes('/book-a-30-minute-conversation'),
+    block.includes('href="#conversation"'),
     'the "already selling" route does not offer a conversation'
   );
   assert.ok(
@@ -527,6 +541,11 @@ test('canonical and indexing behaviour are deliberate', () => {
   // asking search engines to ignore it, and out of the sitemap means it stays
   // a campaign destination rather than becoming another organic front door,
   // which the build brief explicitly ruled out.
+  //
+  // CHANGED 11/10/2026, Tom's approval: the second half is reversed. The page
+  // goes INTO sitemap.xml, so it has a way in that does not depend on the
+  // Ready to Sell ads, which are paused the day this goes live. Indexable is
+  // unchanged.
   const view = read(VIEW);
   assert.ok(
     view.includes(`<link rel="canonical" href="https://www.arringtonconsultancy.com${PATH}">`),
@@ -537,8 +556,12 @@ test('canonical and indexing behaviour are deliberate', () => {
   const server = read('server.js');
   const sitemapBlock = server.slice(server.indexOf('ASSESSMENT_ROUTE_LASTMOD'), server.indexOf('res.type(\'application/xml\')'));
   assert.ok(
-    !sitemapBlock.includes('get-your-business-ready-to-sell'),
-    'the campaign page has been added to sitemap.xml, against the approved decision of 25/09/2026'
+    /'get-your-business-ready-to-sell': '\d{4}-\d{2}-\d{2}'/.test(sitemapBlock),
+    'the page has no lastmod date in the sitemap'
+  );
+  assert.ok(
+    /for \(const slug of \[[^\]]*'get-your-business-ready-to-sell'[^\]]*\]\)/.test(sitemapBlock),
+    'the page has been taken out of sitemap.xml, against the approved decision of 11/10/2026'
   );
 });
 
@@ -635,8 +658,11 @@ test('each route card still goes to its own destination', () => {
   const prepCard = body.slice(prep, now);
   const nowCard = body.slice(now, buyer);
   assert.ok(prepCard.includes('/where-to-start/commercial-review'), 'preparing ahead no longer leads to the Commercial Review');
-  assert.ok(!prepCard.includes('/book-a-30-minute-conversation'), 'preparing ahead now also offers the conversation');
-  assert.ok(nowCard.includes('/book-a-30-minute-conversation'), 'already selling no longer leads to the conversation');
+  // Since 11/10/2026 (Tom's approval) the conversation buttons go to the
+  // enquiry form on this page rather than to the 30 Minute Conversation page.
+  assert.ok(!prepCard.includes('#conversation'), 'preparing ahead now also offers the conversation');
+  assert.ok(nowCard.includes('href="#conversation"'), 'already selling no longer leads to the conversation');
+  assert.ok(!body.includes('/book-a-30-minute-conversation'), 'a button on the page sends people away to the 30 Minute Conversation page again');
   assert.ok(!nowCard.includes('/where-to-start'), 'already selling points at a purchase page; that reader goes to a conversation first');
 });
 
@@ -930,9 +956,10 @@ test('the buyer section is exactly Tom\'s five points, with no sixth', () => {
     'the buyer points are no longer exactly Tom\'s five, in his order'
   );
 
-  // Tom's own introductory principle, verbatim.
+  // Tom's own introductory principle, in the plainer wording he approved on
+  // 11/10/2026 (reading age pass).
   assert.ok(
-    section.includes('A potential buyer will almost always come in with the same underlying questions, even if they phrase them differently. Owners often answer some of them well, but frequently fail to frame the business in the way a buyer needs to understand it.'),
+    section.includes("Buyers nearly always ask the same questions, whatever words they use. Owners often answer some of them well, but don't show the business the way a buyer needs to see it."),
     'the buyer section intro is no longer Tom\'s principle'
   );
   // His wording correction at approval: loss-making, not loss leading.
@@ -940,7 +967,7 @@ test('the buyer section is exactly Tom\'s five points, with no sixth', () => {
   assert.ok(!/loss leading/i.test(section), '"loss leading" is back, which Tom corrected at approval');
   // The anchors of each principle, so a point cannot be hollowed out while
   // keeping its heading.
-  for (const anchor of ['unplanned absence', '100 hours a week for free', 'one customer, one supplier or one relationship', 'commercially savage', 'explainable, and then transferable']) {
+  for (const anchor of ['unplanned absence', '100 hours a week for free', 'one customer, one supplier or one relationship', 'commercially savage', 'have to be explained, so somebody else can make them']) {
     assert.ok(section.includes(anchor), `a buyer point has lost its substance: "${anchor}"`);
   }
 });
@@ -971,7 +998,7 @@ test('the Commercial Review is explained on its own page, not restated here', ()
   const section = body.slice(start, end);
 
   assert.ok(
-    section.includes('The £500 Commercial Review is where we look at the business through the eyes of a potential buyer'),
+    section.includes('In the £500 Commercial Review we look at the business the way a buyer would'),
     'the Review\'s relevance statement has gone'
   );
   assert.ok(section.includes('href="/where-to-start/commercial-review"'), 'the section no longer links to the canonical Commercial Review page');
@@ -1018,8 +1045,9 @@ test('"We stay in your corner" carries Tom\'s proposition, with the Brand OS fix
     'fight for your commercial interests for as long as we are involved',
     // Tom's own framing: the experience is Arrington's value, not Tom as the product.
     'Tom has been through the process himself, and that experience is part of the value of having us in your corner.',
-    // Fragment fixed into a sentence (Brand OS copy standard).
-    'we want to do it first, finding the weaknesses that could cost you money',
+    // Plainer wording approved by Tom on 11/10/2026; the old line repeated
+    // "pick it apart" from the Commercial Review section.
+    'We find the weak spots that could cost you money, and strengthen what the buyer will actually be paying for.',
     // Fire line translated (Brand OS BANNED LANGUAGE), Tom's approved wording.
     'There is no point fixing the roof if the foundations are giving way.',
     // Second fragment fixed.

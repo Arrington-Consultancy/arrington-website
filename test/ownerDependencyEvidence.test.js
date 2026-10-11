@@ -42,6 +42,9 @@ const SALE = 'views/sale-readiness.ejs';
 const QUIZ_EVIDENCE = "The Government's 2024 Small Business Survey found that 69% of UK businesses with 1 to 249 employees had no director in day to day control who was not also an owner or partner. That does not make them badly run or overly reliant on their owners. It shows how often day to day control stays with the people who own the business.";
 const QUIZ_SOURCE = 'Source: Department for Business and Trade, Longitudinal Small Business Survey 2024: SME employers, published September 2025.';
 const DBT_URL = 'https://www.gov.uk/government/statistics/small-business-survey-2024-businesses-with-employees/longitudinal-small-business-survey-2024-sme-employers-businesses-with-1-to-249-employees';
+// Kept word for word on 11/10/2026: a plainer version was approved in the
+// reading age pass, but it dropped the source's own hedges ("among the
+// reasons", "may not be viable"), which the test below exists to keep.
 const SALE_EVIDENCE = "The British Business Bank's guidance on selling a business lists a business that relies on its owner or a single customer among the reasons an exit may not be viable.";
 const BBB_URL = 'https://www.british-business-bank.co.uk/business-guidance/guidance-articles/business-essentials/selling-your-business';
 
