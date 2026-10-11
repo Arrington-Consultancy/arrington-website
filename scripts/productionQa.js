@@ -98,7 +98,35 @@ function slug(p) {
           // Every em or en dash in the text a visitor reads, with a little
           // context, so CMS copy the sandbox cannot read is checked live
           // (Tom, 06/10/2026: no dashes on the site). Added 06/10/2026.
-          dashes: (document.body.innerText.match(/.{0,40}[\u2013\u2014].{0,40}/g) || []).map((x) => x.replace(/\s+/g, ' ').trim())
+          dashes: (document.body.innerText.match(/.{0,40}[\u2013\u2014].{0,40}/g) || []).map((x) => x.replace(/\s+/g, ' ').trim()),
+          // How far down the page the enquiry form starts, in pixels and in
+          // screen heights, so "how many phone screens before the form" is
+          // measured on the live page rather than estimated. Added 11/10/2026
+          // for the Google Ads conversion brief.
+          form: (() => {
+            const f = document.querySelector('#leadForm');
+            if (!f) return null;
+            const top = f.getBoundingClientRect().top + window.scrollY;
+            return { top: Math.round(top), screens: Math.round((top / window.innerHeight) * 10) / 10, viewport: window.innerHeight };
+          })(),
+          // The first primary button on the page and where it points.
+          heroCta: (() => {
+            const a = document.querySelector('main a.btn-primary, section a.btn-primary, a.btn-primary');
+            return a ? { text: a.textContent.replace(/\s+/g, ' ').trim(), href: a.getAttribute('href') } : null;
+          })(),
+          // Whether the gated-PDF email box is showing without a click.
+          docModalOpen: (() => {
+            const o = document.querySelector('#docModalOverlay');
+            if (!o) return null;
+            const cs = getComputedStyle(o);
+            return cs.display !== 'none' && cs.visibility !== 'hidden' && !o.hasAttribute('hidden') && o.getBoundingClientRect().height > 0;
+          })(),
+          docRequestButtons: document.querySelectorAll('.js-doc-request').length,
+          // Microsoft Clarity: the project id is part of the tag URL.
+          clarity: (() => {
+            const s = [...document.scripts].find((x) => /clarity\.ms\/tag\//.test(x.src || ''));
+            return s ? s.src.split('/tag/')[1] : (typeof window.clarity === 'function' ? 'loaded (id not in a script src)' : null);
+          })()
         })));
         // The visible text of the page as a visitor reads it, desktop only,
         // so live CMS copy (which the sandbox cannot read from the database)
@@ -131,6 +159,10 @@ function slug(p) {
     lines.push(`- Robots: meta ${r.robotsMeta || '(none)'}; X-Robots-Tag ${r.xRobotsTag || '(none)'}; in sitemap.xml: ${r.inSitemap ? 'yes' : 'no'}; links to itself on the page: ${r.selfLinks === null ? 'unknown' : r.selfLinks}`);
     lines.push(`- Em or en dashes in the visible text: ${r.dashes ? r.dashes.length : 'unknown'}${r.dashes && r.dashes.length ? ' (' + r.dashes.join(' | ') + ')' : ''}`);
     lines.push(`- Horizontal overflow: ${r.overflow === null ? 'unknown' : r.overflow ? 'YES' : 'no'}; page height ${r.height}px`);
+    lines.push(`- Enquiry form starts: ${r.form ? `${r.form.top}px, ${r.form.screens} screen heights down (viewport ${r.form.viewport}px)` : 'no form found'}`);
+    lines.push(`- First primary button: ${r.heroCta ? `"${r.heroCta.text}" -> ${r.heroCta.href}` : 'none'}`);
+    lines.push(`- PDF email box open without a click: ${r.docModalOpen === null ? 'no box on the page' : r.docModalOpen ? 'YES' : 'no'}; PDF request buttons on the page: ${r.docRequestButtons}`);
+    lines.push(`- Microsoft Clarity: ${r.clarity || 'not loaded'}`);
     lines.push(`- Page errors: ${r.pageErrors.length}${r.pageErrors.length ? ' (' + r.pageErrors.join(' | ') + ')' : ''}`);
     lines.push(`- Console errors: ${r.consoleErrors.length}${r.consoleErrors.length ? ' (' + r.consoleErrors.join(' | ') + ')' : ''}`);
     lines.push(`- Screenshots: full page ${r.screenshot || 'none'}, first screen ${r.topScreenshot || 'none'}${r.error ? `; ERROR: ${r.error}` : ''}`);
