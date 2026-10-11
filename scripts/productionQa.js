@@ -126,6 +126,43 @@ function slug(p) {
           clarity: (() => {
             const s = [...document.scripts].find((x) => /clarity\.ms\/tag\//.test(x.src || ''));
             return s ? s.src.split('/tag/')[1] : (typeof window.clarity === 'function' ? 'loaded (id not in a script src)' : null);
+          })(),
+          // Search engine facts about the page, for the SEO sweep of
+          // 11/10/2026: what Google is shown (title, description, social
+          // tags, structured data), the heading outline, images with no alt
+          // text, the internal links the page gives, and how heavy it is.
+          seo: (() => {
+            const meta = (sel) => { const m = document.querySelector(sel); return m ? (m.getAttribute('content') || '') : null; };
+            const ld = [...document.querySelectorAll('script[type="application/ld+json"]')].map((x) => {
+              try {
+                const j = JSON.parse(x.textContent);
+                const items = Array.isArray(j) ? j : (j['@graph'] || [j]);
+                return items.map((i) => [].concat(i['@type'] || '?').join('/')).join(', ');
+              } catch (e) { return 'INVALID JSON'; }
+            });
+            const imgs = [...document.images];
+            const res = performance.getEntriesByType('resource');
+            const nav = performance.getEntriesByType('navigation')[0];
+            const kb = (n) => Math.round(n / 1024);
+            const internal = [...new Set([...document.querySelectorAll('a[href]')].map((a) => a.getAttribute('href'))
+              .filter((h) => /^\/(?!\/)/.test(h)).map((h) => h.split('#')[0].split('?')[0] || '/'))];
+            return {
+              lang: document.documentElement.getAttribute('lang'),
+              description: meta('meta[name="description"]'),
+              ogTitle: meta('meta[property="og:title"]'),
+              ogImage: meta('meta[property="og:image"]'),
+              jsonLd: ld,
+              h1s: [...document.querySelectorAll('h1')].map((h) => h.textContent.replace(/\s+/g, ' ').trim()),
+              h2s: [...document.querySelectorAll('h2')].map((h) => h.textContent.replace(/\s+/g, ' ').trim()).slice(0, 25),
+              words: (document.body.innerText.match(/[A-Za-z0-9\u00a3]+/g) || []).length,
+              images: imgs.length,
+              imagesNoAlt: imgs.filter((i) => !i.hasAttribute('alt')).map((i) => i.getAttribute('src')),
+              imagesEmptyAlt: imgs.filter((i) => i.getAttribute('alt') === '').length,
+              internal,
+              pageKb: kb(res.reduce((t, r) => t + (r.transferSize || 0), 0) + (nav ? nav.transferSize || 0 : 0)),
+              heaviest: res.filter((r) => r.transferSize > 60000).sort((x, y) => y.transferSize - x.transferSize).slice(0, 3).map((r) => r.name.replace(location.origin, '') + ' ' + kb(r.transferSize) + 'KB'),
+              loadMs: nav ? Math.round(nav.loadEventEnd - nav.startTime) : null
+            };
           })()
         })));
         // The visible text of the page as a visitor reads it, desktop only,
@@ -163,6 +200,15 @@ function slug(p) {
     lines.push(`- First primary button: ${r.heroCta ? `"${r.heroCta.text}" -> ${r.heroCta.href}` : 'none'}`);
     lines.push(`- PDF email box open without a click: ${r.docModalOpen === null ? 'no box on the page' : r.docModalOpen ? 'YES' : 'no'}; PDF request buttons on the page: ${r.docRequestButtons}`);
     lines.push(`- Microsoft Clarity: ${r.clarity || 'not loaded'}`);
+    if (r.seo) {
+      const sd = r.seo;
+      lines.push(`- SEO: title ${r.title ? r.title.length : 0} chars; description ${sd.description === null ? 'MISSING' : sd.description.length + ' chars'}; h1 count ${sd.h1s.length}; words ${sd.words}; lang ${sd.lang || 'MISSING'}; og:image ${sd.ogImage ? 'yes' : 'no'}`);
+      lines.push(`- Description: ${sd.description === null ? '(none)' : sd.description}`);
+      lines.push(`- Structured data: ${sd.jsonLd.length ? sd.jsonLd.join(' | ') : 'none'}`);
+      lines.push(`- Images: ${sd.images}, no alt attribute ${sd.imagesNoAlt.length}${sd.imagesNoAlt.length ? ' (' + sd.imagesNoAlt.join(', ') + ')' : ''}, empty alt ${sd.imagesEmptyAlt}`);
+      lines.push(`- Weight: ${sd.pageKb}KB transferred, load ${sd.loadMs}ms${sd.heaviest.length ? '; heaviest ' + sd.heaviest.join(', ') : ''}`);
+      lines.push(`- Internal links: ${sd.internal.length}; h2: ${sd.h2s.join(' | ')}`);
+    }
     lines.push(`- Page errors: ${r.pageErrors.length}${r.pageErrors.length ? ' (' + r.pageErrors.join(' | ') + ')' : ''}`);
     lines.push(`- Console errors: ${r.consoleErrors.length}${r.consoleErrors.length ? ' (' + r.consoleErrors.join(' | ') + ')' : ''}`);
     lines.push(`- Screenshots: full page ${r.screenshot || 'none'}, first screen ${r.topScreenshot || 'none'}${r.error ? `; ERROR: ${r.error}` : ''}`);
