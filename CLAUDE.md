@@ -7692,8 +7692,8 @@ PROPOSAL - SEO sweep: what was fixed and what needs Tom, 11 October 2026" (id
   moves only while it holds the exact live value, and a mismatch is logged
   with that value. Boot log: "meta_title updated; meta_description updated;
   og_title blank, follows the page". Owner Check title preserved. The social
-  tags (og:title, twitter) on Ready to Sell and the taxi page still carry the
-  old wording, deliberately, as outside the brief. The taxi description is
+  sharing titles (og:title on both, plus twitter:title on Ready to Sell)
+  still carry the old wording, deliberately, as outside the brief. The taxi description is
   164 characters, so Google may trim its last word.
   `test/approvedSeoMetadata.test.js`. Verified in the server HTML with no
   JavaScript (run `20261011T193531Z-seo-metadata-raw-html`, which uses the new
