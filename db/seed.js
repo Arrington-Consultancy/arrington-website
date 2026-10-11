@@ -8179,6 +8179,19 @@ async function seed() {
   }
 
 
+  // HOMEPAGE SEARCH TITLE AND DESCRIPTION (11/10/2026, Tom's approved SEO
+  // Metadata Implementation Brief). Each field moves only while it still
+  // holds the exact live value, so a CMS edit wins; a mismatch is logged
+  // with the live value rather than guessed at. The three code pages in the
+  // same brief carry theirs in their views. Never fatal.
+  try {
+    const report = await require('../lib/approvedSeoMetadata').applyHomeSeoMetadata(db);
+    console.log(`Homepage SEO metadata: ${report.map((r) => `${r.field} ${r.status}`).join('; ')}`);
+  } catch (err) {
+    console.error('Homepage SEO metadata migration failed (boot continues):', err.message);
+  }
+
+
   // Arrington AI Workspace: ingest the encrypted snapshot into
   // workspace_records. A no-op when WORKSPACE_SNAPSHOT_KEY is unset, and
   // never fatal: an ingest failure records itself as a failed sync run
