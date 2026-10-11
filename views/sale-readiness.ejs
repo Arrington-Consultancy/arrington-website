@@ -192,29 +192,59 @@
         .sr-route-actions .btn { width: 100%; text-align: center; padding-left: 0.75rem; padding-right: 0.75rem; }
 
         /* WHAT A BUYER ASKS: five points since 25/09/2026, previously six.
-           De-boxed grid, top rule per item, exactly the .fourcard treatment
+           De-boxed, top rule per item, after the .fourcard treatment
            from index.ejs: the lead-in and the rule carry the separation
            instead of more boxes. Deliberately NOT numbered, because these are
            not a sequence and a number would assert an order that does not
            exist. */
-        .sr-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem 2rem; }
-        /* An odd last item runs the full width of the grid rather than sitting
-           alone in the left column looking left over. Tom's decision of
-           25/09/2026: no sixth point manufactured to fill the slot. Written
-           as a condition on the count, not as "the fifth item", so it stays
-           right if the list ever changes length. On mobile the grid is a
-           single column already, so this changes nothing there. */
-        .sr-grid > .sr-item:last-child:nth-child(odd) { grid-column: 1 / -1; }
-        /* Gold rules rather than grey (Tom, 25/09/2026), so the section carries
-           the brand without the items turning into cards. 40% is the same
-           accent strength the site already uses for a restrained accent
-           hairline on .case-more a in index.ejs, so this is the existing
-           treatment rather than a new one. The items stay unboxed: a rule
-           only, no border, background or radius, because bordered boxes
-           would read as calls to action rather than supporting detail. */
-        .sr-item { padding-top: 1.1rem; border-top: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); }
-        .sr-item-lead { display: block; font-weight: 700; color: var(--text-bright); margin-bottom: 0.3rem; font-size: 0.98rem; }
-        .sr-item p { font-size: 0.94rem; color: var(--text-muted); margin: 0; }
+        /* EXPANDABLE, ONE COLUMN (Tom, 11/10/2026: "is it too much... is
+           there a way to break down and expand when needed rather than having
+           it all out the whole time"). Each buyer point is a <details>: the
+           lead is always visible, the explanation opens on a tap. No script,
+           so nothing for the strict CSP to refuse, and the text stays in the
+           page for search engines. One column rather than the old two-column
+           grid, because an open item in a grid leaves its neighbour sitting
+           in empty space. The first point (owner dependency, the page's
+           thread) opens by default so a reader sees what is inside. Still
+           exactly five points: Tom's decision of 25/09/2026 that no sixth is
+           manufactured stands, and a list has no slot to fill. */
+        .sr-list { display: block; }
+        .sr-item { border-top: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); }
+        .sr-item:last-child { border-bottom: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); }
+        .sr-item > summary {
+            list-style: none; cursor: pointer;
+            display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
+            padding: 1rem 0;
+        }
+        .sr-item > summary::-webkit-details-marker { display: none; }
+        .sr-item > summary::after {
+            content: '+'; flex: none;
+            font-family: 'Poppins', 'DM Sans', sans-serif; font-size: 1.35rem; line-height: 1;
+            color: var(--accent);
+        }
+        .sr-item[open] > summary::after { content: '\2212'; }
+        .sr-item > summary:hover .sr-item-lead { color: var(--accent); }
+        .sr-item > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+        .sr-item-lead { display: block; font-weight: 700; color: var(--text-bright); font-size: 0.98rem; }
+        .sr-item p { font-size: 0.94rem; color: var(--text-muted); margin: 0 0 1.2rem; max-width: 62ch; }
+
+        /* READ MORE on the two long prose sections: the opening paragraphs
+           stay out, the rest opens on a tap. The control is styled as the
+           page's existing inline link (.sr-aside a), and its label flips to
+           "Show less" once open. */
+        .sr-more > summary {
+            list-style: none; cursor: pointer; display: inline-block;
+            font-size: 0.92rem; color: var(--accent);
+            border-bottom: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+            padding-bottom: 2px; margin-bottom: 0.2rem;
+        }
+        .sr-more > summary::-webkit-details-marker { display: none; }
+        .sr-more > summary:hover { border-bottom-color: var(--accent); }
+        .sr-more > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+        .sr-more-less, .sr-more[open] .sr-more-label { display: none; }
+        .sr-more[open] .sr-more-less { display: inline; }
+        .sr-section.sr-prose .sr-more > p { max-width: 62ch; }
+        .sr-more > p:first-of-type { margin-top: 1.2rem; }
 
         /* Accent-dot list, lifted from Owner Check's .check-card ul rather
            than using the browser's default discs, which are the one thing
@@ -300,12 +330,10 @@
            column these sections ran to 91 to 95 characters a line in DM Sans,
            well past comfortable reading, and the narrower corner section made
            the difference visible as a jump in the right edge. The same 62ch
-           measure now applies to the two Review sections and to the TEXT of
-           the full-width fifth buyer point; that item's gold rule still spans
-           the grid, so it keeps reading as a deliberate closing item. Mobile
-           is narrower than 62ch already, so nothing changes there. */
+           measure applies to the two Review sections and to the text of each
+           buyer point, while the buyer points' gold rules span the column.
+           Mobile is narrower than 62ch already, so nothing changes there. */
         .sr-section.sr-prose > p { max-width: 62ch; }
-        .sr-grid > .sr-item:last-child:nth-child(odd) p { max-width: 62ch; }
 
         /* THE TWO REVIEW SECTIONS READ AS ONE STEP: the Review, then what
            happens after it. The gap between them is half the gap between
@@ -344,9 +372,8 @@
             padding-bottom: 2px;
         }
         .sr-aside a:hover, .sr-aside a:focus-visible { border-bottom-color: var(--accent); }
-        /* The evidence line under the buyer grid holds the same 62ch measure
-           as the fifth buyer point above it, rather than running the full
-           width of the grid. */
+        /* The evidence line under the buyer points holds the same 62ch
+           measure as their text, rather than running the full column. */
         .sr-evidence { max-width: 62ch; }
 
         /* MOBILE IS A DESIGN STATE, NOT A STACKED DESKTOP (Build Protocol).
@@ -356,7 +383,6 @@
         @media (max-width: 760px) {
             main { padding-top: calc(var(--site-chrome) + 1.75rem); }
             .sr-routes { grid-template-columns: 1fr; gap: 1rem; }
-            .sr-grid { grid-template-columns: 1fr; gap: 0.9rem; }
             .sr-dots--two { columns: 1; }
             .sr-dots li { margin-bottom: 0.7rem; }
             .sr-section { margin-top: 2.1rem; }
@@ -372,10 +398,9 @@
     </style>
 </head>
 <body>
-    <%# currentPage carries a slug that is deliberately not in navPages: this
-        is a campaign landing page and is not in the main navigation (Tom's
-        decision of 25/09/2026), so nothing in the nav should highlight as
-        active. The header and footer are otherwise the site's own, which is
+    <%# currentPage carries the page's own slug, which since 11/10/2026 is in
+        the main menu as "Ready to Sell" (Tom: "we need this on the menu"), so
+        the menu marks it as the current page. The header and footer are otherwise the site's own, which is
         what the Build Protocol's assessment/tool rule requires. %>
     <%- include('partials/site-header', { currentPage: { slug: 'get-your-business-ready-to-sell' }, navPages, canEdit: false, content, pageContact }) %>
 
@@ -477,30 +502,31 @@
                 items that had been written to fill a six-slot grid. The sixth
                 ("The things you have not got to") was deleted because it was
                 not Tom's thinking, and Tom was explicit that no sixth point may
-                be manufactured to preserve the layout. The odd fifth item runs
-                full width instead: see the .sr-item:last-child rule. %>
+                be manufactured to preserve the layout. Since 11/10/2026 the five
+                are an expandable one-column list (see .sr-list), so there is
+                no grid slot to fill. %>
             <p class="sr-intro">Buyers nearly always ask the same questions, whatever words they use. Owners often answer some of them well, but don't show the business the way a buyer needs to see it.</p>
-            <div class="sr-grid">
-                <div class="sr-item">
-                    <span class="sr-item-lead">Owner dependency</span>
+            <div class="sr-list">
+                <details class="sr-item" open>
+                    <summary><span class="sr-item-lead">Owner dependency</span></summary>
                     <p>The real test is an unplanned absence. If you walked away for a week with no warning, what would you come back to? And would the answer be different if you had planned to be away? If you are effectively the product, there is very little for anyone else to buy. A business that can be sold has to be able to run without you.</p>
-                </div>
-                <div class="sr-item">
-                    <span class="sr-item-lead">Whether the numbers tell the true story</span>
+                </details>
+                <details class="sr-item">
+                    <summary><span class="sr-item-lead">Whether the numbers tell the true story</span></summary>
                     <p>Accounts can make a business look successful while hiding what the owner's own contribution really costs. An owner working 100 hours a week for free can prop up profitability that is not really there. A serious buyer sees through that very early.</p>
-                </div>
-                <div class="sr-item">
-                    <span class="sr-item-lead">Revenue distribution and deal risk</span>
+                </details>
+                <details class="sr-item">
+                    <summary><span class="sr-item-lead">Revenue distribution and deal risk</span></summary>
                     <p>How the revenue is distributed can matter as much as how much depends on you. Too much resting on one customer, one supplier or one relationship can become a serious obstacle to a sale. Finding that early gives you time to do something about it, rather than meeting it in the middle of a transaction.</p>
-                </div>
-                <div class="sr-item">
-                    <span class="sr-item-lead">What is actually adding value</span>
+                </details>
+                <details class="sr-item">
+                    <summary><span class="sr-item-lead">What is actually adding value</span></summary>
                     <p>Bigger does not necessarily mean more valuable. Bloated or loss-making parts of a business can take up people, time and capacity while hurting its value. A fresh and commercially savage set of eyes should tell you what strengthens the business and what may be better cut before a sale.</p>
-                </div>
-                <div class="sr-item">
-                    <span class="sr-item-lead">Transferability</span>
+                </details>
+                <details class="sr-item">
+                    <summary><span class="sr-item-lead">Transferability</span></summary>
                     <p>This is not simply about having procedures written down. To hand a business over, the calls you make every day without thinking have to be explained, so somebody else can make them.</p>
-                </div>
+                </details>
             </div>
             <%# INDEPENDENT EVIDENCE, closing the buyer points rather than
                 opening a section of its own: no heading, no button, one line.
@@ -535,9 +561,12 @@
         <div class="sr-section sr-prose sr-pair-next">
             <h2>What happens after the Review</h2>
             <p>The Review tells us where the problems are. Then we decide what is actually worth fixing before a buyer arrives.</p>
+            <details class="sr-more">
+                <summary><span class="sr-more-label">Read more</span><span class="sr-more-less">Show less</span></summary>
             <p>Every piece of work has to earn its place. Will it protect the value of the business, strengthen what a buyer is actually buying, or materially help the sale complete?</p>
             <p>We spend your time and money where there is a commercial reason to. We do not fix things simply because they could be improved.</p>
             <p>Any further work is agreed separately, once the Review has established what is worth doing and where the value is.</p>
+            </details>
         </div>
 
         <%# WE STAY IN YOUR CORNER. Copy rebuilt on 25/09/2026 from Tom's own
@@ -572,11 +601,14 @@
             <div class="sr-corner-body">
                 <p>Selling a business can be brutal, both emotionally and commercially. We stay alongside you and fight for your commercial interests for as long as we are involved.</p>
                 <p>Tom has been through the process himself, and that experience is part of the value of having us in your corner.</p>
+                <details class="sr-more">
+                    <summary><span class="sr-more-label">Read more</span><span class="sr-more-less">Show less</span></summary>
                 <p class="sr-corner-group">We find the weak spots that could cost you money, and strengthen what the buyer will actually be paying for.</p>
                 <p>In a sale, the business itself is the product. We want to make that product as strong as is commercially sensible, but every intervention has to earn its place. There is no point fixing the roof if the foundations are giving way.</p>
                 <p class="sr-corner-group">We protect every point and every penny. Where the job genuinely needs an accountant, a solicitor, a valuer or another specialist, use one.</p>
                 <p>But nobody should spend £5,000 on something that can competently be done for £500, simply because they are in the middle of a sale. We question the costs and the decisions, and we protect your money as though it were our own.</p>
                 <p>What matters to us is that you come out of it knowing somebody fought your corner and protected every penny the business was worth. What a buyer finally pays is theirs to decide, not ours.</p>
+                </details>
             </div>
         </div>
 

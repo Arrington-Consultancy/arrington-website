@@ -973,19 +973,35 @@ test('the buyer section is exactly Tom\'s five points, with no sixth', () => {
   }
 });
 
-test('the odd fifth buyer point runs full width, and only on the grid', () => {
-  // Tom: do not invent a sixth point; make the fifth full width if that is
-  // the cleanest deliberate layout, and preserve responsive behaviour.
+test('the buyer points open on demand, one column, the first open', () => {
+  // Tom, 11/10/2026: "is there a way to break down and expand when needed
+  // rather than having it all out the whole time". Each point is a <details>
+  // whose lead stays visible; no script, so nothing for the CSP to refuse.
+  // One column, so an open point never leaves a neighbour in empty space,
+  // and still five: a list has no slot that invites a sixth.
+  const body = bodyOf(VIEW);
+  const start = body.indexOf('<div class="sr-list">');
+  assert.ok(start > -1, 'the buyer points are no longer an expandable list');
+  const items = [...body.slice(start).matchAll(/<details class="sr-item"( open)?>\s*<summary><span class="sr-item-lead">([^<]+)<\/span><\/summary>\s*<p>/g)];
+  assert.strictEqual(items.length, 5, 'expected five expandable buyer points, each with its lead in the summary');
+  assert.deepStrictEqual(items.map((m) => Boolean(m[1])), [true, false, false, false, false], 'only the first point (owner dependency) should open by default');
   const css = cssRules(VIEW);
-  assert.ok(
-    /\.sr-grid\s*>\s*\.sr-item:last-child:nth-child\(odd\)\s*\{[^}]*grid-column:\s*1\s*\/\s*-1/.test(css),
-    'the odd last buyer item no longer spans the grid'
-  );
-  // Mobile is untouched: the grid still collapses to one column.
-  assert.ok(
-    /@media[^{]*\{[\s\S]*?\.sr-grid\s*\{[^}]*grid-template-columns:\s*1fr/.test(css),
-    'the buyer grid no longer collapses to one column on mobile'
-  );
+  assert.ok(!/\.sr-grid\b/.test(css), 'the two-column buyer grid is back');
+  assert.ok(/\.sr-item\[open\]\s*>\s*summary::after/.test(css), 'an open point no longer shows that it is open');
+  assert.ok(/\.sr-item\s*>\s*summary:focus-visible\s*\{[^}]*outline/.test(css), 'keyboard focus on a buyer point is no longer visible');
+});
+
+test('the long prose sections show their opening lines, the rest behind Read more', () => {
+  const body = bodyOf(VIEW);
+  const after = body.slice(body.indexOf('<h2>What happens after the Review</h2>'), body.indexOf('<h2>We stay in your corner</h2>'));
+  const corner = body.slice(body.indexOf('<h2>We stay in your corner</h2>'), body.indexOf('<h2>If the business depends on you'));
+  for (const [name, section, visible] of [['What happens after the Review', after, 1], ['We stay in your corner', corner, 2]]) {
+    const more = section.indexOf('<details class="sr-more">');
+    assert.ok(more > -1, `"${name}" no longer has a Read more`);
+    assert.strictEqual((section.slice(0, more).match(/<p[ >]/g) || []).length, visible, `"${name}" shows a different number of paragraphs before Read more`);
+    assert.ok(!/<details class="sr-more" open/.test(section), `"${name}" opens its Read more by default`);
+    assert.match(section, /<summary><span class="sr-more-label">Read more<\/span><span class="sr-more-less">Show less<\/span><\/summary>/);
+  }
 });
 
 test('the Commercial Review is explained on its own page, not restated here', () => {
@@ -1177,7 +1193,7 @@ test('running text keeps one readable measure, the Review pair sits together, th
   // 1. The two Review sections and the full-width fifth buyer point share the
   //    corner section's measure, so no running text spans the full column.
   assert.ok(/\.sr-section\.sr-prose\s*>\s*p\s*\{[^}]*max-width:\s*62ch/.test(css), 'the Review sections lost their readable measure');
-  assert.ok(/\.sr-grid\s*>\s*\.sr-item:last-child:nth-child\(odd\)\s+p\s*\{[^}]*max-width:\s*62ch/.test(css), 'the full-width fifth buyer point\'s text lost its readable measure');
+  assert.ok(/\.sr-item p\s*\{[^}]*max-width:\s*62ch/.test(css), 'the buyer points\' text lost its readable measure');
   assert.ok(/\.sr-corner-body\s*\{[^}]*max-width:\s*62ch/.test(css), 'the corner section no longer shares the same measure');
   for (const heading of ['Where the Commercial Review comes in', 'What happens after the Review']) {
     const at = body.indexOf(`<h2>${heading}</h2>`);
