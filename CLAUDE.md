@@ -6310,6 +6310,32 @@ and the approach steps as blank.** That is the scroll-reveal animation
 Devon page, and not a rendering fault; scroll the page in Playwright before
 screenshotting.
 
+**Abacus and Falmouth Taxis section, LIVE 11/10/2026** (Tom-approved
+direction, "Cornwall Landing Page Improvement" brief). A `filter` section,
+"Built on real business experience in Cornwall", sits directly under the
+Cornwall hero: Tom's own Falmouth business is the one piece of evidence local
+to this page. The copy is the brief's proposed wording, used as written once
+each claim was checked against Tom's own records in Drive (ran it from 2006 to
+April 2025, so more than 18 years; a small local operator growing to weekly
+bookings in the thousands; drivers, office staff and dispatch systems; sold).
+One change: "Abacus & Falmouth Taxis" became "Abacus and Falmouth Taxis", the
+company's own name and the site's spelling. No figure, price or headcount;
+Abacus is never presented as a client; no button and no link away, so the hero
+call to action stays the page's one route to the form. `lib/cornwallExperienceSection.js`
+(marker `site.cornwall_experience_section_2026-10-11`) allocates a free filter
+id against every page and inserts it after the first hero; it edits nothing
+already on the page, adopts a section with the same heading, will not overwrite
+a section order changed mid-run, and stamps the marker only when the page
+exists. The heading is balanced at desktop width by a rule scoped to
+`.page-business-consultant-cornwall`. Production (commit `42c2990`, seed on the
+REMOVED twin `0ce632bb`, serving `f4414aae` a silent no-op): "section added as
+filter__6 after hero__6; order now [hero__6, filter__6, casestudy__8,
+approach__3, biography__8]". Inspection run
+`20261011T201701Z-cornwall-abacus-section`: 200 at desktop and iPhone 13, no
+overflow, no page errors, one title, description, canonical and Google tag
+each, structured data unchanged. The form now starts 6.6 phone screens down
+(4,392px), about one screen further than before. `test/cornwallExperienceSection.test.js`.
+
 ### Full-configuration check of the city routing (02/10/2026, afternoon)
 
 Tom asked for the geographic overlap to be inspected from the full keyword
