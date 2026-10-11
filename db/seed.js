@@ -8192,6 +8192,19 @@ async function seed() {
   }
 
 
+  // CORNWALL PAGE: TOM'S OWN CORNWALL BUSINESS (11/10/2026, Tom-approved
+  // direction, "Cornwall Landing Page Improvement" brief). A new filter
+  // section beneath the page's hero, in the brief's wording once each claim
+  // was checked against Tom's own records. Nothing already on the page is
+  // edited. Run once, under a marker. Never fatal.
+  try {
+    const note = await require('../lib/cornwallExperienceSection').applyCornwallExperienceSection(db);
+    if (note) console.log(`Cornwall experience section: ${note}.`);
+  } catch (err) {
+    console.error('Cornwall experience section migration failed (boot continues):', err.message);
+  }
+
+
   // Arrington AI Workspace: ingest the encrypted snapshot into
   // workspace_records. A no-op when WORKSPACE_SNAPSHOT_KEY is unset, and
   // never fatal: an ingest failure records itself as a failed sync run
