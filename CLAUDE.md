@@ -7513,6 +7513,15 @@ depends on it never being added to `navPages`.
   hovering its button: cancel the button's hover fill explicitly for these
   cards, and confirm hover states with computed styles in a browser rather
   than by reading the CSS.
+- **Detail opens on demand (11/10/2026, Tom: "is it too much... break down
+  and expand when needed").** The five buyer points are a one-column list of
+  `<details>` (lead visible, explanation on a tap, the first open by
+  default); "What happens after the Review" shows one paragraph and "We stay
+  in your corner" two, the rest behind Read more / Show less. No script, no
+  wording changed, text still in the page for Google. Measured live (run
+  `20261011T190634Z-rts-expandable`): phone page 7,222px to 5,754px, the form
+  8.9 to 6.7 screens down. The old two-column grid and its full-width fifth
+  item are gone; a list has no slot that invites a sixth point.
 - Describe the Commercial Review only on its own page. Here, say why it is
   relevant and link to it; do not restate its price mechanics, timeline or
   credit.
