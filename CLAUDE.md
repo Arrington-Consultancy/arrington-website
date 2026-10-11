@@ -7575,6 +7575,51 @@ Handoff Log, 7 October 2026). The report he approved is
   October 2026" (id `1M2nk5Bj6WCl6CPygzbPbjHanq9V11bn-xZ2M0xONLB4`). The taxi page, the start-up page, Privacy, article bodies and
   client quotations were not touched. `test/voiceSweep.test.js`.
 
+## Contact form conversion pass (LIVE 11/10/2026)
+
+Brief from the Google Ads worker on Tom's instruction: 1.7% of paid clicks
+reached the enquiry form, target 3.5% within 30 days. Tom approved the
+proposal (Drive, "(APPROVED AND LIVE 11 October 2026) WEBSITE AND HOSTING
+PROPOSAL - More Google Ads visitors to the contact form", id
+`1I5pUKSB_7CkWIT7dBX7t-79NDLcCW6YeXnZqSmcopOU`) and it went live together:
+commit `a6f4dbd`, deployment `ffceea6b`, inspection run
+`20261011T090627Z-conversion-pass-live`. **The 30 days start 11/10/2026.**
+
+- **Shared form** (`views/partials/site-footer.ejs`): button "Ask Tom to get
+  in touch" (default `submitText` in `server.js` and `lib/navShell.js`; the
+  Websites and AI page can still override it from the CMS), and under it
+  `.lead-form-next`: "Tom reads every enquiry himself and replies personally,
+  usually within one working day. The first conversation is free and there's
+  no obligation." Tom's reply-time promise; do not change it without him.
+  Only name and email are required.
+- **Homepage quiz block** moved from under the hero to below the form and the
+  call, email and WhatsApp details: `views/partials/home-quiz-teaser.ejs`,
+  included by the footer when `currentPage.slug === 'main'`, label "Not ready
+  to talk yet?". **This supersedes conversion decision 2 of 14/09/2026**;
+  `test/conversionDecisions.test.js` pins the new position.
+- **Taxi page:** Tom's story in the first section with the Abacus link, "The
+  business behind the system" removed, no "HTML" wording, offer cards without
+  the catalogue description. Tom kept the after-switchover sentence at the end
+  of the dispatch section. About 714 words; the test caps it at 730.
+- **City pages:** four plainer lines via `lib/landingPlainCopy.js` (the voice
+  sweep's exact-value guard, marker `site.landing_plain_copy_2026-10-11`);
+  production wrote all four pages. The biography template now skips an empty
+  paragraph, so emptying a field in the CMS leaves no gap.
+- **Untouched:** the Contact conversion, `/thank-you`, `routes/leads.js`, the
+  Google tag. `test/contactFormConversionPass.test.js`.
+- **Since 2 October no paid clicks land on the homepage** (General ads go to
+  the Devon page, city ads to their pages), so the shared form and the city
+  pages carry the 30 days unless Tom points the General ads back at the
+  homepage, which the Google Ads worker has recommended (Tom to confirm).
+- **The live inspection now measures** how far down the form starts, the
+  first button's target, whether the PDF box is open unprompted and the
+  Clarity tag (`scripts/productionQa.js`).
+- **Open:** Clarity Project ID from Tom (approved to set
+  `CLARITY_PROJECT_ID` once it arrives); remove the Scott guest password
+  comment in `db/seed.js` once Tom confirms he has changed that password; the
+  repository stays public for now (Railway's GitHub app has access, so going
+  private would not break deploys).
+
 ## Writing and reviewing website copy
 
 - Where a brief asks for copy but does not contain the underlying commercial
