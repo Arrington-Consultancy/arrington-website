@@ -7684,8 +7684,23 @@ PROPOSAL - SEO sweep: what was fixed and what needs Tom, 11 October 2026" (id
   images recompressed in place. `test/seoSweep.test.js`.
 - `scripts/productionQa.js` now reports each page's description, structured
   data, headings, alt text, weight and internal links (the "SEO:" lines).
-- **Waiting on Tom:** new search titles and descriptions for the home page,
-  Ready to Sell, taxi and Owner Check (copy, in the proposal); adding
+- **Search titles and descriptions: LIVE 11/10/2026** (Tom's SEO Metadata
+  Implementation Brief; commit `ffa1ea1`, deployment `a68ee125`, its twin
+  `d66bf62f` ran the seed). The wording lives in `lib/approvedSeoMetadata.js`.
+  The three code pages carry theirs in their views. The homepage is a CMS
+  page, so its `pages` row was moved by a guarded migration: each field
+  moves only while it holds the exact live value, and a mismatch is logged
+  with that value. Boot log: "meta_title updated; meta_description updated;
+  og_title blank, follows the page". Owner Check title preserved. The social
+  tags (og:title, twitter) on Ready to Sell and the taxi page still carry the
+  old wording, deliberately, as outside the brief. The taxi description is
+  164 characters, so Google may trim its last word.
+  `test/approvedSeoMetadata.test.js`. Verified in the server HTML with no
+  JavaScript (run `20261011T193531Z-seo-metadata-raw-html`, which uses the new
+  "Server HTML" line in `scripts/productionQa.js`): one title, one
+  description and one canonical per page, structured data intact, Google
+  tag and Ads config once each.
+- **Waiting on Tom:** adding
   "Business management consultant" as a Google profile category (Windsor
   `update_categories` can do it; may trigger a Google review); profile posts;
   reviews; Bing Places and Apple Business Connect; backlinks; request
