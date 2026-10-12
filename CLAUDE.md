@@ -7290,6 +7290,8 @@ repository (a version prepared on Tom's Mac, branch
   12/10/2026) asks the Microsoft visitor once, and the answer is kept in
   localStorage `arrMicrosoftConsent`. Allow pushes consent `update` granted;
   Decline keeps the tag cookieless. The bar covers Microsoft only and says so.
+  It appears only once the visitor starts scrolling (or straight away on a
+  page opened part way down), never over the first screen.
 - **The goal event** is sent only on `/thank-you`, inside the same
   once-per-token guard as the Google Ads Contact conversion and the Meta Lead,
   and only if `uetq` exists (i.e. the tag loaded). A page visit, a button
@@ -7301,7 +7303,7 @@ repository (a version prepared on Tom's Mac, branch
   `/thank-you` rewrites its own address with `history.replaceState`.
   CSP, gated: `bat.bing.net` and `bat.bing.com` in scriptSrc, imgSrc and
   connectSrc. The Privacy page describes it (approved wording).
-- **Tests:** `test/microsoftUet.test.js` (14, runs the rendered script in a
+- **Tests:** `test/microsoftUet.test.js` (16, runs the rendered script in a
   fake browser; the once-per-enquiry case watched red with the push moved
   outside the guard). Verified locally in Chromium with a stand-in `bat.js`:
   ordinary visit sends nothing, Microsoft ad visit loads the tag with consent
@@ -7317,7 +7319,11 @@ repository (a version prepared on Tom's Mac, branch
   `/?msclkid=livecheck` loads `bat.bing.net/bat.js?ti=343278313`, sends 4
   requests to Microsoft (all 200 or 204) and shows the bar; no page errors,
   no overflow, at desktop and phone. Two things seen live: on a phone the
-  bar covers the lower half of the hero button until the visitor chooses;
+  bar covered the lower half of the hero button until the visitor chose
+  (fixed the same evening on Tom's "you make the call": the choice now
+  appears only once the visitor scrolls, and on a phone it is a slim strip
+  flush to the bottom edge, 110px tall on an iPhone 13 instead of 144px;
+  wording unchanged);
   and Microsoft's `bat.js` also loads a Clarity script tied to the tag
   (`clarity.ms/tag/uet/343278313?conversions=1`) even with the automatic
   Clarity integration off, which the CSP already allows. The goal event

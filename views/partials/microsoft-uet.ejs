@@ -6,7 +6,10 @@
   .ms-consent button { font: inherit; font-weight: 600; padding: 0.45rem 1.1rem; border-radius: 3px; cursor: pointer; border: 1px solid var(--accent, #c8a24a); }
   .ms-consent .ms-allow { background: var(--accent, #c8a24a); color: var(--black, #000); }
   .ms-consent .ms-decline { background: transparent; color: var(--accent, #c8a24a); }
-  @media (max-width: 600px) { .ms-consent { bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)); } }
+  @media (max-width: 600px) {
+    .ms-consent { left: 0; right: 0; bottom: 0; transform: none; width: 100%; max-width: none; border-radius: 0; border-width: 1px 0 0; padding: 0.6rem 1rem calc(0.6rem + env(safe-area-inset-bottom, 0px)); gap: 0.45rem 0.75rem; font-size: 0.82rem; line-height: 1.35; }
+    .ms-consent button { padding: 0.3rem 0.95rem; }
+  }
 </style>
 <script nonce="<%= nonce %>">
   (function () {
@@ -42,8 +45,17 @@
       bar.querySelector('.ms-decline').addEventListener('click', function () { remember('denied'); bar.remove(); });
       document.body.appendChild(bar);
     }
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', showChoice);
-    else showChoice();
+    // Asked once the visitor starts scrolling, never over the first screen,
+    // so it cannot cover the hero button (seen live on a phone, 12/10/2026).
+    function whenScrolled() {
+      if ((window.scrollY || window.pageYOffset || 0) > 0) { showChoice(); return; }
+      window.addEventListener('scroll', function onScroll() {
+        window.removeEventListener('scroll', onScroll);
+        showChoice();
+      }, { passive: true });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', whenScrolled);
+    else whenScrolled();
   })();
 </script>
 <% } %><%# Microsoft Advertising UET tag (12/10/2026, Tom's decision; Microsoft
@@ -61,7 +73,9 @@
     Consent: Microsoft enforces UET consent mode for UK visitors, so the tag
     starts with ad_storage denied (no Microsoft advertising cookie) and a
     small Allow / Decline choice asks the Microsoft visitor once; the answer
-    is remembered in localStorage. Allow updates consent to granted. Decline
+    is remembered in localStorage. The choice appears only once the visitor
+    starts scrolling, and on a phone it is a slim strip on the bottom edge,
+    so it never covers the hero button on the first screen. Allow updates consent to granted. Decline
     keeps the tag cookieless. The choice covers Microsoft only and says so;
     it does not claim to control the Google, Meta or Clarity tags.
 

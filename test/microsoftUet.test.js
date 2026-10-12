@@ -39,8 +39,9 @@ function store(initial) {
   };
 }
 
-function runUet({ search = '', session = {}, local = {} } = {}) {
+function runUet({ search = '', session = {}, local = {}, scrollY = 0 } = {}) {
   const inserted = [];
+  const winListeners = {};
   const listeners = {};
   let bar = null;
   const makeEl = (tag) => {
@@ -71,11 +72,15 @@ function runUet({ search = '', session = {}, local = {} } = {}) {
     sessionStorage: store(session),
     localStorage: store(local),
     document,
-    URLSearchParams
+    URLSearchParams,
+    scrollY,
+    addEventListener(ev, fn) { winListeners[ev] = fn; },
+    removeEventListener(ev, fn) { if (winListeners[ev] === fn) delete winListeners[ev]; }
   };
   win.window = win;
   vm.runInNewContext(uetScript(), win);
-  return { win, inserted, bar: () => bar };
+  const scroll = () => { win.scrollY = 300; if (winListeners.scroll) winListeners.scroll(); };
+  return { win, inserted, bar: () => bar, scroll, listening: () => !!winListeners.scroll };
 }
 
 test('unset: nothing that names bat.bing or uetq renders', () => {
@@ -103,11 +108,13 @@ test('a visit not from a Microsoft advert, with no stored Allow, sends Microsoft
 });
 
 test('a Microsoft ad click: consent starts denied, the tag loads, the choice is asked once', () => {
-  const { win, inserted, bar } = runUet({ search: '?msclkid=xyz' });
+  const { win, inserted, bar, scroll } = runUet({ search: '?msclkid=xyz' });
   assert.deepStrictEqual(plain([win.uetq[0], win.uetq[1], win.uetq[2]]), ['consent', 'default', { ad_storage: 'denied' }]);
   assert.strictEqual(inserted.length, 1);
   assert.strictEqual(inserted[0].src, 'https://bat.bing.net/bat.js?ti=343278313');
-  assert.ok(bar(), 'the Allow / Decline choice is shown');
+  assert.strictEqual(bar(), null, 'nothing covers the first screen');
+  scroll();
+  assert.ok(bar(), 'the Allow / Decline choice is shown once the visitor scrolls');
   assert.match(bar().innerHTML, /Microsoft advert/);
   assert.strictEqual(win.sessionStorage.data.arrFromMicrosoftAd, '1', 'remembered for the rest of the visit');
 });
@@ -120,17 +127,38 @@ test('utm_source=bing also counts as a Microsoft ad visit, and the visit flag ca
 
 test('Allow updates consent to granted and is remembered; Decline stays cookieless', () => {
   const allow = runUet({ search: '?msclkid=1' });
+  allow.scroll();
   allow.bar().buttons['.ms-allow'].on.click();
   assert.strictEqual(allow.win.localStorage.data.arrMicrosoftConsent, 'granted');
   assert.deepStrictEqual(plain(allow.win.uetq.slice(-3)), ['consent', 'update', { ad_storage: 'granted' }]);
   assert.ok(allow.bar().removed);
 
   const decline = runUet({ search: '?msclkid=1' });
+  decline.scroll();
   const before = decline.win.uetq.length;
   decline.bar().buttons['.ms-decline'].on.click();
   assert.strictEqual(decline.win.localStorage.data.arrMicrosoftConsent, 'denied');
   assert.strictEqual(decline.win.uetq.length, before, 'no consent update pushed');
   assert.ok(decline.bar().removed);
+});
+
+test('the choice waits for a scroll, appears once, and shows at once on a page already scrolled', () => {
+  const fresh = runUet({ search: '?msclkid=1' });
+  assert.ok(fresh.listening(), 'waiting for the first scroll');
+  fresh.scroll();
+  assert.ok(fresh.bar());
+  assert.ok(!fresh.listening(), 'the scroll listener removes itself');
+  const midPage = runUet({ search: '?msclkid=1', scrollY: 500 });
+  assert.ok(midPage.bar(), 'a page opened part way down (a reload, or #conversation) asks straight away');
+});
+
+test('on a phone the choice is a slim strip on the bottom edge, not a floating card', () => {
+  const html = render({ nonce: 'n', microsoftUetTagId: '343278313' });
+  const phone = html.match(/@media \(max-width: 600px\) \{([\s\S]*?)\n  \}/);
+  assert.ok(phone, 'a phone rule exists');
+  for (const rule of ['left: 0', 'right: 0', 'bottom: 0', 'transform: none', 'border-radius: 0', 'max-width: none']) {
+    assert.ok(phone[1].includes(rule), rule);
+  }
 });
 
 test('a stored choice is never asked again; a stored Allow starts granted', () => {
