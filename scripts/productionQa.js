@@ -98,8 +98,15 @@ function slug(p) {
       const clarityCollect = [];
       page.on('response', (res) => { if (/\.clarity\.ms\/collect/.test(res.url())) clarityCollect.push(res.status()); });
       page.on('requestfailed', (req) => { if (/\.clarity\.ms\/collect/.test(req.url())) clarityCollect.push('failed'); });
+      // Requests to Microsoft UET (bat.bing.net / bat.bing.com), so a page
+      // opened with ?msclkid= shows the tag loading and sending, and an
+      // ordinary visit shows none. Added 12/10/2026 when
+      // MICROSOFT_UET_TAG_ID went live.
+      const uetRequests = [];
+      page.on('response', (res) => { if (/\/\/bat\.bing\.(net|com)\//.test(res.url())) uetRequests.push(res.url().split('?')[0].replace(/^https:\/\//, '') + ' ' + res.status()); });
+      page.on('requestfailed', (req) => { if (/\/\/bat\.bing\.(net|com)\//.test(req.url())) uetRequests.push(req.url().split('?')[0].replace(/^https:\/\//, '') + ' failed'); });
       const url = BASE + p;
-      const r = { path: p, size, url, status: null, finalUrl: null, title: null, h1: null, canonical: null, robotsMeta: null, xRobotsTag: null, selfLinks: null, inSitemap: sitemap.includes('<loc>' + BASE + p + '</loc>'), overflow: null, height: null, dashes: null, consoleErrors, pageErrors, clarityCollect, screenshot: null, topScreenshot: null, error: null };
+      const r = { path: p, size, url, status: null, finalUrl: null, title: null, h1: null, canonical: null, robotsMeta: null, xRobotsTag: null, selfLinks: null, inSitemap: sitemap.includes('<loc>' + BASE + p + '</loc>'), overflow: null, height: null, dashes: null, consoleErrors, pageErrors, clarityCollect, uetRequests, screenshot: null, topScreenshot: null, error: null };
       try {
         const resp = await page.goto(url, { waitUntil: 'load', timeout: 60000 });
         r.status = resp ? resp.status() : null;
@@ -155,6 +162,18 @@ function slug(p) {
             return cs.display !== 'none' && cs.visibility !== 'hidden' && !o.hasAttribute('hidden') && o.getBoundingClientRect().height > 0;
           })(),
           docRequestButtons: document.querySelectorAll('.js-doc-request').length,
+          // Microsoft UET: whether the tag ran, which tag id, and whether
+          // the Allow / Decline bar is showing.
+          uet: (() => {
+            const q = window.uetq;
+            const loader = [...document.scripts].find((x) => /bat\.bing\.(net|com)\/bat\.js/.test(x.src || ''));
+            const bar = document.querySelector('.ms-consent');
+            return {
+              state: !q ? 'not loaded' : Array.isArray(q) ? 'queued (bat.js not run yet)' : 'running',
+              loader: loader ? loader.src.replace(/^https:\/\//, '') : null,
+              bar: bar ? bar.innerText.replace(/\s+/g, ' ').trim() : null
+            };
+          })(),
           // Microsoft Clarity: the project id is part of the tag URL.
           clarity: (() => {
             const s = [...document.scripts].find((x) => /clarity\.ms\/tag\//.test(x.src || ''));
@@ -239,6 +258,7 @@ function slug(p) {
     lines.push(`- First primary button: ${r.heroCta ? `"${r.heroCta.text}" -> ${r.heroCta.href}` : 'none'}`);
     lines.push(`- PDF email box open without a click: ${r.docModalOpen === null ? 'no box on the page' : r.docModalOpen ? 'YES' : 'no'}; PDF request buttons on the page: ${r.docRequestButtons}`);
     lines.push(`- Microsoft Clarity: ${r.clarity || 'not loaded'}; data sent to Clarity: ${r.clarityCollect.length} request(s)${r.clarityCollect.length ? ' (' + r.clarityCollect.join(', ') + ')' : ''}`);
+    if (r.uet) lines.push(`- Microsoft UET: ${r.uet.state}${r.uet.loader ? ', loader ' + r.uet.loader : ''}; requests to Microsoft: ${r.uetRequests.length}${r.uetRequests.length ? ' (' + [...new Set(r.uetRequests)].join(', ') + ')' : ''}; Allow / Decline bar: ${r.uet.bar ? 'showing' : 'not showing'}`);
     if (r.seo) {
       const sd = r.seo;
       lines.push(`- SEO: title ${r.title ? r.title.length : 0} chars; description ${sd.description === null ? 'MISSING' : sd.description.length + ' chars'}; h1 count ${sd.h1s.length}; words ${sd.words}; lang ${sd.lang || 'MISSING'}; og:image ${sd.ogImage ? 'yes' : 'no'}`);

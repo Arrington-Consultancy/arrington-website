@@ -990,6 +990,7 @@ npm run dev
 - **`GMAIL_APP_PASSWORD`** — Gmail SMTP app password for lead/quiz/Market Ready Test notification emails (see Lead capture section). Optional locally; `notify()` no-ops with a console warning if unset. **It is also what makes the workspace's failed-unlock security alert able to ring** (finding H3): with it unset that alarm is inert, and the boot line now says so rather than leaving the operator to find out during an attack.
 - **`GOOGLE_ADS_PDF_CONVERSION_LABEL`** — optional. The Google Ads conversion label (text after `AW-18129914078/`) for a successful gated-PDF request. Unset means PDF requests fire no Ads conversion; they stopped sharing the contact-click label on 11/09/2026 (see Lead capture).
 - **`CLARITY_PROJECT_ID`** — optional. Microsoft Clarity project id (public, not a secret). Unset means no Clarity script and no Clarity CSP hosts; see "Microsoft Clarity" below.
+- **`MICROSOFT_UET_TAG_ID`** — optional. Microsoft Advertising UET tag id (public, not a secret), `343278313` on production since 12/10/2026. Unset means no UET script and no `bat.bing` CSP hosts; see "Microsoft Advertising UET" below.
 - **`WORKSPACE_ALERT_EMAIL`** — where the workspace's failed-unlock security alert goes. Optional; falls back to the built-in owner address. It deliberately does **not** fall back to the `contact.email` CMS row (finding H1): that row is editable by anyone holding `edit_content`, which is exactly the account the alarm exists to warn about, so the default was retargetable by the attacker.
 - **Bootstrap env vars (first boot only):** `NAT_PASSWORD`, `TOM_PASSWORD` — remove from Railway after the first successful deploy seeds the user rows
 - **Production detection:** checks for `RAILWAY_ENVIRONMENT` or `NODE_ENV=production`
@@ -7266,6 +7267,49 @@ manual route is the green plus, Web, Connect, Meta pixel only, install code
 manually). The two older datasets, "Arrington Consultancy Social" and
 "Arrington Consultancy Workspace", belong to the two read-only apps and
 must not be used as the website pixel.
+
+## Microsoft Advertising UET and the Contact enquiry goal (LIVE 12/10/2026)
+
+Tom's decision; the Microsoft side was set up by him: UET tag `343278313`,
+goal "Contact enquiry" (id `72585237`), custom event action
+`contact_form_submit`, category `contact`, counted once, no value, consent
+mode on, enhanced conversions and Clarity integration off. Built in this
+repository (a version prepared on Tom's Mac, branch
+`codex/microsoft-enquiry-tracking`, was never pushed and is superseded).
+
+- **Who it reaches, deliberately narrow.** `views/partials/microsoft-uet.ejs`
+  (included from `google-tag.ejs`, so every public page and never Scott or
+  the Workspace) loads the tag ONLY when the visit came from a Microsoft
+  advert (`msclkid`, which Microsoft's auto-tagging adds, or `utm_source`
+  bing/microsoft; remembered for the visit in sessionStorage
+  `arrFromMicrosoftAd`) or the browser has already said Allow. Everyone else
+  sends Microsoft nothing, so the 30-day contact form test is untouched for
+  Google and organic visitors. Not a site-wide cookie banner.
+- **Consent mode.** Microsoft enforces it for UK visitors. The tag starts with
+  `ad_storage` denied; a small Allow / Decline bar (wording approved by Tom,
+  12/10/2026) asks the Microsoft visitor once, and the answer is kept in
+  localStorage `arrMicrosoftConsent`. Allow pushes consent `update` granted;
+  Decline keeps the tag cookieless. The bar covers Microsoft only and says so.
+- **The goal event** is sent only on `/thank-you`, inside the same
+  once-per-token guard as the Google Ads Contact conversion and the Meta Lead,
+  and only if `uetq` exists (i.e. the tag loaded). A page visit, a button
+  click, a failed submission or a refresh never sends it.
+- **Gated on `MICROSOFT_UET_TAG_ID`** (validated to 5 to 12 digits, put in
+  `app.locals`). Unset or invalid: no script, no `bat.bing` CSP host, and the
+  boot line `Microsoft UET:` says which. Loader is Microsoft's current
+  snippet (`bat.bing.net`); `enableAutoSpaTracking` is left out because
+  `/thank-you` rewrites its own address with `history.replaceState`.
+  CSP, gated: `bat.bing.net` and `bat.bing.com` in scriptSrc, imgSrc and
+  connectSrc. The Privacy page describes it (approved wording).
+- **Tests:** `test/microsoftUet.test.js` (14, runs the rendered script in a
+  fake browser; the once-per-enquiry case watched red with the push moved
+  outside the guard). Verified locally in Chromium with a stand-in `bat.js`:
+  ordinary visit sends nothing, Microsoft ad visit loads the tag with consent
+  denied and shows the bar, Allow updates consent, the flag carries to later
+  pages, one enquiry sends one event, a refresh sends none, a failed submit
+  sends none, zero CSP violations.
+- **Microsoft Ads account changes belong to the Ads worker**; this repository
+  only sends the event.
 
 ## Start-up idea review page: hidden Google Ads landing page (06/10/2026)
 
