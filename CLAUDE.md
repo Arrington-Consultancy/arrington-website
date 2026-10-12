@@ -7308,6 +7308,21 @@ repository (a version prepared on Tom's Mac, branch
   denied and shows the bar, Allow updates consent, the flag carries to later
   pages, one enquiry sends one event, a refresh sends none, a failed submit
   sends none, zero CSP violations.
+- **Live, 12/10/2026:** commit `cf93858` on main, variable set by this
+  worker, serving deployment `5f46111e` (twins `b0352064` and `e7f5b31e`
+  REMOVED); boot line "Microsoft UET: tag id set (9 digits); loads for
+  Microsoft ad visits, contact_form_submit on /thank-you". Inspection run
+  `20261012T192119Z-microsoft-uet-live` (the script now prints a "Microsoft
+  UET" line per page): `/` and `/privacy` send Microsoft nothing;
+  `/?msclkid=livecheck` loads `bat.bing.net/bat.js?ti=343278313`, sends 4
+  requests to Microsoft (all 200 or 204) and shows the bar; no page errors,
+  no overflow, at desktop and phone. Two things seen live: on a phone the
+  bar covers the lower half of the hero button until the visitor chooses;
+  and Microsoft's `bat.js` also loads a Clarity script tied to the tag
+  (`clarity.ms/tag/uet/343278313?conversions=1`) even with the automatic
+  Clarity integration off, which the CSP already allows. The goal event
+  itself has not been seen arriving: that needs a real enquiry from a
+  Microsoft ad click, read in Microsoft Ads under the goal's status.
 - **Microsoft Ads account changes belong to the Ads worker**; this repository
   only sends the event.
 
