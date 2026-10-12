@@ -7762,6 +7762,10 @@ PROPOSAL - SEO sweep: what was fixed and what needs Tom, 11 October 2026" (id
   check-in (`trig_01HAhM8euGc3ebv97EhKsCwb`, 26/10/2026 08:52 UTC) posts the
   next item only if the Handoff Log records that approval, then re-arms
   itself 14 days on. If this session is retired, the replacement re-arms it.
+  **No new worker (Tom, 12/10/2026):** the posts stay with Website & Hosting;
+  the Google Ads worker does not post to the profile. A replacement session
+  re-arms the check-in in its first reply: the first queue item not marked
+  POSTED, on its Monday, same instructions (Handoff Log, same date).
 - **Waiting on Tom (checked 12/10/2026):** new reviews (still five, the
   last on 20/06/2026); Bing Places and Apple Business Connect; backlinks;
   request indexing in Search Console. Read the Search Console effect of the
