@@ -7849,3 +7849,36 @@ PROPOSAL - SEO sweep: what was fixed and what needs Tom, 11 October 2026" (id
   nothing in (4) without a specific reason and Tom's approval.
 - Check every string against the current Brand Operating System in Drive
   before it ships, not against a record of it in this file.
+
+
+## Microsoft Ads enquiry tracking (prepared 12 October 2026)
+
+Optional `MICROSOFT_UET_TAG_ID` (numeric public UET identifier) enables the
+Microsoft tracking partial through the shared public Google-tag include.
+The middleware excludes login, admin, Scott, Workspace and API paths. Unset
+or invalid IDs render nothing and add no Microsoft CSP hosts.
+
+Microsoft tracking has its own explicit Allow/Decline choice, remembered in
+browser local storage. No Microsoft script or request is made until Allow.
+The UET default is denied and updated from that choice; a footer settings
+button lets the visitor change it. The existing Google/Meta/Clarity consent
+behaviour is outside this change. Automatic Clarity integration must remain
+off for the UET tag because the site already has its separate Clarity project.
+
+Microsoft account setup is complete: UET tag `343278313`, Event goal
+`Contact enquiry` (`72585237`), Submit lead form, this account only,
+30-day click window, Last click, included in Conversions, enhanced conversions
+off, no revenue assigned. The goal is Unverified until the site is deployed.
+The goal matches action `contact_form_submit`,
+category `contact`, count Unique, no assigned revenue. Do not use a destination
+URL goal: a bare /thank-you visit must never count. The event is called only
+inside the existing verified successful-enquiry token conditional and only
+sent after consent and SDK readiness. A local-storage spent list guards
+refresh and replay across tabs; simultaneous races or cleared storage cannot
+be guaranteed to deduplicate. The signed token is removed from the URL before
+Microsoft loads and is not sent in event parameters. Failed submissions,
+honeypots, purchases and document requests are not Microsoft contact events.
+
+Rollback: unset MICROSOFT_UET_TAG_ID. Validation: the Microsoft tracking,
+thank-you conversion, Google tag and contact-form regression tests. Account
+setup completed; deployment and production verification still required before claiming this live.

@@ -23,6 +23,7 @@
     <script nonce="<%= nonce %>">
         (function () {
             var id = '<%= conversion.id %>';
+            if (typeof window.arrMicrosoftContact === 'function') window.arrMicrosoftContact(id);
             var KEY = 'arrContactConversionsSent';
             var sent = [];
             try {

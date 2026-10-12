@@ -1,0 +1,86 @@
+<% if (typeof microsoftUetTagId !== 'undefined' && microsoftUetTagId && typeof microsoftUetPublicPage !== 'undefined' && microsoftUetPublicPage) { %>
+<script nonce="<%= nonce %>">
+(function () {
+  var CHOICE = 'arrMicrosoftAdsConsent';
+  var SENT = 'arrMicrosoftEnquiriesSent';
+  var consent = '';
+  var pending = null;
+  var loaded = false;
+  var ready = false;
+  var seen = [];
+  try { consent = localStorage.getItem(CHOICE) || ''; } catch (e) {}
+  try { seen = JSON.parse(localStorage.getItem(SENT) || '[]'); if (!Array.isArray(seen)) seen = []; } catch (e) {}
+  window.uetq = window.uetq || [];
+  window.uetq.push('consent', 'default', { ad_storage: 'denied' });
+
+  function sendContact() {
+    if (!ready || consent !== 'granted' || !pending || seen.indexOf(pending) !== -1) return;
+    window.uetq.push('event', 'contact_form_submit', { event_category: 'contact' });
+    seen.push(pending);
+    try { localStorage.setItem(SENT, JSON.stringify(seen.slice(-100))); } catch (e) {}
+    pending = null;
+  }
+  function start() {
+    if (loaded || consent !== 'granted') return;
+    loaded = true;
+    window.uetq.push('consent', 'update', { ad_storage: 'granted' });
+    var script = document.createElement('script');
+    script.async = true;
+    script.src = 'https://bat.bing.net/bat.js?ti=<%= microsoftUetTagId %>';
+    script.onload = function () {
+      var options = { ts: (new Date()).getTime(), ti: '<%= microsoftUetTagId %>', enableAutoSpaTracking: false };
+      options.q = window.uetq;
+      window.uetq = new UET(options);
+      window.uetq.push('pageLoad');
+      ready = true;
+      sendContact();
+    };
+    document.head.appendChild(script);
+  }
+  window.arrMicrosoftContact = function (id) {
+    if (!/^[A-Za-z0-9_-]{16,32}$/.test(id)) return;
+    pending = id;
+    start();
+    sendContact();
+  };
+  // Do not disclose the signed enquiry token in Microsoft's page URL.
+  if (location.pathname === '/thank-you') {
+    try { history.replaceState(null, '', '/thank-you'); } catch (e) {}
+  }
+  start();
+  document.addEventListener('DOMContentLoaded', function () {
+    var box = document.createElement('aside');
+    box.className = 'arr-ms-consent';
+    box.setAttribute('aria-label', 'Microsoft advertising cookies');
+    box.innerHTML = '<p>Allow Microsoft advertising cookies? These help us see whether our ads lead to enquiries. Your choice does not affect the contact form.</p><button type="button" data-choice="granted">Allow</button> <button type="button" data-choice="denied">Decline</button> <a href="/privacy">Privacy</a>';
+    box.hidden = consent === 'granted' || consent === 'denied';
+    document.body.appendChild(box);
+    box.addEventListener('click', function (event) {
+      var choice = event.target.getAttribute('data-choice');
+      if (choice !== 'granted' && choice !== 'denied') return;
+      consent = choice;
+      try { localStorage.setItem(CHOICE, choice); } catch (e) {}
+      window.uetq.push('consent', 'update', { ad_storage: choice });
+      box.hidden = true;
+      start();
+      sendContact();
+    });
+    var settings = document.createElement('button');
+    settings.type = 'button';
+    settings.className = 'arr-ms-settings';
+    settings.textContent = 'Microsoft cookie settings';
+    settings.addEventListener('click', function () { box.hidden = false; });
+    var footer = document.querySelector('footer');
+    (footer || document.body).appendChild(settings);
+  });
+})();
+</script>
+<style nonce="<%= nonce %>">
+.arr-ms-consent { position: fixed; bottom: 1rem; left: 1rem; right: 1rem; max-width: 36rem; z-index: 10000; padding: 1rem; background: #fff; color: #17252a; border: 1px solid #66747a; border-radius: 4px; font: 15px/1.5 sans-serif; box-shadow: 0 4px 20px #0003; }
+.arr-ms-consent[hidden] { display: none; }
+.arr-ms-consent p { margin: 0 0 .75rem; color: inherit; }
+.arr-ms-consent button, .arr-ms-settings { padding: .5rem .75rem; font: inherit; cursor: pointer; }
+.arr-ms-consent a { color: #17252a; margin-left: .5rem; }
+.arr-ms-settings { display: block; margin: .75rem auto; color: inherit; background: transparent; border: 1px solid currentColor; border-radius: 3px; }
+</style>
+<% } %>

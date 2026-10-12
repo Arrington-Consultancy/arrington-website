@@ -10,7 +10,7 @@
 <% if (typeof ga4Id !== 'undefined' && ga4Id) { %><script nonce="<%= nonce %>">
   gtag('config', '<%= ga4Id %>');
 </script>
-<% } %><%- include('clarity-tag') %><%- include('meta-pixel') %><%- include('site-schema') %><%# THE SITE'S ONE GOOGLE TAG. Included as the first thing inside <head>
+<% } %><%- include('clarity-tag') %><%- include('meta-pixel') %><%- include('site-schema') %><%- include('Microsoft tracking') %><%# THE SITE'S ONE GOOGLE TAG. Included as the first thing inside <head>
     on every public page, and nowhere else: Google allows one Google tag per
     page, so a page must never carry a second copy of the loader or of the
     config call. test/googleTag.test.js enforces both.

@@ -92,6 +92,14 @@ console.log('Google Ads: paid offer purchase conversion label ' + (app.locals.go
   ? 'set (' + app.locals.googleAdsPurchaseConversionLabel.length + ' chars); a confirmed paid purchase counts as a conversion'
   : 'not set; purchases fire no Ads conversion'));
 
+// Optional Microsoft Ads UET. No tag or CSP hosts until configured.
+const microsoftUetTagId = (process.env.MICROSOFT_UET_TAG_ID || '').trim();
+app.locals.microsoftUetTagId = /^\d{6,12}$/.test(microsoftUetTagId) ? microsoftUetTagId : '';
+app.use((req, res, next) => {
+  res.locals.microsoftUetPublicPage = !/^\/(?:login|admin|scott|workspace|api)(?:\/|$)/.test(req.path);
+  next();
+});
+
 // Microsoft Clarity (session recordings and heatmaps), added 01/10/2026 on
 // Tom's decision. The whole thing is gated on CLARITY_PROJECT_ID: unset, no
 // script renders and the CSP carries no Clarity host, so an unconfigured
@@ -255,6 +263,7 @@ app.use(helmet({
         (req, res) => `'nonce-${res.locals.nonce}'`,
         'https://www.googletagmanager.com',
         'https://www.googleadservices.com',
+        ...(app.locals.microsoftUetTagId ? ['https://bat.bing.com', 'https://bat.bing.net'] : []),
         'https://challenges.cloudflare.com',
         ...(googleSigninClientId ? ['https://accounts.google.com/gsi/client'] : []),
         // Microsoft Clarity: the loader comes from www.clarity.ms and the
@@ -286,7 +295,8 @@ app.use(helmet({
         'https://lh3.googleusercontent.com',
         ...(app.locals.clarityProjectId ? ['https://*.clarity.ms', 'https://c.bing.com'] : []),
         // Meta pixel events are sent as an image request to www.facebook.com/tr.
-        ...(app.locals.metaPixelId ? ['https://www.facebook.com'] : [])
+        ...(app.locals.metaPixelId ? ['https://www.facebook.com'] : []),
+        ...(app.locals.microsoftUetTagId ? ['https://bat.bing.com', 'https://bat.bing.net'] : [])
       ],
       connectSrc: [
         "'self'",
@@ -309,7 +319,8 @@ app.use(helmet({
         // *.clarity.ms and links the session to Bing's cookie via c.bing.com.
         ...(app.locals.clarityProjectId ? ['https://*.clarity.ms', 'https://c.bing.com'] : []),
         // Meta pixel falls back to fetch/sendBeacon to www.facebook.com/tr.
-        ...(app.locals.metaPixelId ? ['https://www.facebook.com'] : [])
+        ...(app.locals.metaPixelId ? ['https://www.facebook.com'] : []),
+        ...(app.locals.microsoftUetTagId ? ['https://bat.bing.com', 'https://bat.bing.net'] : [])
       ],
       frameSrc: [
         "'self'",
