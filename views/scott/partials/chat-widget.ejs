@@ -20,7 +20,7 @@
             <div class="sc-msg-avatar sc-avatar-<%= workersById[m.workerId] ? m.workerId : 'system' %>"><%= m.initials %></div>
             <div class="sc-msg-body">
               <div class="sc-msg-name"><%= m.characterName %><%= m.displayRole ? ' · ' + m.displayRole : '' %></div>
-              <%= m.content %>
+              <span class="sc-msg-text"><%= String(m.content || '').replace(/\n\s*\n+/g, '\n').trim() %></span>
               <% if (m.certainty === 'LIKELY' || m.certainty === 'UNPROVEN' || m.technicalFailure) { %>
               <div class="sc-msg-meta-row">
                 <% if (m.certainty === 'LIKELY') { %><span class="sc-msg-tag sc-msg-tag-certainty">Worked out, not filed</span><% } %>
@@ -127,6 +127,13 @@
   var chatDetail = <%- JSON.stringify(typeof chatDetail !== 'undefined' ? chatDetail : 'team') %>;
   var showProvenance = <%- JSON.stringify(typeof showProvenance !== 'undefined' ? !!showProvenance : false) %>;
 
+  // A reply's paragraph breaks show as a plain line break, never a blank
+  // line (sc-msg-text is white-space: pre-line). Older stored replies can
+  // still hold blank lines, so they are collapsed here too.
+  function replyText(s) {
+    return '<span class="sc-msg-text">' + escapeHtml(String(s == null ? '' : s).replace(/\n\s*\n+/g, '\n').trim()) + '</span>';
+  }
+
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
@@ -186,14 +193,14 @@
       // dropping the honest part.
       div.className = 'sc-msg sc-msg-plain';
       div.innerHTML =
-        '<div class="sc-msg-body">' + escapeHtml(opts.text) +
+        '<div class="sc-msg-body">' + replyText(opts.text) +
         (tags ? '<div class="sc-msg-meta-row">' + tags + '</div>' : '') +
         '</div>';
     } else {
       div.innerHTML =
         '<div class="sc-msg-avatar ' + avatarClass(opts.workerId) + '">' + opts.initials + '</div>' +
         '<div class="sc-msg-body"><div class="sc-msg-name">' + escapeHtml(opts.name) + ' &middot; ' + escapeHtml(opts.role) + '</div>' +
-        escapeHtml(opts.text) +
+        replyText(opts.text) +
         (tags ? '<div class="sc-msg-meta-row">' + tags + '</div>' : '') +
         '</div>';
     }

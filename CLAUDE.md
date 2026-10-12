@@ -1699,6 +1699,34 @@ locally, so the signpost's effect on a real reply, and the workspace note
 reaching the workers, are proven by unit test and by the prompt that is built,
 not by a live turn.
 
+## Scott replies sound human, no stack of paragraphs (12/10/2026)
+
+Tom first asked for Scott to use his own voice from Drive, then agreed it
+should not: the voice folder governs writing AS Tom, forbids copying its
+rules into another worker's brief, and nine fictional staff sounding like
+Tom would blunt the demo. His actual ask: "sound human and no silly
+paragraphs". Three layers:
+
+- **Prompt** (`lib/scott/governance.js`, WRITING STYLE): fewer, fuller
+  paragraphs, no stack of one-liners, no headings/bold/bullets unless the
+  reader must act on several items, no stock opener or closer, a short list
+  of chatbot words to skip. Our own words, informed by the well-known
+  catalogue of AI tells (Wikipedia's "Signs of AI writing").
+- **Cleanup** (`lib/scott/humanise.js`, applied to every worker reply and
+  Ruth's note in `orchestrator.js`): dashes to commas, markdown markers
+  removed, stock opener/closer dropped only at the ends, blank lines
+  collapsed. It never rewords a sentence, so figures, names and job refs
+  cannot change. Write-back drafts (customer emails) are deliberately not
+  touched. A paid third-party "humaniser" was rejected: rewording breaks
+  fact consistency, costs per reply and sends conversations elsewhere.
+- **Display** (`views/scott/partials/chat-widget.ejs`): reply text sits in
+  `.sc-msg-text` (`white-space: pre-line`), so a paragraph break shows as a
+  plain line break with no gap; before this, newlines collapsed and a reply
+  ran together. Older stored replies are collapsed the same way at render.
+
+`test/scott/humanise.test.js` (15; two planted defects watched red). Not
+proven against the live model by this worker: the sandbox cannot call it.
+
 ## Public prices: settled, and not a discount (14/09/2026)
 
 Tom confirmed the current public prices, and confirmed them as settled rather
