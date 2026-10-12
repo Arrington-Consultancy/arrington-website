@@ -7334,6 +7334,21 @@ repository (a version prepared on Tom's Mac, branch
 - **Microsoft Ads account changes belong to the Ads worker**; this repository
   only sends the event.
 
+## Fix brief of 12/10/2026: items 1, 3, 4 and 5 awaiting Tom
+
+From the Google Ads worker, after Codex's review of main `29a2205`. Item 2
+(the Scott guest 'phil' block and the secrets scan) is done. Items 1, 3, 4
+and 5 were proposed to Tom and are NOT approved; nothing has changed. The
+proposal, in short: one shared production check refusing a missing or
+development secret in `server.js`, `routes/leads.js` and
+`lib/contactConversion.js`; a later paid arrival (`gclid`, `gbraid`, `wbraid`
+or `utm_source`) replacing earlier non-paid attribution, in both copies of
+the chrome script; Clarity off the login page and the `google_ads` tag
+cleared for a `utm_source=bing` or `msclkid` arrival; and the `/thank-you`
+token claimed server-side on first render, so a later render in any session
+fires no Google, Meta or Microsoft conversion. Full text in the Website &
+Hosting Handoff Log, entry "12 October 2026 (night) - Records catch-up".
+
 ## Start-up idea review page: hidden Google Ads landing page (06/10/2026)
 
 `/start-up-idea-review` is the landing page for Tom's start-up test, decided
