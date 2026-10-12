@@ -4677,10 +4677,10 @@ Phil's: one `client` user row, one additive `page_access` row on the
 Scott synthetic page, one `audit_log` entry attributed to Tom.
 
 **The one thing changed from the Phil precedent: no plaintext
-password anywhere.** Phil's own migration (04/09/2026, below) put his
-password in a code comment, which is still sitting in git history on
-`main` — a real, if low-stakes, breach of the standing "no secrets in
-code, GitHub, Drive or chat" rule. Marc's migration takes the password
+password anywhere.** Phil's own migration (04/09/2026) put his
+password in a code comment and its hash in the insert. That block was
+removed from `db/seed.js` on 12/10/2026 when Tom deleted the account, so
+no deploy can recreate it; both remain in git history. Marc's migration takes the password
 only from a Railway variable Tom sets himself for one deploy, then
 removes, the exact pattern already used for `NAT_PASSWORD`/
 `TOM_PASSWORD`: `SCOTT_GUEST_MARC_PASSWORD` (required; the migration is
@@ -7719,9 +7719,9 @@ commit `a6f4dbd`, deployment `ffceea6b`, inspection run
 - **The live inspection now measures** how far down the form starts, the
   first button's target, whether the PDF box is open unprompted and the
   Clarity tag (`scripts/productionQa.js`).
-- **Open:** (Clarity id set 12/10/2026, see Microsoft Clarity); remove the Scott guest password
-  comment in `db/seed.js` once Tom confirms he has changed that password; the
-  repository stays public for now (Railway's GitHub app has access, so going
+- **Open:** (Clarity id set 12/10/2026, see Microsoft Clarity); the Scott guest
+  (Phil) block was removed from `db/seed.js` on 12/10/2026 and Tom deletes the
+  account; the repository stays public for now (Railway's GitHub app has access, so going
   private would not break deploys).
 
 ## SEO sweep (LIVE 11/10/2026)

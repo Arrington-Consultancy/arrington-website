@@ -6024,12 +6024,10 @@ async function seed() {
   // Unlike Phil's migration, the password is never written to code, git
   // or chat: it comes only from Railway variables Tom sets himself for
   // one deploy, the same pattern as NAT_PASSWORD/TOM_PASSWORD. Phil's
-  // own migration put a plaintext password in a code comment, which is
-  // now sitting in git history on main — a real, if low-stakes,
-  // violation of "no secrets in code, GitHub, Drive or chat" that this
-  // migration does not repeat. (Phil was advised in that same comment to
-  // change his password once logged in; nothing here rotates it, that is
-  // Tom's and Phil's to do.)
+  // migration put a plaintext password and its hash in this file; it was
+  // removed on 12/10/2026 when Tom deleted the account, so no deploy can
+  // recreate it. Both remain in git history, which is why the account
+  // itself had to go rather than only the code.
   //
   // Armed by SCOTT_GUEST_MARC_PASSWORD; SCOTT_GUEST_MARC_USERNAME
   // defaults to 'marc'. Unset: this does nothing, silently, so a bare
@@ -6078,52 +6076,6 @@ async function seed() {
       } else {
         console.log("Scott AI Demonstration: page-access grant for 'marc' skipped (page not found yet).");
       }
-    }
-  }
-
-  // Scott AI Demonstration — create Phil's viewer account and grant access
-  // (04/09/2026). Phil is a director at Babcock, a friend of Tom's, being
-  // given access to the Scott demo. Follows the same pattern as Will's
-  // account (01/09/2026): one 'client' user row, one additive page_access
-  // row on the Scott synthetic page, one audit_log entry attributed to Tom.
-  // Guard: the page_access row itself (idempotent; user creation is
-  // ON CONFLICT DO NOTHING so a redeploy is safe even if Phil exists).
-  // Password: Babcock2026 (bcrypt cost 12; Tom to advise Phil to change it
-  // via Tom's admin panel Manage Users once he has logged in).
-  {
-    const { rows: pageRows } = await db.query('SELECT id, slug FROM pages WHERE slug = $1', [SCOTT_PAGE_SLUG]);
-    if (pageRows.length) {
-      const pageId = pageRows[0].id;
-      // Create the user account if it doesn't already exist.
-      await db.query(
-        `INSERT INTO users (username, password_hash, role) VALUES ($1, $2, 'client') ON CONFLICT (username) DO NOTHING`,
-        ['phil', '$2b$12$cB9axWKPAorIWyxyg9hIsOcHMkEfjLAcEdq8Tk/Jzq0wZ6h/SK5si']
-      );
-      const { rows: philRows } = await db.query(`SELECT id FROM users WHERE username = 'phil'`);
-      if (philRows.length) {
-        const philId = philRows[0].id;
-        const { rows: existing } = await db.query(
-          'SELECT 1 FROM page_access WHERE page_id = $1 AND user_id = $2',
-          [pageId, philId]
-        );
-        if (existing.length === 0) {
-          await db.query(
-            'INSERT INTO page_access (page_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-            [pageId, philId]
-          );
-          const { rows: tomRows } = await db.query(`SELECT id FROM users WHERE username = 'tom'`);
-          const actorId = tomRows.length ? tomRows[0].id : philId;
-          await db.query(
-            'INSERT INTO audit_log (user_id, action, section_key, detail) VALUES ($1, $2, $3, $4)',
-            [actorId, 'page_access_update', pageRows[0].slug, `Page access granted to 'phil' for "${pageRows[0].slug}", requested by Tom Arrington, applied via seed migration (04/09/2026). Phil is a director at Babcock, friend of Tom's.`]
-          );
-          console.log("Scott AI Demonstration: 'phil' account created and page access granted.");
-        } else {
-          console.log("Scott AI Demonstration: 'phil' already has page access, skipping.");
-        }
-      }
-    } else {
-      console.log("Scott AI Demonstration: page-access grant for 'phil' skipped (page not found yet).");
     }
   }
 
