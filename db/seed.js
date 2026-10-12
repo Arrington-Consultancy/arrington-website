@@ -6011,6 +6011,49 @@ async function seed() {
     }
   }
 
+  // Scott AI Demonstration — grant Dan's (already-created) account access
+  // (12/10/2026). Tom: "dan wants setting up to view scotts armchairs".
+  // Tom created 'dan' himself in Manage Users; the login then hit the
+  // "valid login, not invited" wall, and signing in as Dan replaced Tom's
+  // own session, so the Page access panel was out of reach. Same grant as
+  // Marc's above: one additive page_access row, one audit_log entry
+  // attributed to Tom, no password touched. Runs ONCE (marker row), so if
+  // Tom later removes Dan's access in Page access, a redeploy does not
+  // put it back. The marker is stamped only once the grant is in place.
+  {
+    const DAN_MARKER = 'scott.dan_access_grant_2026-10-12';
+    const { rows: danMarker } = await db.query('SELECT 1 FROM content WHERE section_key = $1', [DAN_MARKER]);
+    if (danMarker.length === 0) {
+      const { rows: pageRows } = await db.query('SELECT id, slug FROM pages WHERE slug = $1', [SCOTT_PAGE_SLUG]);
+      const { rows: danRows } = await db.query(`SELECT id FROM users WHERE username = 'dan'`);
+      if (pageRows.length && danRows.length) {
+        const pageId = pageRows[0].id;
+        const danId = danRows[0].id;
+        const { rows: inserted } = await db.query(
+          'INSERT INTO page_access (page_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING page_id',
+          [pageId, danId]
+        );
+        if (inserted.length) {
+          const { rows: tomRows } = await db.query(`SELECT id FROM users WHERE username = 'tom'`);
+          const actorId = tomRows.length ? tomRows[0].id : danId;
+          await db.query(
+            'INSERT INTO audit_log (user_id, action, section_key, detail) VALUES ($1, $2, $3, $4)',
+            [actorId, 'page_access_update', pageRows[0].slug, `Page access granted to 'dan' for "${pageRows[0].slug}", requested by Tom Arrington, applied via seed migration (12/10/2026).`]
+          );
+        }
+        await db.query(
+          'INSERT INTO content (section_key, content) VALUES ($1, $2) ON CONFLICT (section_key) DO NOTHING',
+          [DAN_MARKER, new Date().toISOString()]
+        );
+        console.log(inserted.length
+          ? "Scott AI Demonstration: page access granted to 'dan'."
+          : "Scott AI Demonstration: 'dan' already had page access; marker stamped.");
+      } else {
+        console.log("Scott AI Demonstration: page-access grant for 'dan' skipped (page or user not found yet).");
+      }
+    }
+  }
+
   // Scott AI Demonstration — create Marc's viewer account and grant access
   // (10/09/2026). Tom's instruction: "I need a login to scott armchairs
   // for Marc, Ivybridge taxis, please make one" — a real prospective
