@@ -92,8 +92,14 @@ function slug(p) {
       const pageErrors = [];
       page.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(m.text().slice(0, 200)); });
       page.on('pageerror', (e) => pageErrors.push(String(e).slice(0, 200)));
+      // Requests to Clarity's collect endpoint, so the report shows the tag
+      // actually sending recordings rather than merely loading. Added
+      // 12/10/2026 when CLARITY_PROJECT_ID went live.
+      const clarityCollect = [];
+      page.on('response', (res) => { if (/\.clarity\.ms\/collect/.test(res.url())) clarityCollect.push(res.status()); });
+      page.on('requestfailed', (req) => { if (/\.clarity\.ms\/collect/.test(req.url())) clarityCollect.push('failed'); });
       const url = BASE + p;
-      const r = { path: p, size, url, status: null, finalUrl: null, title: null, h1: null, canonical: null, robotsMeta: null, xRobotsTag: null, selfLinks: null, inSitemap: sitemap.includes('<loc>' + BASE + p + '</loc>'), overflow: null, height: null, dashes: null, consoleErrors, pageErrors, screenshot: null, topScreenshot: null, error: null };
+      const r = { path: p, size, url, status: null, finalUrl: null, title: null, h1: null, canonical: null, robotsMeta: null, xRobotsTag: null, selfLinks: null, inSitemap: sitemap.includes('<loc>' + BASE + p + '</loc>'), overflow: null, height: null, dashes: null, consoleErrors, pageErrors, clarityCollect, screenshot: null, topScreenshot: null, error: null };
       try {
         const resp = await page.goto(url, { waitUntil: 'load', timeout: 60000 });
         r.status = resp ? resp.status() : null;
@@ -232,7 +238,7 @@ function slug(p) {
     lines.push(`- Enquiry form starts: ${r.form ? `${r.form.top}px, ${r.form.screens} screen heights down (viewport ${r.form.viewport}px)` : 'no form found'}`);
     lines.push(`- First primary button: ${r.heroCta ? `"${r.heroCta.text}" -> ${r.heroCta.href}` : 'none'}`);
     lines.push(`- PDF email box open without a click: ${r.docModalOpen === null ? 'no box on the page' : r.docModalOpen ? 'YES' : 'no'}; PDF request buttons on the page: ${r.docRequestButtons}`);
-    lines.push(`- Microsoft Clarity: ${r.clarity || 'not loaded'}`);
+    lines.push(`- Microsoft Clarity: ${r.clarity || 'not loaded'}; data sent to Clarity: ${r.clarityCollect.length} request(s)${r.clarityCollect.length ? ' (' + r.clarityCollect.join(', ') + ')' : ''}`);
     if (r.seo) {
       const sd = r.seo;
       lines.push(`- SEO: title ${r.title ? r.title.length : 0} chars; description ${sd.description === null ? 'MISSING' : sd.description.length + ' chars'}; h1 count ${sd.h1s.length}; words ${sd.words}; lang ${sd.lang || 'MISSING'}; og:image ${sd.ogImage ? 'yes' : 'no'}`);
