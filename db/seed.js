@@ -8204,6 +8204,17 @@ async function seed() {
     console.error('Cornwall experience section migration failed (boot continues):', err.message);
   }
 
+  // CORNWALL PAGE: FEWER "REAL"S (12/10/2026, Tom: "limit use of real over
+  // use"). Deletion only: "real" out of the new section's heading, and the
+  // proof block's "Real commercial experience" label off this page. Exact-
+  // value guarded, live value logged on a mismatch. Run once. Never fatal.
+  try {
+    const note = await require('../lib/cornwallExperienceSection').applyCornwallRealTrim(db);
+    if (note) console.log(`Cornwall "real" trim: ${note}.`);
+  } catch (err) {
+    console.error('Cornwall "real" trim migration failed (boot continues):', err.message);
+  }
+
 
   // Arrington AI Workspace: ingest the encrypted snapshot into
   // workspace_records. A no-op when WORKSPACE_SNAPSHOT_KEY is unset, and

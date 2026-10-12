@@ -9,7 +9,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
-const { MARKER, SLUG, COPY, applyCornwallExperienceSection } = require('../lib/cornwallExperienceSection');
+const { MARKER, SLUG, COPY, applyCornwallExperienceSection, TRIM_MARKER, OLD_HEADING, applyCornwallRealTrim } = require('../lib/cornwallExperienceSection');
 
 const strip = (h) => h.replace(/<[^>]+>/g, '');
 
@@ -20,8 +20,11 @@ const BRIEF = {
   p2: 'He eventually sold the business. That experience shapes how Arrington Consultancy works today: understanding where the pressure sits, getting better control of the numbers and making the business less dependent on its owner.'
 };
 
-test('the copy is the brief wording, with only "&" written as "and"', () => {
-  assert.strictEqual(COPY.heading, BRIEF.heading);
+test('the copy is the brief wording, with only "&" written as "and" and "real" out of the heading', () => {
+  // "real" taken out on Tom's instruction of 12/10/2026 ("limit use of real
+  // over use"). Deletion only: the heading is the brief's minus one word.
+  assert.strictEqual(COPY.heading, BRIEF.heading.replace('real ', ''));
+  assert.strictEqual(OLD_HEADING, BRIEF.heading);
   assert.strictEqual(strip(COPY.p1), BRIEF.p1.replace('Abacus & Falmouth Taxis', 'Abacus and Falmouth Taxis'));
   assert.strictEqual(strip(COPY.p2), BRIEF.p2);
   assert.strictEqual(COPY.button_text, '', 'no button: the hero call to action keeps the page hierarchy');
@@ -56,6 +59,19 @@ function fakeDb({ pages, content }) {
         return { rows: [...store].filter(([k, v]) => k.endsWith('.heading') && v === params[0] && ids.includes(k.split('.')[0])).map(([k]) => ({ section_key: k })) };
       }
       if (/^SELECT section_order FROM pages$/.test(sql)) return { rows: [...pageMap.values()] };
+      if (/^SELECT content FROM content WHERE section_key = \$1/.test(sql)) {
+        return { rows: store.has(params[0]) ? [{ content: store.get(params[0]) }] : [] };
+      }
+      if (/^UPDATE content SET content = \$1 WHERE section_key = \$2 AND content = \$3/.test(sql)) {
+        if (store.get(params[1]) !== params[2]) return { rowCount: 0 };
+        store.set(params[1], params[0]);
+        return { rowCount: 1 };
+      }
+      if (/^UPDATE content SET content = '' WHERE section_key = \$1 AND content = \$2/.test(sql)) {
+        if (store.get(params[0]) !== params[1]) return { rowCount: 0 };
+        store.set(params[0], '');
+        return { rowCount: 1 };
+      }
       if (/^SELECT DISTINCT split_part/.test(sql)) {
         return { rows: [...new Set([...store.keys()].map((k) => k.split('.')[0]))].map((instance_id) => ({ instance_id })) };
       }
@@ -146,4 +162,69 @@ test('the seed runs it, and the heading balance rule is scoped to the Cornwall p
   assert.ok(seed.includes("require('../lib/cornwallExperienceSection').applyCornwallExperienceSection(db)"));
   const view = fs.readFileSync(path.join(__dirname, '..', 'views', 'index.ejs'), 'utf8');
   assert.ok(view.includes('.page-business-consultant-cornwall .filter .section-heading { text-wrap: balance; }'));
+});
+
+// ---- 12/10/2026: fewer "real"s on the Cornwall page ----
+
+const TRIM_LIVE = () => ({
+  pages: {
+    [SLUG]: ['hero__6', 'filter__6', 'casestudy__8', 'approach__3', 'biography__8'],
+    'business-consultant-devon': ['hero__4', 'casestudy', 'approach', 'biography']
+  },
+  content: {
+    'filter__6.heading': OLD_HEADING,
+    'casestudy__8.label': '<strong>Real commercial experience</strong>',
+    'casestudy__8.heading': 'Commercial decisions<br />with real consequences',
+    'casestudy.label': '<strong>Real commercial experience</strong>'
+  }
+});
+
+test('the trim takes "real" out of the heading and the label off the Cornwall proof block only', async () => {
+  const db = fakeDb(TRIM_LIVE());
+  const note = await applyCornwallRealTrim(db);
+  assert.match(note, /filter__6: heading now "Built on business experience in Cornwall"/);
+  assert.match(note, /casestudy__8: "Real commercial experience" label removed/);
+  assert.strictEqual(db.store.get('filter__6.heading'), COPY.heading);
+  assert.strictEqual(db.store.get('casestudy__8.label'), '');
+  assert.strictEqual(db.store.get('casestudy__8.heading'), TRIM_LIVE().content['casestudy__8.heading'], 'proof heading untouched');
+  assert.strictEqual(db.store.get('casestudy.label'), TRIM_LIVE().content['casestudy.label'], 'Devon untouched');
+  assert.ok(db.store.has(TRIM_MARKER));
+  assert.strictEqual(await applyCornwallRealTrim(db), null, 'a second run is a no-op');
+});
+
+test('a label edited in the CMS since is left alone and its live value logged', async () => {
+  const live = TRIM_LIVE();
+  live.content['casestudy__8.label'] = 'Commercial experience in Cornwall';
+  const db = fakeDb(live);
+  assert.match(await applyCornwallRealTrim(db), /casestudy__8: label left alone, live value "Commercial experience in Cornwall"/);
+  assert.strictEqual(db.store.get('casestudy__8.label'), 'Commercial experience in Cornwall');
+});
+
+test('a fresh database gets the trimmed heading straight away, and the trim then finds it done', async () => {
+  const db = fakeDb(LIVE());
+  await applyCornwallExperienceSection(db);
+  assert.strictEqual(db.store.get('filter__4.heading'), COPY.heading);
+  assert.match(await applyCornwallRealTrim(db), /filter__4: heading already trimmed/);
+});
+
+test('no Cornwall page: the trim writes nothing and is not marked done', async () => {
+  const live = TRIM_LIVE();
+  delete live.pages[SLUG];
+  const db = fakeDb(live);
+  assert.match(await applyCornwallRealTrim(db), /no Cornwall page/);
+  assert.ok(!db.store.has(TRIM_MARKER));
+});
+
+test('the case study template renders no label paragraph when the label is empty', () => {
+  const view = fs.readFileSync(path.join(__dirname, '..', 'views', 'index.ejs'), 'utf8');
+  const block = view.slice(view.indexOf("<% if (_tpl === 'casestudy') { %>"));
+  const labelLine = block.split('\n').find((l) => l.includes("content[_k + '.label']"));
+  assert.match(labelLine, /<% if \(\(content\[_k \+ '\.label'\] \|\| ''\)\.replace\(\/<\[\^>\]\+>\/g, ''\)\.trim\(\)\) \{ %><p class="section-label">/);
+});
+
+test('the seed runs the trim after the section migration', () => {
+  const seed = fs.readFileSync(path.join(__dirname, '..', 'db', 'seed.js'), 'utf8');
+  const a = seed.indexOf('applyCornwallExperienceSection(db)');
+  const b = seed.indexOf('applyCornwallRealTrim(db)');
+  assert.ok(a > 0 && b > a);
 });

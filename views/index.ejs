@@ -4155,7 +4155,7 @@
         <% if (canEdit) { %><button class="cms-move-btn cms-hide-btn<%= (hiddenSections || []).includes(_iid) ? ' cms-hide-btn-on' : '' %>" data-section-id="<%= _iid %>" title="<%= (hiddenSections || []).includes(_iid) ? 'Show section' : 'Hide section' %>">&#128065;</button><% } %>
         <% if (canEdit) { %><button class="cms-move-btn cms-delete-btn" data-section-id="<%= _iid %>" title="Delete section">&#10005;</button><% } %>
         <div class="case-inner">
-            <p class="section-label"><%- content[_k + '.label'] %></p>
+            <% if ((content[_k + '.label'] || '').replace(/<[^>]+>/g, '').trim()) { %><p class="section-label"><%- content[_k + '.label'] %></p><% } %>
             <% const _hTag = _h1Used ? 'h2' : 'h1'; _h1Used = true; %><<%= _hTag %> class="section-heading"><%- content[_k + '.heading'] %></<%= _hTag %>>
             <p class="section-sub"><%- content[_k + '.subtext'] %></p>
             <%
