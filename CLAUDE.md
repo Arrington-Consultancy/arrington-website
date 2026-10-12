@@ -7746,10 +7746,26 @@ PROPOSAL - SEO sweep: what was fixed and what needs Tom, 11 October 2026" (id
   additional category beside the primary "Business development service",
   read back through Windsor on 12/10/2026. It was not added from this
   repository's sessions, so it was added in the profile itself.
-- **Waiting on Tom (checked 12/10/2026):** profile posts (none ever); new
-  reviews (still five, the last on 20/06/2026); Bing Places and Apple
-  Business Connect; backlinks; request indexing in Search Console. Read the
-  Search Console effect of the sweep in about four weeks, not before.
+- **Google profile posts: STARTED 12/10/2026, fortnightly** (Tom's
+  decision). Post 1, "The Most Expensive Person Doing the Job Might Be
+  You", is LIVE (local post `10130541787027013`). The next 13, one every
+  second Monday from 26/10/2026, are in Drive: "GOOGLE BUSINESS PROFILE POST
+  QUEUE - Useful Thinking excerpts, from 12 October 2026" (id
+  `1RNGP7RB7tusy3fjrjIWkyvuH8-lQG217Ujv4jClC81I`, beside the Social Posting
+  Schedule). Rules: every word copied from the live article or its approved
+  summary, no swearing (Google rejects it), no named supplier criticised, no
+  fire metaphor, no phone number; Learn more button tagged
+  `utm_source=google_business_profile&utm_medium=post&utm_campaign=gbp_post`.
+  Windsor `create_local_post` on account `locations/3855282927663970981`;
+  read back from the LocalPosts table with an explicit date range. Posts 2
+  to 14 wait for Tom's approval of the queue wording. A `send_later`
+  check-in (`trig_01HAhM8euGc3ebv97EhKsCwb`, 26/10/2026 08:52 UTC) posts the
+  next item only if the Handoff Log records that approval, then re-arms
+  itself 14 days on. If this session is retired, the replacement re-arms it.
+- **Waiting on Tom (checked 12/10/2026):** new reviews (still five, the
+  last on 20/06/2026); Bing Places and Apple Business Connect; backlinks;
+  request indexing in Search Console. Read the Search Console effect of the
+  sweep in about four weeks, not before.
 
 ## Writing and reviewing website copy
 
