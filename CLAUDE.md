@@ -4725,6 +4725,18 @@ only for a case where the account already exists and its slug/URL
 makes the Page access panel awkward to reach live; it is not the
 normal path.
 
+**Dan (12/10/2026), and two traps worth knowing.** Tom created `dan` in
+Manage Users, then tested Dan's login at `/scott/login` in his own
+browser. (1) The Scott page has Page access rows (Will, Marc), so
+`/scott-ai-demonstration` 404s for anyone not signed in to the main
+site: the panel route needs Tom signed in at `/login` first. (2) A valid
+login at `/scott/login` sets the session user even when the account is
+not invited, so testing a guest's login in your own browser signs YOU
+out and in as the guest. Granted by a run-once seed migration (marker
+`scott.dan_access_grant_2026-10-12`, so a later revoke in Page access
+sticks): commit `ec464a0`, production log "page access granted to
+'dan'" on deployment `774f7ffa` (REMOVED twin), serving `1a005d02`.
+
 **Real invited viewer: Will (01/09/2026).** A real `users` account
 (`will`, role `client`) hit the "valid login, not invited" branch of
 `POST /scott/login` on production, then `GET /scott` 404'd per
