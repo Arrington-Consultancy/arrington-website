@@ -7117,7 +7117,7 @@ same day; the admin Leads panel's Source column is the place to check.
 Organic Facebook is 10 to 100 views a post. Nothing has been posted on any
 channel since 5 August.
 
-## Microsoft Clarity (added 01/10/2026, inert until the id is set)
+## Microsoft Clarity (added 01/10/2026, LIVE 12/10/2026)
 
 Session recordings and heatmaps, on Tom's decision, to answer the one
 question no other tool here can: what a visitor actually does on a page
@@ -7146,6 +7146,27 @@ project's settings, set `CLARITY_PROJECT_ID` on the `arrington-prototype`
 service. The Windsor `microsoft_clarity` connector can then read the
 dashboards from here. Any CSP report naming a Clarity host afterwards means
 Microsoft has added a collector domain and the lists above need it.
+
+**Live 12/10/2026.** Tom created the project and approved the id:
+`CLARITY_PROJECT_ID=ywiy9r672t` (public, not a secret), set on production by
+this worker. Boot line of deployment `36f5dfce`: "Microsoft Clarity: project
+id set (10 chars); recordings and heatmaps on for public pages". The Windsor
+`microsoft_clarity` connector is NOT connected, so recordings are read in
+Clarity itself.
+
+**Paid Google Ads visits are tagged** (`traffic = google_ads`, a Clarity
+custom tag set in `clarity-tag.ejs`). Leads-Search-1 and Ready to Sell carry
+only Google's click id (auto-tagging on, no final URL suffix; read from the
+account on 12/10/2026), so Clarity's own Source, Medium and Channel filters
+put them in with organic Google; only Start-Up and Taxi carry
+`utm_medium=cpc`. The site sets the tag when the landing URL has `gclid`,
+`gbraid` or `wbraid`, or `utm_source=google` with `utm_medium=cpc/ppc`, and
+keeps it for the rest of the visit through sessionStorage
+(`arrPaidGoogle`). Only the label is sent, never the click id; the test runs
+the rendered script and fails if the id reaches Clarity. **To filter in
+Clarity:** Filters, Custom tags, `traffic` is `google_ads`. Only visits from
+12/10/2026 carry it. The live inspection now also reports how many requests
+reached Clarity's collect endpoint.
 
 **Two pre-existing test failures seen on this run, neither this change's:**
 `test/workspace/receivablesRetrieval.test.js` case 4 (the pinned-date rot
@@ -7694,8 +7715,7 @@ commit `a6f4dbd`, deployment `ffceea6b`, inspection run
 - **The live inspection now measures** how far down the form starts, the
   first button's target, whether the PDF box is open unprompted and the
   Clarity tag (`scripts/productionQa.js`).
-- **Open:** Clarity Project ID from Tom (approved to set
-  `CLARITY_PROJECT_ID` once it arrives); remove the Scott guest password
+- **Open:** (Clarity id set 12/10/2026, see Microsoft Clarity); remove the Scott guest password
   comment in `db/seed.js` once Tom confirms he has changed that password; the
   repository stays public for now (Railway's GitHub app has access, so going
   private would not break deploys).
