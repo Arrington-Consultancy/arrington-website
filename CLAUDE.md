@@ -7166,7 +7166,11 @@ keeps it for the rest of the visit through sessionStorage
 the rendered script and fails if the id reaches Clarity. **To filter in
 Clarity:** Filters, Custom tags, `traffic` is `google_ads`. Only visits from
 12/10/2026 carry it. The live inspection now also reports how many requests
-reached Clarity's collect endpoint.
+reached Clarity's collect endpoint: run `20261012T105025Z-clarity-live`
+(home and Plymouth, desktop and phone) loaded tag `ywiy9r672t` and each page
+sent 3 requests to Clarity, all answered 204, with zero page errors. That
+proves the data leaves the site and Clarity accepts it; whether it shows as a
+recording is read in Clarity (headless browsers are usually filtered as bots).
 
 **Two pre-existing test failures seen on this run, neither this change's:**
 `test/workspace/receivablesRetrieval.test.js` case 4 (the pinned-date rot
