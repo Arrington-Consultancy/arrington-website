@@ -4,6 +4,18 @@
     t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
     y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
   })(window, document, "clarity", "script", "<%= clarityProjectId %>");
+  (function () {
+    var paid = false;
+    try {
+      var q = new URLSearchParams(location.search);
+      if (q.has('gclid') || q.has('gbraid') || q.has('wbraid') ||
+          ((q.get('utm_source') || '').toLowerCase() === 'google' && /^(cpc|ppc)$/i.test(q.get('utm_medium') || ''))) {
+        sessionStorage.setItem('arrPaidGoogle', '1');
+      }
+      paid = sessionStorage.getItem('arrPaidGoogle') === '1';
+    } catch (e) {}
+    if (paid) window.clarity('set', 'traffic', 'google_ads');
+  })();
 </script>
 <% } %><%# Microsoft Clarity (session recordings and heatmaps), 01/10/2026.
     Microsoft's own snippet with one change, nonce="..." on the inline
@@ -12,4 +24,11 @@
     the id and puts it in app.locals, so no view has to pass it). Included
     from google-tag.ejs so it reaches exactly the pages the Google tag
     reaches: every public page, never Scott or the Workspace. Clarity masks
-    form inputs by default, and the Privacy page describes it. %>
+    form inputs by default, and the Privacy page describes it.
+
+    Paid Google Ads visits are tagged traffic = google_ads (12/10/2026), so
+    recordings can be filtered to them under Filters, Custom tags. Leads-
+    Search-1 and Ready to Sell carry only Google's click id (auto-tagging,
+    no UTM suffix), so Clarity's own Source/Medium filters cannot see them.
+    The flag lives in sessionStorage so every page of that visit is tagged,
+    and only the label is sent: never the click id itself. %>

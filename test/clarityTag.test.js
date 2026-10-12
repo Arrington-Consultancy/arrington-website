@@ -65,3 +65,39 @@ test('the Privacy page describes Clarity and the input masking', () => {
   assert.match(s, /Microsoft Clarity/);
   assert.match(s, /masked/);
 });
+
+// Paid Google Ads visits are tagged in Clarity (12/10/2026). Runs the
+// rendered script against a stub page, so the behaviour is tested, not the text.
+const vm = require('node:vm');
+function runTag(search, store = {}) {
+  const html = render({ nonce: 'n', clarityProjectId: 'abc123xyz9' });
+  const code = [...html.matchAll(/<script nonce="n">([\s\S]*?)<\/script>/g)].map((m) => m[1]).find((c) => c.includes('clarity.ms/tag'));
+  const calls = [];
+  const el = { parentNode: { insertBefore() {} } };
+  const win = {
+    location: { search },
+    sessionStorage: { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); } },
+    URLSearchParams,
+    document: { createElement: () => ({}), getElementsByTagName: () => [el] },
+  };
+  win.window = win;
+  vm.runInNewContext(code, win);
+  for (const a of (win.clarity && win.clarity.q) || []) calls.push([...a]);
+  return { calls, store };
+}
+
+test('a Google Ads click is tagged google_ads, and the click id itself is never sent', () => {
+  const { calls, store } = runTag('?gclid=SECRETCLICK123');
+  assert.deepStrictEqual(calls, [['set', 'traffic', 'google_ads']]);
+  assert.ok(!JSON.stringify(calls).includes('SECRETCLICK123'));
+  assert.strictEqual(store.arrPaidGoogle, '1');
+});
+
+test('later pages of the same visit stay tagged; other traffic is never tagged', () => {
+  assert.deepStrictEqual(runTag('', { arrPaidGoogle: '1' }).calls, [['set', 'traffic', 'google_ads']]);
+  assert.deepStrictEqual(runTag('?utm_source=google&utm_medium=cpc&utm_campaign=Taxi-Search').calls, [['set', 'traffic', 'google_ads']]);
+  assert.deepStrictEqual(runTag('?wbraid=x').calls, [['set', 'traffic', 'google_ads']]);
+  assert.deepStrictEqual(runTag('').calls, []);
+  assert.deepStrictEqual(runTag('?utm_source=bing&utm_medium=cpc').calls, []);
+  assert.deepStrictEqual(runTag('?utm_source=google&utm_medium=organic').calls, []);
+});
