@@ -7323,7 +7323,9 @@ repository (a version prepared on Tom's Mac, branch
   (fixed the same evening on Tom's "you make the call": the choice now
   appears only once the visitor scrolls, and on a phone it is a slim strip
   flush to the bottom edge, 110px tall on an iPhone 13 instead of 144px;
-  wording unchanged);
+  wording unchanged; commit `7cf2579`, serving `97b88bd8`, inspection run
+  `20261012T195355Z-microsoft-bar-slim`: the hero button sits fully clear
+  above the bar even once it shows);
   and Microsoft's `bat.js` also loads a Clarity script tied to the tag
   (`clarity.ms/tag/uet/343278313?conversions=1`) even with the automatic
   Clarity integration off, which the CSP already allows. The goal event
