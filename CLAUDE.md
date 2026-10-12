@@ -7758,9 +7758,10 @@ PROPOSAL - SEO sweep: what was fixed and what needs Tom, 11 October 2026" (id
   `utm_source=google_business_profile&utm_medium=post&utm_campaign=gbp_post`.
   Windsor `create_local_post` on account `locations/3855282927663970981`;
   read back from the LocalPosts table with an explicit date range. Posts 2
-  to 14 wait for Tom's approval of the queue wording. A `send_later`
-  check-in (`trig_01HAhM8euGc3ebv97EhKsCwb`, 26/10/2026 08:52 UTC) posts the
-  next item only if the Handoff Log records that approval, then re-arms
+  to 14 APPROVED by Tom on 12/10/2026 ("i agree", recorded in the
+  Handoff Log). A `send_later` check-in (`trig_01HAhM8euGc3ebv97EhKsCwb`,
+  26/10/2026 08:52 UTC) posts the next item if its words are still on the
+  live article page, then re-arms
   itself 14 days on. If this session is retired, the replacement re-arms it.
   **No new worker (Tom, 12/10/2026):** the posts stay with Website & Hosting;
   the Google Ads worker does not post to the profile. A replacement session
