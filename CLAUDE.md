@@ -6336,6 +6336,22 @@ overflow, no page errors, one title, description, canonical and Google tag
 each, structured data unchanged. The form now starts 6.6 phone screens down
 (4,392px), about one screen further than before. `test/cornwallExperienceSection.test.js`.
 
+**Fewer "real"s on the Cornwall page (LIVE 12/10/2026, Tom: "limit use of
+real over use").** The page read "real" four times in its first two screens.
+Two were removed by deletion only, no new words: the section heading is now
+"Built on business experience in Cornwall", and the proof block's "Real
+commercial experience" label is gone from this page (Devon, Exeter, Plymouth
+and the home page keep theirs). "real" remains in the hero line and the proof
+heading "Commercial decisions with real consequences", both shared with the
+other city pages. `applyCornwallRealTrim` (marker
+`site.cornwall_real_trim_2026-10-12`) guards each write on the value read and
+logs a live value it does not recognise. The case study template no longer
+renders an empty label paragraph. Production (commit `e8b09ab`, seed on the
+REMOVED twin `cd68e1b9`, serving `4333075f`): "filter__6: heading now ...;
+casestudy__8: "Real commercial experience" label removed". Inspection run
+`20261012T031352Z-cornwall-real-trim`: Cornwall and Devon 200 at desktop and
+phone, no overflow, no page errors, metadata and tags unchanged.
+
 ### Full-configuration check of the city routing (02/10/2026, afternoon)
 
 Tom asked for the geographic overlap to be inspected from the full keyword
