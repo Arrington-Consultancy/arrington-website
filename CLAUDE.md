@@ -7742,11 +7742,14 @@ PROPOSAL - SEO sweep: what was fixed and what needs Tom, 11 October 2026" (id
   "Server HTML" line in `scripts/productionQa.js`): one title, one
   description and one canonical per page, structured data intact, Google
   tag and Ads config once each.
-- **Waiting on Tom:** adding
-  "Business management consultant" as a Google profile category (Windsor
-  `update_categories` can do it; may trigger a Google review); profile posts;
-  reviews; Bing Places and Apple Business Connect; backlinks; request
-  indexing in Search Console.
+- **Google profile category: DONE.** "Business management consultant" is an
+  additional category beside the primary "Business development service",
+  read back through Windsor on 12/10/2026. It was not added from this
+  repository's sessions, so it was added in the profile itself.
+- **Waiting on Tom (checked 12/10/2026):** profile posts (none ever); new
+  reviews (still five, the last on 20/06/2026); Bing Places and Apple
+  Business Connect; backlinks; request indexing in Search Console. Read the
+  Search Console effect of the sweep in about four weeks, not before.
 
 ## Writing and reviewing website copy
 
