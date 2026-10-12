@@ -35,6 +35,12 @@
                 // only then). Same once-per-token guard as the Google conversion;
                 // eventID lets Meta de-duplicate a repeat of the same enquiry.
                 if (typeof fbq === 'function') { try { fbq('track', 'Lead', {}, { eventID: id }); } catch (e) {} }
+                // Microsoft Advertising goal "Contact enquiry" (action
+                // contact_form_submit, category contact). uetq exists only when
+                // the UET tag loaded, i.e. a visit from a Microsoft advert or a
+                // browser that said Allow (views/partials/microsoft-uet.ejs).
+                // Same once-per-token guard, so a refresh sends nothing.
+                if (window.uetq && typeof window.uetq.push === 'function') { try { window.uetq.push('event', 'contact_form_submit', { event_category: 'contact' }); } catch (e) {} }
                 try { sent.push(id); sessionStorage.setItem(KEY, JSON.stringify(sent.slice(-20))); } catch (e) {}
             }
             try { history.replaceState(null, '', '/thank-you'); } catch (e) {}

@@ -1,0 +1,81 @@
+<% if (typeof microsoftUetTagId !== 'undefined' && microsoftUetTagId) { %><style nonce="<%= nonce %>">
+  .ms-consent { position: fixed; left: 50%; bottom: 1rem; transform: translateX(-50%); z-index: 90; width: calc(100% - 2rem); max-width: 34rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; padding: 0.9rem 1.1rem; border-radius: 6px; border: 1px solid var(--border, #333); background: var(--near-black, #111); color: var(--text-bright, #fff); font-family: 'DM Sans', sans-serif; font-size: 0.92rem; line-height: 1.45; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35); }
+  .ms-consent p { margin: 0; flex: 1 1 16rem; color: var(--text-bright, #fff); }
+  .ms-consent a { color: var(--accent, #c8a24a); }
+  .ms-consent-actions { display: flex; gap: 0.6rem; }
+  .ms-consent button { font: inherit; font-weight: 600; padding: 0.45rem 1.1rem; border-radius: 3px; cursor: pointer; border: 1px solid var(--accent, #c8a24a); }
+  .ms-consent .ms-allow { background: var(--accent, #c8a24a); color: var(--black, #000); }
+  .ms-consent .ms-decline { background: transparent; color: var(--accent, #c8a24a); }
+  @media (max-width: 600px) { .ms-consent { bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)); } }
+</style>
+<script nonce="<%= nonce %>">
+  (function () {
+    var fromAd = false, choice = '';
+    try {
+      var q = new URLSearchParams(location.search);
+      if (q.has('msclkid') || /^(bing|microsoft)$/i.test(q.get('utm_source') || '')) {
+        sessionStorage.setItem('arrFromMicrosoftAd', '1');
+      }
+      fromAd = sessionStorage.getItem('arrFromMicrosoftAd') === '1';
+    } catch (e) {}
+    try { choice = localStorage.getItem('arrMicrosoftConsent') || ''; } catch (e) {}
+    if (!fromAd && choice !== 'granted') return;
+
+    window.uetq = window.uetq || [];
+    window.uetq.push('consent', 'default', { ad_storage: choice === 'granted' ? 'granted' : 'denied' });
+    (function(w, d, t, u, o) { w[u] = w[u] || [], o.ts = (new Date).getTime(); var n = d.createElement(t); n.src = "https://bat.bing.net/bat.js?ti=" + o.ti + ("uetq" != u ? "&q=" + u : ""), n.async = 1, n.onload = n.onreadystatechange = function() { var s = this.readyState; s && "loaded" !== s && "complete" !== s || (o.q = w[u], w[u] = new UET(o), w[u].push("pageLoad"), n.onload = n.onreadystatechange = null) }; var i = d.getElementsByTagName(t)[0]; i.parentNode.insertBefore(n, i); })(window, document, "script", "uetq", { ti: "<%= microsoftUetTagId %>" });
+
+    if (choice) return;
+    function remember(value) {
+      try { localStorage.setItem('arrMicrosoftConsent', value); } catch (e) {}
+      if (value === 'granted') { try { window.uetq.push('consent', 'update', { ad_storage: 'granted' }); } catch (e) {} }
+    }
+    function showChoice() {
+      if (!document.body || document.querySelector('.ms-consent')) return;
+      var bar = document.createElement('div');
+      bar.className = 'ms-consent';
+      bar.setAttribute('role', 'region');
+      bar.setAttribute('aria-label', 'Microsoft advertising cookie');
+      bar.innerHTML = '<p>You came here from a Microsoft advert. Can Microsoft set a cookie so we can tell whether the advert led to an enquiry? <a href="/privacy">More about this</a></p>' +
+        '<div class="ms-consent-actions"><button type="button" class="ms-allow">Allow</button><button type="button" class="ms-decline">Decline</button></div>';
+      bar.querySelector('.ms-allow').addEventListener('click', function () { remember('granted'); bar.remove(); });
+      bar.querySelector('.ms-decline').addEventListener('click', function () { remember('denied'); bar.remove(); });
+      document.body.appendChild(bar);
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', showChoice);
+    else showChoice();
+  })();
+</script>
+<% } %><%# Microsoft Advertising UET tag (12/10/2026, Tom's decision; Microsoft
+    goal "Contact enquiry", id 72585237: custom event action
+    contact_form_submit, category contact, counted once, no value).
+
+    Who it reaches, deliberately narrow: the tag loads ONLY for a visit that
+    arrived from a Microsoft advert (msclkid, which Microsoft's auto-tagging
+    adds, or utm_source bing/microsoft; remembered for the visit in
+    sessionStorage) or for a browser that has already said Allow. Everyone
+    else sends Microsoft nothing. It is not a site-wide cookie banner, so the
+    30-day contact form test that started on 11/10/2026 is untouched for
+    Google and organic visitors.
+
+    Consent: Microsoft enforces UET consent mode for UK visitors, so the tag
+    starts with ad_storage denied (no Microsoft advertising cookie) and a
+    small Allow / Decline choice asks the Microsoft visitor once; the answer
+    is remembered in localStorage. Allow updates consent to granted. Decline
+    keeps the tag cookieless. The choice covers Microsoft only and says so;
+    it does not claim to control the Google, Meta or Clarity tags.
+
+    The conversion event itself is NOT here: it fires only on /thank-you
+    after a stored enquiry, inside the same once-per-token guard as the
+    Google Ads Contact conversion (views/thank-you.ejs). A page visit, a
+    button click or a failed submission never sends it.
+
+    Renders only when MICROSOFT_UET_TAG_ID is set (server.js validates it to
+    digits and puts it in app.locals). Microsoft's own snippet as its UET
+    tag page gave it on 12/10/2026 (loader on bat.bing.net), with the nonce
+    the strict CSP needs. enableAutoSpaTracking is left out on purpose: this
+    is not a single-page app, and /thank-you rewrites its own address with
+    history.replaceState, which that option would report as a second page. Styles are
+    classes in a nonced block because the CSP refuses inline style
+    attributes. Included from google-tag.ejs, so every public page and never
+    Scott or the Workspace. test/microsoftUet.test.js. %>

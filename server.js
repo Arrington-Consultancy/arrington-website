@@ -124,6 +124,19 @@ console.log('Meta pixel: ' + (app.locals.metaPixelId
   ? 'pixel id set (' + app.locals.metaPixelId.length + ' digits); PageView on public pages, Lead on /thank-you'
   : (metaPixelId ? 'META_PIXEL_ID is set but is not a valid pixel id; the pixel is OFF' : 'not configured; no pixel script, no Facebook CSP hosts')));
 
+// Microsoft Advertising UET tag, added 12/10/2026 on Tom's decision (goal
+// "Contact enquiry", custom event contact_form_submit / contact). Same shape
+// as Clarity and the Meta pixel: gated entirely on MICROSOFT_UET_TAG_ID (a
+// public identifier, validated to digits), rendered by
+// views/partials/microsoft-uet.ejs from the Google tag partial. The tag
+// itself loads only for visits from a Microsoft advert or a browser that
+// has said Allow; the conversion fires only on /thank-you.
+const microsoftUetTagId = (process.env.MICROSOFT_UET_TAG_ID || '').trim();
+app.locals.microsoftUetTagId = /^[0-9]{5,12}$/.test(microsoftUetTagId) ? microsoftUetTagId : '';
+console.log('Microsoft UET: ' + (app.locals.microsoftUetTagId
+  ? 'tag id set (' + app.locals.microsoftUetTagId.length + ' digits); loads for Microsoft ad visits, contact_form_submit on /thank-you'
+  : (microsoftUetTagId ? 'MICROSOFT_UET_TAG_ID is set but is not a valid tag id; UET is OFF' : 'not configured; no UET script, no bat.bing CSP hosts')));
+
 // Fail fast if SESSION_SECRET is missing in production — we never want to
 // fall back to a hardcoded dev secret on the real domain.
 if (isProd && !process.env.SESSION_SECRET) {
@@ -262,7 +275,11 @@ app.use(helmet({
         ...(app.locals.clarityProjectId ? ['https://www.clarity.ms', 'https://scripts.clarity.ms'] : []),
         // Meta pixel: fbevents.js and its per-pixel config both come from
         // connect.facebook.net. Gated on the pixel id like Clarity.
-        ...(app.locals.metaPixelId ? ['https://connect.facebook.net'] : [])
+        ...(app.locals.metaPixelId ? ['https://connect.facebook.net'] : []),
+        // Microsoft UET loader (Microsoft's current snippet loads it from
+        // bat.bing.net; bat.bing.com kept for the older loader address).
+        // Gated on the tag id like the Meta pixel.
+        ...(app.locals.microsoftUetTagId ? ['https://bat.bing.net', 'https://bat.bing.com'] : [])
       ],
       // Google Ads conversion and remarketing endpoints are sent as pixels or
       // beacons, so they need img-src/connect-src and nothing else. These hosts
@@ -286,7 +303,9 @@ app.use(helmet({
         'https://lh3.googleusercontent.com',
         ...(app.locals.clarityProjectId ? ['https://*.clarity.ms', 'https://c.bing.com'] : []),
         // Meta pixel events are sent as an image request to www.facebook.com/tr.
-        ...(app.locals.metaPixelId ? ['https://www.facebook.com'] : [])
+        ...(app.locals.metaPixelId ? ['https://www.facebook.com'] : []),
+        // Microsoft UET hits go to bat.bing.net and bat.bing.com.
+        ...(app.locals.microsoftUetTagId ? ['https://bat.bing.com', 'https://bat.bing.net'] : [])
       ],
       connectSrc: [
         "'self'",
@@ -309,7 +328,9 @@ app.use(helmet({
         // *.clarity.ms and links the session to Bing's cookie via c.bing.com.
         ...(app.locals.clarityProjectId ? ['https://*.clarity.ms', 'https://c.bing.com'] : []),
         // Meta pixel falls back to fetch/sendBeacon to www.facebook.com/tr.
-        ...(app.locals.metaPixelId ? ['https://www.facebook.com'] : [])
+        ...(app.locals.metaPixelId ? ['https://www.facebook.com'] : []),
+        // Microsoft UET hits go to bat.bing.net and bat.bing.com.
+        ...(app.locals.microsoftUetTagId ? ['https://bat.bing.com', 'https://bat.bing.net'] : [])
       ],
       frameSrc: [
         "'self'",
