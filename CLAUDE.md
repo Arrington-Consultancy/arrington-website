@@ -7361,6 +7361,21 @@ The Contact tag text and the redirect are unchanged. Verified locally on a
 fresh database over real HTTP and in Chromium (one conversion on the first
 render, none on a replay in the same or a new browser, zero CSP violations).
 
+**Live 13/10/2026:** commit `838991b`, serving deployment `14951aec` (twin
+`21eed1ae` REMOVED), boot line "Session secret: set (64 chars), not the
+development value", `contact_conversion_claims` created by the seed. Tag
+audit run `20261013T053703Z-fix-brief-live` (`scripts/tagAudit.js` gained
+these checks, third parties blocked in each): a tagged arrival replaced an
+untagged first page and stayed for the next page; the Clarity label was set
+by a Google ad arrival and cleared by a Microsoft one; `/login` carried no
+Clarity (`/privacy` did, the control); one TEST TRACKING enquiry pushed one
+Google Ads conversion on the first render (Ads and Meta blocked, so nothing
+was recorded in Ads), and its own `/thank-you?c=` link reopened in a new
+browser carried no snippet and pushed nothing. Page inspection run
+`20261013T053604Z-fix-brief-pages`: `/`, `/login`, `/thank-you`, `/privacy`
+all 200 at desktop and phone, no page errors, Clarity sending on all but
+`/login`.
+
 ## Start-up idea review page: hidden Google Ads landing page (06/10/2026)
 
 `/start-up-idea-review` is the landing page for Tom's start-up test, decided
