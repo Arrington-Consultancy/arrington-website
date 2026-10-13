@@ -7695,6 +7695,56 @@ and Tom's decisions, 7 October 2026", id
   is STAGING. A push to main deploys both, so read production logs with the
   production environment id, or you are reading staging's database.
 
+## Taxi and private hire websites page (LIVE 13/10/2026)
+
+`/taxi-and-private-hire-operators/websites` (`routes/taxiWebsites.js`,
+`views/taxi-websites.ejs`, `test/taxiWebsitesPage.test.js`): the landing page
+for the Taxi websites ad group (`206521987328`), backing its live headline
+"Booking Linked To Dispatch". Built from the Google Ads worker's brief, this
+worker's proposal (Drive id `1hTCW6dmWUBfG3a6PYHWBNMnNAGOPsx1wgGmQroizs7I`) and
+Tom's approval with changes (Drive id
+`10qIzroDwFC2kshoWt1Pcu5HeraHcdKtLLWm2irveJXY`), all of 13 October 2026.
+
+- **What £999 covers (Tom's decision):** the website, web bookings that land
+  in the operator's dispatch system, and an email booking check, none of it
+  extra. Price read from `lib/whereToStartOffers.js`.
+- **Systems:** iCabbi, Autocab and Cordic named, plus "other systems with a
+  booking API"; never "any system". The link is promised only "where your
+  system has a booking API and you can arrange API access with your
+  provider", and "Any charge your provider makes for API access is between
+  you and them." Autocab and Cordic publish no third-party access terms
+  (checked 13/10/2026), which is why the qualifier matters. Tom's "30 minutes"
+  for his part is deliberately not on the page.
+- **The email check is described only as Tom described it:** booking requests
+  arriving by email are checked against the jobs in the dispatch system, and
+  one never keyed in, or keyed in wrong, is flagged. No email systems, alert
+  channels or automatic correction may be named without Tom. The widget line
+  ("If your provider's own booking widget already does what you need, we'll
+  say so.") sits beside it. Nothing about fare quotes, card payment, booking
+  tracking, hosting or upkeep, and no operator named. The Handoff Log of
+  12/10/2026 recorded the iCabbi connector as not built from this
+  repository; Tom confirmed on 13/10/2026 that the parts are built and need
+  linking per operator.
+- **"The last eight or so on iCabbi"** was checked against APPROVED 03 before
+  going live, as the approval required ("used iCabbi for around 8 years before
+  selling the business").
+- **Main action is the footer enquiry form** (per-page heading "Tell us about
+  your firm"); no checkout, conversion, lead kind or table. Indexable, in
+  `sitemap.xml`, not in the menu; breadcrumb Home, taxi page, this page
+  (`page-schema.ejs` gained an optional `schemaParent`).
+- **The taxi page changed in two places only:** a link under "Websites for
+  operators", and its website card now goes here instead of
+  `/where-to-start/website-build` (`TAXI_OFFER_HREF` in
+  `routes/taxiOperators.js`). The payment page itself is untouched.
+- **Live:** commit `81a7de3`, serving deployment `78f99154` (twin `aca263ba`
+  REMOVED). Inspection run `20261013T062738Z-taxi-websites-live`: 200 at
+  desktop and iPhone 13, canonical correct, in the sitemap, no dashes, no
+  overflow, no page errors, BreadcrumbList and Service structured data, form
+  2.6 screens down on desktop and 4.9 on a phone; the taxi page still 200
+  with the new link in its live text.
+- **02 Commercial Position** does not yet record that the £999 includes the
+  dispatch link and email check for taxi operators. That record is Tom's.
+
 ## Sale readiness page
 
 `/get-your-business-ready-to-sell` is a campaign landing page for social and
