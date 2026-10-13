@@ -8045,7 +8045,7 @@ PROPOSAL - SEO sweep: what was fixed and what needs Tom, 11 October 2026" (id
   request indexing in Search Console. Read the Search Console effect of the
   sweep in about four weeks, not before.
 
-## Privacy page: business introductions (merged 13/10/2026)
+## Privacy page: business introductions (LIVE 13/10/2026)
 
 `views/privacy.ejs` gained a section, "If we contacted you first"
 (`#introductions`), covering the business contact details the Opportunity
@@ -8067,6 +8067,15 @@ the list has to exist before the next outreach email goes out. Its first
 messages should also name where the address came from and link to
 `/privacy#introductions` (Article 14 timing); that wording is the Opportunity
 Builder's, under the Tom Voice authority, not in this repository.
+Live: serving deployment `a88b3448` (twin `4c56368a` REMOVED); inspection run
+`20261013T190657Z-privacy-introductions-live`, 200 at desktop and phone, new
+h1 and section present, no dashes, no overflow, no errors. The same evening,
+on Tom's instruction ("Put in handover for codex so it can cold call"), the
+outreach rules the page implies were written into the Opportunity Builder
+handoff as PRIVACY AND OUTREACH RULES - 13 OCTOBER 2026 (do-not-contact tab in
+the Lead Tracker, monthly 12-month deletion, source plus privacy link in first
+messages, Companies House check before email, TPS and CTPS screening before
+Tom phones anyone), with a pointer under its CURRENT OBJECTIVE.
 
 ## Writing and reviewing website copy
 
