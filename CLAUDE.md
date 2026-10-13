@@ -8045,7 +8045,7 @@ PROPOSAL - SEO sweep: what was fixed and what needs Tom, 11 October 2026" (id
   request indexing in Search Console. Read the Search Console effect of the
   sweep in about four weeks, not before.
 
-## Privacy page: business introductions (PR open, not merged, 13/10/2026)
+## Privacy page: business introductions (merged 13/10/2026)
 
 `views/privacy.ejs` gained a section, "If we contacted you first"
 (`#introductions`), covering the business contact details the Opportunity
@@ -8058,9 +8058,15 @@ names legitimate interests as the lawful basis, explains that UK GDPR covers
 work emails and that PECR treats limited companies and LLPs differently from
 sole traders and ordinary partnerships, and points complaints to the ICO.
 `test/privacyIntroductions.test.js` pins all of it, including that 12 months
-is the only period on the page. The page must not go live until the
-Opportunity Builder actually runs the 12-month deletion and the
-do-not-contact list, because the page promises both.
+is the only period on the page. Merged on Tom's instruction ("Merge") as PR
+#213, merge `a608773`, which also took his approval of the four points the PR
+flagged (legitimate interests, Companies House as a source, the widened "we do
+not sell" line, the ICO line). The page promises a 12-month deletion and a
+do-not-contact list; Tom is setting both up with the Opportunity Builder, and
+the list has to exist before the next outreach email goes out. Its first
+messages should also name where the address came from and link to
+`/privacy#introductions` (Article 14 timing); that wording is the Opportunity
+Builder's, under the Tom Voice authority, not in this repository.
 
 ## Writing and reviewing website copy
 
