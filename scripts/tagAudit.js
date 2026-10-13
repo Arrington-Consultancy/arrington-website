@@ -19,6 +19,14 @@
 // Google Ads and Meta request is aborted in the browser, so the test can
 // never record an Ads or Meta conversion. It still stores a lead row and
 // emails Tom, which is the point: it is a real submission, plainly marked.
+// It then opens that enquiry's own /thank-you?c= link again in a fresh
+// browser, which must carry no conversion (fix brief of 12/10/2026, item 5).
+//
+// Three further steps check the site's own scripts with EVERY third-party
+// request blocked, so nothing fake reaches Google, Microsoft or Meta:
+// attribution replaced by a later tagged arrival (item 3), the Clarity
+// google_ads label cleared by a Microsoft arrival, and no Clarity on the
+// login page (item 4).
 
 const fs = require('fs');
 const path = require('path');
@@ -60,7 +68,12 @@ async function step(browser, name, fn, opts = {}) {
   const hits = [];
   const blocked = [];
   const scripts = [];
-  if (opts.blockAdsAndMeta || opts.blockMeta) {
+  if (opts.blockThirdParty) {
+    await ctx.route((url) => url.hostname !== new URL(BASE).hostname, (route) => {
+      blocked.push(route.request().url().slice(0, 140));
+      route.abort();
+    });
+  } else if (opts.blockAdsAndMeta || opts.blockMeta) {
     const pattern = opts.blockAdsAndMeta
       ? /googleadservices\.com|googleads\.g\.doubleclick\.net|google\.com\/(pagead|ccm)|facebook\.(com|net)/
       : /facebook\.(com|net)/;
@@ -101,6 +114,18 @@ async function step(browser, name, fn, opts = {}) {
   for (const h of hits) summary[h.en] = (summary[h.en] || 0) + 1;
   return { name, eventCounts: summary, generate_lead: hits.filter((h) => h.en === 'generate_lead'), adsConversions, hits, scripts, blocked: blocked.length, ...(extra || {}) };
 }
+
+// What the page itself asked for, whatever the network then did: Google Ads
+// Contact conversions in dataLayer, Microsoft goal events in uetq.
+async function inPageConversions(page) {
+  return page.evaluate((label) => {
+    const ads = (window.dataLayer || []).filter((e) => e && e[0] === 'event' && e[1] === 'conversion' && e[2] && String(e[2].send_to || '').includes(label)).length;
+    const ms = Array.isArray(window.uetq) ? window.uetq.filter((x) => x === 'contact_form_submit').length : 0;
+    return 'Google Ads ' + ads + ', Microsoft ' + ms;
+  }, CONTACT_LABEL);
+}
+
+let tokenUrl = '';
 
 async function scrollThrough(page) {
   const h = await page.evaluate(() => document.documentElement.scrollHeight);
@@ -145,6 +170,55 @@ async function scrollThrough(page) {
     return { tapped: await tel.getAttribute('href') ? 'tel link' : 'none' };
   }));
 
+  // Item 3: an untagged first page, then a tagged arrival later in the visit.
+  results.push(await step(browser, 'attribution: untagged first page, tagged arrival later (third parties blocked)', async (page) => {
+    const attr = async () => {
+      await page.waitForFunction(() => typeof window.__leadAttribution === 'function', null, { timeout: 15000 });
+      return page.evaluate(() => window.__leadAttribution());
+    };
+    await page.goto(BASE + '/', { waitUntil: 'load' });
+    const first = await attr();
+    await page.goto(BASE + '/product-guide?utm_source=tag_audit&utm_medium=test&utm_campaign=not-a-real-visit', { waitUntil: 'load' });
+    const later = await attr();
+    await page.goto(BASE + '/', { waitUntil: 'load' });
+    const after = await attr();
+    return { checks: [
+      'first page stored: ' + first.landing_page + ' (utm_source ' + (first.utm_source || 'none') + ')',
+      'after the tagged arrival: ' + later.landing_page + ' (utm_source ' + (later.utm_source || 'none') + ')',
+      'next untagged page keeps: ' + after.landing_page
+    ] };
+  }, { blockThirdParty: true }));
+
+  // Item 4: the Clarity google_ads label, then a Microsoft arrival clears it.
+  results.push(await step(browser, 'Clarity label: Google ad arrival, then a Microsoft ad arrival (third parties blocked)', async (page) => {
+    const read = () => page.evaluate(() => ({
+      flag: sessionStorage.getItem('arrPaidGoogle'),
+      label: ((window.clarity && window.clarity.q) || []).some((a) => a[0] === 'set' && a[1] === 'traffic' && a[2] === 'google_ads')
+    }));
+    await page.goto(BASE + '/?utm_source=google&utm_medium=cpc&utm_campaign=tag-audit-not-a-real-visit', { waitUntil: 'domcontentloaded' });
+    const g = await read();
+    await page.goto(BASE + '/product-guide?utm_source=bing&utm_medium=cpc&utm_campaign=tag-audit-not-a-real-visit', { waitUntil: 'domcontentloaded' });
+    const m = await read();
+    await page.goto(BASE + '/privacy', { waitUntil: 'domcontentloaded' });
+    const n = await read();
+    return { checks: [
+      'after the Google ad arrival: flag ' + g.flag + ', google_ads label sent ' + g.label,
+      'after the Microsoft ad arrival: flag ' + m.flag + ', google_ads label sent ' + m.label,
+      'next page: flag ' + n.flag + ', google_ads label sent ' + n.label
+    ] };
+  }, { blockThirdParty: true }));
+
+  // Item 4: the staff login page carries no Clarity.
+  results.push(await step(browser, 'login page: no Clarity (third parties blocked)', async (page) => {
+    const res = await page.goto(BASE + '/login', { waitUntil: 'domcontentloaded' });
+    const html = await res.text();
+    const privacy = await (await page.goto(BASE + '/privacy', { waitUntil: 'domcontentloaded' })).text();
+    return { checks: [
+      '/login status ' + res.status() + ', Clarity tag in HTML: ' + html.includes('clarity.ms/tag') + ', Google tag in HTML: ' + html.includes("gtag('config', 'AW-18129914078')"),
+      '/privacy Clarity tag in HTML (control): ' + privacy.includes('clarity.ms/tag')
+    ] };
+  }, { blockThirdParty: true }));
+
   if (SUBMIT) {
     results.push(await step(browser, 'ONE test enquiry from the start-up page (TEST TRACKING), ' + (ADS ? 'Google Ads allowed, Meta blocked' : 'Ads and Meta requests blocked'), async (page) => {
       await page.goto(BASE + START_UP, { waitUntil: 'networkidle' });
@@ -156,13 +230,32 @@ async function scrollThrough(page) {
       await page.waitForTimeout(6000);
       let finalUrl = '';
       try {
-        await Promise.all([page.waitForURL(/thank-you/, { timeout: 20000 }), page.click('#leadForm button[type="submit"]')]);
-        finalUrl = page.url().replace(/c=[^&]+/, 'c=<token>');
+        const [resp] = await Promise.all([
+          page.waitForResponse((r) => /\/thank-you\?c=/.test(r.url()), { timeout: 20000 }),
+          page.click('#leadForm button[type="submit"]')
+        ]);
+        tokenUrl = resp.url();
+        await page.waitForLoadState('domcontentloaded');
+        await page.waitForTimeout(3000);
+        finalUrl = tokenUrl.replace(/c=[^&]+/, 'c=<token>');
       } catch (e) {
         finalUrl = 'did not reach /thank-you: ' + (await page.textContent('#leadFormStatus').catch(() => '?'));
       }
-      return { finalUrl };
+      return { finalUrl, checks: tokenUrl ? ['conversion events pushed by the page on the first render: ' + await inPageConversions(page)] : [] };
     }, ADS ? { blockMeta: true } : { blockAdsAndMeta: true }));
+
+    // Item 5: the same link again, in a fresh browser (a new session).
+    if (tokenUrl) {
+      results.push(await step(browser, 'replay of that /thank-you?c=<token> link in a new browser (Ads and Meta requests blocked)', async (page) => {
+        const res = await page.goto(tokenUrl, { waitUntil: 'domcontentloaded' });
+        const html = await res.text();
+        await page.waitForTimeout(3000);
+        return { checks: [
+          'status ' + res.status() + ', conversion snippet in HTML: ' + html.includes(CONTACT_LABEL),
+          'conversion events pushed by the page: ' + await inPageConversions(page)
+        ] };
+      }, { blockAdsAndMeta: true }));
+    }
   }
 
   await browser.close();
@@ -180,6 +273,7 @@ async function scrollThrough(page) {
     if (r.finalUrl) md.push('- after submit: ' + r.finalUrl);
     if (r.blocked) md.push('- Ads/Meta requests blocked: ' + r.blocked);
     if (r.note) md.push('- note: ' + r.note);
+    for (const c of r.checks || []) md.push('- ' + c);
     for (const s of r.scripts) md.push('- Google tag script ' + s.id + ': ' + s.bytes + ' bytes, mentions of generate_lead: ' + s.generateLeadMentions);
     md.push('');
   }
