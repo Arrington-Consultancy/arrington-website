@@ -7126,6 +7126,29 @@ The review link for new asks is
 Windsor can also publish posts, so a Useful Thinking article can be posted
 to the listing with a LEARN_MORE button once Tom wants that.
 
+## Google Cloud billing (13/10/2026)
+
+Tom's Google Cloud free trial (started 21/07/2026, the handover day, when
+Google created the Cloud organisation for arringtonconsultancy.com) was
+upgraded to a paid billing account by Tom on 13/10/2026, a week before it
+would have lapsed. Five projects are linked to it: My Project 40770, My
+First Project, My Project 18893, Arrington Workspace and POC project. Which
+project holds which key is read in the console, not from here.
+
+What depends on it: the live Google reviews (`lib/googleReviews.js`, Places
+API, `GOOGLE_PLACES_API_KEY`, the home page rating line and the Evidence
+reviews) need an active billing account. The Gmail connector and the
+Continue with Google button use free APIs, but their projects may sit on
+the same account, and Google stops every project on a lapsed trial, which
+is why letting it lapse was not chosen. A first answer to Tom said the
+reviews were the only thing affected; that came from a code search and was
+wrong until the inbox was checked. Expected cost at current use is nil
+(Places is called about once a day, well inside its monthly free
+allowance). A budget alert under Billing, Budgets & alerts notifies; it
+does not cap. `GOOGLE_MAPS_API_KEY` is set on production and read by
+nothing. Not affected either way: Workspace mail and Drive, Google Ads,
+GA4, Search Console and the Business Profile, each billed separately.
+
 ## Social media connectors and what they showed (01/10/2026)
 
 Windsor now also reads the Facebook page (`facebook_organic`, account
