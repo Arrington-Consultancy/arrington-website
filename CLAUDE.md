@@ -7144,8 +7144,9 @@ is why letting it lapse was not chosen. A first answer to Tom said the
 reviews were the only thing affected; that came from a code search and was
 wrong until the inbox was checked. Expected cost at current use is nil
 (Places is called about once a day, well inside its monthly free
-allowance). A budget alert under Billing, Budgets & alerts notifies; it
-does not cap. `GOOGLE_MAPS_API_KEY` is set on production and read by
+allowance). Tom set a monthly budget alert the same morning ("billing
+alert", emails at 50%, 90% and 100%, under Billing, Budgets & caps); it
+notifies, it does not cap. `GOOGLE_MAPS_API_KEY` is set on production and read by
 nothing. Not affected either way: Workspace mail and Drive, Google Ads,
 GA4, Search Console and the Business Profile, each billed separately.
 
