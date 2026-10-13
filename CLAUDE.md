@@ -8045,6 +8045,23 @@ PROPOSAL - SEO sweep: what was fixed and what needs Tom, 11 October 2026" (id
   request indexing in Search Console. Read the Search Console effect of the
   sweep in about four weeks, not before.
 
+## Privacy page: business introductions (PR open, not merged, 13/10/2026)
+
+`views/privacy.ejs` gained a section, "If we contacted you first"
+(`#introductions`), covering the business contact details the Opportunity
+Builder uses for one to one outreach. Tom's decisions of 13/10/2026: Hunter is
+a source (already approved in the Opportunity Builder brief, which also bans
+guessed or pattern-built addresses); details of people who do not reply are
+deleted 12 months after the last contact; anyone who asks not to be contacted
+goes on a do-not-contact list holding only their email address. The page also
+names legitimate interests as the lawful basis, explains that UK GDPR covers
+work emails and that PECR treats limited companies and LLPs differently from
+sole traders and ordinary partnerships, and points complaints to the ICO.
+`test/privacyIntroductions.test.js` pins all of it, including that 12 months
+is the only period on the page. The page must not go live until the
+Opportunity Builder actually runs the 12-month deletion and the
+do-not-contact list, because the page promises both.
+
 ## Writing and reviewing website copy
 
 - Where a brief asks for copy but does not contain the underlying commercial
