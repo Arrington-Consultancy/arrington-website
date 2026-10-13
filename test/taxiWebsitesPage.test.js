@@ -65,6 +65,20 @@ test('the hero leads with bookings into dispatch, names the email check, and the
   assert.ok(covers.includes('The link to your dispatch system and the email booking check are part of it, not extras.'));
 });
 
+test('"Built from scratch" sits under the hero, word for word, and the £999 scope is unchanged', () => {
+  const body = renderBody();
+  const s = section(body, 'data-scratch');
+  assert.ok(s.includes('Built from scratch for your firm'));
+  assert.ok(s.includes("No templates. We design the site around your firm, how your customers book and what you want it to say, and if we'd do something differently we'll tell you straight. If there's a site in the trade you rate, we'll take what works about it and build it in your name."), 'the approved paragraph changed');
+  // Directly under the hero, before the dispatch section: a supporting point.
+  const main = body.indexOf('<main>');
+  assert.ok(main < body.indexOf('data-scratch') && body.indexOf('data-scratch') < body.indexOf('data-dispatch'), 'not directly under the hero');
+  assert.ok(!/<div class="tw-section"/.test(body.slice(main, body.indexOf('<div class="tw-section" data-scratch'))), 'another section sits above it');
+  // The brief: no promise without limit, no copying, no "industry leader".
+  assert.ok(!/whatever you want|anything you want|unlimited|copy (?:their|another|it)|industry lead/i.test(s), 'a claim the brief rules out');
+  assert.ok(section(body, 'data-covers').includes('one structured round of changes'), 'the £999 scope changed');
+});
+
 test('the systems promise is kept true: named systems, never "any system", access qualified', () => {
   const body = renderBody();
   const text = visibleText(body);

@@ -7742,6 +7742,15 @@ Tom's approval with changes (Drive id
   overflow, no page errors, BreadcrumbList and Service structured data, form
   2.6 screens down on desktop and 4.9 on a phone; the taxi page still 200
   with the new link in its live text.
+- **"Built from scratch for your firm"** (Google Ads worker's brief of
+  13/10/2026, Drive id `1WxXxK43GSuasIDGJ5SN7UQBu_PJZhNAxa7PKYCDeAQY`, copy
+  approved by Tom as written): a short section directly under the hero,
+  before the dispatch section, word for word from the brief. A supporting
+  point; the page still leads with dispatch and the email check. The brief
+  rules out "bespoke"/"tailored", a promise of design without limit (the
+  £999 scope stays one planning conversation, a first version and one
+  structured round of changes), any suggestion of copying another firm's
+  site, and any "industry leader" claim; the test pins all of it.
 - **02 Commercial Position** does not yet record that the £999 includes the
   dispatch link and email check for taxi operators. That record is Tom's.
 
