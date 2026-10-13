@@ -64,6 +64,11 @@ async function rawHead(url) {
   }
 }
 
+// Analytics and advertising hits our own inspection visits must not send
+// (13/10/2026): GA4 collect, Google Ads remarketing and conversion pings,
+// and the Meta pixel. Clarity and Microsoft UET are not in it, because the
+// report checks that those send.
+const OWN_VISIT_HITS = /google-analytics\.com\/g\/collect|analytics\.google\.com\/g\/collect|stats\.g\.doubleclick\.net|googleads\.g\.doubleclick\.net|googleadservices\.com\/pagead|google\.com\/pagead|google\.co\.uk\/pagead|connect\.facebook\.net|facebook\.com\/tr/;
 const OUT = process.env.OUT_DIR || path.join(process.cwd(), 'qa-out');
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -88,9 +93,15 @@ function slug(p) {
     for (const [size, opts] of SIZES) {
       const ctx = await browser.newContext(opts);
       const page = await ctx.newPage();
+      // Our own inspection visits must not count as visitors: until
+      // 13/10/2026 every run added GA4 sessions, Google Ads remarketing
+      // hits and Meta PageViews, so GA4's "Direct" traffic was largely this
+      // script. Only the hits are dropped; the Google tag still loads.
+      const droppedHits = [];
+      await ctx.route(OWN_VISIT_HITS, (route) => { droppedHits.push(new URL(route.request().url()).hostname); return route.abort(); });
       const consoleErrors = [];
       const pageErrors = [];
-      page.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(m.text().slice(0, 200)); });
+      page.on('console', (m) => { if (m.type() === 'error' && !OWN_VISIT_HITS.test((m.location() || {}).url || '')) consoleErrors.push(m.text().slice(0, 200)); });
       page.on('pageerror', (e) => pageErrors.push(String(e).slice(0, 200)));
       // Requests to Clarity's collect endpoint, so the report shows the tag
       // actually sending recordings rather than merely loading. Added
@@ -106,7 +117,7 @@ function slug(p) {
       page.on('response', (res) => { if (/\/\/bat\.bing\.(net|com)\//.test(res.url())) uetRequests.push(res.url().split('?')[0].replace(/^https:\/\//, '') + ' ' + res.status()); });
       page.on('requestfailed', (req) => { if (/\/\/bat\.bing\.(net|com)\//.test(req.url())) uetRequests.push(req.url().split('?')[0].replace(/^https:\/\//, '') + ' failed'); });
       const url = BASE + p;
-      const r = { path: p, size, url, status: null, finalUrl: null, title: null, h1: null, canonical: null, robotsMeta: null, xRobotsTag: null, selfLinks: null, inSitemap: sitemap.includes('<loc>' + BASE + p + '</loc>'), overflow: null, height: null, dashes: null, consoleErrors, pageErrors, clarityCollect, uetRequests, screenshot: null, topScreenshot: null, error: null };
+      const r = { path: p, size, url, status: null, finalUrl: null, title: null, h1: null, canonical: null, robotsMeta: null, xRobotsTag: null, selfLinks: null, inSitemap: sitemap.includes('<loc>' + BASE + p + '</loc>'), overflow: null, height: null, dashes: null, consoleErrors, pageErrors, clarityCollect, uetRequests, droppedHits, screenshot: null, topScreenshot: null, error: null };
       try {
         const resp = await page.goto(url, { waitUntil: 'load', timeout: 60000 });
         r.status = resp ? resp.status() : null;
@@ -257,6 +268,7 @@ function slug(p) {
     lines.push(`- Enquiry form starts: ${r.form ? `${r.form.top}px, ${r.form.screens} screen heights down (viewport ${r.form.viewport}px)` : 'no form found'}`);
     lines.push(`- First primary button: ${r.heroCta ? `"${r.heroCta.text}" -> ${r.heroCta.href}` : 'none'}`);
     lines.push(`- PDF email box open without a click: ${r.docModalOpen === null ? 'no box on the page' : r.docModalOpen ? 'YES' : 'no'}; PDF request buttons on the page: ${r.docRequestButtons}`);
+    lines.push(`- Own-visit analytics hits dropped: ${r.droppedHits.length}${r.droppedHits.length ? ' (' + [...new Set(r.droppedHits)].join(', ') + ')' : ''}`);
     lines.push(`- Microsoft Clarity: ${r.clarity || 'not loaded'}; data sent to Clarity: ${r.clarityCollect.length} request(s)${r.clarityCollect.length ? ' (' + r.clarityCollect.join(', ') + ')' : ''}`);
     if (r.uet) lines.push(`- Microsoft UET: ${r.uet.state}${r.uet.loader ? ', loader ' + r.uet.loader : ''}; requests to Microsoft: ${r.uetRequests.length}${r.uetRequests.length ? ' (' + [...new Set(r.uetRequests)].join(', ') + ')' : ''}; Allow / Decline bar: ${r.uet.bar ? 'showing' : 'not showing'}`);
     if (r.seo) {
