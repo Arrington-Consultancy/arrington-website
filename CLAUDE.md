@@ -6224,6 +6224,19 @@ adding `www.arringtonconsultancy.com` to the environment's allowed domains
 would let the sandbox's own Playwright load production directly; the
 workflow works either way.
 
+**Inspection visits no longer count as visitors (13/10/2026).** Until then
+every run sent GA4 sessions, Google Ads remarketing hits and Meta
+PageViews, so GA4's "Direct" traffic was largely our own runs (159 Direct
+homepage sessions in 2 to 12 October, 14% engaged; city pages at 0 engaged
+and 2 seconds). `scripts/productionQa.js` now aborts those hits
+(`OWN_VISIT_HITS`) and reports `Own-visit analytics hits dropped: N` per
+page (13 per page view on run `20261013T092549Z-own-visits-dropped-2`).
+Clarity and UET still send, because the report checks them. GA4 before
+13/10/2026 still carries the pollution, and the tag audit
+(`scripts/tagAudit.js`) still sends GA4 hits on purpose; keep its runs
+rare. Its `submit=1` test enquiries also count as Paid Search in GA4
+(they carry `utm_medium=cpc`).
+
 ## Business Consultant Cornwall page (01/10/2026)
 
 `/business-consultant-cornwall` is a public organic-search page, built on
