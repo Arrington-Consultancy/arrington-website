@@ -200,6 +200,9 @@
         <div class="tx-section">
             <h2>Websites for operators</h2>
             <p>A taxi website has one job, which is getting the booking. We build yours around the way your customers book, whether that's a phone call, your app or online, so they find your number or your app straight away and book with you rather than the next firm on the list.</p>
+            <%# The one change to this page for the taxi websites page (Google
+                Ads worker's brief and Tom's approval, 13/10/2026). %>
+            <p data-taxi-websites-link><a class="tx-link" href="/taxi-and-private-hire-operators/websites">See how a booking on your website goes straight into your dispatch system</a></p>
         </div>
 
         <%# AI is introduced only where it solves a real problem, never as the
@@ -229,7 +232,7 @@
                     <h3><%= o.name %></h3>
                     <span class="tx-offer-price"><%= '£' + (o.pricePence / 100).toLocaleString('en-GB') %></span>
                     <p class="tx-offer-lead"><%= o.taxiLead %></p>
-                    <p class="tx-offer-more"><a class="tx-link" href="<%= o.path %>">See the <%= o.name %></a></p>
+                    <p class="tx-offer-more"><a class="tx-link" href="<%= o.href %>">See the <%= o.name %></a></p>
                 </li>
                 <% }) %>
             </ul>

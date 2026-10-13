@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <%- include('partials/google-tag') %>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taxi Websites That Book Into Your Dispatch System | Arrington</title>
+    <%# INDEXABLE (13/10/2026): in the sitemap, no noindex, not in the main
+        navigation. The Taxi websites ad group lands here. Copy approved by
+        Tom on 13/10/2026 (see routes/taxiWebsites.js for what it may and may
+        not say). %>
+    <meta name="description" content="A £999 taxi and private hire website where online bookings go straight into iCabbi, Autocab, Cordic or another system with a booking API.">
+    <link rel="canonical" href="https://www.arringtonconsultancy.com/taxi-and-private-hire-operators/websites">
+    <%- include('partials/page-schema', { schemaName: 'Taxi and private hire websites', schemaPath: '/taxi-and-private-hire-operators/websites', schemaParent: { name: 'Taxi and private hire operators', path: '/taxi-and-private-hire-operators' }, schemaService: 'Taxi and private hire websites with bookings into the dispatch system' }) %>
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Taxi websites that book into your dispatch system | Arrington Consultancy">
+    <meta property="og:description" content="A £999 taxi and private hire website where online bookings go straight into your dispatch system.">
+    <meta property="og:url" content="https://www.arringtonconsultancy.com/taxi-and-private-hire-operators/websites">
+    <meta property="og:image" content="https://www.arringtonconsultancy.com/img/logo">
+    <meta name="csrf-token" content="<%= csrfToken %>">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Poppins:wght@500;600&display=swap" rel="stylesheet">
+    <style nonce="<%= nonce %>">
+        :root {
+            <% for (const [prop, val] of Object.entries(theme.vars)) { %>
+            <%= prop %>: <%= val %>;
+            <% } %>
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: 'DM Sans', sans-serif; background: var(--black); color: var(--text); line-height: 1.6; }
+        <%- include('partials/site-chrome-styles') %>
+
+        h1, h2, h3 { font-family: 'Poppins', 'DM Sans', sans-serif; font-weight: 600; color: var(--text-bright); line-height: 1.2; margin: 0; }
+        p { color: var(--text); margin: 0 0 1.2rem; }
+
+        .btn { display: inline-block; font-family: 'DM Sans', sans-serif; font-size: 0.92rem; font-weight: 600; padding: 0.6rem 1.5rem; border-radius: 3px; text-decoration: none; cursor: pointer; border: 1px solid transparent; }
+        .btn-primary { background: var(--accent); color: var(--black); border-color: var(--accent); }
+        .btn-primary:hover, .btn-primary:focus-visible { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+        main { padding: 0 0 5rem; }
+        .tw-wrap { max-width: 700px; margin: 0 auto; padding: 0 1.5rem; }
+
+        /* HERO: the taxi page's treatment and the same real photo of Tom, so
+           an operator arriving from the ad sees the same firm as the taxi
+           page. No generated or stock images. */
+        .tw-hero { position: relative; overflow: hidden; background: var(--black); display: flex; align-items: center; min-height: 640px; padding: calc(var(--site-chrome) + 3.5rem) 1.5rem 4rem; }
+        .tw-hero-photo { position: absolute; top: var(--site-chrome); right: 0; bottom: 0; left: 0; margin: 0; }
+        .tw-hero-photo img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 72% 12%; }
+        .tw-hero-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, var(--black) 0%, var(--black) 28%, color-mix(in srgb, var(--black) 60%, transparent) 52%, color-mix(in srgb, var(--black) 10%, transparent) 78%, transparent 100%), linear-gradient(0deg, var(--black) 0%, transparent 22%); }
+        .tw-hero-inner { position: relative; z-index: 1; width: 100%; max-width: 1100px; margin: 0 auto; }
+        .tw-hero-text { max-width: 600px; }
+
+        .tw-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; color: var(--accent); margin-bottom: 1rem; display: block; }
+        h1 { font-size: clamp(1.6rem, 4.6vw, 2.3rem); margin-bottom: 1.2rem; text-wrap: balance; }
+        .tw-lede { font-size: 1.12rem; color: var(--text-bright); margin-bottom: 1.6rem; max-width: 62ch; }
+        .tw-systems { margin: 1rem 0 0; font-size: 0.9rem; color: var(--text-muted); }
+
+        .tw-section { margin-top: 3.25rem; }
+        .tw-section > h2 { font-size: 1.4rem; margin-bottom: 0.9rem; }
+        .tw-section > p { max-width: 62ch; }
+
+        .tw-cred { margin-top: 3.25rem; padding: 1.5rem 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+        .tw-cred h2 { font-size: 1.4rem; margin-bottom: 0.9rem; }
+        .tw-cred p { max-width: 62ch; }
+        .tw-cred p:last-child { margin-bottom: 0; }
+        .tw-indep { color: var(--text-bright); font-weight: 500; }
+
+        .tw-link { color: var(--accent); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); padding-bottom: 2px; }
+        .tw-link:hover, .tw-link:focus-visible { border-bottom-color: var(--accent); }
+
+        /* WHAT THE £999 COVERS: scope, which is what the paper surface is
+           reserved for. The price is read from the offer catalogue. */
+        .tw-band { margin-top: 3.5rem; padding: 3.25rem 0 3.5rem; }
+        .tw-band .tw-section { margin-top: 0; }
+        .tw-price { font-family: 'Poppins', 'DM Sans', sans-serif; font-size: 2.2rem; font-weight: 600; color: var(--text-bright); margin: 0 0 0.6rem; font-variant-numeric: tabular-nums; }
+        .tw-actions { margin: 1.6rem 0 0; }
+        .tw-also { margin: 2.25rem 0 0; font-size: 0.97rem; }
+
+        @media (max-width: 760px) {
+            .tw-hero { display: block; min-height: 0; padding: var(--site-chrome) 0 0; }
+            .tw-hero-photo { display: block; position: relative; top: auto; height: 38vw; max-height: 240px; }
+            .tw-hero-photo img { object-position: 66% 6%; }
+            .tw-hero-photo::after { background: linear-gradient(0deg, var(--black) 0%, color-mix(in srgb, var(--black) 40%, transparent) 30%, transparent 60%); }
+            .tw-hero-inner { padding: 0 1.5rem; margin-top: -1.5rem; }
+            h1 { margin-bottom: 1rem; }
+            .tw-lede { font-size: 1.02rem; margin-bottom: 1.25rem; }
+            .tw-section { margin-top: 2.1rem; }
+            .tw-cred { margin-top: 2.1rem; padding: 1.25rem 0; }
+            .tw-band { margin-top: 2.5rem; padding: 2.5rem 0 2.75rem; }
+            .tw-actions .btn, .tw-hero-actions .btn { width: 100%; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <%- include('partials/site-header', { currentPage: { slug: 'taxi-and-private-hire-operators' }, navPages, canEdit: false, content, pageContact }) %>
+
+    <%# HERO. The reason to choose us over a web agency leads (bookings into
+        dispatch), and the email check is named before any scrolling (approval
+        of 13/10/2026, change 1). %>
+    <header class="tw-hero">
+        <picture class="tw-hero-photo">
+            <source srcset="/img/startup/tom-at-desk.webp" type="image/webp">
+            <img src="/img/startup/tom-at-desk.jpg" alt="Tom Arrington at his desk" width="1672" height="941" fetchpriority="high">
+        </picture>
+        <div class="tw-hero-inner">
+            <div class="tw-hero-text">
+                <span class="tw-label">Taxi and private hire websites</span>
+                <h1>A taxi website that sends bookings straight into your dispatch system</h1>
+                <p class="tw-lede" data-hero-lede>We build websites for taxi and private hire operators where a booking made online lands in your dispatch system like any other job, so nobody in the office has to key it in. We also set up a check on the bookings that still come in by email. <%= '£' + (websiteOffer.pricePence / 100).toLocaleString('en-GB') %>, with both included.</p>
+                <div class="tw-hero-actions">
+                    <a href="#conversation" class="btn btn-primary">Tell us about your firm</a>
+                </div>
+                <p class="tw-systems" data-systems>Works with iCabbi, Autocab, Cordic and other systems with a booking API.</p>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="tw-wrap">
+        <div class="tw-section" data-dispatch>
+            <h2>How the booking gets to dispatch</h2>
+            <p>A taxi website has one job, which is getting the booking. Ours also get it into dispatch. The booking form on your website talks to your dispatch system through that system's booking API, so when a customer books, the job appears in dispatch ready for your controllers to allocate, the same as one taken on the phone.</p>
+            <%# The qualifier the brief asked for: the link is promised only where
+                access can be arranged. Vendor access is outside our control. %>
+            <p data-qualifier>We connect to iCabbi, Autocab and Cordic, and to other systems with a booking API. The link is included in the £999 where your system has a booking API and you can arrange API access with your provider. Some providers approve the connection or issue a key first, and on the first call we'll tell you what yours will need. Any charge your provider makes for API access is between you and them.</p>
+        </div>
+
+        <%# THE EMAIL BOOKING CHECK (approval of 13/10/2026, change 1). Described
+            exactly as the approval describes it and no further. The widget line
+            sits here because this is the reason to choose us over a provider's
+            own web booker (question 3). %>
+        <div class="tw-section" data-email-check>
+            <h2>Bookings that still come by email</h2>
+            <p>Account customers, hotels and schools still book by email. As part of the build we set up a check that matches the booking requests arriving by email against the jobs in your dispatch system, so a booking that was never keyed in, or was keyed in wrong, gets flagged before the customer is left waiting.</p>
+            <p>It needs the same access to your dispatch system as the booking link, and it covers the gap a provider's own web booker leaves. If your provider's own booking widget already does what you need, we'll say so.</p>
+        </div>
+
+        <%# Facts: nearly twenty years owning Abacus (Evidence case study); the
+            last eight or so on iCabbi (Tom's approved email of 6 July 2026,
+            APPROVED 03: "used iCabbi for around 8 years before selling the
+            business"), checked before publishing as the approval required. %>
+        <div class="tw-section" data-operator>
+            <h2>Built by someone who ran taxi firms</h2>
+            <p>Tom Arrington owned and ran Abacus and Falmouth Taxis for nearly twenty years, the last eight or so on iCabbi. A general web agency can build you a good looking site. What it usually can't do is get the booking into dispatch, because it has never sat on the other side of that screen. <a class="tw-link" href="/evidence#biography__2">Read the Abacus and Falmouth Taxis story</a>.</p>
+        </div>
+
+        <%# Keeps the live ad headline "We Do Not Sell Software" true. The last
+            sentence is the taxi page's approved independence line, word for
+            word. %>
+        <div class="tw-cred" data-independence>
+            <h2>Your dispatch system stays as it is</h2>
+            <p>We build the website and leave your dispatch system exactly as it is. The website sits in front of the system you already run and hands it the booking.</p>
+            <p class="tw-indep">We're listed on the iCabbi Marketplace, but we don't sell software and no supplier pays us.</p>
+        </div>
+        </div>
+
+        <section class="tw-band surface-paper">
+        <div class="tw-wrap">
+        <div class="tw-section" data-covers>
+            <h2>What the £999 covers</h2>
+            <p class="tw-price"><%= '£' + (websiteOffer.pricePence / 100).toLocaleString('en-GB') %></p>
+            <p>That's the whole price. It starts with a recorded planning conversation to agree what the site needs to do. You then get a complete first version and one structured round of changes before launch. The link to your dispatch system and the email booking check are part of it, not extras.</p>
+            <div class="tw-actions">
+                <a href="#conversation" class="btn btn-primary">Tell us about your firm</a>
+            </div>
+            <p class="tw-also" data-dispatch-advice>Choosing or changing a dispatch system as well? <a class="tw-link" href="/taxi-and-private-hire-operators">Talk to an operator first</a>.</p>
+        </div>
+        </div>
+        </section>
+    </main>
+
+    <%- include('partials/site-footer', { canEdit: false, pageContact, content }) %>
+    <script nonce="<%= nonce %>">
+        <%- include('partials/site-chrome-script') %>
+    </script>
+</body>
+</html>

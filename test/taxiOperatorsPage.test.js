@@ -88,8 +88,14 @@ test('three taxi-framed offers from the catalogue, no £3,400, a route to the Pr
   for (const o of offers) {
     const price = '£' + (o.pricePence / 100).toLocaleString('en-GB');
     assert.ok(text.includes(o.name) && text.includes(price), `${o.name} at ${price} is missing`);
-    assert.ok(body.includes(`href="${o.path}"`), `${o.name} no longer links to its own page`);
+    assert.ok(body.includes(`href="${o.href}"`), `${o.name} has lost its link`);
   }
+  // Every card links to its own offer page, except the website card, which
+  // goes to the taxi websites page (approval of 13/10/2026, change 2): taxi
+  // traffic reaches the enquiry form, not a page whose main action is to pay.
+  for (const o of offers.filter((x) => x.id !== 'website_build')) assert.strictEqual(o.href, o.path);
+  assert.strictEqual(offers.find((o) => o.id === 'website_build').href, '/taxi-and-private-hire-operators/websites');
+  assert.ok(!body.includes('href="/where-to-start/website-build"'), 'the website card still sends taxi traffic to the payment page');
   // Tom's brief of 8 October 2026: each price answers the operator's situation.
   for (const lead of ['We find out where the money, the drivers and the work are actually going.', 'We stay and do it with you.', 'A website that gets the booking.']) {
     assert.ok(text.includes(lead), `the taxi lead-in "${lead}" is missing`);

@@ -36,6 +36,9 @@ const { getSiteShellData } = require('../lib/navShell');
 const { OFFERS } = require('../lib/whereToStartOffers');
 
 const TAXI_OPERATORS_PATH = '/taxi-and-private-hire-operators';
+// The taxi websites page (routes/taxiWebsites.js, 13/10/2026). Defined here so
+// both routes share it without requiring each other.
+const TAXI_WEBSITES_PATH = TAXI_OPERATORS_PATH + '/websites';
 
 // Three paid offers, each with a one-line taxi lead-in above its approved
 // catalogue description (Tom, 07/10/2026, after the second review: "lets ditch
@@ -54,6 +57,14 @@ const TAXI_OFFER_LEADS = {
   commercial_review: 'We find out where the money, the drivers and the work are actually going.',
   full_commercial_review: 'We stay and do it with you.',
   website_build: 'A website that gets the booking.'
+};
+
+// Where each card links. Every card goes to its own offer page EXCEPT the
+// website card, which goes to the taxi websites page (approval of 13 October
+// 2026, change 2): taxi traffic should reach the enquiry form, not a page
+// whose main action is a payment. /where-to-start/website-build is untouched.
+const TAXI_OFFER_HREF = {
+  website_build: TAXI_WEBSITES_PATH
 };
 
 async function loadThemeAndShell() {
@@ -79,7 +90,7 @@ const TAXI_OPERATORS_CONTACT = {
 function taxiOffers() {
   return TAXI_OFFER_ORDER.map((id) => OFFERS[id])
     .filter((o) => o && o.publicPriceApproved)
-    .map((o) => ({ ...o, taxiLead: TAXI_OFFER_LEADS[o.id] }));
+    .map((o) => ({ ...o, taxiLead: TAXI_OFFER_LEADS[o.id], href: TAXI_OFFER_HREF[o.id] || o.path }));
 }
 
 function mountPageRoute(app, generateCsrfToken) {
@@ -101,4 +112,4 @@ function mountPageRoute(app, generateCsrfToken) {
   });
 }
 
-module.exports = { mountPageRoute, TAXI_OPERATORS_PATH, TAXI_OPERATORS_CONTACT, TAXI_OFFER_ORDER, TAXI_OFFER_LEADS, taxiOffers };
+module.exports = { mountPageRoute, loadThemeAndShell, TAXI_OPERATORS_PATH, TAXI_WEBSITES_PATH, TAXI_OPERATORS_CONTACT, TAXI_OFFER_ORDER, TAXI_OFFER_LEADS, TAXI_OFFER_HREF, taxiOffers };

@@ -25,6 +25,7 @@ const productGuide = require('./routes/productGuide');
 const saleReadiness = require('./routes/saleReadiness');
 const startUpReview = require('./routes/startUpReview');
 const taxiOperators = require('./routes/taxiOperators');
+const taxiWebsites = require('./routes/taxiWebsites');
 const { legacyRedirect } = require('./lib/legacyRedirect');
 const thankYou = require('./routes/thankYou');
 const scott = require('./routes/scott');
@@ -720,7 +721,8 @@ app.get('/sitemap.xml', async (req, res, next) => {
       'where-to-start/website-build': '2026-08-17',
       'where-to-start/full-review-website-build': '2026-08-17',
       'product-guide': '2026-08-22',
-      'taxi-and-private-hire-operators': '2026-10-07',
+      'taxi-and-private-hire-operators': '2026-10-13',
+      'taxi-and-private-hire-operators/websites': '2026-10-13',
       // In the sitemap from 11/10/2026 on Tom's approval (it had been kept out
       // since 25/09/2026 as a campaign-only page). Linked from the homepage
       // below the form the same day.
@@ -729,7 +731,7 @@ app.get('/sitemap.xml', async (req, res, next) => {
     // where-to-start/confirmation is deliberately excluded — private,
     // per-visitor payment status, noindex/nofollow on the page itself,
     // same treatment as the quiz/review result pages.
-    for (const slug of ['owner-check', 'owner-dependency-quiz', 'commercial-gaps-review', 'market-ready-test', 'where-to-start', 'where-to-start/commercial-review', 'where-to-start/full-commercial-review', 'where-to-start/website-build', 'where-to-start/full-review-website-build', 'product-guide', 'taxi-and-private-hire-operators', 'get-your-business-ready-to-sell']) {
+    for (const slug of ['owner-check', 'owner-dependency-quiz', 'commercial-gaps-review', 'market-ready-test', 'where-to-start', 'where-to-start/commercial-review', 'where-to-start/full-commercial-review', 'where-to-start/website-build', 'where-to-start/full-review-website-build', 'product-guide', 'taxi-and-private-hire-operators', 'taxi-and-private-hire-operators/websites', 'get-your-business-ready-to-sell']) {
       urlEntries.push(`  <url><loc>${escapeXml(`${base}/${slug}`)}</loc><lastmod>${ASSESSMENT_ROUTE_LASTMOD[slug]}</lastmod></url>`);
     }
     res.type('application/xml').send(
@@ -902,6 +904,11 @@ startUpReview.mountPageRoute(app, generateCsrfToken);
 // carries no noindex. Not in the main navigation by design: it is a trade
 // page, not a new front door for the business. test/taxiOperatorsPage.test.js.
 taxiOperators.mountPageRoute(app, generateCsrfToken);
+
+// Taxi and private hire websites, under the taxi page (13/10/2026): indexable,
+// in sitemap.xml, not in the navigation. The Taxi websites ad group lands
+// here. See routes/taxiWebsites.js and test/taxiWebsitesPage.test.js.
+taxiWebsites.mountPageRoute(app, generateCsrfToken);
 
 // /thank-you: where the footer contact form lands after a stored enquiry, and
 // the only place the Google Ads Contact conversion fires (routes/thankYou.js).

@@ -5,15 +5,19 @@
     Service as well when schemaService names one. The business itself is
     described once, site-wide, by partials/site-schema.ejs, and the Service
     points at it by @id rather than repeating it.
-    Takes: schemaName, schemaPath, and optionally schemaService. %>
+    Takes: schemaName, schemaPath, and optionally schemaService and
+    schemaParent ({ name, path }), which puts a middle crumb between Home and
+    this page for a page that sits under another one. %>
 <%
   const _pageUrl = 'https://www.arringtonconsultancy.com' + schemaPath;
+  const _crumbs = [{ name: 'Home', item: 'https://www.arringtonconsultancy.com/' }];
+  if (typeof schemaParent !== 'undefined' && schemaParent) {
+    _crumbs.push({ name: schemaParent.name, item: 'https://www.arringtonconsultancy.com' + schemaParent.path });
+  }
+  _crumbs.push({ name: schemaName, item: _pageUrl });
   const _graph = [{
     '@type': 'BreadcrumbList',
-    itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.arringtonconsultancy.com/' },
-      { '@type': 'ListItem', position: 2, name: schemaName, item: _pageUrl }
-    ]
+    itemListElement: _crumbs.map(function (c, i) { return { '@type': 'ListItem', position: i + 1, name: c.name, item: c.item }; })
   }];
   if (typeof schemaService !== 'undefined' && schemaService) {
     _graph.push({
