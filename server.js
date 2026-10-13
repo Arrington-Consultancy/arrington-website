@@ -33,6 +33,7 @@ const { hasWorkspaceAccess } = require('./lib/workspace/access');
 const { publishedArticles, findBySlug: findUsefulThinkingArticle } = require('./lib/usefulThinkingArticles');
 const { getSiteShellData } = require('./lib/navShell');
 const { SITE_KEY: TURNSTILE_SITE_KEY } = require('./lib/turnstile');
+const { getSessionSecret, describeSessionSecret } = require('./lib/sessionSecret');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -137,13 +138,18 @@ console.log('Microsoft UET: ' + (app.locals.microsoftUetTagId
   ? 'tag id set (' + app.locals.microsoftUetTagId.length + ' digits); loads for Microsoft ad visits, contact_form_submit on /thank-you'
   : (microsoftUetTagId ? 'MICROSOFT_UET_TAG_ID is set but is not a valid tag id; UET is OFF' : 'not configured; no UET script, no bat.bing CSP hosts')));
 
-// Fail fast if SESSION_SECRET is missing in production — we never want to
-// fall back to a hardcoded dev secret on the real domain.
-if (isProd && !process.env.SESSION_SECRET) {
-  console.error('FATAL: SESSION_SECRET must be set in production.');
+// Fail fast if SESSION_SECRET is missing, or is the development value, in
+// production: we never want a key anybody can read in this repository on the
+// real domain. lib/sessionSecret.js is the one reader, shared with the PDF
+// download links and the Contact conversion token.
+let sessionSecret;
+try {
+  sessionSecret = getSessionSecret();
+} catch (err) {
+  console.error(err.message);
   process.exit(1);
 }
-const sessionSecret = process.env.SESSION_SECRET || 'dev-only-secret-change-me';
+console.log('Session secret: ' + describeSessionSecret());
 
 // Trust Railway's proxy (required for rate limiting, secure cookies, and
 // x-forwarded-proto detection behind the reverse proxy).

@@ -9,9 +9,12 @@
 //     the bare /thank-you before anyone can refresh it, and remembers the
 //     token as spent for the rest of the browser session;
 //   - a direct visit, a bookmark or a back-button return counts nothing;
-//   - a copied URL reopened inside the token's 30 minutes can render the
-//     snippet again, but carries the same transaction_id, which Google Ads
-//     de-duplicates on its own side.
+//   - a copied URL reopened later, in any browser or session, counts
+//     nothing: the first render claims the token's id in the database and
+//     only that render carries the snippet (fix brief of 12/10/2026, item 5).
+//     A HEAD request never claims, so a link checker cannot use one up.
+//     The transaction_id is still sent, so Google Ads would de-duplicate a
+//     repeat on its own side as well.
 //
 // Not in the navigation, not in sitemap.xml (which lists pages rows only),
 // noindex, and never cached, because the tokened response is per-visitor.
@@ -20,7 +23,7 @@
 const db = require('../db/pool');
 const themes = require('../db/themes');
 const { getSiteShellData } = require('../lib/navShell');
-const { verifyToken, THANK_YOU_PATH } = require('../lib/contactConversion');
+const { verifyToken, claimToken, THANK_YOU_PATH } = require('../lib/contactConversion');
 
 function mountPageRoute(app, generateCsrfToken) {
   app.get(THANK_YOU_PATH, async (req, res, next) => {
@@ -29,6 +32,10 @@ function mountPageRoute(app, generateCsrfToken) {
       const activeTheme = (themeRows[0] && themeRows[0].content) || 'dark';
       const theme = themes[activeTheme] || themes.dark;
       const { navPages, content, pageContact } = await getSiteShellData();
+      const verified = verifyToken(req.query.c);
+      const conversion = verified && req.method === 'GET' && await claimToken(verified.id, db)
+        ? verified
+        : null;
       res.set('Cache-Control', 'no-store');
       res.set('X-Robots-Tag', 'noindex, nofollow');
       res.render('thank-you', {
@@ -38,7 +45,7 @@ function mountPageRoute(app, generateCsrfToken) {
         navPages,
         content,
         pageContact,
-        conversion: verifyToken(req.query.c)
+        conversion
       });
     } catch (err) {
       next(err);

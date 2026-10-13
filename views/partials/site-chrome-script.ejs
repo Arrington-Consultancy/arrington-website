@@ -19,8 +19,8 @@ document.querySelectorAll('.js-phone-link').forEach(a => {
 });
 
 // Where this visit came from. Captured once per browser session on the
-// first page seen (landing page, referrer, utm_* and the Google Ads click
-// id) and sent with every form that writes an enquiry, so the source of a
+// first page seen (landing page, referrer, utm_* and the ad click ids)
+// and sent with every form that writes an enquiry, so the source of a
 // lead is a recorded fact. The server allowlists and caps every value
 // (lib/leadAttribution.js). Session storage can be unavailable (private
 // window, blocked site data), so every access is wrapped and a form still
@@ -35,11 +35,20 @@ window.__leadAttribution = (function () {
             captured_at: new Date().toISOString()
         };
         const params = new URLSearchParams(location.search);
-        ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid'].forEach(k => {
+        ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'gbraid', 'wbraid', 'msclkid'].forEach(k => {
             const v = params.get(k);
             if (v) out[k] = v.slice(0, 200);
         });
         return out;
+    }
+    // A paid or tagged arrival: an ad click id or a utm_source. If one turns
+    // up later in the visit and what was stored first carries none (an
+    // organic or direct first page), it replaces what was stored, so an
+    // enquiry is credited to the advert that brought the visitor back
+    // (fix brief of 12/10/2026, item 3). It never gives way to an untagged
+    // page, and the first tagged arrival is kept.
+    function isPaid(a) {
+        return !!(a && (a.gclid || a.gbraid || a.wbraid || a.msclkid || a.utm_source));
     }
     try {
         const stored = sessionStorage.getItem(KEY);
@@ -47,6 +56,12 @@ window.__leadAttribution = (function () {
         if (!cached || typeof cached !== 'object' || Array.isArray(cached)) {
             cached = fromPage();
             sessionStorage.setItem(KEY, JSON.stringify(cached));
+        } else if (!isPaid(cached)) {
+            const here = fromPage();
+            if (isPaid(here)) {
+                cached = here;
+                sessionStorage.setItem(KEY, JSON.stringify(cached));
+            }
         }
     } catch (err) {
         cached = cached || fromPage();

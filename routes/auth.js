@@ -44,6 +44,15 @@ function safeNextPath(next) {
   return '/';
 }
 
+// The staff login page is never recorded by Microsoft Clarity (fix brief of
+// 12/10/2026, item 4): views/partials/clarity-tag.ejs renders nothing when
+// noClarity is set. Set here rather than in the view so the Google tag
+// include stays exactly as test/googleTag.test.js pins it.
+router.use('/login', (req, res, next) => {
+  res.locals.noClarity = true;
+  next();
+});
+
 router.get('/login', async (req, res) => {
   if (req.session.user) {
     return res.redirect(safeNextPath(req.query.next));

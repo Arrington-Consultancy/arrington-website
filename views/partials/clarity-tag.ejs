@@ -1,4 +1,4 @@
-<% if (typeof clarityProjectId !== 'undefined' && clarityProjectId) { %><script nonce="<%= nonce %>">
+<% if (typeof clarityProjectId !== 'undefined' && clarityProjectId && !(typeof noClarity !== 'undefined' && noClarity)) { %><script nonce="<%= nonce %>">
   (function(c,l,a,r,i,t,y){
     c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
     t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
@@ -8,7 +8,9 @@
     var paid = false;
     try {
       var q = new URLSearchParams(location.search);
-      if (q.has('gclid') || q.has('gbraid') || q.has('wbraid') ||
+      if (q.has('msclkid') || /^(bing|microsoft)$/i.test(q.get('utm_source') || '')) {
+        sessionStorage.removeItem('arrPaidGoogle');
+      } else if (q.has('gclid') || q.has('gbraid') || q.has('wbraid') ||
           ((q.get('utm_source') || '').toLowerCase() === 'google' && /^(cpc|ppc)$/i.test(q.get('utm_medium') || ''))) {
         sessionStorage.setItem('arrPaidGoogle', '1');
       }
@@ -31,4 +33,12 @@
     Search-1 and Ready to Sell carry only Google's click id (auto-tagging,
     no UTM suffix), so Clarity's own Source/Medium filters cannot see them.
     The flag lives in sessionStorage so every page of that visit is tagged,
-    and only the label is sent: never the click id itself. %>
+    and only the label is sent: never the click id itself.
+
+    Fix brief of 12/10/2026, item 4: a visitor who arrives from a Microsoft
+    advert (msclkid, or utm_source bing/microsoft: the same rule as
+    microsoft-uet.ejs) loses the flag, so the rest of that visit is not
+    labelled a Google Ads visit. Clarity keeps any label it was already sent
+    on earlier pages; this stops it being sent again. And the staff login
+    page sets noClarity (res.locals, routes/auth.js), so it is never
+    recorded at all. %>

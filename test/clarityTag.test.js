@@ -76,7 +76,7 @@ function runTag(search, store = {}) {
   const el = { parentNode: { insertBefore() {} } };
   const win = {
     location: { search },
-    sessionStorage: { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); } },
+    sessionStorage: { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
     URLSearchParams,
     document: { createElement: () => ({}), getElementsByTagName: () => [el] },
   };
@@ -100,4 +100,53 @@ test('later pages of the same visit stay tagged; other traffic is never tagged',
   assert.deepStrictEqual(runTag('').calls, []);
   assert.deepStrictEqual(runTag('?utm_source=bing&utm_medium=cpc').calls, []);
   assert.deepStrictEqual(runTag('?utm_source=google&utm_medium=organic').calls, []);
+});
+
+// Fix brief of 12/10/2026, item 4: a Microsoft advert arrival drops the
+// google_ads label for the rest of the visit, and the login page is never
+// recorded.
+test('a Microsoft ad arrival clears the Google Ads label for the rest of the visit', () => {
+  for (const q of ['?msclkid=m1', '?utm_source=bing&utm_medium=cpc', '?utm_source=Microsoft']) {
+    const store = { arrPaidGoogle: '1' };
+    assert.deepStrictEqual(runTag(q, store).calls, [], q);
+    assert.ok(!('arrPaidGoogle' in store), `${q}: the flag is removed`);
+    assert.deepStrictEqual(runTag('', store).calls, [], `${q}: later pages stay unlabelled`);
+  }
+  // A Google ad click after that labels the visit again.
+  const store = {};
+  runTag('?msclkid=m1', store);
+  assert.deepStrictEqual(runTag('?gclid=g2', store).calls, [['set', 'traffic', 'google_ads']]);
+});
+
+test('noClarity renders no Clarity script at all', () => {
+  const html = render({ nonce: 'n', clarityProjectId: 'abc123xyz9', noClarity: true });
+  assert.ok(!/clarity/i.test(html));
+  assert.match(html, /gtag\('config', 'AW-18129914078'\)/, 'the Google tag itself is unaffected');
+});
+
+test('the login route sets noClarity, and other routes do not', async () => {
+  // The real router, with the database replaced so no connection is opened.
+  require.cache[require.resolve('../db/pool')] = {
+    id: 'pool-stub', filename: 'pool-stub', loaded: true,
+    exports: { query: async () => { throw new Error('no database in this test'); } }
+  };
+  const express = require('express');
+  const app = express();
+  app.use((req, res, next) => {
+    req.session = {};
+    res.render = (view) => res.json({ view, noClarity: res.locals.noClarity === true });
+    next();
+  });
+  app.use(require('../routes/auth'));
+  app.get('/elsewhere', (req, res) => res.render('index'));
+  const server = app.listen(0);
+  try {
+    const base = `http://127.0.0.1:${server.address().port}`;
+    const login = await (await fetch(base + '/login')).json();
+    assert.deepStrictEqual(login, { view: 'login', noClarity: true });
+    const other = await (await fetch(base + '/elsewhere')).json();
+    assert.deepStrictEqual(other, { view: 'index', noClarity: false });
+  } finally {
+    server.close();
+  }
 });

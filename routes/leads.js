@@ -11,11 +11,11 @@ const { parseAttribution, describeAttribution } = require('../lib/leadAttributio
 const { parseHeardAbout, describeHeardAbout } = require('../lib/heardAbout');
 const { issueToken, THANK_YOU_PATH } = require('../lib/contactConversion');
 const { screenEnquiry } = require('../lib/leadScreening');
+const { getSessionSecret } = require('../lib/sessionSecret');
 
 const router = express.Router();
 
 const PDF_DIR = path.join(__dirname, '..', 'private', 'pdfs');
-const TOKEN_SECRET = process.env.SESSION_SECRET || 'dev-only-secret-change-me';
 const TOKEN_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
 // Notification email on new leads, sent via Gmail SMTP using an app password
@@ -93,7 +93,7 @@ const downloadLimiter = rateLimit({
 });
 
 function signToken(doc, expiry) {
-  return crypto.createHmac('sha256', TOKEN_SECRET).update(`${doc}:${expiry}`).digest('hex');
+  return crypto.createHmac('sha256', getSessionSecret()).update(`${doc}:${expiry}`).digest('hex');
 }
 
 function makeDownloadUrl(doc) {

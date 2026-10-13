@@ -1196,3 +1196,15 @@ CREATE TABLE IF NOT EXISTS csp_reports (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_csp_reports_created ON csp_reports (created_at);
+
+-- Contact conversion tokens already shown on /thank-you (fix brief of
+-- 12/10/2026, item 5). routes/thankYou.js claims a token's id here the first
+-- time the page renders it, and renders the conversion snippet only when that
+-- claim is new, so a replayed /thank-you?c= link fires no Google, Meta or
+-- Microsoft conversion in any browser or session. A token lives 30 minutes,
+-- so a row is useless after that; rows older than a day are pruned on claim.
+CREATE TABLE IF NOT EXISTS contact_conversion_claims (
+    token_id VARCHAR(32) PRIMARY KEY,
+    claimed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_contact_conversion_claims_at ON contact_conversion_claims (claimed_at);

@@ -17,8 +17,10 @@
         routes/thankYou.js and lib/contactConversion.js); a bare visit to
         /thank-you gets no snippet at all. The id is checked against
         [A-Za-z0-9_-] before it gets here, so it is safe inside the string.
-        The spent-list and the address swap are what stop a refresh from
-        firing it again. %>
+        The server renders it only for the first showing of a token (the
+        claim in routes/thankYou.js), so a replayed link in any browser counts
+        nothing; the spent-list and the address swap below are the second
+        line in this browser. %>
     <% if (conversion) { %>
     <script nonce="<%= nonce %>">
         (function () {

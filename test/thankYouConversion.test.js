@@ -118,6 +118,9 @@ test('/thank-you is registered ahead of the CMS catch-all, reserved, and not cac
   const routeSrc = read('routes/thankYou.js');
   assert.match(routeSrc, /res\.set\('Cache-Control', 'no-store'\)/);
   assert.match(routeSrc, /res\.set\('X-Robots-Tag', 'noindex, nofollow'\)/);
-  assert.match(routeSrc, /conversion: verifyToken\(req\.query\.c\)/);
+  // Verified, then claimed once in the database (fix brief of 12/10/2026,
+  // item 5; behaviour in test/contactConversionClaim.test.js).
+  assert.match(routeSrc, /const verified = verifyToken\(req\.query\.c\);/);
+  assert.match(routeSrc, /verified && req\.method === 'GET' && await claimToken\(verified\.id, db\)/);
   assert.match(read('routes/admin.js'), /RESERVED_SLUGS = \[[^\]]*'thank-you'/);
 });
