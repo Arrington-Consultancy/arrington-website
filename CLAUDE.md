@@ -8074,8 +8074,10 @@ on Tom's instruction ("Put in handover for codex so it can cold call"), the
 outreach rules the page implies were written into the Opportunity Builder
 handoff as PRIVACY AND OUTREACH RULES - 13 OCTOBER 2026 (do-not-contact tab in
 the Lead Tracker, monthly 12-month deletion, source plus privacy link in first
-messages, Companies House check before email, TPS and CTPS screening before
-Tom phones anyone), with a pointer under its CURRENT OBJECTIVE.
+messages, Companies House check before email), with a pointer under its
+CURRENT OBJECTIVE. Tom then decided "Email always": outreach is email only, no
+cold calls or LinkedIn messages, so no TPS screening; a business not on
+Companies House (sole trader, ordinary partnership) is not approached.
 
 ## Writing and reviewing website copy
 
