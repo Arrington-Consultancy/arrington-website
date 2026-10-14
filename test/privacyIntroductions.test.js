@@ -59,7 +59,7 @@ test('objection is honoured by reply or email', () => {
 
 test('the enquiry section no longer says we never use details from elsewhere', () => {
   assert.doesNotMatch(text(page), /build a profile of you/);
-  assert.match(page, /<a href="#introductions">If we contacted you first<\/a> explains what they are/);
+  assert.match(page, /<a href="#introductions">the section below<\/a> explains what they are/);
 });
 
 test('the page makes no compliance claim and carries no dashes', () => {
