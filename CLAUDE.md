@@ -8045,7 +8045,7 @@ PROPOSAL - SEO sweep: what was fixed and what needs Tom, 11 October 2026" (id
   request indexing in Search Console. Read the Search Console effect of the
   sweep in about four weeks, not before.
 
-## Privacy page: business introductions (LIVE 13/10/2026)
+## Privacy page: business introductions (LIVE 13/10/2026, corrected 14/10/2026)
 
 `views/privacy.ejs` gained a section, "If we contacted you first"
 (`#introductions`), covering the business contact details the Opportunity
@@ -8078,6 +8078,24 @@ messages, Companies House check before email), with a pointer under its
 CURRENT OBJECTIVE. Tom then decided "Email always": outreach is email only, no
 cold calls or LinkedIn messages, so no TPS screening; a business not on
 Companies House (sole trader, ordinary partnership) is not approached.
+
+**Corrected 14/10/2026, on Tom's scope instruction** ("a small, personal email
+outreach campaign, not a project to build compliance or outreach
+infrastructure"; remove or qualify unsupported promises "rather than building a
+new system"). None of the 12-month deletion, the do-not-contact list, or "every
+message we send tells you how to opt out" was existing practice (no deletion
+process; no list; the 9 September emails carried no opt-out line), so all three
+are gone. The page now says: we keep a record that we contacted you so we do
+not approach you again by mistake; we delete your details if you ask; you can
+reply to any message to ask us to stop, and we record that you asked. It states
+no retention period anywhere. The enquiry section's old line "not used to build
+a profile of you from anywhere other than what you have sent us here" (from
+30/08/2026, never true once outreach began) now points to `#introductions`.
+The live page had matched main all along; nothing was lagging. Rules 1 and 2 of
+the Opportunity Builder handoff's PRIVACY AND OUTREACH RULES (the tab and the
+12-month deletion) now go further than the page and are for Tom, not this
+worker, to change. `test/privacyIntroductions.test.js` pins the corrected
+wording and that no period, list or opt-out-line promise returns.
 
 ## Writing and reviewing website copy
 

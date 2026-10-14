@@ -1,11 +1,12 @@
 'use strict';
 
-// The privacy page's "If we contacted you first" section (13/10/2026).
-// Tom's decisions behind it: Hunter is an approved source (already in the
-// Opportunity Builder brief), details of people who do not reply are deleted
-// 12 months after the last contact, and anyone who asks not to be contacted
-// goes on a do-not-contact list. These tests pin those facts so the page
-// cannot drift away from them, and pin that it states no other period.
+// The privacy page's "If we contacted you first" section (13/10/2026,
+// corrected 14/10/2026). Hunter is an approved source (already in the
+// Opportunity Builder brief). The first version also promised deletion 12
+// months after the last contact, a do-not-contact list, and an opt-out line
+// in every message; none of those was existing practice, so Tom asked for
+// them to be removed rather than for a system to be built behind them. These
+// tests pin the corrected wording so an unsupported promise cannot return.
 
 const test = require('node:test');
 const assert = require('node:assert');
@@ -39,17 +40,26 @@ test('it explains UK GDPR for work details and the PECR difference', () => {
   assert.match(t, /sole trader or an ordinary partnership is treated like a private individual/);
 });
 
-test('retention is 12 months and no other period appears anywhere on the page', () => {
-  assert.match(text(section), /delete your details 12 months after we last contacted you/);
+test('it promises no retention period, list or opt-out line it does not have', () => {
   const periods = text(page).match(/\b\d+\s+(?:days?|weeks?|months?|years?)\b/gi) || [];
-  assert.deepStrictEqual(periods, ['12 months']);
+  assert.deepStrictEqual(periods, []);
+  const t = text(page);
+  assert.doesNotMatch(t, /short list of people who have asked not to be contacted/);
+  assert.doesNotMatch(t, /every message we send tells you how to opt out/);
+  assert.match(text(section), /If you would like us to delete your details, tell us and we will/);
 });
 
-test('objection is honoured and the do-not-contact list keeps only the address', () => {
+test('objection is honoured by reply or email', () => {
   const t = text(section);
   assert.match(t, /tell us to stop at any time/);
-  assert.match(t, /keep only your email address, on a short list of people who have asked not to be contacted/);
+  assert.match(t, /you can reply to any message we send to ask us to stop/);
+  assert.match(t, /We will not contact you again/);
   assert.match(section, /mailto:tom@arringtonconsultancy\.com/);
+});
+
+test('the enquiry section no longer says we never use details from elsewhere', () => {
+  assert.doesNotMatch(text(page), /build a profile of you/);
+  assert.match(page, /<a href="#introductions">If we contacted you first<\/a> explains what they are/);
 });
 
 test('the page makes no compliance claim and carries no dashes', () => {
