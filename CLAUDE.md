@@ -114,8 +114,13 @@ raised Leads-Search-1 to £30 a day on Tom's instruction and a midday
 session, not having read it, "restored" £15 as drift. Live at 06:40 UTC on
 3 October the budget was £15. Reported to Tom, who decided on 3 October
 ("first restore to £30 a day budget"): set to £30 via Windsor at about 07:55
-UK and read back as £30, campaign enabled. **£30 a day is the authorised
-Leads-Search-1 budget; a future read of £30 is not drift.** Write-back filed
+UK and read back as £30, campaign enabled. **Superseded: since 5 October the
+authorised Leads-Search-1 budget is £15 a day (Tom's decisions in the Google
+Ads Handoff Log: £15 from 5 to 6 Oct, £10 on 13 Oct, £15 again on 14 Oct).
+A read of £15 is not drift; the Ads Handoff Log, not this file, is the
+budget record.** The 14/10/2026 scheduled review (read only) is merged into
+that log: 30 Sep to 13 Oct, £250 for 27 clicks and no genuine enquiry, budget
+not the limit, hold £15 to the 30 Oct checkpoint. Write-back filed
 standalone in Drive beside the Handoff Log ("GOOGLE ADS WRITE-BACK -
 Leads-Search-1 budget restored to £30 a day on Tom's decision, 3 October
 2026", id `18MzNWfSdSOwj2UIwjo6myXpPhDz47Nzld1hSfycmeys`), to be merged into
