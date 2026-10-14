@@ -203,10 +203,16 @@ const IS_PUBLIC_SITE = CANONICAL_HOST === LIVE_PUBLIC_HOST;
 //     are left alone, so development and any in-container request behave
 //     exactly as before. isProd already covers most of this; this is belt and
 //     braces for a prod-like environment reached over a private hostname.
-//   - /health is never host-rewritten, so an external uptime monitor pointed
-//     at any of the five hostnames still gets a real 200/503 rather than a
-//     301. It also means Railway's own domain stays usable to confirm the app
-//     is alive if DNS for the custom domains ever breaks.
+//   - /health is never host-rewritten OR upgraded to HTTPS, so an external
+//     uptime monitor pointed at any of the five hostnames still gets a real
+//     200/503 rather than a 301, and Railway's own domain stays usable to
+//     confirm the app is alive if DNS for the custom domains ever breaks.
+//     The HTTPS half was added on 14/10/2026 for Railway's deploy healthcheck:
+//     it calls the container over plain HTTP from inside the platform, with no
+//     x-forwarded-proto, and waits for a 200 before switching visitors to the
+//     new deployment. A 301 is not a 200, so with the upgrade applied no
+//     deployment could ever take traffic. The body is {"ok":true}; nothing on
+//     it needs TLS.
 //
 // req.url carries path and query together, so both survive the redirect, and
 // the HTTPS check is folded into the same hop to avoid a redirect chain.
@@ -227,9 +233,10 @@ app.use((req, res, next) => {
 
 app.use((req, res, next) => {
   if (!isProd) return next();
+  if (req.path === '/health') return next();
   const host = (req.header('host') || '').toLowerCase();
   const isHttps = req.header('x-forwarded-proto') === 'https';
-  const mayRewriteHost = !isInternalHost(host) && req.path !== '/health';
+  const mayRewriteHost = !isInternalHost(host);
   const targetHost = mayRewriteHost && host !== CANONICAL_HOST ? CANONICAL_HOST : host;
   if (targetHost !== host || !isHttps) {
     return res.redirect(301, `https://${targetHost}${req.url}`);

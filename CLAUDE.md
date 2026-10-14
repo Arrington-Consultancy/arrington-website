@@ -910,7 +910,7 @@ Active theme stored in DB, applied via CSS variables. Affects main site and logi
 - **SEO URL fields** (`og_image`, `canonical_url`, `seo.default_og_image`) are validated server-side to be `https?://` or root-relative, so no `javascript:`/`data:` scheme can reach a rendered `href`/`content` attribute (defence-in-depth on top of EJS escaping).
 - **404 handler + central error middleware** — stack traces never leak in prod
 - **Process-level handlers** for `unhandledRejection` and `uncaughtException`
-- **`/health`** endpoint runs `SELECT 1` and returns `{"ok":true}` (200) when the DB answers, or `{"ok":false,"error":"database unavailable"}` (503) when it does not. It queries the DB **on purpose** so an external uptime monitor catches a wedged database — a check that skipped the DB reported healthy for ~7 hours during the 15/07/2026 incident below. Keeps the `"ok":true` string for keyword-based monitors.
+- **`/health`** endpoint runs `SELECT 1` and returns `{"ok":true}` (200) when the DB answers, or `{"ok":false,"error":"database unavailable"}` (503) when it does not. It queries the DB **on purpose** so an external uptime monitor catches a wedged database — a check that skipped the DB reported healthy for ~7 hours during the 15/07/2026 incident below. Keeps the `"ok":true` string for keyword-based monitors. Since 14/10/2026 it is also Railway's deploy healthcheck and is exempt from the HTTPS upgrade (see Deployment).
 - **DB connection timeout:** `db/pool.js` sets `connectionTimeoutMillis: 5000` (plus `idleTimeoutMillis: 30000`) so an unreachable database fails in 5s instead of hanging on the OS TCP timeout (~2 min); page routes then return 500 rather than an infinite spinner. The pool also has an `error` listener so an idle-client error (DB restart/network drop) is logged rather than crashing the process via `uncaughtException`. Added 15/07/2026 after a Railway outage restarted the Postgres container and left it wedged mid-boot (stale `postmaster.pid`), so every DB-backed route hung with zero bytes while `/health` and static files stayed 200. Fixed by redeploying the Postgres service (WAL recovery, no data loss). **External monitor recommended:** point UptimeRobot (or similar) at `/health` at a 5-min interval so detection is minutes not hours.
 - **`/robots.txt` + `/sitemap.xml`** generated dynamically; the sitemap lists only public pages (not hidden, not `noindex`, not restricted via `page_access`); robots disallows `/login`.
 - **DB transport:** the Postgres pool connects over Railway's private network (`postgres.railway.internal`); `rejectUnauthorized: false` is intentional there (self-signed internal cert, no public-internet path) — do not flip it without testing, it will break connectivity.
@@ -1003,6 +1003,24 @@ npm run dev
 - **Production detection:** checks for `RAILWAY_ENVIRONMENT` or `NODE_ENV=production`
 - **Trust proxy:** enabled (required for rate limiting, secure cookies, and HTTPS redirect behind Railway's reverse proxy)
 - **Start command:** `node db/seed.js && node server.js` (seed is idempotent; skips user creation after first run)
+- **Deploy healthcheck, set 14/10/2026 (production only):** the Railway
+  healthcheck path on `arrington-prototype` is `/health`, so a new deployment
+  takes visitors only once it answers 200; until then the previous deployment
+  keeps serving, and one that never answers within the timeout is marked
+  failed with the old one left up. Before this, every push to main restarted
+  the site with about a minute in which Railway's edge answered 502
+  "connection refused" (three times in the week to 14/10, one of them the
+  minute a prospect from that morning's outreach clicked the link in Tom's
+  email: `/what-we-do` 502 at 08:52:43Z during deployment `d371724f`, "Your
+  link does not work" in the reply at 09:00). For the check to pass,
+  `/health` is exempt from the HTTPS upgrade as well as the host rewrite in
+  `server.js`: Railway calls it over plain HTTP from inside the platform with
+  no `x-forwarded-proto`, and a 301 is not a 200. Pinned by
+  `test/canonicalHost.test.js` and proven over real HTTP locally in
+  production mode (200 on plain HTTP with Railway's host; pages still 301).
+  Accepted drawbacks: a database hiccup at deploy time fails that deploy
+  (push again), and the check runs only at deploy time, so it is not an
+  uptime monitor. Staging is unchanged.
 - **Deploy:** `railway up` from project root. Auto-deploy on push to `main` is configured but unreliable — always run `railway up` after pushing to ensure the deploy goes out
 - **GitHub Action (`.github/workflows/deploy.yml`, added 25/07/2026):** runs `railway up --service arrington-prototype --environment production --detach` via the Railway CLI on every push to `main`, as a more reliable alternative to Railway's built-in GitHub auto-deploy. (A diagnostic step that printed variable names/lengths/prefixes into the Action log, added for the 25/07/2026 Railway variable incident, was removed 29/08/2026 by PR #115: the incident is closed, and a 13-character prefix of long-prefixed keys is a few real secret characters logged on every deploy.) Requires a `RAILWAY_TOKEN` secret in the repo's GitHub Actions settings — must be a **project token** (Railway dashboard → the service → Settings → Tokens → create a token scoped to that service/environment), not a personal account token, so `railway up` needs no `railway link` step and can't accidentally target the wrong project. Manual `railway up` from a local checkout is still fine as a fallback/for out-of-band deploys.
 - **GitHub:** `github.com/natparnell/arrington-prototype` (private)

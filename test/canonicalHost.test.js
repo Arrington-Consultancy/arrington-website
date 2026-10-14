@@ -34,8 +34,9 @@ const isInternalHost = (host) =>
 
 // Mirrors the middleware. Returns the redirect target, or null to pass through.
 function resolve({ canonicalHost, host, urlPath, query = '', https = true }) {
+  if (urlPath === '/health') return null;
   const h = (host || '').toLowerCase();
-  const mayRewriteHost = !isInternalHost(h) && urlPath !== '/health';
+  const mayRewriteHost = !isInternalHost(h);
   const targetHost = mayRewriteHost && h !== canonicalHost ? canonicalHost : h;
   if (targetHost !== h || !https) {
     return `https://${targetHost}${urlPath}${query}`;
@@ -76,6 +77,24 @@ describe('canonical host redirect', () => {
       assert.equal(
         resolve({ canonicalHost: LIVE, host: 'arrington-prototype-production.up.railway.app', urlPath: '/health' }),
         null
+      );
+    });
+
+    test('/health over plain HTTP passes through, so Railway\'s deploy healthcheck gets its 200', () => {
+      // Railway calls the container over plain HTTP from inside the platform
+      // (no x-forwarded-proto) and only switches visitors to a new deployment
+      // once /health answers 200. Until 14/10/2026 this returned a 301, so a
+      // configured healthcheck would have failed every deployment. The
+      // middleware exempts /health before either rule runs; pinned against
+      // the real source as well, because this mirror could drift.
+      assert.equal(
+        resolve({ canonicalHost: LIVE, host: 'healthcheck.railway.app', urlPath: '/health', https: false }),
+        null
+      );
+      assert.match(
+        SERVER_SRC,
+        /if \(req\.path === '\/health'\) return next\(\);/,
+        'server.js must exempt /health from the redirect middleware before the HTTPS check'
       );
     });
 
