@@ -1,0 +1,12 @@
+{
+  "name": "tidewell-cars-demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Taxi website demo for Arrington Consultancy: a fictional firm whose online bookings go into a dispatch system through a swappable adapter.",
+  "main": "server.js",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  }
+}
