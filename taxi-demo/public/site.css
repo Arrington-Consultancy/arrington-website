@@ -300,7 +300,7 @@ input:not([type=radio]):focus, select:focus, textarea:focus { border-color: var(
 table.prices { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .prices caption { text-align: left; color: var(--ink-2); padding-bottom: 0.9rem; }
 .prices th, .prices td { padding: 0.9rem 0.6rem; border-bottom: 1px solid var(--line); text-align: right; vertical-align: baseline; }
-.prices thead th { font-weight: 600; font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-2); border-bottom: 2px solid var(--ink); }
+.prices thead th { font-weight: 600; font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-2); border-bottom: 2px solid var(--ink); white-space: nowrap; }
 .prices th[scope="row"], .prices thead th:first-child { text-align: left; }
 .prices th[scope="row"] { font-family: var(--display); font-weight: 500; font-size: 1.15rem; }
 .prices th[scope="row"] span { display: block; font-family: var(--body); font-weight: 400; font-size: 0.85rem; color: var(--ink-2); }
