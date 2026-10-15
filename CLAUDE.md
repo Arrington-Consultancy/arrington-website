@@ -7865,9 +7865,18 @@ the main `npm test`.
   not rebuild it, healthcheck `/health`, region Amsterdam
   (`europe-west4-drams3a`). The sales page reads its address from
   `TAXI_DEMO_URL` in `routes/taxiWebsites.js`.
+- **Verified live 15/10/2026:** run `20261015T125923Z-taxi-demo-live`, all
+  six pages 200 at desktop and phone, Lighthouse mobile 100/100/100 on every
+  page (SEO 66, the deliberate `noindex`); run
+  `20261015T130111Z-taxi-demo-booking` made a real test booking: price £28,
+  dispatch reference TW-65895, status allocated with driver, car and arrival
+  time, no page errors. The site-screens booking check polls from Node:
+  Playwright's `waitForFunction` evaluates a string, which the demo's CSP
+  refuses. Sales page commit `5aaddb4`, deployment `652180d9`.
 - **Open:** a custom domain (subdomain of arringtonconsultancy.com or an
   invented .co.uk) is Tom's choice; the brief's last "done" item, one test
-  booking on Tom's phone, is his.
+  booking on Tom's phone, is his. The live Google ad (RSA 827927414816) still
+  says the email check is included in the £999; flagged to the Ads worker.
 
 ## Sale readiness page
 
