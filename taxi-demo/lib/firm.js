@@ -38,7 +38,11 @@ const FIRM = {
   // Where we drop and collect most days. Used in copy and in areaServed.
   area: ['Exmouth', 'Lympstone', 'Budleigh Salterton', 'Woodbury', 'Topsham', 'Exeter'],
   geo: { lat: 50.6195, lng: -3.4140 },
-  arringtonUrl: 'https://www.arringtonconsultancy.com/taxi-and-private-hire-operators/websites'
+  arringtonUrl: 'https://www.arringtonconsultancy.com/taxi-and-private-hire-operators/websites',
+  // The enquiry form on that page. The ribbon button and the confirmation
+  // panel go straight to it (Tom's approval, 15/10/2026); the demo never
+  // carries a form or a phone number of Arrington's own.
+  arringtonEnquiryUrl: 'https://www.arringtonconsultancy.com/taxi-and-private-hire-operators/websites#conversation'
 };
 
 const DEMO_NOTE = 'This is a demonstration site built by Arrington Consultancy. Tidewell Cars is not a real firm, bookings go to a test system, and no car will come.';

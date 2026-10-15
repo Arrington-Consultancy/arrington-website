@@ -64,3 +64,28 @@ test('a cancelled booking stays cancelled', async () => {
   assert.equal((await d.getBooking(job.ref)).status, 'cancelled');
   assert.equal(await d.getBooking('TW-00000'), null);
 });
+
+test('the allocation event carries a driver even when the timer fires before the clock agrees', async () => {
+  // Found 15/10/2026: a timer can fire a millisecond before Date.now() reaches
+  // the allocation time, and the view then said "confirmed" with no driver.
+  // Mounted in the main site, the notification that read it crashed the
+  // whole process. The clock here is held back to reproduce that exactly.
+  let t = 2_000_000;
+  const events = [];
+  const d = createDispatch('mock', { now: () => t, confirmAfterMs: 1, allocateAfterMs: 20, onEvent: (type, view) => events.push({ type, view }) });
+  await d.createBooking({ ...booking, pickupAt: new Date(t).toISOString() });
+  t += 19; // the wall clock is one millisecond short when the timer fires
+  await new Promise((r) => setTimeout(r, 60));
+  assert.equal(events.length, 1);
+  assert.equal(events[0].view.status, 'allocated');
+  assert.ok(events[0].view.driver && events[0].view.driver.name);
+});
+
+test('a dispatch event that cannot be read is dropped, never thrown', () => {
+  const notify = require('../lib/notify');
+  const record = { name: 'Tom Test', phone: '07700 900123' };
+  assert.doesNotThrow(() => notify.driverAllocated(record, { ref: 'TW-12345', status: 'confirmed' }));
+  assert.doesNotThrow(() => notify.driverAllocated(record, undefined));
+  const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'server.js'), 'utf8');
+  assert.match(src, /onEvent: \(type, view\) => {\s*try {[\s\S]*?} catch \(err\) {/, 'the dispatch event handler must catch its own errors');
+});

@@ -93,8 +93,54 @@ test('the demo ribbon is one line on a phone and the full sentence on a wider sc
   assert.match(html, /<span class="ribbon-short">Demo site\.<\/span>/);
   assert.match(html, /<span class="ribbon-short">No car will come\.<\/span>/);
   assert.match(html, /<span class="ribbon-long">Demonstration site\.<\/span>/);
-  assert.match(html, /<a class="ribbon-link" href="https:\/\/www\.arringtonconsultancy\.com\/taxi-and-private-hire-operators\/websites">Built by Arrington Consultancy<\/a>/);
   assert.match(css, /\.ribbon p {[^}]*min-height: 40px/);
+});
+
+test('the ribbon carries a button back to Arrington, after the honesty line and never in place of it', async () => {
+  const { FIRM } = require('../lib/firm');
+  assert.equal(FIRM.arringtonEnquiryUrl, FIRM.arringtonUrl + '#conversation');
+  for (const p of ['/', '/book', '/airports', '/accounts', '/about', '/contact']) {
+    const html = await (await fetch(base + p)).text();
+    const ribbon = /<div class="ribbon" role="note">([\s\S]*?)<\/div>/.exec(html)[1];
+    const button = '<a class="ribbon-cta" href="https://www.arringtonconsultancy.com/taxi-and-private-hire-operators/websites#conversation"><span class="ribbon-long">Want a site like this? Talk to Arrington</span><span class="ribbon-short">Want one? Talk to Arrington</span></a>';
+    assert.ok(ribbon.includes(button), `${p} ribbon button`);
+    assert.ok(ribbon.indexOf('No car will come.') < ribbon.indexOf('ribbon-cta'), `${p} honesty line comes first`);
+    assert.match(ribbon, /no car will come\.<\/span>/, `${p} keeps the full honesty line`);
+    assert.match(html, /<footer[\s\S]*Built by Arrington Consultancy<\/a>/, `${p} footer keeps its credit`);
+  }
+  assert.match(css, /\.ribbon-cta {[^}]*background: var\(--red\)/);
+});
+
+test('a booking confirmation offers the way back to Arrington under the status card, with no phone number', async () => {
+  const { FIRM } = require('../lib/firm');
+  const post = (body) => fetch(base + '/book', { method: 'POST', redirect: 'manual', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(body).toString() });
+  const good = { pickup: 'Exmouth railway station', destination: 'Exeter Airport', when: 'now', passengers: '1', luggage: '0', vehicle: 'saloon', name: 'Tom Test', phone: '07700 900123', payment: 'card' };
+  const page = await (await fetch(base + (await post(good)).headers.get('location'))).text();
+  const status = page.indexOf('data-status ');
+  const panelAt = page.indexOf('data-arrington');
+  assert.ok(status > -1 && panelAt > status, 'panel sits after the status card');
+  assert.ok(panelAt < page.indexOf('About this demo'), 'and before the demo note');
+  const panel = /<div class="arrington-panel" data-arrington>([\s\S]*?)<\/div>/.exec(page)[1];
+  assert.match(panel, /<p class="arrington-label">Built by Arrington Consultancy<\/p>/);
+  assert.match(panel, /<h2>Want this for your firm\?<\/h2>/);
+  assert.match(panel, /That booking went from this website straight into a dispatch system, and dispatch allocated the car\. We build websites that do the same for taxi and private hire firms for £999\. Bookings go into your own dispatch system where it has a booking API, so nobody in the office has to key them in\./);
+  assert.ok(panel.includes(`<a class="btn btn-primary" href="${FIRM.arringtonEnquiryUrl}">Tell us about your firm</a>`));
+  assert.doesNotMatch(panel, /<img|<svg|\btel:|\d{4} ?\d{6}/, 'no logo, no phone number');
+  const demoCard = /<div class="card demo-card">([\s\S]*?)<\/div>/.exec(page)[1];
+  assert.doesNotMatch(demoCard, /<a /, 'the demo note no longer carries its own link');
+  // A booking for later is confirmed, never allocated, so the panel must not
+  // say a car was allocated.
+  const later = new Date(Date.now() + 3 * 864e5);
+  const ymd = later.toISOString().slice(0, 10);
+  const res = await post({ ...good, when: 'later', date: ymd, time: '10:30' });
+  if (res.status === 303) {
+    const laterPage = await (await fetch(base + res.headers.get('location'))).text();
+    assert.match(laterPage, /straight into a dispatch system, and dispatch sent back its reference\./);
+    assert.doesNotMatch(laterPage, /dispatch allocated the car/);
+  } else {
+    assert.fail(`a booking for later was refused (${res.status}); check the field names the form uses`);
+  }
+  assert.match(css, /\.arrington-panel {[^}]*background: var\(--night\)/);
 });
 
 test('the firm runs both kinds of car, and the totals add up', async () => {

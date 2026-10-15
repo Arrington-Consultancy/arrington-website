@@ -60,8 +60,11 @@ function create(options = {}) {
     return 'TW-' + crypto.randomBytes(4).toString('hex').toUpperCase();
   }
 
-  function view(job) {
-    const t = now();
+  // `at` lets the allocation timer ask for the view at the moment it was set
+  // for: a timer can fire a millisecond before the wall clock agrees, and the
+  // view would then say "confirmed" with no driver.
+  function view(job, at) {
+    const t = Math.max(now(), at || 0);
     const base = { ref: job.ref, pickupAt: new Date(job.pickupAt).toISOString(), updatedAt: new Date(t).toISOString() };
     if (job.cancelledAt) return { ...base, status: 'cancelled' };
     if (t < job.receivedAt + confirmAfterMs) return { ...base, status: 'received' };
@@ -98,7 +101,7 @@ function create(options = {}) {
       };
       jobs.set(job.ref, job);
       if (job.asap) {
-        const t = setTimeout(() => { if (!job.cancelledAt) onEvent('allocated', view(job)); }, allocateAfterMs);
+        const t = setTimeout(() => { if (!job.cancelledAt) onEvent('allocated', view(job, receivedAt + allocateAfterMs)); }, allocateAfterMs);
         if (t.unref) t.unref();
       }
       return { ref: job.ref, status: 'received', receivedAt: new Date(receivedAt).toISOString() };

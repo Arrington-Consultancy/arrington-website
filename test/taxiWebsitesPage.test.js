@@ -82,8 +82,22 @@ test('"See one we built" shows the demo and links to it, under "Built from scrat
   assert.ok(/<img src="\/img\/taxi-demo\/tidewell-demo\.jpg" alt="[^"]{40,}"/.test(block), 'the screenshot or its alt text is missing');
   for (const f of ['public/img/taxi-demo/tidewell-demo.jpg', 'public/img/taxi-demo/tidewell-demo.webp']) assert.ok(fs.existsSync(path.join(ROOT, f)), `${f} is missing`);
   assert.ok(body.indexOf('data-scratch') < body.indexOf('data-demo') && body.indexOf('data-demo') < body.indexOf('data-dispatch'), 'the demo section moved');
-  // And the demo links back here (brief, section 8).
-  assert.strictEqual(require('../taxi-demo/lib/firm').FIRM.arringtonUrl, `https://www.arringtonconsultancy.com${PATH}`);
+  // And the demo links back here (brief, section 8), to the form on this page.
+  const { FIRM } = require('../taxi-demo/lib/firm');
+  assert.strictEqual(FIRM.arringtonUrl, `https://www.arringtonconsultancy.com${PATH}`);
+  assert.strictEqual(FIRM.arringtonEnquiryUrl, `https://www.arringtonconsultancy.com${PATH}#conversation`);
+  assert.ok(read('views/taxi-websites.ejs').includes("include('partials/site-footer'") && read('views/partials/site-footer.ejs').includes('<footer id="conversation">'), 'the demo sends people to #conversation, which must stay on this page');
+});
+
+test('the hero carries one text link to the demo under its button, not a second button', () => {
+  // Tom's approval of 15/10/2026: the enquiry stays the one call to action.
+  const body = renderBody();
+  const hero = body.slice(body.indexOf('<header class="tw-hero"'), body.indexOf('</header>'));
+  const button = hero.indexOf('<a href="#conversation" class="btn btn-primary">Tell us about your firm</a>');
+  const link = hero.indexOf(`<p class="tw-hero-demo" data-hero-demo><a class="tw-link" href="${TAXI_DEMO_URL}">See a taxi site we built</a></p>`);
+  assert.ok(button > -1, 'the hero button changed');
+  assert.ok(link > button, 'the demo link is missing or above the button');
+  assert.strictEqual((hero.match(/class="btn\b/g) || []).length, 1, 'the hero has a second button');
 });
 
 test('"Built from scratch" sits under the hero, word for word, and the £999 scope is unchanged', () => {

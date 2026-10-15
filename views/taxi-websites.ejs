@@ -55,6 +55,7 @@
         .tw-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; color: var(--accent); margin-bottom: 1rem; display: block; }
         h1 { font-size: clamp(1.6rem, 4.6vw, 2.3rem); margin-bottom: 1.2rem; text-wrap: balance; }
         .tw-lede { font-size: 1.12rem; color: var(--text-bright); margin-bottom: 1.6rem; max-width: 62ch; }
+        .tw-hero-demo { margin: 1rem 0 0; font-size: 0.97rem; }
         .tw-systems { margin: 1rem 0 0; font-size: 0.9rem; color: var(--text-muted); }
 
         .tw-section { margin-top: 3.25rem; }
@@ -120,6 +121,9 @@
                 <div class="tw-hero-actions">
                     <a href="#conversation" class="btn btn-primary">Tell us about your firm</a>
                 </div>
+                <%# A text link, not a second button: the enquiry stays the one
+                    call to action (Tom's approval, 15/10/2026). %>
+                <p class="tw-hero-demo" data-hero-demo><a class="tw-link" href="<%= demoUrl %>">See a taxi site we built</a></p>
                 <p class="tw-systems" data-systems>Works with iCabbi, Autocab, Cordic and other systems with a booking API.</p>
             </div>
         </div>

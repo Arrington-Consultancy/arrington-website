@@ -344,6 +344,21 @@ function statusSteps(view) {
   return html`<ol class="timeline" data-timeline>${steps.map(([t, d], i) => html`<li class="${i <= reached ? 'done' : i === reached + 1 ? 'next' : ''}"><span class="dot" aria-hidden="true"></span><div><strong>${t}</strong><p>${d}</p></div></li>`)}</ol>`;
 }
 
+// The way back to Arrington on the one page where the visitor has just seen
+// the booking work (Tom's approval, 15/10/2026). Arrington's frame, in the
+// ribbon's colours, with no logo and no phone number. "Dispatch allocated the
+// car" is only said of a booking for now: a booking for later is confirmed
+// and never allocated by the demo, and a cancelled one may not have been, so
+// those say what is always true, that dispatch sent back the reference.
+function arringtonPanel(allocates) {
+  return html`<div class="arrington-panel" data-arrington>
+        <p class="arrington-label">Built by Arrington Consultancy</p>
+        <h2>Want this for your firm?</h2>
+        <p>That booking went from this website straight into a dispatch system, and ${allocates ? 'dispatch allocated the car' : 'dispatch sent back its reference'}. We build websites that do the same for taxi and private hire firms for £999. Bookings go into your own dispatch system where it has a booking API, so nobody in the office has to key them in.</p>
+        <a class="btn btn-primary" href="${FIRM.arringtonEnquiryUrl}">Tell us about your firm</a>
+      </div>`;
+}
+
 function confirmationPage({ record, view }) {
   const b = record.booking;
   const cancelled = view && view.status === 'cancelled';
@@ -369,11 +384,11 @@ function confirmationPage({ record, view }) {
         <p class="noscript-hint" data-refresh-hint>Refresh this page to see the latest.</p>
       </div>
       ${record.sms ? html`<p class="sms-note">${icon('message')} We've texted your reference to ${maskPhone(b.phone)}.</p>` : ''}
+      ${arringtonPanel(b.when === 'now' && !cancelled)}
       <div class="card demo-card">
         <h2>About this demo</h2>
         <p>This booking went from the form to a test dispatch system through the same connection a live site uses for iCabbi, Autocab or Cordic. The reference came back from dispatch, and the driver details above are dispatch telling the site a car was allocated.</p>
         <p>The texts and emails are written to a test log instead of being sent. No car will come, and the booking is deleted after two hours.</p>
-        <p><a href="${FIRM.arringtonUrl}">Get a site like this for your firm</a></p>
       </div>
     </div>
     <aside>

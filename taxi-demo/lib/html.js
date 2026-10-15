@@ -169,7 +169,7 @@ ${structuredData(base)}
 <body class="${classes}">
 <a class="skip" href="#main">Skip to content</a>
 <div class="ribbon" role="note">
-  <p><span class="ribbon-text"><span class="ribbon-dot" aria-hidden="true"></span><strong><span class="ribbon-long">Demonstration site.</span><span class="ribbon-short">Demo site.</span></strong> <span class="ribbon-long">${FIRM.name} is not a real firm, bookings go to a test system and no car will come.</span><span class="ribbon-short">No car will come.</span></span> <a class="ribbon-link" href="${FIRM.arringtonUrl}">Built by Arrington Consultancy</a></p>
+  <p><span class="ribbon-text"><span class="ribbon-dot" aria-hidden="true"></span><strong><span class="ribbon-long">Demonstration site.</span><span class="ribbon-short">Demo site.</span></strong> <span class="ribbon-long">${FIRM.name} is not a real firm, bookings go to a test system and no car will come.</span><span class="ribbon-short">No car will come.</span></span> <a class="ribbon-cta" href="${FIRM.arringtonEnquiryUrl}"><span class="ribbon-long">Want a site like this? Talk to Arrington</span><span class="ribbon-short">Want one? Talk to Arrington</span></a></p>
 </div>
 <header class="site-header">
   <div class="wrap header-inner">

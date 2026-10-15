@@ -29,7 +29,7 @@ function bookingReceived(b, ref) {
 }
 
 function driverAllocated(record, view) {
-  if (!record || !isMobile(record.phone)) return;
+  if (!record || !isMobile(record.phone) || !view || !view.driver) return;
   log(`[notify stub] SMS to ${maskPhone(record.phone)}: ${FIRM.name}: ${firstName(record.name)}, ${view.driver.name} is on the way in a ${view.driver.car} (${view.driver.reg}), about ${view.etaMinutes} minutes. Ref ${view.ref}.`);
 }
 

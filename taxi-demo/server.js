@@ -114,7 +114,16 @@ function createApp(options = {}) {
   images.register(assets, assetUrl);
   const store = options.store || createStore();
   const dispatch = options.dispatch || createDispatch(process.env.DISPATCH_DRIVER || 'mock', {
-    onEvent: (type, view) => { if (type === 'allocated') notify.driverAllocated(store.byRef(view.ref)?.booking, view); }
+    // A dispatch event runs on a timer, outside any request. Mounted in the
+    // main site it shares that site's process, whose uncaught exception
+    // handler exits, so a fault in a test text must never escape from here.
+    onEvent: (type, view) => {
+      try {
+        if (type === 'allocated') notify.driverAllocated(store.byRef(view.ref)?.booking, view);
+      } catch (err) {
+        console.error('Taxi demo: dispatch event not handled:', err && err.message);
+      }
+    }
   });
   const limits = {
     booking: createLimiter({ windowMs: 60 * 60 * 1000, max: options.bookingLimit || 20 }),
