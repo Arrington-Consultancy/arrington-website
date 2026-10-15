@@ -1,0 +1,70 @@
+# Inspection of any public URL (scripts/siteScreens.js). The build sandbox
+# cannot reach outside sites, so this runs on a GitHub runner: it loads each
+# URL in Chromium at desktop and phone sizes, records what a visitor meets on
+# the first screen (phone number, booking button, form), weight and errors,
+# optionally runs Lighthouse's mobile audit, and commits the results to the
+# site-screens branch (a single-commit orphan branch, replaced each run).
+# Added 15/10/2026 to benchmark award-winning taxi websites and to check the
+# taxi demo site on its own Railway URL. It changes nothing anywhere.
+name: Site screens
+
+on:
+  workflow_dispatch:
+    inputs:
+      urls:
+        description: Comma-separated full URLs (https://...)
+        required: true
+      label:
+        description: Short label for this run (used in the results folder name)
+        required: false
+        default: "manual"
+      lighthouse:
+        description: Run Lighthouse mobile on each URL (true/false)
+        required: false
+        default: "true"
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Playwright and Lighthouse
+        run: |
+          npm install --no-save playwright@1.47.0 lighthouse@12.2.1
+          npx playwright install --with-deps chromium
+
+      - name: Inspect
+        env:
+          SCREEN_URLS: ${{ github.event.inputs.urls }}
+          LIGHTHOUSE: ${{ github.event.inputs.lighthouse }}
+          OUT_DIR: ${{ github.workspace }}/screens-out
+        run: node scripts/siteScreens.js
+
+      - name: Publish results to the site-screens branch
+        env:
+          LABEL: ${{ github.event.inputs.label }}
+        run: |
+          set -e
+          STAMP="$(date -u +%Y%m%dT%H%M%SZ)-$(echo "$LABEL" | tr -c 'A-Za-z0-9-' '-' | sed 's/-*$//')"
+          mkdir -p /tmp/sc && cp -r screens-out /tmp/sc/run
+          git config user.name "site-screens"
+          git config user.email "site-screens@users.noreply.github.com"
+          git checkout --orphan site-screens
+          git rm -rfq . 2>/dev/null || true
+          git clean -fdxq
+          mkdir -p "runs/$STAMP"
+          cp -r /tmp/sc/run/. "runs/$STAMP/"
+          echo "$STAMP" > LATEST
+          git add -A
+          git commit -qm "Site screens $STAMP"
+          git push --force origin site-screens
+          echo "Results in runs/$STAMP on branch site-screens"
