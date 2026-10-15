@@ -7998,8 +7998,10 @@ main `npm test`.
   (`MOCK_ALLOCATE_MS` must stay above `MOCK_CONFIRM_MS`). Any future timer
   or event in the demo must catch its own errors for the same reason.
 - **Open:** the brief's last "done" item, one test booking on Tom's phone,
-  is his. The live Google ad (RSA 827927414816) still
-  says the email check is included in the £999; flagged to the Ads worker.
+  is his. The ad that said the email check was included (RSA 827927414816)
+  was paused by the Google Ads worker at 21:30 on 15/10/2026 and replaced
+  by RSA 828218288836, whose headline "See A Taxi Site We Built" the £999
+  hero link now backs.
 
 ## Sale readiness page
 
