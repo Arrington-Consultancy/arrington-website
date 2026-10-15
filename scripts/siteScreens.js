@@ -161,7 +161,10 @@ function lighthouse(url) {
       booking.confirmationUrl = page.url();
       booking.ref = (await page.textContent('[data-ref]')).trim();
       await page.screenshot({ path: path.join(OUT, 'demo-booking-received.png') });
-      await page.waitForFunction(() => document.querySelector('[data-status]').getAttribute('data-state') === 'allocated', null, { timeout: 30000 });
+      // Polled from here rather than with waitForFunction: the demo's CSP
+      // refuses string evaluation, which older Playwright uses to poll.
+      for (let i = 0; i < 30 && (await page.getAttribute('[data-status]', 'data-state')) !== 'allocated'; i++) await page.waitForTimeout(1000);
+      booking.state = await page.getAttribute('[data-status]', 'data-state');
       booking.driverText = (await page.textContent('[data-timeline] li:last-child')).replace(/\s+/g, ' ').trim();
       await page.evaluate(() => window.scrollTo(0, 188));
       await page.waitForTimeout(400);
@@ -181,7 +184,7 @@ function lighthouse(url) {
   const lines = [`# Site inspection, ${ranAt}`, ''];
   if (booking) {
     lines.push('## Demo test booking');
-    lines.push(booking.error ? `- ERROR: ${booking.error}` : `- Price shown before booking: ${booking.priceShown}\n- Reference from dispatch: ${booking.ref}\n- Driver step: ${booking.driverText}\n- Confirmation page: ${booking.confirmationUrl}`);
+    lines.push(booking.error ? `- ERROR: ${booking.error}` : `- Price shown before booking: ${booking.priceShown}\n- Reference from dispatch: ${booking.ref}\n- Status reached: ${booking.state}\n- Driver step: ${booking.driverText}\n- Confirmation page: ${booking.confirmationUrl}`);
     lines.push(`- Page errors: ${booking.pageErrors.length}${booking.pageErrors.length ? ' (' + booking.pageErrors.join(' | ') + ')' : ''}`);
     lines.push('- Screens: demo-booking-received.png, demo-booking-allocated.png', '');
   }
