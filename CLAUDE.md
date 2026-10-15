@@ -7943,6 +7943,22 @@ main `npm test`.
   (four delete attempts through the Railway tool timed out). With no DNS
   record pointing at it, it serves nothing; remove it in the Railway
   dashboard (taxi-demo, Settings, Networking) or with the service.
+- **Lesson from the move (Tom: "We need to explore why you made such a
+  fundamental error", 15/10/2026).** The fact was right and the route was
+  wrong. Live check that evening (dns.google): both arringtonconsultancy.com
+  and .co.uk use Wix's nameservers `ns12`/`ns13.wixdns.net`, and `www` is a
+  CNAME to Railway set there, so any new subdomain does need a record at
+  Wix. The mistakes were: (1) "part of the main website" was read as "on our
+  domain" and a subdomain chosen for technical tidiness, when the path
+  needed nothing from Tom and was the literal ask; (2) the custom domain was
+  attached in Railway, and Tom handed a DNS task, before he had chosen,
+  which breaks proposal first for infrastructure as much as for copy;
+  (3) "Wix" was used as shorthand with no explanation, and the Decision Log
+  entry of 13/10/2026 reads two ways (its reason: Tom bought the domain at
+  Wix only; its decision: Wix also manages DNS). Rules taken from it: offer
+  the route that needs nothing from Tom first; no live change before he
+  chooses; call DNS "the domain's settings, held where the domain was
+  bought" and say why it matters.
 - **Open:** the brief's last "done" item, one test booking on Tom's phone,
   is his. The live Google ad (RSA 827927414816) still
   says the email check is included in the £999; flagged to the Ads worker.
