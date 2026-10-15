@@ -7873,7 +7873,21 @@ the main `npm test`.
   time, no page errors. The site-screens booking check polls from Node:
   Playwright's `waitForFunction` evaluates a string, which the demo's CSP
   refuses. Sales page commit `5aaddb4`, deployment `652180d9`.
-- **Open:** a custom domain (subdomain of arringtonconsultancy.com or an
+- **Redesigned the same day (Tom: "looks crap, uninspiring, boring... winning
+  no awards"; "we need visuals, I can ask ChatGPT to make them").** Briefed to
+  a separate design agent on Tom's instruction; reviewed, fixed (price table
+  headings) and deployed by this worker. Palette from the place (Orcombe red
+  sandstone, Exe estuary blue-green, sand, night), Fraunces headings with
+  Instrument Sans text, an estuary map drawn from the fare engine's
+  coordinates, and eight photograph slots that show painted Exmouth scenes
+  until Tom's ChatGPT images arrive (`taxi-demo/VISUALS.md` has the prompts;
+  `taxi-demo/scripts/optimise-images.py` cuts the sizes; a file dropped in by
+  name appears on the next deploy with no code change). Commits `2904aee`,
+  `d5b0689`, `2eb73c8`. Live run `20261015T134629Z-taxi-redesign-live`: all
+  six pages 100/100/100 on Lighthouse mobile, test booking TW-92401 reached
+  allocated. The sales page screenshot was retaken from the redesign.
+- **Open:** Tom's eight ChatGPT images (to a Drive folder "Tidewell demo
+  images"); a custom domain (subdomain of arringtonconsultancy.com or an
   invented .co.uk) is Tom's choice; the brief's last "done" item, one test
   booking on Tom's phone, is his. The live Google ad (RSA 827927414816) still
   says the email check is included in the £999; flagged to the Ads worker.
