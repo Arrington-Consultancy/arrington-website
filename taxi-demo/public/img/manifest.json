@@ -1,0 +1,34 @@
+{
+  "accounts": {
+    "height": 1024,
+    "width": 1536
+  },
+  "airport-night": {
+    "height": 1024,
+    "width": 1536
+  },
+  "driver": {
+    "height": 1536,
+    "width": 1024
+  },
+  "estuary-sand": {
+    "height": 1024,
+    "width": 1536
+  },
+  "fleet-dawn": {
+    "height": 1024,
+    "width": 1536
+  },
+  "hero-exmouth": {
+    "height": 1024,
+    "width": 1536
+  },
+  "huts-evening": {
+    "height": 1024,
+    "width": 1536
+  },
+  "wav": {
+    "height": 1024,
+    "width": 1536
+  }
+}
