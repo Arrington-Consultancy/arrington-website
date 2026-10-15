@@ -157,7 +157,7 @@ picture.hero-media { position: relative; z-index: 0; aspect-ratio: 2 / 1; width:
 picture.hero-media img { object-position: 35% 60%; }
 .hero-media.pic-fallback { position: absolute; inset: 0; z-index: 0; }
 .hero-media.pic-fallback .exe-map { position: absolute; width: 150%; max-width: none; right: -64%; top: -2%; opacity: 0.55; }
-.hero-shade { display: none; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(90deg, rgba(11, 22, 35, 0.88) 0%, rgba(11, 22, 35, 0.66) 38%, rgba(11, 22, 35, 0.18) 68%, rgba(11, 22, 35, 0.3) 100%), linear-gradient(180deg, rgba(11, 22, 35, 0.2) 0%, rgba(11, 22, 35, 0) 45%, rgba(11, 22, 35, 0.55) 100%); }
+.hero-shade { display: none; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(90deg, rgba(11, 22, 35, 0.84) 0%, rgba(11, 22, 35, 0.66) 36%, rgba(11, 22, 35, 0.1) 64%, rgba(11, 22, 35, 0.12) 100%), linear-gradient(180deg, rgba(11, 22, 35, 0.1) 0%, rgba(11, 22, 35, 0) 40%, rgba(11, 22, 35, 0.5) 100%); }
 .hero-grid { position: relative; z-index: 2; display: grid; gap: 1rem; padding: 1.1rem var(--gutter) 1.5rem; }
 .hero-copy .eyebrow { color: var(--red-glow); margin-bottom: 0.4rem; }
 .hero-copy h1 { color: #fff; margin-bottom: 0.3rem; font-size: clamp(1.8rem, 5.4vw, 3.9rem); }
@@ -175,12 +175,13 @@ picture.hero-media img { object-position: 35% 60%; }
 .quote { animation: rise 0.7s 0.16s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 @media (min-width: 56rem) {
   picture.hero-media { position: absolute; inset: 0; aspect-ratio: auto; height: 100%; }
-  picture.hero-media img { object-position: 50% 62%; }
+  picture.hero-media img { object-position: 50% 40%; }
   .hero.has-photo .hero-shade { display: block; }
   .hero-grid { grid-template-columns: minmax(0, 1fr) 24rem; column-gap: 4rem; padding: 4rem var(--gutter) 4.5rem; align-items: start; min-height: 37rem; }
   .hero-copy { max-width: 34rem; padding-top: 0.5rem; }
   .hero-copy .lede { max-width: 29rem; }
   .hero-copy .lede { display: block; }
+  .hero.has-photo .hero-copy h1, .hero.has-photo .hero-copy .lede { text-shadow: 0 1px 18px rgba(11, 22, 35, 0.55); }
   .quote { padding: 1.5rem 1.5rem 1.25rem; }
   .quote-h { font-size: 1.6rem; }
   .hero-media.pic-fallback .exe-map { width: 58%; right: -4%; top: -10%; opacity: 0.5; }
