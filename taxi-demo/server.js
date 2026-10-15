@@ -28,6 +28,7 @@ const zlib = require('zlib');
 
 const { FIRM } = require('./lib/firm');
 const { layout } = require('./lib/html');
+const images = require('./lib/images');
 const pages = require('./lib/pages');
 const { readBooking, toDispatch, clean, ukPhone } = require('./lib/booking');
 const { estimate, describe, londonToInstant } = require('./lib/fares');
@@ -39,7 +40,7 @@ const notify = require('./lib/notify');
 const PUBLIC = path.join(__dirname, 'public');
 const MAX_BODY = 16 * 1024;
 
-const TYPES = { '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.json': 'application/json; charset=utf-8', '.png': 'image/png', '.txt': 'text/plain; charset=utf-8' };
+const TYPES = { '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.json': 'application/json; charset=utf-8', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.avif': 'image/avif', '.txt': 'text/plain; charset=utf-8' };
 
 // Static files are read once at start and served with a content hash in the
 // address, so they can be cached for a year and still change on deploy.
@@ -98,6 +99,8 @@ function createApp(options = {}) {
     const a = assets.get(rel);
     return a ? `/assets/${rel}?v=${a.hash}` : `/assets/${rel}`;
   };
+  // Photograph slots: which sized files exist, and their hashed addresses.
+  images.register(assets, assetUrl);
   const store = options.store || createStore();
   const dispatch = options.dispatch || createDispatch(process.env.DISPATCH_DRIVER || 'mock', {
     onEvent: (type, view) => { if (type === 'allocated') notify.driverAllocated(store.byRef(view.ref)?.booking, view); }
@@ -188,7 +191,7 @@ function createApp(options = {}) {
     if (!result.ok) {
       if (wantsJson(req)) return json(res, 422, { errors: result.errors });
       return page(req, res, 422, {
-        path: '/book', title: `Book a taxi | ${FIRM.name}, ${FIRM.town}`, description: 'Book a taxi online.', bookPage: true, extraScripts: ['book.js'],
+        path: '/book', title: `Book a taxi | ${FIRM.name}, ${FIRM.town}`, description: 'Book a taxi online.', bookPage: true, extraScripts: ['book.js'], barPrice: pages.bookBarPrice(result.values),
         body: pages.bookPage({ values: { ...result.values, phoneRaw: clean(input.phone, 30) }, errors: result.errors })
       });
     }
@@ -200,7 +203,7 @@ function createApp(options = {}) {
       console.error('Dispatch refused the booking:', e.message);
       const msg = `We couldn't reach our dispatch system just now. Please call ${FIRM.phone}.`;
       return wantsJson(req) ? json(res, 503, { error: msg })
-        : page(req, res, 503, { path: '/book', title: `Book a taxi | ${FIRM.name}`, description: '', bookPage: true, extraScripts: ['book.js'], body: pages.bookPage({ values: b, errors: { form: msg } }) });
+        : page(req, res, 503, { path: '/book', title: `Book a taxi | ${FIRM.name}`, description: '', bookPage: true, extraScripts: ['book.js'], barPrice: pages.bookBarPrice(b), body: pages.bookPage({ values: b, errors: { form: msg } }) });
     }
     const sent = notify.bookingReceived(b, job.ref);
     const record = store.add({ ref: job.ref, booking: b, sms: sent.sms });
@@ -231,11 +234,11 @@ function createApp(options = {}) {
   }
 
   const PAGES = {
-    '/': () => ({ title: `${FIRM.name} | Taxis in ${FIRM.town}, 24 hours | ${FIRM.phone}`, description: `Taxis and private hire in ${FIRM.town} and East Devon, day and night. Book online with the price up front, or call ${FIRM.phone}. Fixed prices to Exeter Airport and beyond.`, body: pages.home() }),
-    '/airports': () => ({ title: `Airport taxis from ${FIRM.town}, fixed prices | ${FIRM.name}`, description: `Fixed price taxis from ${FIRM.town} to Exeter Airport, Bristol Airport, Heathrow, Gatwick and the main stations. Same price day or night.`, body: pages.airportsPage() }),
-    '/accounts': (q) => ({ title: `Business taxi accounts in ${FIRM.town} | ${FIRM.name}`, description: `Taxi accounts for hotels, schools, NHS and care services and local businesses in ${FIRM.town}. One invoice a month.`, body: pages.accountsPage({ sent: q.get('sent') === '1' }) }),
-    '/about': (q) => ({ title: `About us and driving jobs | ${FIRM.name}, ${FIRM.town}`, description: `${FIRM.name} has run taxis in ${FIRM.town} since ${FIRM.founded}. ${FIRM.fleet} cars, licensed drivers, and driving jobs for licence holders.`, body: pages.aboutPage({ sent: q.get('sent') === '1' }) }),
-    '/contact': (q) => ({ title: `Contact ${FIRM.name}, ${FIRM.town} | ${FIRM.phone}`, description: `Call ${FIRM.name} on ${FIRM.phone}, 24 hours. Text, lost property and messages for the office.`, body: pages.contactPage({ sent: q.get('sent') === '1' }) })
+    '/': () => ({ hero: 'hero-exmouth', title: `${FIRM.name} | Taxis in ${FIRM.town}, 24 hours | ${FIRM.phone}`, description: `Taxis and private hire in ${FIRM.town} and East Devon, day and night. Book online with the price up front, or call ${FIRM.phone}. Fixed prices to Exeter Airport and beyond.`, body: pages.home() }),
+    '/airports': () => ({ hero: 'airport-night', title: `Airport taxis from ${FIRM.town}, fixed prices | ${FIRM.name}`, description: `Fixed price taxis from ${FIRM.town} to Exeter Airport, Bristol Airport, Heathrow, Gatwick and the main stations. Same price day or night.`, body: pages.airportsPage() }),
+    '/accounts': (q) => ({ hero: 'accounts', title: `Business taxi accounts in ${FIRM.town} | ${FIRM.name}`, description: `Taxi accounts for hotels, schools, NHS and care services and local businesses in ${FIRM.town}. One invoice a month.`, body: pages.accountsPage({ sent: q.get('sent') === '1' }) }),
+    '/about': (q) => ({ hero: 'fleet-dawn', title: `About us and driving jobs | ${FIRM.name}, ${FIRM.town}`, description: `${FIRM.name} has run taxis in ${FIRM.town} since ${FIRM.founded}. ${FIRM.fleet} cars, licensed drivers, and driving jobs for licence holders.`, body: pages.aboutPage({ sent: q.get('sent') === '1' }) }),
+    '/contact': (q) => ({ hero: 'huts-evening', title: `Contact ${FIRM.name}, ${FIRM.town} | ${FIRM.phone}`, description: `Call ${FIRM.name} on ${FIRM.phone}, 24 hours. Text, lost property and messages for the office.`, body: pages.contactPage({ sent: q.get('sent') === '1' }) })
   };
 
   async function handle(req, res) {
@@ -259,7 +262,7 @@ function createApp(options = {}) {
         const v = {};
         for (const k of ['pickup', 'destination']) v[k] = clean(url.searchParams.get(k), 160);
         return page(req, res, 200, {
-          path: '/book', title: `Book a taxi online | ${FIRM.name}, ${FIRM.town}`, bookPage: true, extraScripts: ['book.js'],
+          path: '/book', title: `Book a taxi online | ${FIRM.name}, ${FIRM.town}`, bookPage: true, extraScripts: ['book.js'], barPrice: pages.bookBarPrice(v),
           description: `Book a taxi in ${FIRM.town} online. See the price before you confirm, and get your driver's details by text.`,
           body: pages.bookPage({ values: v })
         });
