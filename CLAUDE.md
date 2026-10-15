@@ -7828,9 +7828,10 @@ Tom's approval with changes (Drive id
 The example site on the £999 page ("See one we built"), from Tom's brief
 "BRIEF - Taxi Demo Website (Claude Code)" (Drive id
 `1Qo6hVfxe4ExLA-wDHRjFhjHvtfQWpRRV7gB0SmWsYkw`, 15/10/2026, approved to
-build). Live at `https://taxi-demo-production.up.railway.app/`. Code in
-`taxi-demo/` (its own README); zero dependencies; its 40 tests run inside
-the main `npm test`.
+build). Live at `https://www.arringtonconsultancy.com/taxi-demo/`, part of
+the main site since 15/10/2026 (see "On the main site" below). Code in
+`taxi-demo/` (its own README); zero dependencies; its tests run inside the
+main `npm test`.
 
 - **Scope is the £999 and nothing more:** the customer-facing site and a
   booking form whose bookings go into dispatch. No controller screen, email
@@ -7860,11 +7861,10 @@ the main `npm test`.
   nine under 70; four of nine have no tap-to-call link; one has LocalBusiness
   data. The demo measured 100 for performance, accessibility and best practice
   locally; SEO reads 66 only because of the deliberate `noindex`.
-- **Railway:** service `taxi-demo` (`f27dfa50-b03c-46e8-ae25-5ae7d3199082`),
-  production only, root `/taxi-demo`, watch `/taxi-demo/**` so site pushes do
-  not rebuild it, healthcheck `/health`, region Amsterdam
-  (`europe-west4-drams3a`). The sales page reads its address from
-  `TAXI_DEMO_URL` in `routes/taxiWebsites.js`.
+- **Railway (until 15/10/2026 evening):** it first ran as its own service
+  `taxi-demo` (`f27dfa50-b03c-46e8-ae25-5ae7d3199082`), production only, root
+  `/taxi-demo`, watch `/taxi-demo/**`, healthcheck `/health`, region
+  Amsterdam. That service now only forwards its old address (see below).
 - **Verified live 15/10/2026:** run `20261015T125923Z-taxi-demo-live`, all
   six pages 200 at desktop and phone, Lighthouse mobile 100/100/100 on every
   page (SEO 66, the deliberate `noindex`); run
@@ -7913,9 +7913,38 @@ the main `npm test`.
   carriage taxis (roof lights, ranks, hailed) and 18 private hire cars
   (pre-booked), 48 in all, from one control room. No pictured roof-light car
   is called private hire, and no real council is named.
-- **Open:** a custom domain (subdomain of arringtonconsultancy.com or an
-  invented .co.uk) is Tom's choice; the brief's last "done" item, one test
-  booking on Tom's phone, is his. The live Google ad (RSA 827927414816) still
+- **On the main site (Tom, 15/10/2026: "this URL should be part of the main
+  website"; then "we have nothing to do with Wix").** A subdomain was the
+  first route tried and dropped: it needs a DNS record at the registrar,
+  which is Wix (registration and DNS only, Decision Log 13/10/2026). Instead
+  the main site mounts the demo at `/taxi-demo` (`server.js`, commit
+  `a931c34`): after the HTTPS and host redirect, before compression,
+  helmet, cookies, the body parsers, the session and CSRF, so the demo keeps
+  its own CSP, noindex, gzip and same-origin form check, sets no cookie, and
+  takes only the HSTS header. `taxi-demo/lib/base.js` puts the path on every
+  address, redirect and asset (`createApp({ basePath })`; client scripts read
+  `data-base`); `/taxi-demo` and any other spelling 301 to `/taxi-demo/`.
+  The £999 page links to `/taxi-demo/` (`TAXI_DEMO_URL`). The old service
+  carries `REDIRECT_TO=https://www.arringtonconsultancy.com/taxi-demo`, so
+  `taxi-demo-production.up.railway.app` 301s every request but `/health`
+  to the new address with the path kept. Deleting that service is the
+  tidy-up once nothing points at the old address. Tests:
+  `taxi-demo/test/basePath.test.js`, `test/taxiDemoMount.test.js`.
+  Verified live: serving deployment `243f3625`; run
+  `20261015T203035Z-taxi-demo-on-main-site`, all six demo pages 200 at
+  desktop and phone, Lighthouse mobile 100/100/100 (SEO 66 to 69, the
+  noindex), test booking TW-80603 reached allocated, no page errors, and
+  the £999 page still 200. Old address checked after `REDIRECT_TO` was set
+  (old service deployment `3661cddf`): run
+  `20261015T205623Z-taxi-demo-old-address-forwards`, `/` and
+  `/airports` on the Railway hostname land on the same paths under
+  `www.arringtonconsultancy.com/taxi-demo/`. Left behind: the custom domain
+  `taxi-demo.arringtonconsultancy.com` is still attached to the old service
+  (four delete attempts through the Railway tool timed out). With no DNS
+  record pointing at it, it serves nothing; remove it in the Railway
+  dashboard (taxi-demo, Settings, Networking) or with the service.
+- **Open:** the brief's last "done" item, one test booking on Tom's phone,
+  is his. The live Google ad (RSA 827927414816) still
   says the email check is included in the £999; flagged to the Ads worker.
 
 ## Sale readiness page
