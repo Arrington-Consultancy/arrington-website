@@ -1,13 +1,16 @@
 'use strict';
 
 // The Exe estuary, drawn from the same coordinates the fare engine uses, as
-// an inline SVG for the "Where we go" section. It is the one picture on the
-// site that could belong to no other taxi firm: the river, the sandbar at
-// Dawlish Warren, and the red cliffs running east from Orcombe Point, which
-// is where the Jurassic Coast starts.
+// an inline SVG. It is the one picture on the site that could belong to no
+// other taxi firm: the river, the sandbar at Dawlish Warren, and the red
+// cliffs running east from Orcombe Point, which is where the Jurassic Coast
+// starts. It is the home page's opening image until the photograph exists,
+// the "Where we go" map, and the picture on the page not found.
 //
 // Approximate shorelines, good enough for a map at this size; the fare
-// engine's road routing is separate and not drawn from this.
+// engine's road routing is separate and not drawn from this. Colours come
+// from the stylesheet (classes on every shape and on the gradient stops), so
+// the same drawing works on the sand and on the night field.
 
 const { FIRM } = require('./firm');
 
@@ -47,23 +50,27 @@ const TOWNS = [
   { name: 'Dawlish', lng: -3.466, lat: 50.581, dx: -4, dy: 3, anchor: 'end', faint: true }
 ];
 
-function exeMap() {
+// id keeps the gradient reference unique when two maps share a page;
+// decorative drops the labels' meaning for a screen reader when the map is
+// a background rather than a figure.
+function exeMap({ id = 'exe', decorative = false } = {}) {
   const towns = TOWNS.map((t) => {
     const x = X(t.lng);
     const y = Y(t.lat);
     const cls = t.home ? 'map-home' : t.faint ? 'map-faint' : 'map-town';
     const dot = t.home
-      ? `<circle cx="${x}" cy="${y}" r="5.5" class="map-home-ring"/><circle cx="${x}" cy="${y}" r="3" class="map-home-dot"/>`
+      ? `<circle cx="${x}" cy="${y}" r="6" class="map-home-ring"/><circle cx="${x}" cy="${y}" r="3" class="map-home-dot"/>`
       : t.plane
         ? `<path class="map-plane" transform="translate(${x} ${y}) scale(.42)" d="M-9 2 9-4l-2.4 4-12 3.2z"/>`
         : `<circle cx="${x}" cy="${y}" r="2.2" class="${cls}-dot"/>`;
     return `${dot}<text x="${x + t.dx}" y="${y + t.dy}" class="${cls}"${t.anchor ? ` text-anchor="${t.anchor}"` : ''}>${t.name}</text>`;
   }).join('');
   const names = TOWNS.filter((t) => !t.faint).map((t) => t.name).join(', ');
-  return `<svg class="exe-map" viewBox="0 14 254 186" role="img" aria-label="Map of the Exe estuary and the East Devon coast marking ${names}">
-<defs><linearGradient id="exe-water" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3E8199"/><stop offset="1" stop-color="#25627A"/></linearGradient></defs>
+  const a11y = decorative ? 'aria-hidden="true" focusable="false"' : `role="img" aria-label="Map of the Exe estuary and the East Devon coast marking ${names}"`;
+  return `<svg class="exe-map" viewBox="0 14 254 186" ${a11y}>
+<defs><linearGradient id="${id}-water" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="map-water-a"/><stop offset="1" class="map-water-b"/></linearGradient></defs>
 <rect x="0" y="14" width="254" height="186" class="map-land"/>
-<path d="M${WATER.map(pt).join(' L')} Z" fill="url(#exe-water)"/>
+<path d="M${WATER.map(pt).join(' L')} Z" fill="url(#${id}-water)" class="map-water"/>
 <path d="M${WATER.slice(1, 34).map(pt).join(' L')}" class="map-shore"/>
 <path d="M${CLIFFS.map(pt).join(' L')}" class="map-cliffs"/>
 <path d="M${RIVER.map(pt).join(' L')}" class="map-river"/>

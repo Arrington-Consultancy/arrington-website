@@ -1,10 +1,8 @@
-Fraunces: Copyright 2020 The Fraunces Project Authors (https://github.com/undercasetype/Fraunces)
-Instrument Sans: Copyright 2022 The Instrument Sans Project Authors (https://github.com/Instrument/instrument-sans)
+Schibsted Grotesk: Copyright 2023 The Schibsted-Grotesk Project Authors (https://github.com/schibsted/schibsted-grotesk)
 
-Both are licensed under the SIL Open Font License, Version 1.1, below. The
-files here are the latin subsets served by Google Fonts: fraunces.woff2
-(variable, weights 500 to 700), fraunces-italic.woff2 (italic, weight 500)
-and instrument-sans.woff2 (variable, weights 400 to 700).
+Licensed under the SIL Open Font License, Version 1.1, below. The file here
+is the latin subset served by Google Fonts: schibsted-grotesk.woff2
+(variable, weights 400 to 900). It is the only typeface on the site.
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:

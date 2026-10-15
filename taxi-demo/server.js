@@ -234,7 +234,7 @@ function createApp(options = {}) {
   }
 
   const PAGES = {
-    '/': () => ({ hero: 'hero-exmouth', title: `${FIRM.name} | Taxis in ${FIRM.town}, 24 hours | ${FIRM.phone}`, description: `Taxis and private hire in ${FIRM.town} and East Devon, day and night. Book online with the price up front, or call ${FIRM.phone}. Fixed prices to Exeter Airport and beyond.`, body: pages.home() }),
+    '/': () => ({ homePage: true, hero: 'hero-exmouth', title: `${FIRM.name} | Taxis in ${FIRM.town}, 24 hours | ${FIRM.phone}`, description: `Taxis and private hire in ${FIRM.town} and East Devon, day and night. Book online with the price up front, or call ${FIRM.phone}. Fixed prices to Exeter Airport and beyond.`, body: pages.home() }),
     '/airports': () => ({ hero: 'airport-night', title: `Airport taxis from ${FIRM.town}, fixed prices | ${FIRM.name}`, description: `Fixed price taxis from ${FIRM.town} to Exeter Airport, Bristol Airport, Heathrow, Gatwick and the main stations. Same price day or night.`, body: pages.airportsPage() }),
     '/accounts': (q) => ({ hero: 'accounts', title: `Business taxi accounts in ${FIRM.town} | ${FIRM.name}`, description: `Taxi accounts for hotels, schools, NHS and care services and local businesses in ${FIRM.town}. One invoice a month.`, body: pages.accountsPage({ sent: q.get('sent') === '1' }) }),
     '/about': (q) => ({ hero: 'fleet-dawn', title: `About us and driving jobs | ${FIRM.name}, ${FIRM.town}`, description: `${FIRM.name} has run taxis in ${FIRM.town} since ${FIRM.founded}. ${FIRM.fleet} cars, licensed drivers, and driving jobs for licence holders.`, body: pages.aboutPage({ sent: q.get('sent') === '1' }) }),

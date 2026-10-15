@@ -5,10 +5,13 @@
 // canonical, robots, structured data). Pages are plain template strings with
 // every dynamic value passed through esc().
 //
-// The design (redesign of 15/10/2026): colours from the place (red sandstone
-// cliffs, the estuary, sand), Fraunces for headings, Instrument Sans for
-// everything else, full-bleed photographs with painted fallbacks, and one
-// signature drawing, the Exe estuary map in lib/map.js.
+// The design (second redesign, 15/10/2026): one typeface, Schibsted Grotesk,
+// with lining figures everywhere and tabular figures wherever a price, a
+// time or a reference is read; the night field as a dispatch board; the Exe
+// estuary map from lib/map.js as the one picture that could belong to no
+// other firm. Photograph slots render the photograph when its files exist
+// and otherwise a plain field, type, the map, or nothing at all. Never a
+// painted scene.
 
 const { FIRM, DEMO_NOTE, yearsRunning } = require('./firm');
 const images = require('./images');
@@ -62,8 +65,8 @@ const CARS = {
 };
 const carIcon = (id) => raw(`<svg class="car-icon" viewBox="0 0 48 24" aria-hidden="true" focusable="false">${CARS[id] || CARS.saloon}<circle cx="13" cy="17" r="3.2"/><circle cx="36" cy="17" r="3.2"/></svg>`);
 
-// The mark: the sun over the tide line, in sandstone red.
-const MARK = raw('<svg class="mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><circle cx="16" cy="16" r="16" class="mark-bg"/><path d="M4.5 19c3-3.2 5-3.2 8 0s5 3.2 8 0 5-3.2 8 0" class="mark-line"/><circle cx="16" cy="10.5" r="2.7" class="mark-sun"/></svg>');
+// The mark: a rounded red tile, the tide line and the sun over it.
+const MARK = raw('<svg class="mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect width="32" height="32" rx="8" class="mark-bg"/><path d="M4.5 20.5c3-3.4 5.3-3.4 8.3 0s5.3 3.4 8.3 0 5.3-3.4 8.3 0" class="mark-line"/><circle cx="16" cy="11" r="3.1" class="mark-sun"/></svg>');
 const LOGO = html`${MARK}<span class="brand-name">${FIRM.shortName}<span class="brand-sub"> Cars</span></span>`;
 
 const NAV = [
@@ -74,41 +77,21 @@ const NAV = [
   ['/contact', 'Contact']
 ];
 
-// ---- Painted fallbacks for the photograph slots -------------------------------
-// Simple shapes in the site's colours: sky, sea, the red cliffs and sand.
-// Each is a few hundred bytes and reads as a designed placeholder, not a
-// missing image. The real photographs replace them by file name.
+// ---- Photograph slots ----------------------------------------------------------
+// A slot renders a <picture> with WebP and JPEG at every width when the
+// sized files exist (see VISUALS.md). When they do not, it renders whatever
+// fallback the page supplies, which is a colour field, a line of type or the
+// estuary map, and nothing at all when the layout stands up without the
+// image. The real photograph replaces it by file name, with no code change.
 
-const SCENES = {
-  day: `<defs><linearGradient id="sc-sky" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#B4CBD8"/><stop offset="1" stop-color="#EADFCB"/></linearGradient><linearGradient id="sc-sea" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#5E97AA"/><stop offset="1" stop-color="#28657D"/></linearGradient></defs>
-<rect width="1200" height="800" fill="url(#sc-sky)"/><circle cx="300" cy="300" r="54" fill="#F8E9C8" opacity=".9"/>
-<path d="M600 470 760 376q100-48 200-10l100-14 140 20v98z" fill="#B8452A"/><path d="M690 470l110-58q80-30 160-8l240 36v30z" fill="#9A3620"/>
-<rect y="470" width="1200" height="180" fill="url(#sc-sea)"/>
-<path d="M0 640q300-40 600-10t600-10v180H0z" fill="#E5D6BA"/><path d="M0 614q300-30 600-4t600-10" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width="4"/><path d="M0 520q200-10 400 0t400 0 400 0" fill="none" stroke="#fff" stroke-opacity=".18" stroke-width="2"/>`,
-  night: `<defs><linearGradient id="sc-night" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#0D1826"/><stop offset="1" stop-color="#25405A"/></linearGradient></defs>
-<rect width="1200" height="800" fill="url(#sc-night)"/><ellipse cx="620" cy="470" rx="760" ry="110" fill="#E8A469" opacity=".2"/><circle cx="980" cy="250" r="22" fill="#F3E9D2" opacity=".85"/>
-<rect y="470" width="1200" height="330" fill="#0B1420"/><path d="M0 620 1200 560v240H0z" fill="#171C23"/>
-<g fill="#F6D08A" opacity=".9"><circle cx="140" cy="462" r="5"/><circle cx="260" cy="462" r="5"/><circle cx="380" cy="462" r="5"/><circle cx="500" cy="462" r="5"/><circle cx="620" cy="462" r="5"/><circle cx="740" cy="462" r="5"/><circle cx="860" cy="462" r="5"/><circle cx="980" cy="462" r="5"/><circle cx="1100" cy="462" r="5"/></g>
-<path d="M0 700 1200 640" fill="none" stroke="#F6D08A" stroke-opacity=".35" stroke-width="4" stroke-dasharray="40 30"/>`,
-  sand: `<defs><pattern id="sc-ribs" width="240" height="80" patternUnits="userSpaceOnUse"><path d="M0 40q60-22 120 0t120 0" fill="none" stroke="#CDB994" stroke-width="10" stroke-linecap="round"/><path d="M0 72q60-16 120 0t120 0" fill="none" stroke="#D8C7A6" stroke-width="6"/></pattern></defs>
-<rect width="1200" height="800" fill="#E3D4B7"/><rect width="1200" height="800" fill="url(#sc-ribs)"/>
-<path d="M-50 300q350-100 650 30t650-50" fill="none" stroke="#8FB9C6" stroke-width="46" stroke-linecap="round" opacity=".85"/><path d="M-50 620q450-100 850 20t450-80" fill="none" stroke="#9CC3CF" stroke-width="30" stroke-linecap="round" opacity=".8"/>`,
-  road: `<defs><linearGradient id="sc-dusk" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#22364A"/><stop offset=".55" stop-color="#6E8497"/><stop offset="1" stop-color="#DCAB7A"/></linearGradient></defs>
-<rect width="1200" height="800" fill="url(#sc-dusk)"/><rect y="430" width="1200" height="40" fill="#4F8295"/><rect y="470" width="1200" height="330" fill="#2B2F35"/>
-<path d="M520 470h160l420 330H100z" fill="#3A3F46"/><path d="M600 490v310" stroke="#D8CFC0" stroke-width="8" stroke-dasharray="40 50" opacity=".6"/>`
-};
-SCENES.huts = SCENES.day + '<g>' + [0, 1, 2, 3, 4, 5, 6, 7].map((i) => {
-  const x = 40 + i * 150;
-  const c = ['#BF3F23', '#F2E6D0', '#2C6A82', '#E7B35A', '#7FB3C4', '#F2E6D0', '#BF3F23', '#2C6A82'][i];
-  return `<path d="M${x} 600l55-40 55 40z" fill="#3B2A22" opacity=".85"/><rect x="${x}" y="600" width="110" height="72" fill="${c}"/>`;
-}).join('') + '</g>';
+const hasImage = (name) => images.available(name);
 
-const scene = (kind) => `<svg class="scene" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">${SCENES[kind] || SCENES.day}</svg>`;
-
-// A photograph slot: <picture> with WebP and JPEG at every width when the
-// files exist, the painted scene when they do not.
-function picture({ name, alt = '', kind = 'day', className = '', sizes = '100vw', priority = false }) {
-  if (!images.available(name)) return raw(`<div class="pic pic-fallback pic-${esc(kind)} ${esc(className)}" aria-hidden="true">${scene(kind)}</div>`);
+function picture({ name, alt = '', className = '', sizes = '100vw', priority = false, fallback = null }) {
+  if (!images.available(name)) {
+    if (fallback == null) return raw('');
+    const inner = fallback instanceof Raw ? fallback.s : esc(fallback);
+    return raw(`<div class="pic pic-fallback ${esc(className)}" aria-hidden="true">${inner}</div>`);
+  }
   const webp = images.sources(name, 'webp');
   const jpg = images.sources(name, 'jpg');
   const dim = images.size(name);
@@ -125,6 +108,12 @@ function preloadImage(name, sizes = '100vw') {
   const webp = images.sources(name, 'webp');
   if (!webp.length) return '';
   return html`<link rel="preload" as="image" imagesrcset="${webp.map((s) => `${s.url} ${s.w}w`).join(', ')}" imagesizes="${sizes}">`;
+}
+
+// A flat field with a few words set large: what a slot shows when the
+// photograph is not there yet and the layout wants something in that space.
+function typeField({ big, text, tone = 'red' }) {
+  return raw(`<div class="type-field type-field-${esc(tone)}"><span class="type-field-big">${esc(big)}</span><span class="type-field-text">${esc(text)}</span></div>`);
 }
 
 function structuredData(base) {
@@ -151,9 +140,10 @@ function structuredData(base) {
   return raw(`<script type="application/ld+json">${JSON.stringify(data).replace(/</g, '\\u003c')}</script>`);
 }
 
-function layout({ path, title, description, body, base, assets, bookPage = false, barPrice = '', extraScripts = [], hero = null }) {
+function layout({ path, title, description, body, base, assets, bookPage = false, homePage = false, barPrice = '', extraScripts = [], hero = null, bodyClass = '' }) {
   const navItems = NAV.map(([href, label]) => html`<li><a href="${href}"${path === href ? raw(' aria-current="page"') : ''}>${label}</a></li>`);
   const scripts = ['app.js', ...extraScripts].map((s) => html`<script src="${assets(s)}" defer></script>`);
+  const classes = [bookPage ? 'is-book' : '', homePage ? 'is-home' : '', bodyClass].filter(Boolean).join(' ');
   return '<!doctype html>' + html`
 <html lang="en-GB">
 <head>
@@ -163,22 +153,21 @@ function layout({ path, title, description, body, base, assets, bookPage = false
 <meta name="description" content="${description}">
 <meta name="robots" content="noindex, nofollow">
 <link rel="canonical" href="${base + path}">
-<meta name="theme-color" content="#F3EDE3">
+<meta name="theme-color" content="#0B1623">
 <meta property="og:type" content="website">
 <meta property="og:title" content="${title}">
 <meta property="og:description" content="${description}">
 <meta property="og:url" content="${base + path}">
 <link rel="icon" href="${assets('favicon.svg')}" type="image/svg+xml">
-<link rel="preload" href="/assets/fonts/instrument-sans.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="/assets/fonts/fraunces.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/schibsted-grotesk.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="${assets('site.css')}">
 ${hero ? preloadImage(hero) : ''}
 ${structuredData(base)}
 </head>
-<body class="${bookPage ? 'is-book' : ''}">
+<body class="${classes}">
 <a class="skip" href="#main">Skip to content</a>
 <div class="ribbon" role="note">
-  <p><span class="ribbon-dot" aria-hidden="true"></span><strong>Demonstration site.</strong> <span class="ribbon-long">${FIRM.name} is not a real firm, bookings go to a test system and no car will come.</span><span class="ribbon-short">Not a real firm. No car will come.</span> <a href="${FIRM.arringtonUrl}">Built by Arrington Consultancy</a></p>
+  <p><span class="ribbon-text"><span class="ribbon-dot" aria-hidden="true"></span><strong><span class="ribbon-long">Demonstration site.</span><span class="ribbon-short">Demo site.</span></strong> <span class="ribbon-long">${FIRM.name} is not a real firm, bookings go to a test system and no car will come.</span><span class="ribbon-short">No car will come.</span></span> <a class="ribbon-link" href="${FIRM.arringtonUrl}">Built by Arrington Consultancy</a></p>
 </div>
 <header class="site-header">
   <div class="wrap header-inner">
@@ -243,7 +232,7 @@ ${body}
     </div>
   </div>
 </footer>
-<div class="action-bar">
+<div class="action-bar" data-action-bar${homePage ? raw(' data-hide-near="form.quote"') : ''}>
   <a class="btn btn-ghost" href="${FIRM.phoneHref}">${icon('phone')} Call</a>
   ${bookPage
     ? html`<button class="btn btn-primary" type="submit" form="book-form">Book this taxi <span class="bar-price" data-quote-mirror>${barPrice}</span></button>`
@@ -254,4 +243,4 @@ ${scripts}
 </html>`.s;
 }
 
-module.exports = { esc, html, raw, icon, carIcon, picture, scene, layout, LOGO, MARK, NAV, yearsRunning };
+module.exports = { esc, html, raw, icon, carIcon, picture, hasImage, typeField, layout, LOGO, MARK, NAV, yearsRunning };

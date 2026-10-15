@@ -3,34 +3,60 @@
 // Page bodies. Copy rules (taxi demo brief, 15/10/2026): plain English,
 // short sentences, prices and facts stated straight; no "solutions",
 // "seamless" or "cutting-edge", no exclamation marks. Plus the Arrington
-// site's own: UK English and no dashes as punctuation.
+// site's own: UK English and no dashes as punctuation. Every page opens with
+// its own headline that says what the page is for.
 
 const { FIRM, DEMO_NOTE, yearsRunning } = require('./firm');
-const { html, raw, icon, carIcon, picture, esc } = require('./html');
+const { html, raw, icon, carIcon, picture, hasImage, typeField, esc } = require('./html');
 const { VEHICLES, FIXED, money, describe, estimate } = require('./fares');
 const { PAYMENT, maskPhone, firstName } = require('./booking');
 const { PLACES } = require('./places');
 const { exeMap } = require('./map');
 
 const COVER = ['Exmouth', 'Lympstone', 'Budleigh Salterton', 'Woodbury', 'Exton', 'Topsham', 'Exeter', 'Sidmouth'];
+// The four fixed prices on the home page board.
+const BOARD = ['exeter-airport', 'exeter-st-davids', 'bristol-airport', 'heathrow'];
 
-// A page opening: photograph (or painted scene) with the title over it.
-function pageHero({ eyebrow, title, lede, image, kind = 'day', alt = '' }) {
+// ---- The fare -----------------------------------------------------------------
+// One block, the same everywhere a price is shown: a small label, the figure
+// in tabular numerals, one line of context. Server-rendered here, and app.js
+// rebuilds it in the same shape as the addresses change.
+
+function fareBlock({ est = null, hint = '', forForm = null } = {}) {
+  const attrs = raw(`data-quote-out aria-live="polite"${forForm ? ` data-quote-for="${esc(forForm)}"` : ''}`);
+  if (!est || est.kind === 'unpriced') return html`<div class="fare" ${attrs}><p class="fare-hint">${hint}</p></div>`;
+  const label = est.kind === 'fixed' ? 'Fixed price' : 'Estimated fare';
+  const sub = est.kind === 'fixed' ? est.label.replace(/^Fixed price, /, '') : `${est.label}. The meter decides the final fare.`;
+  return html`<div class="fare is-priced" ${attrs}><span class="fare-label">${label}</span><strong class="fare-figure">${describe(est)}</strong><span class="fare-sub">${sub}</span></div>`;
+}
+
+// A page opening: the headline on sand or on the night field, with room for
+// something beside it (the stats on the about page).
+function pageTop({ eyebrow, title, lede, tone = 'sand', extra = '', className = '' }) {
   return html`
-<section class="page-hero">
-  ${picture({ name: image, kind, className: 'page-hero-media', alt, sizes: '100vw', priority: true })}
-  <div class="page-hero-shade" aria-hidden="true"></div>
-  <div class="page-hero-inner">
-    ${eyebrow ? html`<p class="eyebrow">${eyebrow}</p>` : ''}
-    <h1>${title}</h1>
-    ${lede ? html`<p class="lede">${lede}</p>` : ''}
+<section class="page-top page-top-${tone} ${className}">
+  <div class="wrap page-top-inner">
+    <div class="page-top-copy">
+      ${eyebrow ? html`<p class="eyebrow">${eyebrow}</p>` : ''}
+      <h1>${title}</h1>
+      ${lede ? html`<p class="lede">${lede}</p>` : ''}
+    </div>
+    ${extra}
   </div>
 </section>`;
 }
 
+// A wide photograph under a page opening, only once the file exists.
+function photoBand(name, alt) {
+  if (!hasImage(name)) return '';
+  return html`<div class="photo-band">${picture({ name, alt, className: 'photo-band-pic', sizes: '100vw' })}</div>`;
+}
+
+// ---- Home ---------------------------------------------------------------------
+
 function quickQuote() {
-  return html`<form class="quote" action="/book" method="get" data-quote>
-  <h2 class="quote-h">Where to?</h2>
+  return html`<form class="quote" action="/book" method="get" data-quote aria-labelledby="quote-h">
+  <h2 class="quote-h" id="quote-h">Where to?</h2>
   <div class="field">
     <label for="q-from">From</label>
     <input id="q-from" name="pickup" autocomplete="off" placeholder="Pickup address or place" data-places required>
@@ -39,62 +65,64 @@ function quickQuote() {
     <label for="q-to">To</label>
     <input id="q-to" name="destination" autocomplete="off" placeholder="Where you're going" data-places required>
   </div>
-  <p class="quote-price" data-quote-out aria-live="polite">Fixed prices to the airports. Metered fares shown before you book.</p>
-  <button class="btn btn-primary btn-block btn-lg" type="submit">See the price ${icon('arrow')}</button>
-  <p class="quote-note">Booking for later? You choose the time on the next page.</p>
+  ${fareBlock({ hint: 'Type both ends and the price appears here.' })}
+  <button class="btn btn-primary btn-block btn-lg" type="submit"><span data-quote-cta>See the price</span>${icon('arrow')}</button>
+  <p class="quote-note">Booking for later? Choose the time on the next page.</p>
 </form>`;
 }
 
+function priceBoard() {
+  const rows = BOARD.map((id) => FIXED.find((f) => f.id === id));
+  return html`<div class="board" aria-labelledby="board-h">
+  <p class="board-h" id="board-h">Fixed prices, day or night</p>
+  <ul class="board-rows">${rows.map((f) => html`<li><span class="board-to">${f.name}<small>About ${f.miles} miles</small></span><span class="board-price">${money(f.price * 100)}</span></li>`)}</ul>
+  <p class="board-foot">One way from ${FIRM.town}, up to four passengers. <a href="/airports">All fixed prices ${icon('arrow')}</a></p>
+</div>`;
+}
+
 function home() {
-  const fixedPreview = FIXED.filter((f) => ['exeter-airport', 'exeter-st-davids', 'bristol-airport', 'heathrow'].includes(f.id));
-  const facts = ['Licensed operator', `${yearsRunning()} years in ${FIRM.town}`, 'Open every hour of the year', `${FIRM.wheelchairCars} wheelchair accessible cars, the same price as a car`, 'Card, cash or account'];
+  const facts = ['Licensed operator', `${yearsRunning()} years in ${FIRM.town}`, 'Open every hour of the year', `${FIRM.wheelchairCars} wheelchair accessible cars`, 'Card, cash or account'];
+  const heroPhoto = hasImage('hero-exmouth');
   return html`
-<section class="hero">
-  ${picture({ name: 'hero-exmouth', kind: 'day', className: 'hero-media', alt: `A ${FIRM.name} car on the seafront at ${FIRM.town}, the red cliffs of Orcombe Point behind`, sizes: '100vw', priority: true })}
+<section class="hero${heroPhoto ? ' has-photo' : ''}">
+  ${picture({ name: 'hero-exmouth', className: 'hero-media on-night-map', alt: `A ${FIRM.name} car on the seafront at ${FIRM.town}, the red cliffs of Orcombe Point behind`, sizes: '100vw', priority: true, fallback: raw(exeMap({ id: 'hero-map', decorative: true })) })}
   <div class="hero-shade" aria-hidden="true"></div>
-  <div class="hero-copy">
-    <p class="eyebrow">${FIRM.town}, ${FIRM.county}</p>
-    <h1>${FIRM.town}'s taxi firm since ${FIRM.founded}.</h1>
-    <p class="lede">${FIRM.fleet} cars, a control room that never shuts, and the price before you book.</p>
-    <p class="hero-call">Or call <a href="${FIRM.phoneHref}">${FIRM.phone}</a>, any hour.</p>
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <p class="eyebrow">${FIRM.town}, ${FIRM.county}</p>
+      <h1>Taxis in ${FIRM.town}, with the price before you book.</h1>
+      <p class="lede">${FIRM.fleet} cars, a control room that never shuts, and fixed prices to the airports. Book online, in the app, or call <a href="${FIRM.phoneHref}">${FIRM.phone}</a>.</p>
+    </div>
+    ${quickQuote()}
+    ${priceBoard()}
   </div>
-  ${quickQuote()}
 </section>
 <section class="facts-band">
   <div class="wrap">
-    <ul class="facts">${facts.map((f) => html`<li>${icon('check')}<span>${f}</span></li>`)}</ul>
+    <ul class="facts">${facts.map((f) => html`<li>${f}</li>`)}</ul>
   </div>
 </section>
-<section class="section">
-  <div class="wrap split">
-    <div class="split-copy reveal">
-      <p class="eyebrow">Airports and long distance</p>
-      <h2>Fixed prices, day or night.</h2>
-      <p>From anywhere in ${FIRM.town}, Lympstone, Budleigh Salterton, Woodbury or Exton. One way, up to four passengers, and the same price at four in the morning as at four in the afternoon.</p>
-      <ul class="menu-list">${fixedPreview.map((f) => html`<li><span class="menu-name">${f.name}</span><span class="menu-leader" aria-hidden="true"></span><span class="menu-price">${money(f.price * 100)}</span></li>`)}</ul>
-      <p><a class="link-arrow" href="/airports">All fixed prices ${icon('arrow')}</a></p>
-    </div>
-    <div class="split-media reveal">${picture({ name: 'airport-night', kind: 'night', className: 'pic-43', alt: 'A car at the airport drop-off at night', sizes: '(min-width: 56rem) 50vw, 100vw' })}</div>
-  </div>
-</section>
-<section class="section band-night">
+<section class="section" id="ways">
   <div class="wrap">
     <div class="section-head reveal">
       <p class="eyebrow">Three ways to book</p>
-      <h2>Book the way that suits you.</h2>
+      <h2>Online, by phone, or in the app.</h2>
     </div>
     <div class="ways">
       <article class="way reveal">
+        <span class="way-n" aria-hidden="true">01</span>
         <h3>Online</h3>
         <p>See the price first. Your booking goes straight to our controllers and we text you the driver's name, car and arrival time.</p>
         <a class="btn btn-primary" href="/book">Book online</a>
       </article>
       <article class="way reveal">
+        <span class="way-n" aria-hidden="true">02</span>
         <h3>By phone</h3>
         <p>Answered in ${FIRM.town}, 24 hours a day. Tell us where you are and where you're going.</p>
-        <a class="btn btn-ghost" href="${FIRM.phoneHref}">${icon('phone')} ${FIRM.phone}</a>
+        <a class="btn btn-dark" href="${FIRM.phoneHref}">${icon('phone')} ${FIRM.phone}</a>
       </article>
       <article class="way reveal" id="app">
+        <span class="way-n" aria-hidden="true">03</span>
         <h3>In the app</h3>
         <p>Book in two taps, watch your car arrive on the map and pay by card in the app.</p>
         <div class="stores">
@@ -105,8 +133,8 @@ function home() {
     </div>
   </div>
 </section>
-<section class="section">
-  <div class="wrap split split-reverse">
+<section class="section band-paper">
+  <div class="wrap split">
     <div class="split-copy reveal">
       <p class="eyebrow">Business accounts</p>
       <h2>One invoice a month.</h2>
@@ -119,10 +147,10 @@ function home() {
       </ul>
       <p><a class="btn btn-dark" href="/accounts">Open an account</a></p>
     </div>
-    <div class="split-media reveal">${picture({ name: 'accounts', kind: 'huts', className: 'pic-43', alt: 'A guest with a suitcase walking to a waiting car outside a hotel', sizes: '(min-width: 56rem) 50vw, 100vw' })}</div>
+    <div class="split-media reveal">${picture({ name: 'accounts', className: 'pic-43', alt: 'A guest with a suitcase walking to a waiting car outside a hotel', sizes: '(min-width: 56rem) 50vw, 100vw', fallback: typeField({ big: '1', text: 'invoice a month, with every journey on it', tone: 'night' }) })}</div>
   </div>
 </section>
-<section class="section band-paper">
+<section class="section">
   <div class="wrap">
     <div class="section-head reveal">
       <p class="eyebrow">What customers say</p>
@@ -138,8 +166,8 @@ function home() {
     </div>
   </div>
 </section>
-<section class="where">
-  <div class="where-band">${picture({ name: 'estuary-sand', kind: 'sand', className: 'pic-band', alt: '', sizes: '100vw' })}</div>
+<section class="where${hasImage('estuary-sand') ? ' has-band' : ''}">
+  ${picture({ name: 'estuary-sand', className: 'where-band', alt: '', sizes: '100vw' })}
   <div class="wrap where-grid">
     <div class="where-copy reveal">
       <p class="eyebrow">Where we go</p>
@@ -147,7 +175,7 @@ function home() {
       <p>${FIRM.town}, the villages along the estuary, Budleigh and Sidmouth along the coast. We go further every day: Exeter, the airports, the stations and anywhere in the UK by arrangement.</p>
       <ul class="chips">${COVER.map((t) => html`<li>${t}</li>`)}</ul>
     </div>
-    <div class="where-map reveal">${raw(exeMap())}</div>
+    <div class="where-map reveal">${raw(exeMap({ id: 'where-map' }))}</div>
   </div>
 </section>`;
 }
@@ -170,22 +198,32 @@ function bookBarPrice(values = {}) {
 function bookPage({ values = {}, errors = null } = {}) {
   const v = { passengers: 1, luggage: 0, vehicle: 'saloon', payment: 'card', when: 'now', ...values };
   const est = estimate({ pickup: v.pickup, destination: v.destination, vehicle: v.vehicle });
+  const hint = v.pickup && v.destination ? est.message : 'Enter both addresses and the price appears here.';
   const opts = (from, to, sel) => Array.from({ length: to - from + 1 }, (_, i) => from + i).map((n) => html`<option value="${n}"${Number(sel) === n ? raw(' selected') : ''}>${n}</option>`);
   const errorList = errors ? Object.values(errors) : [];
   return html`
-<section class="page-top">
-  <div class="wrap">
-    <p class="eyebrow">Book online</p>
-    <h1>Book a taxi.</h1>
-    <p class="lede">You see the price before you confirm. Your booking goes straight to our controllers, and we text you the driver's details.</p>
-  </div>
-</section>
+${pageTop({ eyebrow: 'Book online', title: 'Book a taxi.', lede: 'The price before you confirm. Your booking goes straight to our controllers, and we text you the driver\'s details.', className: 'page-top-book' })}
 <section class="section section-tight">
   <div class="wrap book-grid">
+    <div class="book-side">
+      <div class="card fare-panel">
+        <h2 class="fare-panel-h">Your fare</h2>
+        ${fareBlock({ est, hint, forForm: 'book-form' })}
+      </div>
+      <div class="card aside-card" aria-label="How booking works">
+        <h2>What happens next</h2>
+        <ol class="track">
+          <li><strong>Your booking reaches our dispatch system</strong> and you get a reference straight away.</li>
+          <li><strong>A controller confirms it.</strong></li>
+          <li><strong>We text you the driver's name, car and registration,</strong> and how many minutes away they are.</li>
+        </ol>
+        <p class="aside-phone">Rather talk to someone? <a href="${FIRM.phoneHref}">${FIRM.phone}</a>, 24 hours.</p>
+      </div>
+    </div>
     <form id="book-form" class="book-form" action="/book" method="post" novalidate data-quote data-book>
       ${errorList.length ? html`<div class="error-summary" role="alert" tabindex="-1"><h2>Check ${errorList.length === 1 ? 'this' : 'these'} and try again</h2><ul>${errorList.map((e) => html`<li>${e}</li>`)}</ul></div>` : ''}
       <fieldset class="group">
-        <legend>Where</legend>
+        <legend><span class="group-n" aria-hidden="true">1</span>Where</legend>
         <div class="field">
           <label for="pickup">Pickup</label>
           <input id="pickup" name="pickup" value="${v.pickup || ''}" autocomplete="off" placeholder="Address, place or postcode" data-places required${invalid(errors, 'pickup')}>
@@ -199,7 +237,7 @@ function bookPage({ values = {}, errors = null } = {}) {
       </fieldset>
 
       <fieldset class="group when">
-        <legend>When</legend>
+        <legend><span class="group-n" aria-hidden="true">2</span>When</legend>
         <div class="seg" role="radiogroup" aria-label="When">
           <input type="radio" id="when-now" name="when" value="now"${v.when !== 'later' ? raw(' checked') : ''}><label for="when-now">As soon as possible</label>
           <input type="radio" id="when-later" name="when" value="later"${v.when === 'later' ? raw(' checked') : ''}><label for="when-later">Later</label>
@@ -212,7 +250,7 @@ function bookPage({ values = {}, errors = null } = {}) {
       </fieldset>
 
       <fieldset class="group">
-        <legend>Who's travelling</legend>
+        <legend><span class="group-n" aria-hidden="true">3</span>Who's travelling</legend>
         <div class="row-2">
           <div class="field"><label for="passengers">Passengers</label><select id="passengers" name="passengers">${opts(1, 8, v.passengers)}</select>${fieldError(errors, 'passengers')}</div>
           <div class="field"><label for="luggage">Large bags</label><select id="luggage" name="luggage">${opts(0, 8, v.luggage)}</select>${fieldError(errors, 'luggage')}</div>
@@ -225,14 +263,14 @@ function bookPage({ values = {}, errors = null } = {}) {
       </fieldset>
 
       <fieldset class="group">
-        <legend>Your details</legend>
+        <legend><span class="group-n" aria-hidden="true">4</span>Your details</legend>
         <div class="field"><label for="name">Name</label><input id="name" name="name" value="${v.name || ''}" autocomplete="name" required${invalid(errors, 'name')}>${fieldError(errors, 'name')}</div>
         <div class="field"><label for="phone">Mobile number</label><input id="phone" name="phone" type="tel" value="${v.phoneRaw || ''}" autocomplete="tel" inputmode="tel" required${invalid(errors, 'phone')}><p class="hint">We text your driver's details to this number.</p>${fieldError(errors, 'phone')}</div>
         <div class="field"><label for="email">Email <span class="optional">(optional, for a receipt)</span></label><input id="email" name="email" type="email" value="${v.email || ''}" autocomplete="email"${invalid(errors, 'email')}>${fieldError(errors, 'email')}</div>
       </fieldset>
 
       <fieldset class="group">
-        <legend>Payment</legend>
+        <legend><span class="group-n" aria-hidden="true">5</span>Payment</legend>
         <div class="seg seg-3" role="radiogroup" aria-label="Payment">
           ${PAYMENT.map((p) => html`<input type="radio" id="pay-${p.id}" name="payment" value="${p.id}"${v.payment === p.id ? raw(' checked') : ''}><label for="pay-${p.id}">${p.label}</label>`)}
         </div>
@@ -243,22 +281,10 @@ function bookPage({ values = {}, errors = null } = {}) {
       <div class="hp" aria-hidden="true"><label for="website">Leave this empty</label><input id="website" name="website" tabindex="-1" autocomplete="off"></div>
 
       <div class="submit-row">
-        <p class="price-inline" data-quote-out aria-live="polite">${est.kind === 'unpriced' ? 'Enter both addresses to see the price.' : html`Price: <strong>${describe(est)}</strong>`}</p>
         <button class="btn btn-primary btn-block btn-lg" type="submit">Book this taxi</button>
         <p class="demo-note">${DEMO_NOTE}</p>
       </div>
     </form>
-    <aside class="book-aside" aria-label="How booking works">
-      <div class="card aside-card">
-        <h2>What happens next</h2>
-        <ol class="track">
-          <li><strong>Your booking reaches our dispatch system</strong> and you get a reference straight away.</li>
-          <li><strong>A controller confirms it.</strong></li>
-          <li><strong>We text you the driver's name, car and registration,</strong> and how many minutes away they are.</li>
-        </ol>
-        <p class="aside-phone">Rather talk to someone? <a href="${FIRM.phoneHref}">${FIRM.phone}</a>, 24 hours.</p>
-      </div>
-    </aside>
   </div>
 </section>`;
 }
@@ -274,7 +300,7 @@ function statusSteps(view) {
     ['Received by our dispatch system', html`Reference <span class="ref-inline">${view ? view.ref : ''}</span>`],
     ['Confirmed by a controller', 'Your booking is with our controllers.'],
     view && view.status === 'allocated'
-      ? ['Driver on the way', html`<span class="driver-card"><span class="driver-who"><strong>${view.driver.name}</strong>, ${view.driver.car}</span><span class="reg">${view.driver.reg}</span><span class="driver-eta">About ${view.etaMinutes} minutes away, arriving around ${time(view.etaAt)}.</span></span>`]
+      ? ['Driver on the way', html`<span class="driver-card"><span class="driver-who"><strong>${view.driver.name}</strong>${view.driver.car}</span><span class="reg">${view.driver.reg}</span><span class="driver-eta"><strong class="driver-mins">${view.etaMinutes}</strong> minutes away, arriving around <span class="driver-time">${time(view.etaAt)}</span>.</span></span>`]
       : ['Driver on the way', view && view.status === 'confirmed' && view.asap === false ? 'We\'ll text you the driver\'s details before pickup.' : 'Allocating a car near you.']
   ];
   return html`<ol class="timeline" data-timeline>${steps.map(([t, d], i) => html`<li class="${i <= reached ? 'done' : i === reached + 1 ? 'next' : ''}"><span class="dot" aria-hidden="true"></span><div><strong>${t}</strong><p>${d}</p></div></li>`)}</ol>`;
@@ -287,11 +313,13 @@ function confirmationPage({ record, view }) {
   const vehicle = VEHICLES.find((x) => x.id === b.vehicle);
   const pay = PAYMENT.find((p) => p.id === b.payment);
   return html`
-<section class="page-top page-top-confirm">
-  <div class="wrap">
-    <p class="eyebrow">${cancelled ? 'Cancelled' : 'Booked'}</p>
-    <h1>${cancelled ? 'Booking cancelled.' : `Thanks, ${firstName(b.name)}. Your taxi is booked.`}</h1>
-    <p class="ref">Booking reference <strong data-ref>${record.ref}</strong></p>
+<section class="page-top page-top-night page-top-confirm">
+  <div class="wrap page-top-inner">
+    <div class="page-top-copy">
+      <p class="eyebrow">${cancelled ? 'Cancelled' : 'Booked'}</p>
+      <h1>${cancelled ? 'Booking cancelled.' : `Thanks, ${firstName(b.name)}. Your taxi is booked.`}</h1>
+    </div>
+    <p class="ref"><span class="ref-label">Booking reference</span><strong data-ref>${record.ref}</strong></p>
   </div>
 </section>
 <section class="section section-tight">
@@ -318,7 +346,7 @@ function confirmationPage({ record, view }) {
           <dt>To</dt><dd>${b.destination}</dd>
           <dt>When</dt><dd>${when}</dd>
           <dt>Car</dt><dd>${vehicle ? vehicle.label : b.vehicle}, ${b.passengers} ${b.passengers === 1 ? 'passenger' : 'passengers'}${b.luggage ? `, ${b.luggage} ${b.luggage === 1 ? 'bag' : 'bags'}` : ''}</dd>
-          <dt>Price</dt><dd>${describe(b.quote)}</dd>
+          <dt>Price</dt><dd class="summary-price">${describe(b.quote)}</dd>
           <dt>Payment</dt><dd>${pay ? pay.label : b.payment}${b.account ? ` (${b.account})` : ''}</dd>
           ${b.notes ? html`<dt>Notes</dt><dd>${b.notes}</dd>` : ''}
         </dl>
@@ -336,12 +364,13 @@ function airportsPage() {
   const factor = (id) => VEHICLES.find((v) => v.id === id).factor;
   const round = (p) => Math.round(p);
   return html`
-${pageHero({ eyebrow: 'Fixed prices', title: 'Airports and long distance.', lede: `Fixed prices from ${FIRM.town} and the villages around it, the same day or night.`, image: 'airport-night', kind: 'night', alt: 'A car at the airport drop-off at night' })}
+${pageTop({ eyebrow: 'Fixed prices', title: 'Fixed prices to the airports and the stations.', lede: `One way from ${FIRM.town}, Lympstone, Budleigh Salterton, Woodbury or Exton. The same price at four in the morning as at four in the afternoon.`, tone: 'night' })}
+${photoBand('airport-night', 'A car at the airport drop-off at night')}
 <section class="section section-tight">
   <div class="wrap">
     <div class="table-wrap">
       <table class="prices">
-        <caption>One way, from ${FIRM.town}, Lympstone, Budleigh Salterton, Woodbury or Exton. Up to four passengers in a car.</caption>
+        <caption>Up to four passengers in a car, with a 6-seater or 8-seater for more. Put your flight number in the notes when you book.</caption>
         <thead><tr><th scope="col">To</th><th scope="col">Car</th><th scope="col">6-seater</th><th scope="col">8-seater</th></tr></thead>
         <tbody>${FIXED.map((f) => html`<tr><th scope="row">${f.name}<span>About ${f.miles} miles</span></th><td>${money(f.price * 100)}</td><td>${money(round(f.price * factor('mpv6')) * 100)}</td><td>${money(round(f.price * factor('mpv8')) * 100)}</td></tr>`)}</tbody>
       </table>
@@ -404,10 +433,11 @@ function accountsPage(state = {}) {
     ['Local businesses', 'Staff, visitors and the late finish. Every journey on one monthly statement with the passenger and the reference.']
   ];
   return html`
-${pageHero({ eyebrow: 'Business accounts', title: 'Book on account, pay once a month.', lede: 'Your people travel without paying the driver. You get one statement a month with every journey on it.', image: 'accounts', kind: 'huts', alt: 'A guest with a suitcase walking to a waiting car outside a hotel' })}
+${pageTop({ eyebrow: 'Business accounts', title: 'Book on account, pay once a month.', lede: 'Your people travel without paying the driver. You get one statement a month with every journey on it.' })}
+${photoBand('accounts', 'A guest with a suitcase walking to a waiting car outside a hotel')}
 <section class="section section-tight">
   <div class="wrap">
-    <div class="sectors">${sectors.map(([t, d]) => html`<article class="sector reveal"><h2>${t}</h2><p>${d}</p></article>`)}</div>
+    <div class="sectors">${sectors.map(([t, d], i) => html`<article class="sector reveal"><span class="sector-n" aria-hidden="true">0${i + 1}</span><h2>${t}</h2><p>${d}</p></article>`)}</div>
   </div>
 </section>
 <section class="section band-paper">
@@ -430,8 +460,16 @@ ${pageHero({ eyebrow: 'Business accounts', title: 'Book on account, pay once a m
 }
 
 function aboutPage(state = {}) {
+  const stats = html`<ul class="stats" aria-label="The firm in numbers">
+    <li><strong>${FIRM.fleet}</strong><span>cars</span></li>
+    <li><strong>${FIRM.wheelchairCars}</strong><span>wheelchair accessible</span></li>
+    <li><strong>${FIRM.founded}</strong><span>running since</span></li>
+    <li><strong>24</strong><span>hours a day</span></li>
+  </ul>`;
+  const driverPhoto = hasImage('driver');
   return html`
-${pageHero({ eyebrow: 'About us', title: `${FIRM.town}'s taxi firm since ${FIRM.founded}.`, lede: `${FIRM.fleet} cars, ${FIRM.wheelchairCars} of them wheelchair accessible, and a control room that is open every hour of the year.`, image: 'fleet-dawn', kind: 'huts', alt: `${FIRM.name} cars parked along the seafront at dawn` })}
+${pageTop({ eyebrow: 'About us', title: 'The firm, the drivers, the cars.', lede: `Running taxis in ${FIRM.town} since ${FIRM.founded}, with a control room that is open every hour of the year.`, extra: stats, className: 'page-top-about' })}
+${photoBand('fleet-dawn', `${FIRM.name} cars parked along the seafront at dawn`)}
 <section class="section section-tight">
   <div class="wrap cols-3">
     <div class="reveal"><h2>Local</h2><p>Our controllers are in ${FIRM.town}. They know the roads, the estates and which door the hospital wants you at.</p></div>
@@ -441,7 +479,7 @@ ${pageHero({ eyebrow: 'About us', title: `${FIRM.town}'s taxi firm since ${FIRM.
 </section>
 <section class="section band-paper">
   <div class="wrap split">
-    <div class="split-media reveal">${picture({ name: 'wav', kind: 'day', className: 'pic-43', alt: 'A wheelchair accessible car with its ramp down', sizes: '(min-width: 56rem) 50vw, 100vw' })}</div>
+    <div class="split-media reveal">${picture({ name: 'wav', className: 'pic-43', alt: 'A wheelchair accessible car with its ramp down', sizes: '(min-width: 56rem) 50vw, 100vw', fallback: typeField({ big: String(FIRM.wheelchairCars), text: 'cars with a ramp, at the price of a car', tone: 'red' }) })}</div>
     <div class="split-copy reveal">
       <p class="eyebrow">Wheelchair accessible</p>
       <h2>Six cars with a ramp, at the price of a car.</h2>
@@ -468,8 +506,8 @@ ${pageHero({ eyebrow: 'About us', title: `${FIRM.town}'s taxi firm since ${FIRM.
   </div>
 </section>
 <section class="section" id="drive">
-  <div class="wrap drive-grid">
-    <div class="drive-media reveal">${picture({ name: 'driver', kind: 'road', className: 'pic-45', alt: 'A driver\'s hands on the wheel, the estuary road ahead', sizes: '(min-width: 56rem) 33vw, 100vw' })}</div>
+  <div class="wrap drive-grid${driverPhoto ? ' has-media' : ''}">
+    ${driverPhoto ? html`<div class="drive-media reveal">${picture({ name: 'driver', className: 'pic-45', alt: 'A driver\'s hands on the wheel, the estuary road ahead', sizes: '(min-width: 56rem) 33vw, 100vw' })}</div>` : ''}
     <div class="reveal">
       <p class="eyebrow">Drive with us</p>
       <h2>Your own hours, paid weekly.</h2>
@@ -491,7 +529,8 @@ ${pageHero({ eyebrow: 'About us', title: `${FIRM.town}'s taxi firm since ${FIRM.
 
 function contactPage(state = {}) {
   return html`
-${pageHero({ eyebrow: 'Contact', title: 'Call us, any time.', lede: `The quickest way to a taxi is ${FIRM.phone}. Someone answers 24 hours a day.`, image: 'huts-evening', kind: 'huts', alt: `Beach huts on the seafront at ${FIRM.town} at dusk` })}
+${pageTop({ eyebrow: 'Contact', title: 'Call us, any time.', lede: `The quickest way to a taxi is ${FIRM.phone}. Someone answers 24 hours a day.` })}
+${photoBand('huts-evening', `Beach huts on the seafront at ${FIRM.town} at dusk`)}
 <section class="section section-tight">
   <div class="wrap split split-top">
     <div class="reveal">
@@ -516,8 +555,9 @@ ${pageHero({ eyebrow: 'Contact', title: 'Call us, any time.', lede: `The quickes
 
 function notFoundPage() {
   return html`
-<section class="page-top page-top-404">
-  <div class="wrap">
+<section class="not-found">
+  <div class="not-found-map on-night-map">${raw(exeMap({ id: 'lost-map', decorative: true }))}</div>
+  <div class="wrap not-found-inner">
     <p class="eyebrow">Page not found</p>
     <h1>That road doesn't go anywhere.</h1>
     <p class="lede">Try the <a href="/">home page</a>, <a href="/book">book online</a>, or call <a href="${FIRM.phoneHref}">${FIRM.phone}</a>.</p>
@@ -530,6 +570,6 @@ function placesJson() {
 }
 
 module.exports = {
-  home, bookPage, bookBarPrice, confirmationPage, statusSteps, airportsPage, accountsPage, aboutPage, contactPage, notFoundPage, placesJson,
+  home, bookPage, bookBarPrice, confirmationPage, statusSteps, airportsPage, accountsPage, aboutPage, contactPage, notFoundPage, placesJson, fareBlock,
   ACCOUNT_FIELDS, DRIVER_FIELDS, CONTACT_FIELDS
 };

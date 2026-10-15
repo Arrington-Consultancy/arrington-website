@@ -1,11 +1,14 @@
 // Shared script: place suggestions on address fields, a live price on any
-// form marked data-quote, and a small reveal-on-scroll. Every page works
-// without it.
+// form marked data-quote (written as the fare block, counted up like a
+// meter), the mobile action bar standing down while the home page's form is
+// on screen, and a small reveal-on-scroll. Every page works without it.
 (function () {
   'use strict';
   var root = document.documentElement;
   root.classList.add('js');
   try { if (!CSS.supports('selector(:has(*))')) root.classList.add('no-has'); } catch (e) { root.classList.add('no-has'); }
+  var reduced = false;
+  try { reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { reduced = false; }
 
   var placesPromise = null;
   function places() {
@@ -77,14 +80,78 @@
     input.addEventListener('blur', function () { setTimeout(close, 120); });
   }
 
-  // The price, written into the form's own output and mirrored to the
-  // mobile action bar on the booking page.
+  // The figure counts up from nothing to the price, the way a meter runs,
+  // in under half a second. Every number in the text runs (a metered fare
+  // is "£14 to £16"); the words around them stay put.
+  function countUp(el, text) {
+    var parts = text.split(/(\d+(?:\.\d+)?)/);
+    var nums = [];
+    for (var i = 1; i < parts.length; i += 2) nums.push(parseFloat(parts[i]));
+    if (reduced || !nums.length || !window.requestAnimationFrame) { el.textContent = text; return; }
+    var start = null;
+    var ms = 420;
+    function frame(t) {
+      if (start === null) start = t;
+      var p = Math.min(1, (t - start) / ms);
+      var e = 1 - Math.pow(1 - p, 3);
+      var out = '';
+      var n = 0;
+      for (var k = 0; k < parts.length; k++) {
+        if (k % 2 === 1) {
+          var target = nums[n++];
+          var v = target * e;
+          out += parts[k].indexOf('.') === -1 ? String(Math.round(v)) : v.toFixed(2);
+        } else out += parts[k];
+      }
+      el.textContent = p < 1 ? out : text;
+      if (p < 1) window.requestAnimationFrame(frame);
+    }
+    window.requestAnimationFrame(frame);
+  }
+
+  // Builds the fare block in the same shape the server renders it.
+  function writeFare(out, q) {
+    out.innerHTML = '';
+    if (q.kind === 'unpriced') {
+      out.classList.remove('is-priced');
+      var hint = document.createElement('p');
+      hint.className = 'fare-hint';
+      hint.textContent = q.label;
+      out.appendChild(hint);
+      return;
+    }
+    var label = document.createElement('span');
+    label.className = 'fare-label';
+    label.textContent = q.kind === 'fixed' ? 'Fixed price' : 'Estimated fare';
+    var figure = document.createElement('strong');
+    figure.className = 'fare-figure';
+    var sub = document.createElement('span');
+    sub.className = 'fare-sub';
+    sub.textContent = q.kind === 'fixed' ? String(q.label).replace(/^Fixed price, /, '') : q.label + '. The meter decides the final fare.';
+    out.appendChild(label);
+    out.appendChild(figure);
+    out.appendChild(sub);
+    out.classList.remove('is-priced');
+    void out.offsetWidth;
+    out.classList.add('is-priced');
+    countUp(figure, q.text);
+  }
+
+  // The price, written into every fare block that belongs to the form (its
+  // own, and any elsewhere on the page marked data-quote-for), mirrored to
+  // the mobile action bar on the booking page, and reflected in the home
+  // page button's words.
   function liveQuote(form) {
-    var out = form.querySelector('[data-quote-out]');
-    if (!out) return;
+    var outs = Array.prototype.filter.call(document.querySelectorAll('[data-quote-out]'), function (o) {
+      return form.contains(o) || (form.id && o.getAttribute('data-quote-for') === form.id);
+    });
+    if (!outs.length) return;
     var mirrors = document.querySelectorAll('[data-quote-mirror]');
+    var cta = form.querySelector('[data-quote-cta]');
+    var ctaText = cta ? cta.textContent : '';
     var timer = null;
     var seq = 0;
+    var last = '';
     function value(name) {
       var el = form.querySelector('[name="' + name + '"]:checked') || form.querySelector('[name="' + name + '"]:not([type=radio])');
       return el ? el.value : '';
@@ -94,6 +161,8 @@
       var pickup = value('pickup');
       var destination = value('destination');
       if (pickup.trim().length < 3 || destination.trim().length < 3) return;
+      var key = [pickup, destination, value('vehicle'), value('when'), value('date'), value('time')].join('|');
+      if (key === last) return;
       var mine = ++seq;
       fetch('/api/quote', {
         method: 'POST',
@@ -101,22 +170,30 @@
         body: JSON.stringify({ pickup: pickup, destination: destination, vehicle: value('vehicle') || 'saloon', when: value('when'), date: value('date'), time: value('time') })
       }).then(function (r) { return r.json(); }).then(function (q) {
         if (mine !== seq) return;
-        out.innerHTML = '';
-        out.classList.remove('is-priced');
-        if (q.kind === 'unpriced') { out.textContent = q.label; mirror(''); return; }
-        out.appendChild(document.createTextNode('Price: '));
-        var strong = document.createElement('strong');
-        strong.textContent = q.text;
-        out.appendChild(strong);
-        if (q.label) { var small = document.createElement('small'); small.textContent = q.label + (q.kind === 'metered' ? '. The meter decides the final fare.' : '.'); out.appendChild(small); }
-        out.classList.add('is-priced');
-        mirror(q.text);
+        last = key;
+        for (var i = 0; i < outs.length; i++) writeFare(outs[i], q);
+        mirror(q.kind === 'unpriced' ? '' : q.text);
+        if (cta) cta.textContent = q.kind === 'unpriced' ? ctaText : 'Book this taxi';
       }).catch(function () {});
     }
     function soon() { clearTimeout(timer); timer = setTimeout(update, 350); }
     form.addEventListener('input', soon);
     form.addEventListener('change', soon);
     update();
+  }
+
+  // On the home page the booking form is on the first screen, so the fixed
+  // bar at the foot would only cover it: the bar stands down while the form
+  // is in view and returns once it has scrolled away.
+  function actionBar() {
+    var bar = document.querySelector('[data-action-bar][data-hide-near]');
+    if (!bar || !('IntersectionObserver' in window)) return;
+    var target = document.querySelector(bar.getAttribute('data-hide-near'));
+    if (!target) return;
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { bar.classList.toggle('is-hidden', e.isIntersecting); });
+    }, { threshold: 0.15 });
+    io.observe(target);
   }
 
   // Sections marked .reveal fade up as they come into view. Without
@@ -139,5 +216,6 @@
 
   document.querySelectorAll('input[data-places]').forEach(autocomplete);
   document.querySelectorAll('form[data-quote]').forEach(liveQuote);
+  actionBar();
   reveal();
 })();
