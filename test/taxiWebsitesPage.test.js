@@ -19,14 +19,14 @@ const emitted = (p) => read(p).replace(/<%#[\s\S]*?%>/g, '');
 const PATH = '/taxi-and-private-hire-operators/websites';
 const VIEW = 'views/taxi-websites.ejs';
 const ROUTE = 'routes/taxiWebsites.js';
-const { TAXI_WEBSITES_CONTACT, TAXI_WEBSITES_PATH } = require('../routes/taxiWebsites');
+const { TAXI_WEBSITES_CONTACT, TAXI_WEBSITES_PATH, TAXI_DEMO_URL } = require('../routes/taxiWebsites');
 const { OFFERS } = require('../lib/whereToStartOffers');
 
 function renderBody() {
   const src = emitted(VIEW).replace(/<%-\s*include\([^)]*\)\s*%>/g, '');
   const html = ejs.render(src, {
     theme: { vars: {} }, nonce: 'n', csrfToken: 't', navPages: [], content: {},
-    websiteOffer: OFFERS.website_build, pageContact: TAXI_WEBSITES_CONTACT
+    websiteOffer: OFFERS.website_build, demoUrl: TAXI_DEMO_URL, pageContact: TAXI_WEBSITES_CONTACT
   });
   return html.slice(html.indexOf('<body>'));
 }
@@ -52,17 +52,37 @@ test('the route is mounted, indexable, in the sitemap and not in the navigation'
   }
 });
 
-test('the hero leads with bookings into dispatch, names the email check, and the £999 includes both', () => {
+test('the hero leads with bookings into dispatch, and the £999 includes the link but not the email check', () => {
+  // Tom's decision of 15/10/2026 (taxi demo brief, section 8): office-side
+  // tools, the email booking check among them, are priced separately.
   assert.strictEqual(OFFERS.website_build.pricePence, 99900);
   const body = renderBody();
   const hero = visibleText(body.slice(body.indexOf('<header class="tw-hero"'), body.indexOf('</header>')));
   assert.ok(hero.includes('A taxi website that sends bookings straight into your dispatch system'));
   assert.ok(hero.includes('so nobody in the office has to key it in'));
-  assert.ok(hero.includes('We also set up a check on the bookings that still come in by email.'), 'the email check is not in the hero');
-  assert.ok(hero.includes('£999, with both included.'));
+  assert.ok(hero.includes('£999, with the dispatch link included.'));
+  assert.ok(!/email/i.test(hero), 'the hero still offers the email check');
   const covers = section(body, 'data-covers');
   assert.ok(covers.includes('£999') && covers.includes("That's the whole price."));
-  assert.ok(covers.includes('The link to your dispatch system and the email booking check are part of it, not extras.'));
+  assert.ok(covers.includes('The link to your dispatch system is part of it, not an extra.'));
+  assert.ok(!/email/i.test(covers), 'the £999 still claims the email check');
+  assert.ok(!/email booking check are part of it|with both included/.test(visibleText(body)), 'the old "included" wording survives somewhere');
+});
+
+test('"See one we built" shows the demo and links to it, under "Built from scratch"', () => {
+  const body = renderBody();
+  const demo = section(body, 'data-demo');
+  assert.ok(demo.includes('See one we built'));
+  assert.ok(demo.includes('Book a test job and see it go through.'), "the brief's line is missing");
+  assert.ok(demo.includes('No car will come.'), 'the section does not say the firm is not real');
+  assert.match(TAXI_DEMO_URL, /^https:\/\/[a-z0-9.-]+\/$/);
+  const block = body.slice(body.indexOf('data-demo'), body.indexOf('data-dispatch'));
+  assert.ok(block.includes(`href="${TAXI_DEMO_URL}"`), 'no link to the demo');
+  assert.ok(/<img src="\/img\/taxi-demo\/tidewell-demo\.jpg" alt="[^"]{40,}"/.test(block), 'the screenshot or its alt text is missing');
+  for (const f of ['public/img/taxi-demo/tidewell-demo.jpg', 'public/img/taxi-demo/tidewell-demo.webp']) assert.ok(fs.existsSync(path.join(ROOT, f)), `${f} is missing`);
+  assert.ok(body.indexOf('data-scratch') < body.indexOf('data-demo') && body.indexOf('data-demo') < body.indexOf('data-dispatch'), 'the demo section moved');
+  // And the demo links back here (brief, section 8).
+  assert.strictEqual(require('../taxi-demo/lib/firm').FIRM.arringtonUrl, `https://www.arringtonconsultancy.com${PATH}`);
 });
 
 test('"Built from scratch" sits under the hero, word for word, and the £999 scope is unchanged', () => {
@@ -91,12 +111,14 @@ test('the systems promise is kept true: named systems, never "any system", acces
   assert.ok(!/30 minutes|thirty minutes/i.test(text), "Tom's own 30 minutes is on the page");
 });
 
-test('the email check says what Tom described and nothing more; the widget line sits beside it', () => {
+test('the email check says what Tom described and nothing more, priced separately; the widget line sits with dispatch', () => {
   const body = renderBody();
   const e = section(body, 'data-email-check');
   assert.ok(e.includes('Account customers, hotels and schools still book by email.'));
   assert.ok(e.includes('a booking that was never keyed in, or was keyed in wrong, gets flagged before the customer is left waiting'));
-  assert.ok(e.includes("If your provider's own booking widget already does what you need, we'll say so."));
+  assert.ok(e.includes("so it's priced separately from the £999."), 'the email check is not marked as priced separately');
+  assert.ok(!/As part of the build/.test(e), 'the email check is still described as part of the build');
+  assert.ok(section(body, 'data-dispatch').includes("If your provider's own booking widget already does what you need, we'll say so."));
   const text = visibleText(body);
   // No email systems, alert channels or automatic correction (approval, change 1).
   assert.ok(!/\b(?:Outlook|Gmail|Microsoft 365|Office 365|Google Workspace|SMS|text message|WhatsApp|Slack|Teams|push notification)\b/i.test(text), 'an email system or alert channel is named');
@@ -113,7 +135,7 @@ test('a website, not dispatch software; one firm named as Tom\'s own, no client 
   const op = section(body, 'data-operator');
   assert.ok(op.includes('nearly twenty years, the last eight or so on iCabbi'), 'the confirmed tenure line changed');
   assert.ok(body.includes('href="/evidence#biography__2"'), 'the Abacus story link is gone');
-  assert.ok(!/<img(?![^>]*tom-at-desk)/.test(body), 'an image other than the photo of Tom was added');
+  assert.ok(!/<img(?![^>]*(?:tom-at-desk|taxi-demo\/tidewell-demo))/.test(body), 'an image other than the photo of Tom or the demo screenshot was added');
 });
 
 test('the enquiry form is the main action: no checkout, no conversion, no payment page', () => {

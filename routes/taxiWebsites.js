@@ -7,9 +7,15 @@
 // whose live headline "Booking Linked To Dispatch" it has to back.
 //
 // What Tom decided, and what the page may therefore say:
-//   - £999 covers the website, web bookings that go straight into the
-//     operator's dispatch system, and an email booking check. Nothing is
-//     extra, and the price comes from lib/whereToStartOffers.js.
+//   - £999 covers the website and web bookings that go straight into the
+//     operator's dispatch system. The price comes from
+//     lib/whereToStartOffers.js. Until 15/10/2026 it also covered an email
+//     booking check; Tom's decision of that day (taxi demo brief, section 8:
+//     office-side tools are priced separately) took the check out, and the
+//     page now says it is priced separately.
+//   - "See one we built" links to the Tidewell Cars demo (taxi-demo/ in this
+//     repository, its own Railway service), with the brief's line "Book a
+//     test job and see it go through."
 //   - The systems named are iCabbi, Autocab and Cordic, plus "other systems
 //     with a booking API". Never "any system" on its own. Autocab and Cordic
 //     publish no third-party access terms, so the link is promised only where
@@ -29,6 +35,10 @@
 const { loadThemeAndShell, TAXI_WEBSITES_PATH } = require('./taxiOperators');
 const { OFFERS } = require('../lib/whereToStartOffers');
 
+// The demo's address. Railway's generated domain; change it here if the demo
+// moves to a custom domain.
+const TAXI_DEMO_URL = 'https://taxi-demo-production.up.railway.app/';
+
 const TAXI_WEBSITES_CONTACT = {
   heading: 'Tell us about your firm',
   body: 'Which dispatch system you\'re on and how customers book with you now. A few lines is plenty.<br /><br />We\'ll come back to you to arrange a conversation with Tom, and you\'ll get a straight answer on whether your system can take bookings from a website.',
@@ -46,6 +56,7 @@ function mountPageRoute(app, generateCsrfToken) {
         navPages,
         content,
         websiteOffer: OFFERS.website_build,
+        demoUrl: TAXI_DEMO_URL,
         pageContact: { ...pageContact, ...TAXI_WEBSITES_CONTACT }
       });
     } catch (err) {
@@ -54,4 +65,4 @@ function mountPageRoute(app, generateCsrfToken) {
   });
 }
 
-module.exports = { mountPageRoute, TAXI_WEBSITES_PATH, TAXI_WEBSITES_CONTACT };
+module.exports = { mountPageRoute, TAXI_WEBSITES_PATH, TAXI_WEBSITES_CONTACT, TAXI_DEMO_URL };

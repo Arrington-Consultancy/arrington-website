@@ -78,6 +78,13 @@
         .tw-actions { margin: 1.6rem 0 0; }
         .tw-also { margin: 2.25rem 0 0; font-size: 0.97rem; }
 
+        /* THE DEMO SCREENSHOT: two phone screens on the demo's own dark
+           ground, linked to the live demo. */
+        .tw-demo-shot { display: block; margin: 1.4rem 0 1rem; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+        .tw-demo-shot img { display: block; width: 100%; height: auto; }
+        .tw-demo-shot:hover, .tw-demo-shot:focus-visible { border-color: var(--accent); }
+        .tw-demo-link { margin: 0; }
+
         @media (max-width: 760px) {
             .tw-hero { display: block; min-height: 0; padding: var(--site-chrome) 0 0; }
             .tw-hero-photo { display: block; position: relative; top: auto; height: 38vw; max-height: 240px; }
@@ -97,8 +104,9 @@
     <%- include('partials/site-header', { currentPage: { slug: 'taxi-and-private-hire-operators' }, navPages, canEdit: false, content, pageContact }) %>
 
     <%# HERO. The reason to choose us over a web agency leads (bookings into
-        dispatch), and the email check is named before any scrolling (approval
-        of 13/10/2026, change 1). %>
+        dispatch). The email check was named here until Tom's decision of
+        15/10/2026 took it out of the £999; it now sits lower, priced
+        separately. %>
     <header class="tw-hero">
         <picture class="tw-hero-photo">
             <source srcset="/img/startup/tom-at-desk.webp" type="image/webp">
@@ -108,7 +116,7 @@
             <div class="tw-hero-text">
                 <span class="tw-label">Taxi and private hire websites</span>
                 <h1>A taxi website that sends bookings straight into your dispatch system</h1>
-                <p class="tw-lede" data-hero-lede>We build websites for taxi and private hire operators where a booking made online lands in your dispatch system like any other job, so nobody in the office has to key it in. We also set up a check on the bookings that still come in by email. <%= '£' + (websiteOffer.pricePence / 100).toLocaleString('en-GB') %>, with both included.</p>
+                <p class="tw-lede" data-hero-lede>We build websites for taxi and private hire operators where a booking made online lands in your dispatch system like any other job, so nobody in the office has to key it in. <%= '£' + (websiteOffer.pricePence / 100).toLocaleString('en-GB') %>, with the dispatch link included.</p>
                 <div class="tw-hero-actions">
                     <a href="#conversation" class="btn btn-primary">Tell us about your firm</a>
                 </div>
@@ -128,22 +136,40 @@
             <p>No templates. We design the site around your firm, how your customers book and what you want it to say, and if we'd do something differently we'll tell you straight. If there's a site in the trade you rate, we'll take what works about it and build it in your name.</p>
         </div>
 
+        <%# THE DEMO (taxi demo brief, 15/10/2026, section 8): operators buy on
+            seeing one. Tidewell Cars is invented and its site says so on every
+            page; the screenshot is that site, taken from a real test booking.
+            The line "Book a test job and see it go through." is the brief's. %>
+        <div class="tw-section" data-demo>
+            <h2>See one we built</h2>
+            <p>Tidewell Cars is an Exmouth taxi firm we invented to show what the <%= '£' + (websiteOffer.pricePence / 100).toLocaleString('en-GB') %> gets you. Book a test job and see it go through. The booking goes into a test dispatch system, the dispatch reference comes straight back, and a few seconds later you see the driver, the car and how far away it is. No car will come.</p>
+            <a class="tw-demo-shot" href="<%= demoUrl %>">
+                <picture>
+                    <source srcset="/img/taxi-demo/tidewell-demo.webp" type="image/webp">
+                    <img src="/img/taxi-demo/tidewell-demo.jpg" alt="The Tidewell Cars demo on a phone: the home page with its price form, and a confirmed booking showing the dispatch reference, the driver, the car and the arrival time" width="1100" height="885" loading="lazy">
+                </picture>
+            </a>
+            <p class="tw-demo-link"><a class="tw-link" href="<%= demoUrl %>">Open the Tidewell Cars demo</a></p>
+        </div>
+
         <div class="tw-section" data-dispatch>
             <h2>How the booking gets to dispatch</h2>
             <p>A taxi website has one job, which is getting the booking. Ours also get it into dispatch. The booking form on your website talks to your dispatch system through that system's booking API, so when a customer books, the job appears in dispatch ready for your controllers to allocate, the same as one taken on the phone.</p>
             <%# The qualifier the brief asked for: the link is promised only where
                 access can be arranged. Vendor access is outside our control. %>
             <p data-qualifier>We connect to iCabbi, Autocab and Cordic, and to other systems with a booking API. The link is included in the £999 where your system has a booking API and you can arrange API access with your provider. Some providers approve the connection or issue a key first, and on the first call we'll tell you what yours will need. Any charge your provider makes for API access is between you and them.</p>
+            <p data-widget>If your provider's own booking widget already does what you need, we'll say so.</p>
         </div>
 
-        <%# THE EMAIL BOOKING CHECK (approval of 13/10/2026, change 1). Described
-            exactly as the approval describes it and no further. The widget line
-            sits here because this is the reason to choose us over a provider's
-            own web booker (question 3). %>
+        <%# THE EMAIL BOOKING CHECK. Described exactly as the approval of
+            13/10/2026 describes it and no further. Since Tom's decision of
+            15/10/2026 (taxi demo brief, section 8: office-side tools are priced
+            separately) it is no longer part of the £999, and the page says so
+            rather than dropping it, because the live ads still name it. %>
         <div class="tw-section" data-email-check>
             <h2>Bookings that still come by email</h2>
-            <p>Account customers, hotels and schools still book by email. As part of the build we set up a check that matches the booking requests arriving by email against the jobs in your dispatch system, so a booking that was never keyed in, or was keyed in wrong, gets flagged before the customer is left waiting.</p>
-            <p>It needs the same access to your dispatch system as the booking link, and it covers the gap a provider's own web booker leaves. If your provider's own booking widget already does what you need, we'll say so.</p>
+            <p>Account customers, hotels and schools still book by email. We can also set up a check that matches the booking requests arriving by email against the jobs in your dispatch system, so a booking that was never keyed in, or was keyed in wrong, gets flagged before the customer is left waiting.</p>
+            <p>That's office work rather than part of the website, so it's priced separately from the <%= '£' + (websiteOffer.pricePence / 100).toLocaleString('en-GB') %>.</p>
         </div>
 
         <%# Facts: nearly twenty years owning Abacus (Evidence case study); the
@@ -170,7 +196,7 @@
         <div class="tw-section" data-covers>
             <h2>What the £999 covers</h2>
             <p class="tw-price"><%= '£' + (websiteOffer.pricePence / 100).toLocaleString('en-GB') %></p>
-            <p>That's the whole price. It starts with a recorded planning conversation to agree what the site needs to do. You then get a complete first version and one structured round of changes before launch. The link to your dispatch system and the email booking check are part of it, not extras.</p>
+            <p>That's the whole price. It starts with a recorded planning conversation to agree what the site needs to do. You then get a complete first version and one structured round of changes before launch. The link to your dispatch system is part of it, not an extra.</p>
             <div class="tw-actions">
                 <a href="#conversation" class="btn btn-primary">Tell us about your firm</a>
             </div>

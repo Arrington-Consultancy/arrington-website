@@ -22,6 +22,10 @@ on:
         description: Run Lighthouse mobile on each URL (true/false)
         required: false
         default: "true"
+      demo_booking:
+        description: Taxi demo base URL to make one test booking on (blank for none)
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -46,6 +50,7 @@ jobs:
         env:
           SCREEN_URLS: ${{ github.event.inputs.urls }}
           LIGHTHOUSE: ${{ github.event.inputs.lighthouse }}
+          DEMO_BOOKING: ${{ github.event.inputs.demo_booking }}
           OUT_DIR: ${{ github.workspace }}/screens-out
         run: node scripts/siteScreens.js
 

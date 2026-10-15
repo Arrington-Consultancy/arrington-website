@@ -138,14 +138,53 @@ function lighthouse(url) {
       await ctx.close();
     }
   }
+  // A real test booking on the taxi demo (DEMO_BOOKING=<demo base URL>): fill
+  // the form on a phone, send it, and record what dispatch sends back. The
+  // demo's mock dispatch is the only thing that receives it.
+  let booking = null;
+  if (process.env.DEMO_BOOKING) {
+    const ctx = await browser.newContext({ ...devices['iPhone 13'] });
+    const page = await ctx.newPage();
+    booking = { pageErrors: [] };
+    page.on('pageerror', (e) => booking.pageErrors.push(String(e).slice(0, 160)));
+    try {
+      const base = process.env.DEMO_BOOKING.replace(/\/$/, '');
+      await page.goto(base + '/book', { waitUntil: 'load', timeout: 60000 });
+      await page.fill('#pickup', 'Exmouth railway station');
+      await page.fill('#destination', 'Exeter Airport');
+      await page.fill('#name', 'Site Screens Check');
+      await page.fill('#phone', '07700 900999');
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(1200);
+      booking.priceShown = (await page.textContent('[data-quote-out]')).replace(/\s+/g, ' ').trim();
+      await Promise.all([page.waitForURL(/\/booking\//, { timeout: 30000 }), page.click('button[type=submit]')]);
+      booking.confirmationUrl = page.url();
+      booking.ref = (await page.textContent('[data-ref]')).trim();
+      await page.screenshot({ path: path.join(OUT, 'demo-booking-received.png') });
+      await page.waitForFunction(() => document.querySelector('[data-status]').getAttribute('data-state') === 'allocated', null, { timeout: 30000 });
+      booking.driverText = (await page.textContent('[data-timeline] li:last-child')).replace(/\s+/g, ' ').trim();
+      await page.evaluate(() => window.scrollTo(0, 188));
+      await page.waitForTimeout(400);
+      await page.screenshot({ path: path.join(OUT, 'demo-booking-allocated.png') });
+    } catch (e) {
+      booking.error = String(e).slice(0, 300);
+    }
+    await ctx.close();
+  }
   await browser.close();
 
   const lh = {};
   if (RUN_LIGHTHOUSE) for (const u of URLS) lh[u] = lighthouse(u);
 
   const ranAt = new Date().toISOString();
-  fs.writeFileSync(path.join(OUT, 'report.json'), JSON.stringify({ ranAt, results, lighthouse: lh }, null, 2));
+  fs.writeFileSync(path.join(OUT, 'report.json'), JSON.stringify({ ranAt, results, lighthouse: lh, booking }, null, 2));
   const lines = [`# Site inspection, ${ranAt}`, ''];
+  if (booking) {
+    lines.push('## Demo test booking');
+    lines.push(booking.error ? `- ERROR: ${booking.error}` : `- Price shown before booking: ${booking.priceShown}\n- Reference from dispatch: ${booking.ref}\n- Driver step: ${booking.driverText}\n- Confirmation page: ${booking.confirmationUrl}`);
+    lines.push(`- Page errors: ${booking.pageErrors.length}${booking.pageErrors.length ? ' (' + booking.pageErrors.join(' | ') + ')' : ''}`);
+    lines.push('- Screens: demo-booking-received.png, demo-booking-allocated.png', '');
+  }
   for (const u of URLS) {
     lines.push(`## ${u}`);
     const l = lh[u];
