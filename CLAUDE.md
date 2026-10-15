@@ -8120,6 +8120,72 @@ the Opportunity Builder handoff's PRIVACY AND OUTREACH RULES (the tab and the
 worker, to change. `test/privacyIntroductions.test.js` pins the corrected
 wording and that no period, list or opt-out-line promise returns.
 
+## Weekly database backup to Google Drive (built 15/10/2026)
+
+Tom's decision of 15/10/2026 ("Put back up on drive regularly maybe
+weekly"), after the finding that only the code was backed up: the Railway
+Postgres volume had no scheduled backup, the CMS "Create backup" button is
+manual and stores its snapshot inside the same database, and the July
+export in `handover/` is stale and holds content only.
+
+- **What runs:** `backup/backup.sh` inside `backup/Dockerfile`
+  (`postgres:18-alpine`, so pg_dump matches production's `postgres-ssl:18`;
+  pg_dump refuses a newer server), as the Railway cron service
+  `db-backup-to-drive` (id `4b4b765a-b32b-48e9-8f5f-d2d00a40558d`,
+  production environment only, root directory `/backup`, schedule
+  `0 3 * * 1` which is Mondays 03:00 UTC, restart policy NEVER, watch
+  pattern `/backup/**` so a site push does not rebuild it). It dumps over
+  Railway's private network (`DATABASE_URL` is a reference to the Postgres
+  service), gzips, checks the dump ends with pg_dump's completion line and is
+  above `BACKUP_MIN_BYTES`, uploads with Drive's resumable upload, reads the
+  stored size back, and deletes backups beyond the newest `BACKUP_KEEP` (12,
+  about three months), touching only files it named itself. The database is
+  not exposed publicly (no TCP proxy) and no database password sits in any
+  GitHub secret; the script never prints a URL or token. Files are named
+  `arrington-website-db-YYYY-MM-DD.sql.gz`.
+- **What is in the file:** every table, including leads, submissions,
+  purchases, Scott and Workspace records, so the Drive folder holds personal
+  and confidential data and must not be shared. Session rows are left out
+  (live login cookies). Restore, on a machine with psql 18, into an EMPTY
+  database: `gunzip -c <file> | psql "$DATABASE_URL"`.
+- **The Drive side is Tom's own account,** through a refresh token with the
+  `drive.file` scope: the script sees only what it created, so on its first
+  run it creates the folder "Arrington website database backups" in Tom's
+  My Drive and reuses it after that. Client id and secret are references to
+  the site's Gmail OAuth client (`${{arrington-prototype.GMAIL_CLIENT_ID}}`
+  and the secret; same Google Cloud project, Internal consent screen, so
+  the token does not expire after seven days). A service account was
+  rejected: in Workspace its uploads can fail on storage quota and the files
+  would be owned by it rather than Tom.
+- **Minting the token (Tom, once):** in the Google Cloud console open the
+  OAuth client used for Gmail and add the authorised redirect URI
+  `https://developers.google.com/oauthplayground`. Open
+  https://developers.google.com/oauthplayground, gear icon, tick "Use your
+  own OAuth credentials", paste the client id and secret. Step 1: enter the
+  scope `https://www.googleapis.com/auth/drive.file`, Authorize APIs, choose
+  tom@arringtonconsultancy.com, Allow. Step 2: "Exchange authorization code
+  for tokens", copy the Refresh token. In Railway, service
+  `db-backup-to-drive`, set `GOOGLE_DRIVE_REFRESH_TOKEN` to it. Until it is
+  set every run stops at its first check ("GOOGLE_DRIVE_REFRESH_TOKEN is not
+  set") and uploads nothing.
+- **Proof:** `test/driveBackup.test.js` runs the real script with real
+  pg_dump against a seeded database and a mock of the two Google endpoints
+  it uses (gated on `BACKUP_TEST_DATABASE_URL`, declared in
+  `test/gatedSuites.test.js`): one complete gzipped dump named by date,
+  uploaded into the existing folder, the two oldest beyond the keep count
+  deleted, a file the script did not name left alone, no secret in the
+  output, and a refused token or a too-small dump failing the run. Its first
+  version hung: a `spawnSync` blocks the event loop, so the mock server in
+  the same process could never answer the script. **Not proven until the
+  first real run:** that Google accepts the requests. Read the service's
+  deploy log for the `Backup to Drive:` lines. A run outside the schedule
+  needs the Railway CLI (`railway cron run`) or a temporary schedule change
+  followed by a redeploy.
+- **Railway's own volume backups stay off** (Postgres service, Backups tab,
+  daily 6 days, weekly 27 days, monthly 89 days) unless Tom switches them on;
+  they would be the faster restore and cost pence. The two are not
+  alternatives.
+
 ## Writing and reviewing website copy
 
 - Where a brief asks for copy but does not contain the underlying commercial
