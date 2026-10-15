@@ -1,5 +1,6 @@
-// Shared script: place suggestions on address fields and a live price on any
-// form marked data-quote. Every form still works without it.
+// Shared script: place suggestions on address fields, a live price on any
+// form marked data-quote, and a small reveal-on-scroll. Every page works
+// without it.
 (function () {
   'use strict';
   var root = document.documentElement;
@@ -76,15 +77,19 @@
     input.addEventListener('blur', function () { setTimeout(close, 120); });
   }
 
+  // The price, written into the form's own output and mirrored to the
+  // mobile action bar on the booking page.
   function liveQuote(form) {
     var out = form.querySelector('[data-quote-out]');
     if (!out) return;
+    var mirrors = document.querySelectorAll('[data-quote-mirror]');
     var timer = null;
     var seq = 0;
     function value(name) {
       var el = form.querySelector('[name="' + name + '"]:checked') || form.querySelector('[name="' + name + '"]:not([type=radio])');
       return el ? el.value : '';
     }
+    function mirror(text) { for (var i = 0; i < mirrors.length; i++) mirrors[i].textContent = text; }
     function update() {
       var pickup = value('pickup');
       var destination = value('destination');
@@ -97,12 +102,15 @@
       }).then(function (r) { return r.json(); }).then(function (q) {
         if (mine !== seq) return;
         out.innerHTML = '';
-        if (q.kind === 'unpriced') { out.textContent = q.label; return; }
+        out.classList.remove('is-priced');
+        if (q.kind === 'unpriced') { out.textContent = q.label; mirror(''); return; }
         out.appendChild(document.createTextNode('Price: '));
         var strong = document.createElement('strong');
         strong.textContent = q.text;
         out.appendChild(strong);
         if (q.label) { var small = document.createElement('small'); small.textContent = q.label + (q.kind === 'metered' ? '. The meter decides the final fare.' : '.'); out.appendChild(small); }
+        out.classList.add('is-priced');
+        mirror(q.text);
       }).catch(function () {});
     }
     function soon() { clearTimeout(timer); timer = setTimeout(update, 350); }
@@ -111,6 +119,25 @@
     update();
   }
 
+  // Sections marked .reveal fade up as they come into view. Without
+  // IntersectionObserver, or with reduced motion, the stylesheet shows them.
+  function reveal() {
+    var els = document.querySelectorAll('.reveal');
+    if (!els.length || !('IntersectionObserver' in window)) { root.classList.add('no-reveal'); return; }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+    els.forEach(function (el) { io.observe(el); });
+  }
+
+  // Close the mobile menu when a link in it is followed or Escape is pressed.
+  var menu = document.querySelector('details.menu');
+  if (menu) {
+    menu.addEventListener('click', function (e) { if (e.target.closest('a')) menu.removeAttribute('open'); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && menu.open) { menu.removeAttribute('open'); menu.querySelector('summary').focus(); } });
+  }
+
   document.querySelectorAll('input[data-places]').forEach(autocomplete);
   document.querySelectorAll('form[data-quote]').forEach(liveQuote);
+  reveal();
 })();
