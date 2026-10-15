@@ -35,9 +35,9 @@
 const { loadThemeAndShell, TAXI_WEBSITES_PATH } = require('./taxiOperators');
 const { OFFERS } = require('../lib/whereToStartOffers');
 
-// The demo's address. Railway's generated domain; change it here if the demo
-// moves to a custom domain.
-const TAXI_DEMO_URL = 'https://taxi-demo-production.up.railway.app/';
+// The demo's address: part of this site since 15/10/2026, mounted in
+// server.js (it used to be Railway's generated domain for its own service).
+const TAXI_DEMO_URL = '/taxi-demo/';
 
 const TAXI_WEBSITES_CONTACT = {
   heading: 'Tell us about your firm',

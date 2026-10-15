@@ -6,11 +6,12 @@
   if (!card) return;
   var body = card.querySelector('[data-status-body]');
   var token = card.getAttribute('data-token');
+  var BASE = document.documentElement.getAttribute('data-base') || '';
   var tries = 0;
   function done(s, asap) { return s === 'allocated' || s === 'cancelled' || (s === 'confirmed' && !asap); }
   function poll() {
     tries += 1;
-    fetch('/api/bookings/' + token, { headers: { Accept: 'application/json' } })
+    fetch(BASE + '/api/bookings/' + token, { headers: { Accept: 'application/json' } })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (v) {
         if (!v) return;

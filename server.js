@@ -249,6 +249,33 @@ app.use(morgan(isProd ? 'combined' : 'dev', {
   skip: (req) => req.url.startsWith('/img/')
 }));
 
+// The taxi demo (Tidewell Cars, a fictional firm, see taxi-demo/README.md) is
+// part of this site at /taxi-demo since 15/10/2026, Tom's decision: the
+// address shown to taxi operators is ours, with no domain of its own and no
+// DNS change. It used to run as its own Railway service, which now forwards
+// its old address here.
+//
+// Mounted here on purpose, after the HTTPS and host redirect above and before
+// everything below it. The demo is a self-contained site with its own strict
+// CSP, noindex header, gzip, rate limits and same-origin check on its forms,
+// and it must not inherit this site's: helmet's CSP would be a second policy
+// on top of its own, the session middleware would set a cookie on a page that
+// says it sets none, the CSRF check would refuse its booking form, and the
+// body parsers would read the request body before the demo can. It takes the
+// HSTS header only, so the demo is held to HTTPS like the rest of the domain.
+// A fault inside the demo ends that one response and is never passed on.
+const taxiDemo = require('./taxi-demo/server').createApp({ basePath: '/taxi-demo' });
+app.use('/taxi-demo', (req, res) => {
+  // Express matches a mount path without regard to case; the demo's
+  // addresses are lower case, so send any other spelling to them.
+  if (!req.originalUrl.startsWith('/taxi-demo')) return res.redirect(301, '/taxi-demo' + req.url);
+  if (req.originalUrl === '/taxi-demo' || req.originalUrl.startsWith('/taxi-demo?')) {
+    return res.redirect(301, '/taxi-demo/' + req.originalUrl.slice('/taxi-demo'.length));
+  }
+  if (isProd) res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  taxiDemo.handle(req, res);
+});
+
 // Gzip compression for text responses (HTML, CSS, JS, JSON, SVG). Images
 // served from /img/:key are already binary (JPEG/WebP), so compression
 // provides no benefit there and the middleware skips them automatically.

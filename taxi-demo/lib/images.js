@@ -13,7 +13,9 @@
 
 const WIDTHS = [480, 768, 1200, 1600, 2400];
 
-let url = (rel) => '/assets/' + rel;
+const { link } = require('./base');
+
+let url = (rel) => link('/assets/' + rel);
 let manifest = {};
 let found = {};
 

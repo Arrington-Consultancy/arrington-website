@@ -75,7 +75,8 @@ test('"See one we built" shows the demo and links to it, under "Built from scrat
   assert.ok(demo.includes('See one we built'));
   assert.ok(demo.includes('Book a test job and see it go through.'), "the brief's line is missing");
   assert.ok(demo.includes('No car will come.'), 'the section does not say the firm is not real');
-  assert.match(TAXI_DEMO_URL, /^https:\/\/[a-z0-9.-]+\/$/);
+  assert.equal(TAXI_DEMO_URL, '/taxi-demo/', 'the demo is part of this site, mounted in server.js');
+  assert.match(fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8'), /app\.use\('\/taxi-demo',/, 'server.js no longer mounts the demo');
   const block = body.slice(body.indexOf('data-demo'), body.indexOf('data-dispatch'));
   assert.ok(block.includes(`href="${TAXI_DEMO_URL}"`), 'no link to the demo');
   assert.ok(/<img src="\/img\/taxi-demo\/tidewell-demo\.jpg" alt="[^"]{40,}"/.test(block), 'the screenshot or its alt text is missing');

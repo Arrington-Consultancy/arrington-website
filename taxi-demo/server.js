@@ -16,6 +16,13 @@
 //   GET  /api/bookings/:token        status for the confirmation page
 //   GET  /health                     for Railway's deploy healthcheck
 //
+// Where it runs (15/10/2026): mounted by Arrington's main site at
+// www.arringtonconsultancy.com/taxi-demo (server.js there calls
+// createApp({ basePath: '/taxi-demo' }) and hands requests to server.handle).
+// It still runs on its own for development and tests (npm start). Its old
+// Railway service sets REDIRECT_TO so the address it used to have forwards
+// every visitor to the new one.
+//
 // Every response carries X-Robots-Tag: noindex: this is a fictional firm and
 // must never sit in search results beside real ones.
 
@@ -36,6 +43,7 @@ const { createDispatch } = require('./lib/dispatch');
 const { createStore } = require('./lib/store');
 const { createLimiter } = require('./lib/limit');
 const notify = require('./lib/notify');
+const { setBase, base: basePath, link } = require('./lib/base');
 
 const PUBLIC = path.join(__dirname, 'public');
 const MAX_BODY = 16 * 1024;
@@ -94,10 +102,13 @@ const CSP = [
 ].join('; ');
 
 function createApp(options = {}) {
+  // Set before anything writes an address: the asset map and the image
+  // register below both build URLs through link().
+  setBase(options.basePath != null ? options.basePath : process.env.BASE_PATH);
   const assets = loadAssets();
   const assetUrl = (rel) => {
     const a = assets.get(rel);
-    return a ? `/assets/${rel}?v=${a.hash}` : `/assets/${rel}`;
+    return a ? link(`/assets/${rel}?v=${a.hash}`) : link(`/assets/${rel}`);
   };
   // Photograph slots: which sized files exist, and their hashed addresses.
   images.register(assets, assetUrl);
@@ -116,7 +127,7 @@ function createApp(options = {}) {
   function baseUrl(req) {
     if (publicUrl) return publicUrl;
     const proto = String(req.headers['x-forwarded-proto'] || 'http').split(',')[0].trim();
-    return `${proto}://${req.headers.host || 'localhost'}`;
+    return `${proto}://${req.headers.host || 'localhost'}${basePath()}`;
   }
   const clientIp = (req) => String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
 
@@ -208,7 +219,7 @@ function createApp(options = {}) {
     const sent = notify.bookingReceived(b, job.ref);
     const record = store.add({ ref: job.ref, booking: b, sms: sent.sms });
     console.log(`Booking ${job.ref} into ${dispatch.name} dispatch: ${b.when === 'now' ? 'asap' : 'pre-booked'}, ${b.vehicle}, ${describe(b.quote)}`);
-    const to = `/booking/${record.token}`;
+    const to = link(`/booking/${record.token}`);
     return wantsJson(req) ? json(res, 201, { ref: job.ref, url: to }) : redirect(res, to);
   }
 
@@ -220,7 +231,7 @@ function createApp(options = {}) {
   async function enquiry(req, res, { path: p, kind, fields, render, title }) {
     if (!limits.enquiry(clientIp(req))) return page(req, res, 429, { path: p, title, description: '', body: pages.notFoundPage() });
     const input = await readBody(req);
-    if (clean(input.website, 200)) return redirect(res, `${p}?sent=1`);
+    if (clean(input.website, 200)) return redirect(res, link(`${p}?sent=1`));
     const values = {};
     const errors = {};
     for (const f of fields) {
@@ -230,7 +241,7 @@ function createApp(options = {}) {
     if (values.phone && fields.find((f) => f.name === 'phone' && f.type === 'tel') && !ukPhone(values.phone)) errors.phone = 'A UK phone number, please.';
     if (Object.keys(errors).length) return page(req, res, 422, { path: p, title, description: '', body: render({ errors, values }) });
     notify.enquiry(kind, values);
-    return redirect(res, `${p}?sent=1#${kind === 'account' ? 'open-account' : kind === 'driver' ? 'drive' : 'main'}`);
+    return redirect(res, link(`${p}?sent=1#${kind === 'account' ? 'open-account' : kind === 'driver' ? 'drive' : 'main'}`));
   }
 
   const PAGES = {
@@ -301,7 +312,7 @@ function createApp(options = {}) {
         if (!record) return page(req, res, 404, { path: p, title: 'Booking not found', description: '', body: pages.notFoundPage() });
         await dispatch.cancelBooking(record.ref);
         console.log(`Booking ${record.ref} cancelled by the customer`);
-        return redirect(res, `/booking/${record.token}`);
+        return redirect(res, link(`/booking/${record.token}`));
       }
       if (p === '/accounts') return enquiry(req, res, { path: '/accounts', kind: 'account', fields: pages.ACCOUNT_FIELDS, title: PAGES['/accounts'](new URLSearchParams()).title, render: (s) => pages.accountsPage(s) });
       if (p === '/about') return enquiry(req, res, { path: '/about', kind: 'driver', fields: pages.DRIVER_FIELDS, title: PAGES['/about'](new URLSearchParams()).title, render: (s) => pages.aboutPage(s) });
@@ -312,6 +323,21 @@ function createApp(options = {}) {
     return send(res, 405, 'Method not allowed', 'text/plain; charset=utf-8', { Allow: 'GET, HEAD, POST' });
   }
 
+  // One request, with nothing outside it able to see a failure: an error in a
+  // page ends that response and never reaches whoever mounted the site.
+  function serve(req, res) {
+    handle(req, res).catch((e) => {
+      const status = e.status || 500;
+      if (status === 500) console.error(e);
+      if (!res.headersSent) send(res, status, status === 413 ? 'Too large' : status === 400 ? 'Bad request' : 'Something went wrong', 'text/plain; charset=utf-8');
+      else res.end();
+    });
+  }
+
+  // Run on its own: log each request, take the base path off the front of
+  // the address when there is one, and, on the old Railway service, forward
+  // everything but the healthcheck to the site's new address.
+  const redirectTo = String(process.env.REDIRECT_TO || '').trim().replace(/\/+$/, '');
   const server = http.createServer((req, res) => {
     const started = Date.now();
     res.on('finish', () => {
@@ -319,13 +345,23 @@ function createApp(options = {}) {
         console.log(`${req.method} ${req.url.split('?')[0]} ${res.statusCode} ${Date.now() - started}ms`);
       }
     });
-    handle(req, res).catch((e) => {
-      const status = e.status || 500;
-      if (status === 500) console.error(e);
-      if (!res.headersSent) send(res, status, status === 413 ? 'Too large' : status === 400 ? 'Bad request' : 'Something went wrong', 'text/plain; charset=utf-8');
-      else res.end();
-    });
+    if (redirectTo && req.url !== '/health') {
+      res.writeHead(301, { Location: redirectTo + req.url, 'X-Robots-Tag': 'noindex, nofollow', 'Cache-Control': 'no-store' });
+      return res.end();
+    }
+    const b = basePath();
+    if (b) {
+      const q = req.url.indexOf('?');
+      const pathOnly = q === -1 ? req.url : req.url.slice(0, q);
+      if (pathOnly === b) { res.writeHead(301, { Location: b + '/' + (q === -1 ? '' : req.url.slice(q)) }); return res.end(); }
+      if (pathOnly.startsWith(b + '/')) req.url = req.url.slice(b.length);
+    }
+    serve(req, res);
   });
+  // For a host that mounts the site (Arrington's main site, under Express's
+  // app.use('/taxi-demo', ...), which has already taken the base path off
+  // req.url and logs requests itself).
+  server.handle = serve;
   server.dispatch = dispatch;
   server.store = store;
   return server;

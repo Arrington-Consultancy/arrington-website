@@ -6,6 +6,8 @@
   'use strict';
   var root = document.documentElement;
   root.classList.add('js');
+  // The path the site is served under ('' or '/taxi-demo'), from lib/base.js.
+  var BASE = root.getAttribute('data-base') || '';
   try { if (!CSS.supports('selector(:has(*))')) root.classList.add('no-has'); } catch (e) { root.classList.add('no-has'); }
   var reduced = false;
   try { reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { reduced = false; }
@@ -13,7 +15,7 @@
   var placesPromise = null;
   function places() {
     if (!placesPromise) {
-      placesPromise = fetch('/assets/places.json').then(function (r) { return r.json(); }).catch(function () { return []; });
+      placesPromise = fetch(BASE + '/assets/places.json').then(function (r) { return r.json(); }).catch(function () { return []; });
     }
     return placesPromise;
   }
@@ -164,7 +166,7 @@
       var key = [pickup, destination, value('vehicle'), value('when'), value('date'), value('time')].join('|');
       if (key === last) return;
       var mine = ++seq;
-      fetch('/api/quote', {
+      fetch(BASE + '/api/quote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ pickup: pickup, destination: destination, vehicle: value('vehicle') || 'saloon', when: value('when'), date: value('date'), time: value('time') })

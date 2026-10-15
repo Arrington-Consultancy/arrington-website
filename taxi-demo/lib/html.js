@@ -15,6 +15,7 @@
 
 const { FIRM, DEMO_NOTE, yearsRunning } = require('./firm');
 const images = require('./images');
+const { link, base: basePath } = require('./base');
 
 const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -142,11 +143,11 @@ function structuredData(base) {
 }
 
 function layout({ path, title, description, body, base, assets, bookPage = false, homePage = false, barPrice = '', extraScripts = [], hero = null, bodyClass = '' }) {
-  const navItems = NAV.map(([href, label]) => html`<li><a href="${href}"${path === href ? raw(' aria-current="page"') : ''}>${label}</a></li>`);
+  const navItems = NAV.map(([href, label]) => html`<li><a href="${link(href)}"${path === href ? raw(' aria-current="page"') : ''}>${label}</a></li>`);
   const scripts = ['app.js', ...extraScripts].map((s) => html`<script src="${assets(s)}" defer></script>`);
   const classes = [bookPage ? 'is-book' : '', homePage ? 'is-home' : '', bodyClass].filter(Boolean).join(' ');
   return '<!doctype html>' + html`
-<html lang="en-GB">
+<html lang="en-GB" data-base="${basePath()}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -160,7 +161,7 @@ function layout({ path, title, description, body, base, assets, bookPage = false
 <meta property="og:description" content="${description}">
 <meta property="og:url" content="${base + path}">
 <link rel="icon" href="${assets('favicon.svg')}" type="image/svg+xml">
-<link rel="preload" href="/assets/fonts/schibsted-grotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="${link('/assets/fonts/schibsted-grotesk.woff2')}" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="${assets('site.css')}">
 ${hero ? preloadImage(hero) : ''}
 ${structuredData(base)}
@@ -172,13 +173,13 @@ ${structuredData(base)}
 </div>
 <header class="site-header">
   <div class="wrap header-inner">
-    <a class="brand" href="/" aria-label="${FIRM.name}, home">${LOGO}</a>
+    <a class="brand" href="${link('/')}" aria-label="${FIRM.name}, home">${LOGO}</a>
     <nav class="nav" aria-label="Main">
       <ul>${navItems}</ul>
     </nav>
     <div class="header-actions">
       <a class="header-phone" href="${FIRM.phoneHref}" aria-label="Call ${FIRM.phone}, 24 hours">${icon('phone')}<span class="header-phone-text"><small>24 hours</small>${FIRM.phone}</span></a>
-      <a class="btn btn-primary header-book" href="/book">Book online</a>
+      <a class="btn btn-primary header-book" href="${link('/book')}">Book online</a>
       <details class="menu">
         <summary aria-label="Menu"><span class="menu-open">${icon('menu')}</span><span class="menu-close">${icon('close')}</span></summary>
         <div class="menu-panel">
@@ -196,7 +197,7 @@ ${body}
   <div class="wrap">
     <div class="footer-top">
       <div>
-        <p class="footer-brand"><a class="brand" href="/" aria-label="${FIRM.name}, home">${LOGO}</a></p>
+        <p class="footer-brand"><a class="brand" href="${link('/')}" aria-label="${FIRM.name}, home">${LOGO}</a></p>
         <p class="footer-tag">Taxis and private hire in ${FIRM.town} since ${FIRM.founded}. ${FIRM.fleet} cars, ${FIRM.wheelchairCars} of them wheelchair accessible, and a control room that never shuts.</p>
       </div>
       <div class="footer-call">
@@ -208,18 +209,18 @@ ${body}
       <div>
         <h2 class="footer-h">Book</h2>
         <ul class="footer-links">
-          <li><a href="/book">Book online</a></li>
-          <li><a href="/airports">Airport and long distance prices</a></li>
-          <li><a href="/accounts">Business accounts</a></li>
-          <li><a href="/about#app">The ${FIRM.shortName} app</a></li>
+          <li><a href="${link('/book')}">Book online</a></li>
+          <li><a href="${link('/airports')}">Airport and long distance prices</a></li>
+          <li><a href="${link('/accounts')}">Business accounts</a></li>
+          <li><a href="${link('/about#app')}">The ${FIRM.shortName} app</a></li>
         </ul>
       </div>
       <div>
         <h2 class="footer-h">${FIRM.name}</h2>
         <ul class="footer-links">
-          <li><a href="/about">About us</a></li>
-          <li><a href="/about#drive">Drive with us</a></li>
-          <li><a href="/contact">Contact and lost property</a></li>
+          <li><a href="${link('/about')}">About us</a></li>
+          <li><a href="${link('/about#drive')}">Drive with us</a></li>
+          <li><a href="${link('/contact')}">Contact and lost property</a></li>
         </ul>
       </div>
       <div>
@@ -237,7 +238,7 @@ ${body}
   <a class="btn btn-ghost" href="${FIRM.phoneHref}">${icon('phone')} Call</a>
   ${bookPage
     ? html`<button class="btn btn-primary" type="submit" form="book-form">Book this taxi <span class="bar-price" data-quote-mirror>${barPrice}</span></button>`
-    : html`<a class="btn btn-primary" href="/book">Book online</a>`}
+    : html`<a class="btn btn-primary" href="${link('/book')}">Book online</a>`}
 </div>
 ${scripts}
 </body>

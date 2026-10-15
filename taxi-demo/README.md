@@ -92,6 +92,20 @@ return shapes in `lib/dispatch/index.js`, and it must pass
 
 ## Hosting
 
-Railway service `taxi-demo` in the Arrington project, production
-environment, root directory `/taxi-demo`, watch pattern `/taxi-demo/**`,
-healthcheck `/health`.
+Part of Arrington's main site since 15/10/2026, at
+https://www.arringtonconsultancy.com/taxi-demo/ (Tom: the demo's address
+should be the main website's, with no domain of its own). The main site's
+`server.js` calls `createApp({ basePath: '/taxi-demo' })` and hands requests
+to `server.handle`, mounted after its HTTPS and host redirect and before its
+helmet, session, body parsers and CSRF check, so the demo keeps its own CSP,
+noindex, gzip and form checks and sets no cookie. Every address a page
+writes goes through `link()` in `lib/base.js`; `test/basePath.test.js` fails
+if one escapes the path.
+
+Run on its own (`npm start`, or `BASE_PATH=/taxi-demo npm start` to try the
+path locally), it behaves as before.
+
+The Railway service `taxi-demo` (production only, root `/taxi-demo`, watch
+`/taxi-demo/**`, healthcheck `/health`) now only forwards its old address,
+taxi-demo-production.up.railway.app, to the new one: `REDIRECT_TO` is set on
+it, and every request but `/health` gets a 301 with its path kept.

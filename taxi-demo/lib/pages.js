@@ -18,6 +18,7 @@ const { VEHICLES, FIXED, money, describe, estimate } = require('./fares');
 const { PAYMENT, maskPhone, firstName } = require('./booking');
 const { PLACES } = require('./places');
 const { exeMap } = require('./map');
+const { link } = require('./base');
 
 const COVER = ['Exmouth', 'Lympstone', 'Budleigh Salterton', 'Woodbury', 'Exton', 'Topsham', 'Exeter', 'Sidmouth'];
 // The four fixed prices on the home page board.
@@ -78,7 +79,7 @@ function photoBand(name) {
 // ---- Home ---------------------------------------------------------------------
 
 function quickQuote() {
-  return html`<form class="quote" action="/book" method="get" data-quote aria-labelledby="quote-h">
+  return html`<form class="quote" action="${link('/book')}" method="get" data-quote aria-labelledby="quote-h">
   <h2 class="quote-h" id="quote-h">Where to?</h2>
   <div class="field">
     <label for="q-from">From</label>
@@ -99,7 +100,7 @@ function priceBoard() {
   return html`<div class="board" aria-labelledby="board-h">
   <p class="board-h" id="board-h">Fixed prices<span>day or night</span></p>
   <ul class="board-rows">${rows.map((f) => html`<li><span class="board-to">${f.name}<small>About ${f.miles} miles</small></span><span class="board-price">${money(f.price * 100)}</span></li>`)}</ul>
-  <p class="board-foot">One way from ${FIRM.town}, up to four passengers.<a href="/airports">All fixed prices ${icon('arrow')}</a></p>
+  <p class="board-foot">One way from ${FIRM.town}, up to four passengers.<a href="${link('/airports')}">All fixed prices ${icon('arrow')}</a></p>
 </div>`;
 }
 
@@ -134,7 +135,7 @@ function home() {
       <h2>Fixed prices, day or night.</h2>
       <p>Exeter Airport ${money(2800)}, Bristol Airport ${money(15000)}, Heathrow ${money(29500)}, from anywhere in ${FIRM.town}, Lympstone, Budleigh Salterton, Woodbury or Exton. The same price at four in the morning as at four in the afternoon.</p>
       <p>Put your flight number in the notes. We check the landing time, and the first 45 minutes of waiting after landing are included.</p>
-      <p><a class="link-arrow" href="/airports">All fixed prices ${icon('arrow')}</a></p>
+      <p><a class="link-arrow" href="${link('/airports')}">All fixed prices ${icon('arrow')}</a></p>
     </div>
     <div class="split-media reveal">${picture({ name: 'airport-night', className: 'pic-43', alt: ALT['airport-night'], sizes: '(min-width: 56rem) 50vw, 100vw', fallback: typeField({ big: money(2800), text: 'to Exeter Airport, the same price day or night', tone: 'night' }) })}</div>
   </div>
@@ -150,7 +151,7 @@ function home() {
         <span class="way-n" aria-hidden="true">01</span>
         <h3>Online</h3>
         <p>See the price first. Your booking goes straight to our controllers and we text you the driver's name, car and arrival time.</p>
-        <a class="btn btn-primary" href="/book">Book online</a>
+        <a class="btn btn-primary" href="${link('/book')}">Book online</a>
       </article>
       <article class="way reveal">
         <span class="way-n" aria-hidden="true">02</span>
@@ -163,8 +164,8 @@ function home() {
         <h3>In the app</h3>
         <p>Book in two taps, watch your car arrive on the map and pay by card in the app.</p>
         <div class="stores">
-          <a class="store" href="/about#app"><small>Download on the</small>App Store</a>
-          <a class="store" href="/about#app"><small>Get it on</small>Google Play</a>
+          <a class="store" href="${link('/about#app')}"><small>Download on the</small>App Store</a>
+          <a class="store" href="${link('/about#app')}"><small>Get it on</small>Google Play</a>
         </div>
       </article>
     </div>
@@ -182,7 +183,7 @@ function home() {
         <li>NHS and care</li>
         <li>Local businesses</li>
       </ul>
-      <p><a class="btn btn-dark" href="/accounts">Open an account</a></p>
+      <p><a class="btn btn-dark" href="${link('/accounts')}">Open an account</a></p>
     </div>
     <div class="split-media reveal">${picture({ name: 'accounts', className: 'pic-43', alt: ALT.accounts, sizes: '(min-width: 56rem) 50vw, 100vw', fallback: typeField({ big: '1', text: 'invoice a month, with every journey on it', tone: 'night' }) })}</div>
   </div>
@@ -257,7 +258,7 @@ ${pageTop({ eyebrow: 'Book online', title: 'Book a taxi.', lede: 'The price befo
         <p class="aside-phone">Rather talk to someone? <a href="${FIRM.phoneHref}">${FIRM.phone}</a>, 24 hours.</p>
       </div>
     </div>
-    <form id="book-form" class="book-form" action="/book" method="post" novalidate data-quote data-book>
+    <form id="book-form" class="book-form" action="${link('/book')}" method="post" novalidate data-quote data-book>
       ${errorList.length ? html`<div class="error-summary" role="alert" tabindex="-1"><h2>Check ${errorList.length === 1 ? 'this' : 'these'} and try again</h2><ul>${errorList.map((e) => html`<li>${e}</li>`)}</ul></div>` : ''}
       <fieldset class="group">
         <legend><span class="group-n" aria-hidden="true">1</span>Where</legend>
@@ -387,8 +388,8 @@ function confirmationPage({ record, view }) {
           <dt>Payment</dt><dd>${pay ? pay.label : b.payment}${b.account ? ` (${b.account})` : ''}</dd>
           ${b.notes ? html`<dt>Notes</dt><dd>${b.notes}</dd>` : ''}
         </dl>
-        ${cancelled ? '' : html`<form action="/booking/${record.token}/cancel" method="post" class="cancel-form"><button class="btn btn-outline btn-block" type="submit">Cancel this booking</button></form>`}
-        <p class="center"><a href="/book">Book another taxi</a></p>
+        ${cancelled ? '' : html`<form action="${link(`/booking/${record.token}/cancel`)}" method="post" class="cancel-form"><button class="btn btn-outline btn-block" type="submit">Cancel this booking</button></form>`}
+        <p class="center"><a href="${link('/book')}">Book another taxi</a></p>
       </div>
     </aside>
   </div>
@@ -416,7 +417,7 @@ ${pageTop({ eyebrow: 'Fixed prices', title: 'Fixed prices to the airports and th
       <div class="reveal"><h2>Returns</h2><p>Book each way as its own journey. The fixed price applies in both directions.</p></div>
       <div class="reveal"><h2>Wheelchair users</h2><p>Our wheelchair accessible cars cost the same as a car, on every journey.</p></div>
     </div>
-    <p class="cta-row"><a class="btn btn-primary btn-lg" href="/book">Book online</a> <a class="btn btn-dark btn-lg" href="${FIRM.phoneHref}">${icon('phone')} ${FIRM.phone}</a></p>
+    <p class="cta-row"><a class="btn btn-primary btn-lg" href="${link('/book')}">Book online</a> <a class="btn btn-dark btn-lg" href="${FIRM.phoneHref}">${icon('phone')} ${FIRM.phone}</a></p>
   </div>
 </section>`;
 }
@@ -427,7 +428,7 @@ function enquiryForm({ action, kind, fields, submit, sent, errors, values = {} }
   if (sent) {
     return html`<div class="card sent" role="status"><h2>Thanks, we've got that.</h2><p>Someone from the office will be in touch within one working day.</p><p class="demo-note">Demo: the message was written to a test log. Nobody will be in touch.</p></div>`;
   }
-  return html`<form class="card enquiry" action="${action}" method="post" novalidate>
+  return html`<form class="card enquiry" action="${link(action)}" method="post" novalidate>
     <input type="hidden" name="kind" value="${kind}">
     ${errors ? html`<div class="error-summary" role="alert"><h2>Check the form and try again</h2></div>` : ''}
     ${fields.map((f) => html`<div class="field"><label for="${f.name}">${f.label}${f.optional ? html` <span class="optional">(optional)</span>` : ''}</label>${
@@ -519,7 +520,7 @@ ${photoBand('fleet-dawn')}
       <p class="eyebrow">Wheelchair accessible</p>
       <h2>Six cars with a ramp, at the price of a car.</h2>
       <p>Ramp access, room for a wheelchair user and up to four others, and drivers trained to help. Book one online, by phone or on account. It costs the same as a car on every journey, because that is how a licensed operator should run.</p>
-      <p><a class="link-arrow" href="/book">Book a wheelchair accessible car ${icon('arrow')}</a></p>
+      <p><a class="link-arrow" href="${link('/book')}">Book a wheelchair accessible car ${icon('arrow')}</a></p>
     </div>
   </div>
 </section>
@@ -594,7 +595,7 @@ function notFoundPage() {
   <div class="wrap not-found-inner">
     <p class="eyebrow">Page not found</p>
     <h1>That road doesn't go anywhere.</h1>
-    <p class="lede">Try the <a href="/">home page</a>, <a href="/book">book online</a>, or call <a href="${FIRM.phoneHref}">${FIRM.phone}</a>.</p>
+    <p class="lede">Try the <a href="${link('/')}">home page</a>, <a href="${link('/book')}">book online</a>, or call <a href="${FIRM.phoneHref}">${FIRM.phone}</a>.</p>
   </div>
 </section>`;
 }
