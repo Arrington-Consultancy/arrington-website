@@ -28,7 +28,12 @@ const FIRM = {
   phoneHref: 'tel:+441632960418',
   textNumber: '07700 900418',
   founded: 2004,
+  // 48 cars from one control room: hackney carriage taxis (roof lights, on
+  // the ranks, can be hailed) and private hire cars (booked in advance).
+  // Tom's decision of 15/10/2026. The two add up to the fleet.
   fleet: 48,
+  taxis: 30,
+  privateHire: 18,
   wheelchairCars: 6,
   // Where we drop and collect most days. Used in copy and in areaServed.
   area: ['Exmouth', 'Lympstone', 'Budleigh Salterton', 'Woodbury', 'Topsham', 'Exeter'],

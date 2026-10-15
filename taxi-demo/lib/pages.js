@@ -5,6 +5,12 @@
 // "seamless" or "cutting-edge", no exclamation marks. Plus the Arrington
 // site's own: UK English and no dashes as punctuation. Every page opens with
 // its own headline that says what the page is for.
+//
+// The firm runs both kinds of licensed car from one control room (Tom's
+// decision, 15/10/2026): hackney carriage taxis, which carry roof lights,
+// wait on the ranks and can be hailed, and private hire cars, which are
+// booked in advance. The pictures show the taxis; no copy beside a
+// pictured car calls it private hire, and no real council is named.
 
 const { FIRM, DEMO_NOTE, yearsRunning } = require('./firm');
 const { html, raw, icon, carIcon, picture, hasImage, typeField, esc } = require('./html');
@@ -16,6 +22,20 @@ const { exeMap } = require('./map');
 const COVER = ['Exmouth', 'Lympstone', 'Budleigh Salterton', 'Woodbury', 'Exton', 'Topsham', 'Exeter', 'Sidmouth'];
 // The four fixed prices on the home page board.
 const BOARD = ['exeter-airport', 'exeter-st-davids', 'bristol-airport', 'heathrow'];
+
+// What is actually in each picture. The pictures are AI-generated
+// illustrations (the footer says so on every page); the alt text describes
+// the scene and never claims a real car, driver or journey.
+const ALT = {
+  'hero-exmouth': 'A white saloon with a taxi roof light driving along the seafront road at Exmouth at sunset, the beach and the red cliffs of Orcombe Point beyond',
+  'airport-night': 'A silver estate car with a taxi roof light at an airport drop-off at night, its boot open while a man lifts out a suitcase, the terminal lit behind',
+  accounts: 'A grey saloon with a taxi roof light waiting with its rear door open outside a white seaside hotel, a woman with a wheeled suitcase walking towards it',
+  wav: 'A white wheelchair accessible taxi with its rear ramp lowered to the pavement on a residential street, a wheelchair user at the foot of the ramp with a helper\'s hand on the chair, the sea beyond',
+  'fleet-dawn': 'Four white and silver taxis with roof lights parked in a row along a promenade at sunrise, pastel beach huts and the sea behind',
+  driver: 'Hands on the steering wheel of a right hand drive car on a coast road along the estuary at sunset, boats moored on the water',
+  'estuary-sand': '',
+  'huts-evening': 'A row of pastel beach huts along the promenade at Exmouth at dusk, the beach and the red cliffs beyond'
+};
 
 // ---- The fare -----------------------------------------------------------------
 // One block, the same everywhere a price is shown: a small label, the figure
@@ -30,11 +50,14 @@ function fareBlock({ est = null, hint = '', forForm = null } = {}) {
   return html`<div class="fare is-priced" ${attrs}><span class="fare-label">${label}</span><strong class="fare-figure">${describe(est)}</strong><span class="fare-sub">${sub}</span></div>`;
 }
 
-// A page opening: the headline on sand or on the night field, with room for
-// something beside it (the stats on the about page).
-function pageTop({ eyebrow, title, lede, tone = 'sand', extra = '', className = '' }) {
+// A page opening: the headline over the page's photograph when it exists,
+// otherwise on sand or on the night field, with room for something beside it
+// (the stats on the about page).
+function pageTop({ eyebrow, title, lede, tone = 'sand', extra = '', className = '', image = null }) {
+  const photo = image && hasImage(image);
   return html`
-<section class="page-top page-top-${tone} ${className}">
+<section class="page-top ${photo ? 'page-top-photo' : `page-top-${tone}`} ${className}">
+  ${photo ? html`${picture({ name: image, className: 'page-top-media', alt: ALT[image], sizes: '100vw', priority: true })}<div class="page-top-shade" aria-hidden="true"></div>` : ''}
   <div class="wrap page-top-inner">
     <div class="page-top-copy">
       ${eyebrow ? html`<p class="eyebrow">${eyebrow}</p>` : ''}
@@ -47,9 +70,9 @@ function pageTop({ eyebrow, title, lede, tone = 'sand', extra = '', className = 
 }
 
 // A wide photograph under a page opening, only once the file exists.
-function photoBand(name, alt) {
+function photoBand(name) {
   if (!hasImage(name)) return '';
-  return html`<div class="photo-band">${picture({ name, alt, className: 'photo-band-pic', sizes: '100vw' })}</div>`;
+  return html`<div class="photo-band">${picture({ name, alt: ALT[name], className: 'photo-band-pic', sizes: '100vw', priority: true })}</div>`;
 }
 
 // ---- Home ---------------------------------------------------------------------
@@ -74,35 +97,49 @@ function quickQuote() {
 function priceBoard() {
   const rows = BOARD.map((id) => FIXED.find((f) => f.id === id));
   return html`<div class="board" aria-labelledby="board-h">
-  <p class="board-h" id="board-h">Fixed prices, day or night</p>
+  <p class="board-h" id="board-h">Fixed prices<span>day or night</span></p>
   <ul class="board-rows">${rows.map((f) => html`<li><span class="board-to">${f.name}<small>About ${f.miles} miles</small></span><span class="board-price">${money(f.price * 100)}</span></li>`)}</ul>
-  <p class="board-foot">One way from ${FIRM.town}, up to four passengers. <a href="/airports">All fixed prices ${icon('arrow')}</a></p>
+  <p class="board-foot">One way from ${FIRM.town}, up to four passengers.<a href="/airports">All fixed prices ${icon('arrow')}</a></p>
 </div>`;
 }
 
 function home() {
-  const facts = ['Licensed operator', `${yearsRunning()} years in ${FIRM.town}`, 'Open every hour of the year', `${FIRM.wheelchairCars} wheelchair accessible cars`, 'Card, cash or account'];
+  const facts = ['Licensed taxis and private hire', `${yearsRunning()} years in ${FIRM.town}`, 'Open every hour of the year', `${FIRM.wheelchairCars} wheelchair accessible cars`, 'Card, cash or account'];
   const heroPhoto = hasImage('hero-exmouth');
   return html`
 <section class="hero${heroPhoto ? ' has-photo' : ''}">
-  ${picture({ name: 'hero-exmouth', className: 'hero-media on-night-map', alt: `A ${FIRM.name} car on the seafront at ${FIRM.town}, the red cliffs of Orcombe Point behind`, sizes: '100vw', priority: true, fallback: raw(exeMap({ id: 'hero-map', decorative: true })) })}
+  ${picture({ name: 'hero-exmouth', className: 'hero-media', alt: ALT['hero-exmouth'], sizes: '100vw', priority: true, fallback: raw(`<div class="on-night-map">${exeMap({ id: 'hero-map', decorative: true })}</div>`) })}
   <div class="hero-shade" aria-hidden="true"></div>
   <div class="wrap hero-grid">
     <div class="hero-copy">
       <p class="eyebrow">${FIRM.town}, ${FIRM.county}</p>
       <h1>Taxis in ${FIRM.town}, with the price before you book.</h1>
-      <p class="lede">${FIRM.fleet} cars, a control room that never shuts, and fixed prices to the airports. Book online, in the app, or call <a href="${FIRM.phoneHref}">${FIRM.phone}</a>.</p>
+      <p class="lede">Taxis on the ranks and private hire cars to book, ${FIRM.fleet} in all, from one control room that never shuts. Book online, in the app, or call <a href="${FIRM.phoneHref}">${FIRM.phone}</a>.</p>
     </div>
     ${quickQuote()}
-    ${priceBoard()}
   </div>
+</section>
+<section class="board-strip">
+  <div class="wrap">${priceBoard()}</div>
 </section>
 <section class="facts-band">
   <div class="wrap">
     <ul class="facts">${facts.map((f) => html`<li>${f}</li>`)}</ul>
   </div>
 </section>
-<section class="section" id="ways">
+<section class="section">
+  <div class="wrap split split-reverse">
+    <div class="split-copy reveal">
+      <p class="eyebrow">Airports and long distance</p>
+      <h2>Fixed prices, day or night.</h2>
+      <p>Exeter Airport ${money(2800)}, Bristol Airport ${money(15000)}, Heathrow ${money(29500)}, from anywhere in ${FIRM.town}, Lympstone, Budleigh Salterton, Woodbury or Exton. The same price at four in the morning as at four in the afternoon.</p>
+      <p>Put your flight number in the notes. We check the landing time, and the first 45 minutes of waiting after landing are included.</p>
+      <p><a class="link-arrow" href="/airports">All fixed prices ${icon('arrow')}</a></p>
+    </div>
+    <div class="split-media reveal">${picture({ name: 'airport-night', className: 'pic-43', alt: ALT['airport-night'], sizes: '(min-width: 56rem) 50vw, 100vw', fallback: typeField({ big: money(2800), text: 'to Exeter Airport, the same price day or night', tone: 'night' }) })}</div>
+  </div>
+</section>
+<section class="section band-night" id="ways">
   <div class="wrap">
     <div class="section-head reveal">
       <p class="eyebrow">Three ways to book</p>
@@ -119,7 +156,7 @@ function home() {
         <span class="way-n" aria-hidden="true">02</span>
         <h3>By phone</h3>
         <p>Answered in ${FIRM.town}, 24 hours a day. Tell us where you are and where you're going.</p>
-        <a class="btn btn-dark" href="${FIRM.phoneHref}">${icon('phone')} ${FIRM.phone}</a>
+        <a class="btn btn-ghost" href="${FIRM.phoneHref}">${icon('phone')} ${FIRM.phone}</a>
       </article>
       <article class="way reveal" id="app">
         <span class="way-n" aria-hidden="true">03</span>
@@ -147,7 +184,7 @@ function home() {
       </ul>
       <p><a class="btn btn-dark" href="/accounts">Open an account</a></p>
     </div>
-    <div class="split-media reveal">${picture({ name: 'accounts', className: 'pic-43', alt: 'A guest with a suitcase walking to a waiting car outside a hotel', sizes: '(min-width: 56rem) 50vw, 100vw', fallback: typeField({ big: '1', text: 'invoice a month, with every journey on it', tone: 'night' }) })}</div>
+    <div class="split-media reveal">${picture({ name: 'accounts', className: 'pic-43', alt: ALT.accounts, sizes: '(min-width: 56rem) 50vw, 100vw', fallback: typeField({ big: '1', text: 'invoice a month, with every journey on it', tone: 'night' }) })}</div>
   </div>
 </section>
 <section class="section">
@@ -364,8 +401,7 @@ function airportsPage() {
   const factor = (id) => VEHICLES.find((v) => v.id === id).factor;
   const round = (p) => Math.round(p);
   return html`
-${pageTop({ eyebrow: 'Fixed prices', title: 'Fixed prices to the airports and the stations.', lede: `One way from ${FIRM.town}, Lympstone, Budleigh Salterton, Woodbury or Exton. The same price at four in the morning as at four in the afternoon.`, tone: 'night' })}
-${photoBand('airport-night', 'A car at the airport drop-off at night')}
+${pageTop({ eyebrow: 'Fixed prices', title: 'Fixed prices to the airports and the stations.', lede: `One way from ${FIRM.town}, Lympstone, Budleigh Salterton, Woodbury or Exton. The same price at four in the morning as at four in the afternoon.`, tone: 'night', image: 'airport-night' })}
 <section class="section section-tight">
   <div class="wrap">
     <div class="table-wrap">
@@ -433,8 +469,7 @@ function accountsPage(state = {}) {
     ['Local businesses', 'Staff, visitors and the late finish. Every journey on one monthly statement with the passenger and the reference.']
   ];
   return html`
-${pageTop({ eyebrow: 'Business accounts', title: 'Book on account, pay once a month.', lede: 'Your people travel without paying the driver. You get one statement a month with every journey on it.' })}
-${photoBand('accounts', 'A guest with a suitcase walking to a waiting car outside a hotel')}
+${pageTop({ eyebrow: 'Business accounts', title: 'Book on account, pay once a month.', lede: 'Your people travel without paying the driver. You get one statement a month with every journey on it.', image: 'accounts' })}
 <section class="section section-tight">
   <div class="wrap">
     <div class="sectors">${sectors.map(([t, d], i) => html`<article class="sector reveal"><span class="sector-n" aria-hidden="true">0${i + 1}</span><h2>${t}</h2><p>${d}</p></article>`)}</div>
@@ -468,18 +503,18 @@ function aboutPage(state = {}) {
   </ul>`;
   const driverPhoto = hasImage('driver');
   return html`
-${pageTop({ eyebrow: 'About us', title: 'The firm, the drivers, the cars.', lede: `Running taxis in ${FIRM.town} since ${FIRM.founded}, with a control room that is open every hour of the year.`, extra: stats, className: 'page-top-about' })}
-${photoBand('fleet-dawn', `${FIRM.name} cars parked along the seafront at dawn`)}
+${pageTop({ eyebrow: 'About us', title: 'The firm, the drivers, the cars.', lede: `Taxis and private hire in ${FIRM.town} since ${FIRM.founded}, from one control room that is open every hour of the year.`, extra: stats, className: 'page-top-about' })}
+${photoBand('fleet-dawn')}
 <section class="section section-tight">
   <div class="wrap cols-3">
     <div class="reveal"><h2>Local</h2><p>Our controllers are in ${FIRM.town}. They know the roads, the estates and which door the hospital wants you at.</p></div>
     <div class="reveal"><h2>Our drivers</h2><p>Every driver holds a private hire or hackney carriage licence, an enhanced DBS check and a medical. Most have driven for us for years.</p></div>
-    <div class="reveal"><h2>Our cars</h2><p>Licensed and inspected by the council, cleaned every shift. Card machines in every car.</p></div>
+    <div class="reveal"><h2>Our cars</h2><p>${FIRM.fleet} cars from one control room: ${FIRM.taxis} hackney carriage taxis, with roof lights, on the ranks and hailed in the street, and ${FIRM.privateHire} private hire cars, booked in advance. All licensed by the council, inspected and cleaned every shift, with a card machine in every one.</p></div>
   </div>
 </section>
 <section class="section band-paper">
   <div class="wrap split">
-    <div class="split-media reveal">${picture({ name: 'wav', className: 'pic-43', alt: 'A wheelchair accessible car with its ramp down', sizes: '(min-width: 56rem) 50vw, 100vw', fallback: typeField({ big: String(FIRM.wheelchairCars), text: 'cars with a ramp, at the price of a car', tone: 'red' }) })}</div>
+    <div class="split-media reveal">${picture({ name: 'wav', className: 'pic-43', alt: ALT.wav, sizes: '(min-width: 56rem) 50vw, 100vw', fallback: typeField({ big: String(FIRM.wheelchairCars), text: 'cars with a ramp, at the price of a car', tone: 'red' }) })}</div>
     <div class="split-copy reveal">
       <p class="eyebrow">Wheelchair accessible</p>
       <h2>Six cars with a ramp, at the price of a car.</h2>
@@ -507,7 +542,7 @@ ${photoBand('fleet-dawn', `${FIRM.name} cars parked along the seafront at dawn`)
 </section>
 <section class="section" id="drive">
   <div class="wrap drive-grid${driverPhoto ? ' has-media' : ''}">
-    ${driverPhoto ? html`<div class="drive-media reveal">${picture({ name: 'driver', className: 'pic-45', alt: 'A driver\'s hands on the wheel, the estuary road ahead', sizes: '(min-width: 56rem) 33vw, 100vw' })}</div>` : ''}
+    ${driverPhoto ? html`<div class="drive-media reveal">${picture({ name: 'driver', className: 'pic-23', alt: ALT.driver, sizes: '(min-width: 56rem) 33vw, 100vw' })}</div>` : ''}
     <div class="reveal">
       <p class="eyebrow">Drive with us</p>
       <h2>Your own hours, paid weekly.</h2>
@@ -529,8 +564,7 @@ ${photoBand('fleet-dawn', `${FIRM.name} cars parked along the seafront at dawn`)
 
 function contactPage(state = {}) {
   return html`
-${pageTop({ eyebrow: 'Contact', title: 'Call us, any time.', lede: `The quickest way to a taxi is ${FIRM.phone}. Someone answers 24 hours a day.` })}
-${photoBand('huts-evening', `Beach huts on the seafront at ${FIRM.town} at dusk`)}
+${pageTop({ eyebrow: 'Contact', title: 'Call us, any time.', lede: `The quickest way to a taxi is ${FIRM.phone}. Someone answers 24 hours a day.`, image: 'huts-evening' })}
 <section class="section section-tight">
   <div class="wrap split split-top">
     <div class="reveal">
@@ -570,6 +604,6 @@ function placesJson() {
 }
 
 module.exports = {
-  home, bookPage, bookBarPrice, confirmationPage, statusSteps, airportsPage, accountsPage, aboutPage, contactPage, notFoundPage, placesJson, fareBlock,
+  home, bookPage, bookBarPrice, confirmationPage, statusSteps, airportsPage, accountsPage, aboutPage, contactPage, notFoundPage, placesJson, fareBlock, ALT,
   ACCOUNT_FIELDS, DRIVER_FIELDS, CONTACT_FIELDS
 };

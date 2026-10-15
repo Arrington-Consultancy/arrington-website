@@ -142,7 +142,7 @@ test('a quote mark in a prefilled address cannot break out of the field', async 
 test('the booking page prefills from the quick price on the home page', async () => {
   const html = await (await fetch(base + '/book?pickup=Exmouth%20railway%20station&destination=Exeter%20Airport')).text();
   assert.match(html, /value="Exmouth railway station"/);
-  assert.match(html, /Price: <strong>£28<\/strong>/);
+  assert.match(html, /class="fare-figure">£28</, 'the fare block carries the price before the form is sent');
 });
 
 test('too many bookings from one address are turned away', async () => {

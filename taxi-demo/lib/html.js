@@ -121,6 +121,7 @@ function structuredData(base) {
     '@context': 'https://schema.org',
     '@type': 'TaxiService',
     name: FIRM.name,
+    description: `Hackney carriage taxis and private hire cars in ${FIRM.town}, ${FIRM.county}, run from one control room 24 hours a day. ${FIRM.fleet} cars, ${FIRM.wheelchairCars} of them wheelchair accessible.`,
     provider: {
       '@type': 'LocalBusiness',
       name: FIRM.name,
@@ -196,7 +197,7 @@ ${body}
     <div class="footer-top">
       <div>
         <p class="footer-brand"><a class="brand" href="/" aria-label="${FIRM.name}, home">${LOGO}</a></p>
-        <p class="footer-tag">${FIRM.town}'s taxi firm since ${FIRM.founded}. ${FIRM.fleet} cars, ${FIRM.wheelchairCars} of them wheelchair accessible, and a control room that never shuts.</p>
+        <p class="footer-tag">Taxis and private hire in ${FIRM.town} since ${FIRM.founded}. ${FIRM.fleet} cars, ${FIRM.wheelchairCars} of them wheelchair accessible, and a control room that never shuts.</p>
       </div>
       <div class="footer-call">
         <a class="footer-phone" href="${FIRM.phoneHref}">${icon('phone')} ${FIRM.phone}</a>
@@ -228,7 +229,7 @@ ${body}
       </div>
     </div>
     <div class="footer-demo">
-      <p>${DEMO_NOTE} Anything typed into this site is kept in memory for two hours and then deleted. No tracking, no cookies. <a href="${FIRM.arringtonUrl}">Built by Arrington Consultancy</a>.</p>
+      <p>${DEMO_NOTE} Pictures on this site are AI-generated illustrations, not photographs of a real fleet. Anything typed into this site is kept in memory for two hours and then deleted. No tracking, no cookies. <a href="${FIRM.arringtonUrl}">Built by Arrington Consultancy</a>.</p>
     </div>
   </div>
 </footer>
