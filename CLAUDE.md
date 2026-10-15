@@ -7769,9 +7769,13 @@ worker's proposal (Drive id `1hTCW6dmWUBfG3a6PYHWBNMnNAGOPsx1wgGmQroizs7I`) and
 Tom's approval with changes (Drive id
 `10qIzroDwFC2kshoWt1Pcu5HeraHcdKtLLWm2irveJXY`), all of 13 October 2026.
 
-- **What £999 covers (Tom's decision):** the website, web bookings that land
-  in the operator's dispatch system, and an email booking check, none of it
-  extra. Price read from `lib/whereToStartOffers.js`.
+- **What £999 covers (Tom's decision, changed 15/10/2026):** the website and
+  web bookings that land in the operator's dispatch system. Price read from
+  `lib/whereToStartOffers.js`. Until 15/10/2026 it also covered an email
+  booking check; Tom's decision of that day (taxi demo brief, section 8:
+  office-side tools are priced separately) took it out. The page keeps the
+  email check section and says it is priced separately, because the live
+  ads still name it.
 - **Systems:** iCabbi, Autocab and Cordic named, plus "other systems with a
   booking API"; never "any system". The link is promised only "where your
   system has a booking API and you can arrange API access with your
@@ -7816,7 +7820,54 @@ Tom's approval with changes (Drive id
   structured round of changes), any suggestion of copying another firm's
   site, and any "industry leader" claim; the test pins all of it.
 - **02 Commercial Position** does not yet record that the £999 includes the
-  dispatch link and email check for taxi operators. That record is Tom's.
+  dispatch link for taxi operators, or that office-side tools (the email
+  check among them) are priced separately. That record is Tom's.
+
+## Taxi demo site: Tidewell Cars (LIVE 15/10/2026)
+
+The example site on the £999 page ("See one we built"), from Tom's brief
+"BRIEF - Taxi Demo Website (Claude Code)" (Drive id
+`1Qo6hVfxe4ExLA-wDHRjFhjHvtfQWpRRV7gB0SmWsYkw`, 15/10/2026, approved to
+build). Live at `https://taxi-demo-production.up.railway.app/`. Code in
+`taxi-demo/` (its own README); zero dependencies; its 40 tests run inside
+the main `npm test`.
+
+- **Scope is the £999 and nothing more:** the customer-facing site and a
+  booking form whose bookings go into dispatch. No controller screen, email
+  check or office tool, per the brief.
+- **Fictional firm, honest about it:** Tidewell Cars, Exmouth (name checked
+  15/10/2026: no UK taxi operator uses it; the only "Tidewell" companies are a
+  Tenby property group). A ribbon on every page says it is a demonstration and
+  no car will come; `noindex` header and meta; Ofcom drama numbers (01632
+  960418, 07700 900418); no street address; no real council, hospital, school
+  or hotel named as licensing body or client; reviews labelled as examples;
+  nothing kept beyond two hours in memory; texts and emails logged masked,
+  never sent; no tracking, no cookies. The footer links back to the sales page.
+- **Booking path:** `lib/booking.js` validates and prices (`lib/fares.js`:
+  fixed airport prices from the local area, a metered tariff with night,
+  Sunday and bank holiday rates, routing round the Exe by the Countess Wear
+  bridge) and hands the job to `lib/dispatch`. `DISPATCH_DRIVER` defaults to
+  `mock`, which returns its own reference, confirms, then allocates a driver,
+  car and ETA. The iCabbi, Autocab and Cordic files are slots that refuse every
+  call until written against that vendor's API with the operator's access.
+- **Benchmark (Tom: "award winning taxi websites, this is our bench mark"):**
+  `scripts/siteScreens.js` and `.github/workflows/site-screens.yml` inspect any
+  URL on a runner, with Lighthouse and an optional test booking on the demo.
+  Run `20261015T122519Z-taxi-benchmark` covered nine award winners (Big Yellow
+  Taxi Co, Best Scottish Taxi Website 2022; Take Me and its Plymouth firm Tower
+  Cabs; Parker; fonaCAB; Veezu; Myle; Bruce Taxis; Addison Lee). None takes a
+  booking with a price on its own site; mobile performance 32 to 98, seven of
+  nine under 70; four of nine have no tap-to-call link; one has LocalBusiness
+  data. The demo measured 100 for performance, accessibility and best practice
+  locally; SEO reads 66 only because of the deliberate `noindex`.
+- **Railway:** service `taxi-demo` (`f27dfa50-b03c-46e8-ae25-5ae7d3199082`),
+  production only, root `/taxi-demo`, watch `/taxi-demo/**` so site pushes do
+  not rebuild it, healthcheck `/health`, region Amsterdam
+  (`europe-west4-drams3a`). The sales page reads its address from
+  `TAXI_DEMO_URL` in `routes/taxiWebsites.js`.
+- **Open:** a custom domain (subdomain of arringtonconsultancy.com or an
+  invented .co.uk) is Tom's choice; the brief's last "done" item, one test
+  booking on Tom's phone, is his.
 
 ## Sale readiness page
 
