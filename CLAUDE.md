@@ -7959,6 +7959,44 @@ main `npm test`.
   the route that needs nothing from Tom first; no live change before he
   chooses; call DNS "the domain's settings, held where the domain was
   bought" and say why it matters.
+- **Route back to Arrington (LIVE 15/10/2026, commit `ed883c1`).** From the
+  Google Ads worker's brief "Taxi demo: obvious route back to Arrington"
+  (Drive id `1wuPuqFbhudX8PaONsiCMkkBVQonaZX09HgFgb4IzBCE`); this worker's
+  proposal (Drive id `1RO42ihcoYcS5VWxEPFNlqDApQD2xfVADWrhErJAnN8g`)
+  approved by Tom ("Approve"). (1) The ribbon keeps its honesty line word
+  for word; its old text link became a red pill button (`.ribbon-cta`),
+  "Want one? Talk to Arrington" on a phone, "Want a site like this? Talk to
+  Arrington" wider, to `FIRM.arringtonEnquiryUrl` (the £999 page's
+  `#conversation` form). One line at 390px; at 360px it wraps onto its own
+  line, which is accepted. The footer keeps "Built by Arrington
+  Consultancy". (2) The confirmation page has `arringtonPanel()` under the
+  status card: night background, label "Built by Arrington Consultancy",
+  "Want this for your firm?", the approved text, button "Tell us about
+  your firm" to the same form; no logo, no phone number. The demo never
+  allocates a booking for later, so for those and for a cancelled booking
+  the panel says "dispatch sent back its reference" in place of "dispatch
+  allocated the car" (a factual correction to the approved line, reported
+  to Tom). The "About this demo" card lost its link. (3) The £999 page hero
+  has one text link, "See a taxi site we built", under its button
+  (`[data-hero-demo]`), not a second button. No ad change. Verified live
+  on serving deployment `5669bdfc` (twin `c29ca562` REMOVED): run
+  `20261015T213940Z-taxi-demo-route-back`, demo pages 200 at desktop and
+  phone, Lighthouse mobile 100/100/100, ribbon button on one line on an
+  iPhone 13, the £999 hero link under its button, test booking TW-87797
+  allocated with its "on the way" text in the production log 7 seconds
+  later and no errors; run `20261015T214106Z-taxi-demo-confirmation-panel`
+  read that booking's confirmation page: headings in order "Your booking",
+  "Want this for your firm?", "About this demo", panel text as approved.
+  **Found on the way:** the demo's dispatch timer runs outside any request
+  and, since the move, inside the main site's process, whose
+  `uncaughtException` handler exits. A notification error there would have
+  taken the whole site down. The allocation event now reads the view at its
+  set time, the notification ignores a view with no driver, and the event
+  handler catches its own errors (`taxi-demo/test/dispatch.test.js`). It
+  never happened on production; the local crash that showed it came from
+  test timings with allocation set before confirmation
+  (`MOCK_ALLOCATE_MS` must stay above `MOCK_CONFIRM_MS`). Any future timer
+  or event in the demo must catch its own errors for the same reason.
 - **Open:** the brief's last "done" item, one test booking on Tom's phone,
   is his. The live Google ad (RSA 827927414816) still
   says the email check is included in the £999; flagged to the Ads worker.
