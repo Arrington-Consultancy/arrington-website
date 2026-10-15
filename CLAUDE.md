@@ -7885,9 +7885,35 @@ the main `npm test`.
   name appears on the next deploy with no code change). Commits `2904aee`,
   `d5b0689`, `2eb73c8`. Live run `20261015T134629Z-taxi-redesign-live`: all
   six pages 100/100/100 on Lighthouse mobile, test booking TW-92401 reached
-  allocated. The sales page screenshot was retaken from the redesign.
-- **Open:** Tom's eight ChatGPT images (to a Drive folder "Tidewell demo
-  images"); a custom domain (subdomain of arringtonconsultancy.com or an
+  allocated. The sales page screenshot was retaken from the redesign. That
+  version is superseded by the one below.
+- **Second redesign with Tom's pictures (same evening; Tom: "sort this site
+  out using the better model").** Done by the same design model; the first
+  brief had only said the serif "may" be the problem. Now: one sans face
+  (Schibsted Grotesk, lining and tabular figures; "no serif" is pinned by
+  `test/design.test.js`), the price as the hero (a fare block that counts up
+  as addresses are typed, a fixed-price strip under the opening), every page
+  its own headline, a one-line demo ribbon on a phone, and the home page's
+  From field on the first phone screen. Commits `148c43a`, `f3a1c1e`,
+  `06aa50d`, then this worker's brighter desktop hero crop (`795a611`) and the new sales page screenshot `c1f1452`.
+- **Pictures (Tom's brief "TIDEWELL CARS: WEBSITE IMAGE IMPLEMENTATION",
+  originals in Drive folder `1p_kvjqLL8Yl_0ICV67iXh2Z6g7wRaHnD`, kept there
+  and never committed).** Each image was checked before use: the hero car was
+  driving on the right (mirrored), the fleet was parked against the flow
+  (mirrored), and the airport roof sign had garbled letters (repainted as a
+  plain lit sign); the other five passed. Web sizes are cut with
+  `TAXI_IMAGES_SRC=<folder of corrected PNGs> python3
+  taxi-demo/scripts/optimise-images.py`. The footer on every page says the
+  pictures are AI-generated illustrations, not a real fleet, and no alt text
+  says "our car". All eight are used: hero (home), airport (airports and the
+  home fixed prices), accounts, wav and driver (about), fleet (about band),
+  estuary sand (behind the map), huts (contact).
+- **Taxis and private hire (Tom, 15/10/2026: "I want the roof lights").**
+  Every pictured car has a roof light, so Tidewell runs both: 30 hackney
+  carriage taxis (roof lights, ranks, hailed) and 18 private hire cars
+  (pre-booked), 48 in all, from one control room. No pictured roof-light car
+  is called private hire, and no real council is named.
+- **Open:** a custom domain (subdomain of arringtonconsultancy.com or an
   invented .co.uk) is Tom's choice; the brief's last "done" item, one test
   booking on Tom's phone, is his. The live Google ad (RSA 827927414816) still
   says the email check is included in the £999; flagged to the Ads worker.
