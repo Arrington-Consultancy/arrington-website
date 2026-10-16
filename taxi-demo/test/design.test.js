@@ -128,6 +128,10 @@ test('a booking confirmation offers the way back to Arrington under the status c
   assert.doesNotMatch(panel, /<img|<svg|\btel:|\d{4} ?\d{6}/, 'no logo, no phone number');
   const demoCard = /<div class="card demo-card">([\s\S]*?)<\/div>/.exec(page)[1];
   assert.doesNotMatch(demoCard, /<a /, 'the demo note no longer carries its own link');
+  // The demo talks to a test dispatch system; the named vendor connections
+  // are made per firm with the provider's API access (Tom, 16/10/2026).
+  assert.match(demoCard, /This booking went from the form to a test dispatch system\. On a live site it goes into the firm's own iCabbi, Autocab or Cordic system, once that is connected with API access from their provider\./);
+  assert.doesNotMatch(page, /same connection a live site uses/, 'the demo must not claim it already uses the vendor connections');
   // A booking for later is confirmed, never allocated, so the panel must not
   // say a car was allocated.
   const later = new Date(Date.now() + 3 * 864e5);
@@ -141,6 +145,14 @@ test('a booking confirmation offers the way back to Arrington under the status c
     assert.fail(`a booking for later was refused (${res.status}); check the field names the form uses`);
   }
   assert.match(css, /\.arrington-panel {[^}]*background: var\(--night\)/);
+});
+
+test('on a phone the photo is a strip, so the route fields and the price button fit the first screen', () => {
+  // Measured 16/10/2026 on an iPhone 13 (390 by 664): at 2:1 the button
+  // started at 699px; at 4:1 it ends at 658px. Wider screens are unchanged.
+  const phone = css.slice(0, css.indexOf('@media (min-width: 56rem) {\n  picture.hero-media'));
+  assert.match(phone, /picture\.hero-media {[^}]*aspect-ratio: 4 \/ 1/);
+  assert.match(css, /@media \(min-width: 56rem\) {\s*picture\.hero-media {[^}]*aspect-ratio: auto/);
 });
 
 test('the firm runs both kinds of car, and the totals add up', async () => {

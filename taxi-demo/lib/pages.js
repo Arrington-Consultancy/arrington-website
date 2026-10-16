@@ -387,7 +387,7 @@ function confirmationPage({ record, view }) {
       ${arringtonPanel(b.when === 'now' && !cancelled)}
       <div class="card demo-card">
         <h2>About this demo</h2>
-        <p>This booking went from the form to a test dispatch system through the same connection a live site uses for iCabbi, Autocab or Cordic. The reference came back from dispatch, and the driver details above are dispatch telling the site a car was allocated.</p>
+        <p>This booking went from the form to a test dispatch system. On a live site it goes into the firm's own iCabbi, Autocab or Cordic system, once that is connected with API access from their provider. The reference came back from dispatch, and the driver details above are dispatch telling the site a car was allocated.</p>
         <p>The texts and emails are written to a test log instead of being sent. No car will come, and the booking is deleted after two hours.</p>
       </div>
     </div>
