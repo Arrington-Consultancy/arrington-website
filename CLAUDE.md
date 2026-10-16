@@ -8270,6 +8270,48 @@ that it was Brian and he will be disciplined or we will investigate etc".
   refund. The licensing letter took its note too. `RUN_TAXI_OFFICE_AI_CHECK`
   set back to empty.
 
+### Live demo address (BUILT 16/10/2026, inert until the mailbox exists)
+
+Tom said yes to a real demo mailbox so Dan can email a booking in from his
+own phone and watch it arrive. Commit `84d90ab`, serving deployment
+`32863039`; the boot line still reads "Taxi office mailbox: demo", so
+nothing has changed on the live site yet.
+
+- **How it works:** with `TAXI_OFFICE_DEMO_ADDRESS` (the demo mailbox's own
+  address) and the Gmail driver set, the office keeps the made-up inbox and
+  gives each visitor their own copy of the address, `local+tag@domain`
+  (six characters, per session, new each day). Only email sent to that tag,
+  or carrying it in the subject, reaches that visitor. Untagged mail (spam
+  included) and other visitors' mail is shown to nobody. The inbox page
+  asks every 8 seconds (`/inbox/live.json`) and reloads when it lands; the
+  mailbox is read at most every 15 seconds, shared, one read at a time. The
+  email arrives already read and passed to its worker, on the visitor's own
+  allowance, never in the shared cache. A reply is saved as a draft in the
+  demo mailbox, never sent.
+- **Safety:** the connect flow (`/taxi-demo/office/connect/gmail`, Tom's
+  admin and content logins only; anyone else 404) shows the refresh token
+  once, and only if Google returned the demo address itself. Any other
+  account, Tom's own inbox above all, has its token revoked on the spot and
+  never shown. The office also checks the token's account before every
+  first read and refuses one that is not the demo address. Only
+  `TAXI_OFFICE_GMAIL_*` is read; scopes are gmail.readonly and
+  gmail.compose.
+- **To switch it on (Tom):** add a Workspace user for the demo (one seat a
+  month); in the Google Cloud project that holds the Gmail connector,
+  create a new OAuth client (Web application) with redirect URI
+  `https://www.arringtonconsultancy.com/taxi-demo/office/connect/gmail/callback`;
+  in Railway set `TAXI_OFFICE_DEMO_ADDRESS`, `TAXI_OFFICE_MAIL_DRIVER=gmail`,
+  `TAXI_OFFICE_GMAIL_CLIENT_ID` and `_SECRET`; open the connect page, choose
+  the demo account, and paste the token shown into
+  `TAXI_OFFICE_GMAIL_REFRESH_TOKEN`. Rollback: unset `TAXI_OFFICE_DEMO_ADDRESS`.
+- **Proof:** `test/taxiOfficeLiveMail.test.js` (12; the account check and
+  the tag match each watched red). Local run with a fake Gmail: Dan's email
+  on screen 12 seconds after it landed, read as Bookings, Not in dispatch,
+  reply saved as a Gmail draft to Dan; spam and another visitor's email
+  never shown; a second session got a 404 for Dan's email; no overflow on
+  an iPhone 13. Not proven until the first real email: Gmail delivery and
+  plus addressing on the real Workspace user.
+
 ## Sale readiness page
 
 `/get-your-business-ready-to-sell` is a campaign landing page for social and
