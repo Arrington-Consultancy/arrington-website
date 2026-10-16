@@ -8038,6 +8038,60 @@ main `npm test`.
   by RSA 828218288836, whose headline "See A Taxi Site We Built" the £999
   hero link now backs.
 
+## Tidewell Cars office: the taxi staff portal (built 16/10/2026)
+
+Tom: "I want a staff portal taxi related I can show Dan". The staff side of
+the Tidewell demo, at `/taxi-demo/office/`, with three AI workers. It was
+first challenged (start with the email check alone; a council worker that
+talks to the council itself is out); Tom chose all three, so the council
+desk drafts only and nothing in the office sends, books or posts.
+
+- **Booking inbox.** Nine made-up emails. The AI reads each one into a
+  closed JSON shape (intent, journeys, gaps) and drafts a reply; **plain
+  code, not the AI, decides** the verdict against the dispatch board
+  (`lib/taxiOffice/match.js`): Matches, Keyed in wrong (names each field),
+  Not in dispatch, Needs details, To cancel, Not a booking, For Licensing.
+  A person then presses Add, Correct or Cancel on the board and Mark as
+  sent on the reply. "Try one of your own" lets Dan type an email of his
+  own (AI on only).
+- **Licensing.** A renewals register (MOT, compliance test, badges, plates,
+  insurance) with urgency by days left; the AI drafts the letter to the
+  council and a checklist. No real council is named, and no fee or rule
+  may be invented (the prompt forbids it).
+- **Social.** The AI drafts three posts from the week's made-up facts and
+  may only choose from the demo's own eight pictures; Approve marks one,
+  nothing is posted.
+- **Dates move with today** (London), so it never looks stale; Saturday
+  jobs fall on the coming Saturday. The matcher's verdicts are tested
+  across every weekday.
+- **Access is Scott's** (`hasScottAccess`): Tom's logins, or any client
+  account with page_access on the Scott page, through the site's own
+  `/login`. Dan already has that grant (12/10/2026), so his existing
+  login works. Anyone else signed in gets a 404; signed out goes to
+  `/login?next=`. Noindex header and meta, `Cache-Control: no-store`, no
+  Clarity, no Google tag, no Meta pixel.
+- **Mounting:** the public demo mount in `server.js` passes only
+  `/taxi-demo/office` on to the main app (session, CSRF); every other demo
+  request is still answered by the demo and never falls through. Pinned by
+  `test/taxiDemoMount.test.js`.
+- **AI switch:** `ENABLE_TAXI_OFFICE_AI=true` plus `ANTHROPIC_API_KEY`;
+  model `claude-opus-5-5` (override `TAXI_OFFICE_MODEL`), structured
+  output against closed schemas, effort low. Off, a refusal, a cut-off or
+  an error all fall back to a prepared answer that **says it is prepared**.
+  Email text is treated as data (the prompt says to ignore instructions in
+  it). Spending is bounded per visitor session: 40 reads, 10 own emails
+  and 6 social drafts an hour, at most 4 calls at once, and the seeded
+  emails' readings are cached for the day and shared by every visitor.
+  State is in memory per session (four hours) and lost on a deploy, which
+  is fine for a demo. Boot lines: `Taxi office AI:` and, when on,
+  `Taxi office AI probe:`. `RUN_TAXI_OFFICE_AI_CHECK=<label>` for one
+  deploy runs the real model over every demo email and logs whether its
+  verdict matches the prepared one (`lib/taxiOffice/check.js`).
+- **Files:** `lib/taxiOffice/` (data, match, ai, prepared, office,
+  check), `routes/taxiOffice.js`, `views/taxi-office/`,
+  `public/css/taxi-office.css`, `public/js/taxi-office.js`,
+  `test/taxiOffice.test.js` (12; two planted defects watched red).
+
 ## Sale readiness page
 
 `/get-your-business-ready-to-sell` is a campaign landing page for social and
