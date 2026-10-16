@@ -1,0 +1,223 @@
+{
+  "ranAt": "2026-10-16T08:56:07.236Z",
+  "results": [
+    {
+      "url": "https://www.arringtonconsultancy.com/taxi-demo/",
+      "size": "desktop",
+      "status": 200,
+      "finalUrl": "https://www.arringtonconsultancy.com/taxi-demo/",
+      "error": null,
+      "pageErrors": [],
+      "top": "www-arringtonconsultancy-com-taxi-demo-desktop-top.png",
+      "full": "www-arringtonconsultancy-com-taxi-demo-desktop.png",
+      "title": "Tidewell Cars | Taxis and private hire in Exmouth, 24 hours | 01632 960418",
+      "description": "Taxis and private hire cars in Exmouth and East Devon, day and night, from one control room. Book online with the price up front, or call 01632 960418. Fixed prices to Exeter Airport and beyond.",
+      "h1": "Taxis in Exmouth, with the price before you book.",
+      "phoneLinks": 6,
+      "phoneFirstScreen": true,
+      "phoneText": "24 HOURS 01632 960418",
+      "bookButtons": 6,
+      "bookFirstScreen": [
+        "Book online"
+      ],
+      "forms": [],
+      "iframes": [],
+      "jsonLd": [
+        "TaxiService"
+      ],
+      "fonts": [
+        "Schibsted Grotesk"
+      ],
+      "overflow": false,
+      "height": 4333,
+      "words": 692,
+      "pageKb": 597,
+      "requests": 8,
+      "loadMs": 383,
+      "h2s": [
+        "Where to?",
+        "Fixed prices, day or night.",
+        "Online, by phone, or in the app.",
+        "One invoice a month.",
+        "The price it said, the car on time.",
+        "Most of our work is within a few miles of the Strand.",
+        "Book",
+        "Tidewell Cars",
+        "Where we go"
+      ]
+    },
+    {
+      "url": "https://www.arringtonconsultancy.com/taxi-demo/",
+      "size": "mobile",
+      "status": 200,
+      "finalUrl": "https://www.arringtonconsultancy.com/taxi-demo/",
+      "error": null,
+      "pageErrors": [],
+      "top": "www-arringtonconsultancy-com-taxi-demo-mobile-top.png",
+      "full": "www-arringtonconsultancy-com-taxi-demo-mobile.png",
+      "title": "Tidewell Cars | Taxis and private hire in Exmouth, 24 hours | 01632 960418",
+      "description": "Taxis and private hire cars in Exmouth and East Devon, day and night, from one control room. Book online with the price up front, or call 01632 960418. Fixed prices to Exeter Airport and beyond.",
+      "h1": "Taxis in Exmouth, with the price before you book.",
+      "phoneLinks": 6,
+      "phoneFirstScreen": true,
+      "phoneText": "24 hours01632 960418",
+      "bookButtons": 6,
+      "bookFirstScreen": [
+        "Book online"
+      ],
+      "forms": [],
+      "iframes": [],
+      "jsonLd": [
+        "TaxiService"
+      ],
+      "fonts": [
+        "Schibsted Grotesk"
+      ],
+      "overflow": false,
+      "height": 6456,
+      "words": 637,
+      "pageKb": 411,
+      "requests": 7,
+      "loadMs": 221,
+      "h2s": [
+        "Where to?",
+        "Fixed prices, day or night.",
+        "Online, by phone, or in the app.",
+        "One invoice a month.",
+        "The price it said, the car on time.",
+        "Most of our work is within a few miles of the Strand.",
+        "Book",
+        "Tidewell Cars",
+        "Where we go"
+      ]
+    },
+    {
+      "url": "https://www.arringtonconsultancy.com/taxi-demo/about",
+      "size": "desktop",
+      "status": 200,
+      "finalUrl": "https://www.arringtonconsultancy.com/taxi-demo/about",
+      "error": null,
+      "pageErrors": [],
+      "top": "www-arringtonconsultancy-com-taxi-demo-about-desktop-top.png",
+      "full": "www-arringtonconsultancy-com-taxi-demo-about-desktop.png",
+      "title": "About us and driving jobs | Tidewell Cars, Exmouth",
+      "description": "Tidewell Cars has run taxis and private hire in Exmouth since 2004. 48 cars, 30 of them hackney carriage taxis, licensed drivers, and driving jobs for licence holders.",
+      "h1": "The firm, the drivers, the cars.",
+      "phoneLinks": 4,
+      "phoneFirstScreen": true,
+      "phoneText": "24 HOURS 01632 960418",
+      "bookButtons": 6,
+      "bookFirstScreen": [
+        "Book online"
+      ],
+      "forms": [
+        {
+          "fields": 4,
+          "text": "Your name Phone Do you hold a private hire or taxi licence? Yes I've applied Not"
+        }
+      ],
+      "iframes": [],
+      "jsonLd": [
+        "TaxiService"
+      ],
+      "fonts": [
+        "Schibsted Grotesk"
+      ],
+      "overflow": false,
+      "height": 3359,
+      "words": 558,
+      "pageKb": 352,
+      "requests": 7,
+      "loadMs": 285,
+      "h2s": [
+        "Local",
+        "Our drivers",
+        "Our cars",
+        "Six cars with a ramp, at the price of a car.",
+        "The Tidewell app.",
+        "About this demo",
+        "Your own hours, paid weekly.",
+        "Book",
+        "Tidewell Cars",
+        "Where we go"
+      ]
+    },
+    {
+      "url": "https://www.arringtonconsultancy.com/taxi-demo/about",
+      "size": "mobile",
+      "status": 200,
+      "finalUrl": "https://www.arringtonconsultancy.com/taxi-demo/about",
+      "error": null,
+      "pageErrors": [],
+      "top": "www-arringtonconsultancy-com-taxi-demo-about-mobile-top.png",
+      "full": "www-arringtonconsultancy-com-taxi-demo-about-mobile.png",
+      "title": "About us and driving jobs | Tidewell Cars, Exmouth",
+      "description": "Tidewell Cars has run taxis and private hire in Exmouth since 2004. 48 cars, 30 of them hackney carriage taxis, licensed drivers, and driving jobs for licence holders.",
+      "h1": "The firm, the drivers, the cars.",
+      "phoneLinks": 4,
+      "phoneFirstScreen": true,
+      "phoneText": "24 hours01632 960418",
+      "bookButtons": 6,
+      "bookFirstScreen": [
+        "Book online",
+        "Book online"
+      ],
+      "forms": [
+        {
+          "fields": 4,
+          "text": "Your name Phone Do you hold a private hire or taxi licence? Yes I've applied Not"
+        }
+      ],
+      "iframes": [],
+      "jsonLd": [
+        "TaxiService"
+      ],
+      "fonts": [
+        "Schibsted Grotesk"
+      ],
+      "overflow": false,
+      "height": 5361,
+      "words": 533,
+      "pageKb": 409,
+      "requests": 7,
+      "loadMs": 259,
+      "h2s": [
+        "Local",
+        "Our drivers",
+        "Our cars",
+        "Six cars with a ramp, at the price of a car.",
+        "The Tidewell app.",
+        "About this demo",
+        "Your own hours, paid weekly.",
+        "Book",
+        "Tidewell Cars",
+        "Where we go"
+      ]
+    }
+  ],
+  "lighthouse": {
+    "https://www.arringtonconsultancy.com/taxi-demo/": {
+      "performance": 100,
+      "accessibility": 100,
+      "bestPractices": 100,
+      "seo": 69,
+      "lcp": "1.3 s",
+      "cls": "0",
+      "tbt": "60 ms",
+      "fcp": "1.0 s",
+      "shifts": []
+    },
+    "https://www.arringtonconsultancy.com/taxi-demo/about": {
+      "performance": 100,
+      "accessibility": 100,
+      "bestPractices": 100,
+      "seo": 69,
+      "lcp": "1.2 s",
+      "cls": "0",
+      "tbt": "0 ms",
+      "fcp": "0.8 s",
+      "shifts": []
+    }
+  },
+  "booking": null
+}
