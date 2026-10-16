@@ -52,9 +52,14 @@ function lighthouse(url) {
     const num = (k) => (j.audits[k] ? j.audits[k].displayValue || null : null);
     // Keep only the summary: the full report is several MB per URL.
     fs.unlinkSync(file);
+    // Which elements moved, so a layout shift can be traced to its cause
+    // rather than guessed at (added 16/10/2026).
+    const shiftItems = (j.audits['layout-shifts'] && j.audits['layout-shifts'].details && j.audits['layout-shifts'].details.items) || [];
+    const shifts = shiftItems.slice(0, 5).map((i) => ({ score: i.score, node: i.node ? (i.node.selector || i.node.snippet || i.node.nodeLabel) : null, snippet: i.node ? String(i.node.snippet || '').slice(0, 160) : null }));
     return {
       performance: score('performance'), accessibility: score('accessibility'), bestPractices: score('best-practices'), seo: score('seo'),
-      lcp: num('largest-contentful-paint'), cls: num('cumulative-layout-shift'), tbt: num('total-blocking-time'), fcp: num('first-contentful-paint')
+      lcp: num('largest-contentful-paint'), cls: num('cumulative-layout-shift'), tbt: num('total-blocking-time'), fcp: num('first-contentful-paint'),
+      shifts
     };
   } catch (e) {
     return { error: String(e.message || e).slice(0, 200) };
@@ -192,6 +197,7 @@ function lighthouse(url) {
     lines.push(`## ${u}`);
     const l = lh[u];
     if (l) lines.push(l.error ? `- Lighthouse (mobile): ERROR ${l.error}` : `- Lighthouse (mobile): performance ${l.performance}, accessibility ${l.accessibility}, best practices ${l.bestPractices}, SEO ${l.seo}; LCP ${l.lcp}, CLS ${l.cls}, TBT ${l.tbt}, FCP ${l.fcp}`);
+    if (l && l.shifts && l.shifts.length) for (const s of l.shifts) lines.push(`  - Layout shift ${s.score}: ${s.node} ${s.snippet || ''}`);
     for (const r of results.filter((x) => x.url === u)) {
       if (r.error) { lines.push(`- ${r.size}: ERROR ${r.error}`); continue; }
       lines.push(`- ${r.size}: HTTP ${r.status}${r.finalUrl !== u ? ` (landed on ${r.finalUrl})` : ''}; ${r.pageKb}KB in ${r.requests} requests, load ${r.loadMs}ms; height ${r.height}px; words ${r.words}; overflow ${r.overflow ? 'YES' : 'no'}; page errors ${r.pageErrors.length}`);

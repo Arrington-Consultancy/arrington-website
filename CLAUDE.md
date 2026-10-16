@@ -7997,6 +7997,28 @@ main `npm test`.
   test timings with allocation set before confirmation
   (`MOCK_ALLOCATE_MS` must stay above `MOCK_CONFIRM_MS`). Any future timer
   or event in the demo must catch its own errors for the same reason.
+- **Outside review, two fixes (16/10/2026, Tom: "yes", commit `d3fa381`).**
+  A review of the live demo (relayed by Tom) raised five points; each was
+  checked against the code and in a phone browser first. Fixed: (1) the
+  "About this demo" card claimed the booking went "through the same
+  connection a live site uses for iCabbi, Autocab or Cordic"; the vendor
+  adapters are slots that refuse every call, so it now reads "This booking
+  went from the form to a test dispatch system. On a live site it goes into
+  the firm's own iCabbi, Autocab or Cordic system, once that is connected
+  with API access from their provider." (2) On a phone the hero photo is a
+  4:1 strip (was 2:1, object position 30% 62%), so From, To and "See the
+  price" fit an iPhone 13's first screen (button ends at 658px of 664; it
+  started at 699px). The strip loses the cliffs; desktop keeps the whole
+  picture. A 320px iPhone SE still cannot fit the button whatever the photo
+  height. Not reproduced: an 8-seater still showing £28 (the booking page
+  re-prices The Strand to Exeter Airport to £45 for an 8-seater, in a
+  browser and from the server). Kept on purpose: the example reviews and
+  the app badges, because the demo shows an operator's own site and a real
+  one has both; replacing them with Arrington's selling points would turn
+  it into an Arrington advert. Agreed with Codex's view the same morning:
+  stop polishing the demo; the open commercial question is the first real
+  dispatch connection, so check an operator's system and API access before
+  taking the £999.
 - **Open:** the brief's last "done" item, one test booking on Tom's phone,
   is his. The ad that said the email check was included (RSA 827927414816)
   was paused by the Google Ads worker at 21:30 on 15/10/2026 and replaced
