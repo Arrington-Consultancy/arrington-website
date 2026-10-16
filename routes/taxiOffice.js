@@ -28,6 +28,7 @@
 // demo deliberately has no sessions, no cookies and no database. server.js
 // passes /taxi-demo/office through the demo's mount to here.
 
+const crypto = require('crypto');
 const { hasScottAccess } = require('../lib/scott/access');
 const { render404 } = require('../lib/render404');
 const office = require('../lib/taxiOffice/office');
@@ -35,6 +36,8 @@ const data = require('../lib/taxiOffice/data');
 const match = require('../lib/taxiOffice/match');
 const ai = require('../lib/taxiOffice/ai');
 const workers = require('../lib/taxiOffice/workers');
+const mail = require('../lib/taxiOffice/mail');
+const gmailConnect = require('../lib/taxiOffice/mail/gmailConnect');
 const { FIRM } = require('../taxi-demo/lib/firm');
 
 const BASE = '/taxi-demo/office';
@@ -102,7 +105,7 @@ function mountPageRoute(app) {
 
   page('/', async (req, res) => {
     const s = stateOf(req);
-    await office.refreshMailbox(s);
+    await Promise.all([office.refreshMailbox(s), office.refreshLive()]);
     const emails = rows(s);
     const reg = office.register(s).filter((i) => i.urgency.level !== 'ok');
     const todayJobs = s.board.filter((j) => j.date === s.today).sort((a, b) => a.time.localeCompare(b.time));
@@ -111,10 +114,21 @@ function mountPageRoute(app) {
 
   page('/inbox', async (req, res) => {
     const s = stateOf(req);
-    const mail = await office.refreshMailbox(s);
-    if (!mail.ok) flash(s, `The mailbox could not be read just now: ${mail.message}`, 'warn');
-    render(req, res, 'inbox', { section: 'inbox', emails: rows(s), limit: office.LIMITS.custom });
+    const [box] = await Promise.all([office.refreshMailbox(s), office.refreshLive()]);
+    if (!box.ok) flash(s, `The mailbox could not be read just now: ${box.message}`, 'warn');
+    // An email to the visitor's live address arrives already read.
+    await office.readNewLive(s);
+    const live = office.liveFor(s);
+    render(req, res, 'inbox', { section: 'inbox', emails: rows(s), limit: office.LIMITS.custom, live, liveCount: live ? office.liveEmails(s).length : 0 });
   });
+
+  // How many emails have reached this visitor's live address. The inbox page
+  // asks every few seconds while it waits, and reloads when one arrives.
+  app.get(BASE + '/inbox/live.json', noindex, requireOfficeAccess, VIEW(async (req, res) => {
+    const s = stateOf(req);
+    const r = await office.refreshLive();
+    res.json({ live: Boolean(office.liveFor(s)), ok: r.ok, count: office.liveEmails(s).length });
+  }));
 
   post('/inbox/check-all', async (req, res) => {
     const s = stateOf(req);
@@ -268,6 +282,38 @@ function mountPageRoute(app) {
       flash(s, 'Approved. In this demo nothing is posted anywhere.');
     }
     res.redirect(303, BASE + '/social');
+  });
+
+  // Connecting the live address: Tom only (the site's admin and content
+  // logins), never an invited viewer. See lib/taxiOffice/mail/gmailConnect.js.
+  const canConnect = (req) => ['admin', 'content'].includes(req.session.user && req.session.user.role);
+  const callbackUrl = (req) => `${req.protocol}://${req.get('host')}${BASE}/connect/gmail/callback`;
+
+  page('/connect/gmail', (req, res) => {
+    if (!canConnect(req)) return render404(req, res);
+    const address = mail.demoAddress();
+    const missing = gmailConnect.missing();
+    if (!address || missing.length) {
+      return render(req, res, 'connect', { section: 'inbox', result: null, address, missing, redirectUri: callbackUrl(req) });
+    }
+    const state = crypto.randomBytes(24).toString('hex');
+    req.session.taxiOfficeGmailState = state;
+    res.redirect(gmailConnect.authorizeUrl({ redirectUri: callbackUrl(req), state, loginHint: address }));
+  });
+
+  page('/connect/gmail/callback', async (req, res) => {
+    if (!canConnect(req)) return render404(req, res);
+    const expected = req.session.taxiOfficeGmailState;
+    delete req.session.taxiOfficeGmailState;
+    const address = mail.demoAddress();
+    const show = (result) => render(req, res, 'connect', { section: 'inbox', result, address, missing: gmailConnect.missing(), redirectUri: callbackUrl(req) });
+    if (req.query.error) return show({ ok: false, message: `Google did not connect it: ${String(req.query.error).slice(0, 100)}.` });
+    if (!expected || req.query.state !== expected) return show({ ok: false, message: 'That could not be checked as the connection you started. Start again from this page, in an ordinary browser window.' });
+    if (typeof req.query.code !== 'string' || !req.query.code || !address) return show({ ok: false, message: 'Google did not send back what it should. Start again.' });
+    const result = await gmailConnect.finish({ code: req.query.code, redirectUri: callbackUrl(req), expected: address });
+    if (result.ok) console.log(`Taxi office: a Gmail token was issued for the live address ${result.account}; Tom copies it into Railway.`);
+    else console.warn(`Taxi office: Gmail connection refused: ${result.message}`);
+    show(result);
   });
 
   post('/reset', (req, res) => {

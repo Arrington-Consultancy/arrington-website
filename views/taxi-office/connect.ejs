@@ -1,0 +1,33 @@
+<%- include('partials/top', { title: 'Connect the demo mailbox' }) %>
+<p class="to-back"><a href="<%= BASE %>/inbox">Inbox</a></p>
+<section class="to-hero">
+  <p class="to-eyebrow">Setting up the live address</p>
+  <h1>Connect the demo mailbox</h1>
+  <p class="to-lede">This connects the office to the demo mailbox, so a visitor can email a booking from their own phone and watch it arrive. Only the demo mailbox itself can be connected here: if Google is given any other account, its token is cancelled and never shown.</p>
+</section>
+
+<% if (result && result.ok) { %>
+  <section class="to-panel">
+    <p class="to-note to-note-ok">Connected to <strong><%= result.account %></strong>.</p>
+    <h2>One step left</h2>
+    <p>Copy the token below into Railway as <strong>TAXI_OFFICE_GMAIL_REFRESH_TOKEN</strong> on the website service. Railway redeploys on its own and the live address starts working. It is shown once, here only: do not paste it anywhere else.</p>
+    <pre class="to-token" id="token"><%= result.refreshToken %></pre>
+    <p class="to-small">What it may do: <%= result.scope || 'read the inbox and save drafts' %>. It can read the demo mailbox and leave replies as drafts there. The office never sends.</p>
+  </section>
+<% } else if (result) { %>
+  <section class="to-panel">
+    <p class="to-note to-note-warn"><%= result.message %></p>
+    <a class="to-btn to-btn-primary" href="<%= BASE %>/connect/gmail">Start again</a>
+  </section>
+<% } else { %>
+  <section class="to-panel">
+    <h2>Not ready to connect yet</h2>
+    <p>These need setting in Railway on the website service first:</p>
+    <ul class="to-checklist">
+      <% if (!address) { %><li><strong>TAXI_OFFICE_DEMO_ADDRESS</strong>: the demo mailbox's address.</li><% } %>
+      <% missing.forEach(function (k) { %><li><strong><%= k %></strong>: from the OAuth client in Google Cloud.</li><% }) %>
+    </ul>
+    <p class="to-small">The OAuth client's authorised redirect address must be exactly <strong><%= redirectUri %></strong>.</p>
+  </section>
+<% } %>
+<%- include('partials/bottom') %>

@@ -10,13 +10,25 @@
   </form>
 </section>
 
+<% if (live) { %>
+<section class="to-panel to-live" id="live" data-live-url="<%= BASE %>/inbox/live.json" data-live-count="<%= liveCount %>">
+  <p class="to-worker-tag">Live: a real <%= live.label %> mailbox</p>
+  <h2>Email one in from your phone</h2>
+  <p>Send a booking, a complaint or a question to your own address for this demo. It usually lands here within a minute, and the AI reads it and passes it to its worker straight away.</p>
+  <% var _at = live.address.indexOf('@'); %>
+  <p class="to-live-address"><a href="mailto:<%= live.address %>?subject=Taxi%20booking"><%= live.address.slice(0, _at) %><wbr><%= live.address.slice(_at) %></a> <button type="button" class="to-btn to-btn-quiet" data-copy="<%= live.address %>">Copy</button></p>
+  <p class="to-small" id="live-status" role="status" aria-live="polite"><%= live.ok ? (liveCount ? 'Send another and this page shows it when it arrives.' : 'Waiting for your email. This page updates by itself.') : 'The demo mailbox could not be read just now. The page keeps trying.' %></p>
+  <p class="to-small">Only you see what you send to this address, and only until the demo starts again. Use made-up details: the email stays in the demo mailbox, and a reply you approve is saved there as a draft, never sent.</p>
+</section>
+<% } %>
+
 <p class="to-connections"><span><strong>Mailbox:</strong> <%= conn.mailbox %></span><span class="to-small"><%= conn.mailboxDemo ? 'Made-up emails for this demo. On a live office this is the firm\'s own Gmail or Outlook inbox, read through its API, and a reply is saved as a draft in that inbox for someone to send.' : 'Replies are saved as drafts in this mailbox, on the same thread, for someone to send.' %></span></p>
 
 <ul class="to-inbox" aria-label="Emails">
   <% emails.forEach(function (row) { var e = row.email; %>
     <li>
       <a href="<%= BASE %>/inbox/<%= e.id %>" class="to-inbox-row">
-        <span class="to-inbox-from"><%= e.from.replace(/\s*<.*$/, '') %><% if (e.custom) { %> <span class="to-tag">Your test email</span><% } %></span>
+        <span class="to-inbox-from"><%= e.from.replace(/\s*<.*$/, '') %><% if (e.custom) { %> <span class="to-tag">Your test email</span><% } else if (e.live) { %> <span class="to-tag">Your email</span><% } %></span>
         <span class="to-inbox-subject"><%= e.subject %></span>
         <span class="to-inbox-when"><%= e.receivedAt.slice(0, 10) === today ? 'Today ' + e.receivedAt.slice(11) : shortDate(e.receivedAt.slice(0, 10)) + ' ' + e.receivedAt.slice(11) %></span>
         <span class="to-inbox-status"><% if (row.worker) { %><span class="to-chip"><%= WORKER[row.worker].name %></span> <% } %><span class="to-pill to-pill-<%= row.status.tone %>"><%= row.status.label %></span><% if (row.sent) { %> <span class="to-pill to-pill-ok">Replied</span><% } %></span>

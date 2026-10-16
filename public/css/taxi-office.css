@@ -272,6 +272,13 @@ p { margin: 0 0 0.8rem; }
 .to-past[open] summary::before { content: '\25BE'; }
 .to-past summary h2 { margin: 0; }
 
+/* The live address: a visitor's own copy of the demo mailbox's address */
+.to-live { border-color: var(--teal); }
+.to-live h2 { margin-top: 0.2rem; }
+.to-live-address { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.8rem; margin: 0.4rem 0 0.6rem; }
+.to-live-address a { font-size: 1.15rem; font-weight: 700; overflow-wrap: anywhere; }
+.to-token { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 0.7rem 0.8rem; font-size: 0.9rem; user-select: all; }
+
 /* Footer */
 .to-foot { background: var(--night); color: var(--on-night-muted); font-size: 0.88rem; }
 .to-foot-inner { padding-top: 1.4rem; padding-bottom: 1.6rem; display: flex; flex-direction: column; gap: 0.6rem; }

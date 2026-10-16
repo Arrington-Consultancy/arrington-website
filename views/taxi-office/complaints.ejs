@@ -89,7 +89,7 @@
                 max: guideMax
               }) %>
             <% } %>
-            <button type="submit" class="to-btn to-btn-primary"><%= conn.mailboxDemo || e.custom ? 'Mark as sent' : 'Save as a draft in ' + conn.mailbox %></button>
+            <button type="submit" class="to-btn to-btn-primary"><%= e.live && conn.liveLabel ? 'Save as a draft in ' + conn.liveLabel : (conn.mailboxDemo || e.custom ? 'Mark as sent' : 'Save as a draft in ' + conn.mailbox) %></button>
             <p class="to-small">Edit it first if you like. A person always sends; here nothing is sent at all.</p>
           </form>
         <% } %>
