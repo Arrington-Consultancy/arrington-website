@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <title><%= title %> | <%= FIRM.name %> office</title>
+  <link rel="preload" href="/taxi-demo/assets/fonts/schibsted-grotesk.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/css/taxi-office.css">
+  <link rel="icon" href="/taxi-demo/assets/favicon.svg" type="image/svg+xml">
+</head>
+<body class="to">
+  <a class="to-skip" href="#main">Skip to content</a>
+  <div class="to-ribbon" role="note">
+    <p><span class="to-dot" aria-hidden="true"></span><span class="to-long"><strong>Demonstration office.</strong> <%= FIRM.name %> is a made-up firm. The AI drafts, a person decides, and nothing is sent, booked or posted.</span><span class="to-short"><strong>Demo office.</strong> Made-up firm; nothing is sent.</span><a href="https://www.arringtonconsultancy.com/taxi-and-private-hire-operators/websites"><span class="to-long">Built by Arrington Consultancy</span><span class="to-short">By Arrington</span></a></p>
+  </div>
+  <header class="to-bar">
+    <div class="to-wrap to-bar-inner">
+      <a class="to-brand" href="<%= BASE %>/">
+        <span class="to-mark" aria-hidden="true">T</span>
+        <span><strong><%= FIRM.name %></strong> <span class="to-brand-sub">Office</span></span>
+      </a>
+      <div class="to-who">
+        <span class="to-date"><%= todayLong %></span>
+        <% if (user) { %><span class="to-user">Signed in as <%= user.username %></span><% } %>
+      </div>
+    </div>
+    <nav class="to-wrap to-nav" aria-label="Office">
+      <a href="<%= BASE %>/"<% if (section === 'today') { %> aria-current="page"<% } %>>Today</a>
+      <a href="<%= BASE %>/inbox"<% if (section === 'inbox') { %> aria-current="page"<% } %>><span class="to-long">Booking inbox</span><span class="to-short">Inbox</span><% if (counts.unread + counts.needAction) { %> <span class="to-count"><%= counts.unread + counts.needAction %></span><% } %></a>
+      <a href="<%= BASE %>/dispatch"<% if (section === 'dispatch') { %> aria-current="page"<% } %>>Dispatch</a>
+      <a href="<%= BASE %>/licensing"<% if (section === 'licensing') { %> aria-current="page"<% } %>>Licensing<% if (counts.licensingDue) { %> <span class="to-count"><%= counts.licensingDue %></span><% } %></a>
+      <a href="<%= BASE %>/social"<% if (section === 'social') { %> aria-current="page"<% } %>><span class="to-long">Social media</span><span class="to-short">Social</span></a>
+    </nav>
+  </header>
+  <main id="main" class="to-wrap to-main">
+    <% if (!aiOn) { %>
+      <p class="to-note to-note-warn">The AI is switched off on this server, so the office shows answers prepared for the demo, each labelled as prepared.</p>
+    <% } %>
+    <% if (flash) { %>
+      <p class="to-flash to-flash-<%= flash.tone %>" role="status"><%= flash.message %></p>
+    <% } %>

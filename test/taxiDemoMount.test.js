@@ -27,8 +27,14 @@ test('the demo is mounted after the HTTPS redirect and before everything it must
 
 test('it is mounted with its base path and nothing else from this site reaches it', () => {
   assert.match(src, /require\('\.\/taxi-demo\/server'\)\.createApp\(\{ basePath: '\/taxi-demo' \}\)/);
-  const block = src.slice(at("app.use('/taxi-demo',"), at("app.use('/taxi-demo',") + 900);
+  const start = at("app.use('/taxi-demo',");
+  const block = src.slice(start, src.indexOf('\n});', start));
   assert.match(block, /taxiDemo\.handle\(req, res\)/);
   assert.match(block, /Strict-Transport-Security/);
-  assert.doesNotMatch(block, /next\(/, 'a demo request must never fall through to this site');
+  // The one request that goes on to this site is the office
+  // (routes/taxiOffice.js), which needs the login, session and CSRF the
+  // public demo deliberately lacks. Nothing else may fall through.
+  const nexts = block.match(/next\(/g) || [];
+  assert.equal(nexts.length, 1, 'a demo request must never fall through to this site');
+  assert.match(block, /if \(\/\^\\\/taxi-demo\\\/office\(\\\/\|\\\?\|\$\)\/\.test\(req\.originalUrl\)\) return next\(\);/);
 });

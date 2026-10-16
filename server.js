@@ -265,7 +265,12 @@ app.use(morgan(isProd ? 'combined' : 'dev', {
 // HSTS header only, so the demo is held to HTTPS like the rest of the domain.
 // A fault inside the demo ends that one response and is never passed on.
 const taxiDemo = require('./taxi-demo/server').createApp({ basePath: '/taxi-demo' });
-app.use('/taxi-demo', (req, res) => {
+app.use('/taxi-demo', (req, res, next) => {
+  // The office (/taxi-demo/office, routes/taxiOffice.js) is the staff side
+  // of the demo and needs what the demo deliberately lacks: a login, a
+  // session and the site's CSRF check. It goes on to this app's own
+  // middleware and routes below.
+  if (/^\/taxi-demo\/office(\/|\?|$)/.test(req.originalUrl)) return next();
   // Express matches a mount path without regard to case; the demo's
   // addresses are lower case, so send any other spelling to them.
   if (!req.originalUrl.startsWith('/taxi-demo')) return res.redirect(301, '/taxi-demo' + req.url);
@@ -962,6 +967,12 @@ thankYou.mountPageRoute(app, generateCsrfToken);
 scott.mountPageRoute(app, generateCsrfToken);
 app.use(scott.router);
 
+// Tidewell Cars office (/taxi-demo/office): the staff side of the taxi demo,
+// with three AI workers that draft and never send. Same access as Scott
+// (Tom's logins and anyone granted Scott in Page access), through the
+// site's own staff login. See routes/taxiOffice.js.
+require('./routes/taxiOffice').mountPageRoute(app);
+
 // Arrington AI Workspace — the real internal workspace (see
 // routes/workspace.js, lib/workspace/**). Same registration pattern as
 // the areas above. Entirely separate from the Scott demonstration: no
@@ -1497,6 +1508,19 @@ loadPermissions().then(() => {
   app.listen(PORT, () => {
     console.log(`[${isProd ? 'PROD' : 'DEV'}] Arrington CMS running on port ${PORT}`);
     console.log(require('./lib/scott/orchestrator').describeScottAIStatus());
+    // The taxi office's AI workers: which switch is set, and one tiny call
+    // so the deploy log says whether the model answers on this key.
+    {
+      const taxiOfficeAi = require('./lib/taxiOffice/ai');
+      console.log(taxiOfficeAi.describeAiStatus());
+      if (taxiOfficeAi.aiEnabled()) {
+        taxiOfficeAi.probe().then((r) => console.log(`Taxi office AI probe: ${r.ok ? 'ok' : 'FAILED'}, ${r.message}`));
+        // One-off: set for a single deploy to run the real model over the
+        // demo emails and print the verdicts (lib/taxiOffice/check.js).
+        const checkLabel = (process.env.RUN_TAXI_OFFICE_AI_CHECK || '').trim();
+        if (checkLabel) require('./lib/taxiOffice/check').runAiCheck(checkLabel).catch((e) => console.error('Taxi office AI check: ' + e.message));
+      }
+    }
     // Approved additions to Scott's company brain (gap-driven authoring,
     // 01/09/2026). Read once into memory here because the brain is read
     // synchronously throughout lib/scott/data/contextBuilders.js, and

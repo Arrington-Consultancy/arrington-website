@@ -1,0 +1,43 @@
+<%- include('partials/top', { title: 'Social media' }) %>
+<section class="to-hero">
+  <p class="to-eyebrow">AI worker</p>
+  <h1>Social media</h1>
+  <p class="to-lede">The AI writes this week's posts from what is actually happening at the firm, picks a picture for each, and says why it is worth posting. Nothing goes out until the owner approves it.</p>
+</section>
+
+<section class="to-panel">
+  <h2>What it writes from this week</h2>
+  <ul class="to-checklist">
+    <% facts.forEach(function (f) { %><li><%= f %></li><% }) %>
+  </ul>
+  <form method="post" action="<%= BASE %>/social/draft" class="to-inline-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <button type="submit" class="to-btn to-btn-primary" data-busy="Writing the posts..."><%= social ? 'Write another set' : "Draft this week's posts" %></button>
+  </form>
+</section>
+
+<% if (social) { %>
+  <% if (social.note) { %><p class="to-note to-note-warn"><%= social.note %></p><% } %>
+  <div class="to-posts">
+    <% social.posts.forEach(function (p, i) { var img = images.find(function (x) { return x.id === p.image; }); %>
+      <article class="to-post">
+        <p class="to-post-platform"><%= p.platform %> <span class="to-worker-tag"><%= social.source === 'ai' ? 'Drafted by the AI' : 'Prepared for the demo' %></span></p>
+        <picture>
+          <source type="image/webp" srcset="/taxi-demo/assets/img/<%= p.image %>-768.webp">
+          <img src="/taxi-demo/assets/img/<%= p.image %>-768.jpg" alt="<%= img ? img.label : 'Picture' %> (illustration)" width="768" height="512" loading="lazy">
+        </picture>
+        <div class="to-post-text"><%= p.text %></div>
+        <p class="to-small"><strong>Why this week:</strong> <%= p.why %></p>
+        <% if (approved[i]) { %>
+          <p class="to-note to-note-ok">Approved. In this demo nothing is posted.</p>
+        <% } else { %>
+          <form method="post" action="<%= BASE %>/social/<%= i %>/approve">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <button type="submit" class="to-btn">Approve</button>
+          </form>
+        <% } %>
+      </article>
+    <% }) %>
+  </div>
+<% } %>
+<%- include('partials/bottom') %>

@@ -1,0 +1,75 @@
+<%- include('partials/top', { title: 'Today' }) %>
+<section class="to-hero">
+  <p class="to-eyebrow">Office, <%= todayLong %></p>
+  <h1>Three AI workers, one office.</h1>
+  <p class="to-lede">They read the booking emails and check them against dispatch, keep the licensing dates in front of you, and draft the week's posts. Each one drafts; a person checks it and decides.</p>
+</section>
+
+<ul class="to-stats" aria-label="At a glance">
+  <li><span class="to-stat-n"><%= counts.jobsToday %></span><span class="to-stat-l">jobs on the board today</span></li>
+  <li><span class="to-stat-n"><%= counts.unread + counts.needAction %></span><span class="to-stat-l">booking emails to deal with</span></li>
+  <li><span class="to-stat-n"><%= counts.licensingDue %></span><span class="to-stat-l">licensing dates in the next fortnight</span></li>
+  <li><span class="to-stat-n"><%= counts.socialWaiting %></span><span class="to-stat-l">posts waiting for approval</span></li>
+</ul>
+
+<div class="to-workers">
+  <article class="to-worker">
+    <p class="to-worker-tag">AI worker</p>
+    <h2>Booking inbox</h2>
+    <p>Reads each booking email, works out the date, time, pickup and passengers, and checks them against the jobs in dispatch. It flags a job that was never keyed in, or keyed in wrong, and drafts the reply.</p>
+    <ul class="to-mini">
+      <% emails.slice(0, 5).forEach(function (row) { %>
+        <li><a href="<%= BASE %>/inbox/<%= row.email.id %>"><%= row.email.from.replace(/\s*<.*$/, '') %></a> <span class="to-pill to-pill-<%= row.status.tone %>"><%= row.status.label %></span></li>
+      <% }) %>
+    </ul>
+    <a class="to-btn" href="<%= BASE %>/inbox">Open the inbox</a>
+  </article>
+  <article class="to-worker">
+    <p class="to-worker-tag">AI worker</p>
+    <h2>Licensing</h2>
+    <p>Keeps every badge, plate, MOT and insurance date in one register, flags what is due, and drafts what goes to the council's licensing team. A person attaches the papers and sends it.</p>
+    <ul class="to-mini">
+      <% reg.slice(0, 4).forEach(function (i) { %>
+        <li><span><%= i.subject.split(',')[0] %>: <%= i.item.toLowerCase() %></span> <span class="to-pill to-pill-<%= i.urgency.level === 'overdue' ? 'bad' : (i.urgency.level === 'urgent' ? 'warn' : 'neutral') %>"><%= i.urgency.label %></span></li>
+      <% }) %>
+    </ul>
+    <a class="to-btn" href="<%= BASE %>/licensing">Open licensing</a>
+  </article>
+  <article class="to-worker">
+    <p class="to-worker-tag">AI worker</p>
+    <h2>Social media</h2>
+    <p>Writes the week's posts from what is actually happening at the firm: new cars, long-serving drivers, fixed airport prices. Nothing goes out until the owner approves it.</p>
+    <% if (social) { %>
+      <p class="to-small"><%= social.posts.length %> drafts ready, <%= Object.keys(approved).length %> approved.</p>
+    <% } else { %>
+      <p class="to-small">No drafts yet this week.</p>
+    <% } %>
+    <a class="to-btn" href="<%= BASE %>/social">Open social media</a>
+  </article>
+</div>
+
+<section class="to-section">
+  <div class="to-section-head">
+    <h2>Today's board</h2>
+    <a href="<%= BASE %>/dispatch">All of dispatch</a>
+  </div>
+  <ul class="to-board-list">
+    <% todayJobs.forEach(function (j) { %>
+      <li class="<%= j.status === 'cancelled' ? 'is-cancelled' : '' %>">
+        <span class="to-time"><%= j.time %></span>
+        <span class="to-route"><strong><%= j.name %></strong> <span><%= j.pickup %> to <%= j.destination %></span></span>
+        <span class="to-ref"><%= j.ref %></span>
+      </li>
+    <% }) %>
+  </ul>
+</section>
+
+<% if (changes.length) { %>
+<section class="to-section">
+  <h2>Put right this session</h2>
+  <ul class="to-changes">
+    <% changes.forEach(function (c) { %><li><span class="to-ref"><%= c.ref %></span> <%= c.what %></li><% }) %>
+  </ul>
+</section>
+<% } %>
+<%- include('partials/bottom') %>

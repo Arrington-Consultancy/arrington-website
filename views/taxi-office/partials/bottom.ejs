@@ -1,0 +1,17 @@
+  </main>
+  <footer class="to-foot">
+    <div class="to-wrap to-foot-inner">
+      <p><%= FIRM.name %> is a made-up firm. This office is a demonstration by Arrington Consultancy of AI workers in a taxi office: they read, check and draft, and a person decides.</p>
+      <p class="to-foot-links">
+        <a href="/taxi-demo/">The customer website</a>
+        <a href="https://www.arringtonconsultancy.com/taxi-and-private-hire-operators/websites">Taxi websites by Arrington</a>
+      </p>
+      <form method="post" action="<%= BASE %>/reset" class="to-reset">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <button type="submit" class="to-btn to-btn-quiet" data-confirm="Start the office again from this morning? Anything you have changed is cleared.">Start the demo again</button>
+      </form>
+    </div>
+  </footer>
+  <script src="/js/taxi-office.js" defer></script>
+</body>
+</html>

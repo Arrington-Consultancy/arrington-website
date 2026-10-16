@@ -1,0 +1,40 @@
+<%- include('partials/top', { title: 'Booking inbox' }) %>
+<section class="to-hero">
+  <p class="to-eyebrow">AI worker</p>
+  <h1>Booking inbox</h1>
+  <p class="to-lede">The AI reads each email into booking details. Plain code then checks those details against the jobs in dispatch, so a job that was never keyed in, or keyed in wrong, is caught before the car is due.</p>
+  <form method="post" action="<%= BASE %>/inbox/check-all" class="to-inline-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <button type="submit" class="to-btn to-btn-primary" data-busy="Reading the inbox...">Check the whole inbox</button>
+    <span class="to-small">Takes a few seconds while the AI reads each one.</span>
+  </form>
+</section>
+
+<ul class="to-inbox" aria-label="Emails">
+  <% emails.forEach(function (row) { var e = row.email; %>
+    <li>
+      <a href="<%= BASE %>/inbox/<%= e.id %>" class="to-inbox-row">
+        <span class="to-inbox-from"><%= e.from.replace(/\s*<.*$/, '') %><% if (e.custom) { %> <span class="to-tag">Your test email</span><% } %></span>
+        <span class="to-inbox-subject"><%= e.subject %></span>
+        <span class="to-inbox-when"><%= e.receivedAt.slice(0, 10) === today ? 'Today ' + e.receivedAt.slice(11) : shortDate(e.receivedAt.slice(0, 10)) + ' ' + e.receivedAt.slice(11) %></span>
+        <span class="to-inbox-status"><span class="to-pill to-pill-<%= row.status.tone %>"><%= row.status.label %></span><% if (row.sent) { %> <span class="to-pill to-pill-ok">Replied</span><% } %></span>
+      </a>
+    </li>
+  <% }) %>
+</ul>
+
+<section class="to-section to-panel" id="write">
+  <h2>Try one of your own</h2>
+  <p>Write a booking email the way a customer would, and see the AI read it and check it against today's dispatch board. Use made-up details: places around Exmouth and Exeter work best.</p>
+  <form method="post" action="<%= BASE %>/inbox/new" class="to-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="to-field-row">
+      <label class="to-field"><span>From</span><input id="own-from" name="from" type="text" maxlength="120" placeholder="Sam Brown <sam@example.com>"></label>
+      <label class="to-field"><span>Subject</span><input id="own-subject" name="subject" type="text" maxlength="160" placeholder="Taxi to the airport"></label>
+    </div>
+    <label class="to-field"><span>Email</span><textarea id="own-body" name="body" rows="6" maxlength="3000" required placeholder="Hi, can I book a car for 3 of us from Exmouth Marina to Exeter Airport on Friday at 6am? Two big cases. Sam, 07700 900450"></textarea></label>
+    <button type="submit" class="to-btn to-btn-primary" data-busy="The AI is reading it...">Send it to the inbox</button>
+    <p class="to-small">Up to <%= limit %> test emails an hour. What you write is read by the AI and emailed to nobody, and it is cleared when the demo starts again or after four hours.</p>
+  </form>
+</section>
+<%- include('partials/bottom') %>
