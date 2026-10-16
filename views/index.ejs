@@ -3789,8 +3789,11 @@
           const _btnSlug = (content[_k + '.button_link'] || '').trim();
           // Optional trailing #fragment lets a button deep-link to a specific
           // section on its target page (e.g. "evidence#documents"), same
-          // pattern as the fourcards card_N_link deep-link below.
-          const _validSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*(#[a-z0-9_-]+)?$/.test(_btnSlug);
+          // pattern as the fourcards card_N_link deep-link below. A sub-page
+          // of a code route ("taxi-and-private-hire-operators/websites",
+          // 16/10/2026) is allowed too: every segment is the same slug
+          // shape, so no traversal, scheme or host can get through.
+          const _validSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*(#[a-z0-9_-]+)?$/.test(_btnSlug);
           const _btnHref = _btnSlug === 'main' ? '/' : (_validSlug ? _resolvePageHref(_btnSlug) : '#conversation');
           const _isPrimaryCta = _btnSlug === '' || _btnSlug === 'book-a-30-minute-conversation';
         %>

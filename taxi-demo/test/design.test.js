@@ -48,7 +48,7 @@ test.before(async () => {
 });
 test.after(() => new Promise((r) => server.close(r)));
 
-const PAGES = ['/', '/book', '/airports', '/accounts', '/about', '/contact', '/no-such-road'];
+const PAGES = ['/', '/book', '/airports', '/accounts', '/about', '/contact', '/staff-portal', '/no-such-road'];
 
 test('every page has exactly one h1, and no two pages share one', async () => {
   const seen = new Map();

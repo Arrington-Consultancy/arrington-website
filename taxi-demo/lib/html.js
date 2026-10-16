@@ -75,7 +75,8 @@ const NAV = [
   ['/airports', 'Airports'],
   ['/accounts', 'Business accounts'],
   ['/about', 'About'],
-  ['/contact', 'Contact']
+  ['/contact', 'Contact'],
+  ['/staff-portal', 'Staff portal']
 ];
 
 // ---- Photograph slots ----------------------------------------------------------
@@ -221,6 +222,7 @@ ${body}
           <li><a href="${link('/about')}">About us</a></li>
           <li><a href="${link('/about#drive')}">Drive with us</a></li>
           <li><a href="${link('/contact')}">Contact and lost property</a></li>
+          <li><a href="${link('/staff-portal')}">Staff portal and AI workers</a></li>
         </ul>
       </div>
       <div>

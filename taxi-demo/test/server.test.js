@@ -17,7 +17,7 @@ test.before(async () => {
 });
 test.after(() => new Promise((r) => server.close(r)));
 
-const PAGES = ['/', '/book', '/airports', '/accounts', '/about', '/contact'];
+const PAGES = ['/', '/book', '/airports', '/accounts', '/about', '/contact', '/staff-portal'];
 const visible = (html) => html.replace(/<script[\s\S]*?<\/script>/g, ' ').replace(/<style[\s\S]*?<\/style>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
 const form = (o) => new URLSearchParams(o).toString();
 const post = (path, body, headers = {}) => fetch(base + path, { method: 'POST', redirect: 'manual', headers: { 'Content-Type': 'application/x-www-form-urlencoded', ...headers }, body });

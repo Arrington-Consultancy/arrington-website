@@ -27,6 +27,30 @@
     "height": 1024,
     "width": 1536
   },
+  "office-booking": {
+    "height": 3058,
+    "width": 2560
+  },
+  "office-booking-phone": {
+    "height": 2442,
+    "width": 1170
+  },
+  "office-complaint": {
+    "height": 2264,
+    "width": 2560
+  },
+  "office-complaint-phone": {
+    "height": 2865,
+    "width": 1170
+  },
+  "office-today": {
+    "height": 2060,
+    "width": 2560
+  },
+  "office-today-phone": {
+    "height": 2904,
+    "width": 1170
+  },
   "wav": {
     "height": 1024,
     "width": 1536

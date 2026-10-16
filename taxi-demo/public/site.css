@@ -148,6 +148,12 @@ p { margin: 0 0 1rem; }
   .mark { width: 36px; height: 36px; }
   .brand-name { font-size: 1.45rem; }
 }
+/* Six menu items fit from 72rem; between 64rem and 72rem they sit closer. */
+@media (min-width: 64rem) and (max-width: 71.99rem) {
+  .nav { margin-right: 0.25rem; }
+  .nav a { padding: 0.5rem 0.45rem; font-size: 0.93rem; }
+  .header-book { margin-left: 0.35rem; }
+}
 
 /* ---- Home: the photograph, the headline over it, the booking card. ----
    On a phone the picture is a strip above the headline, so the car stays in
@@ -596,6 +602,31 @@ text.map-sea-sm { font-size: 5.6px; }
 .action-bar .btn-primary { flex: 1; }
 .action-bar .btn { min-height: 52px; }
 @media (min-width: 64rem) { .action-bar { display: none; } body { padding-bottom: 0; } }
+
+/* Staff portal page: the office behind the website, in screenshots, with
+   the login where nobody can miss it. */
+.login-card { background: var(--paper); color: var(--ink); border-radius: var(--radius); padding: 1.25rem; box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25); }
+.login-card .login-label { margin: 0 0 0.6rem; font-weight: 700; font-size: 0.74rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--red-deep); }
+.login-card .login-note { margin: 0.8rem 0 0; font-size: 0.92rem; color: var(--ink-2); }
+.page-top-night .login-card a:not(.btn) { color: var(--teal); }
+@media (min-width: 56rem) {
+  .page-top-portal .page-top-inner { grid-template-columns: minmax(0, 1fr) 21rem; align-items: end; column-gap: 3rem; }
+}
+.portal-intro { max-width: 42rem; }
+.portal-intro h2 { margin-top: 0; }
+.shot { margin: 1.75rem 0 0; }
+.shot-pic, .shot-pic img { display: block; width: 100%; height: auto; }
+.shot-pic img { border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--paper); box-shadow: 0 18px 44px rgba(11, 22, 35, 0.16); }
+.shot figcaption { margin-top: 0.75rem; font-size: 0.92rem; color: var(--ink-2); }
+.office-workers { list-style: none; margin: 1.75rem 0 0; padding: 0; }
+.office-workers li { display: grid; gap: 0.25rem; padding: 1rem 0; border-top: 1px solid var(--line); }
+.office-workers li:last-child { border-bottom: 1px solid var(--line); }
+.office-workers h3 { margin: 0; font-size: 1.15rem; }
+.office-workers p { margin: 0; max-width: 40rem; color: var(--ink-2); }
+@media (min-width: 48rem) { .office-workers li { grid-template-columns: 12rem minmax(0, 1fr); gap: 1.5rem; align-items: baseline; } }
+.portal-panel { margin-top: 0; padding: 1.75rem 1.5rem; }
+.portal-panel .portal-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 0; }
+.shot-note { margin: 1rem 0 0; font-size: 0.88rem; color: var(--ink-2); max-width: 42rem; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }

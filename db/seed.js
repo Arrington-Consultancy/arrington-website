@@ -8210,6 +8210,18 @@ async function seed() {
     console.error('Cornwall "real" trim migration failed (boot continues):', err.message);
   }
 
+  // WEBSITES AND AI: A SECTION FOR TAXI FIRMS (16/10/2026, Tom: "Website
+  // page needs our new taxi page on there as well"). A new intervention just
+  // before the page's closing call to action, pointing at the taxi websites
+  // page. Outside the gated Websites and AI seed chain; nothing on the page
+  // is edited. Run once, under a marker. Never fatal.
+  try {
+    const note = await require('../lib/websitesAiTaxiSection').applyWebsitesAiTaxiSection(db);
+    if (note) console.log(`Websites and AI taxi section: ${note}.`);
+  } catch (err) {
+    console.error('Websites and AI taxi section migration failed (boot continues):', err.message);
+  }
+
 
   // Arrington AI Workspace: ingest the encrypted snapshot into
   // workspace_records. A no-op when WORKSPACE_SNAPSHOT_KEY is unset, and

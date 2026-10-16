@@ -4,10 +4,14 @@
 // A plain Node server with no dependencies, run as its own Railway service
 // from this folder (root directory /taxi-demo). It shows the £999 product
 // and nothing more: the customer-facing site and the booking form that puts
-// a job into the dispatch system. No controller screens, no office tools.
+// a job into the dispatch system. No controller screens, no office tools:
+// the one page about the office (/staff-portal) shows it in screenshots.
 //
 // Routes
 //   GET  /  /book  /airports  /accounts  /about  /contact     pages
+//   GET  /staff-portal               the office behind the site, in screenshots
+//                                    (the office itself, /office, is served by
+//                                    the main site and needs an invited login)
 //   POST /book                       booking (form post or JSON)
 //   GET  /booking/:token             confirmation, polls for the driver
 //   POST /booking/:token/cancel      cancel
@@ -258,6 +262,7 @@ function createApp(options = {}) {
     '/airports': () => ({ hero: 'airport-night', title: `Airport taxis from ${FIRM.town}, fixed prices | ${FIRM.name}`, description: `Fixed price taxis from ${FIRM.town} to Exeter Airport, Bristol Airport, Heathrow, Gatwick and the main stations. Same price day or night.`, body: pages.airportsPage() }),
     '/accounts': (q) => ({ hero: 'accounts', title: `Business taxi accounts in ${FIRM.town} | ${FIRM.name}`, description: `Taxi accounts for hotels, schools, NHS and care services and local businesses in ${FIRM.town}. One invoice a month.`, body: pages.accountsPage({ sent: q.get('sent') === '1' }) }),
     '/about': (q) => ({ hero: 'fleet-dawn', title: `About us and driving jobs | ${FIRM.name}, ${FIRM.town}`, description: `${FIRM.name} has run taxis and private hire in ${FIRM.town} since ${FIRM.founded}. ${FIRM.fleet} cars, ${FIRM.taxis} of them hackney carriage taxis, licensed drivers, and driving jobs for licence holders.`, body: pages.aboutPage({ sent: q.get('sent') === '1' }) }),
+    '/staff-portal': () => ({ title: `Staff portal and AI workers | ${FIRM.name}`, description: `The office behind the ${FIRM.name} website: AI workers read the emails, check them against dispatch and draft the replies, and a person in the office decides what goes out.`, body: pages.staffPortalPage() }),
     '/contact': (q) => ({ hero: 'huts-evening', title: `Contact ${FIRM.name}, ${FIRM.town} | ${FIRM.phone}`, description: `Call ${FIRM.name} on ${FIRM.phone}, 24 hours. Text, lost property and messages for the office.`, body: pages.contactPage({ sent: q.get('sent') === '1' }) })
   };
 

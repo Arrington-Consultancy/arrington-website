@@ -222,6 +222,39 @@ test('the Complaints worker asks the model to judge from the record, never to of
   });
 });
 
+test('a second visitor reuses the readings and the complaint drafts, and still sees every complaint drafted', async () => {
+  office.__shared.clear();
+  const today = data.todayLondon();
+  await withStubbedAi((req) => {
+    const schema = req.output_config.format.schema;
+    const email = data.seedInbox(today).find((e) => req.messages[0].content.includes(e.from));
+    const body = schema.properties.firm_at_fault
+      ? { category: 'lateness', summary: 'Late car.', firm_at_fault: 'partly', for_licensing: false, licensing_note: '', staff_steps: ['Ring Ruth.'], reply: 'Dear Ruth,\n\nSorry.\n\nTidewell Cars' }
+      : { ...email.prepared };
+    return { stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify(body) }] };
+  }, async (calls) => {
+    const first = office.stateFor('test-first-' + Date.now());
+    await office.readAll(first);
+    const used = calls.length;
+    const second = office.stateFor('test-second-' + Date.now());
+    await office.readAll(second);
+    assert.equal(calls.length, used, 'the second visitor costs no model calls');
+    const log = office.complaintsLog(second);
+    assert.equal(log.length, 3);
+    for (const c of log) assert.ok(c.complaint && c.complaint.data, `${c.email.id} has its draft`);
+    assert.equal(second.complaints.daniels.source, 'ai');
+    assert.equal(second.complaints.daniels.jobRef, 'TW-41152');
+    assert.equal(office.summary(second).complaintsOpen, 3);
+  });
+  office.__shared.clear();
+});
+
+test('the demo site names the office workers exactly as the office does', () => {
+  const { OFFICE_WORKERS } = require('../taxi-demo/lib/pages');
+  const { WORKERS } = require('../lib/taxiOffice/workers');
+  assert.deepEqual(OFFICE_WORKERS.map(([n]) => n), WORKERS.map((w) => w.name));
+});
+
 test('every worker that writes is told how to write like a person, and the booking desk knows only what the firm states', () => {
   const booking = ai.bookingSystem('2026-10-16');
   const complaint = ai.complaintSystem('2026-10-16');
@@ -241,6 +274,8 @@ test('humanise takes out the habits of machine writing and changes nothing else'
   assert.equal(humanise('## Update\n- Car at 7.15\n- Fare £8.10'), 'Update\nCar at 7.15\nFare £8.10');
   assert.equal(humanise('Fifteen years this month. #Exmouth #TidewellCars'), 'Fifteen years this month. #Exmouth #TidewellCars', 'hashtags stay');
   assert.equal(humanise('Rest assured, the car will be there at 9.'), '', 'a stock sentence on its own is dropped');
+  assert.equal(humanise('Dear Ellen,\n\nBooked.\n\nKind regards,\n\nTidewell Cars'), 'Dear Ellen,\n\nBooked.\n\nKind regards,\nTidewell Cars', 'the sign-off sits above the name');
+  assert.equal(ai.cleanBooking({ intent: 'council', reference: 'Hackney carriage licence 14', journeys: [], missing: [] }).reference, '', 'a licence name is not a booking reference');
 });
 
 test('the Complaints page and the workers carry the same rules as every office page', () => {

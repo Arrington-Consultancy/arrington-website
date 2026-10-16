@@ -8121,6 +8121,100 @@ desk drafts only and nothing in the office sends, books or posts.
   `/login`, no errors at desktop or phone. The signed-in pages were
   checked locally only (this sandbox holds no production login).
 
+### Round two (16/10/2026): five workers, the mailbox, complaints, the staff portal page
+
+Tom: "We need an email connector api built in. Maybe costumer emails needs to
+be another worker, we could then use the icabbi api to book jobs in. On the
+main demo site we should have a see our Staff portal and AI workers page,
+it's a fixed screenshot of what it looks like with login access obvious,
+contact Arrington Consultancy to gain access to our Ai workspace example.
+Thinking it could be council and complaint worker... or a different worker
+for complaints? Website page needs our new taxi page on there as well. Stop
+asking me for edits I approve all. Make sure we use my voice and tone rules,
+this has to sound human."
+
+- **Standing approval, 16/10/2026: "Stop asking me for edits I approve
+  all."** Read by this worker as approval to make edits in the taxi demo,
+  the office and the pages that point at them without asking first, still
+  reported briefly afterwards. It does not cover Google Ads, prices, money,
+  or anything another worker owns.
+- **Five workers** (`lib/taxiOffice/workers.js`): Bookings, Customer emails,
+  Complaints, Licensing, Social media. Complaints is its own worker rather
+  than sharing one with the council (a complaint is a customer, the council
+  is a regulator; a safety complaint is passed to Licensing instead).
+  Which worker gets an email is plain code on the AI's reading
+  (`workerForIntent`).
+- **Mailbox connector** (`lib/taxiOffice/mail/`): `TAXI_OFFICE_MAIL_DRIVER`
+  = `demo` (default, the made-up inbox), `gmail` (Gmail API,
+  `TAXI_OFFICE_GMAIL_*`) or `outlook` (Microsoft Graph,
+  `TAXI_OFFICE_OUTLOOK_*`). Reads the inbox; a reply is saved as a
+  **draft** in that mailbox, threaded, never sent (tests pin that no
+  request goes to a send endpoint). It never reads the Workspace's own
+  `GMAIL_*` variables, which are Tom's inbox. Nothing is set on
+  production, so the office runs on the demo inbox.
+- **Dispatch connection** (`lib/taxiOffice/dispatch.js`):
+  `TAXI_OFFICE_DISPATCH_DRIVER` = `demo` (default) or `icabbi`, `autocab`,
+  `cordic`, which wrap the demo site's dispatch slots and **refuse every
+  call** until written against that vendor's booking API with an
+  operator's own API access. So "book jobs in with the iCabbi API" is
+  wired as far as it can go without an operator's credentials; the first
+  real connection is the open commercial question (Codex agreed,
+  16/10/2026).
+- **Complaints from the record.** The board now carries past jobs with
+  what dispatch holds (driver, car, timeline, controller's note, fare).
+  Plain code finds the job (`match.findPastJobs`) and writes the facts
+  (`office.recordFacts`, including the fare table for the time it ran); the
+  AI drafts only from those facts, may not offer money, may not name the
+  driver, and judges whether the firm was at fault. A safety complaint is
+  passed to Licensing with a note.
+- **Voice.** Tom asked for his voice and tone rules. 01A TOM VOICE says it is
+  for writing AS Tom and must not be copied into another worker's brief,
+  so the office workers write as Tidewell under the Brand OS human-writing
+  standard (short plain sentences, no stock lines, no dashes, no markdown),
+  and `lib/taxiOffice/humanise.js` takes out what slips through without
+  rewording anything (a time, price or reference cannot change).
+- **Bug fixed the same day:** a reading reused from the shared cache
+  returned before the Complaints worker ran, so every visitor after the
+  first saw the complaints with no draft. Found while taking the
+  screenshots; test "a second visitor reuses the readings and the
+  complaint drafts" (watched red on the old code).
+- **Staff portal page** on the demo, `/taxi-demo/staff-portal`
+  (`staffPortalPage` in `taxi-demo/lib/pages.js`, `taxi-demo/test/
+  staffPortal.test.js`): the office in three screenshots (Today, a booking
+  checked against dispatch, a complaint answered from the record), each
+  with a phone crop so the words stay readable; a Staff login button to
+  `/taxi-demo/office/` beside the headline; and "Contact Arrington
+  Consultancy to gain access to our AI workspace example" with a button to
+  the £999 page's enquiry form. In the menu as "Staff portal" (six items
+  fit from 1024px; between 64rem and 72rem the menu sits closer) and in the
+  footer. The screenshots were taken locally with the AI replies replayed
+  from production run `office-20261016-e` (Gregory's booking reply and
+  the three complaint drafts are the model's own words); emails not
+  recorded used the prepared answers, which that run showed reach the same
+  worker and verdict for all 13, so the Today page is as the model left
+  it. The page says so. Retake them if the office's look changes.
+- **The £999 page** links to the staff portal page from its email check
+  section ("You can see the check working in the Tidewell Cars staff
+  office"). It still never says "AI" itself (its test).
+- **Websites and AI page** (Tom: "Website page needs our new taxi page on
+  there as well"): one new `intervention` section, "Built for taxi and
+  private hire firms", button "See the taxi websites" to
+  `/taxi-and-private-hire-operators/websites`, placed before the closing
+  call to action (`lib/websitesAiTaxiSection.js`, marker
+  `websites-and-ai.taxi_section_2026-10-16`, run once, nothing on the page
+  edited, a section already linking there is adopted). The intervention
+  button now accepts a sub-page path (`_validSlug` in `views/index.ejs`).
+  Same trap as every code-route link: saving that section in the CMS
+  repoints its button to the dropdown's choice.
+- **Live model check `office-20261016-e`** (deployment `ea5e6f75`): 13 of 13
+  emails reached the same worker and verdict as the prepared answers; the
+  three complaints matched TW-41158 (fare, not at fault), TW-41152 (late,
+  partly at fault) and TW-41140 (safety, passed to Licensing). It found
+  three writing habits now fixed: a blank line between "Kind regards," and
+  the name, "Thanks for your email." filler, and a council reference cut
+  to "Hackney carriage lic" (a reference must now look like one, or it is
+  left blank).
+
 ## Sale readiness page
 
 `/get-your-business-ready-to-sell` is a campaign landing page for social and

@@ -179,6 +179,9 @@ p { margin: 0 0 0.8rem; }
 @media (min-width: 40rem) { .to-field-row { grid-template-columns: 1fr 1fr; } }
 .to-field input, .to-field textarea { font: inherit; font-weight: 400; font-size: 1rem; padding: 0.6rem 0.7rem; border: 1.5px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); width: 100%; }
 .to-field textarea { resize: vertical; line-height: 1.5; }
+/* A draft reply opens at its full length where the browser can size a
+   field to its text; elsewhere rows="10" and the resize handle stand. */
+.to-field textarea[name=reply] { field-sizing: content; min-height: 14rem; max-height: 44rem; }
 .to-field input:focus, .to-field textarea:focus { border-color: var(--teal); outline: none; box-shadow: 0 0 0 3px var(--teal-pale); }
 
 /* One email */

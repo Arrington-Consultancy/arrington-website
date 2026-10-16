@@ -19,6 +19,7 @@ const { PAYMENT, maskPhone, firstName } = require('./booking');
 const { PLACES } = require('./places');
 const { exeMap } = require('./map');
 const { link } = require('./base');
+const images = require('./images');
 
 const COVER = ['Exmouth', 'Lympstone', 'Budleigh Salterton', 'Woodbury', 'Exton', 'Topsham', 'Exeter', 'Sidmouth'];
 // The four fixed prices on the home page board.
@@ -603,6 +604,105 @@ ${pageTop({ eyebrow: 'Contact', title: 'Call us, any time.', lede: `The quickest
 </section>`;
 }
 
+// ---- Staff portal ----------------------------------------------------------
+// The office behind the website (Tom, 16/10/2026: "a see our Staff portal and
+// AI workers page, it's a fixed screenshot of what it looks like with login
+// access obvious, contact Arrington Consultancy to gain access to our AI
+// workspace example"). The office itself is served by Arrington's main site
+// at /taxi-demo/office and needs an invited login; this page shows it in
+// screenshots and puts the login button where nobody can miss it.
+//
+// The screenshots were taken from the demonstration office on 16 October
+// 2026 with the replies as the AI drafted them on production that morning.
+// The five workers are named as the office names them
+// (lib/taxiOffice/workers.js in the main site; a test there keeps the two
+// lists the same).
+
+const OFFICE_WORKERS = [
+  ['Bookings', 'Reads booking emails, checks each one against the job in dispatch, and books, corrects or cancels it there. Drafts the reply.'],
+  ['Customer emails', 'Answers everything else customers send, from lost property to account questions, and looks up the journey when the answer is in dispatch.'],
+  ['Complaints', 'Logs every complaint and pulls the job from dispatch, so the reply rests on what happened. Passes anything about safety to Licensing.'],
+  ['Licensing', 'Keeps every badge, plate, MOT and insurance date in one register, flags what is due and drafts the letter to the council.'],
+  ['Social media', 'Writes the week\'s posts from what is going on at the firm. Nothing is posted until the owner approves it.']
+];
+
+// A screenshot: the desktop crop, and on a phone a crop taken at phone width
+// so the words stay readable. Nothing at all when the files are not there.
+function shot({ name, alt, caption }) {
+  if (!images.available(name)) return '';
+  const set = (n, ext) => images.sources(n, ext).map((x) => `${x.url} ${x.w}w`).join(', ');
+  const dim = images.size(name);
+  const jpg = images.sources(name, 'jpg');
+  const main = jpg.find((x) => x.w === 1200) || jpg[jpg.length - 1];
+  const sizes = '(min-width: 72rem) 68rem, calc(100vw - 3rem)';
+  const phone = `${name}-phone`;
+  const pd = images.size(phone);
+  const phoneSources = images.available(phone)
+    ? html`<source media="(max-width: 40rem)" type="image/webp" srcset="${set(phone, 'webp')}" sizes="calc(100vw - 2rem)" width="${pd.width}" height="${pd.height}"><source media="(max-width: 40rem)" srcset="${set(phone, 'jpg')}" sizes="calc(100vw - 2rem)" width="${pd.width}" height="${pd.height}">`
+    : '';
+  return html`<figure class="shot reveal"><picture class="shot-pic">${phoneSources}<source type="image/webp" srcset="${set(name, 'webp')}" sizes="${sizes}"><img src="${main.url}" srcset="${set(name, 'jpg')}" sizes="${sizes}" width="${main.w}" height="${Math.round(dim.height * main.w / dim.width)}" alt="${alt}" loading="lazy" decoding="async"></picture><figcaption>${caption}</figcaption></figure>`;
+}
+
+function staffPortalPage() {
+  const login = html`<div class="login-card">
+    <p class="login-label">Staff</p>
+    <a class="btn btn-primary btn-lg btn-block" href="${link('/office/')}">Staff login</a>
+    <p class="login-note">Logins are by invitation. To look round the office yourself, <a href="${FIRM.arringtonEnquiryUrl}">ask Arrington Consultancy for one</a>.</p>
+  </div>`;
+  return html`
+${pageTop({ eyebrow: 'Staff portal', title: 'The office behind the website.', lede: 'Booking emails, complaints and letters from the council all land in one office. Five AI workers read them, check them against dispatch and draft the replies. A person in the office decides what goes out.', tone: 'night', extra: login, className: 'page-top-portal' })}
+<section class="section section-tight">
+  <div class="wrap">
+    <div class="portal-intro">
+      <h2>Today, on one screen.</h2>
+      <p>The emails waiting, the complaints still open, the licensing dates coming up and the day's board. Press Read the inbox and each email goes to the worker it belongs to.</p>
+    </div>
+    ${shot({ name: 'office-today', alt: 'Screenshot of the office Today page: four counts across the top, then a card for each AI worker listing the emails it has, each marked as matching dispatch, keyed in wrong, not in dispatch or needing details.', caption: 'The Today page after the morning\'s 13 emails were read.' })}
+  </div>
+</section>
+<section class="section band-paper">
+  <div class="wrap">
+    <div class="portal-intro">
+      <p class="eyebrow">AI workers</p>
+      <h2>Five workers, one office.</h2>
+      <p>Each one does a single job. None of them sends, books or posts anything on its own.</p>
+    </div>
+    <ul class="office-workers">${OFFICE_WORKERS.map(([n, d]) => html`<li><h3>${n}</h3><p>${d}</p></li>`)}</ul>
+  </div>
+</section>
+<section class="section">
+  <div class="wrap">
+    <div class="portal-intro">
+      <p class="eyebrow">Bookings</p>
+      <h2>A booking checked against dispatch.</h2>
+      <p>Paul asked for a 5.30am pickup to the airport. Dispatch had 5.50. The AI reads the email, then plain code compares it with the job, field by field, and shows the difference. One click puts it right in dispatch, and the reply is drafted ready for someone to check.</p>
+    </div>
+    ${shot({ name: 'office-booking', alt: 'Screenshot of a booking email beside the AI\'s reading of it. Under "Does dispatch have it right?" the email says 05:30 and dispatch has 05:50, with a button to correct it in dispatch and a draft reply below.', caption: 'A booking email beside what dispatch holds. The reply is as the AI drafted it.' })}
+  </div>
+</section>
+<section class="section band-paper">
+  <div class="wrap">
+    <div class="portal-intro">
+      <p class="eyebrow">Complaints</p>
+      <h2>A complaint answered from the record.</h2>
+      <p>Ruth's car was 16 minutes late and she missed her train. The worker pulled the job from dispatch: a road closure at Exton, and a controller's note that nobody rang her. So the draft says what happened, owns the part that was the firm's fault, and leaves any refund to the office.</p>
+    </div>
+    ${shot({ name: 'office-complaint', alt: 'Screenshot of a complaint: what the customer says, the dispatch record for the journey including the controller\'s note, the steps for the office, and the draft reply.', caption: 'The complaint, the dispatch record behind it, and the reply as the AI drafted it.' })}
+  </div>
+</section>
+<section class="section">
+  <div class="wrap">
+    <div class="arrington-panel portal-panel">
+      <p class="arrington-label">Built by Arrington Consultancy</p>
+      <h2>Want to look round the office?</h2>
+      <p>This office is a working example we built for taxi and private hire firms. The AI workers run on a made-up inbox and a test dispatch board, so nothing real is sent, booked or posted. Contact Arrington Consultancy to gain access to our AI workspace example.</p>
+      <p class="portal-actions"><a class="btn btn-primary" href="${FIRM.arringtonEnquiryUrl}">Ask Arrington for a login</a> <a class="btn btn-ghost" href="${link('/office/')}">Staff login</a></p>
+    </div>
+    <p class="shot-note">Screenshots taken on 16 October 2026 from the demonstration office. The replies shown are as the AI drafted them; a person checks every one before it goes anywhere.</p>
+  </div>
+</section>`;
+}
+
 function notFoundPage() {
   return html`
 <section class="not-found">
@@ -620,6 +720,6 @@ function placesJson() {
 }
 
 module.exports = {
-  home, bookPage, bookBarPrice, confirmationPage, statusSteps, airportsPage, accountsPage, aboutPage, contactPage, notFoundPage, placesJson, fareBlock, ALT,
+  home, bookPage, bookBarPrice, confirmationPage, statusSteps, airportsPage, accountsPage, aboutPage, contactPage, staffPortalPage, notFoundPage, placesJson, fareBlock, ALT, OFFICE_WORKERS,
   ACCOUNT_FIELDS, DRIVER_FIELDS, CONTACT_FIELDS
 };

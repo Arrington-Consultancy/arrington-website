@@ -10,6 +10,14 @@ It is exactly the £999 product: the customer-facing site and a booking form
 whose bookings go into the dispatch system. Nothing office-side (controller
 screens, email booking checks, phone handling) is in it, by design.
 
+One page looks behind it: `/staff-portal` (16 October 2026) shows the
+Tidewell office, Arrington's AI workspace example, in screenshots, with a
+Staff login button to `/taxi-demo/office/`. The office itself is served by
+the main site (`routes/taxiOffice.js`) and needs an invited login; the
+screenshots live in `public/img/office-*` and were cut with
+`scripts/optimise-images.py` from captures of the office with the replies as
+the AI drafted them on production that morning.
+
 ## Run it
 
     cd taxi-demo
