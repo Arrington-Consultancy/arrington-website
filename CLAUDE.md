@@ -8091,6 +8091,24 @@ desk drafts only and nothing in the office sends, books or posts.
   check), `routes/taxiOffice.js`, `views/taxi-office/`,
   `public/css/taxi-office.css`, `public/js/taxi-office.js`,
   `test/taxiOffice.test.js` (12; two planted defects watched red).
+- **Live 16/10/2026:** commits `cf175fa`, `338bfe7`, `7a5f689`; serving
+  deployment `00b35119`. `ENABLE_TAXI_OFFICE_AI=true` set by this worker
+  on production (rollback: unset it). Three model checks: `-a` 7 of 9
+  verdicts agreed, `-b` 8 of 9, `-c` **9 of 9**, plus a licensing letter
+  and three posts each time. The first two found real faults, both fixed:
+  Hollis's email said "tomorrow, Saturday" but arrived the day before, so
+  it contradicted itself (now received the same morning); and the model
+  listed "destination address in Budleigh Salterton" as missing, which
+  made Sophie's email Needs details (the prompt now says what is enough to
+  book, a destination town included). **The model's `missing` list
+  overrides the code's own gaps in `compare`**, so a prompt change can
+  move a verdict; rerun the check after any change to the booking prompt.
+  `RUN_TAXI_OFFICE_AI_CHECK` was then set to empty (no delete tool; empty
+  means off). Of three racing deploys, two were removed mid-check, so read
+  the serving deployment's log. Inspection run
+  `20261016T120556Z-taxi-office-launch`: signed-out visits land on
+  `/login`, no errors at desktop or phone. The signed-in pages were
+  checked locally only (this sandbox holds no production login).
 
 ## Sale readiness page
 
