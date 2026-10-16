@@ -4,7 +4,9 @@
 (function () {
   document.addEventListener('submit', function (e) {
     var form = e.target;
-    var button = form.querySelector('button[type="submit"]');
+    // The button that was pressed: a draft's form has two (send, and
+    // redraft with the staff's guidance).
+    var button = e.submitter || form.querySelector('button[type="submit"]');
     if (!button) return;
     var question = button.getAttribute('data-confirm');
     if (question && !window.confirm(question)) {

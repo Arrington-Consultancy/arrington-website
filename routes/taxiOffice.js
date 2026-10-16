@@ -144,7 +144,7 @@ function mountPageRoute(app) {
     const worker = office.workerOf(s, email);
     const regItem = worker === 'licensing' ? office.register(s).find((i) => i.council === email.id) : null;
     const pastJobs = worker === 'customer' ? office.pastJobsFor(s, email) : [];
-    render(req, res, 'email', { section: 'inbox', email, reading, cmp, status, worker, sent: s.sent[email.id] || null, regItem, pastJobs, complaint: s.complaints[email.id] || null });
+    render(req, res, 'email', { section: 'inbox', email, reading, cmp, status, worker, sent: s.sent[email.id] || null, regItem, pastJobs, complaint: s.complaints[email.id] || null, guided: s.guided[email.id] || null, replyText: office.replyFor(s, email), guideMax: office.MAX_GUIDANCE });
   });
 
   post('/inbox/:id/read', async (req, res) => {
@@ -173,9 +173,31 @@ function mountPageRoute(app) {
     res.redirect(303, req.body.back === 'complaints' ? `${BASE}/complaints#c-${email.id}` : `${BASE}/inbox/${email.id}`);
   });
 
+  // Staff steering a draft reply: the AI redrafts it to say what they want.
+  // The draft as edited on screen goes with it, so a hand edit is kept.
+  const backTo = (req, email, anchor) => (req.body.back === 'complaints' ? `${BASE}/complaints#c-${email.id}` : `${BASE}/inbox/${email.id}${anchor || ''}`);
+
+  post('/inbox/:id/guide', async (req, res) => {
+    const s = stateOf(req);
+    const email = office.findEmail(s, req.params.id);
+    if (!email) return render404(req, res);
+    const r = await office.guideReply(s, email, { guidance: req.body.guidance, draft: req.body.reply });
+    flash(s, r.message, r.ok ? 'ok' : 'warn');
+    res.redirect(303, backTo(req, email, '#draft'));
+  });
+
+  post('/inbox/:id/unguide', (req, res) => {
+    const s = stateOf(req);
+    const email = office.findEmail(s, req.params.id);
+    if (!email) return render404(req, res);
+    office.unguideReply(s, email);
+    flash(s, "Back to the worker's first draft.");
+    res.redirect(303, backTo(req, email, '#draft'));
+  });
+
   page('/complaints', (req, res) => {
     const s = stateOf(req);
-    render(req, res, 'complaints', { section: 'complaints', log: office.complaintsLog(s), unread: office.inbox(s).filter((e) => !(s.readings[e.id] && s.readings[e.id].data)).length });
+    render(req, res, 'complaints', { section: 'complaints', log: office.complaintsLog(s), unread: office.inbox(s).filter((e) => !(s.readings[e.id] && s.readings[e.id].data)).length, guided: s.guided, guideMax: office.MAX_GUIDANCE });
   });
 
   post('/complaints/:id/draft', async (req, res) => {
@@ -202,7 +224,7 @@ function mountPageRoute(app) {
     const s = stateOf(req);
     const items = office.register(s);
     const councilEmails = office.inbox(s).filter((e) => e.routeTo === 'licensing' || office.workerOf(s, e) === 'licensing');
-    render(req, res, 'licensing', { section: 'licensing', items, drafts: s.licensing, councilEmails, passed: office.passedToLicensing(s) });
+    render(req, res, 'licensing', { section: 'licensing', items, drafts: s.licensing, licGuided: s.licGuided, councilEmails, passed: office.passedToLicensing(s), guideMax: office.MAX_GUIDANCE });
   });
 
   post('/licensing/:id/draft', async (req, res) => {
@@ -212,14 +234,29 @@ function mountPageRoute(app) {
     res.redirect(303, `${BASE}/licensing#item-${req.params.id}`);
   });
 
+  post('/licensing/:id/guide', async (req, res) => {
+    const s = stateOf(req);
+    const r = await office.guideLicensing(s, req.params.id, { guidance: req.body.guidance });
+    if (!r) return render404(req, res);
+    flash(s, r.message, r.ok ? 'ok' : 'warn');
+    res.redirect(303, `${BASE}/licensing#item-${req.params.id}`);
+  });
+
+  post('/licensing/:id/unguide', (req, res) => {
+    const s = stateOf(req);
+    office.unguideLicensing(s, req.params.id);
+    flash(s, "Back to the worker's first draft.");
+    res.redirect(303, `${BASE}/licensing#item-${req.params.id}`);
+  });
+
   page('/social', (req, res) => {
     const s = stateOf(req);
-    render(req, res, 'social', { section: 'social', facts: data.socialFacts(s.today), social: s.social, approved: s.approved, images: data.SOCIAL_IMAGES });
+    render(req, res, 'social', { section: 'social', facts: data.socialFacts(s.today), social: s.social, approved: s.approved, images: data.SOCIAL_IMAGES, guideMax: office.MAX_GUIDANCE });
   });
 
   post('/social/draft', async (req, res) => {
     const s = stateOf(req);
-    await office.draftSocial(s);
+    await office.draftSocial(s, { steer: req.body.steer });
     res.redirect(303, BASE + '/social');
   });
 

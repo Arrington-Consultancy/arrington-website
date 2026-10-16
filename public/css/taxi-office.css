@@ -182,6 +182,13 @@ p { margin: 0 0 0.8rem; }
 /* A draft reply opens at its full length where the browser can size a
    field to its text; elsewhere rows="10" and the resize handle stand. */
 .to-field textarea[name=reply] { field-sizing: content; min-height: 14rem; max-height: 44rem; }
+/* Guiding a draft: staff say what it should say and the worker rewrites it */
+.to-guide { width: 100%; background: var(--sand); border: 1px solid var(--sand-2); border-radius: 10px; padding: 0.8rem 0.9rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.to-guide .to-worker-tag, .to-guide .to-small, .to-guide .to-note { margin: 0; }
+.to-guide-notes { margin: 0; padding-left: 1.3rem; font-size: 0.95rem; }
+.to-guide-notes li { margin-bottom: 0.2rem; }
+.to-guide-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+.to-draft .to-guide { background: var(--paper); margin-top: 0.8rem; }
 .to-field input:focus, .to-field textarea:focus { border-color: var(--teal); outline: none; box-shadow: 0 0 0 3px var(--teal-pale); }
 
 /* One email */

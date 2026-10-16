@@ -121,16 +121,26 @@
       <% } %>
 
       <% if (worker === 'bookings' || worker === 'customer') { %>
-        <section class="to-panel">
+        <section class="to-panel" id="draft">
           <p class="to-worker-tag"><%= W.name %> worker</p>
           <h2>Draft reply</h2>
           <% if (sent) { %>
             <p class="to-note to-note-ok"><%= sent.where ? 'Saved as a draft in ' + sent.where + ' for someone to send.' : 'Marked as sent. In this demo nothing leaves the office.' %></p>
             <div class="to-reply-sent"><%= sent.text %></div>
-          <% } else if (x.reply) { %>
+          <% } else if (replyText) { %>
             <form method="post" action="<%= BASE %>/inbox/<%= email.id %>/send" class="to-form">
               <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-              <label class="to-field"><span class="to-sr">Reply</span><textarea id="reply-<%= email.id %>" name="reply" rows="10" maxlength="3000"><%= x.reply %></textarea></label>
+              <label class="to-field"><span class="to-sr">Reply</span><textarea id="reply-<%= email.id %>" name="reply" rows="10" maxlength="3000"><%= replyText %></textarea></label>
+              <% if (aiOn) { %>
+                <%- include('partials/guide', {
+                  fieldId: 'guide-' + email.id,
+                  action: BASE + '/inbox/' + email.id + '/guide',
+                  unguideAction: BASE + '/inbox/' + email.id + '/unguide',
+                  placeholder: worker === 'bookings' ? 'For example: We\'re fully booked then. Offer half an hour later.' : 'For example: It was handed in. They can collect it from the office.',
+                  guided: guided,
+                  max: guideMax
+                }) %>
+              <% } %>
               <button type="submit" class="to-btn to-btn-primary"><%= conn.mailboxDemo || email.custom ? 'Mark as sent' : 'Save as a draft in ' + conn.mailbox %></button>
               <p class="to-small">Edit it first if you like. A person always sends; here nothing is sent at all.</p>
             </form>

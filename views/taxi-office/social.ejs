@@ -10,14 +10,22 @@
   <ul class="to-checklist">
     <% facts.forEach(function (f) { %><li><%= f %></li><% }) %>
   </ul>
-  <form method="post" action="<%= BASE %>/social/draft" class="to-inline-form">
+  <form method="post" action="<%= BASE %>/social/draft" class="to-form">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <% if (aiOn) { %>
+      <label class="to-field">
+        <span>Anything to mention this week?</span>
+        <textarea id="social-steer" name="steer" rows="3" maxlength="<%= guideMax %>" placeholder="For example: We're taking on two drivers. Ask anyone interested to ring the office." aria-describedby="social-steer-help"></textarea>
+      </label>
+      <p class="to-small" id="social-steer-help">Optional. Whatever you write here goes in the posts as fact, so only write what's true.</p>
+    <% } %>
     <button type="submit" class="to-btn to-btn-primary" data-busy="Writing the posts..."><%= social ? 'Write another set' : "Draft this week's posts" %></button>
   </form>
 </section>
 
 <% if (social) { %>
   <% if (social.note) { %><p class="to-note to-note-warn"><%= social.note %></p><% } %>
+  <% if (social.steer) { %><p class="to-small"><strong>You asked it to mention:</strong> <%= social.steer %></p><% } %>
   <div class="to-posts">
     <% social.posts.forEach(function (p, i) { var img = images.find(function (x) { return x.id === p.image; }); %>
       <article class="to-post">

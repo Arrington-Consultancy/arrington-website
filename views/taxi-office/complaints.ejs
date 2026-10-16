@@ -78,7 +78,17 @@
           <form method="post" action="<%= BASE %>/inbox/<%= e.id %>/send" class="to-form">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <input type="hidden" name="back" value="complaints">
-            <label class="to-field"><span class="to-sr">Reply to <%= e.from.replace(/\s*<.*$/, '') %></span><textarea id="reply-c-<%= e.id %>" name="reply" rows="10" maxlength="3000"><%= d.reply %></textarea></label>
+            <label class="to-field"><span class="to-sr">Reply to <%= e.from.replace(/\s*<.*$/, '') %></span><textarea id="reply-c-<%= e.id %>" name="reply" rows="10" maxlength="3000"><%= guided[e.id] ? guided[e.id].reply : d.reply %></textarea></label>
+            <% if (aiOn) { %>
+              <%- include('partials/guide', {
+                fieldId: 'guide-c-' + e.id,
+                action: BASE + '/inbox/' + e.id + '/guide',
+                unguideAction: BASE + '/inbox/' + e.id + '/unguide',
+                placeholder: 'For example: It was our driver and he is being dealt with. Refund the fare.',
+                guided: guided[e.id] || null,
+                max: guideMax
+              }) %>
+            <% } %>
             <button type="submit" class="to-btn to-btn-primary"><%= conn.mailboxDemo || e.custom ? 'Mark as sent' : 'Save as a draft in ' + conn.mailbox %></button>
             <p class="to-small">Edit it first if you like. A person always sends; here nothing is sent at all.</p>
           </form>

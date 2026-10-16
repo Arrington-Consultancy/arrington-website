@@ -56,7 +56,7 @@
               <div><dt>To</dt><dd><%= d.data.to %></dd></div>
               <div><dt>Subject</dt><dd><%= d.data.subject %></dd></div>
             </dl>
-            <div class="to-reply-sent"><%= d.data.body %></div>
+            <div class="to-reply-sent"><%= licGuided[i.id] ? licGuided[i.id].reply : d.data.body %></div>
             <% if ((d.data.checklist || []).length) { %>
               <h3>Before it goes</h3>
               <ul class="to-checklist">
@@ -64,6 +64,19 @@
               </ul>
             <% } %>
             <p class="to-small">A person sends this from the office email. In this demo it goes nowhere.</p>
+            <% if (aiOn) { %>
+              <form method="post" action="<%= BASE %>/licensing/<%= i.id %>/guide" class="to-form">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <%- include('partials/guide', {
+                  fieldId: 'guide-l-' + i.id,
+                  action: BASE + '/licensing/' + i.id + '/guide',
+                  unguideAction: BASE + '/licensing/' + i.id + '/unguide',
+                  placeholder: 'For example: The new certificate is attached. Ask them to confirm the file is up to date.',
+                  guided: licGuided[i.id] || null,
+                  max: guideMax
+                }) %>
+              </form>
+            <% } %>
           </div>
         <% } %>
       </li>

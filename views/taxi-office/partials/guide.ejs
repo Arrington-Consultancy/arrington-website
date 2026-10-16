@@ -1,0 +1,25 @@
+<%#
+  The guide box under a draft (Tom, 16/10/2026: "a section where we can
+  guide it"). Staff say what the draft should say and the worker rewrites
+  it. It sits inside the draft's own form, so a reply edited by hand goes
+  with it and is kept. Locals: fieldId, action, unguideAction, placeholder,
+  guided (or null), max.
+%>
+<div class="to-guide">
+  <% if (guided) { %>
+    <p class="to-worker-tag">Redrafted with your guidance</p>
+    <ol class="to-guide-notes">
+      <% guided.notes.forEach(function (n) { %><li><%= n %></li><% }) %>
+    </ol>
+    <% if (guided.heldBack) { %><p class="to-note to-note-warn"><strong>From the AI:</strong> <%= guided.heldBack %></p><% } %>
+  <% } %>
+  <label class="to-field">
+    <span><%= guided ? 'Anything else?' : 'Guide the AI' %></span>
+    <textarea id="<%= fieldId %>" name="guidance" rows="3" maxlength="<%= max %>" placeholder="<%= placeholder %>" aria-describedby="<%= fieldId %>-help"></textarea>
+  </label>
+  <p class="to-small" id="<%= fieldId %>-help">Tell it what to say and it rewrites the draft. It does what you say, but it won't make anything up.</p>
+  <div class="to-guide-actions">
+    <button type="submit" class="to-btn" formaction="<%= action %>" data-busy="Redrafting...">Redraft with this</button>
+    <% if (guided) { %><button type="submit" class="to-btn to-btn-quiet" formaction="<%= unguideAction %>">Back to the first draft</button><% } %>
+  </div>
+</div>
