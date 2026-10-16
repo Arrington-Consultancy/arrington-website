@@ -6033,6 +6033,17 @@ only), and rebuilding a record as a new file would change its id and lose its
 formatting, so this is the only bypass. Merge the waiting notes into the live
 record once Zapier has tasks again.
 
+**Better first, since 16/10/2026: the Google Docs connector edits in
+place.** When a session has `read_doc`/`update_doc` (Google Docs connector),
+append straight to the log with no Zapier task: `read_doc` (the Handoff Log
+is about 1MB of JSON, so it is saved to a file), `docs_index.py outline` from
+the google-workspace skill for the body end and `revisionId`, then one
+`insertText` at body end minus 1, starting with a newline, guarded by
+`writeControl.requiredRevisionId`, and read back. Entries in the Website &
+Hosting log are plain NORMAL_TEXT paragraphs (a dated first line, a blank
+paragraph between entries, ending "Next controlled action: ..."). The
+standalone note stays the fallback when neither tool is available.
+
 ### "No default connection" is not "out of tasks" (03/10/2026)
 
 On 03/10/2026 a Google Docs call failed with "No default connection is set
