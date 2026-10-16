@@ -8225,6 +8225,51 @@ this has to sound human."
   days, accounts set up the same week, Steve Lakeman's 15 years) found in
   the made-up data. `RUN_TAXI_OFFICE_AI_CHECK` set back to empty.
 
+### Guide the AI (LIVE 16/10/2026)
+
+Tom: "In the AI response I would like a section where we can guide it, so
+for example in bookings you can write we are fully booked and it will guide
+ai to the response, in complaints you can guide it and say our records show
+that it was Brian and he will be disciplined or we will investigate etc".
+
+- **Where:** a "Guide the AI" box (`views/taxi-office/partials/guide.ejs`)
+  under every draft: Bookings and Customer emails replies (email page),
+  Complaints replies, and Licensing letters. Social has an optional "Anything
+  to mention this week?" note, used as fact. Shown only with the AI on.
+- **How:** the box sits inside the draft's own form, so the reply as edited
+  on screen goes with the note (`formaction`, and `public/js/taxi-office.js`
+  now uses `e.submitter` for the busy label). Notes build up, earliest first,
+  six kept; "Back to the first draft" throws them away; re-reading an email
+  or redrafting a complaint clears them. `office.guideReply` /
+  `guideLicensing`, `ai.redraft` (schema `{reply, held_back}`, kinds
+  bookings, customer, complaints, licensing). 20 redrafts per visitor an
+  hour (`LIMITS.guide`). Per session, never shared.
+- **What it may do:** staff guidance is the office's decision, so it is
+  followed, a refund included (the first draft may never offer money on its
+  own). It adds nothing beyond the email, the dispatch record, the firm's own
+  facts and what staff said. **A customer email never names a driver or says
+  what will happen to them, even if staff do**; it says the firm knows which
+  driver it was and is dealing with it, and `held_back` tells staff why on
+  screen. Tom's own example ("it was Brian and he will be disciplined") is
+  answered that way, deliberately: telling a customer a named driver is being
+  disciplined is the firm sharing an employee's disciplinary matter. If Tom
+  wants the name in, it is one line in `redraftSystem`. A letter to the
+  council may name the driver and licence.
+- **Tests:** `test/taxiOfficeGuide.test.js` (8; notes dropped and the driver
+  rule removed were each watched red). 40 office tests pass. The full suite
+  was not run for this change (Tom stopped the ten-minute run).
+- **Live:** commit `6fe0d82`, serving deployment `31b5e50f` (a redeploy of
+  `267a0794` so the check ran). Model check `office-20261016-g`: 13 of 13
+  emails as before, then Tom's examples on the real model: fully booked
+  (Sophie offered midnight instead, asked to reply or ring), the umbrella
+  handed in, and Ruth's complaint with "Our records show it was Dave and he
+  will be disciplined. Refund the £8.10 fare." The reply kept the facts,
+  said "We know which driver it was and we are dealing with it", offered the
+  refund, did not name Dave or mention discipline, and held_back explained
+  both, plus that she paid cash so the office will ring to arrange the
+  refund. The licensing letter took its note too. `RUN_TAXI_OFFICE_AI_CHECK`
+  set back to empty.
+
 ## Sale readiness page
 
 `/get-your-business-ready-to-sell` is a campaign landing page for social and
