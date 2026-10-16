@@ -6264,6 +6264,19 @@ Clarity and UET still send, because the report checks them. GA4 before
 rare. Its `submit=1` test enquiries also count as Paid Search in GA4
 (they carry `utm_medium=cpc`).
 
+**Numerals: the face actually drawn (16/10/2026, Tom: "checking times
+numeral is not on the site anywhere?").** Each page's report now has a
+`Numerals drawn in:` line (`scripts/renderedDigitFonts.js`): the browser is
+asked through DevTools (`CSS.getPlatformFontsForNode`) which face it drew for
+every visible element holding a digit, and any serif is named with its text.
+A code search cannot answer this, because a browser falls back to its default
+serif (Times on an iPhone) wherever text gets no font of ours. Run
+`20261016T090804Z-numeral-fonts`, every sitemap page plus the six demo pages,
+the start-up page, `/thank-you` and `/login`, desktop and phone (96 checks,
+all 200): no serif anywhere. Numerals are DM Sans and Poppins on the site and
+Schibsted Grotesk on the demo; `/login` has none. Tested on a deliberate
+control first (unstyled text reported as Liberation Serif).
+
 ## Business Consultant Cornwall page (01/10/2026)
 
 `/business-consultant-cornwall` is a public organic-search page, built on
