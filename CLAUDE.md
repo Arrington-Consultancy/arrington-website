@@ -8214,6 +8214,16 @@ this has to sound human."
   the name, "Thanks for your email." filler, and a council reference cut
   to "Hackney carriage lic" (a reference must now look like one, or it is
   left blank).
+- **Live, 16/10/2026:** commit `801bae0`, serving deployment `365d0ab0`
+  (twins `78de43bd`, which ran the seed and placed the Websites and AI
+  section, and `8cd683d1` REMOVED). Inspection run
+  `20261016T125931Z-staff-portal-live`: the staff portal page, the £999
+  page and Websites and AI all 200 at desktop and phone, no page errors,
+  no overflow, no dashes, no serif. Model check `office-20261016-f` on
+  that deployment, after the writing fixes: 13 of 13 again, the same three
+  complaint verdicts, no stock lines, every fact it used (lost property 28
+  days, accounts set up the same week, Steve Lakeman's 15 years) found in
+  the made-up data. `RUN_TAXI_OFFICE_AI_CHECK` set back to empty.
 
 ## Sale readiness page
 
