@@ -27,10 +27,11 @@
     </div>
     <nav class="to-wrap to-nav" aria-label="Office">
       <a href="<%= BASE %>/"<% if (section === 'today') { %> aria-current="page"<% } %>>Today</a>
-      <a href="<%= BASE %>/inbox"<% if (section === 'inbox') { %> aria-current="page"<% } %>><span class="to-long">Booking inbox</span><span class="to-short">Inbox</span><% if (counts.unread + counts.needAction) { %> <span class="to-count"><%= counts.unread + counts.needAction %></span><% } %></a>
+      <a href="<%= BASE %>/inbox"<% if (section === 'inbox') { %> aria-current="page"<% } %>>Inbox<% if (counts.unread + counts.needAction) { %> <span class="to-count"><%= counts.unread + counts.needAction %></span><% } %></a>
       <a href="<%= BASE %>/dispatch"<% if (section === 'dispatch') { %> aria-current="page"<% } %>>Dispatch</a>
+      <a href="<%= BASE %>/complaints"<% if (section === 'complaints') { %> aria-current="page"<% } %>>Complaints<% if (counts.complaintsOpen) { %> <span class="to-count"><%= counts.complaintsOpen %></span><% } %></a>
       <a href="<%= BASE %>/licensing"<% if (section === 'licensing') { %> aria-current="page"<% } %>>Licensing<% if (counts.licensingDue) { %> <span class="to-count"><%= counts.licensingDue %></span><% } %></a>
-      <a href="<%= BASE %>/social"<% if (section === 'social') { %> aria-current="page"<% } %>><span class="to-long">Social media</span><span class="to-short">Social</span></a>
+      <a href="<%= BASE %>/social"<% if (section === 'social') { %> aria-current="page"<% } %>>Social</a>
     </nav>
   </header>
   <main id="main" class="to-wrap to-main">

@@ -83,9 +83,10 @@ p { margin: 0 0 0.8rem; }
 .to-nav a[aria-current="page"] { color: #fff; border-bottom-color: var(--red); background: var(--night-2); }
 .to-count { background: var(--red); color: #fff; border-radius: 999px; font-size: 0.75rem; min-width: 1.4rem; padding: 0 0.4rem; text-align: center; font-variant-numeric: tabular-nums; }
 @media (max-width: 47.99rem) {
-  /* All five tabs on one phone screen: tighter, spread edge to edge. */
-  .to-nav { gap: 0; justify-content: space-between; }
-  .to-nav a { padding: 0.5rem 0.35rem; font-size: 0.85rem; gap: 0.3rem; }
+  /* Six tabs on a phone: two rows of three, every one visible, none hidden
+     off the edge of the screen. */
+  .to-nav { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; overflow: visible; }
+  .to-nav a { justify-content: center; padding: 0.5rem 0.25rem; font-size: 0.88rem; gap: 0.3rem; border-radius: 8px 8px 0 0; }
   .to-count { font-size: 0.7rem; min-width: 1.2rem; padding: 0 0.3rem; }
 }
 
@@ -100,6 +101,8 @@ p { margin: 0 0 0.8rem; }
 .to-note { padding: 0.6rem 0.8rem; border-radius: 8px; font-size: 0.92rem; }
 .to-note-warn { background: var(--warn-bg); color: var(--warn); }
 .to-note-ok { background: var(--ok-bg); color: var(--ok); }
+.to-note-bad { background: var(--bad-bg); color: var(--bad); }
+.to-note a { color: inherit; font-weight: 700; }
 .to-flash { padding: 0.7rem 0.9rem; border-radius: 8px; font-weight: 600; margin-bottom: 1.2rem; }
 .to-flash-ok { background: var(--ok-bg); color: var(--ok); }
 .to-flash-warn { background: var(--warn-bg); color: var(--warn); }
@@ -118,6 +121,13 @@ p { margin: 0 0 0.8rem; }
 .to-pill-bad { background: var(--bad-bg); color: var(--bad); }
 .to-pill-soon { background: var(--teal-pale); color: var(--teal); }
 .to-pill-neutral { background: var(--neutral-bg); color: var(--ink-2); }
+/* Which worker an email went to. */
+.to-chip { display: inline-block; font-size: 0.75rem; font-weight: 700; background: var(--night); color: var(--on-night); border-radius: 6px; padding: 0.1rem 0.45rem; white-space: nowrap; }
+
+/* The two connections the office runs on. */
+.to-connections { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 1.2rem; background: var(--paper); border: 1px dashed var(--line); border-radius: var(--radius); padding: 0.7rem 0.9rem; margin: 0 0 1.4rem; font-size: 0.92rem; }
+.to-connections .to-small { flex-basis: 100%; margin: 0; }
+
 .to-tag { display: inline-block; font-size: 0.72rem; font-weight: 700; background: var(--teal-pale); color: var(--teal); border-radius: 6px; padding: 0.05rem 0.4rem; vertical-align: 0.1em; }
 
 /* Today */
@@ -229,6 +239,28 @@ p { margin: 0 0 0.8rem; }
 .to-post img { width: 100%; aspect-ratio: 3 / 2; object-fit: cover; border-radius: 8px; display: block; height: auto; }
 .to-post-text { white-space: pre-line; line-height: 1.55; overflow-wrap: anywhere; }
 .to-post form { margin-top: auto; }
+
+/* Customer emails: the jobs it could be */
+.to-jobs { list-style: none; margin: 0; padding: 0; }
+.to-jobs li { display: flex; flex-wrap: wrap; gap: 0.2rem 0.6rem; padding: 0.55rem 0; border-top: 1px solid var(--line); }
+.to-jobs .to-small { flex-basis: 100%; }
+
+/* Complaints */
+.to-complaints { list-style: none; margin: 0; padding: 0; }
+.to-complaint { scroll-margin-top: 8rem; }
+.to-complaint h2 { margin-bottom: 0.2rem; }
+.to-complaint h3 { margin-top: 0.9rem; }
+.to-complaint-grid { display: grid; gap: 0 1.4rem; grid-template-columns: 1fr; }
+@media (min-width: 52rem) { .to-complaint-grid { grid-template-columns: 3fr 2fr; } }
+.to-record { list-style: none; margin: 0 0 0.6rem; padding: 0; }
+.to-record li { padding: 0.45rem 0 0.45rem 0.7rem; border-left: 3px solid var(--sand-2); margin-bottom: 0.3rem; font-size: 0.95rem; }
+
+/* Dispatch: completed days folded away */
+.to-past summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.6rem; }
+.to-past summary::-webkit-details-marker { display: none; }
+.to-past summary::before { content: '\25B8'; color: var(--red); font-size: 0.9rem; }
+.to-past[open] summary::before { content: '\25BE'; }
+.to-past summary h2 { margin: 0; }
 
 /* Footer */
 .to-foot { background: var(--night); color: var(--on-night-muted); font-size: 0.88rem; }

@@ -2,8 +2,21 @@
 <section class="to-hero">
   <p class="to-eyebrow">AI worker</p>
   <h1>Licensing</h1>
-  <p class="to-lede">Every driver badge, vehicle licence, MOT and insurance date in one register. The AI drafts what goes to the council's licensing team; a person checks it, attaches the papers and sends it. It never writes to the council itself.</p>
+  <p class="to-lede">Every driver badge, vehicle licence, MOT and insurance date in one register, and any safety report passed on by Complaints. The AI drafts what goes to the council's licensing team; a person checks it, attaches the papers and sends it. It never writes to the council itself.</p>
 </section>
+
+<% if (passed.length) { %>
+  <section class="to-panel to-council" id="from-complaints">
+    <p class="to-worker-tag">Passed from Complaints</p>
+    <h2>Safety reports to keep on file</h2>
+    <p class="to-small">The Complaints worker passes anything about safety here, so it sits with the driver's or the vehicle's record. Whether the council needs to be told is for the office to check against the council's own conditions.</p>
+    <ul class="to-record">
+      <% passed.forEach(function (c) { %>
+        <li><strong><%= c.email.from.replace(/\s*<.*$/, '') %>, <%= shortDate(c.email.receivedAt.slice(0, 10)) %>:</strong> <%= c.complaint.data.licensing_note %> <a href="<%= BASE %>/complaints#c-<%= c.email.id %>">The complaint</a></li>
+      <% }) %>
+    </ul>
+  </section>
+<% } %>
 
 <% councilEmails.forEach(function (e) { var item = items.find(function (i) { return i.council === e.id; }); %>
   <section class="to-panel to-council">

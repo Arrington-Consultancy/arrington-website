@@ -2,14 +2,20 @@
 
 // Tidewell Cars office (/taxi-demo/office): the staff side of the taxi demo,
 // built for showing operators what AI workers do in a taxi office (Tom,
-// 16/10/2026: "I want a staff portal taxi related I can show Dan").
+// 16/10/2026: "I want a staff portal taxi related I can show Dan", then the
+// same day: an email connector, customer emails as their own worker, the
+// iCabbi API to book jobs in, and complaints as a worker of their own).
 //
-// Three AI workers, all drafting, none sending:
-//   - Booking inbox: reads each booking email, checks it against the
-//     dispatch board (plain code decides whether it matches), and drafts
-//     the reply. Staff put dispatch right with one click and "send".
-//   - Licensing: the renewals register, and drafts for the council's
-//     licensing team. Never writes to the council itself.
+// Five AI workers (lib/taxiOffice/workers.js), all drafting, none sending:
+//   - Bookings: reads booking emails, checks them against dispatch (plain
+//     code decides), and books, corrects or cancels through the dispatch
+//     connection. Drafts the reply.
+//   - Customer emails: lost property, accounts, questions; looks up the
+//     journey in dispatch where the answer is there.
+//   - Complaints: pulls the job's record from dispatch and drafts the reply
+//     from it; passes safety matters to Licensing.
+//   - Licensing: the renewals register, drafts for the council's licensing
+//     team, and what Complaints passes on. Never writes to the council.
 //   - Social: drafts the week's posts for the owner to approve.
 //
 // Who can open it: the same people who can open the Scott demonstration
@@ -28,6 +34,7 @@ const office = require('../lib/taxiOffice/office');
 const data = require('../lib/taxiOffice/data');
 const match = require('../lib/taxiOffice/match');
 const ai = require('../lib/taxiOffice/ai');
+const workers = require('../lib/taxiOffice/workers');
 const { FIRM } = require('../taxi-demo/lib/firm');
 
 const BASE = '/taxi-demo/office';
@@ -75,6 +82,9 @@ function render(req, res, view, locals) {
     user: req.session.user,
     STATUS: match.STATUS,
     VEHICLE_LABELS: match.VEHICLE_LABELS,
+    WORKERS: workers.WORKERS,
+    WORKER: workers.byId,
+    conn: office.connections(),
     longDate: data.longDate,
     shortDate: data.shortDate,
     weekday: data.weekday,
@@ -88,25 +98,29 @@ function mountPageRoute(app) {
   const page = (path, handler) => app.get(BASE + path, noindex, requireOfficeAccess, VIEW(handler));
   const post = (path, handler) => app.post(BASE + path, noindex, requireOfficeAccess, VIEW(handler));
 
-  page('/', (req, res) => {
+  const rows = (s) => office.inbox(s).map((e) => ({ email: e, status: office.readingStatus(s, e), worker: office.workerOf(s, e), reading: s.readings[e.id] || null, sent: Boolean(s.sent[e.id]) }));
+
+  page('/', async (req, res) => {
     const s = stateOf(req);
-    const emails = office.inbox(s).map((e) => ({ email: e, status: office.readingStatus(s, e) }));
+    await office.refreshMailbox(s);
+    const emails = rows(s);
     const reg = office.register(s).filter((i) => i.urgency.level !== 'ok');
     const todayJobs = s.board.filter((j) => j.date === s.today).sort((a, b) => a.time.localeCompare(b.time));
-    render(req, res, 'today', { section: 'today', emails, reg, todayJobs, changes: s.changes.slice(0, 5), social: s.social, approved: s.approved });
+    render(req, res, 'today', { section: 'today', emails, reg, todayJobs, complaints: office.complaintsLog(s), passed: office.passedToLicensing(s), changes: s.changes.slice(0, 5), social: s.social, approved: s.approved });
   });
 
-  page('/inbox', (req, res) => {
+  page('/inbox', async (req, res) => {
     const s = stateOf(req);
-    const emails = office.inbox(s).map((e) => ({ email: e, status: office.readingStatus(s, e), reading: s.readings[e.id] || null, sent: Boolean(s.sent[e.id]) }));
-    render(req, res, 'inbox', { section: 'inbox', emails, limit: office.LIMITS.custom });
+    const mail = await office.refreshMailbox(s);
+    if (!mail.ok) flash(s, `The mailbox could not be read just now: ${mail.message}`, 'warn');
+    render(req, res, 'inbox', { section: 'inbox', emails: rows(s), limit: office.LIMITS.custom });
   });
 
   post('/inbox/check-all', async (req, res) => {
     const s = stateOf(req);
     const n = await office.readAll(s);
-    flash(s, n ? `Read ${n} email${n === 1 ? '' : 's'} and checked them against dispatch.` : 'Every email has already been read.');
-    res.redirect(303, BASE + '/inbox');
+    flash(s, n ? `Read ${n} email${n === 1 ? '' : 's'} and passed each one to its worker.` : 'Every email has already been read.');
+    res.redirect(303, BASE + (req.body.back === 'today' ? '/' : '/inbox'));
   });
 
   post('/inbox/new', async (req, res) => {
@@ -127,8 +141,10 @@ function mountPageRoute(app) {
     const reading = s.readings[email.id] || null;
     const cmp = reading && reading.data ? match.compare(reading.data, s.board) : null;
     const status = office.readingStatus(s, email);
-    const regItem = email.routeTo === 'licensing' ? office.register(s).find((i) => i.council === email.id) : null;
-    render(req, res, 'email', { section: 'inbox', email, reading, cmp, status, sent: s.sent[email.id] || null, regItem });
+    const worker = office.workerOf(s, email);
+    const regItem = worker === 'licensing' ? office.register(s).find((i) => i.council === email.id) : null;
+    const pastJobs = worker === 'customer' ? office.pastJobsFor(s, email) : [];
+    render(req, res, 'email', { section: 'inbox', email, reading, cmp, status, worker, sent: s.sent[email.id] || null, regItem, pastJobs, complaint: s.complaints[email.id] || null });
   });
 
   post('/inbox/:id/read', async (req, res) => {
@@ -139,22 +155,35 @@ function mountPageRoute(app) {
     res.redirect(303, `${BASE}/inbox/${email.id}`);
   });
 
-  post('/inbox/:id/fix', (req, res) => {
+  post('/inbox/:id/fix', async (req, res) => {
     const s = stateOf(req);
     const email = office.findEmail(s, req.params.id);
     if (!email) return render404(req, res);
-    const r = office.fixLeg(s, email, Number.parseInt(req.body.leg, 10));
+    const r = await office.fixLeg(s, email, Number.parseInt(req.body.leg, 10));
     flash(s, r.message, r.ok ? 'ok' : 'warn');
     res.redirect(303, `${BASE}/inbox/${email.id}`);
   });
 
-  post('/inbox/:id/send', (req, res) => {
+  post('/inbox/:id/send', async (req, res) => {
     const s = stateOf(req);
     const email = office.findEmail(s, req.params.id);
     if (!email) return render404(req, res);
-    const r = office.markSent(s, email, req.body.reply);
+    const r = await office.markSent(s, email, req.body.reply);
     flash(s, r.message, r.ok ? 'ok' : 'warn');
-    res.redirect(303, `${BASE}/inbox/${email.id}`);
+    res.redirect(303, req.body.back === 'complaints' ? `${BASE}/complaints#c-${email.id}` : `${BASE}/inbox/${email.id}`);
+  });
+
+  page('/complaints', (req, res) => {
+    const s = stateOf(req);
+    render(req, res, 'complaints', { section: 'complaints', log: office.complaintsLog(s), unread: office.inbox(s).filter((e) => !(s.readings[e.id] && s.readings[e.id].data)).length });
+  });
+
+  post('/complaints/:id/draft', async (req, res) => {
+    const s = stateOf(req);
+    const email = office.findEmail(s, req.params.id);
+    if (!email) return render404(req, res);
+    await office.handleComplaint(s, email, { force: req.body.again === '1' });
+    res.redirect(303, `${BASE}/complaints#c-${email.id}`);
   });
 
   page('/dispatch', (req, res) => {
@@ -172,8 +201,8 @@ function mountPageRoute(app) {
   page('/licensing', (req, res) => {
     const s = stateOf(req);
     const items = office.register(s);
-    const councilEmails = office.inbox(s).filter((e) => e.routeTo === 'licensing');
-    render(req, res, 'licensing', { section: 'licensing', items, drafts: s.licensing, councilEmails });
+    const councilEmails = office.inbox(s).filter((e) => e.routeTo === 'licensing' || office.workerOf(s, e) === 'licensing');
+    render(req, res, 'licensing', { section: 'licensing', items, drafts: s.licensing, councilEmails, passed: office.passedToLicensing(s) });
   });
 
   post('/licensing/:id/draft', async (req, res) => {

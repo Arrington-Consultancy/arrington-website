@@ -17,17 +17,33 @@ const office = require('../lib/taxiOffice/office');
 const ROOT = path.join(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 
+const workers = require('../lib/taxiOffice/workers');
+const { humanise } = require('../lib/taxiOffice/humanise');
+
 const EXPECTED = {
   hollis: 'match', gregory: 'differs', turner: 'missing', patel: 'differs', rowe: 'needs_details',
-  clarke: 'missing', fowler: 'to_cancel', umbrella: 'not_booking', 'council-14': 'council'
+  clarke: 'missing', fowler: 'to_cancel', umbrella: 'not_booking', fenwick: 'not_booking', 'council-14': 'council',
+  daniels: 'complaint', holt: 'complaint', carr: 'complaint'
 };
+const WORKER = {
+  hollis: 'bookings', gregory: 'bookings', turner: 'bookings', patel: 'bookings', rowe: 'bookings', clarke: 'bookings', fowler: 'bookings',
+  umbrella: 'customer', fenwick: 'customer', 'council-14': 'licensing', daniels: 'complaints', holt: 'complaints', carr: 'complaints'
+};
+// The completed job each complaint is about, and the candidates for the
+// umbrella left in a car "Exeter to Exmouth about 11pm last night".
+const PAST = { daniels: ['TW-41152'], holt: ['TW-41158'], carr: ['TW-41140'], umbrella: ['TW-41160', 'TW-41158'] };
 
-test('every demo email reaches the intended verdict, whatever day of the week the office is opened', () => {
+test('every demo email reaches the intended worker and verdict, whatever day of the week the office is opened', () => {
   for (let n = 0; n < 7; n++) {
     const today = data.addDays('2026-10-12', n);
     const board = data.seedBoard(today);
-    for (const email of data.seedInbox(today)) {
-      assert.equal(match.compare(email.prepared, board).status, EXPECTED[email.id], `${email.id} on ${data.weekday(today)}`);
+    const inbox = data.seedInbox(today);
+    assert.deepEqual(inbox.map((e) => e.id).sort(), Object.keys(EXPECTED).sort());
+    for (const email of inbox) {
+      const day = `${email.id} on ${data.weekday(today)}`;
+      assert.equal(match.compare(email.prepared, board).status, EXPECTED[email.id], day);
+      assert.equal(workers.workerForIntent(email.prepared.intent), WORKER[email.id], day);
+      if (PAST[email.id]) assert.deepEqual(match.findPastJobs(email.prepared, email.prepared.journeys[0], board).map((j) => j.ref), PAST[email.id], day);
     }
   }
 });
@@ -66,22 +82,40 @@ test('a wheelchair job on the board in a car is flagged; "a taxi" is not a reque
   assert.deepEqual(match.diffJourney({ ...job, vehicle: 'estate' }, job), []);
 });
 
-test('putting dispatch right: add, correct and cancel, each only when the check calls for it', () => {
+test('putting dispatch right: book, correct and cancel through the dispatch connection, each only when the check calls for it', async () => {
   const s = office.stateFor('test-fix-' + Date.now());
   const inbox = office.inbox(s);
   const email = (id) => inbox.find((e) => e.id === id);
   for (const id of ['gregory', 'clarke', 'fowler', 'hollis']) s.readings[id] = { data: email(id).prepared, source: 'prepared' };
-  assert.equal(office.fixLeg(s, email('gregory'), 0).ok, true);
+  assert.equal((await office.fixLeg(s, email('gregory'), 0)).ok, true);
   assert.equal(s.board.find((j) => j.ref === 'TW-41203').time, '05:30');
   assert.equal(office.readingStatus(s, email('gregory')).key, 'match');
-  const added = office.fixLeg(s, email('clarke'), 1);
-  assert.match(added.message, /^Added to dispatch as TW-4\d{4}\.$/);
+  const added = await office.fixLeg(s, email('clarke'), 1);
+  assert.match(added.message, /^Booked into dispatch as TW-4\d{4}\.$/);
   assert.equal(office.readingStatus(s, email('clarke')).key, 'match');
-  assert.equal(office.fixLeg(s, email('fowler'), 0).ok, true);
+  assert.equal((await office.fixLeg(s, email('fowler'), 0)).ok, true);
   assert.equal(s.board.find((j) => j.ref === 'TW-41191').status, 'cancelled');
-  assert.equal(office.fixLeg(s, email('hollis'), 0).ok, false, 'nothing to put right on a matching job');
-  assert.equal(office.markSent(s, email('hollis'), '   ').ok, false);
-  assert.equal(office.markSent(s, email('hollis'), 'Dear Margaret').ok, true);
+  assert.equal((await office.fixLeg(s, email('hollis'), 0)).ok, false, 'nothing to put right on a matching job');
+  assert.equal((await office.markSent(s, email('hollis'), '   ')).ok, false);
+  assert.equal((await office.markSent(s, email('hollis'), 'Dear Margaret')).ok, true);
+});
+
+test('with iCabbi as the dispatch connection, a booking goes to its slot, which refuses and says what it needs; the board does not change', async () => {
+  const { createOfficeDispatch } = require('../lib/taxiOffice/dispatch');
+  office.__setConnectionsForTests({ disp: createOfficeDispatch('icabbi') });
+  try {
+    const s = office.stateFor('test-icabbi-' + Date.now());
+    const turner = office.inbox(s).find((e) => e.id === 'turner');
+    s.readings.turner = { data: turner.prepared, source: 'prepared' };
+    const before = s.board.length;
+    const r = await office.fixLeg(s, turner, 0);
+    assert.equal(r.ok, false);
+    assert.match(r.message, /^iCabbi is not connected yet\. It needs access to the iCabbi booking API/);
+    assert.equal(s.board.length, before);
+    assert.equal(office.connections().dispatch, 'iCabbi');
+  } finally {
+    office.__setConnectionsForTests({ disp: null });
+  }
 });
 
 test('with the AI off, the office shows the prepared answer and says so; a new email cannot be read', async () => {

@@ -1,0 +1,97 @@
+<%- include('partials/top', { title: 'Complaints' }) %>
+<%
+  var CAT = { lateness: 'Late', no_show: 'No show', fare: 'Fare', driver_conduct: 'Driver', safety: 'Safety', vehicle: 'Vehicle', other: 'Other' };
+  var FAULT = { yes: 'Our fault', no: 'Charge was right', partly: 'Partly our fault', unclear: 'Being looked into' };
+%>
+<section class="to-hero">
+  <p class="to-eyebrow">AI worker</p>
+  <h1>Complaints</h1>
+  <p class="to-lede">Every complaint is logged here. The worker pulls the job from dispatch, so the reply rests on what actually happened, not on a guess, and drafts it. Anything about money is the office's decision, and anything about safety goes to Licensing too.</p>
+</section>
+
+<% if (!log.length) { %>
+  <section class="to-panel">
+    <h2>No complaints read yet</h2>
+    <p><%= unread ? unread + ' email' + (unread === 1 ? '' : 's') + ' in the inbox ' + (unread === 1 ? "hasn't" : "haven't") + ' been read. Complaints turn up here once they are.' : 'Nothing in the inbox is a complaint.' %></p>
+    <% if (unread) { %>
+      <form method="post" action="<%= BASE %>/inbox/check-all" class="to-inline-form">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <button type="submit" class="to-btn to-btn-primary" data-busy="Reading the inbox...">Read the inbox</button>
+      </form>
+    <% } %>
+  </section>
+<% } %>
+
+<ol class="to-complaints">
+  <% log.forEach(function (c) { var e = c.email; var k = c.complaint; var d = k && k.data; %>
+    <li class="to-complaint to-panel" id="c-<%= e.id %>">
+      <div class="to-panel-head">
+        <div>
+          <h2><%= e.from.replace(/\s*<.*$/, '') %></h2>
+          <p class="to-small">Logged <%= longDate(e.receivedAt.slice(0, 10)) %> at <%= e.receivedAt.slice(11) %>: <a href="<%= BASE %>/inbox/<%= e.id %>"><%= e.subject %></a></p>
+        </div>
+        <span>
+          <% if (d) { %><span class="to-chip"><%= CAT[d.category] || 'Other' %></span> <% } %>
+          <span class="to-pill to-pill-<%= c.sent ? 'ok' : 'bad' %>"><%= c.sent ? 'Replied' : 'Open' %></span>
+        </span>
+      </div>
+
+      <% if (!d) { %>
+        <% if (k && k.note) { %><p class="to-note to-note-warn"><%= k.note %></p><% } %>
+        <form method="post" action="<%= BASE %>/complaints/<%= e.id %>/draft" class="to-inline-form">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <button type="submit" class="to-btn to-btn-primary" data-busy="Looking into it...">Look into it</button>
+        </form>
+      <% } else { %>
+        <p class="to-worker-tag"><%= k.source === 'ai' ? 'Drafted by the AI' : 'Prepared for the demo' %></p>
+        <% if (k.note) { %><p class="to-note to-note-warn"><%= k.note %></p><% } %>
+        <div class="to-complaint-grid">
+          <div>
+            <h3>What they say</h3>
+            <p><%= d.summary %></p>
+            <h3>What dispatch shows</h3>
+            <% if (k.lines && k.lines.length) { %>
+              <ul class="to-record">
+                <% k.lines.forEach(function (l) { %><li><%= l %></li><% }) %>
+              </ul>
+              <p class="to-small">Pulled from dispatch by plain code. The reply may rest on these facts and nothing else.</p>
+            <% } else { %>
+              <p><%= k.candidates && k.candidates.length > 1 ? 'More than one job could fit (' + k.candidates.join(', ') + '), so the reply asks the customer which.' : 'No matching job was found, so the reply asks for the booking reference or the time and route.' %></p>
+            <% } %>
+            <p><span class="to-pill to-pill-<%= d.firm_at_fault === 'yes' || d.firm_at_fault === 'partly' ? 'warn' : (d.firm_at_fault === 'no' ? 'ok' : 'neutral') %>"><%= FAULT[d.firm_at_fault] || 'Being looked into' %></span></p>
+          </div>
+          <div>
+            <h3>For the office</h3>
+            <ul class="to-checklist">
+              <% d.staff_steps.forEach(function (st) { %><li><%= st %></li><% }) %>
+            </ul>
+            <% if (d.for_licensing) { %>
+              <p class="to-note to-note-bad"><strong>Passed to Licensing.</strong> <%= d.licensing_note %> <a href="<%= BASE %>/licensing#from-complaints">See it in Licensing</a></p>
+            <% } %>
+          </div>
+        </div>
+        <h3>Draft reply</h3>
+        <% if (c.sent) { %>
+          <p class="to-note to-note-ok"><%= c.sent.where ? 'Saved as a draft in ' + c.sent.where + ' for someone to send.' : 'Marked as sent. In this demo nothing leaves the office.' %></p>
+          <div class="to-reply-sent"><%= c.sent.text %></div>
+        <% } else { %>
+          <form method="post" action="<%= BASE %>/inbox/<%= e.id %>/send" class="to-form">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input type="hidden" name="back" value="complaints">
+            <label class="to-field"><span class="to-sr">Reply to <%= e.from.replace(/\s*<.*$/, '') %></span><textarea id="reply-c-<%= e.id %>" name="reply" rows="10" maxlength="3000"><%= d.reply %></textarea></label>
+            <button type="submit" class="to-btn to-btn-primary"><%= conn.mailboxDemo || e.custom ? 'Mark as sent' : 'Save as a draft in ' + conn.mailbox %></button>
+            <p class="to-small">Edit it first if you like. A person always sends; here nothing is sent at all.</p>
+          </form>
+        <% } %>
+        <% if (k.source !== 'ai' && aiOn) { %>
+          <form method="post" action="<%= BASE %>/complaints/<%= e.id %>/draft" class="to-inline-form">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input type="hidden" name="again" value="1">
+            <button type="submit" class="to-btn to-btn-quiet" data-busy="Looking into it...">Ask the AI to draft it</button>
+          </form>
+        <% } %>
+      <% } %>
+    </li>
+  <% }) %>
+</ol>
+<%- include('partials/bottom') %>

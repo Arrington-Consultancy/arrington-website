@@ -2,34 +2,42 @@
 <section class="to-hero">
   <p class="to-eyebrow">The booking software</p>
   <h1>Dispatch board</h1>
-  <p class="to-lede">This stands in for the firm's own dispatch system. On a live build the office reads and writes the real one, such as iCabbi, Autocab or Cordic, through its booking API, with access arranged with the provider.</p>
+  <p class="to-lede">This stands in for the firm's own dispatch system. The Bookings worker books, corrects and cancels jobs through a connection, never by hand. On a live office that connection is the firm's iCabbi, Autocab or Cordic booking API, the same one its booking website uses, with access arranged with the provider.</p>
 </section>
 
-<% days.forEach(function (d) { %>
+<p class="to-connections"><span><strong>Dispatch:</strong> <%= conn.dispatch %></span><span class="to-small"><%= conn.dispatchDemo ? 'Your own copy of a made-up board. What you book, correct or cancel here is cleared after four hours.' : 'Bookings from the office go into this system.' %></span></p>
+
+<% days.forEach(function (d) { var past = d.date < today; %>
   <section class="to-section">
-    <h2><%= d.date === today ? 'Today, ' + longDate(d.date) : longDate(d.date) %></h2>
+    <% if (past) { %><details class="to-past"><summary><h2><%= longDate(d.date) %>, completed</h2></summary><% } else { %><h2><%= d.date === today ? 'Today, ' + longDate(d.date) : longDate(d.date) %></h2><% } %>
     <div class="to-table-wrap">
       <table class="to-table">
         <thead>
-          <tr><th scope="col">Time</th><th scope="col">Ref</th><th scope="col">Customer</th><th scope="col">Pickup</th><th scope="col">Destination</th><th scope="col">Pax</th><th scope="col">Vehicle</th><th scope="col">Came in by</th><th scope="col">Status</th></tr>
+          <tr><th scope="col">Time</th><th scope="col">Ref</th><th scope="col">Customer</th><th scope="col">Pickup</th><th scope="col">Destination</th><th scope="col">Pax</th><th scope="col">Vehicle</th><th scope="col"><%= past ? 'Driver and car' : 'Came in by' %></th><th scope="col"><%= past ? 'Fare' : 'Status' %></th></tr>
         </thead>
         <tbody>
           <% d.jobs.forEach(function (j) { %>
             <tr class="<%= j.status === 'cancelled' ? 'is-cancelled' : '' %><%= j.changed ? ' is-changed' : '' %>">
               <td class="to-time"><%= j.time %></td>
               <td class="to-ref"><%= j.ref %></td>
-              <td><%= j.name %><% if (j.notes) { %><span class="to-cell-note"><%= j.notes %></span><% } %></td>
+              <td><%= j.name %><% if (j.notes) { %><span class="to-cell-note"><%= j.notes %></span><% } %><% if (j.record && j.record.controller) { %><span class="to-cell-note">Controller: <%= j.record.controller %></span><% } %></td>
               <td><%= j.pickup %></td>
               <td><%= j.destination %></td>
               <td class="to-num"><%= j.passengers %></td>
               <td><%= VEHICLE_LABELS[j.vehicle] || j.vehicle %></td>
-              <td><%= j.source %></td>
-              <td><% if (j.status === 'cancelled') { %><span class="to-pill to-pill-neutral">Cancelled</span><% } else if (j.changed === 'added') { %><span class="to-pill to-pill-ok">Added today</span><% } else if (j.changed === 'updated') { %><span class="to-pill to-pill-ok">Corrected</span><% } else { %><span class="to-pill to-pill-neutral">Booked</span><% } %></td>
+              <% if (past) { %>
+                <td><%= j.record ? j.record.driver + ', ' + j.record.car + ' ' + j.record.reg : '' %></td>
+                <td class="to-num"><%= j.record ? j.record.fare : '' %></td>
+              <% } else { %>
+                <td><%= j.source %></td>
+                <td><% if (j.status === 'cancelled') { %><span class="to-pill to-pill-neutral">Cancelled</span><% } else if (j.changed === 'added') { %><span class="to-pill to-pill-ok">Booked today</span><% } else if (j.changed === 'updated') { %><span class="to-pill to-pill-ok">Corrected</span><% } else { %><span class="to-pill to-pill-neutral">Booked</span><% } %></td>
+              <% } %>
             </tr>
           <% }) %>
         </tbody>
       </table>
     </div>
+    <% if (past) { %></details><% } %>
   </section>
 <% }) %>
 <%- include('partials/bottom') %>

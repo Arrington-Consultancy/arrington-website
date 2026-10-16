@@ -1,14 +1,16 @@
-<%- include('partials/top', { title: 'Booking inbox' }) %>
+<%- include('partials/top', { title: 'Inbox' }) %>
 <section class="to-hero">
-  <p class="to-eyebrow">AI worker</p>
-  <h1>Booking inbox</h1>
-  <p class="to-lede">The AI reads each email into booking details. Plain code then checks those details against the jobs in dispatch, so a job that was never keyed in, or keyed in wrong, is caught before the car is due.</p>
+  <p class="to-eyebrow">The office inbox</p>
+  <h1>Inbox</h1>
+  <p class="to-lede">Bookings, complaints, questions and the council all land here, the way they do in a real office. The AI reads each email and plain code passes it to the worker it belongs to: Bookings, Customer emails, Complaints or Licensing.</p>
   <form method="post" action="<%= BASE %>/inbox/check-all" class="to-inline-form">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-    <button type="submit" class="to-btn to-btn-primary" data-busy="Reading the inbox...">Check the whole inbox</button>
+    <button type="submit" class="to-btn to-btn-primary" data-busy="Reading the inbox...">Read the whole inbox</button>
     <span class="to-small">Takes a few seconds while the AI reads each one.</span>
   </form>
 </section>
+
+<p class="to-connections"><span><strong>Mailbox:</strong> <%= conn.mailbox %></span><span class="to-small"><%= conn.mailboxDemo ? 'Made-up emails for this demo. On a live office this is the firm\'s own Gmail or Outlook inbox, read through its API, and a reply is saved as a draft in that inbox for someone to send.' : 'Replies are saved as drafts in this mailbox, on the same thread, for someone to send.' %></span></p>
 
 <ul class="to-inbox" aria-label="Emails">
   <% emails.forEach(function (row) { var e = row.email; %>
@@ -17,7 +19,7 @@
         <span class="to-inbox-from"><%= e.from.replace(/\s*<.*$/, '') %><% if (e.custom) { %> <span class="to-tag">Your test email</span><% } %></span>
         <span class="to-inbox-subject"><%= e.subject %></span>
         <span class="to-inbox-when"><%= e.receivedAt.slice(0, 10) === today ? 'Today ' + e.receivedAt.slice(11) : shortDate(e.receivedAt.slice(0, 10)) + ' ' + e.receivedAt.slice(11) %></span>
-        <span class="to-inbox-status"><span class="to-pill to-pill-<%= row.status.tone %>"><%= row.status.label %></span><% if (row.sent) { %> <span class="to-pill to-pill-ok">Replied</span><% } %></span>
+        <span class="to-inbox-status"><% if (row.worker) { %><span class="to-chip"><%= WORKER[row.worker].name %></span> <% } %><span class="to-pill to-pill-<%= row.status.tone %>"><%= row.status.label %></span><% if (row.sent) { %> <span class="to-pill to-pill-ok">Replied</span><% } %></span>
       </a>
     </li>
   <% }) %>
@@ -25,7 +27,7 @@
 
 <section class="to-section to-panel" id="write">
   <h2>Try one of your own</h2>
-  <p>Write a booking email the way a customer would, and see the AI read it and check it against today's dispatch board. Use made-up details: places around Exmouth and Exeter work best.</p>
+  <p>Write an email the way a customer would: a booking, a complaint, a lost phone. Watch the AI read it, pass it to the right worker and check it against today's dispatch board. Use made-up details; places around Exmouth and Exeter work best.</p>
   <form method="post" action="<%= BASE %>/inbox/new" class="to-form">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <div class="to-field-row">

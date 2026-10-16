@@ -1513,6 +1513,8 @@ loadPermissions().then(() => {
     {
       const taxiOfficeAi = require('./lib/taxiOffice/ai');
       console.log(taxiOfficeAi.describeAiStatus());
+      console.log(require('./lib/taxiOffice/mail').describeMailStatus());
+      console.log(require('./lib/taxiOffice/dispatch').describeDispatchStatus());
       if (taxiOfficeAi.aiEnabled()) {
         taxiOfficeAi.probe().then((r) => console.log(`Taxi office AI probe: ${r.ok ? 'ok' : 'FAILED'}, ${r.message}`));
         // One-off: set for a single deploy to run the real model over the

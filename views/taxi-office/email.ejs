@@ -1,5 +1,5 @@
 <%- include('partials/top', { title: email.subject }) %>
-<p class="to-back"><a href="<%= BASE %>/inbox">Booking inbox</a></p>
+<p class="to-back"><a href="<%= BASE %>/inbox">Inbox</a></p>
 
 <div class="to-email-grid">
   <article class="to-email" aria-label="The email">
@@ -14,20 +14,20 @@
   <div class="to-work">
     <% if (!reading || !reading.data) { %>
       <section class="to-panel to-start">
-        <p class="to-worker-tag">AI worker: booking inbox</p>
-        <h2>Not read yet</h2>
+        <p class="to-worker-tag">Not read yet</p>
+        <h2>Read it and pass it on</h2>
         <% if (reading && reading.note) { %><p class="to-note to-note-warn"><%= reading.note %></p><% } %>
-        <p>The AI reads the email into booking details, then plain code checks them against today's dispatch board.</p>
+        <p>The AI reads the email and works out what it is. Plain code then passes it to Bookings, Customer emails, Complaints or Licensing, and checks it against dispatch.</p>
         <form method="post" action="<%= BASE %>/inbox/<%= email.id %>/read">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <button type="submit" class="to-btn to-btn-primary" data-busy="Reading the email...">Read this email</button>
         </form>
       </section>
-    <% } else { var x = reading.data; %>
+    <% } else { var x = reading.data; var W = WORKER[worker]; %>
       <section class="to-panel">
         <div class="to-panel-head">
           <p class="to-worker-tag"><%= reading.source === 'ai' ? 'Read by the AI' : 'Prepared for the demo' %></p>
-          <span class="to-pill to-pill-<%= status.tone %>"><%= status.label %></span>
+          <span><span class="to-chip"><%= W.name %></span> <span class="to-pill to-pill-<%= status.tone %>"><%= status.label %></span></span>
         </div>
         <% if (reading.note) { %><p class="to-note to-note-warn"><%= reading.note %></p><% } %>
         <p class="to-summary"><%= x.summary %></p>
@@ -41,16 +41,42 @@
         <% } %>
       </section>
 
-      <% if (email.routeTo === 'licensing') { %>
+      <% if (worker === 'licensing') { %>
         <section class="to-panel">
+          <p class="to-worker-tag">Passed to Licensing</p>
           <h2>This one is for Licensing</h2>
-          <p>It is from the council's licensing team, not a customer, so the booking desk has passed it to the licensing worker<% if (regItem) { %>, filed against <strong><%= regItem.subject %></strong><% } %>.</p>
+          <p>It's from the council's licensing team, not a customer, so it has gone to the Licensing worker<% if (regItem) { %> and been filed against <strong><%= regItem.subject %></strong><% } %>.</p>
           <a class="to-btn" href="<%= BASE %>/licensing<% if (regItem) { %>#item-<%= regItem.id %><% } %>">Open it in Licensing</a>
         </section>
+      <% } else if (worker === 'complaints') { %>
+        <section class="to-panel">
+          <p class="to-worker-tag">Passed to Complaints</p>
+          <h2>This one is a complaint</h2>
+          <% if (complaint && complaint.data) { %>
+            <p><%= complaint.jobRef ? 'The Complaints worker found the job in dispatch (' + complaint.jobRef + ') and drafted a reply from what the record shows.' : 'The Complaints worker could not match it to one job in dispatch, so the draft asks the customer for the details.' %><% if (complaint.data.for_licensing) { %> It has also passed it to Licensing, because it's about safety.<% } %></p>
+          <% } else { %>
+            <p>The Complaints worker looks up the job in dispatch and drafts the reply from the record.</p>
+          <% } %>
+          <a class="to-btn to-btn-primary" href="<%= BASE %>/complaints#c-<%= email.id %>">Open it in Complaints</a>
+        </section>
+      <% } else if (worker === 'customer') { %>
+        <% if (pastJobs.length) { %>
+          <section class="to-panel">
+            <p class="to-worker-tag">Checked against dispatch</p>
+            <h2>The journey<%= pastJobs.length > 1 ? 's it could be' : '' %></h2>
+            <p class="to-small">Plain code found <%= pastJobs.length === 1 ? 'this job' : 'these jobs' %> in dispatch from what the email says<%= pastJobs.length > 1 ? ', so the office knows which drivers to ask' : '' %>.</p>
+            <ul class="to-jobs">
+              <% pastJobs.forEach(function (j) { %>
+                <li><span class="to-ref"><%= j.ref %></span> <span><%= shortDate(j.date) %> <%= j.time %>, <%= j.pickup %> to <%= j.destination %></span><% if (j.record) { %> <span class="to-small">Driver <%= j.record.driver %>, <%= j.record.car %> <%= j.record.reg %></span><% } %></li>
+              <% }) %>
+            </ul>
+          </section>
+        <% } %>
       <% } else if (cmp && cmp.legs.length) { %>
         <section class="to-panel">
-          <h2>Checked against dispatch</h2>
-          <p class="to-small">Plain code, not the AI, decides whether dispatch matches what the customer asked for.</p>
+          <p class="to-worker-tag">Checked against dispatch</p>
+          <h2>Does dispatch have it right?</h2>
+          <p class="to-small">Plain code, not the AI, decides whether dispatch matches what the customer asked for. Changes go through the dispatch connection (<%= conn.dispatch %>).</p>
           <% cmp.legs.forEach(function (leg) { var j = leg.journey; var st = STATUS[leg.status]; %>
             <div class="to-leg">
               <div class="to-leg-head">
@@ -82,7 +108,7 @@
                 <form method="post" action="<%= BASE %>/inbox/<%= email.id %>/fix" class="to-inline-form">
                   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                   <input type="hidden" name="leg" value="<%= leg.index %>">
-                  <button type="submit" class="to-btn to-btn-primary"><%= leg.status === 'missing' ? 'Add it to dispatch' : (leg.status === 'differs' ? 'Correct dispatch' : 'Cancel it in dispatch') %></button>
+                  <button type="submit" class="to-btn to-btn-primary"><%= leg.status === 'missing' ? 'Book it into dispatch' : (leg.status === 'differs' ? 'Correct it in dispatch' : 'Cancel it in dispatch') %></button>
                 </form>
               <% } else if (leg.status === 'needs_details') { %>
                 <p class="to-small">Nothing goes into dispatch until the customer sends <%= (leg.gaps || []).join(', ') || 'the missing details' %>. The reply below asks for it.</p>
@@ -94,17 +120,18 @@
         </section>
       <% } %>
 
-      <% if (email.routeTo !== 'licensing') { %>
+      <% if (worker === 'bookings' || worker === 'customer') { %>
         <section class="to-panel">
+          <p class="to-worker-tag"><%= W.name %> worker</p>
           <h2>Draft reply</h2>
           <% if (sent) { %>
-            <p class="to-note to-note-ok">Marked as sent. In this demo nothing leaves the office.</p>
+            <p class="to-note to-note-ok"><%= sent.where ? 'Saved as a draft in ' + sent.where + ' for someone to send.' : 'Marked as sent. In this demo nothing leaves the office.' %></p>
             <div class="to-reply-sent"><%= sent.text %></div>
           <% } else if (x.reply) { %>
             <form method="post" action="<%= BASE %>/inbox/<%= email.id %>/send" class="to-form">
               <input type="hidden" name="_csrf" value="<%= csrfToken %>">
               <label class="to-field"><span class="to-sr">Reply</span><textarea id="reply-<%= email.id %>" name="reply" rows="10" maxlength="3000"><%= x.reply %></textarea></label>
-              <button type="submit" class="to-btn to-btn-primary">Mark as sent</button>
+              <button type="submit" class="to-btn to-btn-primary"><%= conn.mailboxDemo || email.custom ? 'Mark as sent' : 'Save as a draft in ' + conn.mailbox %></button>
               <p class="to-small">Edit it first if you like. A person always sends; here nothing is sent at all.</p>
             </form>
           <% } else { %>
