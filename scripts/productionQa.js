@@ -22,6 +22,7 @@
 const fs = require('fs');
 const path = require('path');
 const { chromium, devices } = require('playwright');
+const { renderedDigitFonts, describeDigitFonts } = require('./renderedDigitFonts');
 
 const BASE = process.env.QA_BASE_URL || 'https://www.arringtonconsultancy.com';
 // The token "sitemap" expands to every path in the live sitemap.xml, so a
@@ -234,6 +235,10 @@ function slug(p) {
         if (size === 'desktop') {
           fs.writeFileSync(path.join(OUT, `${slug(p)}.txt`), await page.evaluate(() => document.body.innerText));
         }
+        // The faces the browser actually drew numerals in, so a serif
+        // fallback (Times on an iPhone) shows up even where every stylesheet
+        // names a sans serif face. Added 16/10/2026 on Tom's question.
+        try { r.digitFonts = await renderedDigitFonts(page); } catch (e) { r.digitFonts = { error: String(e).slice(0, 200) }; }
         const file = `${slug(p)}-${size}.png`;
         await page.screenshot({ path: path.join(OUT, file), fullPage: true });
         r.screenshot = file;
@@ -264,6 +269,7 @@ function slug(p) {
     }
     lines.push(`- Robots: meta ${r.robotsMeta || '(none)'}; X-Robots-Tag ${r.xRobotsTag || '(none)'}; in sitemap.xml: ${r.inSitemap ? 'yes' : 'no'}; links to itself on the page: ${r.selfLinks === null ? 'unknown' : r.selfLinks}`);
     lines.push(`- Em or en dashes in the visible text: ${r.dashes ? r.dashes.length : 'unknown'}${r.dashes && r.dashes.length ? ' (' + r.dashes.join(' | ') + ')' : ''}`);
+    lines.push(`- Numerals drawn in: ${describeDigitFonts(r.digitFonts)}`);
     lines.push(`- Horizontal overflow: ${r.overflow === null ? 'unknown' : r.overflow ? 'YES' : 'no'}; page height ${r.height}px`);
     lines.push(`- Enquiry form starts: ${r.form ? `${r.form.top}px, ${r.form.screens} screen heights down (viewport ${r.form.viewport}px)` : 'no form found'}`);
     lines.push(`- First primary button: ${r.heroCta ? `"${r.heroCta.text}" -> ${r.heroCta.href}` : 'none'}`);
