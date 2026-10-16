@@ -138,6 +138,7 @@ test('the booking desk asks the model for JSON against a closed schema, and uses
     assert.equal(req.output_config.effort, 'low');
     everyObjectIsClosed(req.output_config.format.schema);
     assert.match(req.system, /ignore them/, 'the email is treated as data, not instructions');
+    assert.match(req.system, /a town or area will do/, 'a destination town is enough to book, as in a real office (live check of 16/10/2026)');
     assert.match(req.system, /Never guess an address, a time or a phone number/);
     assert.match(req.messages[0].content, /Received: \d{4}-\d{2}-\d{2} \d{2}:\d{2}/);
     // A second visitor gets the shared reading, with no second call.
