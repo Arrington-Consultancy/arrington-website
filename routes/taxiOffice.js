@@ -29,6 +29,8 @@
 // passes /taxi-demo/office through the demo's mount to here.
 
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const { hasScottAccess } = require('../lib/scott/access');
 const { render404 } = require('../lib/render404');
 const office = require('../lib/taxiOffice/office');
@@ -41,6 +43,37 @@ const gmailConnect = require('../lib/taxiOffice/mail/gmailConnect');
 const { FIRM } = require('../taxi-demo/lib/firm');
 
 const BASE = '/taxi-demo/office';
+
+// The office's stylesheet and script are served from /public, which browsers
+// may keep for a day. Their addresses carry a version taken from their
+// contents, so a change reaches every browser on its next page, not a day
+// later (17/10/2026: the new worker icons drew full width for a visitor
+// whose browser still held the stylesheet from before they existed).
+function assetVersion(rel) {
+  try {
+    return crypto.createHash('sha256').update(fs.readFileSync(path.join(__dirname, '..', 'public', rel))).digest('hex').slice(0, 10);
+  } catch {
+    return String(Date.now());
+  }
+}
+const ASSET_V = { css: assetVersion('css/taxi-office.css'), js: assetVersion('js/taxi-office.js') };
+
+// What the four counts on the Today page open (?show=...): the list each one
+// counts, from the same definitions in lib/taxiOffice/office.js. Anything
+// else in ?show= shows everything.
+const FILTERS = {
+  dispatch: { today: ['job on the board today', 'jobs on the board today'] },
+  inbox: { todo: ['email to deal with', 'emails to deal with'] },
+  complaints: { open: ['complaint waiting for a reply', 'complaints waiting for a reply'] },
+  licensing: { due: ['licensing item due or passed on', 'licensing items due or passed on'] }
+};
+
+function filterFor(req, pageName, count) {
+  const key = String(req.query.show || '');
+  const labels = Object.hasOwn(FILTERS[pageName], key) ? FILTERS[pageName][key] : null;
+  if (!labels) return null;
+  return { key, count, label: count === 1 ? labels[0] : labels[1], none: labels[1], allHref: `${BASE}/${pageName}` };
+}
 
 function noindex(req, res, next) {
   res.setHeader('X-Robots-Tag', 'noindex, nofollow');
@@ -76,6 +109,8 @@ function render(req, res, view, locals) {
   const s = stateOf(req);
   res.render(`taxi-office/${view}`, {
     BASE,
+    ASSET_V,
+    filter: null,
     FIRM,
     today: s.today,
     todayLong: data.longDate(s.today),
@@ -119,7 +154,13 @@ function mountPageRoute(app) {
     // An email to the visitor's live address arrives already read.
     await office.readNewLive(s);
     const live = office.liveFor(s);
-    render(req, res, 'inbox', { section: 'inbox', emails: rows(s), limit: office.LIMITS.custom, live, liveCount: live ? office.liveEmails(s).length : 0 });
+    let emails = rows(s);
+    const filter = filterFor(req, 'inbox', office.emailsToDealWith(s).length);
+    if (filter) {
+      const ids = new Set(office.emailsToDealWith(s).map((e) => e.id));
+      emails = emails.filter((r) => ids.has(r.email.id));
+    }
+    render(req, res, 'inbox', { section: 'inbox', emails, filter, limit: office.LIMITS.custom, live, liveCount: live ? office.liveEmails(s).length : 0 });
   });
 
   // How many emails have reached this visitor's live address. The inbox page
@@ -211,7 +252,10 @@ function mountPageRoute(app) {
 
   page('/complaints', (req, res) => {
     const s = stateOf(req);
-    render(req, res, 'complaints', { section: 'complaints', log: office.complaintsLog(s), unread: office.inbox(s).filter((e) => !(s.readings[e.id] && s.readings[e.id].data)).length, guided: s.guided, guideMax: office.MAX_GUIDANCE });
+    const all = office.complaintsLog(s);
+    const filter = filterFor(req, 'complaints', office.openComplaints(s).length);
+    const log = filter ? office.openComplaints(s) : all;
+    render(req, res, 'complaints', { section: 'complaints', log, logged: all.length, filter, unread: office.inbox(s).filter((e) => !(s.readings[e.id] && s.readings[e.id].data)).length, guided: s.guided, guideMax: office.MAX_GUIDANCE });
   });
 
   post('/complaints/:id/draft', async (req, res) => {
@@ -224,21 +268,27 @@ function mountPageRoute(app) {
 
   page('/dispatch', (req, res) => {
     const s = stateOf(req);
-    const jobs = s.board.slice().sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+    const filter = filterFor(req, 'dispatch', office.jobsToday(s).length);
+    const jobs = (filter ? office.jobsToday(s) : s.board.slice()).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
     const days = [];
     for (const j of jobs) {
       let d = days.find((x) => x.date === j.date);
       if (!d) { d = { date: j.date, jobs: [] }; days.push(d); }
       d.jobs.push(j);
     }
-    render(req, res, 'dispatch', { section: 'dispatch', days, changes: s.changes });
+    render(req, res, 'dispatch', { section: 'dispatch', days, filter, changes: s.changes });
   });
 
   page('/licensing', (req, res) => {
     const s = stateOf(req);
-    const items = office.register(s);
-    const councilEmails = office.inbox(s).filter((e) => e.routeTo === 'licensing' || office.workerOf(s, e) === 'licensing');
-    render(req, res, 'licensing', { section: 'licensing', items, drafts: s.licensing, licGuided: s.licGuided, councilEmails, passed: office.passedToLicensing(s), guideMax: office.MAX_GUIDANCE });
+    const passed = office.passedToLicensing(s);
+    const due = office.licensingDueItems(s);
+    const filter = filterFor(req, 'licensing', due.length + passed.length);
+    const items = filter ? due : office.register(s);
+    // Filtered, a council email shows only beside a register item on screen.
+    const councilEmails = office.inbox(s).filter((e) => e.routeTo === 'licensing' || office.workerOf(s, e) === 'licensing')
+      .filter((e) => !filter || items.some((i) => i.council === e.id));
+    render(req, res, 'licensing', { section: 'licensing', items, filter, drafts: s.licensing, licGuided: s.licGuided, councilEmails, passed, guideMax: office.MAX_GUIDANCE });
   });
 
   post('/licensing/:id/draft', async (req, res) => {

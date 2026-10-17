@@ -1,0 +1,8 @@
+<%#
+  Shown when a page is opened from one of the counts on the Today page
+  (?show=...): says what the list is narrowed to, and gives the way back to
+  everything. Locals: filter ({ count, label, none, allHref }) or null.
+%>
+<% if (filter) { %>
+<p class="to-filter" id="filtered" role="status"><span><%= filter.count ? 'Showing ' + filter.count + ' ' + filter.label + '.' : 'There are no ' + filter.none + '.' %></span> <a href="<%= filter.allHref %>">Show all</a></p>
+<% } %>

@@ -5,6 +5,8 @@
   <p class="to-lede">Every driver badge, vehicle licence, MOT and insurance date in one register, and any safety report passed on by Complaints. The AI drafts what goes to the council's licensing team; a person checks it, attaches the papers and sends it. It never writes to the council itself.</p>
 </section>
 
+<%- include('partials/filter-note') %>
+
 <% if (passed.length) { %>
   <section class="to-panel to-council" id="from-complaints">
     <p class="to-worker-tag">Passed from Complaints</p>

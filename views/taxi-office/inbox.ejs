@@ -24,6 +24,8 @@
 
 <p class="to-connections"><span><strong>Mailbox:</strong> <%= conn.mailbox %></span><span class="to-small"><%= conn.mailboxDemo ? 'Made-up emails for this demo. On a live office this is the firm\'s own Gmail or Outlook inbox, read through its API, and a reply is saved as a draft in that inbox for someone to send.' : 'Replies are saved as drafts in this mailbox, on the same thread, for someone to send.' %></span></p>
 
+<%- include('partials/filter-note') %>
+
 <ul class="to-inbox" aria-label="Emails">
   <% emails.forEach(function (row) { var e = row.email; %>
     <li>

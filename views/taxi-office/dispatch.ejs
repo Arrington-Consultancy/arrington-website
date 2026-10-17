@@ -7,6 +7,8 @@
 
 <p class="to-connections"><span><strong>Dispatch:</strong> <%= conn.dispatch %></span><span class="to-small"><%= conn.dispatchDemo ? 'Your own copy of a made-up board. What you book, correct or cancel here is cleared after four hours.' : 'Bookings from the office go into this system.' %></span></p>
 
+<%- include('partials/filter-note') %>
+
 <% days.forEach(function (d) { var past = d.date < today; %>
   <section class="to-section">
     <% if (past) { %><details class="to-past"><summary><h2><%= longDate(d.date) %>, completed</h2></summary><% } else { %><h2><%= d.date === today ? 'Today, ' + longDate(d.date) : longDate(d.date) %></h2><% } %>

@@ -9,7 +9,9 @@
   <p class="to-lede">Every complaint is logged here. The worker pulls the job from dispatch, so the reply rests on what actually happened, not on a guess, and drafts it. Anything about money is the office's decision, and anything about safety goes to Licensing too.</p>
 </section>
 
-<% if (!log.length) { %>
+<%- include('partials/filter-note') %>
+
+<% if (!logged) { %>
   <section class="to-panel">
     <h2>No complaints read yet</h2>
     <p><%= unread ? unread + ' email' + (unread === 1 ? '' : 's') + ' in the inbox ' + (unread === 1 ? "hasn't" : "haven't") + ' been read. Complaints turn up here once they are.' : 'Nothing in the inbox is a complaint.' %></p>

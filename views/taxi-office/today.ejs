@@ -21,10 +21,19 @@
 <p class="to-connections"><span><strong>Mailbox:</strong> <%= conn.mailbox %></span><span><strong>Dispatch:</strong> <%= conn.dispatch %></span><span class="to-small">On a live office these are the firm's own Gmail or Outlook inbox and its iCabbi, Autocab or Cordic system, connected through their APIs.</span></p>
 
 <ul class="to-stats" aria-label="At a glance">
-  <li><span class="to-stat-n"><%= counts.jobsToday %></span><span class="to-stat-l">jobs on the board today</span></li>
-  <li><span class="to-stat-n"><%= counts.unread + counts.needAction %></span><span class="to-stat-l">emails to deal with</span></li>
-  <li><span class="to-stat-n"><%= counts.complaintsOpen %></span><span class="to-stat-l">complaints waiting for a reply</span></li>
-  <li><span class="to-stat-n"><%= counts.licensingDue %></span><span class="to-stat-l">licensing items due or passed on</span></li>
+  <%
+    // Each count opens the list it counts (routes/taxiOffice.js, FILTERS).
+    var _go = '<svg class="to-stat-go" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m9 6 6 6-6 6"/></svg>';
+    var _stats = [
+      [counts.jobsToday, 'jobs on the board today', '/dispatch?show=today#filtered'],
+      [counts.unread + counts.needAction, 'emails to deal with', '/inbox?show=todo#filtered'],
+      [counts.complaintsOpen, 'complaints waiting for a reply', '/complaints?show=open#filtered'],
+      [counts.licensingDue, 'licensing items due or passed on', '/licensing?show=due#filtered']
+    ];
+  %>
+  <% _stats.forEach(function (st) { %>
+  <li><a class="to-stat" href="<%= BASE + st[2] %>"><span class="to-stat-n"><%= st[0] %></span><span class="to-stat-l"><%= st[1] %></span><%- _go %></a></li>
+  <% }) %>
 </ul>
 
 <div class="to-workers">

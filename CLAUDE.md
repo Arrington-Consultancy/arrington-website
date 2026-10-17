@@ -8335,6 +8335,37 @@ icons, copied into the demo's `ICONS` map in `taxi-demo/lib/html.js` because
 the demo is self-contained; `test/taxiOfficeWorkers.test.js` fails if the two
 drawings drift apart (watched red).
 
+**The icons drew huge for Tom on the live site** (screenshot, 17/10/2026), even
+though the code was right. `/css/taxi-office.css` is served from `/public`
+with a one-day browser cache and no version on its address, so his browser
+kept the stylesheet from before the icons existed, and an SVG with no size
+rule fills its box. Two fixes. The office's CSS and JS links now carry a
+content hash (`ASSET_V` in `routes/taxiOffice.js`, `?v=` in the partials),
+so a change reaches a browser on its next page. And every office icon has
+`width`/`height` attributes, so a missing or stale stylesheet leaves it at
+20 pixels. Any other page that links a `/public` file which changes should
+version it the same way.
+
+### Today's four counts open what they count (LIVE 17/10/2026)
+
+Tom: "those 4 black boxes at the top should be clickable to go through to
+and filter what it says". Each box on Today is a link: jobs on the board today
+go to `/dispatch?show=today`, emails to deal with to `/inbox?show=todo`,
+complaints waiting for a reply to `/complaints?show=open`, and licensing items
+due or passed on to `/licensing?show=due`, each with `#filtered`. The filtered
+page says "Showing N ..." (or "There are no ...") and has a Show all link.
+**Each count is defined once** in `lib/taxiOffice/office.js` (`jobsToday`,
+`emailsToDealWith`, `openComplaints`, `licensingDueItems`), and both the box
+and its filtered list come from that definition, so the number always equals
+the list. The allowed `?show=` values are in `FILTERS` in
+`routes/taxiOffice.js`; anything else shows everything. On the filtered
+licensing page a council email shows only beside a register item that is on
+screen. `test/taxiOfficeTodayLinks.test.js` starts the office routes on a
+local server, follows every box before and after the inbox is read, and
+checks each list's length against its box (a filter that drifted from its
+count was watched red). The Today screenshot on the staff portal page predates
+the small arrow on each box.
+
 ## Sale readiness page
 
 `/get-your-business-ready-to-sell` is a campaign landing page for social and
