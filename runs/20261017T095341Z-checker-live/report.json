@@ -1,0 +1,372 @@
+{
+  "ranAt": "2026-10-17T09:53:41.893Z",
+  "base": "https://www.arringtonconsultancy.com",
+  "results": [
+    {
+      "path": "/taxi-demo/staff-portal",
+      "size": "desktop",
+      "url": "https://www.arringtonconsultancy.com/taxi-demo/staff-portal",
+      "status": 200,
+      "finalUrl": "https://www.arringtonconsultancy.com/taxi-demo/staff-portal",
+      "title": "Staff portal and AI workers | Tidewell Cars",
+      "h1": "The office behind the website.",
+      "canonical": "https://www.arringtonconsultancy.com/taxi-demo/staff-portal",
+      "robotsMeta": "noindex, nofollow",
+      "xRobotsTag": "noindex, nofollow",
+      "selfLinks": 3,
+      "inSitemap": false,
+      "overflow": false,
+      "height": 6722,
+      "dashes": [],
+      "consoleErrors": [],
+      "pageErrors": [],
+      "clarityCollect": [],
+      "uetRequests": [],
+      "droppedHits": [],
+      "screenshot": "taxi-demo-staff-portal-desktop.png",
+      "topScreenshot": "taxi-demo-staff-portal-desktop-top.png",
+      "error": null,
+      "form": null,
+      "heroCta": {
+        "text": "Book online",
+        "href": "/taxi-demo/book"
+      },
+      "docModalOpen": null,
+      "docRequestButtons": 0,
+      "uet": {
+        "state": "not loaded",
+        "loader": null,
+        "bar": null
+      },
+      "clarity": null,
+      "seo": {
+        "lang": "en-GB",
+        "description": "The office behind the Tidewell Cars website: AI workers read the emails, check them against dispatch and draft the replies, and a person in the office decides what goes out.",
+        "ogTitle": "Staff portal and AI workers | Tidewell Cars",
+        "ogImage": null,
+        "jsonLd": [
+          "TaxiService"
+        ],
+        "h1s": [
+          "The office behind the website."
+        ],
+        "h2s": [
+          "Today, on one screen.",
+          "Six workers, one office.",
+          "A booking checked against dispatch.",
+          "A complaint answered from the record.",
+          "Want to look round the office?",
+          "Book",
+          "Tidewell Cars",
+          "Where we go"
+        ],
+        "words": 729,
+        "images": 3,
+        "imagesNoAlt": [],
+        "imagesEmptyAlt": 0,
+        "internal": [
+          "/taxi-demo/",
+          "/taxi-demo/book",
+          "/taxi-demo/airports",
+          "/taxi-demo/accounts",
+          "/taxi-demo/about",
+          "/taxi-demo/contact",
+          "/taxi-demo/staff-portal",
+          "/taxi-demo/office/"
+        ],
+        "pageKb": 341,
+        "heaviest": [
+          "/taxi-demo/assets/img/office-complaint-1200.webp?v=48c373ba80 102KB",
+          "/taxi-demo/assets/img/office-booking-1200.webp?v=6e7f7de58e 91KB",
+          "/taxi-demo/assets/img/office-today-1200.webp?v=713cabf771 84KB"
+        ],
+        "loadMs": 116
+      },
+      "digitFonts": {
+        "elements": 10,
+        "glyphs": {
+          "Schibsted Grotesk": 1006
+        },
+        "serif": []
+      },
+      "raw": {
+        "titles": [
+          "Staff portal and AI workers | Tidewell Cars"
+        ],
+        "descriptions": [
+          "The office behind the Tidewell Cars website: AI workers read the emails, check them against dispatch and draft the replies, and a person in the office decides what goes out."
+        ],
+        "canonicals": [
+          "https://www.arringtonconsultancy.com/taxi-demo/staff-portal"
+        ],
+        "ogTitles": [
+          "Staff portal and AI workers | Tidewell Cars"
+        ],
+        "ldBlocks": 1,
+        "googleTagLoaders": 0,
+        "adsConfigs": 0
+      }
+    },
+    {
+      "path": "/taxi-demo/staff-portal",
+      "size": "mobile",
+      "url": "https://www.arringtonconsultancy.com/taxi-demo/staff-portal",
+      "status": 200,
+      "finalUrl": "https://www.arringtonconsultancy.com/taxi-demo/staff-portal",
+      "title": "Staff portal and AI workers | Tidewell Cars",
+      "h1": "The office behind the website.",
+      "canonical": "https://www.arringtonconsultancy.com/taxi-demo/staff-portal",
+      "robotsMeta": "noindex, nofollow",
+      "xRobotsTag": "noindex, nofollow",
+      "selfLinks": 3,
+      "inSitemap": false,
+      "overflow": false,
+      "height": 7396,
+      "dashes": [],
+      "consoleErrors": [],
+      "pageErrors": [],
+      "clarityCollect": [],
+      "uetRequests": [],
+      "droppedHits": [],
+      "screenshot": "taxi-demo-staff-portal-mobile.png",
+      "topScreenshot": "taxi-demo-staff-portal-mobile-top.png",
+      "error": null,
+      "form": null,
+      "heroCta": {
+        "text": "Book online",
+        "href": "/taxi-demo/book"
+      },
+      "docModalOpen": null,
+      "docRequestButtons": 0,
+      "uet": {
+        "state": "not loaded",
+        "loader": null,
+        "bar": null
+      },
+      "clarity": null,
+      "seo": {
+        "lang": "en-GB",
+        "description": "The office behind the Tidewell Cars website: AI workers read the emails, check them against dispatch and draft the replies, and a person in the office decides what goes out.",
+        "ogTitle": "Staff portal and AI workers | Tidewell Cars",
+        "ogImage": null,
+        "jsonLd": [
+          "TaxiService"
+        ],
+        "h1s": [
+          "The office behind the website."
+        ],
+        "h2s": [
+          "Today, on one screen.",
+          "Six workers, one office.",
+          "A booking checked against dispatch.",
+          "A complaint answered from the record.",
+          "Want to look round the office?",
+          "Book",
+          "Tidewell Cars",
+          "Where we go"
+        ],
+        "words": 702,
+        "images": 3,
+        "imagesNoAlt": [],
+        "imagesEmptyAlt": 0,
+        "internal": [
+          "/taxi-demo/",
+          "/taxi-demo/book",
+          "/taxi-demo/airports",
+          "/taxi-demo/accounts",
+          "/taxi-demo/about",
+          "/taxi-demo/contact",
+          "/taxi-demo/staff-portal",
+          "/taxi-demo/office/"
+        ],
+        "pageKb": 515,
+        "heaviest": [
+          "/taxi-demo/assets/img/office-complaint-phone-1170.webp?v=68ced07156 197KB",
+          "/taxi-demo/assets/img/office-today-phone-1170.webp?v=801ca38791 145KB",
+          "/taxi-demo/assets/img/office-booking-phone-1170.webp?v=5e4e62c97f 109KB"
+        ],
+        "loadMs": 73
+      },
+      "digitFonts": {
+        "elements": 9,
+        "glyphs": {
+          "Schibsted Grotesk": 970
+        },
+        "serif": []
+      },
+      "raw": {
+        "titles": [
+          "Staff portal and AI workers | Tidewell Cars"
+        ],
+        "descriptions": [
+          "The office behind the Tidewell Cars website: AI workers read the emails, check them against dispatch and draft the replies, and a person in the office decides what goes out."
+        ],
+        "canonicals": [
+          "https://www.arringtonconsultancy.com/taxi-demo/staff-portal"
+        ],
+        "ogTitles": [
+          "Staff portal and AI workers | Tidewell Cars"
+        ],
+        "ldBlocks": 1,
+        "googleTagLoaders": 0,
+        "adsConfigs": 0
+      }
+    },
+    {
+      "path": "/taxi-demo/office/",
+      "size": "desktop",
+      "url": "https://www.arringtonconsultancy.com/taxi-demo/office/",
+      "status": 200,
+      "finalUrl": "https://www.arringtonconsultancy.com/login?next=%2Ftaxi-demo%2Foffice%2F",
+      "title": "Log in - Arrington",
+      "h1": null,
+      "canonical": null,
+      "robotsMeta": null,
+      "xRobotsTag": null,
+      "selfLinks": 0,
+      "inSitemap": false,
+      "overflow": false,
+      "height": 1000,
+      "dashes": [],
+      "consoleErrors": [],
+      "pageErrors": [],
+      "clarityCollect": [],
+      "uetRequests": [],
+      "droppedHits": [
+        "connect.facebook.net",
+        "googleads.g.doubleclick.net",
+        "googleads.g.doubleclick.net"
+      ],
+      "screenshot": "taxi-demo-office--desktop.png",
+      "topScreenshot": "taxi-demo-office--desktop-top.png",
+      "error": null,
+      "form": null,
+      "heroCta": null,
+      "docModalOpen": null,
+      "docRequestButtons": 0,
+      "uet": {
+        "state": "not loaded",
+        "loader": null,
+        "bar": null
+      },
+      "clarity": null,
+      "seo": {
+        "lang": "en-GB",
+        "description": null,
+        "ogTitle": null,
+        "ogImage": null,
+        "jsonLd": [
+          "Organization/ProfessionalService, WebSite"
+        ],
+        "h1s": [],
+        "h2s": [],
+        "words": 10,
+        "images": 1,
+        "imagesNoAlt": [],
+        "imagesEmptyAlt": 0,
+        "internal": [
+          "/"
+        ],
+        "pageKb": 158,
+        "heaviest": [
+          "/img/logo 152KB"
+        ],
+        "loadMs": 938
+      },
+      "digitFonts": {
+        "elements": 0,
+        "glyphs": {},
+        "serif": []
+      },
+      "raw": {
+        "titles": [
+          "Log in - Arrington"
+        ],
+        "descriptions": [],
+        "canonicals": [],
+        "ogTitles": [],
+        "ldBlocks": 1,
+        "googleTagLoaders": 1,
+        "adsConfigs": 1
+      }
+    },
+    {
+      "path": "/taxi-demo/office/",
+      "size": "mobile",
+      "url": "https://www.arringtonconsultancy.com/taxi-demo/office/",
+      "status": 200,
+      "finalUrl": "https://www.arringtonconsultancy.com/login?next=%2Ftaxi-demo%2Foffice%2F",
+      "title": "Log in - Arrington",
+      "h1": null,
+      "canonical": null,
+      "robotsMeta": null,
+      "xRobotsTag": null,
+      "selfLinks": 0,
+      "inSitemap": false,
+      "overflow": false,
+      "height": 664,
+      "dashes": [],
+      "consoleErrors": [],
+      "pageErrors": [],
+      "clarityCollect": [],
+      "uetRequests": [],
+      "droppedHits": [
+        "connect.facebook.net",
+        "googleads.g.doubleclick.net",
+        "googleads.g.doubleclick.net"
+      ],
+      "screenshot": "taxi-demo-office--mobile.png",
+      "topScreenshot": "taxi-demo-office--mobile-top.png",
+      "error": null,
+      "form": null,
+      "heroCta": null,
+      "docModalOpen": null,
+      "docRequestButtons": 0,
+      "uet": {
+        "state": "not loaded",
+        "loader": null,
+        "bar": null
+      },
+      "clarity": null,
+      "seo": {
+        "lang": "en-GB",
+        "description": null,
+        "ogTitle": null,
+        "ogImage": null,
+        "jsonLd": [
+          "Organization/ProfessionalService, WebSite"
+        ],
+        "h1s": [],
+        "h2s": [],
+        "words": 10,
+        "images": 1,
+        "imagesNoAlt": [],
+        "imagesEmptyAlt": 0,
+        "internal": [
+          "/"
+        ],
+        "pageKb": 158,
+        "heaviest": [
+          "/img/logo 152KB"
+        ],
+        "loadMs": 277
+      },
+      "digitFonts": {
+        "elements": 0,
+        "glyphs": {},
+        "serif": []
+      },
+      "raw": {
+        "titles": [
+          "Log in - Arrington"
+        ],
+        "descriptions": [],
+        "canonicals": [],
+        "ogTitles": [],
+        "ldBlocks": 1,
+        "googleTagLoaders": 1,
+        "adsConfigs": 1
+      }
+    }
+  ]
+}

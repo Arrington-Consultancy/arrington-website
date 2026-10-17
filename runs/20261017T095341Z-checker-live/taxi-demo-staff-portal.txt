@@ -1,0 +1,116 @@
+Skip to content
+
+Demonstration site.
+Tidewell Cars is not a real firm, bookings go to a test system and no car will come.
+Want a site like this? Talk to Arrington
+
+Tidewell Cars
+Airports
+Business accounts
+About
+Contact
+Staff portal
+24 HOURS
+01632 960418
+Book online
+
+STAFF PORTAL
+
+The office behind the website.
+
+Booking emails, complaints and letters from the council all land in one office. Six AI workers read them, check them against dispatch and draft the replies. A second AI checks every booking, and a person in the office signs it off before anything goes out.
+
+STAFF
+
+Staff login
+
+Logins are by invitation. To look round the office yourself, ask Arrington Consultancy for one.
+
+Today, on one screen.
+
+The emails waiting, the complaints still open, the licensing dates coming up and the day's board. Press Read the inbox and each email goes to the worker it belongs to.
+
+The Today page after the morning's 13 emails were read.
+
+AI WORKERS
+
+Six workers, one office.
+
+Each one does a single job. None of them sends, books or posts anything on its own.
+
+Bookings
+
+Reads booking emails, checks each one against the job in dispatch, and books, corrects or cancels it there. Drafts the reply.
+
+Checker
+
+A second AI that checks every booking against the customer's own email and shows anything that doesn't match. Nothing goes into dispatch until someone in the office signs it off.
+
+Customer emails
+
+Answers everything else customers send, from lost property to account questions, and looks up the journey when the answer is in dispatch.
+
+Complaints
+
+Logs every complaint and pulls the job from dispatch, so the reply rests on what happened. Passes anything about safety to Licensing.
+
+Licensing
+
+Keeps every badge, plate, MOT and insurance date in one register, flags what is due and drafts the letter to the council.
+
+Social media
+
+Writes the week's posts from what is going on at the firm. Nothing is posted until the owner approves it.
+
+BOOKINGS
+
+A booking checked against dispatch.
+
+Paul asked for a 5.30am pickup to the airport. Dispatch had 5.50. The AI reads the email, then plain code compares it with the job, field by field, and shows the difference. One click puts it right in dispatch, and the reply is drafted ready for someone to check.
+
+A booking email beside what dispatch holds. The reply is as the AI drafted it.
+
+COMPLAINTS
+
+A complaint answered from the record.
+
+Ruth's car was 16 minutes late and she missed her train. The worker pulled the job from dispatch: a road closure at Exton, and a controller's note that nobody rang her. So the draft says what happened, owns the part that was the firm's fault, and leaves any refund to the office.
+
+The complaint, the dispatch record behind it, and the reply as the AI drafted it.
+
+BUILT BY ARRINGTON CONSULTANCY
+
+Want to look round the office?
+
+This office is a working example we built for taxi and private hire firms. The AI workers run on a made-up inbox and a test dispatch board, so nothing real is sent, booked or posted. Contact Arrington Consultancy to gain access to our AI workspace example.
+
+Ask Arrington for a login
+Staff login
+
+Screenshots taken on 16 October 2026 from the demonstration office. The replies shown are as the AI drafted them; a person checks every one before it goes anywhere.
+
+Tidewell Cars
+
+Taxis and private hire in Exmouth since 2004. 48 cars, 6 of them wheelchair accessible, and a control room that never shuts.
+
+01632 960418
+
+Any hour, any day. Text 07700 900418.
+
+Book
+Book online
+Airport and long distance prices
+Business accounts
+The Tidewell app
+Tidewell Cars
+About us
+Drive with us
+Contact and lost property
+Staff portal and AI workers
+Where we go
+
+Exmouth, Lympstone, Budleigh Salterton, Woodbury, Topsham, Exeter and anywhere in the UK by arrangement.
+
+Tidewell Cars, Exmouth, Devon EX8. Licensed private hire and hackney carriage operator.
+
+This is a demonstration site built by Arrington Consultancy. Tidewell Cars is not a real firm, bookings go to a test system, and no car will come. Pictures on this site are AI-generated illustrations, not photographs of a real fleet. Anything typed into this site is kept in memory for two hours and then deleted. No tracking, no cookies. Built by Arrington Consultancy.
