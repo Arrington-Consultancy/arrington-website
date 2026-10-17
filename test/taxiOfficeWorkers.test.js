@@ -253,6 +253,17 @@ test('the demo site names the office workers exactly as the office does', () => 
   const { OFFICE_WORKERS } = require('../taxi-demo/lib/pages');
   const { WORKERS } = require('../lib/taxiOffice/workers');
   assert.deepEqual(OFFICE_WORKERS.map(([n]) => n), WORKERS.map((w) => w.name));
+  // and draws each one's icon exactly as the office does
+  assert.deepEqual(OFFICE_WORKERS.map(([, , id]) => id), WORKERS.map((w) => w.id));
+  const { ICONS } = require('../taxi-demo/lib/html');
+  const partial = require('fs').readFileSync(require('path').join(__dirname, '../views/taxi-office/partials/worker-icon.ejs'), 'utf8');
+  for (const w of WORKERS) {
+    const m = partial.match(new RegExp(`\\n\\s+${w.id}: '([^']+)'`));
+    assert.ok(m, `${w.id}: drawn in the office`);
+    assert.equal(ICONS[w.id], m[1], `${w.id}: the demo site draws it as the office does`);
+  }
+  const page = String(require('../taxi-demo/lib/pages').staffPortalPage());
+  assert.equal((page.match(/<span class="office-worker-icon"><svg class="icon"/g) || []).length, WORKERS.length, 'an icon beside every worker on the staff portal page');
 });
 
 test('every worker that writes is told how to write like a person, and the booking desk knows only what the firm states', () => {

@@ -8312,6 +8312,29 @@ nothing has changed on the live site yet.
   an iPhone 13. Not proven until the first real email: Gmail delivery and
   plus addressing on the real Workspace user.
 
+### Worker icons (LIVE 17/10/2026)
+
+Tom: "lets have our ai workers with a small logo next to them, So emails,
+email logo, social maybe facebook logo or something, liciencing logo etc".
+Each worker now has a small line icon, drawn for the office in its own
+colours, in `views/taxi-office/partials/worker-icon.ejs` (inline SVG,
+`currentColor`, `aria-hidden`, no style attribute because of the strict CSP).
+The icons are a calendar with a tick for Bookings, an envelope for Customer
+emails, a speech bubble with "!" for Complaints, an ID card for Licensing and
+a share icon for Social media. **Social does not use Facebook's logo**, on
+purpose: the logo is Meta's, and the worker drafts for more than one platform.
+They appear on the Today cards, beside the Complaints, Licensing and Social
+headings, and in the worker chip in the inbox and on an email. A new worker
+needs a path in `_paths`, or it renders without an icon.
+`test/taxiOfficeIcons.test.js`. The Today screenshot on the demo's staff
+portal page was retaken to show them; the booking and complaint screenshots
+are still from 16/10/2026. Commit `d6135e9`, serving deployment `a9379795`,
+inspection run `20261017T073657Z-office-worker-icons`. The demo's own "Five
+workers, one office" list on `/taxi-demo/staff-portal` carries the same
+icons, copied into the demo's `ICONS` map in `taxi-demo/lib/html.js` because
+the demo is self-contained; `test/taxiOfficeWorkers.test.js` fails if the two
+drawings drift apart (watched red).
+
 ## Sale readiness page
 
 `/get-your-business-ready-to-sell` is a campaign landing page for social and

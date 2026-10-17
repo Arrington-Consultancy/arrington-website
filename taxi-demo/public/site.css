@@ -621,9 +621,14 @@ text.map-sea-sm { font-size: 5.6px; }
 .office-workers { list-style: none; margin: 1.75rem 0 0; padding: 0; }
 .office-workers li { display: grid; gap: 0.25rem; padding: 1rem 0; border-top: 1px solid var(--line); }
 .office-workers li:last-child { border-bottom: 1px solid var(--line); }
-.office-workers h3 { margin: 0; font-size: 1.15rem; }
+.office-workers h3 { margin: 0; font-size: 1.15rem; display: flex; align-items: center; gap: 0.65rem; }
+.office-worker-icon { flex: none; display: inline-grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: var(--radius-sm); background: var(--teal-pale); color: var(--teal); }
+.office-worker-icon .icon { width: 1.3rem; height: 1.3rem; vertical-align: 0; }
 .office-workers p { margin: 0; max-width: 40rem; color: var(--ink-2); }
-@media (min-width: 48rem) { .office-workers li { grid-template-columns: 12rem minmax(0, 1fr); gap: 1.5rem; align-items: baseline; } }
+@media (min-width: 48rem) {
+  .office-workers li { grid-template-columns: 15rem minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+  .office-workers p { padding-top: 0.3rem; }
+}
 .portal-panel { margin-top: 0; padding: 1.75rem 1.5rem; }
 .portal-panel .portal-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 0; }
 .shot-note { margin: 1rem 0 0; font-size: 0.88rem; color: var(--ink-2); max-width: 42rem; }

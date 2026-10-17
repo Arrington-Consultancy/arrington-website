@@ -614,16 +614,16 @@ ${pageTop({ eyebrow: 'Contact', title: 'Call us, any time.', lede: `The quickest
 //
 // The screenshots were taken from the demonstration office on 16 October
 // 2026 with the replies as the AI drafted them on production that morning.
-// The five workers are named as the office names them
+// The five workers are named, and their icons drawn, as the office does it
 // (lib/taxiOffice/workers.js in the main site; a test there keeps the two
 // lists the same).
 
 const OFFICE_WORKERS = [
-  ['Bookings', 'Reads booking emails, checks each one against the job in dispatch, and books, corrects or cancels it there. Drafts the reply.'],
-  ['Customer emails', 'Answers everything else customers send, from lost property to account questions, and looks up the journey when the answer is in dispatch.'],
-  ['Complaints', 'Logs every complaint and pulls the job from dispatch, so the reply rests on what happened. Passes anything about safety to Licensing.'],
-  ['Licensing', 'Keeps every badge, plate, MOT and insurance date in one register, flags what is due and drafts the letter to the council.'],
-  ['Social media', 'Writes the week\'s posts from what is going on at the firm. Nothing is posted until the owner approves it.']
+  ['Bookings', 'Reads booking emails, checks each one against the job in dispatch, and books, corrects or cancels it there. Drafts the reply.', 'bookings'],
+  ['Customer emails', 'Answers everything else customers send, from lost property to account questions, and looks up the journey when the answer is in dispatch.', 'customer'],
+  ['Complaints', 'Logs every complaint and pulls the job from dispatch, so the reply rests on what happened. Passes anything about safety to Licensing.', 'complaints'],
+  ['Licensing', 'Keeps every badge, plate, MOT and insurance date in one register, flags what is due and drafts the letter to the council.', 'licensing'],
+  ['Social media', 'Writes the week\'s posts from what is going on at the firm. Nothing is posted until the owner approves it.', 'social']
 ];
 
 // A screenshot: the desktop crop, and on a phone a crop taken at phone width
@@ -667,7 +667,7 @@ ${pageTop({ eyebrow: 'Staff portal', title: 'The office behind the website.', le
       <h2>Five workers, one office.</h2>
       <p>Each one does a single job. None of them sends, books or posts anything on its own.</p>
     </div>
-    <ul class="office-workers">${OFFICE_WORKERS.map(([n, d]) => html`<li><h3>${n}</h3><p>${d}</p></li>`)}</ul>
+    <ul class="office-workers">${OFFICE_WORKERS.map(([n, d, id]) => html`<li><h3><span class="office-worker-icon">${icon(id)}</span>${n}</h3><p>${d}</p></li>`)}</ul>
   </div>
 </section>
 <section class="section">
