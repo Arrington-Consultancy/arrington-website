@@ -19,14 +19,14 @@ const emitted = (p) => read(p).replace(/<%#[\s\S]*?%>/g, '');
 const PATH = '/taxi-and-private-hire-operators/websites';
 const VIEW = 'views/taxi-websites.ejs';
 const ROUTE = 'routes/taxiWebsites.js';
-const { TAXI_WEBSITES_CONTACT, TAXI_WEBSITES_PATH, TAXI_DEMO_URL } = require('../routes/taxiWebsites');
+const { TAXI_WEBSITES_CONTACT, TAXI_WEBSITES_PATH, TAXI_DEMO_URL, WORKSPACE_PRICE_PENCE } = require('../routes/taxiWebsites');
 const { OFFERS } = require('../lib/whereToStartOffers');
 
 function renderBody() {
   const src = emitted(VIEW).replace(/<%-\s*include\([^)]*\)\s*%>/g, '');
   const html = ejs.render(src, {
     theme: { vars: {} }, nonce: 'n', csrfToken: 't', navPages: [], content: {},
-    websiteOffer: OFFERS.website_build, demoUrl: TAXI_DEMO_URL, pageContact: TAXI_WEBSITES_CONTACT
+    websiteOffer: OFFERS.website_build, workspacePricePence: WORKSPACE_PRICE_PENCE, demoUrl: TAXI_DEMO_URL, pageContact: TAXI_WEBSITES_CONTACT
   });
   return html.slice(html.indexOf('<body>'));
 }
@@ -63,9 +63,11 @@ test('the hero leads with bookings into dispatch, and the £999 includes the lin
   assert.ok(hero.includes('£999, with the dispatch link included.'));
   assert.ok(!/email/i.test(hero), 'the hero still offers the email check');
   const covers = section(body, 'data-covers');
+  assert.ok(covers.includes('What the £999 website covers'), 'the heading no longer says which £999 it is');
   assert.ok(covers.includes('£999') && covers.includes("That's the whole price."));
   assert.ok(covers.includes('The link to your dispatch system is part of it, not an extra.'));
   assert.ok(!/email/i.test(covers), 'the £999 still claims the email check');
+  assert.ok(!/workspace|\bAI\b|1,998/i.test(covers), 'the website\'s £999 section mentions the workspace');
   assert.ok(!/email booking check are part of it|with both included/.test(visibleText(body)), 'the old "included" wording survives somewhere');
 });
 
@@ -126,13 +128,34 @@ test('the systems promise is kept true: named systems, never "any system", acces
   assert.ok(!/30 minutes|thirty minutes/i.test(text), "Tom's own 30 minutes is on the page");
 });
 
-test('the email check says what Tom described and nothing more, priced separately; the widget line sits with dispatch', () => {
+test('the office workspace: the approved wording, its own £999, after the website\'s price, compliance as warning only', () => {
+  // Tom's approval of 17/10/2026 of the proposal "Taxi page: the £999 office
+  // workspace" (Drive 1Ty-9RJCp_YGR3W8N1YbzM_4UV99sWNnFbP5TGfrb9Ds), word for
+  // word apart from "made up" unhyphenated for the page's no dash rule.
+  assert.strictEqual(WORKSPACE_PRICE_PENCE, 99900);
   const body = renderBody();
-  const e = section(body, 'data-email-check');
-  assert.ok(e.includes('Account customers, hotels and schools still book by email.'));
-  assert.ok(e.includes('a booking that was never keyed in, or was keyed in wrong, gets flagged before the customer is left waiting'));
-  assert.ok(e.includes("so it's priced separately from the £999."), 'the email check is not marked as priced separately');
-  assert.ok(!/As part of the build/.test(e), 'the email check is still described as part of the build');
+  assert.ok(!body.includes('data-email-check'), 'the old "priced separately" section is back');
+  assert.ok(!/priced separately/i.test(visibleText(body)), 'the email check is still "priced separately" with no price');
+  // Tags become spaces in visibleText, so a link before a comma leaves " ,".
+  const w = section(body, 'data-workspace').replace(/\s+([,.:;])/g, '$1');
+  for (const line of [
+    'An office workspace for your firm',
+    'Alongside the website, we can set up an office workspace: AI workers built for your firm, who know your business, your customers and how you talk to them. They draft the work and flag what needs attention, and someone in your office checks it and decides what goes out.',
+    'What they can take off the office:',
+    'Keeping track of every driver badge, vehicle licence, DBS check, insurance and MOT date, and warning you before anything runs out. You still check the paperwork and sign off anything that goes to the council.',
+    "Checking the bookings that still come by email. Account customers, hotels and schools still book that way, so each request is matched against the jobs in your dispatch system, and a booking that was never keyed in, or was keyed in wrong, gets flagged before the customer is left waiting.",
+    'Drafting quotes from your own prices.',
+    'Helping plan driver rotas and cover.',
+    "Writing social media posts in your firm's voice, ready for you to approve.",
+    'The workspace is £999, separate from the website, or £1,998 for both. Which workers you get, and what each one does, is agreed in a recorded planning conversation, the same way the website is, so you know exactly what the £999 buys before any work starts.',
+    'You can look round an example in the Tidewell Cars staff office, where the workers run on a made up firm.'
+  ]) assert.ok(w.includes(line), `the approved line changed: ${line}`);
+  // The operator keeps the legal responsibility; no limitless promise.
+  assert.ok(!/handles? (?:your )?compliance|keeps? you compliant|takes care of (?:your )?compliance|responsib/i.test(w), 'the workspace is said to carry compliance');
+  assert.ok(!/unlimited|as many (?:workers )?as you|whatever you want/i.test(w), 'a promise without limit');
+  // After the website's price band, so its £999 is never read as part of the website's.
+  assert.ok(body.indexOf('data-covers') < body.indexOf('data-workspace'), 'the workspace sits above the website\'s price');
+  assert.ok(body.slice(body.indexOf('data-workspace')).includes('href="/taxi-demo/staff-portal"'), 'the example office link is gone');
   assert.ok(section(body, 'data-dispatch').includes("If your provider's own booking widget already does what you need, we'll say so."));
   const text = visibleText(body);
   // No email systems, alert channels or automatic correction (approval, change 1).
@@ -160,7 +183,12 @@ test('the enquiry form is the main action: no checkout, no conversion, no paymen
   assert.ok(!/\/api\/checkout|data-offer=|AW-18129914078|Pay £|where-to-start\/website-build/.test(body + read(ROUTE)), 'a payment route or conversion appeared');
   assert.ok(body.includes('href="/taxi-and-private-hire-operators"'), 'the way back to dispatch advice is gone');
   assert.strictEqual(TAXI_WEBSITES_CONTACT.heading, 'Tell us about your firm');
-  assert.ok(!/£(?!999\b)[0-9][0-9,]*/.test(visibleText(body)), 'a price other than £999 is on the page');
+  // £999 for each, and their plain sum in the workspace section only.
+  const text = visibleText(body);
+  assert.ok(!/£(?!999\b|1,998\b)[0-9][0-9,]*/.test(text), 'a price other than £999 or £1,998 is on the page');
+  assert.strictEqual((text.match(/£1,998/g) || []).length, 1, '£1,998 appears other than once');
+  assert.ok(section(body, 'data-workspace').includes('£1,998 for both'), '£1,998 is outside the workspace section');
+  assert.ok(!/bundle|package price|save £|saving/i.test(text), 'the £1,998 is framed as a saving');
   assert.ok(!/save £|was £|discount|introductory|50%|half price|launch (?:price|offer)|limited time|special offer/i.test(visibleText(body)), 'a price is framed as a reduction');
 });
 
@@ -183,7 +211,11 @@ test('brand rules: we, no dashes, no hyphenated words, no banned words, never fa
   }
   assert.ok(!/\bfire|firefight|burning|flames?\b/i.test(served), 'a fire metaphor');
   assert.ok(!/\bfailing\b|\bstruggling\b|\bfix your business\b/i.test(served), 'the page implies the operator is failing');
-  assert.ok(!/\bAI\b/.test(served), 'AI appears on the page');
+  // "AI" is in the workspace section and nowhere else: never the hook (Brand OS).
+  assert.ok(/\bAI\b/.test(section(body, 'data-workspace')), 'the workspace section does not say what its workers are');
+  const rest = body.replace(/<div class="tw-section" data-workspace>[\s\S]*?<\/div>/, '');
+  assert.ok(rest.length < body.length, 'the workspace section was not found to cut out');
+  assert.ok(!/\bAI\b/.test(visibleText(rest) + ' ' + TAXI_WEBSITES_CONTACT.body), 'AI appears outside the workspace section');
 });
 
 test('the page schema names the taxi page as its parent', () => {

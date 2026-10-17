@@ -11,8 +11,15 @@
 //     operator's dispatch system. The price comes from
 //     lib/whereToStartOffers.js. Until 15/10/2026 it also covered an email
 //     booking check; Tom's decision of that day (taxi demo brief, section 8:
-//     office-side tools are priced separately) took the check out, and the
-//     page now says it is priced separately.
+//     office-side tools are priced separately) took the check out.
+//   - The office workspace (17/10/2026, Google Ads brief "Taxi page: the £999
+//     office workspace", this worker's proposal, Tom's "yes"): AI workers set
+//     up for the operator's firm, £999 separate from the website or £1,998 for
+//     both, no bundle saving. The email check is now one of its examples.
+//     Compliance is only ever "keeping track" and "warning you"; the operator
+//     signs off. Which workers, and what each does, is agreed in the recorded
+//     planning conversation. "AI" may appear in that section and nowhere else
+//     on the page (the Brand OS: AI is never the hook).
 //   - "See one we built" links to the Tidewell Cars demo (taxi-demo/ in this
 //     repository, its own Railway service), with the brief's line "Book a
 //     test job and see it go through."
@@ -39,6 +46,12 @@ const { OFFERS } = require('../lib/whereToStartOffers');
 // server.js (it used to be Railway's generated domain for its own service).
 const TAXI_DEMO_URL = '/taxi-demo/';
 
+// The office workspace's price, Tom's decision of 17/10/2026. Kept here rather
+// than in the offer catalogue because it is sold on this page only, through
+// the enquiry form, with no payment page. 02 Commercial Position is Tom's to
+// update. The page shows it beside the website's price and their plain sum.
+const WORKSPACE_PRICE_PENCE = 99900;
+
 const TAXI_WEBSITES_CONTACT = {
   heading: 'Tell us about your firm',
   body: 'Which dispatch system you\'re on and how customers book with you now. A few lines is plenty.<br /><br />We\'ll come back to you to arrange a conversation with Tom, and you\'ll get a straight answer on whether your system can take bookings from a website.',
@@ -56,6 +69,7 @@ function mountPageRoute(app, generateCsrfToken) {
         navPages,
         content,
         websiteOffer: OFFERS.website_build,
+        workspacePricePence: WORKSPACE_PRICE_PENCE,
         demoUrl: TAXI_DEMO_URL,
         pageContact: { ...pageContact, ...TAXI_WEBSITES_CONTACT }
       });
@@ -65,4 +79,4 @@ function mountPageRoute(app, generateCsrfToken) {
   });
 }
 
-module.exports = { mountPageRoute, TAXI_WEBSITES_PATH, TAXI_WEBSITES_CONTACT, TAXI_DEMO_URL };
+module.exports = { mountPageRoute, TAXI_WEBSITES_PATH, TAXI_WEBSITES_CONTACT, TAXI_DEMO_URL, WORKSPACE_PRICE_PENCE };

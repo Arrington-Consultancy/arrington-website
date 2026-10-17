@@ -79,6 +79,13 @@
         .tw-actions { margin: 1.6rem 0 0; }
         .tw-also { margin: 2.25rem 0 0; font-size: 0.97rem; }
 
+        /* THE OFFICE WORKSPACE: a plain list of examples under the website's
+           price band. */
+        .tw-list-lead { margin-bottom: 0.6rem; color: var(--text-bright); font-weight: 500; }
+        .tw-list { margin: 0 0 1.4rem; padding-left: 1.2rem; max-width: 62ch; }
+        .tw-list li { margin-bottom: 0.7rem; color: var(--text); }
+        .tw-list li::marker { color: var(--accent); }
+
         /* THE DEMO SCREENSHOT: two phone screens on the demo's own dark
            ground, linked to the live demo. */
         .tw-demo-shot { display: block; margin: 1.4rem 0 1rem; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
@@ -106,8 +113,8 @@
 
     <%# HERO. The reason to choose us over a web agency leads (bookings into
         dispatch). The email check was named here until Tom's decision of
-        15/10/2026 took it out of the £999; it now sits lower, priced
-        separately. %>
+        15/10/2026 took it out of the £999; since 17/10/2026 it is one of the
+        office workspace's examples, at the foot of the page. %>
     <header class="tw-hero">
         <picture class="tw-hero-photo">
             <source srcset="/img/startup/tom-at-desk.webp" type="image/webp">
@@ -133,8 +140,8 @@
         <div class="tw-wrap">
         <%# Google Ads worker's brief of 13/10/2026, approved by Tom as written:
             a supporting point, so it is short and sits under the hero; the page
-            still leads with dispatch and the email check. The scope stays as
-            "What the £999 covers" states it. %>
+            still leads with dispatch. The scope stays as "What the £999 website
+            covers" states it. %>
         <div class="tw-section" data-scratch>
             <h2>Built from scratch for your firm</h2>
             <p>No templates. We design the site around your firm, how your customers book and what you want it to say, and if we'd do something differently we'll tell you straight. If there's a site in the trade you rate, we'll take what works about it and build it in your name.</p>
@@ -165,20 +172,6 @@
             <p data-widget>If your provider's own booking widget already does what you need, we'll say so.</p>
         </div>
 
-        <%# THE EMAIL BOOKING CHECK. Described exactly as the approval of
-            13/10/2026 describes it and no further. Since Tom's decision of
-            15/10/2026 (taxi demo brief, section 8: office-side tools are priced
-            separately) it is no longer part of the £999, and the page says so
-            rather than dropping it, because the live ads still name it. %>
-        <div class="tw-section" data-email-check>
-            <h2>Bookings that still come by email</h2>
-            <p>Account customers, hotels and schools still book by email. We can also set up a check that matches the booking requests arriving by email against the jobs in your dispatch system, so a booking that was never keyed in, or was keyed in wrong, gets flagged before the customer is left waiting.</p>
-            <p>That's office work rather than part of the website, so it's priced separately from the <%= '£' + (websiteOffer.pricePence / 100).toLocaleString('en-GB') %>.</p>
-            <%# Tom, 16/10/2026: the demo site's staff portal page. No "AI" and no
-                email system named here, as everywhere on this page. %>
-            <p data-office-link>You can see the check working in the <a class="tw-link" href="/taxi-demo/staff-portal">Tidewell Cars staff office</a>.</p>
-        </div>
-
         <%# Facts: nearly twenty years owning Abacus (Evidence case study); the
             last eight or so on iCabbi (Tom's approved email of 6 July 2026,
             APPROVED 03: "used iCabbi for around 8 years before selling the
@@ -201,7 +194,7 @@
         <section class="tw-band surface-paper">
         <div class="tw-wrap">
         <div class="tw-section" data-covers>
-            <h2>What the £999 covers</h2>
+            <h2>What the £999 website covers</h2>
             <p class="tw-price"><%= '£' + (websiteOffer.pricePence / 100).toLocaleString('en-GB') %></p>
             <p>That's the whole price. It starts with a recorded planning conversation to agree what the site needs to do. You then get a complete first version and one structured round of changes before launch. The link to your dispatch system is part of it, not an extra.</p>
             <div class="tw-actions">
@@ -211,6 +204,33 @@
         </div>
         </div>
         </section>
+
+        <%# THE OFFICE WORKSPACE (17/10/2026). Google Ads brief "Taxi page: the
+            £999 office workspace", this worker's proposal, approved by Tom as
+            written ("yes"), with "made up" unhyphenated for the page's no dash
+            rule. After the website's price on purpose, so no reader takes the
+            workspace's £999 as part of the website's. The only place on this
+            page that says "AI" (Brand OS: AI workers as part of the offer, never
+            the hook). Compliance is keeping track and warning, and the operator
+            signs off; the email check is described as the 13/10 approval
+            describes it. No payment button: the enquiry form below is the
+            action. %>
+        <div class="tw-wrap">
+        <div class="tw-section" data-workspace>
+            <h2>An office workspace for your firm</h2>
+            <p>Alongside the website, we can set up an office workspace: AI workers built for your firm, who know your business, your customers and how you talk to them. They draft the work and flag what needs attention, and someone in your office checks it and decides what goes out.</p>
+            <p class="tw-list-lead">What they can take off the office:</p>
+            <ul class="tw-list">
+                <li>Keeping track of every driver badge, vehicle licence, DBS check, insurance and MOT date, and warning you before anything runs out. You still check the paperwork and sign off anything that goes to the council.</li>
+                <li>Checking the bookings that still come by email. Account customers, hotels and schools still book that way, so each request is matched against the jobs in your dispatch system, and a booking that was never keyed in, or was keyed in wrong, gets flagged before the customer is left waiting.</li>
+                <li>Drafting quotes from your own prices.</li>
+                <li>Helping plan driver rotas and cover.</li>
+                <li>Writing social media posts in your firm's voice, ready for you to approve.</li>
+            </ul>
+            <p data-workspace-price>The workspace is <%= '£' + (workspacePricePence / 100).toLocaleString('en-GB') %>, separate from the website, or <%= '£' + ((websiteOffer.pricePence + workspacePricePence) / 100).toLocaleString('en-GB') %> for both. Which workers you get, and what each one does, is agreed in a recorded planning conversation, the same way the website is, so you know exactly what the <%= '£' + (workspacePricePence / 100).toLocaleString('en-GB') %> buys before any work starts.</p>
+            <p data-office-link>You can look round an example in the <a class="tw-link" href="/taxi-demo/staff-portal">Tidewell Cars staff office</a>, where the workers run on a made up firm.</p>
+        </div>
+        </div>
     </main>
 
     <%- include('partials/site-footer', { canEdit: false, pageContact, content }) %>
