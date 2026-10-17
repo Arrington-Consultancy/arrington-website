@@ -7846,6 +7846,17 @@ Tom's approval with changes (Drive id
 - **02 Commercial Position** does not yet record that the £999 includes the
   dispatch link for taxi operators, or that office-side tools (the email
   check among them) are priced separately. That record is Tom's.
+- **PROPOSED, NOT BUILT (17/10/2026): the £999 office workspace.** Google Ads
+  brief (Drive id `1froB2YVMPVUpUAZcJA8Vxsg-dEF2uTl8YQcWj9yvXGs`): Tom priced
+  the office workspace (AI workers set up for the operator's firm) at £999,
+  separate from the website, £1,998 for both, no bundle saving. This worker's
+  proposal (Drive id `1Ty-9RJCp_YGR3W8N1YbzM_4UV99sWNnFbP5TGfrb9Ds`) replaces
+  the "priced separately" email check section with a workspace section after
+  "What the £999 covers" (renamed "What the £999 website covers"), compliance
+  worded as "keeping track" and "warning you", and lets "AI" appear in that
+  one section only (the page's no-AI test came from this worker's own build,
+  not an approval; the Brand OS allows AI workers if AI is never the hook).
+  Nothing changes on the page until Tom approves the wording.
 
 ## Taxi demo site: Tidewell Cars (LIVE 15/10/2026)
 
