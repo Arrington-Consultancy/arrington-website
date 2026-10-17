@@ -7797,9 +7797,8 @@ Tom's approval with changes (Drive id
   web bookings that land in the operator's dispatch system. Price read from
   `lib/whereToStartOffers.js`. Until 15/10/2026 it also covered an email
   booking check; Tom's decision of that day (taxi demo brief, section 8:
-  office-side tools are priced separately) took it out. The page keeps the
-  email check section and says it is priced separately, because the live
-  ads still name it.
+  office-side tools are priced separately) took it out. Since 17/10/2026 the
+  email check is one example in the office workspace section (below).
 - **Systems:** iCabbi, Autocab and Cordic named, plus "other systems with a
   booking API"; never "any system". The link is promised only "where your
   system has a booking API and you can arrange API access with your
@@ -7846,17 +7845,31 @@ Tom's approval with changes (Drive id
 - **02 Commercial Position** does not yet record that the £999 includes the
   dispatch link for taxi operators, or that office-side tools (the email
   check among them) are priced separately. That record is Tom's.
-- **PROPOSED, NOT BUILT (17/10/2026): the £999 office workspace.** Google Ads
-  brief (Drive id `1froB2YVMPVUpUAZcJA8Vxsg-dEF2uTl8YQcWj9yvXGs`): Tom priced
-  the office workspace (AI workers set up for the operator's firm) at £999,
-  separate from the website, £1,998 for both, no bundle saving. This worker's
-  proposal (Drive id `1Ty-9RJCp_YGR3W8N1YbzM_4UV99sWNnFbP5TGfrb9Ds`) replaces
-  the "priced separately" email check section with a workspace section after
-  "What the £999 covers" (renamed "What the £999 website covers"), compliance
-  worded as "keeping track" and "warning you", and lets "AI" appear in that
-  one section only (the page's no-AI test came from this worker's own build,
-  not an approval; the Brand OS allows AI workers if AI is never the hook).
-  Nothing changes on the page until Tom approves the wording.
+- **The £999 office workspace (LIVE 17/10/2026).** Google Ads brief (Drive
+  id `1froB2YVMPVUpUAZcJA8Vxsg-dEF2uTl8YQcWj9yvXGs`): Tom priced the office
+  workspace (AI workers set up for the operator's firm) at £999, separate
+  from the website, £1,998 for both, no bundle saving. This worker's
+  proposal (Drive id `1Ty-9RJCp_YGR3W8N1YbzM_4UV99sWNnFbP5TGfrb9Ds`),
+  approved by Tom ("yes"), is built: the "priced separately" email check
+  section is replaced by "An office workspace for your firm", placed after
+  the website's price section (now "What the £999 website covers") so the
+  two £999s are never read as one. Five examples (licensing dates kept track
+  of with warnings, the email booking check, quotes from the firm's prices,
+  rotas and cover, social posts for approval), then the price line and a
+  link to the Tidewell staff office. Compliance is only "keeping track" and
+  "warning you", and the operator signs off. "AI" appears in this section
+  and nowhere else on the page (the Brand OS: AI is never the hook). The
+  approved wording is word for word except "made up", unhyphenated for the
+  page's no dash rule. The price is `WORKSPACE_PRICE_PENCE` in
+  `routes/taxiWebsites.js`, not the offer catalogue, because it is sold on
+  this page through the enquiry form with no payment page. Tests pin the
+  wording, the two prices (£999, £1,998 once, only in the workspace
+  section), no bundle or saving language, and no AI outside the section.
+  Commit `f364da1`, serving deployment `7bd8d142` (twin `e68a69ff`
+  REMOVED); inspection run `20261017T081938Z-taxi-office-workspace-live`:
+  200 at desktop and phone, no dashes, no overflow, no page errors, section
+  text read from the live page. 02 Commercial Position recording the
+  workspace price is Tom's.
 
 ## Taxi demo site: Tidewell Cars (LIVE 15/10/2026)
 
@@ -8356,6 +8369,22 @@ so a change reaches a browser on its next page. And every office icon has
 `width`/`height` attributes, so a missing or stale stylesheet leaves it at
 20 pixels. Any other page that links a `/public` file which changes should
 version it the same way.
+
+### Sign out (17/10/2026)
+
+Tom: "in the taxi demo site i need to be able to sign out". Every office
+page has a Sign out button in its header (`views/taxi-office/partials/top.ejs`,
+`.to-signout`), shown on a phone too, posting to the site's own `/logout`
+with the CSRF token and `next=/taxi-demo/staff-portal`, so the visitor lands
+back on the demo's staff portal page. `/logout` in `routes/auth.js` now
+follows a form's `next` through the same `safeNextPath` check the login page
+uses (a path on this site only; `//host`, a full URL or anything else goes
+home), and the CMS log out sends none, so it still goes to `/`.
+`test/taxiOfficeSignOut.test.js` (the button on all six office pages, in the
+header, with the token; the redirect and the refusals; watched red on the
+old route). Verified locally in Chromium at desktop and phone: signed in,
+pressed Sign out, landed on the staff portal page, and the office then sent
+the browser to `/login`.
 
 ### Today's four counts open what they count (LIVE 17/10/2026)
 
