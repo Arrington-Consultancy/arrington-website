@@ -164,7 +164,10 @@ router.post('/logout', (req, res) => {
       }
     }
 
-    res.redirect('/');
+    // A form may name where to land afterwards (the Tidewell office sends
+    // its visitors back to the demo's staff portal page). safeNextPath only
+    // lets a path on this site through; anything else lands on the home page.
+    res.redirect(safeNextPath(req.body && req.body.next));
   });
 });
 

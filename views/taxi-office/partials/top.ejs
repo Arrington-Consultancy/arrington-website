@@ -22,7 +22,12 @@
       </a>
       <div class="to-who">
         <span class="to-date"><%= todayLong %></span>
-        <% if (user) { %><span class="to-user">Signed in as <%= user.username %></span><% } %>
+        <% if (user) { %><span class="to-user">Signed in as <%= user.username %></span>
+        <form class="to-signout" method="post" action="/logout">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <input type="hidden" name="next" value="/taxi-demo/staff-portal">
+          <button type="submit">Sign out</button>
+        </form><% } %>
       </div>
     </div>
     <nav class="to-wrap to-nav" aria-label="Office">

@@ -72,7 +72,12 @@ p { margin: 0 0 0.8rem; }
 .to-brand:hover { color: #fff; }
 .to-brand-sub { color: var(--on-night-muted); font-weight: 500; }
 .to-mark { width: 2rem; height: 2rem; border-radius: 8px; background: var(--red); display: inline-grid; place-items: center; font-weight: 900; color: #fff; }
-.to-who { display: flex; gap: 0.9rem; font-size: 0.85rem; color: var(--on-night-muted); flex-wrap: wrap; }
+.to-who { display: flex; align-items: center; gap: 0.9rem; font-size: 0.85rem; color: var(--on-night-muted); flex-wrap: wrap; }
+/* Sign out sits in the bar on every page, phone included. */
+.to-signout { margin: 0; }
+.to-signout button { font: inherit; font-weight: 600; color: var(--on-night); background: transparent; border: 1px solid var(--on-night-muted); border-radius: 999px; min-height: 32px; padding: 0.2rem 0.8rem; cursor: pointer; }
+.to-signout button:hover { color: #fff; background: var(--night-2); border-color: #fff; }
+.to-signout button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 .to-user { display: none; }
 @media (min-width: 48rem) { .to-user { display: inline; } }
 .to-date { color: var(--on-night); font-weight: 600; }
