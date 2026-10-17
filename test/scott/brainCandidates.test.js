@@ -463,9 +463,10 @@ describe('the invited-viewer login alert', () => {
     }
   };
 
-  test('watches will by default and stays silent for Tom and the fictional staff', () => {
+  test('watches will and marc by default and stays silent for Tom and the fictional staff', () => {
     withEnv(undefined, () => {
       assert.equal(notifier.shouldAlertOnLogin('will'), true);
+      assert.equal(notifier.shouldAlertOnLogin('marc'), true, 'Tom, 17/10/2026: "want to see if marc logs on"');
       assert.equal(notifier.shouldAlertOnLogin('Will'), true, 'the login lowercases, so this must too');
       assert.equal(notifier.shouldAlertOnLogin('tom'), false);
       assert.equal(notifier.shouldAlertOnLogin('nat'), false);
@@ -515,6 +516,32 @@ describe('the invited-viewer login alert', () => {
       // It must not imply anything was sent to the visitor.
       assert.match(sent[0].text, /Nothing has been sent to them/i);
     } finally { notifier.__resetTransportForTests(); }
+  });
+
+  test('a watched login on the site\'s own login page names where they went, and says nothing about the Scott brain', async () => {
+    const sent = [];
+    notifier.__setTransportForTests({ sendMail: async (m) => { sent.push(m); return {}; } });
+    try {
+      const r = await withEnv(undefined, () => notifier.sendLoginNotification({ username: 'marc', place: 'the Tidewell taxi office' }));
+      assert.equal(r.sent, true);
+      assert.equal(sent[0].subject, 'marc has just logged in to the Tidewell taxi office');
+      assert.match(sent[0].text, /^marc signed in to the Tidewell taxi office at /);
+      assert.doesNotMatch(sent[0].text, /learned|\/scott\/gaps/);
+      assert.match(sent[0].text, /Nothing has been sent to them/i);
+    } finally { notifier.__resetTransportForTests(); }
+  });
+
+  test('the site login sends the alert for a watched account, and knows the taxi office from the Scott demo', () => {
+    const { placeFor } = require('../../routes/auth');
+    assert.equal(placeFor('/taxi-demo/office/'), 'the Tidewell taxi office');
+    assert.equal(placeFor('/taxi-demo/office'), 'the Tidewell taxi office');
+    assert.equal(placeFor('/scott'), 'the Scott demonstration (through the site login)');
+    assert.equal(placeFor('/'), 'the website');
+    const src = require('fs').readFileSync(require('path').join(__dirname, '../../routes/auth.js'), 'utf8');
+    const login = src.slice(src.indexOf("router.post('/login'"), src.indexOf("router.post('/logout'"));
+    assert.match(login, /if \(shouldAlertOnLogin\(user\.username\)\) \{\s+sendLoginNotification\(\{ username: user\.username, place: placeFor\(nextPath\) \}\)/);
+    assert.ok(login.indexOf('sendLoginNotification') > login.indexOf("'login'"), 'only after a successful login is recorded');
+    assert.doesNotMatch(login, /await sendLoginNotification/, 'never awaited, so mail cannot slow a login');
   });
 
   test('nothing learned is said plainly rather than as a number', async () => {

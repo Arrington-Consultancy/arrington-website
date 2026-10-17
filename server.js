@@ -1508,6 +1508,7 @@ loadPermissions().then(() => {
   app.listen(PORT, () => {
     console.log(`[${isProd ? 'PROD' : 'DEV'}] Arrington CMS running on port ${PORT}`);
     console.log(require('./lib/scott/orchestrator').describeScottAIStatus());
+    console.log(require('./lib/scott/gapNotifier').describeLoginAlerts());
     // The taxi office's AI workers: which switch is set, and one tiny call
     // so the deploy log says whether the model answers on this key.
     {

@@ -3,6 +3,7 @@ const bcrypt = require('bcrypt');
 const rateLimit = require('express-rate-limit');
 const db = require('../db/pool');
 const themes = require('../db/themes');
+const { shouldAlertOnLogin, sendLoginNotification } = require('../lib/scott/gapNotifier');
 
 const router = express.Router();
 
@@ -36,6 +37,13 @@ const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false
 });
+
+// Where a watched guest was heading, in words for the login alert.
+function placeFor(nextPath) {
+  if (/^\/taxi-demo\/office(\/|$)/.test(nextPath)) return 'the Tidewell taxi office';
+  if (/^\/scott(\/|$)/.test(nextPath)) return 'the Scott demonstration (through the site login)';
+  return 'the website';
+}
 
 function safeNextPath(next) {
   if (typeof next === 'string' && /^\/[a-z0-9][a-z0-9/-]*(?:\?[a-z0-9=&._%-]+)?$/i.test(next)) {
@@ -138,6 +146,17 @@ router.post('/login', loginLimiter, async (req, res) => {
       [user.id, 'login', `${user.username} logged in`]
     );
 
+    // Tells Tom when a watched guest (SCOTT_LOGIN_ALERT_USERNAMES, see
+    // lib/scott/gapNotifier.js) signs in here, which is how a guest reaches
+    // the Tidewell taxi office. Not awaited and cannot throw: a mail
+    // problem must never slow down or break a login. Tom's own logins are
+    // not on the list and send nothing.
+    if (shouldAlertOnLogin(user.username)) {
+      sendLoginNotification({ username: user.username, place: placeFor(nextPath) })
+        .then((r) => { if (!r.sent) console.warn(`Login alert for ${user.username} not sent: ${r.reason}`); })
+        .catch((err) => console.error('Login alert failed:', err.message));
+    }
+
     res.redirect(nextPath);
   } catch (err) {
     console.error('Login error:', err);
@@ -172,3 +191,4 @@ router.post('/logout', (req, res) => {
 });
 
 module.exports = router;
+module.exports.placeFor = placeFor;
