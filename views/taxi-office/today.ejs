@@ -30,8 +30,10 @@
 <div class="to-workers">
   <% WORKERS.forEach(function (w) { %>
     <article class="to-worker" id="worker-<%= w.id %>">
-      <p class="to-worker-tag">AI worker</p>
-      <h2><%= w.name %></h2>
+      <div class="to-worker-head">
+        <%- include('partials/worker-icon', { id: w.id, tile: true }) %>
+        <div><p class="to-worker-tag">AI worker</p><h2><%= w.name %></h2></div>
+      </div>
       <p><%= w.does %></p>
       <% if (w.id === 'bookings' || w.id === 'customer') { var list = byWorker(w.id); %>
         <% if (list.length) { %>

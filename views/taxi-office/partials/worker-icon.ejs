@@ -1,0 +1,20 @@
+<%#
+  A small icon for each AI worker (Tom, 17/10/2026: "our ai workers with a
+  small logo next to them"). Drawn here as plain line icons in the office's
+  own colours, not borrowed brand logos: Social media drafts for more than
+  one platform, and Facebook's logo is Meta's to control. Locals: id (a
+  worker id from lib/taxiOffice/workers.js), and tile (true for the
+  coloured square used on cards and page headings; false for the bare icon
+  inside a chip). Decorative only: the worker's name is always beside it.
+%>
+<%
+  var _paths = {
+    bookings: '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4M9 15l2 2 4-4"/>',
+    customer: '<rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/>',
+    complaints: '<path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-9l-4.5 3.5V17H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="M12 8.5v3.8M12 14.6v.1"/>',
+    licensing: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10.5" r="2"/><path d="M5.5 15.5c.6-1.4 1.7-2.1 3-2.1s2.4.7 3 2.1M14 9.5h4M14 12.5h4M14 15.5h2.5"/>',
+    social: '<circle cx="17.5" cy="5.5" r="2.5"/><circle cx="6.5" cy="12" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/><path d="m8.7 10.7 6.6-3.9M8.7 13.3l6.6 3.9"/>'
+  };
+  var _svg = _paths[id] ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' + _paths[id] + '</svg>' : '';
+%>
+<% if (_svg && typeof tile !== 'undefined' && tile) { %><span class="to-wicon to-wicon-<%= id %>"><%- _svg %></span><% } else if (_svg) { %><span class="to-wicon-inline"><%- _svg %></span><% } %>

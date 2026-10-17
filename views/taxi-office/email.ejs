@@ -27,7 +27,7 @@
       <section class="to-panel">
         <div class="to-panel-head">
           <p class="to-worker-tag"><%= reading.source === 'ai' ? 'Read by the AI' : 'Prepared for the demo' %></p>
-          <span><span class="to-chip"><%= W.name %></span> <span class="to-pill to-pill-<%= status.tone %>"><%= status.label %></span></span>
+          <span><span class="to-chip"><%- include('partials/worker-icon', { id: worker }) %><%= W.name %></span> <span class="to-pill to-pill-<%= status.tone %>"><%= status.label %></span></span>
         </div>
         <% if (reading.note) { %><p class="to-note to-note-warn"><%= reading.note %></p><% } %>
         <p class="to-summary"><%= x.summary %></p>
