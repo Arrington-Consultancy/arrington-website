@@ -8386,6 +8386,96 @@ old route). Verified locally in Chromium at desktop and phone: signed in,
 pressed Sign out, landed on the staff portal page, and the office then sent
 the browser to `/login`.
 
+### The Checker: a second AI on every booking, then a person signs it off (17/10/2026)
+
+Tom: "the Ai can do the booking work but we need a second Ai to check the
+booking then human authority needs to sign it off". A sixth worker,
+Checker (`lib/taxiOffice/workers.js`, shield icon), never routed an email.
+
+- **What it does:** after the Bookings worker reads a booking, change or
+  cancellation, `ai.checkBooking` (its own brief, `checkSystem`) reads the
+  customer's email beside the booking and lists each real difference: date
+  (from when the email arrived; a 1am return is the next day), time,
+  pickup, destination, passengers, vehicle, driver notes, name, phone, a
+  missed or invented journey. It is given the email and the booking only,
+  not the Bookings brief, draft or summary. `cleanCheck` keeps only issues
+  that point at something in the booking and would change it, and fills in
+  what the booking says from the booking itself. Flagged or agrees is
+  decided by code from the issues (`office.checkState`), and a check is tied
+  to the exact reading it checked (`fingerprint`).
+- **"Use the checker's corrections"** (`office.applyCheck`, POST
+  `/inbox/:id/apply-check`) puts its values into this visitor's copy of the
+  booking (never the shared or prepared one), checks it again, and redrafts
+  the reply through the ordinary redraft with the note "Checker: match the
+  corrected booking". A missed or extra journey is shown, not auto-fixed.
+- **Sign-off:** every book, correct and cancel in dispatch needs a required
+  tick in the email page's sign-off box; `fixLeg` refuses without it and
+  the board is untouched. The change log reads "Signed off by <login>, the
+  checker agreeing / over the checker's concerns / the checker not having
+  run". The tick's wording changes with the checker's result.
+- **Cost and fallbacks:** one extra call per booking email. The demo's own
+  emails share the check for the day like their readings (`check|day|id|fp`);
+  a visitor's own email or a corrected booking uses their allowance
+  (`LIMITS.check`, 40 an hour). AI off: a demo email read from its prepared
+  answer carries a check made by hand ("prepared"); anything else asks the
+  person to check it against the email themselves.
+- **Where it shows:** a Checker panel on the email page above the dispatch
+  section (table: the booking says, the email says, it should be), a
+  Checker card on Today, "Checker flagged" in the inbox, and six workers on
+  the demo's staff portal page (the Today screenshot there still shows five
+  cards; retake it when the office's look next changes).
+- **Proof:** `test/taxiOfficeChecker.test.js` (6; a missing sign-off and a
+  check of a stale reading each watched red). In Chromium against a local
+  server with a stand-in model: Clarke's 1am return put on the wrong day,
+  flagged, corrected, checked again (agrees), reply redrafted, signed off,
+  booked; the board read "Signed off by tom, the checker agreeing". The
+  real-model run (`RUN_TAXI_OFFICE_AI_CHECK`) now prints each booking's
+  check and plants that same mistake for the checker to catch.
+
+### Free Gmail for the live demo address (BUILT 17/10/2026, inert)
+
+Tom: "lets just make a free one you can integrate into the demo easily",
+in place of the Workspace seat above. `lib/taxiOffice/mail/imap.js`
+(driver `imap`) reads a free Gmail account over IMAP with an app password:
+no Google Cloud project, no OAuth client, no licence. Written with no
+library (`imap.js` plus `mail/mime.js`), because imapflow and mailparser
+need Node 20 and production runs **Node 18.20.8** (Railpack, from
+`engines`); its tests pass on 18.20.8.
+
+- Read only: EXAMINE (never SELECT), BODY.PEEK, the first 100KB of each
+  message, each message fetched once; one connection kept while the inbox
+  page polls, signed out after a minute idle. Replies are APPENDed to the
+  Drafts folder found by its `\Drafts` flag (`[Gmail]` or the older UK
+  `[Google Mail]`), threaded by In-Reply-To. IMAP cannot send.
+- It refuses to sign in to any `arringtonconsultancy.com` or `.co.uk`
+  address (an app password works for a Workspace account too), and the boot
+  line says REFUSED. The password never reaches a log or an error.
+- **To switch it on:** Tom creates a free Gmail account for the demo,
+  turns on 2-Step Verification, creates an app password
+  (myaccount.google.com/apppasswords) and sets it on the website service as
+  `TAXI_OFFICE_IMAP_PASSWORD`. This worker then sets
+  `TAXI_OFFICE_DEMO_ADDRESS` to the address and `TAXI_OFFICE_MAIL_DRIVER=imap`.
+  Rollback: unset `TAXI_OFFICE_DEMO_ADDRESS`.
+- **Proof:** `test/taxiOfficeImap.test.js` (8) against a fake IMAP server:
+  plain, quoted-printable, base64, ISO-8859-1, split encoded-word subjects,
+  attachments skipped, UID after the literal, reconnect after a drop, the
+  draft round trip, the Arrington refusal, and the office flow. Not proven
+  until the first real email: Google accepting the app password from
+  Railway's network.
+
+### Login alerts for Marc, and from the site login (LIVE 17/10/2026)
+
+Tom: "want to see if marc logs on". `SCOTT_LOGIN_ALERT_USERNAMES` is unset
+on production, so the default list applies, now `will,marc`
+(`lib/scott/gapNotifier.js`). The site's own `/login` sends the same alert
+for a watched account, naming where they were heading ("the Tidewell taxi
+office" for `/taxi-demo/office`), because a guest reaches the office through
+that page, not `/scott/login`. Never awaited. Boot line, deployment
+`6ab922e0`: "Login alerts: will, marc (the default list), emailed to
+tom@arringtonconsultancy.com". Earlier logins are in the admin Activity log
+(`audit_log`, "marc logged in"); this worker cannot read the production
+database.
+
 ### Today's four counts open what they count (LIVE 17/10/2026)
 
 Tom: "those 4 black boxes at the top should be clickable to go through to
