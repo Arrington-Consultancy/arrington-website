@@ -239,6 +239,20 @@ p { margin: 0 0 0.8rem; }
 .to-diff thead th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); }
 .to-diff tbody td:nth-child(2) { color: var(--ok); font-weight: 700; }
 .to-diff tbody td:nth-child(3) { color: var(--bad); font-weight: 700; }
+/* The checker (17/10/2026): what the booking says is the suspect value,
+   what it should be is the checker's; the email's own words sit between. */
+.to-check { border-left: 4px solid var(--line); }
+.to-check-agrees { border-left-color: var(--ok); }
+.to-check-concerns { border-left-color: var(--bad); }
+.to-table-scroll { overflow-x: auto; }
+.to-check-table tbody td:nth-child(2) { color: var(--bad); font-weight: 700; }
+.to-check-table tbody td:nth-child(3) { color: var(--ink-2); font-weight: 400; font-style: italic; }
+.to-check-table tbody td:nth-child(4) { color: var(--ok); font-weight: 700; }
+.to-signoff { margin-top: 0.9rem; padding: 0.9rem 1rem; border: 1px solid var(--line); border-radius: 10px; background: var(--paper, #fff); display: grid; gap: 0.6rem; justify-items: start; }
+.to-signoff .to-worker-tag { margin: 0; }
+.to-signoff .to-small { margin: 0; }
+.to-check-box { display: flex; gap: 0.6rem; align-items: flex-start; font-weight: 600; cursor: pointer; }
+.to-check-box input { width: 1.2rem; height: 1.2rem; margin-top: 0.15rem; flex: none; accent-color: var(--teal); }
 .to-reply-sent { white-space: pre-line; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 0.8rem; line-height: 1.6; overflow-wrap: anywhere; }
 
 /* Dispatch */

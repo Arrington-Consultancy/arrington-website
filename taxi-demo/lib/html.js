@@ -52,10 +52,11 @@ const ICONS = {
   message: '<path d="M4 5.5h16v10H9l-5 4z"/>',
   check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
   car: '<path d="M4.5 16.5v-4l2-5h11l2 5v4z"/><path d="M4.5 12.5h15M7 16.5v2M17 16.5v2"/><circle cx="8" cy="14.3" r=".6"/><circle cx="16" cy="14.3" r=".6"/>',
-  // The five office workers, drawn exactly as the office draws them
+  // The six office workers, drawn exactly as the office draws them
   // (views/taxi-office/partials/worker-icon.ejs in the main site; a test
   // there keeps the two the same).
   bookings: '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4M9 15l2 2 4-4"/>',
+  checker: '<path d="M12 3.2 19 6v5.2c0 4.3-2.9 8-7 9.6-4.1-1.6-7-5.3-7-9.6V6z"/><path d="m9 12 2 2 4-4"/>',
   customer: '<rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/>',
   complaints: '<path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-9l-4.5 3.5V17H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="M12 8.5v3.8M12 14.6v.1"/>',
   licensing: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10.5" r="2"/><path d="M5.5 15.5c.6-1.4 1.7-2.1 3-2.1s2.4.7 3 2.1M14 9.5h4M14 12.5h4M14 15.5h2.5"/>',

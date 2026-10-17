@@ -41,6 +41,45 @@
         <% } %>
       </section>
 
+      <% if (checkState) { var cs = checkState; %>
+        <section class="to-panel to-check to-check-<%= cs %>" id="check">
+          <div class="to-panel-head">
+            <p class="to-worker-tag"><%- include('partials/worker-icon', { id: 'checker' }) %>Checker, a second AI</p>
+            <span class="to-pill to-pill-<%= cs === 'agrees' ? 'ok' : (cs === 'concerns' ? 'bad' : 'neutral') %>"><%= cs === 'agrees' ? 'Agrees' : (cs === 'concerns' ? 'Flagged' : 'Not checked') %></span>
+          </div>
+          <h2><%= cs === 'agrees' ? 'The booking matches the email' : (cs === 'concerns' ? 'The checker found something' : 'Not checked yet') %></h2>
+          <p class="to-small">A second AI reads the customer's email beside the booking above, without seeing how the first one worked it out, and reports anything that doesn't match. It decides nothing: you sign it off.</p>
+          <% if (reading.corrected && reading.corrected.length) { %><p class="to-note to-note-ok">Corrected from the checker's findings: <%= reading.corrected.join(', ') %>.</p><% } %>
+          <% if (check && check.note) { %><p class="to-note to-note-warn"><%= check.note %></p><% } %>
+          <% if (check && check.data) { %>
+            <% if (check.data.summary) { %><p><%= check.data.summary %></p><% } %>
+            <% if (check.data.issues.length) { var _lab = { date: 'Date', time: 'Pickup time', pickup: 'Pickup', destination: 'Destination', passengers: 'Passengers', vehicle: 'Vehicle', needs: 'For the driver', customer_name: 'Name', phone: 'Phone', journey_missing: 'Journey missed', journey_extra: 'Journey not asked for' }; var _multi = (reading.data.journeys || []).length > 1; %>
+              <div class="to-table-scroll"><table class="to-diff to-check-table">
+                <thead><tr><th scope="col"></th><th scope="col">The booking says</th><th scope="col">The email says</th><th scope="col">It should be</th></tr></thead>
+                <tbody>
+                  <% check.data.issues.forEach(function (i) { var v = function (x) { return i.field === 'date' && /^\d{4}-\d{2}-\d{2}$/.test(x) ? longDate(x) : (i.field === 'vehicle' ? (VEHICLE_LABELS[x] || x) : x); }; %>
+                    <tr><th scope="row"><%= _lab[i.field] %><%= _multi && i.journey >= 0 && i.field !== 'journey_missing' ? ' (journey ' + (i.journey + 1) + ')' : '' %></th><td><%= v(i.booking) || 'Nothing' %></td><td><%= i.email ? '\u201c' + i.email + '\u201d' : '' %></td><td><%= v(i.should_be) %></td></tr>
+                  <% }) %>
+                </tbody>
+              </table></div>
+              <% if (check.data.issues.some(function (i) { return i.fixable; }) && !sent) { %>
+                <form method="post" action="<%= BASE %>/inbox/<%= email.id %>/apply-check" class="to-inline-form">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button type="submit" class="to-btn to-btn-primary" data-busy="Correcting and checking again...">Use the checker's corrections</button>
+                  <span class="to-small">Puts its values into the booking and checks it again. Or read the email and decide for yourself.</span>
+                </form>
+              <% } %>
+            <% } %>
+          <% } %>
+          <% if (aiOn && (!check || check.source !== 'ai')) { %>
+            <form method="post" action="<%= BASE %>/inbox/<%= email.id %>/recheck" class="to-inline-form">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button type="submit" class="to-btn to-btn-quiet" data-busy="Checking...">Ask the checker</button>
+            </form>
+          <% } %>
+        </section>
+      <% } %>
+
       <% if (worker === 'licensing') { %>
         <section class="to-panel">
           <p class="to-worker-tag">Passed to Licensing</p>
@@ -76,7 +115,7 @@
         <section class="to-panel">
           <p class="to-worker-tag">Checked against dispatch</p>
           <h2>Does dispatch have it right?</h2>
-          <p class="to-small">Plain code, not the AI, decides whether dispatch matches what the customer asked for. Changes go through the dispatch connection (<%= conn.dispatch %>).</p>
+          <p class="to-small">Plain code, not the AI, decides whether dispatch matches what the customer asked for. Changes go through the dispatch connection (<%= conn.dispatch %>), and only once someone in the office has signed them off.</p>
           <% cmp.legs.forEach(function (leg) { var j = leg.journey; var st = STATUS[leg.status]; %>
             <div class="to-leg">
               <div class="to-leg-head">
@@ -104,11 +143,14 @@
                   </tbody>
                 </table>
               <% } %>
-              <% if (leg.status === 'missing' || leg.status === 'differs' || leg.status === 'to_cancel') { %>
-                <form method="post" action="<%= BASE %>/inbox/<%= email.id %>/fix" class="to-inline-form">
+              <% if (leg.status === 'missing' || leg.status === 'differs' || leg.status === 'to_cancel') { var _sid = 'signoff-' + email.id + '-' + leg.index; %>
+                <form method="post" action="<%= BASE %>/inbox/<%= email.id %>/fix" class="to-signoff">
                   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                   <input type="hidden" name="leg" value="<%= leg.index %>">
-                  <button type="submit" class="to-btn to-btn-primary"><%= leg.status === 'missing' ? 'Book it into dispatch' : (leg.status === 'differs' ? 'Correct it in dispatch' : 'Cancel it in dispatch') %></button>
+                  <p class="to-worker-tag">Your sign-off</p>
+                  <label class="to-check-box" for="<%= _sid %>"><input type="checkbox" id="<%= _sid %>" name="signoff" value="yes" required> <span><%= checkState === 'agrees' ? 'I\'ve read the email and the checker\'s result, and I\'m signing this off.' : (checkState === 'concerns' ? 'The checker flagged this booking. I\'ve read what it found, and I\'m signing it off anyway.' : 'The checker hasn\'t checked this. I\'ve checked it against the email myself, and I\'m signing it off.') %></span></label>
+                  <button type="submit" class="to-btn to-btn-primary"><%= leg.status === 'missing' ? 'Sign off and book it into dispatch' : (leg.status === 'differs' ? 'Sign off and correct it in dispatch' : 'Sign off and cancel it in dispatch') %></button>
+                  <p class="to-small">Signed off as <%= user ? user.username : 'you' %>. The board records who signed it off.</p>
                 </form>
               <% } else if (leg.status === 'needs_details') { %>
                 <p class="to-small">Nothing goes into dispatch until the customer sends <%= (leg.gaps || []).join(', ') || 'the missing details' %>. The reply below asks for it.</p>

@@ -38,7 +38,7 @@ test('it says plainly how to get in: contact Arrington Consultancy', async () =>
   assert.match(text, /Contact Arrington Consultancy to gain access to our AI workspace example\./);
   assert.match(html, /<a class="btn btn-primary" href="https:\/\/www\.arringtonconsultancy\.com\/taxi-and-private-hire-operators\/websites#conversation">Ask Arrington for a login<\/a>/);
   assert.match(text, /nothing real is sent, booked or posted/);
-  assert.match(text, /A person in the office decides what goes out/);
+  assert.match(text, /A second AI checks every booking, and a person in the office signs it off before anything goes out/);
 });
 
 test('every page links to it from the menu and the footer', async () => {

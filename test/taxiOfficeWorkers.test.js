@@ -294,7 +294,8 @@ test('the Complaints page and the workers carry the same rules as every office p
   assert.doesNotMatch(src, /\sstyle="/);
   for (const form of src.match(/<form method="post"[\s\S]*?<\/form>/g) || []) assert.match(form, /name="_csrf" value="<%= csrfToken %>"/);
   const workers = require('../lib/taxiOffice/workers');
-  assert.deepEqual(workers.WORKERS.map((w) => w.name), ['Bookings', 'Customer emails', 'Complaints', 'Licensing', 'Social media']);
+  assert.deepEqual(workers.WORKERS.map((w) => w.name), ['Bookings', 'Checker', 'Customer emails', 'Complaints', 'Licensing', 'Social media']);
+  for (const intent of ['new_booking', 'change', 'cancel', 'enquiry', 'complaint', 'council', 'not_booking', 'x']) assert.notEqual(workers.workerForIntent(intent), 'checker', 'the Checker is never handed an email: it checks the Bookings worker\'s work');
   assert.equal(workers.workerForIntent('complaint'), 'complaints');
   assert.equal(workers.workerForIntent('not_booking'), 'customer');
   assert.equal(workers.workerForIntent('something new'), 'customer', 'anything unknown goes to a person on Customer emails');

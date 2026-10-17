@@ -144,7 +144,8 @@ test('a live email arrives already read, once, on the visitor\'s own allowance a
       assert.equal(s.used.read.length, 0);
       assert.ok(![...office.__shared.keys()].some((k) => k.includes('gm-r1')), 'a real email is never shared with another visitor');
       assert.equal(await office.readNewLive(s), 0, 'tried once');
-      assert.equal(calls, 1);
+      assert.equal(calls, 2, 'the reading, and the Checker on the booking');
+      assert.equal(s.used.check.length, 1, 'the check too comes from the visitor\'s own allowance');
     });
   } finally {
     if (saved.flag === undefined) delete process.env.ENABLE_TAXI_OFFICE_AI; else process.env.ENABLE_TAXI_OFFICE_AI = saved.flag;

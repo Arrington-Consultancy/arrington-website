@@ -614,12 +614,13 @@ ${pageTop({ eyebrow: 'Contact', title: 'Call us, any time.', lede: `The quickest
 //
 // The screenshots were taken from the demonstration office on 16 October
 // 2026 with the replies as the AI drafted them on production that morning.
-// The five workers are named, and their icons drawn, as the office does it
+// The six workers are named, and their icons drawn, as the office does it
 // (lib/taxiOffice/workers.js in the main site; a test there keeps the two
 // lists the same).
 
 const OFFICE_WORKERS = [
   ['Bookings', 'Reads booking emails, checks each one against the job in dispatch, and books, corrects or cancels it there. Drafts the reply.', 'bookings'],
+  ['Checker', 'A second AI that checks every booking against the customer\'s own email and shows anything that doesn\'t match. Nothing goes into dispatch until someone in the office signs it off.', 'checker'],
   ['Customer emails', 'Answers everything else customers send, from lost property to account questions, and looks up the journey when the answer is in dispatch.', 'customer'],
   ['Complaints', 'Logs every complaint and pulls the job from dispatch, so the reply rests on what happened. Passes anything about safety to Licensing.', 'complaints'],
   ['Licensing', 'Keeps every badge, plate, MOT and insurance date in one register, flags what is due and drafts the letter to the council.', 'licensing'],
@@ -650,7 +651,7 @@ function staffPortalPage() {
     <p class="login-note">Logins are by invitation. To look round the office yourself, <a href="${FIRM.arringtonEnquiryUrl}">ask Arrington Consultancy for one</a>.</p>
   </div>`;
   return html`
-${pageTop({ eyebrow: 'Staff portal', title: 'The office behind the website.', lede: 'Booking emails, complaints and letters from the council all land in one office. Five AI workers read them, check them against dispatch and draft the replies. A person in the office decides what goes out.', tone: 'night', extra: login, className: 'page-top-portal' })}
+${pageTop({ eyebrow: 'Staff portal', title: 'The office behind the website.', lede: 'Booking emails, complaints and letters from the council all land in one office. Six AI workers read them, check them against dispatch and draft the replies. A second AI checks every booking, and a person in the office signs it off before anything goes out.', tone: 'night', extra: login, className: 'page-top-portal' })}
 <section class="section section-tight">
   <div class="wrap">
     <div class="portal-intro">
@@ -664,7 +665,7 @@ ${pageTop({ eyebrow: 'Staff portal', title: 'The office behind the website.', le
   <div class="wrap">
     <div class="portal-intro">
       <p class="eyebrow">AI workers</p>
-      <h2>Five workers, one office.</h2>
+      <h2>Six workers, one office.</h2>
       <p>Each one does a single job. None of them sends, books or posts anything on its own.</p>
     </div>
     <ul class="office-workers">${OFFICE_WORKERS.map(([n, d, id]) => html`<li><h3><span class="office-worker-icon">${icon(id)}</span>${n}</h3><p>${d}</p></li>`)}</ul>

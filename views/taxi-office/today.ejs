@@ -7,7 +7,7 @@
 <section class="to-hero">
   <p class="to-eyebrow">Office, <%= todayLong %></p>
   <h1>Here's what needs doing today.</h1>
-  <p class="to-lede">Five AI workers read the inbox, check it against dispatch, and draft the replies, the letters to the council and the week's posts. Nothing goes anywhere until someone in the office has looked at it.</p>
+  <p class="to-lede">Six AI workers read the inbox, check it against dispatch, and draft the replies, the letters to the council and the week's posts. A second AI checks every booking, and nothing goes into dispatch until someone in the office signs it off.</p>
   <% if (unreadRows.length) { %>
     <form method="post" action="<%= BASE %>/inbox/check-all" class="to-inline-form">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
@@ -53,6 +53,18 @@
           </ul>
         <% } else { %>
           <p class="to-small"><%= unreadRows.length ? 'Read the inbox to see which emails are its.' : 'Nothing for it today.' %></p>
+        <% } %>
+        <a class="to-btn" href="<%= BASE %>/inbox">Open the inbox</a>
+      <% } else if (w.id === 'checker') { var checked = emails.filter(function (r) { return r.check; }); var flagged = checked.filter(function (r) { return r.check === 'concerns'; }); %>
+        <% if (checked.length) { %>
+          <ul class="to-mini">
+            <% checked.slice(0, 4).forEach(function (row) { %>
+              <li><a href="<%= BASE %>/inbox/<%= row.email.id %>#check"><%= row.email.from.replace(/\s*<.*$/, '') %></a> <span class="to-pill to-pill-<%= row.check === 'agrees' ? 'ok' : (row.check === 'concerns' ? 'bad' : 'neutral') %>"><%= row.check === 'agrees' ? 'Agrees' : (row.check === 'concerns' ? 'Flagged' : 'Not checked') %></span></li>
+            <% }) %>
+          </ul>
+          <p class="to-small"><%= checked.length %> booking<%= checked.length === 1 ? '' : 's' %> checked<%= flagged.length ? ', ' + flagged.length + ' flagged' : ', none flagged' %>.</p>
+        <% } else { %>
+          <p class="to-small"><%= unreadRows.length ? 'Read the inbox and it checks each booking.' : 'No bookings to check today.' %></p>
         <% } %>
         <a class="to-btn" href="<%= BASE %>/inbox">Open the inbox</a>
       <% } else if (w.id === 'complaints') { %>

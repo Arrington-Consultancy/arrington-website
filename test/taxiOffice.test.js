@@ -87,15 +87,22 @@ test('putting dispatch right: book, correct and cancel through the dispatch conn
   const inbox = office.inbox(s);
   const email = (id) => inbox.find((e) => e.id === id);
   for (const id of ['gregory', 'clarke', 'fowler', 'hollis']) s.readings[id] = { data: email(id).prepared, source: 'prepared' };
-  assert.equal((await office.fixLeg(s, email('gregory'), 0)).ok, true);
+  // Nothing goes into dispatch until a person signs it off (17/10/2026).
+  const unsigned = await office.fixLeg(s, email('gregory'), 0);
+  assert.equal(unsigned.ok, false);
+  assert.match(unsigned.message, /Tick the box to sign it off first/);
+  assert.equal(s.board.find((j) => j.ref === 'TW-41203').time, '05:50', 'the board is untouched without a sign-off');
+  const SIGN = { signedOff: true, by: 'tom' };
+  assert.equal((await office.fixLeg(s, email('gregory'), 0, SIGN)).ok, true);
+  assert.match(s.changes[0].what, /Signed off by tom, the checker not having run\.$/, 'the board records who signed it off, and what the checker said');
   assert.equal(s.board.find((j) => j.ref === 'TW-41203').time, '05:30');
   assert.equal(office.readingStatus(s, email('gregory')).key, 'match');
-  const added = await office.fixLeg(s, email('clarke'), 1);
+  const added = await office.fixLeg(s, email('clarke'), 1, SIGN);
   assert.match(added.message, /^Booked into dispatch as TW-4\d{4}\.$/);
   assert.equal(office.readingStatus(s, email('clarke')).key, 'match');
-  assert.equal((await office.fixLeg(s, email('fowler'), 0)).ok, true);
+  assert.equal((await office.fixLeg(s, email('fowler'), 0, SIGN)).ok, true);
   assert.equal(s.board.find((j) => j.ref === 'TW-41191').status, 'cancelled');
-  assert.equal((await office.fixLeg(s, email('hollis'), 0)).ok, false, 'nothing to put right on a matching job');
+  assert.equal((await office.fixLeg(s, email('hollis'), 0, SIGN)).ok, false, 'nothing to put right on a matching job');
   assert.equal((await office.markSent(s, email('hollis'), '   ')).ok, false);
   assert.equal((await office.markSent(s, email('hollis'), 'Dear Margaret')).ok, true);
 });
@@ -108,7 +115,7 @@ test('with iCabbi as the dispatch connection, a booking goes to its slot, which 
     const turner = office.inbox(s).find((e) => e.id === 'turner');
     s.readings.turner = { data: turner.prepared, source: 'prepared' };
     const before = s.board.length;
-    const r = await office.fixLeg(s, turner, 0);
+    const r = await office.fixLeg(s, turner, 0, { signedOff: true, by: 'tom' });
     assert.equal(r.ok, false);
     assert.match(r.message, /^iCabbi is not connected yet\. It needs access to the iCabbi booking API/);
     assert.equal(s.board.length, before);
@@ -175,10 +182,14 @@ test('the booking desk asks the model for JSON against a closed schema, and uses
     assert.match(req.system, /a town or area will do/, 'a destination town is enough to book, as in a real office (live check of 16/10/2026)');
     assert.match(req.system, /Never guess an address, a time or a phone number/);
     assert.match(req.messages[0].content, /Received: \d{4}-\d{2}-\d{2} \d{2}:\d{2}/);
-    // A second visitor gets the shared reading, with no second call.
+    // Two calls: the reading, then the Checker on the booking it made.
+    assert.equal(calls.length, 2);
+    assert.ok(calls[1].output_config.format.schema.properties.issues, 'the second call is the Checker');
+    // A second visitor gets the shared reading and the shared check, with no new call.
     const s2 = office.stateFor('test-ai2-' + Date.now());
     await office.readEmail(s2, office.inbox(s2).find((e) => e.id === 'turner'));
-    assert.equal(calls.length, 1);
+    assert.equal(calls.length, 2);
+    assert.equal(office.checkState(s2, office.inbox(s2).find((e) => e.id === 'turner')), 'agrees');
   });
 });
 

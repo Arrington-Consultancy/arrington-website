@@ -33,7 +33,7 @@
         <span class="to-inbox-from"><%= e.from.replace(/\s*<.*$/, '') %><% if (e.custom) { %> <span class="to-tag">Your test email</span><% } else if (e.live) { %> <span class="to-tag">Your email</span><% } %></span>
         <span class="to-inbox-subject"><%= e.subject %></span>
         <span class="to-inbox-when"><%= e.receivedAt.slice(0, 10) === today ? 'Today ' + e.receivedAt.slice(11) : shortDate(e.receivedAt.slice(0, 10)) + ' ' + e.receivedAt.slice(11) %></span>
-        <span class="to-inbox-status"><% if (row.worker) { %><span class="to-chip"><%- include('partials/worker-icon', { id: row.worker }) %><%= WORKER[row.worker].name %></span> <% } %><span class="to-pill to-pill-<%= row.status.tone %>"><%= row.status.label %></span><% if (row.sent) { %> <span class="to-pill to-pill-ok">Replied</span><% } %></span>
+        <span class="to-inbox-status"><% if (row.worker) { %><span class="to-chip"><%- include('partials/worker-icon', { id: row.worker }) %><%= WORKER[row.worker].name %></span> <% } %><span class="to-pill to-pill-<%= row.status.tone %>"><%= row.status.label %></span><% if (row.check === 'concerns') { %> <span class="to-pill to-pill-bad">Checker flagged</span><% } %><% if (row.sent) { %> <span class="to-pill to-pill-ok">Replied</span><% } %></span>
       </a>
     </li>
   <% }) %>
