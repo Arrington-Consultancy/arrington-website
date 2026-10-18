@@ -1,8 +1,9 @@
 // Tidewell Cars office: small comforts and nothing else. A button that
 // starts an AI call says what is happening and cannot be pressed twice, and
-// "Start the demo again" asks first. On the inbox, with a live address, the
-// page checks every few seconds and reloads when the visitor's email
-// arrives, and the Copy button copies the address. Every form works
+// "Start the demo again" asks first. While the workers read the inbox, the
+// page reloads itself when they have finished. On the inbox, with a live
+// address, the page checks every few seconds and reloads when the visitor's
+// email arrives, and the Copy button copies the address. Every form works
 // without this file.
 (function () {
   document.addEventListener('submit', function (e) {
@@ -26,6 +27,30 @@
       }, 0);
     }
   });
+})();
+
+(function () {
+  // The workers are reading the inbox (the first visitor of the day waits
+  // for the AI). Ask every few seconds, reload when they have finished, and
+  // give up after three minutes rather than ask for ever.
+  var note = document.querySelector('[data-reading-url]');
+  if (!note || !window.fetch) return;
+  var started = Date.now();
+  function later() { setTimeout(check, 3000); }
+  function check() {
+    if (Date.now() - started > 3 * 60 * 1000) {
+      note.textContent = 'The workers are taking longer than usual. Reload the page in a minute.';
+      return;
+    }
+    fetch(note.getAttribute('data-reading-url'), { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (j && !j.reading) { window.location.reload(); return; }
+        later();
+      })
+      .catch(later);
+  }
+  later();
 })();
 
 (function () {

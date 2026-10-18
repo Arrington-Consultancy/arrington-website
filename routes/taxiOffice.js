@@ -118,6 +118,7 @@ function render(req, res, view, locals) {
     today: s.today,
     todayLong: data.longDate(s.today),
     aiOn: ai.aiEnabled(),
+    readingNow: office.readingNow(s),
     counts: office.summary(s),
     flash: takeFlash(s),
     user: req.session.user,
@@ -136,7 +137,11 @@ function render(req, res, view, locals) {
 const VIEW = (fn) => (req, res, next) => Promise.resolve(fn(req, res)).catch(next);
 
 function mountPageRoute(app) {
-  const page = (path, handler) => app.get(BASE + path, noindex, requireOfficeAccess, VIEW(handler));
+  // Every page starts the workers reading the inbox if they have not yet,
+  // and waits a moment for them (office.settleReading).
+  // (Not the mailbox connection pages, which have nothing to do with it.)
+  const settle = (req, res, next) => (req.path.startsWith(BASE + '/connect/') ? next() : office.settleReading(stateOf(req)).then(() => next(), next));
+  const page = (path, handler) => app.get(BASE + path, noindex, requireOfficeAccess, settle, VIEW(handler));
   const post = (path, handler) => app.post(BASE + path, noindex, requireOfficeAccess, VIEW(handler));
 
   const rows = (s) => office.inbox(s).map((e) => ({ email: e, status: office.readingStatus(s, e), worker: office.workerOf(s, e), reading: s.readings[e.id] || null, sent: Boolean(s.sent[e.id]), check: office.checkState(s, e) }));
@@ -174,9 +179,17 @@ function mountPageRoute(app) {
     res.json({ live: Boolean(office.liveFor(s)), ok: r.ok, count: office.liveEmails(s).length });
   }));
 
+  // Whether the workers are still reading. A page opened while they read
+  // asks every few seconds and reloads when they have finished.
+  app.get(BASE + '/inbox/reading.json', noindex, requireOfficeAccess, (req, res) => {
+    const s = stateOf(req);
+    res.json({ reading: office.readingNow(s), unread: office.unreadDemo(s).length });
+  });
+
   post('/inbox/check-all', async (req, res) => {
     const s = stateOf(req);
-    const n = await office.readAll(s);
+    const job = office.startReading(s);
+    const n = job ? await job : 0;
     flash(s, n ? `Read ${n} email${n === 1 ? '' : 's'} and passed each one to its worker.` : 'Every email has already been read.');
     res.redirect(303, BASE + (req.body.back === 'today' ? '/' : '/inbox'));
   });

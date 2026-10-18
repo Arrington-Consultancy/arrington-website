@@ -3,11 +3,13 @@
   <p class="to-eyebrow">The office inbox</p>
   <h1>Inbox</h1>
   <p class="to-lede">Bookings, complaints, questions and the council all land here, the way they do in a real office. The AI reads each email and plain code passes it to the worker it belongs to: Bookings, Customer emails, Complaints or Licensing.</p>
+  <% if (!readingNow && emails.some(function (r) { return !r.worker && !r.email.custom && !r.email.live; })) { %>
   <form method="post" action="<%= BASE %>/inbox/check-all" class="to-inline-form">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-    <button type="submit" class="to-btn to-btn-primary" data-busy="Reading the inbox...">Read the whole inbox</button>
-    <span class="to-small">Takes a few seconds while the AI reads each one.</span>
+    <button type="submit" class="to-btn to-btn-primary" data-busy="Reading the inbox...">Read the rest of the inbox</button>
+    <span class="to-small">Some emails could not be read just now. Takes a few seconds.</span>
   </form>
+  <% } %>
 </section>
 
 <% if (live) { %>

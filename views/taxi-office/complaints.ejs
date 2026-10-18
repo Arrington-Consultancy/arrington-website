@@ -11,10 +11,15 @@
 
 <%- include('partials/filter-note') %>
 
-<% if (!logged) { %>
+<% if (!logged && readingNow) { %>
   <section class="to-panel">
-    <h2>No complaints read yet</h2>
-    <p><%= unread ? unread + ' email' + (unread === 1 ? '' : 's') + ' in the inbox ' + (unread === 1 ? "hasn't" : "haven't") + ' been read. Complaints turn up here once they are.' : 'Nothing in the inbox is a complaint.' %></p>
+    <h2>Reading the inbox now</h2>
+    <p>The workers are reading today's emails. Any complaint among them turns up here, with its record from dispatch and a drafted reply.</p>
+  </section>
+<% } else if (!logged) { %>
+  <section class="to-panel">
+    <h2><%= unread ? 'Not read yet' : 'No complaints today' %></h2>
+    <p><%= unread ? unread + ' email' + (unread === 1 ? '' : 's') + ' in the inbox ' + (unread === 1 ? "hasn't" : "haven't") + ' been read yet. Complaints turn up here once they are.' : 'Nothing in the inbox is a complaint.' %></p>
     <% if (unread) { %>
       <form method="post" action="<%= BASE %>/inbox/check-all" class="to-inline-form">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">

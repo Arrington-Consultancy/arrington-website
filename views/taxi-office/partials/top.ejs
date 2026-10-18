@@ -43,6 +43,9 @@
     <% if (!aiOn) { %>
       <p class="to-note to-note-warn">The AI is switched off on this server, so the office shows answers prepared for the demo, each labelled as prepared.</p>
     <% } %>
+    <% if (readingNow) { %>
+      <p class="to-reading" role="status" data-reading-url="<%= BASE %>/inbox/reading.json"><span class="to-reading-dot" aria-hidden="true"></span>The workers are reading today's emails. Each one goes to its worker, and this page updates by itself when they have finished.</p>
+    <% } %>
     <% if (flash) { %>
       <p class="to-flash to-flash-<%= flash.tone %>" role="status"><%= flash.message %></p>
     <% } %>

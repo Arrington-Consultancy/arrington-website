@@ -8496,6 +8496,32 @@ checks each list's length against its box (a filter that drifted from its
 count was watched red). The Today screenshot on the staff portal page predates
 the small arrow on each box.
 
+### The workers read the inbox on arrival (18/10/2026)
+
+Tom, with a screenshot of an empty Complaints page: "Ai worker disappeared".
+An office session lasts four hours (`TTL` in `lib/taxiOffice/office.js`), so
+by the next day he had a fresh office where nothing was read until he pressed
+"Read the inbox". The first read of the day took long enough that he left the
+page (the production log shows that request closed with no status), so it
+looked broken. Now every office page (`settle` in `routes/taxiOffice.js`, not
+the mailbox connection pages) starts the workers reading the demo inbox if
+they have not yet, and waits up to two seconds. When another visitor has
+already read today's emails the shared cache answers at once and the page
+opens read. On the day's first reading the page opens with "The workers are
+reading today's emails" (`.to-reading`, `data-reading-url`), and
+`public/js/taxi-office.js` asks `/inbox/reading.json` every three seconds and
+reloads when they have finished (stops after three minutes). One reading per
+visitor at a time (`startReading`); a demo email the AI is already reading for
+someone else is waited on, not read again (`inflight` in `readEmail`), so two
+visitors arriving together pay once. The Read buttons now show only when
+something could not be read. No extra AI cost: the same reading used to happen
+when someone pressed the button. `test/taxiOfficeAutoRead.test.js` (no reading
+on arrival, and reading an email twice, each watched red). In that same
+session Safari sent CSP reports from office pages after the inbox was read;
+the same path in Chromium raised none, and what Safari reported was not
+visible from here (the next boot log's `CSP reports, last 7 days:` line
+summarises them).
+
 ## Sale readiness page
 
 `/get-your-business-ready-to-sell` is a campaign landing page for social and

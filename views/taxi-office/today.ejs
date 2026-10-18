@@ -8,7 +8,7 @@
   <p class="to-eyebrow">Office, <%= todayLong %></p>
   <h1>Here's what needs doing today.</h1>
   <p class="to-lede">Six AI workers read the inbox, check it against dispatch, and draft the replies, the letters to the council and the week's posts. A second AI checks every booking, and nothing goes into dispatch until someone in the office signs it off.</p>
-  <% if (unreadRows.length) { %>
+  <% if (unreadRows.length && !readingNow) { %>
     <form method="post" action="<%= BASE %>/inbox/check-all" class="to-inline-form">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <input type="hidden" name="back" value="today">

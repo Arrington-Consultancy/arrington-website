@@ -107,6 +107,10 @@ p { margin: 0 0 0.8rem; }
 .to-note-warn { background: var(--warn-bg); color: var(--warn); }
 .to-note-ok { background: var(--ok-bg); color: var(--ok); }
 .to-note-bad { background: var(--bad-bg); color: var(--bad); }
+.to-reading { display: flex; gap: 0.6rem; align-items: baseline; padding: 0.7rem 0.9rem; border-radius: 8px; background: var(--ok-bg); color: var(--ok); font-size: 0.95rem; }
+.to-reading-dot { flex: none; width: 0.6rem; height: 0.6rem; border-radius: 50%; background: currentColor; animation: to-pulse 1.2s ease-in-out infinite; }
+@keyframes to-pulse { 50% { opacity: 0.25; } }
+@media (prefers-reduced-motion: reduce) { .to-reading-dot { animation: none; } }
 .to-note a { color: inherit; font-weight: 700; }
 .to-flash { padding: 0.7rem 0.9rem; border-radius: 8px; font-weight: 600; margin-bottom: 1.2rem; }
 .to-flash-ok { background: var(--ok-bg); color: var(--ok); }
