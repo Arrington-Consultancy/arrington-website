@@ -3,17 +3,10 @@
 // Built 19/10/2026 from the Google Ads worker's brief "BRIEF - Taxi Office AI
 // Workspace landing page and iCabbi copy" (Drive, approved for build by Tom
 // on 19 October), this worker's pushback the same day, and Tom's answers to
-// it. The brief says to show Tom the page before it is linked from anywhere
-// or sent to iCabbi, so for now it is HIDDEN, exactly like the start-up page:
-//
-//   - not in the navigation, the footer or sitemap.xml
-//   - noindex, as a <meta name="robots"> tag and as an X-Robots-Tag header
-//   - linked from nowhere else on the site (test/taxiWorkspacePage.test.js)
-//   - not robots-disallowed, so a crawler can still see the noindex
-//
-// Releasing it, once Tom has seen it, is three edits: drop the noindex here
-// and in the view, add the path to the sitemap list in server.js, and point
-// the taxi websites page's workspace section at it. The test changes with it.
+// it. Built hidden, as the brief asked, and RELEASED the same day on Tom's
+// "approve" after he had seen it live: indexable, in sitemap.xml, linked from
+// the taxi websites page's workspace section. Still not in the navigation,
+// like the other taxi pages.
 //
 // What Tom decided, and what the page may therefore say:
 //   - Two products, bought separately or together: the website £999 (from the
@@ -44,11 +37,9 @@
 //     as on every other page. A login request comes through the same form.
 const fs = require('fs');
 const path = require('path');
-const { loadThemeAndShell, TAXI_OPERATORS_PATH, TAXI_WEBSITES_PATH } = require('./taxiOperators');
+const { loadThemeAndShell, TAXI_WEBSITES_PATH, TAXI_WORKSPACE_PATH } = require('./taxiOperators');
 const { WORKSPACE_PRICE_PENCE } = require('./taxiWebsites');
 const { OFFERS } = require('../lib/whereToStartOffers');
-
-const TAXI_WORKSPACE_PATH = TAXI_OPERATORS_PATH + '/office-workspace';
 
 // Tom's 60 second screen recording of the booking check (brief, open item 4).
 // Drop it here and the page shows it; until then the page shows nothing in
@@ -67,8 +58,6 @@ function mountPageRoute(app, generateCsrfToken) {
   app.get(TAXI_WORKSPACE_PATH, async (req, res, next) => {
     try {
       const { theme, navPages, content, pageContact } = await loadThemeAndShell();
-      // Belt and braces with the <meta name="robots"> tag in the view.
-      res.set('X-Robots-Tag', 'noindex');
       res.render('taxi-workspace', {
         theme,
         ga4Id: process.env.GA4_MEASUREMENT_ID || '',

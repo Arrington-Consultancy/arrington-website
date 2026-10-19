@@ -20,13 +20,14 @@ const PATH = '/taxi-and-private-hire-operators/websites';
 const VIEW = 'views/taxi-websites.ejs';
 const ROUTE = 'routes/taxiWebsites.js';
 const { TAXI_WEBSITES_CONTACT, TAXI_WEBSITES_PATH, TAXI_DEMO_URL, WORKSPACE_PRICE_PENCE } = require('../routes/taxiWebsites');
+const { TAXI_WORKSPACE_PATH } = require('../routes/taxiOperators');
 const { OFFERS } = require('../lib/whereToStartOffers');
 
 function renderBody() {
   const src = emitted(VIEW).replace(/<%-\s*include\([^)]*\)\s*%>/g, '');
   const html = ejs.render(src, {
     theme: { vars: {} }, nonce: 'n', csrfToken: 't', navPages: [], content: {},
-    websiteOffer: OFFERS.website_build, workspacePricePence: WORKSPACE_PRICE_PENCE, demoUrl: TAXI_DEMO_URL, pageContact: TAXI_WEBSITES_CONTACT
+    websiteOffer: OFFERS.website_build, workspacePricePence: WORKSPACE_PRICE_PENCE, demoUrl: TAXI_DEMO_URL, workspacePath: TAXI_WORKSPACE_PATH, pageContact: TAXI_WEBSITES_CONTACT
   });
   return html.slice(html.indexOf('<body>'));
 }
@@ -43,7 +44,8 @@ test('the route is mounted, indexable, in the sitemap and not in the navigation'
   assert.ok(/taxiWebsites\.mountPageRoute\(app, generateCsrfToken\)/.test(server), 'the route is not mounted');
   assert.ok(server.indexOf('taxiWebsites.mountPageRoute') < server.indexOf("app.get('/:slug'"), 'mounted after the CMS catch-all');
   assert.ok(/'taxi-and-private-hire-operators\/websites': '\d{4}-\d{2}-\d{2}'/.test(server), 'no sitemap lastmod');
-  assert.ok(/'taxi-and-private-hire-operators\/websites', 'get-your-business-ready-to-sell'\]/.test(server), 'not in the sitemap list');
+  const sitemapList = (server.match(/for \(const slug of \[([^\]]*)\]\)/) || [])[1] || '';
+  assert.ok(sitemapList.includes("'taxi-and-private-hire-operators/websites'"), 'not in the sitemap list');
   assert.ok(!/X-Robots-Tag/.test(read(ROUTE)) && !/<meta name="robots"/.test(emitted(VIEW)), 'a noindex was added');
   assert.ok(emitted(VIEW).includes(`<link rel="canonical" href="https://www.arringtonconsultancy.com${PATH}">`));
   for (const f of ['server.js', 'lib/navShell.js', 'views/partials/site-header.ejs']) {
@@ -128,10 +130,13 @@ test('the systems promise is kept true: named systems, never "any system", acces
   assert.ok(!/30 minutes|thirty minutes/i.test(text), "Tom's own 30 minutes is on the page");
 });
 
-test('the office workspace: the approved wording, its own £999, after the website\'s price, compliance as warning only', () => {
+test('the office workspace: a summary with a link to its own page, its own £999, after the website\'s price', () => {
   // Tom's approval of 17/10/2026 of the proposal "Taxi page: the £999 office
-  // workspace" (Drive 1Ty-9RJCp_YGR3W8N1YbzM_4UV99sWNnFbP5TGfrb9Ds), word for
-  // word apart from "made up" unhyphenated for the page's no dash rule.
+  // workspace" (Drive 1Ty-9RJCp_YGR3W8N1YbzM_4UV99sWNnFbP5TGfrb9Ds) gave the
+  // first paragraph and the price line, kept word for word. Since 19/10/2026
+  // (Tom: "approve", releasing the workspace page) the list of examples is a
+  // summary of the workers and the checker that page shows, plus a link to it;
+  // quotes and rotas went because that page does not claim them.
   assert.strictEqual(WORKSPACE_PRICE_PENCE, 99900);
   const body = renderBody();
   assert.ok(!body.includes('data-email-check'), 'the old "priced separately" section is back');
@@ -141,15 +146,12 @@ test('the office workspace: the approved wording, its own £999, after the websi
   for (const line of [
     'An office workspace for your firm',
     'Alongside the website, we can set up an office workspace: AI workers built for your firm, who know your business, your customers and how you talk to them. They draft the work and flag what needs attention, and someone in your office checks it and decides what goes out.',
-    'What they can take off the office:',
-    'Keeping track of every driver badge, vehicle licence, DBS check, insurance and MOT date, and warning you before anything runs out. You still check the paperwork and sign off anything that goes to the council.',
-    "Checking the bookings that still come by email. Account customers, hotels and schools still book that way, so each request is matched against the jobs in your dispatch system, and a booking that was never keyed in, or was keyed in wrong, gets flagged before the customer is left waiting.",
-    'Drafting quotes from your own prices.',
-    'Helping plan driver rotas and cover.',
-    "Writing social media posts in your firm's voice, ready for you to approve.",
+    'Five workers take the booking emails, customer emails, complaints, licensing and social media off your controllers. Every booking that arrives by email is checked against the job in your dispatch system, and when something does not match, your controllers see it before the car is sent.',
     'The workspace is £999, separate from the website, or £1,998 for both. Which workers you get, and what each one does, is agreed in a recorded planning conversation, the same way the website is, so you know exactly what the £999 buys before any work starts.',
-    'You can look round an example in the Tidewell Cars staff office, where the workers run on a made up firm.'
+    'See the office workspace, or look round an example in the Tidewell Cars staff office, where the workers run on a made up firm.'
   ]) assert.ok(w.includes(line), `the approved line changed: ${line}`);
+  assert.ok(!/quotes?|rotas?/i.test(w), 'quotes or rotas are back, which the workspace page does not claim');
+  assert.ok(body.slice(body.indexOf('data-workspace')).includes(`href="${TAXI_WORKSPACE_PATH}"`), 'the link to the workspace page is gone');
   // The operator keeps the legal responsibility; no limitless promise.
   assert.ok(!/handles? (?:your )?compliance|keeps? you compliant|takes care of (?:your )?compliance|responsib/i.test(w), 'the workspace is said to carry compliance');
   assert.ok(!/unlimited|as many (?:workers )?as you|whatever you want/i.test(w), 'a promise without limit');

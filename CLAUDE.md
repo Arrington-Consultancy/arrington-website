@@ -8558,18 +8558,19 @@ publishes nothing; third parties write bookings in, and reading jobs is
 unconfirmed. So: likely with iCabbi, probable with Autocab, to be confirmed
 with Cordic, and in every case with the operator's own API access.
 
-## Taxi office AI workspace page (built 19/10/2026, HIDDEN)
+## Taxi office AI workspace page (RELEASED 19/10/2026)
 
 `/taxi-and-private-hire-operators/office-workspace` (`routes/taxiWorkspace.js`,
 `views/taxi-workspace.ejs`, `test/taxiWorkspacePage.test.js`), from the Google
 Ads worker's brief "BRIEF - Taxi Office AI Workspace landing page and iCabbi
 copy" (Drive id `1BId6M07xk_7dUjUnIIzfw-YhuWs3x2f-qovCz8IwNUo`, approved for
 build by Tom on 19/10/2026), this worker's pushback and Tom's answers the same
-day. The brief says to show Tom the page before it is linked or sent to
-iCabbi, so it is hidden exactly like the start-up page: noindex as a meta tag
-and an `X-Robots-Tag` header, not in the menu, footer or sitemap, linked from
-nowhere (the test walks the source for the path). Releasing it is three
-edits, listed at the top of the route.
+day. Built hidden as the brief asked (Tom sees it before it is linked or sent
+to iCabbi), then **released the same day on Tom's "approve"**: indexable, in
+`sitemap.xml` (lastmod 2026-10-19), BreadcrumbList and Service data via
+`page-schema`, linked from the taxi websites page, not in the menu or footer
+(like the other taxi pages). The path constant `TAXI_WORKSPACE_PATH` lives in
+`routes/taxiOperators.js` beside the other taxi paths.
 
 - **Tom's decisions:** its own page (not a section); two products, the website
   £999 (offer catalogue) and the workspace £999 (`WORKSPACE_PRICE_PENCE` in
@@ -8597,14 +8598,17 @@ edits, listed at the top of the route.
   with phone crops. The video slot renders only once
   `public/video/taxi-office/booking-check.mp4` exists (Tom's recording, open
   item 4 in the brief).
-- **Still on the taxi websites page:** its own workspace section (approved
-  17/10/2026, rotas and quotes included) stays as it is until this page is
-  released; then it becomes a summary with a link here.
+- **The taxi websites page's workspace section is now a summary** (since the
+  release): the 17/10/2026 first paragraph and price line word for word, one
+  sentence on the five workers and the checker taken from this page, and a
+  link here plus the demo office. The list of examples went, and quotes and
+  rotas with it, because this page does not claim them; the test fails if
+  either returns.
 - **Form wording:** the shared footer form's time box takes
   `pageContact.timePlaceholder` (default "Best day/time for a 30 min call
   (optional)"); this page asks about the walk through instead (commit
   `d899d24`). Keep "(optional)" in any override (`test/heardAbout.test.js`).
-- **Live, hidden:** serving deployment `f8ad25bd`; inspection run
+- **First live check, while hidden:** serving deployment `f8ad25bd`; inspection run
   `20261019T125113Z-office-workspace-hidden`, 200 at desktop and phone,
   noindex both ways, not in the sitemap, no page errors, captures read.
   Written back to both Handoff Logs on 19/10/2026. The Ads log records that

@@ -39,6 +39,7 @@ const TAXI_OPERATORS_PATH = '/taxi-and-private-hire-operators';
 // The taxi websites page (routes/taxiWebsites.js, 13/10/2026). Defined here so
 // both routes share it without requiring each other.
 const TAXI_WEBSITES_PATH = TAXI_OPERATORS_PATH + '/websites';
+const TAXI_WORKSPACE_PATH = TAXI_OPERATORS_PATH + '/office-workspace';
 
 // Three paid offers, each with a one-line taxi lead-in above its approved
 // catalogue description (Tom, 07/10/2026, after the second review: "lets ditch
@@ -112,4 +113,4 @@ function mountPageRoute(app, generateCsrfToken) {
   });
 }
 
-module.exports = { mountPageRoute, loadThemeAndShell, TAXI_OPERATORS_PATH, TAXI_WEBSITES_PATH, TAXI_OPERATORS_CONTACT, TAXI_OFFER_ORDER, TAXI_OFFER_LEADS, TAXI_OFFER_HREF, taxiOffers };
+module.exports = { mountPageRoute, loadThemeAndShell, TAXI_OPERATORS_PATH, TAXI_WEBSITES_PATH, TAXI_WORKSPACE_PATH, TAXI_OPERATORS_CONTACT, TAXI_OFFER_ORDER, TAXI_OFFER_LEADS, TAXI_OFFER_HREF, taxiOffers };

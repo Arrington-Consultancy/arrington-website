@@ -5,12 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Workspace for Taxi and Private Hire Offices | Arrington</title>
-    <%# HIDDEN UNTIL TOM HAS SEEN IT (brief of 19/10/2026: "show Tom the page
-        before it is linked from navigation or sent to iCabbi"). noindex here
-        and as an X-Robots-Tag header from the route; not in the sitemap; not
-        linked from anywhere. See routes/taxiWorkspace.js for what the page may
-        and may not say. %>
-    <meta name="robots" content="noindex">
+    <%# Released 19/10/2026 on Tom's "approve", after he had seen it hidden:
+        indexable and in the sitemap. See routes/taxiWorkspace.js for what the
+        page may and may not say. %>
+    <%- include('partials/page-schema', { schemaName: 'Taxi office AI workspace', schemaPath: '/taxi-and-private-hire-operators/office-workspace', schemaParent: { name: 'Taxi and private hire operators', path: '/taxi-and-private-hire-operators' }, schemaService: 'AI workspace for taxi and private hire offices, with a booking checker against the dispatch system' }) %>
     <meta name="description" content="AI workers for taxi and private hire offices, with a booking checker that compares every emailed booking with the job in your dispatch system. £999 to set up.">
     <link rel="canonical" href="https://www.arringtonconsultancy.com/taxi-and-private-hire-operators/office-workspace">
     <meta property="og:type" content="website">

@@ -39,7 +39,7 @@
 // taxi operators page. The call to action is the existing footer enquiry form
 // with a per-page copy override; no checkout, conversion, lead kind or table.
 // test/taxiWebsitesPage.test.js pins all of it.
-const { loadThemeAndShell, TAXI_WEBSITES_PATH } = require('./taxiOperators');
+const { loadThemeAndShell, TAXI_WEBSITES_PATH, TAXI_WORKSPACE_PATH } = require('./taxiOperators');
 const { OFFERS } = require('../lib/whereToStartOffers');
 
 // The demo's address: part of this site since 15/10/2026, mounted in
@@ -71,6 +71,7 @@ function mountPageRoute(app, generateCsrfToken) {
         websiteOffer: OFFERS.website_build,
         workspacePricePence: WORKSPACE_PRICE_PENCE,
         demoUrl: TAXI_DEMO_URL,
+        workspacePath: TAXI_WORKSPACE_PATH,
         pageContact: { ...pageContact, ...TAXI_WEBSITES_CONTACT }
       });
     } catch (err) {

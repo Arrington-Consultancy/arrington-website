@@ -113,8 +113,8 @@
 
     <%# HERO. The reason to choose us over a web agency leads (bookings into
         dispatch). The email check was named here until Tom's decision of
-        15/10/2026 took it out of the £999; since 17/10/2026 it is one of the
-        office workspace's examples, at the foot of the page. %>
+        15/10/2026 took it out of the £999; since 19/10/2026 it is part of the
+        office workspace, summarised at the foot of the page. %>
     <header class="tw-hero">
         <picture class="tw-hero-photo">
             <source srcset="/img/startup/tom-at-desk.webp" type="image/webp">
@@ -205,30 +205,25 @@
         </div>
         </section>
 
-        <%# THE OFFICE WORKSPACE (17/10/2026). Google Ads brief "Taxi page: the
-            £999 office workspace", this worker's proposal, approved by Tom as
-            written ("yes"), with "made up" unhyphenated for the page's no dash
-            rule. After the website's price on purpose, so no reader takes the
-            workspace's £999 as part of the website's. The only place on this
-            page that says "AI" (Brand OS: AI workers as part of the offer, never
-            the hook). Compliance is keeping track and warning, and the operator
-            signs off; the email check is described as the 13/10 approval
-            describes it. No payment button: the enquiry form below is the
-            action. %>
+        <%# THE OFFICE WORKSPACE. A summary since 19/10/2026, when the workspace
+            got its own page (/taxi-and-private-hire-operators/office-workspace,
+            released on Tom's "approve"); the detail lives there, so the two
+            pages cannot drift. The first paragraph and the price line are the
+            wording Tom approved on 17/10/2026 ("yes"); the list of examples
+            (licensing dates, the email check, quotes, rotas, social) gave way
+            to the workers and the checker the new page shows, and quotes and
+            rotas went with it because the new page does not claim them. After
+            the website's price on purpose, so no reader takes the workspace's
+            £999 as part of the website's. The only place on this page that
+            says "AI" (Brand OS: AI workers as part of the offer, never the
+            hook). No payment button: the enquiry form below is the action. %>
         <div class="tw-wrap">
         <div class="tw-section" data-workspace>
             <h2>An office workspace for your firm</h2>
             <p>Alongside the website, we can set up an office workspace: AI workers built for your firm, who know your business, your customers and how you talk to them. They draft the work and flag what needs attention, and someone in your office checks it and decides what goes out.</p>
-            <p class="tw-list-lead">What they can take off the office:</p>
-            <ul class="tw-list">
-                <li>Keeping track of every driver badge, vehicle licence, DBS check, insurance and MOT date, and warning you before anything runs out. You still check the paperwork and sign off anything that goes to the council.</li>
-                <li>Checking the bookings that still come by email. Account customers, hotels and schools still book that way, so each request is matched against the jobs in your dispatch system, and a booking that was never keyed in, or was keyed in wrong, gets flagged before the customer is left waiting.</li>
-                <li>Drafting quotes from your own prices.</li>
-                <li>Helping plan driver rotas and cover.</li>
-                <li>Writing social media posts in your firm's voice, ready for you to approve.</li>
-            </ul>
+            <p data-workspace-summary>Five workers take the booking emails, customer emails, complaints, licensing and social media off your controllers. Every booking that arrives by email is checked against the job in your dispatch system, and when something does not match, your controllers see it before the car is sent.</p>
             <p data-workspace-price>The workspace is <%= '£' + (workspacePricePence / 100).toLocaleString('en-GB') %>, separate from the website, or <%= '£' + ((websiteOffer.pricePence + workspacePricePence) / 100).toLocaleString('en-GB') %> for both. Which workers you get, and what each one does, is agreed in a recorded planning conversation, the same way the website is, so you know exactly what the <%= '£' + (workspacePricePence / 100).toLocaleString('en-GB') %> buys before any work starts.</p>
-            <p data-office-link>You can look round an example in the <a class="tw-link" href="/taxi-demo/staff-portal">Tidewell Cars staff office</a>, where the workers run on a made up firm.</p>
+            <p data-office-link><a class="tw-link" href="<%= workspacePath %>">See the office workspace</a>, or look round an example in the <a class="tw-link" href="/taxi-demo/staff-portal">Tidewell Cars staff office</a>, where the workers run on a made up firm.</p>
         </div>
         </div>
     </main>

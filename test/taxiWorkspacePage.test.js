@@ -1,8 +1,9 @@
 // The taxi office AI workspace page, /taxi-and-private-hire-operators/
 // office-workspace (19/10/2026). Built from the Google Ads worker's brief
-// (approved for build by Tom), this worker's pushback and Tom's answers. It
-// stays hidden until Tom has seen it. What is pinned: hidden in every sense,
-// the two prices and nothing else, the checker claiming only what the demo
+// (approved for build by Tom), this worker's pushback and Tom's answers.
+// Built hidden and released the same day on Tom's "approve". What is pinned:
+// indexable, in the sitemap, linked from the taxi websites page and not in
+// the navigation, the two prices and nothing else, the checker claiming only what the demo
 // does, Tom's story in the third person with the approved facts, the
 // existing enquiry form, and the house rules.
 
@@ -39,31 +40,24 @@ const section = (body, attr) => {
   return visibleText(body.slice(start, body.indexOf('</div>', start)));
 };
 
-test('it is hidden until Tom has seen it: noindex twice, not in the menu, the footer or the sitemap, linked from nowhere', () => {
+test('released: indexable, in the sitemap, linked from the taxi websites page, not in the navigation', () => {
+  // Tom, 19/10/2026: "approve", after seeing the page live while it was hidden.
   assert.strictEqual(TAXI_WORKSPACE_PATH, PATH);
   const server = read('server.js');
   assert.ok(/taxiWorkspace\.mountPageRoute\(app, generateCsrfToken\)/.test(server), 'the route is not mounted');
   assert.ok(server.indexOf('taxiWorkspace.mountPageRoute') < server.indexOf("app.get('/:slug'"), 'mounted after the CMS catch-all');
-  assert.ok(/res\.set\('X-Robots-Tag', 'noindex'\)/.test(read(ROUTE)), 'the X-Robots-Tag header is gone');
-  assert.ok(/<meta name="robots" content="noindex">/.test(emitted(VIEW)), 'the robots meta tag is gone');
-  const sitemapAt = server.indexOf("app.get('/sitemap.xml'");
-  const sitemapEnd = server.indexOf('</urlset>', sitemapAt);
-  assert.ok(sitemapAt > -1 && sitemapEnd > sitemapAt, 'the sitemap handler has moved; this test needs updating');
-  assert.ok(!server.slice(sitemapAt, sitemapEnd).includes('office-workspace'), 'the page is in sitemap.xml');
-  const robotsSrc = server.slice(server.indexOf("app.get('/robots.txt'"), sitemapAt);
-  assert.ok(!robotsSrc.includes('office-workspace'), 'robots-disallowed, so no crawler would see the noindex');
+  assert.ok(!/X-Robots-Tag/.test(read(ROUTE)) && !/<meta name="robots"/.test(emitted(VIEW)), 'a noindex is back');
+  assert.ok(/'taxi-and-private-hire-operators\/office-workspace': '\d{4}-\d{2}-\d{2}'/.test(server), 'no sitemap lastmod');
+  const sitemapList = (server.match(/for \(const slug of \[([^\]]*)\]\)/) || [])[1] || '';
+  assert.ok(sitemapList.includes("'taxi-and-private-hire-operators/office-workspace'"), 'not in the sitemap list');
+  const robotsSrc = server.slice(server.indexOf("app.get('/robots.txt'"), server.indexOf("app.get('/sitemap.xml'"));
+  assert.ok(!robotsSrc.includes('office-workspace'), 'robots-disallowed');
+  assert.ok(emitted(VIEW).includes(`<link rel="canonical" href="https://www.arringtonconsultancy.com${PATH}">`));
+  assert.ok(/include\('partials\/page-schema', \{[^}]*schemaPath: '\/taxi-and-private-hire-operators\/office-workspace'/.test(emitted(VIEW)), 'no breadcrumb or service data');
   for (const f of ['views/partials/site-header.ejs', 'views/partials/site-footer.ejs', 'lib/navShell.js']) {
-    assert.ok(!read(f).includes('office-workspace'), `${f} links to or names the page`);
+    assert.ok(!read(f).includes('office-workspace'), `${f} puts the page in the navigation or footer`);
   }
-  const walk = (dir) => fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true }).flatMap((e) => {
-    const rel = path.join(dir, e.name);
-    if (e.isDirectory()) return e.name === 'node_modules' ? [] : walk(rel);
-    return /\.(ejs|js|sql)$/.test(e.name) ? [rel] : [];
-  });
-  const offenders = ['views', 'lib', 'db', 'public/js', 'routes', 'taxi-demo/lib'].flatMap(walk)
-    .filter((f) => f !== VIEW && f !== ROUTE)
-    .filter((f) => read(f).includes('office-workspace'));
-  assert.deepStrictEqual(offenders, [], `the page is linked or named from: ${offenders.join(', ')}`);
+  assert.ok(read('views/taxi-websites.ejs').includes('href="<%= workspacePath %>"'), 'the taxi websites page no longer links here');
 });
 
 test('two products at £999 each, £1,998 for both, support optional with no monthly figure', () => {

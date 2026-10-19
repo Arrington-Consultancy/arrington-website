@@ -763,6 +763,8 @@ app.get('/sitemap.xml', async (req, res, next) => {
       'product-guide': '2026-08-22',
       'taxi-and-private-hire-operators': '2026-10-13',
       'taxi-and-private-hire-operators/websites': '2026-10-13',
+      // Released 19/10/2026 on Tom's approval, after he had seen it hidden.
+      'taxi-and-private-hire-operators/office-workspace': '2026-10-19',
       // In the sitemap from 11/10/2026 on Tom's approval (it had been kept out
       // since 25/09/2026 as a campaign-only page). Linked from the homepage
       // below the form the same day.
@@ -771,7 +773,7 @@ app.get('/sitemap.xml', async (req, res, next) => {
     // where-to-start/confirmation is deliberately excluded — private,
     // per-visitor payment status, noindex/nofollow on the page itself,
     // same treatment as the quiz/review result pages.
-    for (const slug of ['owner-check', 'owner-dependency-quiz', 'commercial-gaps-review', 'market-ready-test', 'where-to-start', 'where-to-start/commercial-review', 'where-to-start/full-commercial-review', 'where-to-start/website-build', 'where-to-start/full-review-website-build', 'product-guide', 'taxi-and-private-hire-operators', 'taxi-and-private-hire-operators/websites', 'get-your-business-ready-to-sell']) {
+    for (const slug of ['owner-check', 'owner-dependency-quiz', 'commercial-gaps-review', 'market-ready-test', 'where-to-start', 'where-to-start/commercial-review', 'where-to-start/full-commercial-review', 'where-to-start/website-build', 'where-to-start/full-review-website-build', 'product-guide', 'taxi-and-private-hire-operators', 'taxi-and-private-hire-operators/websites', 'taxi-and-private-hire-operators/office-workspace', 'get-your-business-ready-to-sell']) {
       urlEntries.push(`  <url><loc>${escapeXml(`${base}/${slug}`)}</loc><lastmod>${ASSESSMENT_ROUTE_LASTMOD[slug]}</lastmod></url>`);
     }
     res.type('application/xml').send(
