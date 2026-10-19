@@ -8579,6 +8579,45 @@ publishes nothing; third parties write bookings in, and reading jobs is
 unconfirmed. So: likely with iCabbi, probable with Autocab, to be confirmed
 with Cordic, and in every case with the operator's own API access.
 
+### The fleet register: 48 cars with MOT, plate and interim dates (19/10/2026)
+
+Tom: the Licensing worker holds every car's MOT and plate dates "in the
+background" and reminds the office what is coming up. His rules: the MOT falls
+a few days before the plate runs out, occasionally the same day, and every car
+has an interim test exactly six months after its MOT.
+
+- **`lib/taxiOffice/fleet.js`** holds the 48 cars, matching the demo site
+  (`taxi-demo/lib/firm.js`): 30 hackney carriage (licences 01 to 30) and 18
+  private hire (01 to 18). Of those, 6 are wheelchair accessible, 4 are
+  8-seaters, 4 are 6-seaters, 2 executive, 6 estates and 26 cars. Every
+  vehicle type the booking form offers is on the road.
+  - The ten cars the demo's dispatch hands out, and the cars in the complaint
+    records, are on the register with the same registrations and licence
+    numbers.
+  - The new 8-seater in the social facts is PH 18, licensed this week.
+- **Dates move with today.** Each car has `motIn` (days to its next MOT) and
+  `gap` (0 to 5 days to the plate). Everything follows from the last MOT, in
+  calendar months: interim test 6 months on, next MOT 12 months on.
+  - 4 of the 48 have the plate on the same day as the MOT.
+  - HC 21's interim test is pinned 6 days ahead, not yet booked, as the
+    register's example.
+- **Where it shows:**
+  - The register merges the office's own items (badges, medicals, insurance)
+    with each car's MOT and plate renewal (one item) and interim test due in
+    the next 30 days, soonest first.
+  - The Today card adds a line with the month's count.
+  - The Licensing page has a fleet table and "Download as a spreadsheet":
+    `/licensing/fleet.csv`, behind the office login, with dates as
+    YYYY-MM-DD so a spreadsheet sorts them.
+- **Plain code does the reminders, not the AI.** The Licensing AI only drafts
+  the letter for an item, and is given the plate date in the item's note.
+- **Tests:** `test/taxiOfficeFleet.test.js` (8), including Tom's rules
+  checked on every day of a year. An interim worked out as 182 days, and a
+  plate 9 days after its MOT, were each watched red.
+- **The public demo pages were not changed.** They still describe Licensing
+  as "badge, plate, MOT and insurance"; the office's own description adds
+  interim tests.
+
 ## Taxi office AI workspace page (RELEASED 19/10/2026)
 
 `/taxi-and-private-hire-operators/office-workspace` (`routes/taxiWorkspace.js`,
