@@ -1094,6 +1094,8 @@ router.post('/scott/login', noindexHeader, scottLoginLimiter, async (req, res) =
       repo.getBrainFactsSince(new Date(Date.now() - 7 * 24 * 3600 * 1000))
         .then((rows) => sendLoginNotification({ username: user.username, learnedRecently: rows.length }))
         .catch((err) => console.error('Scott login notification could not be prepared:', err.message));
+      require('../lib/guestVisits').note({ username: user.username, kind: 'login', text: 'Logged in to the Scott demonstration', alerted: true })
+        .catch((err) => console.error('Guest visit note failed:', err.message));
     }
 
     res.redirect(nextPath);

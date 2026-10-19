@@ -4,6 +4,7 @@ const rateLimit = require('express-rate-limit');
 const db = require('../db/pool');
 const themes = require('../db/themes');
 const { shouldAlertOnLogin, sendLoginNotification } = require('../lib/scott/gapNotifier');
+const guestVisits = require('../lib/guestVisits');
 
 const router = express.Router();
 
@@ -155,6 +156,10 @@ router.post('/login', loginLimiter, async (req, res) => {
       sendLoginNotification({ username: user.username, place: placeFor(nextPath) })
         .then((r) => { if (!r.sent) console.warn(`Login alert for ${user.username} not sent: ${r.reason}`); })
         .catch((err) => console.error('Login alert failed:', err.message));
+      // The login opens their visit, so the first page does not send a
+      // second "is in now" email (lib/guestVisits.js).
+      guestVisits.note({ username: user.username, kind: 'login', text: `Logged in, heading for ${placeFor(nextPath)}`, alerted: true })
+        .catch((err) => console.error('Guest visit note failed:', err.message));
     }
 
     res.redirect(nextPath);
@@ -181,6 +186,14 @@ router.post('/logout', (req, res) => {
       } catch (e) {
         // Non-critical, don't block logout
       }
+    }
+
+    // A watched guest signing out closes their visit, and the summary goes
+    // to Tom now rather than after the quiet period (lib/guestVisits.js).
+    if (username && guestVisits.isWatched(username)) {
+      guestVisits.noteSignOut(username)
+        .then(() => guestVisits.sweep())
+        .catch((e) => console.error('Guest visit sign out failed:', e.message));
     }
 
     // A form may name where to land afterwards (the Tidewell office sends

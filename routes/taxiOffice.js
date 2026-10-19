@@ -47,6 +47,7 @@ const workers = require('../lib/taxiOffice/workers');
 const mail = require('../lib/taxiOffice/mail');
 const gmailConnect = require('../lib/taxiOffice/mail/gmailConnect');
 const { FIRM } = require('../taxi-demo/lib/firm');
+const guestVisits = require('../lib/guestVisits');
 
 const BASE = '/taxi-demo/office';
 
@@ -137,6 +138,75 @@ function render(req, res, view, locals) {
   });
 }
 
+// What a watched guest does in the office goes into their visit, and Tom
+// gets a summary when it is over (Tom, 19/10/2026: "it would be handy to know
+// what he's done on the site and how long he's played around").
+// lib/guestVisits.js. Nobody else is recorded. Pages that poll on their own
+// are not here, so an open tab does not count as time in the office.
+const PLACE = 'the Tidewell taxi office';
+const PAGE_NAMES = { '/': 'Today', '/inbox': 'Inbox', '/dispatch': 'Dispatch board', '/complaints': 'Complaints', '/licensing': 'Licensing', '/social': 'Social media' };
+
+function emailLabel(s, id) {
+  const e = office.findEmail(s, id);
+  if (!e) return 'an email';
+  const subject = guestVisits.clip(e.subject, 80);
+  return e.live ? `an email sent to the live address from ${guestVisits.nameOf(e.from)} ("${subject}")` : `the email from ${guestVisits.nameOf(e.from)} ("${subject}")`;
+}
+
+function itemLabel(s, id) {
+  const i = office.register(s).find((x) => x.id === id);
+  return i ? `${i.item}, ${i.subject}` : 'a licensing item';
+}
+
+function activityFor(req, s) {
+  const pattern = String((req.route && req.route.path) || '').slice(BASE.length) || '/';
+  const id = req.params && req.params.id;
+  const b = req.body || {};
+  const note = (v) => `"${guestVisits.clip(v, 300)}"`;
+  if (req.method === 'GET') {
+    if (pattern === '/inbox/:id') return { kind: 'open_email', text: `Opened ${emailLabel(s, id)}` };
+    if (pattern === '/licensing/fleet.csv') return { kind: 'download', text: 'Downloaded the fleet spreadsheet' };
+    if (!PAGE_NAMES[pattern]) return null;
+    const filtered = req.query && req.query.show ? ' (filtered)' : '';
+    const live = pattern === '/inbox' && office.liveFor(s) ? office.liveEmails(s).length : 0;
+    return { kind: 'page', text: `${PAGE_NAMES[pattern]}${filtered}${live ? `, ${live} email${live === 1 ? '' : 's'} at the live address so far` : ''}` };
+  }
+  switch (pattern) {
+    case '/inbox/check-all': return { kind: 'action', text: 'Pressed Read the inbox' };
+    case '/inbox/new': return { kind: 'own_email', text: `Typed an email into the inbox to try it: ${note(`${b.subject || ''}: ${b.body || ''}`)}` };
+    case '/inbox/:id/read': return { kind: 'action', text: `Asked the AI to read ${emailLabel(s, id)} again` };
+    case '/inbox/:id/fix': return b.signoff === 'yes'
+      ? { kind: 'signoff', text: `Signed off and put the booking into dispatch: ${emailLabel(s, id)}` }
+      : { kind: 'action', text: `Pressed the dispatch button without ticking the sign-off: ${emailLabel(s, id)}` };
+    case '/inbox/:id/apply-check': return { kind: 'action', text: `Used the checker's corrections on ${emailLabel(s, id)}` };
+    case '/inbox/:id/recheck': return { kind: 'action', text: `Asked the checker again about ${emailLabel(s, id)}` };
+    case '/inbox/:id/send': return { kind: 'mark_sent', text: `Marked the reply as sent: ${emailLabel(s, id)}` };
+    case '/inbox/:id/guide': return { kind: 'guide', text: `Guided the AI on the reply to ${emailLabel(s, id)}: ${note(b.guidance)}` };
+    case '/inbox/:id/unguide': return { kind: 'action', text: `Went back to the first draft for ${emailLabel(s, id)}` };
+    case '/complaints/:id/draft': return { kind: 'action', text: `Asked for a fresh complaint reply: ${emailLabel(s, id)}` };
+    case '/licensing/:id/draft': return { kind: 'action', text: `Drafted the council letter: ${itemLabel(s, id)}` };
+    case '/licensing/:id/guide': return { kind: 'guide', text: `Guided the council letter (${itemLabel(s, id)}): ${note(b.guidance)}` };
+    case '/licensing/:id/unguide': return { kind: 'action', text: `Went back to the first council letter: ${itemLabel(s, id)}` };
+    case '/social/draft': return { kind: 'action', text: `Drafted this week's social posts${b.steer ? `, asking for ${note(b.steer)}` : ''}` };
+    case '/social/:i/approve': return { kind: 'action', text: 'Approved a social post' };
+    case '/reset': return { kind: 'action', text: 'Reset the demo office' };
+    default: return null;
+  }
+}
+
+function track(req, res, next) {
+  const user = req.session && req.session.user;
+  if (user && guestVisits.isWatched(user.username)) {
+    let a = null;
+    try { a = activityFor(req, stateOf(req)); } catch (err) { a = { kind: 'page', text: `Opened ${req.path}` }; }
+    if (a) {
+      guestVisits.noteActivity({ username: user.username, kind: a.kind, text: a.text, place: PLACE })
+        .catch((err) => console.error('Guest visit note failed:', err.message));
+    }
+  }
+  next();
+}
+
 const VIEW = (fn) => (req, res, next) => Promise.resolve(fn(req, res)).catch(next);
 
 function mountPageRoute(app) {
@@ -144,8 +214,8 @@ function mountPageRoute(app) {
   // and waits a moment for them (office.settleReading).
   // (Not the mailbox connection pages, which have nothing to do with it.)
   const settle = (req, res, next) => (req.path.startsWith(BASE + '/connect/') ? next() : office.settleReading(stateOf(req)).then(() => next(), next));
-  const page = (path, handler) => app.get(BASE + path, noindex, requireOfficeAccess, settle, VIEW(handler));
-  const post = (path, handler) => app.post(BASE + path, noindex, requireOfficeAccess, VIEW(handler));
+  const page = (path, handler) => app.get(BASE + path, noindex, requireOfficeAccess, track, settle, VIEW(handler));
+  const post = (path, handler) => app.post(BASE + path, noindex, requireOfficeAccess, track, VIEW(handler));
 
   const rows = (s) => office.inbox(s).map((e) => ({ email: e, status: office.readingStatus(s, e), worker: office.workerOf(s, e), reading: s.readings[e.id] || null, sent: Boolean(s.sent[e.id]), check: office.checkState(s, e) }));
 
@@ -331,7 +401,7 @@ function mountPageRoute(app) {
   });
 
   // The whole fleet as a spreadsheet, worked out from today like the page.
-  app.get(BASE + '/licensing/fleet.csv', noindex, requireOfficeAccess, (req, res) => {
+  app.get(BASE + '/licensing/fleet.csv', noindex, requireOfficeAccess, track, (req, res) => {
     const today = stateOf(req).today;
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="tidewell-cars-fleet-${today}.csv"`);
@@ -419,4 +489,4 @@ function mountPageRoute(app) {
   });
 }
 
-module.exports = { mountPageRoute, BASE };
+module.exports = { mountPageRoute, BASE, activityFor };

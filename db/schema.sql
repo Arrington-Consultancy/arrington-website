@@ -1203,6 +1203,22 @@ CREATE INDEX IF NOT EXISTS idx_csp_reports_created ON csp_reports (created_at);
 -- claim is new, so a replayed /thank-you?c= link fires no Google, Meta or
 -- Microsoft conversion in any browser or session. A token lives 30 minutes,
 -- so a row is useless after that; rows older than a day are pruned on claim.
+-- Visits by a watched guest (the login alert list): when they came, what
+-- they did, how long they stayed. Tom, 19/10/2026. lib/guestVisits.js.
+CREATE TABLE IF NOT EXISTS guest_visits (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(100) NOT NULL,
+    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    ended_at TIMESTAMPTZ,
+    events JSONB NOT NULL DEFAULT '[]'::jsonb,
+    start_alerted BOOLEAN NOT NULL DEFAULT FALSE,
+    summary_claimed_at TIMESTAMPTZ,
+    summary_sent_at TIMESTAMPTZ,
+    summary_error TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_guest_visits_open ON guest_visits (username, last_seen_at) WHERE summary_claimed_at IS NULL;
+
 CREATE TABLE IF NOT EXISTS contact_conversion_claims (
     token_id VARCHAR(32) PRIMARY KEY,
     claimed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

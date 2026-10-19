@@ -30,6 +30,7 @@ const taxiWorkspace = require('./routes/taxiWorkspace');
 const { legacyRedirect } = require('./lib/legacyRedirect');
 const thankYou = require('./routes/thankYou');
 const scott = require('./routes/scott');
+const guestVisits = require('./lib/guestVisits');
 const workspace = require('./routes/workspace');
 const { hasWorkspaceAccess } = require('./lib/workspace/access');
 const { publishedArticles, findBySlug: findUsefulThinkingArticle } = require('./lib/usefulThinkingArticles');
@@ -973,6 +974,19 @@ thankYou.mountPageRoute(app, generateCsrfToken);
 // requireScottPageAccess/requireScottApiAccess, reusing the existing
 // page_access table against one synthetic hidden page row — no second
 // permission system, no second admin screen.
+// A watched guest's pages and questions in the Scott demonstration go into
+// their visit, like the Tidewell office (lib/guestVisits.js, Tom 19/10/2026).
+// Pages by path; a question by its first words. Nobody else is recorded.
+app.use((req, res, next) => {
+  const user = req.session && req.session.user;
+  if (user && guestVisits.isWatched(user.username)) {
+    let a = null;
+    if (req.method === 'GET' && /^\/scott(\/|$)/.test(req.path) && !/\.[a-z0-9]{2,5}$/i.test(req.path) && req.path !== '/scott/login') a = { kind: 'page', text: `Scott demonstration: ${req.path}` };
+    else if (req.method === 'POST' && req.path === '/api/scott/messages') a = { kind: 'action', text: `Asked Scott's AI: "${guestVisits.clip(req.body && req.body.message, 300)}"` };
+    if (a) guestVisits.noteActivity({ username: user.username, ...a, place: 'the Scott demonstration' }).catch((err) => console.error('Guest visit note failed:', err.message));
+  }
+  next();
+});
 scott.mountPageRoute(app, generateCsrfToken);
 app.use(scott.router);
 
@@ -1518,6 +1532,8 @@ loadPermissions().then(() => {
     console.log(`[${isProd ? 'PROD' : 'DEV'}] Arrington CMS running on port ${PORT}`);
     console.log(require('./lib/scott/orchestrator').describeScottAIStatus());
     console.log(require('./lib/scott/gapNotifier').describeLoginAlerts());
+    console.log(guestVisits.describeGuestVisits());
+    guestVisits.startSweeping();
     // The taxi office's AI workers: which switch is set, and one tiny call
     // so the deploy log says whether the model answers on this key.
     {

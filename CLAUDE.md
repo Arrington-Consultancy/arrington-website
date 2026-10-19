@@ -8500,6 +8500,49 @@ tom@arringtonconsultancy.com". Earlier logins are in the admin Activity log
 (`audit_log`, "marc logged in"); this worker cannot read the production
 database.
 
+### Dan: login alert and a summary of every visit (19/10/2026)
+
+Tom sent the Tidewell email to Dan (daniel@a2btransportcornwall.com, A2B
+Transport) at 20:09 on 19/10/2026, then: "I need an email the moment he logs
+on and it would be handy to know what he's done on the site and how long
+he's played around".
+
+- **Watched list** (`SCOTT_LOGIN_ALERT_USERNAMES`, unset on production) now
+  defaults to `will,marc,dan`. Only these accounts are recorded; Tom's own
+  logins are not.
+- **`lib/guestVisits.js`**, table `guest_visits`. A visit opens on a watched
+  guest's login or, if they were already signed in, on their first office or
+  Scott page; it closes on sign out or after 20 minutes without doing
+  anything. One advisory lock per guest, so racing requests open one visit.
+- **Emails to Tom** (same transport and fixed recipient as the login alert):
+  the login alert as before (now saying a summary will follow); "dan is in
+  the Tidewell taxi office now" if a visit starts without a login; and a
+  summary when it closes: start and end time (UK), how long from the first
+  page to the last, a one-line count (emails opened, emails typed in to try
+  it, bookings signed off, notes to guide the AI, replies marked sent), then
+  every page and action in order, with anything typed (guidance notes, an
+  email typed in, a Scott question) clipped to 300 characters. Wording
+  names the guest, no pronouns.
+- **What counts:** every office page and action (`track` in
+  `routes/taxiOffice.js`, `activityFor` turns a route into a sentence), the
+  fleet download, and Scott pages and questions (`server.js`, ahead of the
+  Scott routes). The polling routes (`inbox/live.json`, `inbox/reading.json`)
+  are not activity, so an open tab does not keep a visit going.
+- **Sent once:** the summary is claimed in the database before it is sent
+  (`sweep`, every 2 minutes, and straight after a sign out), so racing
+  deployments cannot send two. A failed send is written to `summary_error`,
+  not retried. Visits are deleted after 90 days.
+- **Privacy page:** new section "If we give you a demonstration login"
+  (`#demonstration-logins`) says what is recorded and that it is deleted
+  automatically. No period is stated, because `privacyIntroductions.test.js`
+  bans any period on the page (Tom, 14/10/2026); the code deletes at 90 days.
+- **Tests:** `test/guestVisits.test.js` (9; the database half needs
+  `DATABASE_URL`). Watched red: the advisory lock removed (only with the pool
+  warmed first; a cold pool serialised the race and hid it, the K2 trap
+  again) and the once-only claim removed. End to end locally with the real
+  app and Chromium: login, pages, a sign-off, the fleet download and sign out
+  produced one visit and its summary straight after sign out.
+
 ### Today's four counts open what they count (LIVE 17/10/2026)
 
 Tom: "those 4 black boxes at the top should be clickable to go through to
