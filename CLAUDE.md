@@ -8887,20 +8887,23 @@ export in `handover/` is stale and holds content only.
   Services, Library, Google Drive API, Enable).
   `test/workspace/driveBackupConnect.test.js` (6; the purpose branch removed
   and `include_granted_scopes` added were each watched red).
-- **First real run, 19/10/2026:** token set by Tom; a one-off run
-  (`35 6 19 10 *`) got an access token from Google, then Drive refused to
-  create the folder, and the script printed no reason. It now prints
-  Google's own message for a refused folder search, folder creation or
-  upload. A second one-off run (08:20 UTC) gave the reason: "Google Drive
-  API has not been used in project 78910296338 before or it is disabled".
-  That is the Cloud project holding the Gmail OAuth client, so the Drive
-  API needs enabling there once (Tom:
-  `https://console.developers.google.com/apis/api/drive.googleapis.com/overview?project=78910296338`,
-  Enable). The cron is back on `0 3 * * 1` (deployment `66ef9905`); a
-  test run outside it means a one-off schedule, a redeploy, and then the
-  weekly schedule restored and redeployed again. Railway cron runs start
-  two to three minutes after the set minute, and a schedule change applies
-  only from the next deployment.
+- **First real run, 19/10/2026: WORKING.** Token set by Tom. The first
+  one-off run got an access token and then Drive refused to create the
+  folder with no reason given; the script now prints Google's own message
+  for a refused folder search, folder creation or upload. The next run gave
+  the reason ("Google Drive API has not been used in project 78910296338 or
+  it is disabled", the Cloud project holding the Gmail OAuth client); Tom
+  enabled the Drive API there, and the run at 11:33 UTC created the folder
+  "Arrington website database backups" in Tom's My Drive (id
+  `19slmPr5LiMM62qAW_3CfjyqWs5cdgNvA`) and uploaded the first backup (file
+  id `1tfgN-XPRkPGmaF0zNLybz3Q33EPOdKHz`, 49 tables, about 10.3 MB, size
+  read back from Drive). The cron is back on `0 3 * * 1` (deployment
+  `6d2f5d49`), so the next run is Monday 26/10/2026 at about 03:03 UTC. A
+  test run outside the schedule means a one-off schedule, a redeploy, and
+  then the weekly schedule restored and redeployed again: Railway cron runs
+  start two to three minutes after the set minute, a schedule change applies
+  only from the next deployment, and a redeploy is refused while the latest
+  deployment is SKIPPED (pass the id of a real build).
 - **Proof:** `test/driveBackup.test.js` runs the real script with real
   pg_dump against a seeded database and a mock of the two Google endpoints
   it uses (gated on `BACKUP_TEST_DATABASE_URL`, declared in
