@@ -314,8 +314,9 @@ ${pageTop({ eyebrow: 'Book online', title: 'Book a taxi.', lede: 'The price befo
           ${PAYMENT.map((p) => html`<input type="radio" id="pay-${p.id}" name="payment" value="${p.id}"${v.payment === p.id ? raw(' checked') : ''}><label for="pay-${p.id}">${p.label}</label>`)}
         </div>
         <div class="field account-field"><label for="account">Account name</label><input id="account" name="account" value="${v.account || ''}"${invalid(errors, 'account')}>${fieldError(errors, 'account')}</div>
-        <div class="field"><label for="notes">Anything the driver should know <span class="optional">(optional)</span></label><textarea id="notes" name="notes" rows="3" maxlength="300" placeholder="Flight number, door code, child seat">${v.notes || ''}</textarea></div>
       </fieldset>
+
+      <div class="field field-notes"><label for="notes">Anything the driver should know <span class="optional">(optional)</span></label><textarea id="notes" name="notes" rows="3" maxlength="300" placeholder="Flight number, door code, child seat">${v.notes || ''}</textarea></div>
 
       <div class="hp" aria-hidden="true"><label for="website">Leave this empty</label><input id="website" name="website" tabindex="-1" autocomplete="off"></div>
 

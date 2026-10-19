@@ -207,7 +207,7 @@ picture.hero-media img { object-position: 30% 62%; }
 .board-h span { color: var(--on-night-muted); }
 .board-h span::before { content: ', '; }
 .board-rows { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1.25rem; }
-.board-rows li { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; padding: 0.45rem 0; border-top: 1px solid rgba(255, 255, 255, 0.12); }
+.board-rows li { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; gap: 0.3rem; padding: 0.55rem 0 0.45rem; border-top: 1px solid rgba(255, 255, 255, 0.12); }
 .board-to { font-weight: 600; color: #fff; line-height: 1.15; font-size: 0.95rem; }
 .board-to small { display: block; font-weight: 400; font-size: 0.76rem; color: var(--on-night-muted); margin-top: 0.1rem; }
 .board-price { font-weight: 800; font-size: 1.45rem; letter-spacing: -0.02em; color: #fff; font-variant-numeric: tabular-nums; }
@@ -434,9 +434,9 @@ a.store:hover { color: #fff; border-color: #fff; }
 .map-home-dot { fill: var(--red); }
 .map-town-dot { fill: var(--ink); }
 .map-faint-dot { fill: var(--ink-2); }
-.map-plane { fill: var(--teal); }
 text.map-home { font-weight: 800; font-size: 9.5px; fill: var(--ink); }
 text.map-town { font-weight: 600; font-size: 7.4px; fill: var(--ink); }
+text.map-coast { fill: #fff; }
 text.map-faint { font-weight: 500; font-size: 7px; fill: var(--ink-2); }
 text.map-sea { font-weight: 700; font-size: 7.5px; fill: #fff; fill-opacity: 0.85; letter-spacing: 0.1em; text-transform: uppercase; }
 text.map-sea-sm { font-size: 5.6px; }
@@ -450,7 +450,6 @@ text.map-sea-sm { font-size: 5.6px; }
 .on-night-map text.map-home, .on-night-map text.map-town { fill: #fff; }
 .on-night-map text.map-faint { fill: var(--on-night-muted); }
 .on-night-map .map-town-dot { fill: #fff; }
-.on-night-map .map-plane { fill: var(--teal-bright); }
 .on-night-map .map-river { stroke: #2B7A93; }
 
 /* Booking */
@@ -472,6 +471,7 @@ text.map-sea-sm { font-size: 5.6px; }
 .group legend { font-weight: 800; font-size: 1.35rem; letter-spacing: -0.02em; padding: 0; margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.6rem; }
 .group-n { display: inline-grid; place-items: center; width: 1.7rem; height: 1.7rem; border-radius: 50%; background: var(--night); color: #fff; font-size: 0.85rem; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: 0; }
 .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+.field-notes { margin-bottom: 1.75rem; }
 .submit-row { border-top: 2px solid var(--ink); padding-top: 1.25rem; }
 .demo-note { font-size: 0.9rem; color: var(--ink-2); margin: 0.9rem 0 0; }
 .track { list-style: none; padding: 0; margin: 0 0 1rem; counter-reset: track; }

@@ -37,17 +37,22 @@ const CLIFFS = [[-3.385, 50.609], [-3.365, 50.614], [-3.34, 50.62], [-3.32, 50.6
 // The river above the estuary, up to Exeter.
 const RIVER = [[-3.5, 50.703], [-3.505, 50.712], [-3.515, 50.718], [-3.525, 50.722]];
 
+// Label offsets are set so no label touches another label, a dot, the shore
+// or the red cliff line (checked in a browser at desktop and phone widths,
+// 19/10/2026). Exmouth's name sits above its own dot, clear of the cliffs.
+// Budleigh Salterton's goes in the sea in white, like Lyme Bay, because the
+// cliff line climbs through anything to its right on the land side.
 const TOWNS = [
-  { name: 'Exmouth', lng: -3.405, lat: 50.6195, home: true, dx: 4, dy: 3 },
+  { name: 'Exmouth', lng: -3.405, lat: 50.6195, home: true, dx: -5, dy: -10 },
   { name: 'Lympstone', lng: -3.424, lat: 50.648, dx: 4, dy: 3 },
   { name: 'Exton', lng: -3.438, lat: 50.668, dx: 4, dy: 3 },
   { name: 'Topsham', lng: -3.465, lat: 50.688, dx: 4, dy: -3 },
   { name: 'Woodbury', lng: -3.401, lat: 50.676, dx: 4, dy: 3 },
-  { name: 'Budleigh Salterton', lng: -3.32, lat: 50.632, dx: 4, dy: -3 },
+  { name: 'Budleigh Salterton', lng: -3.32, lat: 50.632, dx: 4, dy: 12, sea: true },
   { name: 'Sidmouth', lng: -3.239, lat: 50.682, dx: -4, dy: -4, anchor: 'end' },
   { name: 'Exeter', lng: -3.53, lat: 50.7236, dx: -4, dy: 3, anchor: 'end' },
-  { name: 'Exeter Airport', lng: -3.414, lat: 50.734, dx: 4, dy: 3, plane: true },
-  { name: 'Dawlish', lng: -3.466, lat: 50.581, dx: -4, dy: 3, anchor: 'end', faint: true }
+  { name: 'Exeter Airport', lng: -3.414, lat: 50.734, dx: 4, dy: 3 },
+  { name: 'Dawlish', lng: -3.466, lat: 50.581, dx: -5, dy: 0, anchor: 'end', faint: true }
 ];
 
 // id keeps the gradient reference unique when two maps share a page;
@@ -60,10 +65,9 @@ function exeMap({ id = 'exe', decorative = false } = {}) {
     const cls = t.home ? 'map-home' : t.faint ? 'map-faint' : 'map-town';
     const dot = t.home
       ? `<circle cx="${x}" cy="${y}" r="6" class="map-home-ring"/><circle cx="${x}" cy="${y}" r="3" class="map-home-dot"/>`
-      : t.plane
-        ? `<path class="map-plane" transform="translate(${x} ${y}) scale(.42)" d="M-9 2 9-4l-2.4 4-12 3.2z"/>`
-        : `<circle cx="${x}" cy="${y}" r="2.2" class="${cls}-dot"/>`;
-    return `${dot}<text x="${x + t.dx}" y="${y + t.dy}" class="${cls}"${t.anchor ? ` text-anchor="${t.anchor}"` : ''}>${t.name}</text>`;
+      : `<circle cx="${x}" cy="${y}" r="2.2" class="${cls}-dot"/>`;
+    const textCls = t.sea ? `${cls} map-coast` : cls;
+    return `${dot}<text x="${+(x + t.dx).toFixed(1)}" y="${+(y + t.dy).toFixed(1)}" class="${textCls}"${t.anchor ? ` text-anchor="${t.anchor}"` : ''}>${t.name}</text>`;
   }).join('');
   const names = TOWNS.filter((t) => !t.faint).map((t) => t.name).join(', ');
   const a11y = decorative ? 'aria-hidden="true" focusable="false"' : `role="img" aria-label="Map of the Exe estuary and the East Devon coast marking ${names}"`;
@@ -76,7 +80,7 @@ function exeMap({ id = 'exe', decorative = false } = {}) {
 <path d="M${RIVER.map(pt).join(' L')}" class="map-river"/>
 ${towns}
 <text x="150" y="190" class="map-sea">Lyme Bay</text>
-<text x="88" y="118" class="map-sea map-sea-sm" transform="rotate(-62 88 118)">River Exe</text>
+<text x="95" y="108" class="map-sea map-sea-sm" text-anchor="middle" transform="rotate(68 95 108)">River Exe</text>
 </svg>`;
 }
 
