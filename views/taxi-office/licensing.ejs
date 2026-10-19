@@ -93,7 +93,7 @@
     <h2>The fleet</h2>
     <a class="to-btn" href="<%= BASE %>/licensing/fleet.csv" download>Download as a spreadsheet</a>
   </div>
-  <p class="to-small"><%= fleetMix.total %> cars: <%= fleetMix.hackney %> hackney carriage taxis and <%= fleetMix.privateHire %> private hire, including <%= fleetMix.byType.wav %> wheelchair accessible cars, <%= fleetMix.byType.mpv8 %> eight-seaters and <%= fleetMix.byType.mpv6 %> six-seaters. Each MOT falls a few days before the plate runs out, sometimes the same day, and every car has an interim test six months after its MOT.</p>
+  <p class="to-small"><%= fleetMix.total %> cars: <%= fleetMix.hackney %> hackney carriage taxis and <%= fleetMix.privateHire %> private hire, including <%= fleetMix.byType.wav %> wheelchair accessible cars, <%= fleetMix.byType.mpv8 %> eight-seaters and <%= fleetMix.byType.mpv6 %> six-seaters. Each MOT falls a few days before the plate runs out, sometimes the same day, and every car has an interim test six months after its MOT. All <%= fleetMix.total %> are on one fleet insurance policy, which renews on <%= longDate(insurance.renews) %> <%= insurance.renews.slice(0, 4) %>.</p>
   <div class="to-table-wrap">
     <table class="to-table to-fleet">
       <thead><tr><th scope="col">Licence</th><th scope="col">Car</th><th scope="col">Registration</th><th scope="col">Interim test</th><th scope="col">Next MOT</th><th scope="col">Plate runs out</th></tr></thead>

@@ -112,15 +112,37 @@ test('the register carries the next month and nothing else from the fleet, soone
   office.reset(sid);
 });
 
+test('insurance is fleet cover: one policy, one renewal date, no per-car insurance dates', () => {
+  // Tom, 19/10/2026: "Insurance will all be on the same date, it will be fleet cover".
+  const office = require('../lib/taxiOffice/office');
+  const sid = `fleet-insurance-${Date.now()}`;
+  const s = office.stateFor(sid);
+  const p = fleet.insurancePolicy(s.today);
+  const reg = office.register(s);
+  const renewals = reg.filter((i) => /insurance renewal/i.test(i.item));
+  assert.equal(renewals.length, 1, 'one renewal for the whole fleet');
+  assert.equal(renewals[0].due, p.renews);
+  assert.match(renewals[0].subject, new RegExp(`all ${FIRM.fleet} cars`));
+  assert.equal(reg.filter((i) => /insurance/i.test(i.item) && i.id !== 'fleet-insurance' && i.id !== 'veh-14').length, 0, 'no car has an insurance date of its own');
+  // The council's email about licence 14 and its register note tell the same story as the policy.
+  const council = data.seedInbox(s.today).find((e) => e.id === 'council-14');
+  assert.ok(council.body.includes(`expired on ${data.longDate(p.from)}`));
+  const v14 = reg.find((i) => i.id === 'veh-14');
+  assert.ok(v14.note.includes(`renewed on ${data.shortDate(p.arranged)}`) && /fleet policy/.test(v14.note));
+  assert.equal(fleet.addMonths(p.from, 12), p.renews);
+  office.reset(sid);
+});
+
 test('the spreadsheet has every car, dates a spreadsheet can sort, and what is due next', () => {
   const today = '2026-10-19';
   const lines = fleet.fleetCsv(today).trim().split('\r\n');
   assert.equal(lines.length, FIRM.fleet + 1);
-  assert.match(lines[0], /^Licence,Licence type,Vehicle,Type,Seats,Wheelchair accessible,Registration,Last MOT,Interim test,Next MOT,Plate runs out/);
+  assert.match(lines[0], /^Licence,Licence type,Vehicle,Type,Seats,Wheelchair accessible,Registration,Last MOT,Interim test,Next MOT,Plate runs out,.*,Fleet insurance renews$/);
   for (const line of lines.slice(1)) {
     const cells = line.split(',');
-    assert.equal(cells.length, 14, line);
-    for (const d of [cells[7], cells[8], cells[9], cells[10], cells[13]]) assert.match(d, /^\d{4}-\d{2}-\d{2}$/);
+    assert.equal(cells.length, 15, line);
+    for (const d of [cells[7], cells[8], cells[9], cells[10], cells[13], cells[14]]) assert.match(d, /^\d{4}-\d{2}-\d{2}$/);
+    assert.equal(cells[14], fleet.insurancePolicy(today).renews, 'every car renews its insurance on the fleet date');
     assert.ok(cells[13] >= today, `${cells[0]}: the next thing due is in the past`);
   }
   assert.equal(lines.filter((l) => /,Wheelchair accessible,5,Yes,/.test(l)).length, FIRM.wheelchairCars);

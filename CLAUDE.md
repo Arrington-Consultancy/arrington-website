@@ -8609,6 +8609,16 @@ has an interim test exactly six months after its MOT.
   - The Licensing page has a fleet table and "Download as a spreadsheet":
     `/licensing/fleet.csv`, behind the office login, with dates as
     YYYY-MM-DD so a spreadsheet sorts them.
+- **Insurance is fleet cover** (Tom, 19/10/2026: "Insurance will all be on
+  the same date, it will be fleet cover"). One policy covers all 48 cars, so
+  there is one renewal date, `fleet.insurancePolicy(today)`.
+  - This year's cover started 3 days ago, the day the council's email says
+    licence 14's old certificate expired. It was arranged the day before.
+  - The register carries one "Insurance renewal, Fleet insurance, all 48
+    cars" item, and no car has an insurance date of its own (the PH 11 item
+    went).
+  - The spreadsheet's last column gives the same date on every row.
+  - A date in another year now shows its year on the register's pills.
 - **Plain code does the reminders, not the AI.** The Licensing AI only drafts
   the letter for an item, and is given the plate date in the item's note.
 - **Tests:** `test/taxiOfficeFleet.test.js` (8), including Tom's rules

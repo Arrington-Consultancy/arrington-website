@@ -327,7 +327,7 @@ function mountPageRoute(app) {
     // Filtered, a council email shows only beside a register item on screen.
     const councilEmails = office.inbox(s).filter((e) => e.routeTo === 'licensing' || office.workerOf(s, e) === 'licensing')
       .filter((e) => !filter || items.some((i) => i.council === e.id));
-    render(req, res, 'licensing', { section: 'licensing', items, filter, drafts: s.licensing, licGuided: s.licGuided, councilEmails, passed, guideMax: office.MAX_GUIDANCE, cars: fleet.fleetFor(s.today), fleetMix: fleet.composition(), fleetTypes: fleet.TYPES });
+    render(req, res, 'licensing', { section: 'licensing', items, filter, drafts: s.licensing, licGuided: s.licGuided, councilEmails, passed, guideMax: office.MAX_GUIDANCE, cars: fleet.fleetFor(s.today), fleetMix: fleet.composition(), fleetTypes: fleet.TYPES, insurance: fleet.insurancePolicy(s.today) });
   });
 
   // The whole fleet as a spreadsheet, worked out from today like the page.
