@@ -8694,6 +8694,11 @@ unchanged: Tom decided on 12/10/2026 they should not sound like him).
   shot now shows the Checker panel and the sign-off box, so its alt text and
   the paragraph above it were brought into line. The Today shot is unchanged.
   `RUN_TAXI_OFFICE_AI_CHECK` set back to empty.
+- **Live:** commit `4cff591`, deployment `9d15ac1c`. Inspection run
+  `20261019T192359Z-staff-portal-shots-1019`: `/taxi-demo/staff-portal` 200
+  at desktop and phone, the new booking and complaint images served (their
+  `?v=` hashes match the committed files), the new paragraph in the live
+  text, no dashes, no page or console errors.
 
 ## Taxi office AI workspace page (RELEASED 19/10/2026)
 
