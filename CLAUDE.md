@@ -8671,9 +8671,19 @@ unchanged: Tom decided on 12/10/2026 they should not sound like him).
   drafts were rewritten to the same rules.
 - `test/taxiOfficeVoice.test.js` (5; the body joined with blank lines and
   the spaced hyphen left in were each watched red).
-- **Not yet redone:** the complaint screenshot on `/taxi-demo/staff-portal`
-  shows a reply from 16/10/2026 with a blank line between its paragraphs and
-  "Kind regards,".
+- **Live model check `office-20261019-voice`** (deployment `8831abbd`): 15
+  of 15 emails reached the same worker and verdict, the checker agreed on all
+  9 bookings and caught the planted 1am mistake. Every draft kept the layout,
+  no dashes, "Thanks," or "Cheers," (Paul Gregory, the regular account
+  customer) on customer emails.
+- **Found by that check, fixed the same day:** on a Monday "yesterday" is a
+  Sunday (time and a half), and Ruth Daniels' 7.15 job still showed the
+  weekday £8.10 against a £11.50 to £13 table, so the Complaints worker told
+  staff the fare looked wrong. Daytime and night past jobs now take their
+  fare from the fare table for the day they ran (`meterFare` in
+  `lib/taxiOffice/data.js`; £8.10, £6.20 and £47.40 on a weekday, as before).
+  Gary Holt's £46.20 stays fixed because his email quotes it.
+  `test/taxiOfficeFares.test.js` checks every day of a year.
 
 ## Taxi office AI workspace page (RELEASED 19/10/2026)
 
