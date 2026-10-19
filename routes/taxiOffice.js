@@ -312,7 +312,7 @@ function mountPageRoute(app) {
       if (!d) { d = { date: j.date, jobs: [] }; days.push(d); }
       d.jobs.push(j);
     }
-    render(req, res, 'dispatch', { section: 'dispatch', days, filter, changes: s.changes });
+    render(req, res, 'dispatch', { section: 'dispatch', days, filter, changes: s.changes, twice: match.duplicateRefs(s.board) });
   });
 
   page('/licensing', (req, res) => {

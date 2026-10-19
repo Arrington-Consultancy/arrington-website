@@ -22,7 +22,7 @@
             <tr class="<%= j.status === 'cancelled' ? 'is-cancelled' : '' %><%= j.changed ? ' is-changed' : '' %>">
               <td class="to-time"><%= j.time %></td>
               <td class="to-ref"><%= j.ref %></td>
-              <td><%= j.name %><% if (j.notes) { %><span class="to-cell-note"><%= j.notes %></span><% } %><% if (j.record && j.record.controller) { %><span class="to-cell-note">Controller: <%= j.record.controller %></span><% } %></td>
+              <td><%= j.name %><% if (j.flight) { %><span class="to-cell-note">Flight <%= j.flight %></span><% } %><% if (j.notes) { %><span class="to-cell-note"><%= j.notes %></span><% } %><% if (j.record && j.record.controller) { %><span class="to-cell-note">Controller: <%= j.record.controller %></span><% } %></td>
               <td><%= j.pickup %></td>
               <td><%= j.destination %></td>
               <td class="to-num"><%= j.passengers %></td>
@@ -32,7 +32,7 @@
                 <td class="to-num"><%= j.record ? j.record.fare : '' %></td>
               <% } else { %>
                 <td><%= j.source %></td>
-                <td><% if (j.status === 'cancelled') { %><span class="to-pill to-pill-neutral">Cancelled</span><% } else if (j.changed === 'added') { %><span class="to-pill to-pill-ok">Booked today</span><% } else if (j.changed === 'updated') { %><span class="to-pill to-pill-ok">Corrected</span><% } else { %><span class="to-pill to-pill-neutral">Booked</span><% } %></td>
+                <td><% if (j.status === 'cancelled') { %><span class="to-pill to-pill-neutral">Cancelled</span><% } else if (j.changed === 'added') { %><span class="to-pill to-pill-ok">Booked today</span><% } else if (twice.has(j.ref)) { %><span class="to-pill to-pill-warn">Booked twice</span><span class="to-cell-note">Same job as <%= twice.get(j.ref) %></span><% } else if (j.changed === 'updated') { %><span class="to-pill to-pill-ok">Corrected</span><% } else { %><span class="to-pill to-pill-neutral">Booked</span><% } %></td>
               <% } %>
             </tr>
           <% }) %>

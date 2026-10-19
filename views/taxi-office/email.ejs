@@ -53,7 +53,7 @@
           <% if (check && check.note) { %><p class="to-note to-note-warn"><%= check.note %></p><% } %>
           <% if (check && check.data) { %>
             <% if (check.data.summary) { %><p><%= check.data.summary %></p><% } %>
-            <% if (check.data.issues.length) { var _lab = { date: 'Date', time: 'Pickup time', pickup: 'Pickup', destination: 'Destination', passengers: 'Passengers', vehicle: 'Vehicle', needs: 'For the driver', customer_name: 'Name', phone: 'Phone', journey_missing: 'Journey missed', journey_extra: 'Journey not asked for' }; var _multi = (reading.data.journeys || []).length > 1; %>
+            <% if (check.data.issues.length) { var _lab = { date: 'Date', time: 'Pickup time', pickup: 'Pickup', destination: 'Destination', passengers: 'Passengers', vehicle: 'Vehicle', flight: 'Flight number', needs: 'For the driver', customer_name: 'Name', phone: 'Phone', journey_missing: 'Journey missed', journey_extra: 'Journey not asked for' }; var _multi = (reading.data.journeys || []).length > 1; %>
               <div class="to-table-scroll"><table class="to-diff to-check-table">
                 <thead><tr><th scope="col"></th><th scope="col">The booking says</th><th scope="col">The email says</th><th scope="col">It should be</th></tr></thead>
                 <tbody>
@@ -127,11 +127,15 @@
                 <div><dt>From</dt><dd><%= j.pickup || 'Not given' %></dd></div>
                 <div><dt>To</dt><dd><%= j.destination || 'Not given' %></dd></div>
                 <div><dt>Passengers</dt><dd><%= j.passengers %>, <%= (VEHICLE_LABELS[j.vehicle] || 'Car').toLowerCase() %></dd></div>
+                <% if (j.flight) { %><div><dt>Flight</dt><dd><%= j.flight %></dd></div><% } %>
                 <% if (j.needs) { %><div><dt>For the driver</dt><dd><%= j.needs %></dd></div><% } %>
                 <% if (leg.fare) { %><div><dt>Fare table</dt><dd><%= leg.fare %></dd></div><% } %>
               </dl>
               <% if (leg.job) { %>
                 <p class="to-small">In dispatch as <strong><%= leg.job.ref %></strong>, <%= leg.job.name %>, <%= longDate(leg.job.date) %> at <%= leg.job.time %>.</p>
+              <% } %>
+              <% if (leg.duplicates && leg.duplicates.length) { %>
+                <p class="to-note to-note-warn">Dispatch has this job twice: <% leg.duplicates.forEach(function (d, i) { %><%= i ? ' and ' : '' %><strong><%= d.ref %></strong> (came in by <%= d.source ? d.source.toLowerCase() : 'another route' %>, <%= d.time %>)<% }) %> as well as <strong><%= leg.job.ref %></strong>. Same customer, same day, same pickup. Unless they really want two cars, cancel the extra one so only one turns up.</p>
               <% } %>
               <% if (leg.diffs.length) { %>
                 <table class="to-diff">
@@ -143,13 +147,13 @@
                   </tbody>
                 </table>
               <% } %>
-              <% if (leg.status === 'missing' || leg.status === 'differs' || leg.status === 'to_cancel') { var _sid = 'signoff-' + email.id + '-' + leg.index; %>
+              <% if (leg.status === 'missing' || leg.status === 'differs' || leg.status === 'duplicate' || leg.status === 'to_cancel') { var _sid = 'signoff-' + email.id + '-' + leg.index; %>
                 <form method="post" action="<%= BASE %>/inbox/<%= email.id %>/fix" class="to-signoff">
                   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                   <input type="hidden" name="leg" value="<%= leg.index %>">
                   <p class="to-worker-tag">Your sign-off</p>
                   <label class="to-check-box" for="<%= _sid %>"><input type="checkbox" id="<%= _sid %>" name="signoff" value="yes" required> <span><%= checkState === 'agrees' ? 'I\'ve read the email and the checker\'s result, and I\'m signing this off.' : (checkState === 'concerns' ? 'The checker flagged this booking. I\'ve read what it found, and I\'m signing it off anyway.' : 'The checker hasn\'t checked this. I\'ve checked it against the email myself, and I\'m signing it off.') %></span></label>
-                  <button type="submit" class="to-btn to-btn-primary"><%= leg.status === 'missing' ? 'Sign off and book it into dispatch' : (leg.status === 'differs' ? 'Sign off and correct it in dispatch' : 'Sign off and cancel it in dispatch') %></button>
+                  <button type="submit" class="to-btn to-btn-primary"><%= leg.status === 'missing' ? 'Sign off and book it into dispatch' : (leg.status === 'differs' ? 'Sign off and correct it in dispatch' : (leg.status === 'duplicate' ? 'Sign off and cancel the extra booking' : 'Sign off and cancel it in dispatch')) %></button>
                   <p class="to-small">Signed off as <%= user ? user.username : 'you' %>. The board records who signed it off.</p>
                 </form>
               <% } else if (leg.status === 'needs_details') { %>

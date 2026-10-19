@@ -21,12 +21,12 @@ const workers = require('../lib/taxiOffice/workers');
 const { humanise } = require('../lib/taxiOffice/humanise');
 
 const EXPECTED = {
-  hollis: 'match', gregory: 'differs', turner: 'missing', patel: 'differs', rowe: 'needs_details',
+  hollis: 'match', gregory: 'differs', turner: 'missing', patel: 'differs', ashworth: 'differs', reid: 'duplicate', rowe: 'needs_details',
   clarke: 'missing', fowler: 'to_cancel', umbrella: 'not_booking', fenwick: 'not_booking', 'council-14': 'council',
   daniels: 'complaint', holt: 'complaint', carr: 'complaint'
 };
 const WORKER = {
-  hollis: 'bookings', gregory: 'bookings', turner: 'bookings', patel: 'bookings', rowe: 'bookings', clarke: 'bookings', fowler: 'bookings',
+  hollis: 'bookings', gregory: 'bookings', turner: 'bookings', patel: 'bookings', ashworth: 'bookings', reid: 'bookings', rowe: 'bookings', clarke: 'bookings', fowler: 'bookings',
   umbrella: 'customer', fenwick: 'customer', 'council-14': 'licensing', daniels: 'complaints', holt: 'complaints', carr: 'complaints'
 };
 // The completed job each complaint is about, and the candidates for the

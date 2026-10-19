@@ -619,7 +619,7 @@ ${pageTop({ eyebrow: 'Contact', title: 'Call us, any time.', lede: `The quickest
 // lists the same).
 
 const OFFICE_WORKERS = [
-  ['Bookings', 'Reads booking emails, checks each one against the job in dispatch, and books, corrects or cancels it there. Drafts the reply.', 'bookings'],
+  ['Bookings', 'Reads booking emails and checks each one against the job in dispatch: times, names, phone numbers, flight numbers, and anything booked twice. Gets the change ready for dispatch and drafts the reply.', 'bookings'],
   ['Checker', 'A second AI that checks every booking against the customer\'s own email and shows anything that doesn\'t match. Nothing goes into dispatch until someone in the office signs it off.', 'checker'],
   ['Customer emails', 'Answers everything else customers send, from lost property to account questions, and looks up the journey when the answer is in dispatch.', 'customer'],
   ['Complaints', 'Logs every complaint and pulls the job from dispatch, so the reply rests on what happened. Passes anything about safety to Licensing.', 'complaints'],
