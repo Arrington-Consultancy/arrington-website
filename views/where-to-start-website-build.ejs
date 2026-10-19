@@ -112,6 +112,7 @@
             color: var(--text-bright);
             font-size: 1.12rem;
         }
+        .wts-hero-action { margin: 0 0 1.6rem; }
         .wts-direct-proof { margin-bottom: 0; color: var(--text-muted); }
         .wts-direct-proof + .wts-direct-proof { margin-top: 0.6rem; }
         .wts-direct-proof a { color: var(--accent); font-weight: 700; }
@@ -204,6 +205,12 @@
             <p class="wts-price">£<%= (offer.pricePence / 100).toLocaleString('en-GB') %></p>
         </div>
         <p class="wts-lede">A fixed-price website build shaped around what your business needs to do. Built from scratch, not from a template, and completely customisable.</p>
+        <%# The enquiry button at the top (Tom, 19/10/2026, for the website design
+            ads): on a phone the first screen had nothing to tap, and Google Ads
+            counts an enquiry from this page but cannot see a £999 payment. The
+            pay section below is unchanged, so anyone arriving ready to buy
+            loses nothing. %>
+        <p class="wts-hero-action" data-hero-enquiry><a href="#conversation" class="btn btn-primary">Tell us what you want to build</a></p>
         <p class="wts-direct-proof"><a href="<%= websiteBuildProofHref || '/websites-and-ai' %>">Look at our latest example of what we have built</a> before you pay.</p>
         <%# Second example (Tom, 19/10/2026, for the website design ads): the
             Tidewell Cars taxi demo. Said in words to be a demo we built for a

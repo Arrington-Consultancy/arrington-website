@@ -42,6 +42,10 @@ const SUBMIT = process.env.SUBMIT === '1';
 const ADS = process.env.ADS === '1';
 const CONTACT_LABEL = 'vCKKCKjSna0cEN6RgsVD';
 const START_UP = '/start-up-idea-review?utm_source=google&utm_medium=cpc&utm_campaign=Start-Up-Search';
+// SUBMIT_PATH chooses the page the one test enquiry is sent from (default the
+// start-up page), so the Contact conversion can be proved from any page that
+// carries the footer form. A root-relative path only.
+const SUBMIT_PATH = /^\/(?!\/)/.test(process.env.SUBMIT_PATH || '') ? process.env.SUBMIT_PATH : START_UP;
 
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -220,8 +224,8 @@ async function scrollThrough(page) {
   }, { blockThirdParty: true }));
 
   if (SUBMIT) {
-    results.push(await step(browser, 'ONE test enquiry from the start-up page (TEST TRACKING), ' + (ADS ? 'Google Ads allowed, Meta blocked' : 'Ads and Meta requests blocked'), async (page) => {
-      await page.goto(BASE + START_UP, { waitUntil: 'networkidle' });
+    results.push(await step(browser, 'ONE test enquiry from ' + SUBMIT_PATH + ' (TEST TRACKING), ' + (ADS ? 'Google Ads allowed, Meta blocked' : 'Ads and Meta requests blocked'), async (page) => {
+      await page.goto(BASE + SUBMIT_PATH, { waitUntil: 'networkidle' });
       await page.waitForTimeout(4000);
       await page.fill('#leadForm [name="name"]', 'TEST TRACKING');
       await page.fill('#leadForm [name="email"]', 'test-tracking@example.invalid');

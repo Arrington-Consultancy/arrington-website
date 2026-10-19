@@ -38,6 +38,17 @@ test('the taxi demo is a second example, said to be a demo we built for a made u
   assert.ok(!/client|customer of ours|worked with/i.test(visibleText(demo)), 'the demo reads as a client');
 });
 
+test('an enquiry button at the top goes to the form; the pay section stays as it was', () => {
+  // Tom, 19/10/2026: "Release both together", for the website design ads.
+  const body = renderBody();
+  const hero = body.match(/<p class="wts-hero-action" data-hero-enquiry>[\s\S]*?<\/p>/);
+  assert.ok(hero, 'the enquiry button at the top is gone');
+  assert.ok(/<a href="#conversation" class="btn btn-primary">Tell us what you want to build<\/a>/.test(hero[0]));
+  assert.ok(body.indexOf('data-hero-enquiry') < body.indexOf('wts-direct-proof'), 'the button is no longer at the top');
+  assert.ok(body.indexOf('data-hero-enquiry') < body.indexOf('id="wtsCheckoutSubmit"'));
+  assert.strictEqual((body.match(/id="wtsCheckoutSubmit"/g) || []).length, 1, 'a second pay button appeared');
+});
+
 test('never the staff office, and nothing else on the page moved', () => {
   const src = emitted();
   assert.ok(!src.includes('/taxi-demo/office'), 'the page links to the staff office');
