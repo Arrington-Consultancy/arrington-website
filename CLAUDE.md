@@ -8067,6 +8067,18 @@ main `npm test`.
   stop polishing the demo; the open commercial question is the first real
   dispatch connection, so check an operator's system and API access before
   taking the £999.
+- **Final visual pass, 19/10/2026, then finished (Tom).** A second outside
+  review scored it 7/10 without having seen it; most of what it asked for
+  already existed. From the live screenshots this worker rated it 8/10 and
+  Tom approved three fixes only (commit `bdf7635`): map labels (measured in
+  a browser: nine collisions before, none after; Exmouth's name above its
+  dot, Budleigh Salterton's in white in the sea because the cliff line
+  climbs through anything to its right, River Exe along the river, a dot
+  for Exeter Airport), the notes box moved out of the Payment group, and
+  the fare strip on phones stacked price under destination. Live: deployment
+  `4a6b6903`, Lighthouse mobile 100/100/100 on home and booking. Tom's
+  standing rules for the demo: photographs stay as they are, the Staff
+  portal stays in the main navigation, no redesign; next is operators.
 - **Open:** the brief's last "done" item, one test booking on Tom's phone,
   is his. The ad that said the email check was included (RSA 827927414816)
   was paused by the Google Ads worker at 21:30 on 15/10/2026 and replaced
