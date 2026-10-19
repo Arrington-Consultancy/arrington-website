@@ -168,6 +168,7 @@ function home() {
           <a class="store" href="${link('/about#app')}"><small>Download on the</small>App Store</a>
           <a class="store" href="${link('/about#app')}"><small>Get it on</small>Google Play</a>
         </div>
+        <p class="stores-note">In this demo, these buttons show how the app works.</p>
       </article>
     </div>
   </div>

@@ -153,7 +153,9 @@ function structuredData(base) {
 }
 
 function layout({ path, title, description, body, base, assets, bookPage = false, homePage = false, barPrice = '', extraScripts = [], hero = null, bodyClass = '' }) {
-  const navItems = NAV.map(([href, label]) => html`<li><a href="${link(href)}"${path === href ? raw(' aria-current="page"') : ''}>${label}</a></li>`);
+  // The staff portal link carries a class so the desktop menu can outline it
+  // (Tom, 19/10/2026); the phone menu reuses this list and has no rule for it.
+  const navItems = NAV.map(([href, label]) => html`<li><a href="${link(href)}"${href === '/staff-portal' ? raw(' class="nav-staff"') : ''}${path === href ? raw(' aria-current="page"') : ''}>${label}</a></li>`);
   const scripts = ['app.js', ...extraScripts].map((s) => html`<script src="${assets(s)}" defer></script>`);
   const classes = [bookPage ? 'is-book' : '', homePage ? 'is-home' : '', bodyClass].filter(Boolean).join(' ');
   return '<!doctype html>' + html`

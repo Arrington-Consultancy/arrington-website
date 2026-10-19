@@ -44,7 +44,7 @@ test('it says plainly how to get in: contact Arrington Consultancy', async () =>
 test('every page links to it from the menu and the footer', async () => {
   for (const p of ['/', '/about', '/staff-portal']) {
     const html = await (await fetch(base + p)).text();
-    assert.match(html, /<li><a href="\/taxi-demo\/staff-portal"( aria-current="page")?>Staff portal<\/a><\/li>/, `${p} menu`);
+    assert.match(html, /<li><a href="\/taxi-demo\/staff-portal" class="nav-staff"( aria-current="page")?>Staff portal<\/a><\/li>/, `${p} menu`);
     assert.match(html, /<a href="\/taxi-demo\/staff-portal">Staff portal and AI workers<\/a>/, `${p} footer`);
   }
 });
@@ -70,4 +70,20 @@ test('the five workers are named, and none of them is said to act on its own', a
   const text = visible(await (await fetch(base + '/staff-portal')).text());
   for (const w of ['Bookings', 'Customer emails', 'Complaints', 'Licensing', 'Social media']) assert.match(text, new RegExp(`${w} [A-Z]`), w);
   assert.match(text, /None of them sends, books or posts anything on its own/);
+});
+
+test('the desktop menu outlines it, the phone menu is left as it was (Tom, 19/10/2026)', () => {
+  const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'site.css'), 'utf8');
+  const desktop = /@media \(min-width: 64rem\) \{([\s\S]*?)\n\}/.exec(css);
+  assert.ok(desktop, 'the desktop block is there');
+  assert.match(desktop[1], /\.nav a\.nav-staff \{ box-shadow: inset 0 0 0 1\.5px var\(--teal\);/);
+  const outside = css.replace(desktop[0], '');
+  assert.ok(!outside.includes('nav-staff'), 'an outline rule outside the desktop block reaches the phone menu');
+});
+
+test('the home page says what the app buttons are for in a demo', async () => {
+  const html = await (await fetch(base + '/')).text();
+  const card = /<article class="way reveal" id="app">[\s\S]*?<\/article>/.exec(html);
+  assert.ok(card, 'the app card is there');
+  assert.match(card[0], /<\/div>\s*<p class="stores-note">In this demo, these buttons show how the app works\.<\/p>/);
 });

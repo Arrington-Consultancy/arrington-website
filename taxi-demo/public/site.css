@@ -147,6 +147,10 @@ p { margin: 0 0 1rem; }
   .header-book { display: inline-flex; margin-left: 0.5rem; white-space: nowrap; }
   .mark { width: 36px; height: 36px; }
   .brand-name { font-size: 1.45rem; }
+  /* Staff portal: a quiet teal outline, so it is easy to find without
+     competing with the red Book online button. Desktop only. */
+  .nav a.nav-staff { box-shadow: inset 0 0 0 1.5px var(--teal); margin-left: 0.3rem; }
+  .nav a.nav-staff[aria-current="page"] { box-shadow: inset 0 0 0 1.5px var(--red); border-radius: 8px; }
 }
 /* Six menu items fit from 72rem; between 64rem and 72rem they sit closer. */
 @media (min-width: 64rem) and (max-width: 71.99rem) {
@@ -400,6 +404,7 @@ table.prices { width: 100%; border-collapse: collapse; }
 .stores { display: flex; flex-wrap: wrap; gap: 0.6rem; }
 .store { display: inline-flex; flex-direction: column; justify-content: center; min-height: 48px; padding: 0.35rem 1rem; border-radius: 8px; background: #000; color: #fff; border: 1px solid #5C6B70; text-decoration: none; font-weight: 700; font-size: 1.05rem; line-height: 1.1; }
 .store small { font-weight: 400; font-size: 0.7rem; }
+.way .stores-note { flex: none; margin: 0.6rem 0 0; font-size: 0.85rem; color: var(--on-night-muted); }
 a.store:hover { color: #fff; border-color: #fff; }
 
 /* Reviews */
