@@ -26,6 +26,7 @@ const saleReadiness = require('./routes/saleReadiness');
 const startUpReview = require('./routes/startUpReview');
 const taxiOperators = require('./routes/taxiOperators');
 const taxiWebsites = require('./routes/taxiWebsites');
+const taxiWorkspace = require('./routes/taxiWorkspace');
 const { legacyRedirect } = require('./lib/legacyRedirect');
 const thankYou = require('./routes/thankYou');
 const scott = require('./routes/scott');
@@ -948,6 +949,12 @@ taxiOperators.mountPageRoute(app, generateCsrfToken);
 // in sitemap.xml, not in the navigation. The Taxi websites ad group lands
 // here. See routes/taxiWebsites.js and test/taxiWebsitesPage.test.js.
 taxiWebsites.mountPageRoute(app, generateCsrfToken);
+
+// The taxi office AI workspace (19/10/2026): HIDDEN until Tom has seen it
+// (brief: "show Tom the page before it is linked"), like the start-up page:
+// noindex, not in the navigation or sitemap.xml, linked from nowhere. See
+// routes/taxiWorkspace.js and test/taxiWorkspacePage.test.js.
+taxiWorkspace.mountPageRoute(app, generateCsrfToken);
 
 // /thank-you: where the footer contact form lands after a stored enquiry, and
 // the only place the Google Ads Contact conversion fires (routes/thankYou.js).

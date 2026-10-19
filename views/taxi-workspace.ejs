@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <%- include('partials/google-tag') %>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Workspace for Taxi and Private Hire Offices | Arrington</title>
+    <%# HIDDEN UNTIL TOM HAS SEEN IT (brief of 19/10/2026: "show Tom the page
+        before it is linked from navigation or sent to iCabbi"). noindex here
+        and as an X-Robots-Tag header from the route; not in the sitemap; not
+        linked from anywhere. See routes/taxiWorkspace.js for what the page may
+        and may not say. %>
+    <meta name="robots" content="noindex">
+    <meta name="description" content="AI workers for taxi and private hire offices, with a booking checker that compares every emailed booking with the job in your dispatch system. £999 to set up.">
+    <link rel="canonical" href="https://www.arringtonconsultancy.com/taxi-and-private-hire-operators/office-workspace">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="An AI workspace that cuts office errors | Arrington Consultancy">
+    <meta property="og:description" content="AI workers for taxi and private hire offices, with a booking checker that compares every emailed booking with the job in dispatch.">
+    <meta property="og:url" content="https://www.arringtonconsultancy.com/taxi-and-private-hire-operators/office-workspace">
+    <meta property="og:image" content="https://www.arringtonconsultancy.com/img/logo">
+    <meta name="csrf-token" content="<%= csrfToken %>">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Poppins:wght@500;600&display=swap" rel="stylesheet">
+    <style nonce="<%= nonce %>">
+        :root {
+            <% for (const [prop, val] of Object.entries(theme.vars)) { %>
+            <%= prop %>: <%= val %>;
+            <% } %>
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: 'DM Sans', sans-serif; background: var(--black); color: var(--text); line-height: 1.6; }
+        <%- include('partials/site-chrome-styles') %>
+
+        h1, h2, h3 { font-family: 'Poppins', 'DM Sans', sans-serif; font-weight: 600; color: var(--text-bright); line-height: 1.2; margin: 0; }
+        p { color: var(--text); margin: 0 0 1.2rem; }
+
+        .btn { display: inline-block; font-family: 'DM Sans', sans-serif; font-size: 0.92rem; font-weight: 600; padding: 0.6rem 1.5rem; border-radius: 3px; text-decoration: none; cursor: pointer; border: 1px solid transparent; }
+        .btn-primary { background: var(--accent); color: var(--black); border-color: var(--accent); }
+        .btn-primary:hover, .btn-primary:focus-visible { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+        main { padding: 0 0 5rem; }
+        .ow-wrap { max-width: 700px; margin: 0 auto; padding: 0 1.5rem; }
+        .ow-wide { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; }
+
+        /* HERO: the taxi pages' treatment and the same real photo of Tom. */
+        .ow-hero { position: relative; overflow: hidden; background: var(--black); display: flex; align-items: center; min-height: 600px; padding: calc(var(--site-chrome) + 3.5rem) 1.5rem 4rem; }
+        .ow-hero-photo { position: absolute; top: var(--site-chrome); right: 0; bottom: 0; left: 0; margin: 0; }
+        .ow-hero-photo img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 72% 12%; }
+        .ow-hero-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, var(--black) 0%, var(--black) 28%, color-mix(in srgb, var(--black) 60%, transparent) 52%, color-mix(in srgb, var(--black) 10%, transparent) 78%, transparent 100%), linear-gradient(0deg, var(--black) 0%, transparent 22%); }
+        .ow-hero-inner { position: relative; z-index: 1; width: 100%; max-width: 1100px; margin: 0 auto; }
+        .ow-hero-text { max-width: 590px; }
+
+        .ow-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; color: var(--accent); margin-bottom: 1rem; display: block; }
+        h1 { font-size: clamp(1.7rem, 4.8vw, 2.5rem); margin-bottom: 1.2rem; text-wrap: balance; }
+        .ow-lede { font-size: 1.12rem; color: var(--text-bright); margin-bottom: 1rem; max-width: 60ch; }
+        .ow-proof { font-size: 0.95rem; color: var(--text-muted); margin-bottom: 1.6rem; }
+        .ow-hero-link { margin: 1rem 0 0; font-size: 0.97rem; }
+
+        .ow-section { margin-top: 3.5rem; }
+        .ow-section > h2, .ow-head h2 { font-size: 1.45rem; margin-bottom: 0.9rem; text-wrap: balance; }
+        .ow-section > p, .ow-head p { max-width: 62ch; }
+
+        .ow-link { color: var(--accent); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); padding-bottom: 2px; }
+        .ow-link:hover, .ow-link:focus-visible { border-bottom-color: var(--accent); }
+
+        /* THE FIVE WORKERS: a definition list, one worker a row. */
+        .ow-workers { margin: 1.5rem 0 0; padding: 0; display: grid; gap: 0; border-top: 1px solid var(--border); }
+        .ow-workers > div { display: grid; grid-template-columns: 11rem 1fr; gap: 1.25rem; padding: 1rem 0; border-bottom: 1px solid var(--border); }
+        .ow-workers dt { font-family: 'Poppins', 'DM Sans', sans-serif; font-weight: 600; color: var(--text-bright); }
+        .ow-workers dd { margin: 0; color: var(--text); }
+
+        /* SCREENSHOTS from the Tidewell demo office, each captioned as such. */
+        .ow-shot { margin: 1.75rem 0 0; }
+        .ow-shot picture, .ow-shot img { display: block; width: 100%; height: auto; }
+        .ow-shot img { border-radius: 8px; border: 1px solid var(--border); }
+        .ow-shot figcaption { margin-top: 0.6rem; font-size: 0.88rem; color: var(--text-muted); }
+        .ow-shots { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start; margin-top: 1.75rem; }
+        .ow-shots .ow-shot { margin: 0; }
+
+        /* THE BOOKING CHECKER: scope, which is what the paper surface is
+           reserved for. */
+        .ow-band { margin-top: 3.75rem; padding: 3.25rem 0 3.5rem; }
+        .ow-band .ow-section { margin-top: 0; }
+        .ow-list-lead { margin-bottom: 0.6rem; color: var(--text-bright); font-weight: 500; }
+        .ow-list { margin: 0 0 1.4rem; padding-left: 1.2rem; max-width: 62ch; }
+        .ow-list li { margin-bottom: 0.55rem; color: var(--text); }
+        .ow-list li::marker { color: var(--accent); }
+        .ow-closing { color: var(--text-bright); font-weight: 500; }
+        .ow-video { margin: 1.75rem 0 0; }
+        .ow-video figcaption { margin-top: 0.6rem; font-size: 0.88rem; color: var(--text-muted); }
+        .ow-video video { display: block; width: 100%; max-width: 700px; border-radius: 8px; border: 1px solid var(--border); }
+
+        /* PRICE: two products, bought separately or together. */
+        .ow-prices { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin: 1.5rem 0 1.25rem; }
+        .ow-price-card { border: 1px solid var(--border); border-radius: 6px; padding: 1.25rem 1.25rem 1rem; }
+        .ow-price-card h3 { font-size: 1.05rem; margin-bottom: 0.4rem; }
+        .ow-price { font-family: 'Poppins', 'DM Sans', sans-serif; font-size: 2rem; font-weight: 600; color: var(--text-bright); margin: 0 0 0.5rem; font-variant-numeric: tabular-nums; }
+        .ow-price-card p:last-child { margin-bottom: 0; }
+        .ow-both { color: var(--text-bright); font-weight: 500; }
+        .ow-actions { margin: 1.6rem 0 0; }
+
+        /* QUESTIONS */
+        .ow-faq { margin: 1.25rem 0 0; border-top: 1px solid var(--border); }
+        .ow-faq details { border-bottom: 1px solid var(--border); padding: 0.9rem 0; }
+        .ow-faq summary { cursor: pointer; font-weight: 600; color: var(--text-bright); }
+        .ow-faq details p { margin: 0.7rem 0 0; max-width: 62ch; }
+
+        @media (max-width: 760px) {
+            .ow-hero { display: block; min-height: 0; padding: var(--site-chrome) 0 0; }
+            .ow-hero-photo { display: block; position: relative; top: auto; height: 38vw; max-height: 240px; }
+            .ow-hero-photo img { object-position: 66% 6%; }
+            .ow-hero-photo::after { background: linear-gradient(0deg, var(--black) 0%, color-mix(in srgb, var(--black) 40%, transparent) 30%, transparent 60%); }
+            .ow-hero-inner { padding: 0 1.5rem; margin-top: -1.5rem; }
+            h1 { margin-bottom: 1rem; }
+            .ow-lede { font-size: 1.02rem; }
+            .ow-section { margin-top: 2.25rem; }
+            .ow-band { margin-top: 2.5rem; padding: 2.5rem 0 2.75rem; }
+            .ow-workers > div { grid-template-columns: 1fr; gap: 0.25rem; }
+            .ow-shots, .ow-prices { grid-template-columns: 1fr; }
+            .ow-actions .btn, .ow-hero-actions .btn { width: 100%; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <%- include('partials/site-header', { currentPage: { slug: 'taxi-and-private-hire-operators' }, navPages, canEdit: false, content, pageContact }) %>
+
+    <%# HERO: the brief's wording, approved by Tom on 19/10/2026. %>
+    <header class="ow-hero">
+        <picture class="ow-hero-photo">
+            <source srcset="/img/startup/tom-at-desk.webp" type="image/webp">
+            <img src="/img/startup/tom-at-desk.jpg" alt="Tom Arrington at his desk" width="1672" height="941" fetchpriority="high">
+        </picture>
+        <div class="ow-hero-inner">
+            <div class="ow-hero-text">
+                <span class="ow-label">Taxi and private hire offices</span>
+                <h1>An AI workspace that cuts office errors</h1>
+                <p class="ow-lede" data-hero-lede>Take the emails and admin off your controllers. Catch booking mistakes before they cost you a job.</p>
+                <p class="ow-proof">Built by an operator who ran taxi firms in Cornwall for nearly 20 years.</p>
+                <div class="ow-hero-actions">
+                    <a href="#conversation" class="btn btn-primary">Book a 15 minute walk through</a>
+                </div>
+                <p class="ow-hero-link"><a class="ow-link" href="#booking-check">See how the booking check works</a></p>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <%# PART ONE: the AI workers, as they are in the Tidewell demo. The
+            Bookings line follows the approval rule (Tom, 19/10/2026: every
+            booking change needs a person's approval, always). %>
+        <div class="ow-wrap">
+        <div class="ow-section" data-workers>
+            <h2>Five workers, set up around your firm</h2>
+            <p>Each worker does one job in your office. They draft the work and flag what needs attention, and someone in your office decides what goes out.</p>
+            <dl class="ow-workers">
+                <div><dt>Bookings</dt><dd>Reads booking emails and checks each one against the job in dispatch. Prepares the reply and the booking change, and nothing goes into dispatch until a controller approves it.</dd></div>
+                <div><dt>Customer emails</dt><dd>Answers lost property and account questions, looking up the journey in dispatch when the answer is there.</dd></div>
+                <div><dt>Complaints</dt><dd>Logs every complaint and pulls the job from dispatch, so the reply is based on what happened. Anything about safety goes straight to licensing.</dd></div>
+                <div><dt>Licensing</dt><dd>Keeps every badge, plate, MOT and insurance date in one register and flags what is due. Drafts what goes to the council's licensing team.</dd></div>
+                <div><dt>Social media</dt><dd>Writes the week's social media and advertising posts from what is happening at the firm. Nothing goes out until you approve it.</dd></div>
+            </dl>
+        </div>
+        </div>
+
+        <div class="ow-wide">
+            <figure class="ow-shot" data-shot="today">
+                <picture>
+                    <source media="(max-width: 640px)" srcset="/img/taxi-office/office-today-phone.webp" type="image/webp">
+                    <source media="(max-width: 640px)" srcset="/img/taxi-office/office-today-phone.jpg">
+                    <source srcset="/img/taxi-office/office-today.webp" type="image/webp">
+                    <img src="/img/taxi-office/office-today.jpg" alt="The Today page of the demo office: counts of jobs, emails, complaints and licensing items, then a card for each AI worker listing what it has, each marked as matching dispatch, keyed in wrong, not in dispatch, needing details or booked twice." width="1600" height="1837" loading="lazy">
+                </picture>
+                <figcaption>From our working demo. Tidewell Cars is a made up firm we built to show the workspace.</figcaption>
+            </figure>
+        </div>
+
+        <%# PART TWO: the booking checker as its own named feature (brief, page
+            structure decision of 19/10/2026). Every line in the list is
+            something the Tidewell demo does today (lib/taxiOffice/match.js):
+            Tom, "show max of what it can do, don't be over cautious". Not
+            listed, because not built: PO numbers, phone numbers against
+            booking history, pickups too tight for a flight. %>
+        <section class="ow-band surface-paper" id="booking-check">
+        <div class="ow-wrap">
+        <div class="ow-section" data-checker>
+            <h2>The AI booking checker</h2>
+            <p>Every booking that arrives by email is checked against the job in your dispatch system. When something does not match, your controllers see it before the car is sent.</p>
+            <p class="ow-list-lead">What it looks for:</p>
+            <ul class="ow-list">
+                <li>A date or pickup time that does not match the email</li>
+                <li>A pickup address or destination entered differently</li>
+                <li>A flight number missing from the job or entered differently</li>
+                <li>The customer's name spelt differently on the job</li>
+                <li>A phone number on the email that differs from the one on the job</li>
+                <li>The wrong number of passengers, or a wheelchair accessible car or larger vehicle asked for and not booked</li>
+                <li>The same job booked twice, which usually happens when a customer rings and emails</li>
+                <li>An emailed booking with no job in dispatch, or a return asked for and not booked</li>
+                <li>A change or cancellation the customer asked for that has not been made in dispatch</li>
+            </ul>
+            <p>A second AI then reads the customer's email again on its own and checks the booking before anyone signs it off.</p>
+            <p class="ow-closing">It flags and prepares the correction. A controller approves every change.</p>
+        </div>
+        </div>
+        <div class="ow-wide">
+            <div class="ow-shots">
+                <figure class="ow-shot" data-shot="flight">
+                    <picture>
+                        <source media="(max-width: 640px)" srcset="/img/taxi-office/check-ashworth-phone.webp" type="image/webp">
+                        <source media="(max-width: 640px)" srcset="/img/taxi-office/check-ashworth-phone.jpg">
+                        <source srcset="/img/taxi-office/check-ashworth.webp" type="image/webp">
+                        <img src="/img/taxi-office/check-ashworth.jpg" alt="An airport pickup checked against dispatch: the email says flight XR 2214 and mobile 07700 900615, dispatch has XR 2241 and 07700 900651, with a button to sign it off and correct it." width="1146" height="1162" loading="lazy">
+                    </picture>
+                    <figcaption>From our working demo: a flight number and a mobile number keyed in wrong.</figcaption>
+                </figure>
+                <figure class="ow-shot" data-shot="twice">
+                    <picture>
+                        <source media="(max-width: 640px)" srcset="/img/taxi-office/check-reid-phone.webp" type="image/webp">
+                        <source media="(max-width: 640px)" srcset="/img/taxi-office/check-reid-phone.jpg">
+                        <source srcset="/img/taxi-office/check-reid.webp" type="image/webp">
+                        <img src="/img/taxi-office/check-reid.jpg" alt="A booking marked booked twice: the customer rang and emailed, and dispatch holds the same job under two references, with a button to sign it off and cancel the extra one." width="1146" height="1018" loading="lazy">
+                    </picture>
+                    <figcaption>From our working demo: the same job booked twice.</figcaption>
+                </figure>
+            </div>
+            <% if (videoUrl) { %>
+                <figure class="ow-video" data-video>
+                    <video controls preload="none" src="<%= videoUrl %>"></video>
+                    <figcaption>A short recording of the booking check in our working demo.</figcaption>
+                </figure>
+            <% } %>
+        </div>
+        </section>
+
+        <div class="ow-wrap">
+        <div class="ow-section" data-in-charge>
+            <h2>It does the admin. Your controllers make the calls.</h2>
+            <p>The workspace drafts and flags. Your staff approve anything that matters, and every worker only sees what it needs for its job.</p>
+        </div>
+
+        <%# Tom, 19/10/2026: "we connect icabbi autocab cordic and all major
+            dispatch systems". Access to a system's API is arranged with its
+            provider, as the websites page says. %>
+        <div class="ow-section" data-firm>
+            <h2>Set up around your firm</h2>
+            <p>Every workspace is set up with your own procedures and prices, so replies sound like your office and not like a computer.</p>
+            <p data-systems>It connects to iCabbi, Autocab, Cordic and the other main dispatch systems through their APIs, with access arranged with your provider. We'll confirm yours on the call.</p>
+        </div>
+
+        <%# Third person (Brand OS). Facts: Abacus and Falmouth Taxis, nearly
+            twenty years, the last eight or so on iCabbi (APPROVED 03), around
+            3,500 jobs a week at peak (Tom, 19/10/2026). The office mistakes
+            line is the brief's, approved by Tom. %>
+        <div class="ow-section" data-tom>
+            <h2>Built by someone who ran a taxi office</h2>
+            <p>Tom Arrington owned and ran Abacus and Falmouth Taxis in Cornwall for nearly twenty years, the last eight or so on iCabbi. At its peak the firm was doing around 3,500 jobs a week. Most of the mistakes that cost it money started in the office, with an email read too fast or a date nobody was watching. This is what he would have wanted in that office. <a class="ow-link" href="/evidence#biography__2">Read the Abacus and Falmouth Taxis story</a>.</p>
+        </div>
+
+        <%# PRICE: two products, bought separately or together (Tom, 19/10/2026
+            12:19). Support is optional and priced on the call; no monthly
+            figure is published. %>
+        <div class="ow-section" data-price>
+            <h2>Buy one or both</h2>
+            <div class="ow-prices">
+                <div class="ow-price-card" data-price-workspace>
+                    <h3>The office workspace</h3>
+                    <p class="ow-price"><%= '£' + (workspacePricePence / 100).toLocaleString('en-GB') %></p>
+                    <p>To set up, with the workers agreed around your firm.</p>
+                </div>
+                <div class="ow-price-card" data-price-website>
+                    <h3>A website for your firm</h3>
+                    <p class="ow-price"><%= '£' + (websiteOffer.pricePence / 100).toLocaleString('en-GB') %></p>
+                    <p>Bookings made online go straight into your dispatch system. <a class="ow-link" href="<%= websitesPath %>">About the website</a></p>
+                </div>
+            </div>
+            <p class="ow-both" data-both>Both together are <%= '£' + ((websiteOffer.pricePence + workspacePricePence) / 100).toLocaleString('en-GB') %>.</p>
+            <p data-support>Support after setup is optional. If you would like it, we agree a monthly price with you on the call. It's your choice.</p>
+            <div class="ow-actions">
+                <a href="#conversation" class="btn btn-primary">Book a 15 minute walk through</a>
+            </div>
+        </div>
+
+        <div class="ow-section" data-questions>
+            <h2>Questions</h2>
+            <div class="ow-faq">
+                <details>
+                    <summary>Does it replace my controllers?</summary>
+                    <p>No. It takes the emails and admin off them so they can run the operation.</p>
+                </details>
+                <details>
+                    <summary>Which dispatch systems does it work with?</summary>
+                    <p>iCabbi, Autocab, Cordic and the other main systems with an API. We confirm yours before you commit.</p>
+                </details>
+                <details>
+                    <summary>Where does my customer data go?</summary>
+                    <p>You choose. Before setup we agree with you where your data is held and who can see it, and we put that in writing.</p>
+                </details>
+                <details>
+                    <summary>Do I have to take monthly support?</summary>
+                    <p>No. Support is optional. If you want it, we agree the price with you on the call.</p>
+                </details>
+                <details>
+                    <summary>Can I see it working?</summary>
+                    <p>Yes. Book a 15 minute walk through, or ask for a login and Tom will set one up so you can look round the demo office yourself.</p>
+                </details>
+            </div>
+        </div>
+        </div>
+    </main>
+
+    <%- include('partials/site-footer', { canEdit: false, pageContact, content }) %>
+    <script nonce="<%= nonce %>">
+        <%- include('partials/site-chrome-script') %>
+    </script>
+</body>
+</html>
