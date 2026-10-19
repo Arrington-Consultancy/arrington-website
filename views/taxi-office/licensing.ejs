@@ -2,7 +2,7 @@
 <section class="to-hero">
   <p class="to-eyebrow">AI worker</p>
   <h1 class="to-h1-icon"><%- include('partials/worker-icon', { id: 'licensing', tile: true }) %>Licensing</h1>
-  <p class="to-lede">Every driver badge, vehicle licence, MOT and insurance date in one register, and any safety report passed on by Complaints. The AI drafts what goes to the council's licensing team; a person checks it, attaches the papers and sends it. It never writes to the council itself.</p>
+  <p class="to-lede">Every plate, MOT, interim test, driver badge and insurance date for the <%= FIRM.fleet %> cars, and any safety report passed on by Complaints. It reminds the office what is coming up and drafts what goes to the council's licensing team; a person checks it, attaches the papers and sends it. It never writes to the council itself.</p>
 </section>
 
 <%- include('partials/filter-note') %>
@@ -30,7 +30,8 @@
 <% }) %>
 
 <section class="to-section">
-  <h2>The register</h2>
+  <h2>Coming up</h2>
+  <p class="to-small">Badges, medicals and insurance, and every MOT, plate renewal and interim test due in the next <%= counts.fleetComingUp.windowDays %> days, soonest first. The rest of the year is in the fleet below.</p>
   <ul class="to-register">
     <% items.forEach(function (i) { var d = drafts[i.id]; var tone = i.urgency.level === 'overdue' ? 'bad' : (i.urgency.level === 'urgent' ? 'warn' : (i.urgency.level === 'soon' ? 'soon' : 'neutral')); %>
       <li id="item-<%= i.id %>" class="to-reg-item">
@@ -85,4 +86,37 @@
     <% }) %>
   </ul>
 </section>
+
+<% if (!filter) { %>
+<section class="to-section" id="fleet">
+  <div class="to-section-head to-fleet-head">
+    <h2>The fleet</h2>
+    <a class="to-btn" href="<%= BASE %>/licensing/fleet.csv" download>Download as a spreadsheet</a>
+  </div>
+  <p class="to-small"><%= fleetMix.total %> cars: <%= fleetMix.hackney %> hackney carriage taxis and <%= fleetMix.privateHire %> private hire, including <%= fleetMix.byType.wav %> wheelchair accessible cars, <%= fleetMix.byType.mpv8 %> eight-seaters and <%= fleetMix.byType.mpv6 %> six-seaters. Each MOT falls a few days before the plate runs out, sometimes the same day, and every car has an interim test six months after its MOT.</p>
+  <div class="to-table-wrap">
+    <table class="to-table to-fleet">
+      <thead><tr><th scope="col">Licence</th><th scope="col">Car</th><th scope="col">Registration</th><th scope="col">Interim test</th><th scope="col">Next MOT</th><th scope="col">Plate runs out</th></tr></thead>
+      <tbody>
+        <% cars.forEach(function (c) {
+          var cell = function (d) {
+            if (d < today) return { text: 'Done ' + shortDate(d), cls: 'to-fleet-done' };
+            var n = Math.round((Date.parse(d) - Date.parse(today)) / 86400000);
+            return { text: shortDate(d) + (d.slice(0, 4) !== today.slice(0, 4) ? ' ' + d.slice(0, 4) : ''), cls: n <= counts.fleetComingUp.windowDays ? 'to-fleet-soon' : '' };
+          };
+          var ci = cell(c.interim), cm = cell(c.nextMot), cp = cell(c.plate); %>
+          <tr id="car-<%= c.id %>">
+            <th scope="row"><%= c.kind === 'hackney' ? 'HC' : 'PH' %> <%= c.licence.slice(-2) %></th>
+            <td><%= c.car %><span class="to-cell-note"><%= fleetTypes[c.type] %></span></td>
+            <td><%= c.reg %></td>
+            <td class="<%= ci.cls %>"><%= ci.text %></td>
+            <td class="<%= cm.cls %>"><%= cm.text %></td>
+            <td class="<%= cp.cls %>"><%= cp.text %><% if (c.gap === 0) { %><span class="to-cell-note">Same day as the MOT</span><% } %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+<% } %>
 <%- include('partials/bottom') %>

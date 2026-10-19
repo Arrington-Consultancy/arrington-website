@@ -278,6 +278,16 @@ p { margin: 0 0 0.8rem; }
 .to-reg-what { font-weight: 800; margin: 0; }
 .to-reg-subject { margin: 0 0 0.2rem; color: var(--ink-2); }
 .to-reg-side { display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem; }
+/* The fleet: every car's interim test, MOT and plate. Dates in the next month
+   are picked out; an interim test already done is greyed. */
+.to-fleet-head { flex-wrap: wrap; align-items: center; margin-bottom: 0.4rem; }
+.to-fleet-head h2 { margin: 0; }
+.to-table.to-fleet { min-width: 46rem; }
+.to-fleet tbody th { text-align: left; font-weight: 800; white-space: nowrap; }
+.to-fleet td { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.to-fleet td:nth-child(2) { white-space: normal; min-width: 12rem; }
+.to-fleet-soon { background: var(--warn-bg); color: var(--warn); font-weight: 700; }
+.to-fleet-done { color: var(--ink-2); }
 .to-draft { margin-top: 0.9rem; padding: 0.9rem; background: var(--sand); border-radius: 10px; }
 .to-checklist { margin: 0 0 0.8rem; padding-left: 1.2rem; }
 .to-checklist li { margin-bottom: 0.3rem; }

@@ -84,9 +84,11 @@
             <li><span>From Complaints: <%= c.email.from.replace(/\s*<.*$/, '') %></span> <span class="to-pill to-pill-bad">Safety</span></li>
           <% }) %>
           <% reg.slice(0, 3).forEach(function (i) { %>
-            <li><span><%= i.subject.split(',')[0] %>: <%= i.item.toLowerCase() %></span> <span class="to-pill to-pill-<%= pillTone(i) %>"><%= i.urgency.label %></span></li>
+            <li><span><%= i.subject.split(',')[0] %>: <%= i.itemLower %></span> <span class="to-pill to-pill-<%= pillTone(i) %>"><%= i.urgency.label %></span></li>
           <% }) %>
         </ul>
+        <% var _cu = counts.fleetComingUp; %>
+        <p class="to-small" data-fleet-coming-up>Across the <%= FIRM.fleet %> cars in the next <%= _cu.windowDays %> days: <%= _cu.renewals %> MOT and plate renewal<%= _cu.renewals === 1 ? '' : 's' %> and <%= _cu.interims %> interim test<%= _cu.interims === 1 ? '' : 's' %>.</p>
         <a class="to-btn" href="<%= BASE %>/licensing">Open licensing</a>
       <% } else { %>
         <p class="to-small"><%= social ? social.posts.length + ' drafts ready, ' + Object.keys(approved).length + ' approved.' : 'No drafts yet this week.' %></p>

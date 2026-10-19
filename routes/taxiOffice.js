@@ -17,8 +17,10 @@
 //     journey in dispatch where the answer is there.
 //   - Complaints: pulls the job's record from dispatch and drafts the reply
 //     from it; passes safety matters to Licensing.
-//   - Licensing: the renewals register, drafts for the council's licensing
-//     team, and what Complaints passes on. Never writes to the council.
+//   - Licensing: the renewals register (badges, insurance, and every car's
+//     MOT, plate and interim test from lib/taxiOffice/fleet.js), reminders of
+//     what is coming up, drafts for the council's licensing team, and what
+//     Complaints passes on. Never writes to the council.
 //   - Social: drafts the week's posts for the owner to approve.
 //
 // Who can open it: the same people who can open the Scott demonstration
@@ -38,6 +40,7 @@ const { hasScottAccess } = require('../lib/scott/access');
 const { render404 } = require('../lib/render404');
 const office = require('../lib/taxiOffice/office');
 const data = require('../lib/taxiOffice/data');
+const fleet = require('../lib/taxiOffice/fleet');
 const match = require('../lib/taxiOffice/match');
 const ai = require('../lib/taxiOffice/ai');
 const workers = require('../lib/taxiOffice/workers');
@@ -324,7 +327,15 @@ function mountPageRoute(app) {
     // Filtered, a council email shows only beside a register item on screen.
     const councilEmails = office.inbox(s).filter((e) => e.routeTo === 'licensing' || office.workerOf(s, e) === 'licensing')
       .filter((e) => !filter || items.some((i) => i.council === e.id));
-    render(req, res, 'licensing', { section: 'licensing', items, filter, drafts: s.licensing, licGuided: s.licGuided, councilEmails, passed, guideMax: office.MAX_GUIDANCE });
+    render(req, res, 'licensing', { section: 'licensing', items, filter, drafts: s.licensing, licGuided: s.licGuided, councilEmails, passed, guideMax: office.MAX_GUIDANCE, cars: fleet.fleetFor(s.today), fleetMix: fleet.composition(), fleetTypes: fleet.TYPES });
+  });
+
+  // The whole fleet as a spreadsheet, worked out from today like the page.
+  app.get(BASE + '/licensing/fleet.csv', noindex, requireOfficeAccess, (req, res) => {
+    const today = stateOf(req).today;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="tidewell-cars-fleet-${today}.csv"`);
+    res.send(fleet.fleetCsv(today));
   });
 
   post('/licensing/:id/draft', async (req, res) => {
