@@ -2813,7 +2813,7 @@ async function seed() {
       ].map((p) => `<p>${p}</p>`).join('');
 
     const newBodyParagraphs12 = [
-        'We were doing around 3,000 jobs a week, which meant roughly 10,000 people sitting in the back of our cars, so the idea seemed obvious: give local businesses the chance to advertise directly to them. And commercially, it worked. Businesses wanted the space, some were bidding against each other and a few even wanted exclusivity within their industry. For a little while, it genuinely felt like printing money.',
+        'We were doing around 3,500 jobs a week, which meant roughly 10,000 people sitting in the back of our cars, so the idea seemed obvious: give local businesses the chance to advertise directly to them. And commercially, it worked. Businesses wanted the space, some were bidding against each other and a few even wanted exclusivity within their industry. For a little while, it genuinely felt like printing money.',
         "The problem was that I had tested whether people wanted to buy it, but I had not tested whether the business could actually carry it. Worse, I had already sold a year's worth of advertising before we had properly tried it in the real world.",
         'Then reality arrived. Drivers would not always turn the screens on, customers did not always want adverts playing in the back of a taxi and the technology was nowhere near as reliable as it would be now. Advertisers were understandably unhappy if they had paid for something that was not being shown, and the drivers, never exactly a selfless bunch, quite reasonably wanted to know what they were getting out of it.',
         'The final straw was customers leaving bad reviews because they did not want to be advertised to while they were already paying us for a taxi. That mattered more than anything else because the advertisers were customers of the advertising idea, whereas the passengers were customers of the actual business. I could refund an unhappy advertiser. Lose a taxi customer and I might never see them again, and for every one angry enough to complain I assumed there were plenty more who disliked it and simply said nothing.',
@@ -3007,6 +3007,21 @@ async function seed() {
       [oldSentence, newSentence]
     );
     if (rowCount > 0) console.log(`Useful Thinking: removed the em dash from the 13th article (${rowCount} row).`);
+  }
+
+  // Migration: the job count in "The Monument to Wasted Money" (Tom,
+  // 19/10/2026: "3500 jobs a week was where we got to"). Number only; the
+  // "roughly 10,000 people" beside it is passengers and stays. Exact-substring
+  // replace, so it is a no-op once applied and leaves a CMS edit alone. The
+  // Drive source of the article was corrected the same day.
+  {
+    const oldJobs = 'We were doing around 3,000 jobs a week, which meant roughly 10,000 people';
+    const newJobs = 'We were doing around 3,500 jobs a week, which meant roughly 10,000 people';
+    const { rowCount } = await db.query(
+      "UPDATE content SET content = replace(content, $1, $2) WHERE section_key LIKE '%.body' AND position($1 in content) > 0",
+      [oldJobs, newJobs]
+    );
+    if (rowCount > 0) console.log(`Useful Thinking: "The Monument to Wasted Money" now says around 3,500 jobs a week (${rowCount} row).`);
   }
 
   // Migration: fourteenth Useful Thinking article, "The Most Expensive
