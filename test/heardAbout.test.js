@@ -195,7 +195,8 @@ test('the question is optional and does not say so, and the other two still do',
   // a real hesitation ("do I have to give you my phone number?"). Removing it
   // from those would be a different and worse change.
   assert.match(footer, /name="phone" placeholder="Phone \(optional\)"/);
-  assert.match(footer, /name="preferred_time" placeholder="[^"]*\(optional\)"/);
+  // A page may set its own wording (pageContact.timePlaceholder); the default still says optional.
+  assert.match(footer, /name="preferred_time" placeholder="[^"]*\(optional\)[^"]*"/);
 });
 
 test('an untouched dropdown submits, which is what optional has to mean', () => {

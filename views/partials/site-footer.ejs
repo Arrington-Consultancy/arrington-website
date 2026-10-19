@@ -43,7 +43,7 @@
             </div>
             <div class="lead-row">
                 <input type="tel" name="phone" placeholder="Phone (optional)" maxlength="50">
-                <input type="text" name="preferred_time" placeholder="Best day/time for a 30 min call (optional)" maxlength="255">
+                <input type="text" name="preferred_time" placeholder="<%= pageContact.timePlaceholder || 'Best day/time for a 30 min call (optional)' %>" maxlength="255">
             </div>
             <textarea name="message" placeholder="<%= pageContact.messagePlaceholder %>" maxlength="2000" rows="4"></textarea>
             <%# "How did you hear about us?" (19/09/2026). The first option is

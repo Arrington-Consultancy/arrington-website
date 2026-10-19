@@ -137,6 +137,9 @@ test('the hero, the systems named, and the existing enquiry form with page wordi
   assert.ok(section(body, 'data-systems').includes('iCabbi, Autocab, Cordic'));
   assert.strictEqual(TAXI_WORKSPACE_CONTACT.heading, 'Book a 15 minute walk through');
   assert.ok(/ask for a login/.test(TAXI_WORKSPACE_CONTACT.body), 'the login route is gone from the form');
+  // The shared form's time box asks about a "30 min call" unless the page says otherwise.
+  assert.match(TAXI_WORKSPACE_CONTACT.timePlaceholder, /walk through.*\(optional\)$/);
+  assert.ok(read('views/partials/site-footer.ejs').includes("pageContact.timePlaceholder || 'Best day/time for a 30 min call (optional)'"), 'the form no longer takes the page wording, or lost its default');
   const route = read(ROUTE).replace(/^\s*\/\/.*$/gm, '');
   assert.ok(!/\/api\/checkout|stripe|AW-18129914078|UPDATE content|INSERT INTO/i.test(route + emitted(VIEW)), 'a checkout, a conversion call or a CMS write appeared');
 });

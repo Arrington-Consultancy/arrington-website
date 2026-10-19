@@ -59,7 +59,8 @@ const VIDEO_URL = '/video/taxi-office/booking-check.mp4';
 const TAXI_WORKSPACE_CONTACT = {
   heading: 'Book a 15 minute walk through',
   body: 'Tell us which dispatch system you use and how many controllers you have. If you would rather look round the demo office on your own, ask for a login and Tom will set one up.<br /><br />Tom will be in touch to book your walk through.',
-  messagePlaceholder: 'Your dispatch system and how many controllers you have, or ask for a login'
+  messagePlaceholder: 'Your dispatch system and how many controllers you have, or ask for a login',
+  timePlaceholder: 'Best day/time for the walk through (optional)'
 };
 
 function mountPageRoute(app, generateCsrfToken) {
