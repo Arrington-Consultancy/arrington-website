@@ -8615,6 +8615,40 @@ to iCabbi), then **released the same day on Tom's "approve"**: indexable, in
   the workspace is sold through iCabbi Marketplace, outreach and paid pilots,
   not Search ads (Taxi - Search is paused).
 
+## Website Build page: taxi example and enquiry button (LIVE 19/10/2026)
+
+`/where-to-start/website-build` is the landing page for the Google Ads
+campaign Websites - Local Search (website design in Plymouth, Cornwall and
+Devon). Tom's brief of 19/10/2026, then "Release both together":
+
+- **Second example** under the existing one (`data-taxi-demo-proof`): "Or
+  see Tidewell Cars, a taxi firm website we built as a demo, where bookings go
+  straight into dispatch. The firm is made up." Public demo only
+  (`/taxi-demo/`), never `/taxi-demo/office/`. It backs the ad headline "See A
+  Site We Built"; keep it saying "demo" and "made up".
+- **Enquiry button at the top** (`data-hero-enquiry`, "Tell us what you want
+  to build" to `#conversation`), under the lede. Before it the first phone
+  screen had nothing to tap, and the pay button was nearly three screens
+  down. Google Ads counts the enquiry from this page but cannot see a £999
+  payment (`GOOGLE_ADS_PURCHASE_CONVERSION_LABEL` unset), so the enquiry is
+  the action the campaign can learn from. The pay section is unchanged lower
+  down, for people arriving from Where to Start ready to buy.
+- Price, scope, the £300 a day rate and the Stripe flow untouched; all pinned
+  by `test/websiteBuildProof.test.js`.
+- **Proved live:** commit `bfc04a2`, serving deployment `4745dc1e`.
+  Inspection run `20261019T133133Z-website-build-live`: 200 at desktop and
+  phone, first primary button "Tell us what you want to build", no page
+  errors. Tag audit `20261019T132219Z-website-build-conversion`: one TEST
+  TRACKING enquiry sent from this page (Ads requests blocked, so nothing
+  recorded in Ads) pushed exactly one Contact conversion on `/thank-you` and
+  one `generate_lead` with this page as its location; the same link replayed
+  in a new browser counted nothing. That run stored one TEST TRACKING lead
+  and emailed Tom.
+- The tag audit now takes `submit_path`, so its one test enquiry can be sent
+  from any page with the footer form.
+- Not done, Tom's later item: reporting a £999 payment to Google Ads (the
+  purchase conversion label, see Payments above).
+
 ## Sale readiness page
 
 `/get-your-business-ready-to-sell` is a campaign landing page for social and
