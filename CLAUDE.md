@@ -8891,10 +8891,16 @@ export in `handover/` is stale and holds content only.
   (`35 6 19 10 *`) got an access token from Google, then Drive refused to
   create the folder, and the script printed no reason. It now prints
   Google's own message for a refused folder search, folder creation or
-  upload. Probable cause: the Drive API is off in the Cloud project that
-  holds the Gmail OAuth client. **The cron is still the one-off
-  `35 6 19 10 *` and must go back to `0 3 * * 1`** (Railway, service
-  Settings, Cron Schedule) or the weekly backup never runs again.
+  upload. A second one-off run (08:20 UTC) gave the reason: "Google Drive
+  API has not been used in project 78910296338 before or it is disabled".
+  That is the Cloud project holding the Gmail OAuth client, so the Drive
+  API needs enabling there once (Tom:
+  `https://console.developers.google.com/apis/api/drive.googleapis.com/overview?project=78910296338`,
+  Enable). The cron is back on `0 3 * * 1` (deployment `66ef9905`); a
+  test run outside it means a one-off schedule, a redeploy, and then the
+  weekly schedule restored and redeployed again. Railway cron runs start
+  two to three minutes after the set minute, and a schedule change applies
+  only from the next deployment.
 - **Proof:** `test/driveBackup.test.js` runs the real script with real
   pg_dump against a seeded database and a mock of the two Google endpoints
   it uses (gated on `BACKUP_TEST_DATABASE_URL`, declared in
