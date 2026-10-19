@@ -65,7 +65,7 @@ test('the Dockerfile runs the script and not a database server', () => {
 
 const DB = process.env.BACKUP_TEST_DATABASE_URL;
 
-function mockGoogle({ refreshToken }) {
+function mockGoogle({ refreshToken, driveDisabled = false }) {
   // In-memory Drive: folders and files, each {id, name, mimeType, parents, createdTime, bytes}.
   const store = new Map();
   let next = 1;
@@ -97,6 +97,11 @@ function mockGoogle({ refreshToken }) {
       return json(res, 200, { access_token: ACCESS, expires_in: 3599, token_type: 'Bearer' });
     }
     if (req.headers.authorization !== `Bearer ${ACCESS}`) return json(res, 401, { error: { code: 401, message: 'Invalid Credentials' } });
+    // What Google answers when the Drive API is switched off in the Cloud
+    // project the OAuth client belongs to (the first live run, 19/10/2026).
+    if (driveDisabled) {
+      return json(res, 403, { error: { code: 403, message: 'Google Drive API has not been used in project 123456 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/drive.googleapis.com/overview?project=123456 then retry.', status: 'PERMISSION_DENIED' } });
+    }
 
     if (req.method === 'GET' && url.pathname === '/drive/v3/files') {
       const q = url.searchParams.get('q') || '';
@@ -251,6 +256,28 @@ test('a refused refresh token fails the run with a readable reason and no secret
       assert.match(r.stderr, /set a fresh GOOGLE_DRIVE_REFRESH_TOKEN/);
       assert.ok(!r.stderr.includes('rt-WRONG') && !r.stderr.includes('csecret-abc'));
       assert.equal(google.store.size, 0, 'nothing was created in Drive');
+    } finally {
+      await google.close();
+    }
+  });
+
+test('a refusal from Drive is reported with Google\'s own reason',
+  { skip: !DB && 'set BACKUP_TEST_DATABASE_URL to a seeded database (the suite only reads it)' },
+  async () => {
+    const google = mockGoogle({ refreshToken: 'rt-secret-123', driveDisabled: true });
+    const port = await google.listen();
+    try {
+      const r = await runScript({
+        DATABASE_URL: DB,
+        GOOGLE_DRIVE_CLIENT_ID: 'cid', GOOGLE_DRIVE_CLIENT_SECRET: 'csecret-abc',
+        GOOGLE_DRIVE_REFRESH_TOKEN: 'rt-secret-123',
+        GOOGLE_OAUTH_TOKEN_URL: `http://127.0.0.1:${port}/token`,
+        GOOGLE_DRIVE_API_BASE: `http://127.0.0.1:${port}`
+      });
+      assert.notEqual(r.status, 0, 'must fail');
+      assert.match(r.stderr, /Drive refused the folder search \(Google Drive API has not been used in project 123456/);
+      assert.match(r.stderr, /drive\.googleapis\.com\/overview\?project=123456/);
+      for (const secret of ['rt-secret-123', 'csecret-abc', 'mock-access-token-xyz']) assert.ok(!(r.stdout + r.stderr).includes(secret));
     } finally {
       await google.close();
     }

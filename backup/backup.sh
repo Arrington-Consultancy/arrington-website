@@ -83,19 +83,25 @@ printf 'Authorization: Bearer %s\n' "$ACCESS_TOKEN" > "$HDR"
 log "access token issued"
 
 drive() { curl -sS -H @"$HDR" "$@"; }
+# Google's own reason for a refusal, so a failed run says what to fix. An
+# error message carries no credential.
+api_error() { printf '%s' "$1" | jq -r '.error.message // empty' 2>/dev/null | head -c 400 || true; }
 
 # 2. The folder. With the drive.file scope the script sees only what it
 #    created itself, so the first run creates the folder in Tom's My Drive
 #    and every later run finds that same folder.
 FOLDER_Q="name = '${FOLDER_NAME//\'/\\\'}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
-FOLDER_ID="$(drive -G "$API/drive/v3/files" --data-urlencode "q=$FOLDER_Q" \
-  --data-urlencode "fields=files(id,name)" --data-urlencode "spaces=drive" \
-  | jq -r '.files[0].id // empty')"
+FOUND="$(drive -G "$API/drive/v3/files" --data-urlencode "q=$FOLDER_Q" \
+  --data-urlencode "fields=files(id,name)" --data-urlencode "spaces=drive" || true)"
+WHY="$(api_error "$FOUND")"
+[ -z "$WHY" ] || fail "Drive refused the folder search ($WHY)"
+FOLDER_ID="$(printf '%s' "$FOUND" | jq -r '.files[0].id // empty' 2>/dev/null || true)"
 if [ -z "$FOLDER_ID" ]; then
-  FOLDER_ID="$(drive -X POST "$API/drive/v3/files?fields=id" -H 'Content-Type: application/json; charset=UTF-8' \
-    --data-binary "$(jq -nc --arg n "$FOLDER_NAME" '{name:$n, mimeType:"application/vnd.google-apps.folder"}')" \
-    | jq -r '.id // empty')"
-  [ -n "$FOLDER_ID" ] || fail "could not create the Drive folder '$FOLDER_NAME'"
+  MADE="$(drive -X POST "$API/drive/v3/files?fields=id" -H 'Content-Type: application/json; charset=UTF-8' \
+    --data-binary "$(jq -nc --arg n "$FOLDER_NAME" '{name:$n, mimeType:"application/vnd.google-apps.folder"}')" || true)"
+  FOLDER_ID="$(printf '%s' "$MADE" | jq -r '.id // empty' 2>/dev/null || true)"
+  WHY="$(api_error "$MADE")"
+  [ -n "$FOLDER_ID" ] || fail "could not create the Drive folder '$FOLDER_NAME'${WHY:+ ($WHY)}"
   log "created Drive folder '$FOLDER_NAME' ($FOLDER_ID)"
 else
   log "using Drive folder '$FOLDER_NAME' ($FOLDER_ID)"
@@ -124,9 +130,10 @@ SESSION_URI="$(drive -D - -o /dev/null -X POST "$API/upload/drive/v3/files?uploa
   -H "X-Upload-Content-Length: $SIZE" \
   --data-binary "$META" | awk 'tolower($1)=="location:" {print $2}' | tr -d '\r' | tail -n 1)"
 [ -n "$SESSION_URI" ] || fail "Drive did not open an upload session"
-FILE_ID="$(drive -X PUT "$SESSION_URI" -H 'Content-Type: application/gzip' --data-binary @"$OUT" \
-  | jq -r '.id // empty')"
-[ -n "$FILE_ID" ] || fail "upload did not return a file id"
+PUT_REPLY="$(drive -X PUT "$SESSION_URI" -H 'Content-Type: application/gzip' --data-binary @"$OUT" || true)"
+FILE_ID="$(printf '%s' "$PUT_REPLY" | jq -r '.id // empty' 2>/dev/null || true)"
+WHY="$(api_error "$PUT_REPLY")"
+[ -n "$FILE_ID" ] || fail "upload did not return a file id${WHY:+ ($WHY)}"
 STORED="$(drive "$API/drive/v3/files/$FILE_ID?fields=id,name,size" | jq -r '.size // empty')"
 [ "$STORED" = "$SIZE" ] || fail "Drive holds $STORED bytes for $NAME but $SIZE were sent"
 log "uploaded $NAME ($SIZE bytes) as $FILE_ID"
