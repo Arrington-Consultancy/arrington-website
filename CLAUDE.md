@@ -8600,6 +8600,16 @@ edits, listed at the top of the route.
 - **Still on the taxi websites page:** its own workspace section (approved
   17/10/2026, rotas and quotes included) stays as it is until this page is
   released; then it becomes a summary with a link here.
+- **Form wording:** the shared footer form's time box takes
+  `pageContact.timePlaceholder` (default "Best day/time for a 30 min call
+  (optional)"); this page asks about the walk through instead (commit
+  `d899d24`). Keep "(optional)" in any override (`test/heardAbout.test.js`).
+- **Live, hidden:** serving deployment `f8ad25bd`; inspection run
+  `20261019T125113Z-office-workspace-hidden`, 200 at desktop and phone,
+  noindex both ways, not in the sitemap, no page errors, captures read.
+  Written back to both Handoff Logs on 19/10/2026. The Ads log records that
+  the workspace is sold through iCabbi Marketplace, outreach and paid pilots,
+  not Search ads (Taxi - Search is paused).
 
 ## Sale readiness page
 
