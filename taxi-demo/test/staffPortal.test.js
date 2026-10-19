@@ -63,7 +63,7 @@ test('the screenshots are real files, readable on a phone, sized, lazy and descr
       assert.ok(fs.existsSync(path.join(__dirname, '..', 'public', 'img', `${name}${suffix}-768.webp`)), `${name}${suffix} files are committed`);
     }
   }
-  assert.match(visible(html), /Screenshots taken on 16 October 2026 from the demonstration office\. The replies shown are as the AI drafted them/);
+  assert.match(visible(html), /Screenshots taken in October 2026 from the demonstration office\. The replies shown are as the AI drafted them/);
 });
 
 test('the five workers are named, and none of them is said to act on its own', async () => {

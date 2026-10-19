@@ -8684,6 +8684,16 @@ unchanged: Tom decided on 12/10/2026 they should not sound like him).
   `lib/taxiOffice/data.js`; £8.10, £6.20 and £47.40 on a weekday, as before).
   Gary Holt's £46.20 stays fixed because his email quotes it.
   `test/taxiOfficeFares.test.js` checks every day of a year.
+- **Staff portal screenshots retaken (booking and complaint):** from model
+  check `office-20261019-voice-b` (deployment `0a17ce08`, which also logs
+  the checker's own words now), replayed locally with a stub that answers
+  only from the recorded output and fails otherwise, so nothing made up can
+  reach a screenshot. Harness: the office routes on a local express app with
+  `/taxi-demo/assets` served for the font (without it the shots fall back to
+  a default face), then `taxi-demo/scripts/optimise-images.py`. The booking
+  shot now shows the Checker panel and the sign-off box, so its alt text and
+  the paragraph above it were brought into line. The Today shot is unchanged.
+  `RUN_TAXI_OFFICE_AI_CHECK` set back to empty.
 
 ## Taxi office AI workspace page (RELEASED 19/10/2026)
 

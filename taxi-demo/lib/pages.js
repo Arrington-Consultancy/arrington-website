@@ -614,8 +614,10 @@ ${pageTop({ eyebrow: 'Contact', title: 'Call us, any time.', lede: `The quickest
 // at /taxi-demo/office and needs an invited login; this page shows it in
 // screenshots and puts the login button where nobody can miss it.
 //
-// The screenshots were taken from the demonstration office on 16 October
-// 2026 with the replies as the AI drafted them on production that morning.
+// The screenshots were taken from the demonstration office: Today on 16 and
+// 17 October 2026, the booking and the complaint on 19 October 2026, with the
+// replies and the checker's words as the AI wrote them on production that
+// evening (model check office-20261019-voice-b, replayed locally).
 // The six workers are named, and their icons drawn, as the office does it
 // (lib/taxiOffice/workers.js in the main site; a test there keeps the two
 // lists the same).
@@ -678,9 +680,9 @@ ${pageTop({ eyebrow: 'Staff portal', title: 'The office behind the website.', le
     <div class="portal-intro">
       <p class="eyebrow">Bookings</p>
       <h2>A booking checked against dispatch.</h2>
-      <p>Paul asked for a 5.30am pickup to the airport. Dispatch had 5.50. The AI reads the email, then plain code compares it with the job, field by field, and shows the difference. One click puts it right in dispatch, and the reply is drafted ready for someone to check.</p>
+      <p>Paul asked for a 5.30am pickup to the airport. Dispatch had 5.50. The AI reads the email, then plain code compares it with the job, field by field, and shows the difference. A second AI checks the booking against the email, and once someone in the office signs it off, one click puts it right in dispatch. The reply is drafted ready for them to check.</p>
     </div>
-    ${shot({ name: 'office-booking', alt: 'Screenshot of a booking email beside the AI\'s reading of it. Under "Does dispatch have it right?" the email says 05:30 and dispatch has 05:50, with a button to correct it in dispatch and a draft reply below.', caption: 'A booking email beside what dispatch holds. The reply is as the AI drafted it.' })}
+    ${shot({ name: 'office-booking', alt: 'Screenshot of a booking email beside the AI\'s reading of it. Under "Does dispatch have it right?" the email says 05:30 and dispatch has 05:50. Above it a second AI has checked the booking against the email; below it are a sign-off box, a button to correct it in dispatch, and the draft reply.', caption: 'A booking email beside what dispatch holds. The reply is as the AI drafted it.' })}
   </div>
 </section>
 <section class="section band-paper">
@@ -701,7 +703,7 @@ ${pageTop({ eyebrow: 'Staff portal', title: 'The office behind the website.', le
       <p>This office is a working example we built for taxi and private hire firms. The AI workers run on a made-up inbox and a test dispatch board, so nothing real is sent, booked or posted. Contact Arrington Consultancy to gain access to our AI workspace example.</p>
       <p class="portal-actions"><a class="btn btn-primary" href="${FIRM.arringtonEnquiryUrl}">Ask Arrington for a login</a> <a class="btn btn-ghost" href="${link('/office/')}">Staff login</a></p>
     </div>
-    <p class="shot-note">Screenshots taken on 16 October 2026 from the demonstration office. The replies shown are as the AI drafted them; a person checks every one before it goes anywhere.</p>
+    <p class="shot-note">Screenshots taken in October 2026 from the demonstration office. The replies shown are as the AI drafted them; a person checks every one before it goes anywhere.</p>
   </div>
 </section>`;
 }
