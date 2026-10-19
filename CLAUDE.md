@@ -8218,6 +8218,9 @@ this has to sound human."
   standard (short plain sentences, no stock lines, no dashes, no markdown),
   and `lib/taxiOffice/humanise.js` takes out what slips through without
   rewording anything (a time, price or reference cannot change).
+  **Superseded 19/10/2026:** Tom decided the workers DO write to his tone,
+  paragraph and dash rules (see "Tom's voice rules for the office workers"
+  below).
 - **Bug fixed the same day:** a reading reused from the shared cache
   returned before the Complaints worker ran, so every visitor after the
   first saw the complaints with no draft. Found while taking the
@@ -8635,6 +8638,42 @@ has an interim test exactly six months after its MOT.
   to `/login`, and an unknown office path gives 404, so the spreadsheet route
   is live. The signed-in pages were checked locally only (desktop and phone,
   no overflow, no errors).
+
+### Tom's voice rules for the office workers (19/10/2026)
+
+Tom: "I want Toms tone of voice and paragraph and dashes rules to apply to
+the Ai workers". This reverses the 16/10/2026 position above, on Tom's
+decision, for the Tidewell office workers only (Scott's workers are
+unchanged: Tom decided on 12/10/2026 they should not sound like him).
+
+- **Source:** 01A TOM VOICE - WORKER SPEC in Drive, CORE and EMAIL TRACK,
+  read 19/10/2026 (last reviewed 14/10/2026). 01A says not to copy its
+  rules into a worker brief, because it is still evolving; Tom's
+  instruction overrides that here, so the copy is kept in ONE place,
+  `WRITING` in `lib/taxiOffice/ai.js`, with its date. **Re-read 01A and
+  bring that block into line whenever 01A changes.** What is Tom's alone
+  (his tag lines and asides, who he signs "Cheers" to) is left out: the
+  workers write as the firm.
+- **In the briefs:** direct, honest, practical and conversational; the
+  shortest email that does the job; fewer, fuller paragraphs; medium-length
+  sentences; no groups of three, corporate words or fire metaphors; mirror
+  the customer's warmth; never "mate"; say sorry once, own it, move on.
+  Customers are signed off "Thanks," or "Cheers," (a regular who writes
+  casually) with "Tidewell Cars" under it; only the council letter keeps
+  "Kind regards," (01A says to ask who gets it). Social posts: one flowing
+  block in full sentences, no blank lines.
+- **In code** (`humanise.js`, every reply, letter and post): an email is
+  laid out greeting, one blank line, every body paragraph on consecutive
+  lines, one blank line, sign-off; anything else has no blank lines; a
+  "Subject:" line is dropped from a body; no dashes (an em or en dash, a
+  double dash or a spaced hyphen between words becomes a comma, between two
+  figures it becomes "to"; a hyphen inside a word stays). The prepared
+  drafts were rewritten to the same rules.
+- `test/taxiOfficeVoice.test.js` (5; the body joined with blank lines and
+  the spaced hyphen left in were each watched red).
+- **Not yet redone:** the complaint screenshot on `/taxi-demo/staff-portal`
+  shows a reply from 16/10/2026 with a blank line between its paragraphs and
+  "Kind regards,".
 
 ## Taxi office AI workspace page (RELEASED 19/10/2026)
 
