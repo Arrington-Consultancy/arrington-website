@@ -8617,6 +8617,12 @@ has an interim test exactly six months after its MOT.
 - **The public demo pages were not changed.** They still describe Licensing
   as "badge, plate, MOT and insurance"; the office's own description adds
   interim tests.
+- **Live:** commit `3dd8f54`, serving deployment `8e2882f9` (twin `a17379c0`
+  REMOVED), booted clean. Inspection run `20261019T184307Z-fleet-register-live`:
+  signed out, `/licensing` and `/licensing/fleet.csv` both send the visitor
+  to `/login`, and an unknown office path gives 404, so the spreadsheet route
+  is live. The signed-in pages were checked locally only (desktop and phone,
+  no overflow, no errors).
 
 ## Taxi office AI workspace page (RELEASED 19/10/2026)
 
