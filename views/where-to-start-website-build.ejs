@@ -113,6 +113,7 @@
             font-size: 1.12rem;
         }
         .wts-direct-proof { margin-bottom: 0; color: var(--text-muted); }
+        .wts-direct-proof + .wts-direct-proof { margin-top: 0.6rem; }
         .wts-direct-proof a { color: var(--accent); font-weight: 700; }
         .wts-direct-proof a:hover { color: var(--accent-hover); }
 
@@ -204,6 +205,11 @@
         </div>
         <p class="wts-lede">A fixed-price website build shaped around what your business needs to do. Built from scratch, not from a template, and completely customisable.</p>
         <p class="wts-direct-proof"><a href="<%= websiteBuildProofHref || '/websites-and-ai' %>">Look at our latest example of what we have built</a> before you pay.</p>
+        <%# Second example (Tom, 19/10/2026, for the website design ads): the
+            Tidewell Cars taxi demo. Said in words to be a demo we built for a
+            made up firm, so it never reads as a client. The public demo only,
+            never /taxi-demo/office/ (test/websiteBuildProof.test.js). %>
+        <p class="wts-direct-proof" data-taxi-demo-proof>Or see <a href="/taxi-demo/">Tidewell Cars</a>, a taxi firm website we built as a demo, where bookings go straight into dispatch. The firm is made up.</p>
 
         <div class="wts-card">
             <div class="wts-card-item">
