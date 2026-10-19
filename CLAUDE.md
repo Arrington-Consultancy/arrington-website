@@ -8619,6 +8619,8 @@ has an interim test exactly six months after its MOT.
     went).
   - The spreadsheet's last column gives the same date on every row.
   - A date in another year now shows its year on the register's pills.
+  - Live: commit `5c63ef5`, serving deployment `1c82d2f4` (twin `b00cc161`
+    REMOVED), booted clean with the office AI and live address on.
 - **Plain code does the reminders, not the AI.** The Licensing AI only drafts
   the letter for an item, and is given the plate date in the item's note.
 - **Tests:** `test/taxiOfficeFleet.test.js` (8), including Tom's rules
