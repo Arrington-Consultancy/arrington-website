@@ -8522,6 +8522,85 @@ the same path in Chromium raised none, and what Safari reported was not
 visible from here (the next boot log's `CSP reports, last 7 days:` line
 summarises them).
 
+### Names, phone numbers, flight numbers and double bookings (19/10/2026)
+
+Tom: "fix demo so it does all of those" (the booking checker claims in the
+Google Ads worker's brief). The plain-code dispatch check
+(`lib/taxiOffice/match.js`) now also flags, beside date, time, places,
+passengers and vehicle: a surname keyed differently (`diffCustomer`; first
+names and titles are ignored, and an account job, named "(account)", is not
+compared), a phone number on the email that differs from the job's (digits
+only, +44 read as 0), a flight number missing from the job or keyed
+differently (`flightKey`; the Bookings AI reads a new `flight` field, cleaned
+by `ai.cleanFlight`, and the Checker checks it), and the same job booked
+twice (`duplicatesOf`: same phone, or same surname with no phone, same day,
+within 30 minutes, same pickup). A leg with no other difference but a twin
+is "Booked twice"; signing it off cancels the later booking and keeps the
+first. The dispatch board marks the extra one (`duplicateRefs`). Two new demo
+emails: Neil Ashworth (airport pickup, flight XR 2214 keyed as XR 2241, mobile
+digits swapped) and Owen Reid (rang and emailed, both keyed). Dev Patel's job
+is now keyed "Patil". Flight numbers in the demo are made up and name no
+airline. Not built, so not claimed anywhere: PO or account references, phone
+numbers against booking history, pickups too tight for a flight.
+`test/taxiOfficeDispatchChecks.test.js` (8; the name and phone check and the
+duplicate status each watched red). Commit `79bf803`.
+
+Whether a real office can do this depends on reading jobs out of the
+operator's dispatch system, which the website link (writing only) does not
+need. Checked 19/10/2026 from public sources: iCabbi publishes an API
+Explorer and says its APIs can export information to a third party; partners
+such as CabMind change and cancel bookings through it, and minicabit gets
+status updates back. Keys come only through iCabbi (marketplace@icabbi.com
+before development, then support@icabbi.com with the operator's company ID),
+and some calls need extra privileges. Autocab has an API and webhooks that an
+accredited developer reads data out of, but no public documentation. Cordic
+publishes nothing; third parties write bookings in, and reading jobs is
+unconfirmed. So: likely with iCabbi, probable with Autocab, to be confirmed
+with Cordic, and in every case with the operator's own API access.
+
+## Taxi office AI workspace page (built 19/10/2026, HIDDEN)
+
+`/taxi-and-private-hire-operators/office-workspace` (`routes/taxiWorkspace.js`,
+`views/taxi-workspace.ejs`, `test/taxiWorkspacePage.test.js`), from the Google
+Ads worker's brief "BRIEF - Taxi Office AI Workspace landing page and iCabbi
+copy" (Drive id `1BId6M07xk_7dUjUnIIzfw-YhuWs3x2f-qovCz8IwNUo`, approved for
+build by Tom on 19/10/2026), this worker's pushback and Tom's answers the same
+day. The brief says to show Tom the page before it is linked or sent to
+iCabbi, so it is hidden exactly like the start-up page: noindex as a meta tag
+and an `X-Robots-Tag` header, not in the menu, footer or sitemap, linked from
+nowhere (the test walks the source for the path). Releasing it is three
+edits, listed at the top of the route.
+
+- **Tom's decisions:** its own page (not a section); two products, the website
+  £999 (offer catalogue) and the workspace £999 (`WORKSPACE_PRICE_PENCE` in
+  `routes/taxiWebsites.js`), £1,998 for both; support after setup optional
+  and priced on the call, no monthly figure; five workers (Bookings, Customer
+  emails, Complaints, Licensing, Social media) plus the AI booking checker as
+  its own part ("include it's a good thing to have"; "show max of what it can
+  do"); "cuts office errors" as the H1 (Tom: "it will cut errors, there's no
+  way around it"), with no figure beside it; iCabbi, Autocab and Cordic named
+  ("we connect icabbi autocab cordic and all major dispatch systems"), with
+  access arranged with the provider; the existing footer form with page
+  wording (walk through, or ask for a login, which Tom creates by hand).
+- **The checker list is the demo's list**, word for word in the test, and a
+  second test runs the matcher against each claim. The brief's held-back
+  items that the demo does (a return not booked, a booking with no job,
+  a change or cancellation not made) are listed on Tom's "show max"; what the
+  demo does not do is not.
+- **Tom's story** in the third person with the approved facts: Abacus and
+  Falmouth Taxis, nearly twenty years, the last eight or so on iCabbi, around
+  3,500 jobs a week at peak. The brief's "more than 50 drivers and staff" is
+  left out: no record backs it.
+- **Screenshots** in `public/img/taxi-office/`, taken on a local server with
+  the model stood in by the prepared readings, cropped to what plain code
+  decides (the dispatch comparison), each captioned "From our working demo",
+  with phone crops. The video slot renders only once
+  `public/video/taxi-office/booking-check.mp4` exists (Tom's recording, open
+  item 4 in the brief).
+- **Still on the taxi websites page:** its own workspace section (approved
+  17/10/2026, rotas and quotes included) stays as it is until this page is
+  released; then it becomes a summary with a link here.
+
 ## Sale readiness page
 
 `/get-your-business-ready-to-sell` is a campaign landing page for social and
