@@ -8079,6 +8079,15 @@ main `npm test`.
   `4a6b6903`, Lighthouse mobile 100/100/100 on home and booking. Tom's
   standing rules for the demo: photographs stay as they are, the Staff
   portal stays in the main navigation, no redesign; next is operators.
+  Two last changes the same afternoon, then Tom called it finished ("the
+  priority should be showing the demo to potential customers, not
+  continually refining it"; commit `c75a232`): under the home page app
+  buttons, "In this demo, these buttons show how the app works."
+  (`.stores-note`), and a thin teal outline on the Staff portal link in the
+  desktop menu only (`.nav a.nav-staff`, red on its own page; the phone menu
+  reuses the list but has no rule for it). Both pinned in
+  `taxi-demo/test/staffPortal.test.js`. **The demo is finished: make no
+  further design changes to it without a new decision from Tom.**
 - **Open:** the brief's last "done" item, one test booking on Tom's phone,
   is his. The ad that said the email check was included (RSA 827927414816)
   was paused by the Google Ads worker at 21:30 on 15/10/2026 and replaced
