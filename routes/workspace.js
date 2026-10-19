@@ -46,6 +46,7 @@ const zohoInvoiceClient = require('../lib/workspace/finance/zohoInvoiceClient');
 const invoiceIntent = require('../lib/workspace/finance/invoiceIntent');
 const pendingAction = require('../lib/workspace/finance/pendingAction');
 const gmailClient = require('../lib/workspace/email/gmailClient');
+const driveBackupConnect = require('../lib/workspace/driveBackupConnect');
 const emailSummary = require('../lib/workspace/email/summary');
 // Read-only, inert until its own flag is on. It advises on an invoice and
 // can never alter or send one; see lib/workspace/hours/invoiceCheck.js.
@@ -700,7 +701,31 @@ code{background:#f4f4f4;padding:.25rem .5rem;border-radius:4px;word-break:break-
     if (missing.length) return res.redirect('/workspace/email?connectError=' + encodeURIComponent(`Cannot start the Gmail connection: ${missing.join(' and ')} ${missing.length === 1 ? 'is' : 'are'} empty in Railway. Fill it in, let Railway redeploy, then try again.`));
     const state = crypto.randomBytes(24).toString('hex');
     req.session.gmailOAuthState = state;
+    delete req.session.gmailOAuthPurpose;
     res.redirect(gmailClient.buildAuthorizeUrl(state));
+  });
+
+  // The weekly database backup's Drive token, minted with the same client
+  // and callback (lib/workspace/driveBackupConnect.js says why). The dump
+  // holds every table, so the same confidential clearance as Gmail.
+  const driveBackupPage = (res, title, body) => {
+    const nonce = res.locals.nonce || '';
+    res.setHeader('Cache-Control', 'no-store');
+    res.send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${title}</title>
+<style nonce="${nonce}">body{font-family:system-ui,sans-serif;max-width:640px;margin:4rem auto;padding:0 1.5rem;line-height:1.5}
+code{background:#f4f4f4;padding:.5rem .75rem;border-radius:4px;word-break:break-all;display:block;margin:1rem 0;font-size:.9rem}
+ol li{margin:.4rem 0}.note{color:#555;font-size:.9rem;margin-top:2rem}</style></head>
+<body><h1>${title}</h1>${body}<p><a href="/workspace">Back to the Workspace</a></p></body></html>`);
+  };
+
+  app.get('/workspace/backup/drive/connect', requireWorkspacePageAccess, (req, res) => {
+    if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'confidential')) return res.redirect('/workspace');
+    const missing = driveBackupConnect.missingCredentials();
+    if (missing.length) return driveBackupPage(res, 'Drive backup not connected', `<p>Cannot start: ${missing.join(' and ')} ${missing.length === 1 ? 'is' : 'are'} empty in Railway.</p>`);
+    const state = crypto.randomBytes(24).toString('hex');
+    req.session.gmailOAuthState = state;
+    req.session.gmailOAuthPurpose = driveBackupConnect.PURPOSE;
+    res.redirect(driveBackupConnect.buildAuthorizeUrl(state));
   });
 
   app.get('/workspace/email/gmail/callback', requireWorkspacePageAccess, async (req, res, next) => {
@@ -708,6 +733,9 @@ code{background:#f4f4f4;padding:.25rem .5rem;border-radius:4px;word-break:break-
       if (!clearanceCanSeeSensitivity(req.workspaceClearance, 'confidential')) return res.redirect('/workspace/email');
       const expectedState = req.session.gmailOAuthState;
       delete req.session.gmailOAuthState;
+      const purpose = req.session.gmailOAuthPurpose;
+      delete req.session.gmailOAuthPurpose;
+      if (purpose === driveBackupConnect.PURPOSE) return await driveBackupCallback(req, res, expectedState);
       if (req.query.error) {
         return res.redirect(`/workspace/email?connectError=${encodeURIComponent(`Google declined the connection: ${String(req.query.error).slice(0, 100)}`)}`);
       }
@@ -732,6 +760,25 @@ code{background:#f4f4f4;padding:.25rem .5rem;border-radius:4px;word-break:break-
 <p><a href="/workspace/email">Back to Email</a></p></body></html>`);
     } catch (err) { next(err); }
   });
+
+  async function driveBackupCallback(req, res, expectedState) {
+    const esc = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const failed = (why) => driveBackupPage(res, 'Drive backup not connected', `<p>${why}</p><p><a href="/workspace/backup/drive/connect">Try again</a></p>`);
+    if (req.query.error) return failed(`Google declined the connection: ${esc(String(req.query.error).slice(0, 100))}.`);
+    if (!expectedState || req.query.state !== expectedState) return failed('That attempt could not be verified (state mismatch). Start again from the link, in an ordinary browser window.');
+    if (typeof req.query.code !== 'string' || !req.query.code) return failed('Google did not return an authorisation code.');
+    const grant = driveBackupConnect.assessGrant(await gmailClient.exchangeCodeForTokens(req.query.code));
+    if (!grant.ok) return failed(esc(grant.message));
+    const { service, variable } = driveBackupConnect.TARGET;
+    await repo.addActivity({ actor: (req.session.user && req.session.user.username) || 'unknown', eventType: 'drive_backup_token_issued', summary: 'A Drive refresh token for the weekly database backup was issued and shown once. It was not stored.' });
+    return driveBackupPage(res, 'Drive backup connected', `<ol>
+<li>Copy the token below.</li>
+<li>In Railway, open the <strong>${service}</strong> service, then Variables.</li>
+<li>Set <strong>${variable}</strong> to the token and save. The next Monday run uses it.</li>
+</ol>
+<code>${esc(grant.refreshToken)}</code>
+<p class="note">Shown once and not stored. Paste it only into Railway. Access granted: Drive files this backup creates, nothing else.</p>`);
+  }
 
   // Contacts. Real people's details, so the area sits at the commercial
   // sensitivity level: a clearance that cannot see commercial records

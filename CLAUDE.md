@@ -8861,17 +8861,32 @@ export in `handover/` is stale and holds content only.
   the token does not expire after seven days). A service account was
   rejected: in Workspace its uploads can fail on storage quota and the files
   would be owned by it rather than Tom.
-- **Minting the token (Tom, once):** in the Google Cloud console open the
-  OAuth client used for Gmail and add the authorised redirect URI
-  `https://developers.google.com/oauthplayground`. Open
-  https://developers.google.com/oauthplayground, gear icon, tick "Use your
-  own OAuth credentials", paste the client id and secret. Step 1: enter the
-  scope `https://www.googleapis.com/auth/drive.file`, Authorize APIs, choose
-  tom@arringtonconsultancy.com, Allow. Step 2: "Exchange authorization code
-  for tokens", copy the Refresh token. In Railway, service
-  `db-backup-to-drive`, set `GOOGLE_DRIVE_REFRESH_TOKEN` to it. Until it is
-  set every run stops at its first check ("GOOGLE_DRIVE_REFRESH_TOKEN is not
-  set") and uploads nothing.
+- **Minting the token (Tom, once; one link since 19/10/2026):** signed in
+  and with the Workspace unlocked, open
+  `https://www.arringtonconsultancy.com/workspace/backup/drive/connect`,
+  approve as tom@arringtonconsultancy.com, and copy the token the page shows
+  into `GOOGLE_DRIVE_REFRESH_TOKEN` on the `db-backup-to-drive` service.
+  Until it is set every run stops at its first check
+  ("GOOGLE_DRIVE_REFRESH_TOKEN is not set") and uploads nothing. The link
+  (`lib/workspace/driveBackupConnect.js`, built because the OAuth Playground
+  route took too many copy-and-paste steps; TinyFish was rejected because it
+  would hand Tom's Google login to an outside browser) uses the Gmail OAuth
+  client and its already-registered callback, so nothing changes in the
+  Google Cloud console; the callback tells the two apart by a purpose flag in
+  the session. It asks for `drive.file` only, without
+  `include_granted_scopes`, and shows the token only if it carries
+  `drive.file` and nothing else (an unticked box or a Gmail-capable token is
+  refused, not shown). Same gates as the Gmail connect (workspace access,
+  confidential clearance); the token is not stored, only an activity row
+  saying one was issued. **Never revoke a token from this flow**: Google
+  keeps one grant per person per client, so revoking could cut off the Gmail
+  connector, which holds a token from the same client for the same account;
+  for the same reason, removing the app's access in Tom's Google account
+  stops both. If the first run fails with "Drive API has not been used in
+  project", the Drive API needs enabling in that Cloud project (APIs and
+  Services, Library, Google Drive API, Enable).
+  `test/workspace/driveBackupConnect.test.js` (6; the purpose branch removed
+  and `include_granted_scopes` added were each watched red).
 - **Proof:** `test/driveBackup.test.js` runs the real script with real
   pg_dump against a seeded database and a mock of the two Google endpoints
   it uses (gated on `BACKUP_TEST_DATABASE_URL`, declared in
