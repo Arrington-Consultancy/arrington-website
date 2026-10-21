@@ -9234,6 +9234,62 @@ export in `handover/` is stale and holds content only.
   they would be the faster restore and cost pence. The two are not
   alternatives.
 
+## Three offers: menu, home page and offer pages (BUILT 21/10/2026, NOT LIVE)
+
+Tom's decision of 21/10/2026, "DECISION AND PLAN - Simplify to three offers"
+(Drive `1_63u0CLmytc0Iz8GOjkeJGDB9WP4-g_qBQbVUYAVW6g`, week 1): Arrington
+leads with three offers (Commercial Review £500, Website £999, the taxi office
+workspace £999). Everything else is PARKED: out of the menu and off the home
+page, live at its URL and still in the sitemap (Start Up review, Ready to
+Sell, Owner Dependency Quiz, Owner Check, Market Ready Test, Commercial Gaps
+Review, Product Guide, the two bundles). Built on branch
+`claude/new-session-hbgp04`, shown to Tom before release as the decision asks.
+**This supersedes the menu notes above** (Owner Check, Ready to Sell and
+Product Guide as synthetic entries; the home page quiz block of 11/10/2026).
+
+- **Menu** (`lib/mainNav.js`, one list used by `server.js` renderPage and
+  `lib/navShell.js`): Commercial Review, Website, Taxi office workspace, then
+  CMS pages with Show in nav on (About Us), then Contact, which goes to
+  `#conversation` (the footer form, on every page). A nav entry may carry its
+  own `href`; the header uses it before the slug.
+- **Home page:** the same approved headline, then three boxes in place of
+  the hero button (`views/partials/home-offers.ejs`, rendered inside the
+  opening hero on the home page only). Every box line is copied from the
+  page it leads to (catalogue description, Website Build lede, workspace
+  lede); prices come from `lib/whereToStartOffers.js` and
+  `WORKSPACE_PRICE_PENCE`. Each box is one stretched link, so the top of the
+  first box is tappable on a phone's first screen. The proof below stays. The
+  quiz block (`home-quiz-teaser.ejs`) is deleted.
+- **Migration** (`lib/threeOffersSite.js`, marker
+  `site.three_offers_2026-10-21`, run once): every CMS page but the home page
+  and About Us gets Show in nav off; the home page's "What we do" `filter`
+  section is hidden (not deleted; only if its label still reads What we do).
+- **Offer pages, one main action, the form:** Commercial Review's
+  conversation button goes to `#conversation`; its "The credit" card (it
+  advertised the parked bundles) and the "Where to Start" back link are gone;
+  Pay £500 stays secondary. Website Build: Pay £999 is now an outline button,
+  back link gone, form heading "Tell us what you want to build" with its own
+  body line (`WEBSITE_BUILD_CONTACT` in `routes/whereToStart.js`). The
+  workspace page already had the form as its only main action.
+- **Order put to Tom:** Commercial Review first, where the decision lists the
+  website first, because the home page's paid traffic is the Leads campaign's
+  consultant searches and the Brand OS still names the Commercial Review the
+  main offer. Swapping is one list in `lib/mainNav.js` (`OFFER_LINKS` and the
+  order in `homeOffers`).
+- **Records out of step:** 00 Brand OS, 01 and 02 still describe the
+  Commercial Review as the main offer and owner run businesses as the
+  audience, and 02 does not record the workspace price. Tom's or the Brain
+  Keeper's to update, not this worker's.
+- **Search Console (item 5), 21/10/2026:** no impressions for any taxi page
+  in 90 days (Windsor `searchconsole`), but the pages went live on 7, 13 and
+  19 October. All three are indexable and in the sitemap Google last read on
+  17/10 (39 URLs, no errors). Googlebot fetched
+  `/taxi-and-private-hire-operators` twice on 17/10 (200); the two subpages
+  were not fetched between 5 and 21 October. Windsor cannot read index status;
+  that needs URL Inspection and Request indexing in Search Console, Tom's.
+- Tests: `test/threeOffers.test.js` (8); the tests that pinned the old menu
+  and quiz block now pin the parked state.
+
 ## Writing and reviewing website copy
 
 - Where a brief asks for copy but does not contain the underlying commercial

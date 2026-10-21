@@ -36,12 +36,15 @@
       it is still reached from the contextual links on What We Do and from the
       hero proof link. Do not re-add a nav entry for it without a new
       decision. %>
+<%# Since 21/10/2026 the list is built in lib/mainNav.js: the three offers,
+      the CMS pages with Show in nav on (About Us), then Contact, which carries
+      its own href (#conversation, the enquiry form in the shared footer). %>
 <% const _navLoopPages = navPages.filter((p) => p.slug !== 'main'); %>
 <div class="mobile-menu" id="mobileMenu">
     <% if (_navLoopPages.length > 0) { %>
         <% for (const _p of _navLoopPages) { %>
             <% if (!_p.hidden || canEdit) { %>
-            <a href="<%= _p.slug === 'main' ? '/' : '/' + _p.slug %>"
+            <a href="<%= _p.href || (_p.slug === 'main' ? '/' : '/' + _p.slug) %>"
                class="<%= _p.slug === currentPage.slug ? 'active' : '' %>">
                 <%= _p.nav_label || _p.title %>
             </a>
@@ -60,7 +63,7 @@
 <div class="page-menu" id="pageMenu">
     <div class="page-menu-inner">
         <% for (const _p of _navLoopPages) { %>
-        <a href="<%= _p.slug === 'main' ? '/' : '/' + _p.slug %>"
+        <a href="<%= _p.href || (_p.slug === 'main' ? '/' : '/' + _p.slug) %>"
            class="page-menu-link<%= _p.slug === currentPage.slug ? ' active' : '' %><%= ((_p.hidden || !_p.show_in_nav) && canEdit) ? ' page-menu-hidden' : '' %>"
            <% if (canEdit && !_p.hidden && !_p.show_in_nav) { %>title="Out of the main nav (Show in nav is off), but reachable by direct URL and indexed"<% } %>>
             <%= _p.nav_label || _p.title %>

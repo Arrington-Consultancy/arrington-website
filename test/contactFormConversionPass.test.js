@@ -68,16 +68,19 @@ test('the approved next step sits right by the button, and the form still needs 
   }
 });
 
-test('the quiz block renders under the form on the homepage only', async () => {
+// The 11/10/2026 quiz block below the form left the home page on 21/10/2026
+// (Tom's three offer decision; test/conversionDecisions.test.js). What still
+// holds from this pass: the footer renders the same form on every page and
+// carries no quiz block anywhere.
+test('the footer renders no quiz block on any page', async () => {
   const base = { canEdit: false, content: {}, heardAboutOptions: [], turnstileSiteKey: '',
     pageContact: { heading: 'h', body: 'b', label: '', submitText: 'Ask Tom to get in touch', messagePlaceholder: 'm' } };
   const file = path.join(root, 'views', 'partials', 'site-footer.ejs');
-  const home = await ejs.renderFile(file, { ...base, currentPage: { slug: 'main' } });
-  const devon = await ejs.renderFile(file, { ...base, currentPage: { slug: 'business-consultant-devon' } });
-  const standalone = await ejs.renderFile(file, { ...base });
-  assert.ok(home.includes('Owner Dependency Quiz') && home.indexOf('class="contact-details"') < home.indexOf('class="pg-teaser'), 'the homepage quiz block is missing or above the contact details');
-  assert.ok(!devon.includes('class="pg-teaser'), 'the quiz block appeared on a landing page');
-  assert.ok(!standalone.includes('class="pg-teaser'), 'the quiz block appeared on a page with no CMS page');
+  for (const page of [{ currentPage: { slug: 'main' } }, { currentPage: { slug: 'business-consultant-devon' } }, {}]) {
+    const html = await ejs.renderFile(file, { ...base, ...page });
+    assert.ok(html.includes('id="leadForm"'), 'the enquiry form is missing');
+    assert.ok(!html.includes('class="pg-teaser'), 'a quiz block appeared in the footer');
+  }
 });
 
 test('the Contact conversion and /thank-you are untouched by this pass', () => {
@@ -85,7 +88,7 @@ test('the Contact conversion and /thank-you are untouched by this pass', () => {
   // /thank-you, behind a server-issued token. Nothing in this pass may add a
   // second firing point or change the label.
   const label = 'vCKKCKjSna0cEN6RgsVD';
-  for (const f of ['views/partials/site-footer.ejs', 'views/partials/home-quiz-teaser.ejs', 'views/taxi-operators.ejs', 'lib/landingPlainCopy.js']) {
+  for (const f of ['views/partials/site-footer.ejs', 'views/taxi-operators.ejs', 'lib/landingPlainCopy.js']) {
     assert.ok(!read(f).includes(label), `${f} carries the Contact conversion label`);
     assert.ok(!/gtag\(\s*'event'\s*,\s*'conversion'/.test(read(f)), `${f} fires a conversion`);
   }

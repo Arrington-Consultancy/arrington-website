@@ -12,7 +12,10 @@
 // readiness must not become a competing top-level Arrington proposition or
 // duplicate the existing Commercial Review." So:
 //
-//   - it is in the main navigation since 11/10/2026 (Tom: "we need this on
+//   - PARKED since 21/10/2026 (Tom's three offer decision, lib/mainNav.js):
+//     out of the menu and off the home page, still live here and in the
+//     sitemap. The two notes below describe 11/10/2026 to 21/10/2026.
+//   - it was in the main navigation from 11/10/2026 (Tom: "we need this on
 //     the menu"), as a synthetic entry after Owner Check, built in
 //     server.js and lib/navShell.js. Until then it was kept out.
 //   - it is NOT promoted in the homepage's upper sections. CHANGED 11/10/2026

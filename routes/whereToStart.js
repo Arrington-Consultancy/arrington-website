@@ -28,6 +28,15 @@ const { getStripeClient, getStripeKeyStatus } = require('../lib/stripeClient');
 const { OFFERS, FULL_REVIEW_PURCHASE_MODE, getOffer, buildCheckoutSessionParams } = require('../lib/whereToStartOffers');
 const { getSiteShellData } = require('../lib/navShell');
 const { parseAttribution, describeAttribution } = require('../lib/leadAttribution');
+
+// The enquiry form's wording on the Website Build page (21/10/2026, Tom's
+// three offer decision: each offer page's one main action is the enquiry
+// form). The site-wide wording talks about a commercial review, which is the
+// wrong offer here. The heading is the page's own button text.
+const WEBSITE_BUILD_CONTACT = Object.freeze({
+  heading: 'Tell us what you want to build',
+  body: 'Tell us what the business does and what the website needs to do. Tom will be in touch to talk it through.'
+});
 const { purchaseConversionFor } = require('../lib/purchaseConversion');
 
 const router = express.Router();
@@ -153,7 +162,7 @@ function mountPageRoute(app, generateCsrfToken) {
         csrfToken: generateCsrfToken(req, res),
         navPages,
         content,
-        pageContact,
+        pageContact: { ...pageContact, ...WEBSITE_BUILD_CONTACT },
         offer: OFFERS.website_build,
         websiteBuildProofHref
       });
@@ -507,4 +516,4 @@ function mountWebhook(app) {
   });
 }
 
-module.exports = { router, mountPageRoute, mountWebhook };
+module.exports = { WEBSITE_BUILD_CONTACT, router, mountPageRoute, mountWebhook };

@@ -71,58 +71,22 @@ test('the route is registered ahead of the CMS catch-all', () => {
   assert.ok(route.includes(PATH), `the route no longer serves ${PATH}`);
 });
 
-test('it is in the main navigation as one synthetic entry, after Owner Check', () => {
-  // CHANGED 11/10/2026, Tom: "we need this on the menu". Until then this test
-  // pinned the page OUT of the navigation (the 25/09/2026 brief). It is now a
-  // synthetic entry like Owner Check and Product Guide, built in the same two
-  // places, which must stay in step. The header partial still hardcodes no
-  // link to it: the entry reaches both nav loops through navPages.
+test('parked on 21/10/2026: out of the menu and off the home page, still live at its URL', () => {
+  // CHANGED 21/10/2026, Tom's three offer decision ("DECISION AND PLAN -
+  // Simplify to three offers"): Ready to Sell is parked. It was a synthetic
+  // menu entry from 11/10/2026 and a link in the home page block below the
+  // enquiry form; both are gone. Parked is not deleted: the route, the page
+  // and its place in the sitemap all stay (the route test above still holds).
   const header = emitted('views/partials/site-header.ejs');
-  assert.ok(!header.includes(PATH), 'the header partial hardcodes a sale-readiness link instead of using navPages');
-  for (const f of ['server.js', 'lib/navShell.js']) {
+  assert.ok(!header.includes(PATH), 'the header partial hardcodes a sale-readiness link');
+  for (const f of ['server.js', 'lib/navShell.js', 'lib/mainNav.js']) {
     const src = read(f);
-    assert.ok(
-      /readyToSellNavEntry = \{ slug: 'get-your-business-ready-to-sell', title: 'Ready to Sell'/.test(src),
-      `${f} does not build the Ready to Sell nav entry`
-    );
-    assert.ok(/ownerCheckNavEntry, readyToSellNavEntry\]/.test(src), `${f} no longer places Ready to Sell after Owner Check`);
-    assert.ok(/ownerCheckNavEntry, readyToSellNavEntry, \.\.\./.test(src), `${f} no longer places Ready to Sell after Owner Check`);
+    assert.ok(!/readyToSellNavEntry/.test(src), `${f} builds a Ready to Sell menu entry again`);
+    assert.ok(!src.includes(`'${PATH}'`), `${f} puts the page in the menu again`);
   }
-
-  // The positive half: the two nav entries that ARE meant to exist still do,
-  // so this test cannot pass by the nav having been emptied.
-  for (const f of ['server.js', 'lib/navShell.js']) {
-    const src = read(f);
-    assert.ok(/ownerCheckNavEntry/.test(src), `${f} lost the Owner Check nav entry`);
-    assert.ok(/productGuideNavEntry/.test(src), `${f} lost the Product Guide nav entry`);
-  }
-});
-
-test('on the homepage it is one link below the form, and no existing route was demoted for it', () => {
-  // CHANGED 11/10/2026 on Tom's approval. Until then the page was not linked
-  // from the homepage at all. The general Google Ads land on the homepage
-  // again from that day, so the one link sits in the block below the enquiry
-  // form, never in the sections above it, where it would send paid visitors
-  // away before they reach the form.
-  const index = emitted('views/index.ejs');
-  assert.ok(!index.includes(PATH), 'the sale-readiness page is linked from the homepage sections above the form');
-  const teaser = emitted('views/partials/home-quiz-teaser.ejs');
-  assert.strictEqual(teaser.split(PATH).length - 1, 1, 'the homepage block below the form does not carry exactly one link to the page');
-  assert.ok(
-    teaser.includes(`Thinking of selling in the next few years? <a href="${PATH}">Get the business ready first`),
-    'the approved wording of the homepage link has changed'
-  );
-  assert.ok(!/<a href="\/get-your-business-ready-to-sell" class="btn/.test(teaser), 'the homepage link has become a button and competes with the form');
-  const footer = read('views/partials/site-footer.ejs');
-  assert.ok(footer.indexOf("include('home-quiz-teaser')") > footer.indexOf('</form>'), 'the block carrying the link is no longer below the form');
-
-  // Decision 7 of 14/09/2026 stands: the quiz keeps the post-hero slot. If
-  // this page had been slipped in there, the quiz link would have gone with
-  // it, so assert the quiz is still the one in that slot.
-  assert.ok(
-    /href="\/owner-dependency-quiz"/.test(index),
-    'the Owner Dependency Quiz is no longer linked from the homepage'
-  );
+  assert.ok(!emitted('views/index.ejs').includes(PATH), 'the home page links to the sale-readiness page');
+  assert.ok(!emitted('views/partials/site-footer.ejs').includes(PATH), 'the shared footer links to the sale-readiness page');
+  assert.ok(!fs.existsSync(path.join(__dirname, '..', 'views/partials/home-quiz-teaser.ejs')), 'the home page block that carried the link is back');
 });
 
 test('the two routes carry equal visual weight, neither preferred', () => {

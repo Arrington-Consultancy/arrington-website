@@ -28,6 +28,7 @@ const taxiOperators = require('./routes/taxiOperators');
 const taxiWebsites = require('./routes/taxiWebsites');
 const taxiWorkspace = require('./routes/taxiWorkspace');
 const { legacyRedirect } = require('./lib/legacyRedirect');
+const { buildNavPages, homeOffers } = require('./lib/mainNav');
 const thankYou = require('./routes/thankYou');
 const scott = require('./routes/scott');
 const guestVisits = require('./lib/guestVisits');
@@ -1106,43 +1107,13 @@ async function renderPage(req, res, next, pageSlug) {
       allPages = allPagesRows;
     }
 
-    // Owner Check is a standalone route (not a `pages` row), so it can't
-    // just sit in `allPages` — that array also feeds the intervention/filter
-    // button link picker (<meta name="all-pages">), which should keep
-    // listing only genuine CMS pages. Nav position: third, right after What
-    // We Do, per the approved nav (Home | What We Do | Owner Check |
-    // Evidence | About Us | 30 Minute Conversation). Built as a separate
-    // array used only by the two nav loops in index.ejs; falls back to
-    // appending at the end if 'what-we-do' is ever renamed or removed.
-    const ownerCheckNavEntry = { slug: 'owner-check', title: 'Owner Check', nav_label: '', hidden: false, show_in_nav: true };
-    // Ready to Sell (11/10/2026, Tom: "we need this on the menu") is a third
-    // synthetic entry, a code route like Owner Check, placed straight after
-    // it. Same construction and fallback; lib/navShell.js builds the same
-    // list for the standalone pages and must stay in step.
-    const readyToSellNavEntry = { slug: 'get-your-business-ready-to-sell', title: 'Ready to Sell', nav_label: '', hidden: false, show_in_nav: true };
-    const whatWeDoIndex = allPages.findIndex(p => p.slug === 'what-we-do');
-    const navPagesWithOwnerCheck = whatWeDoIndex === -1
-      ? [...allPages, ownerCheckNavEntry, readyToSellNavEntry]
-      : [...allPages.slice(0, whatWeDoIndex + 1), ownerCheckNavEntry, readyToSellNavEntry, ...allPages.slice(whatWeDoIndex + 1)];
-
-    // Product Guide (22/08/2026) — this nav slot used to be "Where to
-    // Start" (linking to /where-to-start), renamed per the site refinement
-    // brief now that the Product Guide is live. It links to /product-guide
-    // directly rather than to the /where-to-start hub, since that is the
-    // page the nav label actually names. /where-to-start is NOT deleted —
-    // it still exists, is still in the sitemap, and is still linked
-    // directly from the Product Guide's own "already know what you need"
-    // link and from elsewhere on the site — it is just no longer the nav's
-    // own top-level destination. Same synthetic-nav-entry reasoning as
-    // Owner Check above (no CMS template exists for this route). Position
-    // unchanged: after Evidence, so proof is seen before the guide/prices.
-    // Falls back to appending at the end if 'evidence' is ever renamed or
-    // removed.
-    const productGuideNavEntry = { slug: 'product-guide', title: 'Product Guide', nav_label: '', hidden: false, show_in_nav: true };
-    const evidenceIndex = navPagesWithOwnerCheck.findIndex(p => p.slug === 'evidence');
-    const navPages = evidenceIndex === -1
-      ? [...navPagesWithOwnerCheck, productGuideNavEntry]
-      : [...navPagesWithOwnerCheck.slice(0, evidenceIndex + 1), productGuideNavEntry, ...navPagesWithOwnerCheck.slice(evidenceIndex + 1)];
+    // The menu: the three offers, the CMS pages allowed above (About Us on
+    // the live site), then Contact (lib/mainNav.js, Tom's decision of
+    // 21/10/2026). Owner Check, Ready to Sell and the Product Guide were
+    // code-route entries here until then; they are parked, live at their URLs
+    // and out of the menu. allPages itself still lists only CMS pages, because
+    // it also feeds the button link picker (<meta name="all-pages">).
+    const navPages = buildNavPages(allPages);
 
     // Load content
     const { rows } = await db.query('SELECT section_key, content FROM content');
@@ -1331,6 +1302,8 @@ async function renderPage(req, res, next, pageSlug) {
       sectionOrder: renderOrder, hiddenSections, instanceTemplates,
       currentPage, allPages, navPages, seo, caseStudyAnchors, googleReviews,
       isUsefulThinkingArticle,
+      // The three offer boxes under the home page hero (lib/mainNav.js).
+      homeOffers: currentPage.slug === 'main' ? homeOffers(taxiWebsites.WORKSPACE_PRICE_PENCE) : null,
       canEdit, capabilities, showAdminPanel,
       pageContact,
       screenshotKeys,

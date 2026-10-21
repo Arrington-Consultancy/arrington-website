@@ -194,11 +194,11 @@
     </style>
 </head>
 <body>
-    <%- include('partials/site-header', { currentPage: { slug: 'where-to-start' }, navPages, canEdit: false, content, pageContact }) %>
+    <%- include('partials/site-header', { currentPage: { slug: 'where-to-start/website-build' }, navPages, canEdit: false, content, pageContact }) %>
 
     <main>
-        <a href="/where-to-start" class="wts-back">&larr; Where to Start</a>
-
+        <%# No "Where to Start" back link since 21/10/2026 (see the Commercial
+            Review page). %>
         <span class="wts-label">Pay upfront</span>
         <div class="wts-hero-head">
             <h1><%= offer.name %></h1>
@@ -254,7 +254,10 @@
                     <label for="wtsWebsite">Leave this field blank</label>
                     <input type="text" id="wtsWebsite" name="website" tabindex="-1" autocomplete="off">
                 </div>
-                <button type="submit" class="btn btn-primary" id="wtsCheckoutSubmit">Pay £999 securely</button>
+                <%# Secondary since 21/10/2026: the page's one main action is the
+                    enquiry form (Tom's three offer decision). Paying still
+                    works exactly as before for anyone ready to buy. %>
+                <button type="submit" class="btn btn-outline" id="wtsCheckoutSubmit">Pay £999 securely</button>
                 <p class="wts-form-status" id="wtsCheckoutStatus" role="status"></p>
             </form>
             <p class="wts-alt-route"><a href="#conversation">Not ready to pay? Tell us what you want to build instead &rarr;</a></p>

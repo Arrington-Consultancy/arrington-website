@@ -56,7 +56,9 @@ test('never the staff office, and nothing else on the page moved', () => {
   const text = visibleText(body);
   assert.strictEqual(OFFERS.website_build.pricePence, 99900);
   assert.ok(text.includes('Further changes after the agreed build and included revision are charged at £300 per day, based on approximately six working hours.'));
-  assert.ok(body.includes('<button type="submit" class="btn btn-primary" id="wtsCheckoutSubmit">Pay £999 securely</button>'), 'the payment button changed');
+  // The secondary treatment since 21/10/2026: the enquiry form is the page's
+  // one main action (Tom's three offer decision). Paying works as before.
+  assert.ok(body.includes('<button type="submit" class="btn btn-outline" id="wtsCheckoutSubmit">Pay £999 securely</button>'), 'the payment button changed');
   assert.ok(body.includes("fetch('/api/checkout/' + form.dataset.offer"), 'the Stripe checkout call changed');
   assert.ok(body.includes('Not ready to pay? Tell us what you want to build instead'), 'the enquiry route changed');
   // House rules on the new line: no dashes or hyphens.

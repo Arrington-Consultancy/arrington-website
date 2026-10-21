@@ -36,12 +36,14 @@ test('decision 1: Websites and AI is out of the main navigation, Product Guide s
     'the child-link markup is back'
   );
 
-  // Product Guide is a synthetic nav entry built in two places that must stay
-  // in step. Decision 1 says it is not renamed, demoted or removed.
+  // "Product Guide stays" was superseded by Tom's three offer decision of
+  // 21/10/2026: the Product Guide is parked, live at its URL and out of the
+  // menu. Both menu builders now take the list from lib/mainNav.js
+  // (test/threeOffers.test.js).
   for (const f of ['server.js', 'lib/navShell.js']) {
     const src = read(f);
-    assert.ok(/productGuideNavEntry/.test(src), `${f} no longer builds the Product Guide nav entry`);
-    assert.ok(/title: 'Product Guide'/.test(src), `${f} renamed the Product Guide nav entry`);
+    assert.ok(!/productGuideNavEntry/.test(src), `${f} builds a Product Guide menu entry again`);
+    assert.ok(/buildNavPages\(/.test(src), `${f} no longer builds the menu from lib/mainNav.js`);
   }
 });
 
@@ -52,53 +54,30 @@ test('decision 1: the Websites and AI page itself is untouched and still reachab
   assert.ok(/'websites-and-ai'/.test(server), 'the websites-and-ai route/entry vanished from server.js');
 });
 
-// Decision 2 (the quiz leads the slot directly under the homepage hero) was
-// SUPERSEDED by Tom on 11/10/2026: the first thing under the headline now
-// leads to the enquiry form, and the quiz block moved below the form and the
-// call, email and WhatsApp details (Website & Hosting proposal "More Google
-// Ads visitors to the contact form"). What decisions 2 and 7 still require
-// holds: the quiz keeps a homepage block with the primary button, the
-// Product Guide keeps its route there, and the two do not compete equally.
-test('decisions 2 and 7, as changed on 11/10/2026: the quiz block sits below the form, homepage only', () => {
-  const teaser = emitted('views/partials/home-quiz-teaser.ejs');
-  assert.ok(/href="\/owner-dependency-quiz"/.test(teaser), 'the quiz block lost its route to the quiz');
-  assert.ok(/btn btn-primary/.test(teaser), 'the quiz CTA is not the primary button in its block');
-  assert.ok(/href="\/product-guide"/.test(teaser), 'the Product Guide lost its route out of this block');
-  assert.strictEqual((teaser.match(/btn-primary/g) || []).length, 1, 'the block has more than one primary CTA');
-  assert.ok(teaser.includes('Not ready to talk yet?'), 'the block label changed');
-
-  // Not under the hero any more.
-  const index = emitted('views/index.ejs');
-  assert.ok(!/<section class="pg-teaser/.test(index) && !/<div class="pg-teaser/.test(index), 'the quiz block is back in the homepage section loop');
-
-  // In the footer, after the form and the contact details, homepage only.
+// Decisions 2 and 7 (the Owner Dependency Quiz block on the home page, with
+// the Product Guide as its quieter second route) were SUPERSEDED twice: on
+// 11/10/2026 the block moved below the enquiry form, and on 21/10/2026 Tom's
+// three offer decision parked the quiz and the Product Guide, so the block
+// left the home page. Both pages stay live at their URLs.
+test('decisions 2 and 7, superseded on 21/10/2026: no quiz block on the home page', () => {
+  assert.ok(!fs.existsSync(path.join(__dirname, '..', 'views/partials/home-quiz-teaser.ejs')), 'the home page quiz block is back');
   const footer = emitted('views/partials/site-footer.ejs');
-  const inc = footer.indexOf("include('home-quiz-teaser')");
-  assert.ok(inc > 0, 'the footer no longer includes the quiz block');
-  assert.ok(footer.indexOf('id="leadForm"') < inc && footer.indexOf('class="contact-details"') < inc, 'the quiz block is above the form or the contact details');
-  assert.ok(inc < footer.indexOf('class="footer-links"'), 'the quiz block fell below the footer links');
-  assert.ok(/currentPage\.slug === 'main'\) \{ %>\s*<%- include\('home-quiz-teaser'\) %>/.test(footer), 'the quiz block is not limited to the homepage');
-});
-
-test('decision 2: no claim is made about the quiz that the quiz page does not make', () => {
-  // The quiz is 32 questions. An earlier draft of this block nearly said "ten
-  // questions, two minutes", which was invented. Both claims that survive are
-  // the quiz page's own controlled wording.
-  const teaser = emitted('views/partials/home-quiz-teaser.ejs');
-  assert.ok(!/\b(ten|10|twelve|12|five|5)\s+questions\b/i.test(teaser), 'the teaser states a question count');
-  assert.ok(/five minute/i.test(teaser), 'the teaser dropped the quiz page\'s own "five minute" framing');
-
-  const quiz = read('views/owner-dependency-quiz.ejs');
-  assert.ok(/5 minute quiz/i.test(quiz), 'the quiz page no longer says five minutes, so the homepage claim is now unsupported');
-  assert.ok(/No email required/i.test(quiz), 'the quiz page no longer says no email required, so the homepage claim is now unsupported');
+  assert.ok(!footer.includes('home-quiz-teaser'), 'the footer includes the quiz block again');
+  const index = emitted('views/index.ejs');
+  assert.ok(!/pg-teaser/.test(index), 'the quiz block is back on the home page');
+  // Parked, not deleted.
+  assert.ok(fs.existsSync(path.join(__dirname, '..', 'views/owner-dependency-quiz.ejs')), 'the quiz page itself was removed');
+  assert.ok(fs.existsSync(path.join(__dirname, '..', 'views/product-guide.ejs')), 'the Product Guide page itself was removed');
 });
 
 test('decision 5: the conversation leads the Commercial Review and direct purchase survives', () => {
   const cr = emitted('views/where-to-start-commercial-review.ejs');
 
-  // The conversation is the stronger route for someone unsure.
-  assert.ok(/href="\/book-a-30-minute-conversation" class="btn btn-primary/.test(cr),
-    'booking a conversation is not the primary CTA');
+  // The conversation is the stronger route for someone unsure. Since
+  // 21/10/2026 it is booked through the enquiry form on the page, the one
+  // main action every offer page now has (Tom's three offer decision).
+  assert.ok(/href="#conversation" class="btn btn-primary/.test(cr),
+    'booking a conversation through the enquiry form is not the primary CTA');
 
   // Direct purchase is NOT removed, is still a real form, and is not gated.
   // Matched as two independent facts rather than one exact attribute string:

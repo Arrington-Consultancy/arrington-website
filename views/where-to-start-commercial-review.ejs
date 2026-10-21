@@ -127,11 +127,12 @@
     </style>
 </head>
 <body>
-    <%- include('partials/site-header', { currentPage: { slug: 'where-to-start' }, navPages, canEdit: false, content, pageContact }) %>
+    <%- include('partials/site-header', { currentPage: { slug: 'where-to-start/commercial-review' }, navPages, canEdit: false, content, pageContact }) %>
 
     <main>
-        <a href="/where-to-start" class="wts-back">&larr; Where to Start</a>
-
+        <%# No "Where to Start" back link since 21/10/2026: that hub lists the
+            parked bundles, and this is one of the three offers the site now
+            leads with (lib/mainNav.js). %>
         <div class="wts-hero-head">
             <h1><%= offer.name %></h1>
             <p class="wts-price">£<%= (offer.pricePence / 100).toLocaleString('en-GB') %></p>
@@ -154,10 +155,9 @@
             </div>
         </div>
 
-        <div class="wts-card surface-paper">
-            <h2>The credit</h2>
-            <p>If you go on to Commercial Review and Implementation or Commercial Review and Website Build, the £<%= (offer.pricePence / 100).toLocaleString('en-GB') %> you pay here is credited in full.</p>
-        </div>
+        <%# "The credit" card sat here until 21/10/2026: it advertised the two
+            bundles Tom's three offer decision parked. The credit itself is a
+            checkout term and is unchanged (lib/whereToStartOffers.js). %>
 
         <%# Tom's approved decision 5 of 14/09/2026. For a visitor who is not
             sure, booking a conversation is the stronger route and now leads
@@ -170,7 +170,11 @@
         <div class="wts-form-section">
             <h2>Not sure this is the right thing for you?</h2>
             <p class="wts-lead-route">Start with a conversation. Thirty minutes, no charge, and we will say plainly whether a Commercial Review is what the business needs or whether something else is.</p>
-            <a href="/book-a-30-minute-conversation" class="btn btn-primary wts-book-cta">Book a 30 minute conversation</a>
+            <%# The page's one main action is the enquiry form below (Tom's three
+                offer decision, 21/10/2026). It asks for the best time for the
+                call, so it books the same 30 minute conversation the separate
+                page did. %>
+            <a href="#conversation" class="btn btn-primary wts-book-cta">Book a 30 minute conversation</a>
         </div>
 
         <div class="wts-form-section wts-buy-direct">

@@ -8237,6 +8237,17 @@ async function seed() {
     console.error('Websites and AI taxi section migration failed (boot continues):', err.message);
   }
 
+  // THREE OFFERS (21/10/2026, Tom's decision "Simplify to three offers"):
+  // CMS pages other than About Us leave the menu, and the home page's "What
+  // we do" section is hidden behind the new offer boxes. The menu and the
+  // boxes themselves are code (lib/mainNav.js). Run once, never fatal.
+  try {
+    const note = await require('../lib/threeOffersSite').applyThreeOffersSite(db);
+    if (note) console.log(`Three offers: ${note}.`);
+  } catch (err) {
+    console.error('Three offers migration failed (boot continues):', err.message);
+  }
+
 
   // Arrington AI Workspace: ingest the encrypted snapshot into
   // workspace_records. A no-op when WORKSPACE_SNAPSHOT_KEY is unset, and
