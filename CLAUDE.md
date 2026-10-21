@@ -1022,7 +1022,7 @@ npm run dev
   (push again), and the check runs only at deploy time, so it is not an
   uptime monitor. Staging is unchanged.
 - **Deploy:** `railway up` from project root. Auto-deploy on push to `main` is configured but unreliable — always run `railway up` after pushing to ensure the deploy goes out
-- **GitHub Action (`.github/workflows/deploy.yml`, added 25/07/2026):** runs `railway up --service arrington-prototype --environment production --detach` via the Railway CLI on every push to `main`, as a more reliable alternative to Railway's built-in GitHub auto-deploy. (A diagnostic step that printed variable names/lengths/prefixes into the Action log, added for the 25/07/2026 Railway variable incident, was removed 29/08/2026 by PR #115: the incident is closed, and a 13-character prefix of long-prefixed keys is a few real secret characters logged on every deploy.) Requires a `RAILWAY_TOKEN` secret in the repo's GitHub Actions settings — must be a **project token** (Railway dashboard → the service → Settings → Tokens → create a token scoped to that service/environment), not a personal account token, so `railway up` needs no `railway link` step and can't accidentally target the wrong project. Manual `railway up` from a local checkout is still fine as a fallback/for out-of-band deploys.
+- **GitHub Action (`.github/workflows/deploy.yml`, added 25/07/2026):** runs `railway up --service arrington-prototype --environment production --detach` via the Railway CLI on every push to `main`, as a more reliable alternative to Railway's built-in GitHub auto-deploy. (A diagnostic step that printed variable names/lengths/prefixes into the Action log, added for the 25/07/2026 Railway variable incident, was removed 29/08/2026 by PR #115: the incident is closed, and a 13-character prefix of long-prefixed keys is a few real secret characters logged on every deploy.) Requires a `RAILWAY_TOKEN` secret in the repo's GitHub Actions settings — must be a **project token** (Railway dashboard → the service → Settings → Tokens → create a token scoped to that service/environment), not a personal account token, so `railway up` needs no `railway link` step and can't accidentally target the wrong project. Manual `railway up` from a local checkout is still fine as a fallback/for out-of-band deploys. **Found invalid on 21/10/2026** (see Three offers below); a run that fails with "Invalid RAILWAY_TOKEN" deploys nothing, and Railway's own GitHub auto-deploy did not step in.
 - **GitHub:** `github.com/natparnell/arrington-prototype` (private)
 
 ## Payments / Where to Start (14/08/2026)
@@ -9234,7 +9234,7 @@ export in `handover/` is stale and holds content only.
   they would be the faster restore and cost pence. The two are not
   alternatives.
 
-## Three offers: menu, home page and offer pages (BUILT 21/10/2026, NOT LIVE)
+## Three offers: menu, home page and offer pages (APPROVED 21/10/2026, ON MAIN, NOT YET LIVE)
 
 Tom's decision of 21/10/2026, "DECISION AND PLAN - Simplify to three offers"
 (Drive `1_63u0CLmytc0Iz8GOjkeJGDB9WP4-g_qBQbVUYAVW6g`, week 1): Arrington
@@ -9275,7 +9275,16 @@ Product Guide as synthetic entries; the home page quiz block of 11/10/2026).
   website first, because the home page's paid traffic is the Leads campaign's
   consultant searches and the Brand OS still names the Commercial Review the
   main offer. Swapping is one list in `lib/mainNav.js` (`OFFER_LINKS` and the
-  order in `homeOffers`).
+  order in `homeOffers`). **Tom approved this order and the release ("Yes",
+  21/10/2026).**
+- **Release blocked, 21/10/2026:** `23a1c94` is on main, but the deploy run
+  (`39583501600`) failed with "Invalid RAILWAY_TOKEN", and Railway did not
+  deploy it by itself: production inspection at 10:29 UTC still showed the old
+  menu, quiz block and credit card. The same token deployed on 19/10/2026. The
+  Railway connector here was also signed out the same morning. Fix (Tom): a new
+  project token for `arrington-prototype`, production, set as the GitHub
+  Actions secret `RAILWAY_TOKEN`; then re-run the deploy and inspect live. Until
+  then main is ahead of the live site, and every push to main fails to deploy.
 - **Records out of step:** 00 Brand OS, 01 and 02 still describe the
   Commercial Review as the main offer and owner run businesses as the
   audience, and 02 does not record the workspace price. Tom's or the Brain
