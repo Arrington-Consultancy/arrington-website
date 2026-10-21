@@ -9234,7 +9234,7 @@ export in `handover/` is stale and holds content only.
   they would be the faster restore and cost pence. The two are not
   alternatives.
 
-## Three offers: menu, home page and offer pages (APPROVED 21/10/2026, ON MAIN, WAITING ON A NEW RAILWAY TOKEN)
+## Three offers: menu, home page and offer pages (APPROVED 21/10/2026, ON MAIN, WAITING FOR RAILWAY TO RESUME DEPLOYS)
 
 Tom's decision of 21/10/2026, "DECISION AND PLAN - Simplify to three offers"
 (Drive `1_63u0CLmytc0Iz8GOjkeJGDB9WP4-g_qBQbVUYAVW6g`, week 1): Arrington
@@ -9302,6 +9302,17 @@ Product Guide as synthetic entries; the home page quiz block of 11/10/2026).
   secret is empty and the error is ours. This worker's first diagnosis (bad
   token) was made before the status page was checked, and its second (outage
   only) before that `env:` line was read. Check both before acting.
+  **Token restored, 17:05 UTC:** Tom created a new project token
+  (`github-actions-2`, production) in the Railway dashboard, which was
+  answering again, and pasted it into the GitHub secret. The re-run at
+  17:06 UTC (`39608191372` attempt 5) showed `RAILWAY_TOKEN: ***`, reached
+  "Indexing... Uploading..." and then failed with Railway's own message
+  "Deploys have been paused temporarily", so the secret is right and the
+  one remaining blocker is Railway resuming deploys. An hourly check-in
+  re-runs the latest deploy until it returns a Deployment URL, then runs
+  the production inspection and writes back the release. The old token
+  `github-actions` (25/07/2026) is still listed in Railway and can be
+  deleted once the new one has deployed.
 - **Records out of step:** 00 Brand OS, 01 and 02 still describe the
   Commercial Review as the main offer and owner run businesses as the
   audience, and 02 does not record the workspace price. Tom's or the Brain
