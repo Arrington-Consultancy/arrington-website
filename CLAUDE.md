@@ -9260,6 +9260,23 @@ Product Guide as synthetic entries; the home page quiz block of 11/10/2026).
   `WORKSPACE_PRICE_PENCE`. Each box is one stretched link, so the top of the
   first box is tappable on a phone's first screen. The proof below stays. The
   quiz block (`home-quiz-teaser.ejs`) is deleted.
+- **One line under the boxes (Tom's yes, 21/10/2026, after "we need the 30
+  minute conversation to be free always"):** "Not sure which is right for
+  you? The first conversation is free and there's no obligation.", the second
+  sentence linking to `#conversation`. The linked sentence is the one the
+  footer form already says (`.lead-form-next`), and the test ties the two
+  together so the boxes never promise what the form does not. Styled
+  `.home-offers-note` in `views/index.ejs`, quiet so the boxes keep the
+  weight. The 30 Minute Conversation stays free and its page stays live; the
+  release only drops the words from the menu ("Contact" now) and the hero.
+- **The quizzes after the release:** live at their URLs and in the sitemap,
+  out of the menu and off the home page. Still linked from the Useful
+  Thinking articles' next steps (Owner Dependency Quiz; Commercial Gaps
+  Review and Market Ready Test on three articles), the Ready to Sell page, the
+  Useful Thinking index bridge and the Websites and AI insights cards (Owner
+  Check, Commercial Gaps Review). Nothing on the three offer pages or in the
+  menu points at the Owner Check hub. Reported to Tom on 21/10/2026; he chose
+  the free conversation line above and did not ask for a quiz link.
 - **Migration** (`lib/threeOffersSite.js`, marker
   `site.three_offers_2026-10-21`, run once): every CMS page but the home page
   and About Us gets Show in nav off; the home page's "What we do" `filter`

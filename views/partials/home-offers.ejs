@@ -5,7 +5,8 @@
     three boxes. The copy, prices and links come from lib/mainNav.js
     (homeOffers), where every line is already approved on the page it leads
     to. Styles are in views/index.ejs (.home-offers), the only view that
-    renders this. Expects: homeOffers. %>
+    renders this. Expects: homeOffers. Followed by one line that points at
+    the enquiry form. %>
 <div class="home-offers" data-home-offers>
     <% homeOffers.forEach(function (o) { %>
     <div class="home-offer" data-offer="<%= o.id %>">
@@ -17,3 +18,9 @@
     </div>
     <% }); %>
 </div>
+<%# One line under the boxes (Tom's yes of 21/10/2026): the first
+    conversation is free, linking to the enquiry form in the footer. The
+    second sentence is the same sentence the form itself carries
+    (site-footer.ejs, .lead-form-next), so the boxes never say something the
+    form does not. %>
+<p class="home-offers-note" data-home-offers-note>Not sure which is right for you? <a href="#conversation">The first conversation is free and there's no obligation.</a></p>

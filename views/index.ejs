@@ -734,7 +734,24 @@
         .home-offer-btn { align-self: flex-start; position: static; }
         .home-offer-btn::after { content: ''; position: absolute; inset: 0; border-radius: 6px; }
 
-        .hero[data-section-id="hero"] .home-offers + .hero-proof-strip { margin-top: 1.6rem; }
+        /* The one line under the boxes: the first conversation is free,
+           linking to the form (Tom, 21/10/2026). Quiet, so the boxes keep
+           the weight. */
+        .home-offers-note {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: var(--text);
+            margin: 1rem 0 0;
+        }
+        .home-offers-note a {
+            color: var(--accent);
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+        .home-offers-note a:hover, .home-offers-note a:focus-visible { color: var(--text-bright); }
+
+        .hero[data-section-id="hero"] .home-offers + .hero-proof-strip,
+        .hero[data-section-id="hero"] .home-offers-note + .hero-proof-strip { margin-top: 1.6rem; }
 
         @media (max-width: 900px) {
             .home-offers { grid-template-columns: 1fr; gap: 1rem; }

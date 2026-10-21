@@ -88,7 +88,23 @@ test('the boxes replace the hero button on the home page only', () => {
   assert.ok(at > 0 && cta > at, 'the boxes do not take the place of the hero button');
   assert.ok(/homeOffers: currentPage\.slug === 'main' \?/.test(read('server.js')), 'the boxes reach a page other than the home page');
   const partial = emitted('views/partials/home-offers.ejs');
-  assert.strictEqual((partial.match(/<a /g) || []).length, 1, 'a box carries more than one link');
+  const box = partial.slice(partial.indexOf('<div class="home-offer"'), partial.indexOf('<% }); %>'));
+  assert.strictEqual((box.match(/<a /g) || []).length, 1, 'a box carries more than one link');
+});
+
+test('one line under the boxes says the first conversation is free and links to the form (Tom, 21/10/2026)', () => {
+  const partial = emitted('views/partials/home-offers.ejs');
+  const note = partial.slice(partial.indexOf('<p class="home-offers-note"'), partial.indexOf('</p>', partial.indexOf('<p class="home-offers-note"')) + 4);
+  assert.ok(note, 'the line is missing');
+  assert.ok(note.indexOf('<p class="home-offers-note"') === 0 && partial.indexOf('<p class="home-offers-note"') > partial.indexOf('<% }); %>'), 'the line is not after the boxes');
+  assert.ok(note.includes('Not sure which is right for you? <a href="#conversation">The first conversation is free and there\'s no obligation.</a>'), 'the wording or the link changed');
+  assert.strictEqual((note.match(/<a /g) || []).length, 1, 'the line carries more than one link');
+  // The linked sentence is the one the form itself says, so the boxes never
+  // promise something the form does not.
+  const footer = emitted('views/partials/site-footer.ejs');
+  assert.ok(footer.includes("The first conversation is free and there's no obligation."), 'the footer no longer says the sentence the line links to');
+  assert.ok(!/[\u2013\u2014]/.test(note), 'a dash in the line');
+  assert.ok(/\.home-offers-note\s*\{/.test(read('views/index.ejs')), 'the line has no style');
 });
 
 test('the parked pages are off the home page and out of the shared chrome, but still live', () => {
