@@ -9344,6 +9344,72 @@ Product Guide as synthetic entries; the home page quiz block of 11/10/2026).
 - Tests: `test/threeOffers.test.js` (8); the tests that pinned the old menu
   and quiz block now pin the parked state.
 
+## Railway environment variable breach: every secret in Railway is to be treated as taken (22/10/2026)
+
+Railway's notice, pasted by Tom on 22/10/2026 (the outage of 21/10, incident
+`QH8L8B3E`, turned out to be this): an unauthorised third party may have
+accessed encrypted environment variables and, for some, obtained the
+decrypted contents, as part of attacks aimed at AI inference providers.
+Railway's instruction: revoke and reissue every environment variable,
+including API keys, and review the services' logs. Builds stay paused until
+Railway restores them.
+
+**Working position: every value stored in Railway for this project is
+compromised until it has been reissued**, on production (`arrington-prototype`),
+staging (`scott-demo`, `arrington-ai-workspace`), the backup cron
+(`db-backup-to-drive`) and the old `taxi-demo` service. Names only here,
+never values; every reissue is Tom's, in each provider's own console and then
+in Railway, and nothing is pasted in a chat. In order of what a holder can do:
+
+1. `STRIPE_SECRET_KEY` (live) and `STRIPE_WEBHOOK_SECRET`: full access to the
+   Stripe account (refunds, payouts, customers). Roll in the Stripe Dashboard
+   first.
+2. `ANTHROPIC_API_KEY`: the stated target of the attack; spends money. New key
+   in console.anthropic.com, old one deleted, usage checked for a spike.
+3. Google, all from one place (myaccount.google.com, Security): the Workspace
+   Gmail connector (`GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`; read AND send
+   on tom@, since `ENABLE_GMAIL_SEND=true`), the backup token
+   (`GOOGLE_DRIVE_REFRESH_TOKEN`; reads the Drive folder holding full database
+   dumps with leads in them), the notification app password
+   (`GMAIL_APP_PASSWORD`; send as Tom), the demo mailbox app password
+   (`TAXI_OFFICE_IMAP_PASSWORD`), and the Places key (`GOOGLE_PLACES_API_KEY`,
+   billed). Removing the app's access revokes the Gmail and Drive tokens
+   together (one grant per client, see the backup section); both are then
+   reconnected through their connect pages once new values are in Railway.
+4. Zoho Invoice (`ZOHO_INVOICE_CLIENT_SECRET`, `ZOHO_INVOICE_REFRESH_TOKEN`;
+   can create and email invoices to customers): revoke at accounts.zoho.eu,
+   Security, Connected Apps, and reconnect.
+5. `SESSION_SECRET` (signs logins, PDF links, the Contact conversion token and
+   the erasure hashes; rotating logs everyone out, which is fine),
+   `WORKSPACE_ACCESS_PASSPHRASE` (gate 3 of the Workspace), `TURNSTILE_SECRET_KEY`,
+   `WORKSPACE_FINANCE_TOKEN_KEY`, `SCOTT_DEMO_STAFF_PASSWORD`, and the CMS
+   passwords for `nat` and `tom` (changed in the site, not in Railway;
+   `NAT_PASSWORD`/`TOM_PASSWORD` should not still be set).
+6. `WORKSPACE_SNAPSHOT_KEY`: the repository is PUBLIC, so
+   `data/workspace-snapshot.enc` (the 30 controlled Brain records) is readable
+   by anyone holding the key. **Treat the snapshot's contents as possibly
+   disclosed**; a new key protects only a re-encrypted file
+   (`scripts/encryptWorkspaceSnapshot.js`, which needs the plaintext records),
+   and making the repository private closes the other half.
+7. `DATABASE_URL`: the Postgres password. The database has no public route (no
+   TCP proxy), so it is the least reachable; rotate it on the Postgres service
+   when Railway allows.
+8. Railway's own project tokens (`github-actions-2` in the GitHub secret, the
+   old `github-actions`): not environment variables, but regenerate the live
+   one and delete the old one once builds are back.
+
+**Consequences while builds are paused:** a value revoked at the provider
+stops working on the live site at once, and the new value only reaches the
+site when a deploy succeeds. So between revoking and the next deploy, lead
+notification emails do not send (the enquiry is still stored; read the admin
+Leads panel), Stripe checkout fails, and the Workspace Gmail, Zoho and Drive
+backup connectors are down. Stripe and Anthropic first regardless, because
+their exposure costs money by the hour. Tom's inbox showed no security alert
+from Google, Stripe, Anthropic, Zoho or Railway in the two days to 22/10/2026
+(searched from this session), which is not evidence of safety. The hourly
+deploy check-in keeps running: the first successful deploy after Tom sets the
+new values is what brings them live.
+
 ## Writing and reviewing website copy
 
 - Where a brief asks for copy but does not contain the underlying commercial
