@@ -9,13 +9,13 @@
     (.home-offers), the only view that renders this. Expects: homeOffers.
     The line that the first conversation is free sits in the hero itself. %>
 <div class="home-offers" data-home-offers>
-    <% homeOffers.forEach(function (o) { %>
-    <div class="home-offer" data-offer="<%= o.id %>">
+    <% homeOffers.forEach(function (o, n) { %>
+    <div class="home-offer <%= n === 0 ? 'home-offer--lead' : 'home-offer--side' %>" data-offer="<%= o.id %>">
         <p class="home-offer-audience"><%= o.audience %></p>
         <h2 class="home-offer-name"><%= o.name %></h2>
         <p class="home-offer-price"><%= o.price %></p>
         <p class="home-offer-line"><%= o.line %></p>
-        <a href="<%= o.href %>" class="btn btn-primary home-offer-btn"><%= o.button %></a>
+        <a href="<%= o.href %>" class="btn <%= n === 0 ? 'btn-primary' : 'btn-outline' %> home-offer-btn"><%= o.button %></a>
     </div>
     <% }); %>
 </div>

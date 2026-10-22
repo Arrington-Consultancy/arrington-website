@@ -1304,6 +1304,7 @@ async function renderPage(req, res, next, pageSlug) {
       isUsefulThinkingArticle,
       // The three offer boxes under the home page hero (lib/mainNav.js).
       homeOffers: currentPage.slug === 'main' ? homeOffers(taxiWebsites.WORKSPACE_PRICE_PENCE) : null,
+      homeEvidenceFirst: process.env.HOME_LAYOUT_PREVIEW === 'b',
       canEdit, capabilities, showAdminPanel,
       pageContact,
       screenshotKeys,

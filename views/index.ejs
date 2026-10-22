@@ -768,6 +768,49 @@
 
         .hero[data-section-id="hero"] .home-offers-note + .hero-proof-strip { margin-top: 1.6rem; }
 
+        /* PREVIEW 22/10/2026: the hero gets one button to the form, with the
+           free conversation line under it, and the first offer leads. */
+        .hero[data-section-id="hero"] .home-hero-cta { margin-top: 0.4rem; }
+        .hero[data-section-id="hero"] .home-hero-cta + .home-offers-note {
+            font-size: 0.92rem;
+            color: var(--text-muted, var(--text));
+            margin-top: 0.75rem;
+        }
+
+        @media (min-width: 901px) {
+            .home-offers {
+                grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr);
+                grid-auto-rows: auto;
+                gap: 1.25rem;
+            }
+            .home-offer--lead {
+                grid-row: span 2;
+                padding: 2.5rem 2.75rem;
+                justify-content: center;
+                background: var(--dark-grey);
+                border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+            }
+            .home-offer--lead .home-offer-name { font-size: 2.1rem; margin-bottom: 0.4rem; }
+            .home-offer--lead .home-offer-price { font-size: 1.5rem; margin-bottom: 1.1rem; }
+            .home-offer--lead .home-offer-line { font-size: 1.08rem; line-height: 1.7; max-width: 34rem; flex: 0 0 auto; margin-bottom: 1.75rem; }
+            .home-offer--side { padding: 1.35rem 1.5rem 1.45rem; }
+            .home-offer--side .home-offer-name { font-size: 1.2rem; }
+            .home-offer--side .home-offer-price { font-size: 1.05rem; margin-bottom: 0.5rem; }
+            .home-offer--side .home-offer-line { font-size: 0.9rem; margin-bottom: 1rem; }
+        }
+        .home-offer--side .home-offer-btn { padding-top: 0.7rem; padding-bottom: 0.7rem; }
+        .home-offer--side:hover .home-offer-btn,
+        .home-offer--side:focus-within .home-offer-btn { background: var(--accent); color: var(--black); }
+        @media (max-width: 900px) {
+            .home-offer--lead { background: var(--dark-grey); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+            .home-offer--lead .home-offer-name { font-size: 1.55rem; }
+            .home-offer--side { padding: 1.05rem 1.15rem 1.15rem; }
+            .home-offer--side .home-offer-name { font-size: 1.15rem; }
+            .home-offer--side .home-offer-price { font-size: 1rem; margin-bottom: 0.45rem; }
+            .home-offer--side .home-offer-line { font-size: 0.9rem; margin-bottom: 0.9rem; }
+        }
+
+
         @media (max-width: 900px) {
             .home-offers-section { padding: 2rem 1.25rem 2.5rem; }
             .home-offers { grid-template-columns: 1fr; gap: 1rem; }
@@ -2270,6 +2313,41 @@
             padding-top: 1.1rem;
         }
 
+        /* The two case studies on the home page use the full width on
+           desktop: the turnaround's three phases run across the page as one
+           line, and the Abacus story sits in two columns. Phones keep the
+           single column. */
+        @media (min-width: 901px) {
+            .page-main .case-inner { max-width: 1100px; }
+            .page-main .case-timeline {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                column-gap: 2.75rem;
+                padding-left: 0;
+                padding-top: 1.9rem;
+                margin-top: 1.5rem;
+            }
+            .page-main .case-timeline::before {
+                left: 4px; right: 0; top: 4px; bottom: auto;
+                width: auto; height: 1px;
+                background: linear-gradient(90deg, var(--accent), var(--border) 70%);
+                opacity: 0.6;
+            }
+            .page-main .case-phase { padding-bottom: 0; }
+            .page-main .case-phase::before { left: 0; top: -1.9rem; }
+            .page-main .casestudy2-inner {
+                max-width: 1100px;
+                display: grid;
+                grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+                column-gap: 3.5rem;
+                align-items: start;
+            }
+            .page-main .casestudy2-inner > * { grid-column: 1 / -1; }
+            .page-main .casestudy2-inner > .casestudy2-intro { grid-column: 1; grid-row: 3 / span 2; margin-top: 1rem; margin-bottom: 0; }
+            .page-main .casestudy2-inner > .casestudy2-body { grid-column: 2; grid-row: 3; margin-top: 1.1rem; }
+            .page-main .casestudy2-inner > .case-more { grid-column: 2; grid-row: 4; margin-top: 0; }
+        }
+
         .casestudy2-outcome {
             background: var(--charcoal);
             border-left: 3px solid var(--accent);
@@ -3604,6 +3682,17 @@
     return (_isUtArticleSlug(slug) ? `/useful-thinking/${slug}` : `/${slug}`) + fragment;
   };
 %>
+<%
+  // Where the home page offers render: straight after the hero, or (evidence
+  // first) after the last case study on the page.
+  let _homeOffersAfter = sectionOrder[0];
+  if (typeof homeOffers !== 'undefined' && homeOffers && typeof homeEvidenceFirst !== 'undefined' && homeEvidenceFirst) {
+    sectionOrder.forEach(function (_sid) {
+      const _st = instanceTemplates[_sid] || _sid;
+      if (_st === 'casestudy' || _st === 'casestudy2') _homeOffersAfter = _sid;
+    });
+  }
+%>
 <div id="cms-sections">
 <% for (let _i = 0; _i < sectionOrder.length; _i++) { %>
 <% const _iid = sectionOrder[_i]; %>
@@ -3680,7 +3769,10 @@
                 CTA field is left as it is in the CMS, so editing it there
                 changes nothing while the boxes show. %>
             <% if (typeof homeOffers !== 'undefined' && homeOffers && _i === 0) { %>
-            <p class="home-offers-note" data-home-offers-note>Not sure which is right for you? <a href="#conversation">The first conversation is free and there's no obligation.</a></p>
+            <div class="hero-cta-row home-hero-cta" data-home-hero-cta>
+                <a href="#conversation" class="btn btn-primary"><%- content[_k + '.cta'] || 'Tell us what is going on' %></a>
+            </div>
+            <p class="home-offers-note" data-home-offers-note>The first conversation is free and there's no obligation.</p>
             <% } else { %>
             <div class="hero-cta-row">
                 <% if (_heroCtaLinkValid) { %>
@@ -3725,15 +3817,6 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
     </div>
 </section>
-<% if (typeof homeOffers !== 'undefined' && homeOffers && _i === 0) { %>
-<%# HOME PAGE OFFERS: the three boxes, one per offer, as the first section
-    under the one-screen hero (lib/mainNav.js; Tom, 21/10 and 22/10/2026). %>
-<section class="home-offers-section" data-home-offers-section>
-    <div class="home-offers-inner">
-        <%- include('partials/home-offers', { homeOffers }) %>
-    </div>
-</section>
-<% } %>
 <% } %>
 
 
@@ -4813,6 +4896,16 @@
 
 <% if (_tpl === 'contact') { %>
 <!-- contact now rendered in footer -->
+<% } %>
+
+<% if (typeof homeOffers !== 'undefined' && homeOffers && _iid === _homeOffersAfter) { %>
+<%# HOME PAGE OFFERS: the three boxes, one per offer, as the first section
+    under the one-screen hero (lib/mainNav.js; Tom, 21/10 and 22/10/2026). %>
+<section class="home-offers-section" data-home-offers-section>
+    <div class="home-offers-inner">
+        <%- include('partials/home-offers', { homeOffers }) %>
+    </div>
+</section>
 <% } %>
 
 <% } %>
