@@ -9370,6 +9370,83 @@ Product Guide as synthetic entries; the home page quiz block of 11/10/2026).
 - Tests: `test/threeOffers.test.js` (8); the tests that pinned the old menu
   and quiz block now pin the parked state.
 
+## Homepage review of 22/10/2026: Tom's decisions, three changes LIVE
+
+A Claude review of the live home page ("Arrington homepage review: brief for
+Code", Drive `1r6qD8yYLhCe7_JiaLq6ivhvT0PRUpWpOkm76YbL6K6o`, 22/10/2026, from
+a text-only read) was answered point by point in "Arrington homepage review:
+Code's response, 22 October 2026" (Drive
+`11z9PuUIfydKqqtKkikO1vqmsFKus1HqrF6i7FxLfj2Y`), and Tom's decisions were
+written into the brief the same morning. **This supersedes the hero
+description in the Three offers section above:** the boxes are no longer
+inside the hero.
+
+- **Built and LIVE (commit `0e475e8`, approved words only):** (1) the hero is
+  one screen again (photo, headline, line, the free conversation line where
+  the button was, credential line) and the three boxes are the first section
+  under it (`.home-offers-section` in `views/index.ejs`; the partial renders
+  the boxes only). Inside the hero they had made it about four and a half
+  phone screens tall, and the photo, stretched to cover that, was a blurred
+  slice (the review's point 6, Tom's own observation). (2) The website box
+  label is "For owner run businesses" (`lib/mainNav.js`); the words "for any
+  business" were Tom's own 21/10 decision text, and the Website Build page's
+  search description already said owner run. (3) The Abacus and Falmouth
+  Taxis story takes the VAT Intervention's place as the second home proof
+  (`lib/homeAbacusProof.js`, marker `homepage.abacus_proof_2026-10-22`):
+  heading from the Evidence case study, the two paragraphs imported from
+  `lib/cornwallExperienceSection.js` (Tom-approved 11/10/2026), label and
+  "Read the full case study" text copied from the VAT instance, link to
+  `/evidence#biography__2`. The VAT instance is found by its live heading
+  and **hidden, not deleted** (dimmed to a logged-in editor, eye button to
+  bring it back); the full VAT case stays on Evidence. The new instance id
+  is allocated on production at deploy time and is in the deploy log line
+  `Home page Abacus proof:`. `test/homeAbacusProof.test.js` (8),
+  `test/threeOffers.test.js` updated; full suite 1876 pass, 2 fail (the two
+  documented pre-existing failures).
+- **Deploy:** the first deployment (`fa838b62`, 09:06 UTC) failed before
+  building, "Failed to snapshot repository", during Railway's platform
+  outage of that morning; the healthcheck kept the old page serving and the
+  seed never ran, so four inspections showed the previous page (the way to
+  tell: no Abacus block even though the old code would have rendered one had
+  the seed run). Re-running the same deploy workflow run gave `093870c1`,
+  which serves. Inspection run `20261022T100245Z-homepage-review-release-5`:
+  home and Evidence 200 at desktop and phone, zero page errors, no overflow,
+  no dashes, captures read: phone first screen is the photo, headline, line,
+  free conversation link and credential line; the boxes follow; the Abacus
+  block sits in the VAT slot; Evidence still carries both case studies.
+  Form at 3.8 desktop screens (3.5 before) and 7.3 phone screens (unchanged).
+- **Not changed, by Tom's decision:** the Insolvent Turnaround rework waits
+  on his facts about people and systems (nothing approved says "right people
+  in the right jobs"); the WSA AI workspace story goes on Evidence first,
+  once there is a verified outcome and Tim's consent is in a controlled
+  record (what that record needs is in the response doc). The "Get the full
+  PDF" block the review saw is the hidden email box for the four gated
+  Evidence PDFs, in every page's HTML and never visible on the home page;
+  left alone. Voice: the home page already follows the Brand OS pronoun
+  rule; no change.
+- **Brand OS changed the same day (22/10/2026, last reviewed date updated):**
+  the AI WORKERS section now says AI workers are sold as an offer in their
+  own right and **AI may be the hook where the audience is looking for it**
+  (the taxi office workspace, a case study about work moved off the owner),
+  leading with the owner problem and naming the AI as the means; the
+  outreach line is "AI does not open a cold outreach email unless the
+  business is already looking for it". Read the current Brand OS before
+  applying the old "AI is never the hook" wording anywhere in this file.
+- **Point 7, conversion tracking (the advisor's question): tracking works.**
+  One Google Ads conversion fires from the site, Contact on `/thank-you`,
+  once per stored enquiry; clicks were retired 02/10, PDFs fire none by
+  decision. A TEST TRACKING enquiry from the live home page (tag audit run
+  `20261022T085824Z-homepage-review-tracking`, Ads and Meta blocked) sent
+  `contact_form_submit` and `generate_lead` to GA4, pushed exactly one
+  Contact conversion on `/thank-you`, and a replay pushed nothing. Google
+  Ads shows zero conversions in 30 days because GA4 shows no genuine form
+  submission since 22/09 (only our four test enquiries on 06, 13, 19 and 22
+  October), and Ads counts only ad-click visitors; the Contact action's own
+  record of the 04/09 enquiry proves a real one is counted. The two
+  conversions the account shows on 02/10 are WSA's. The 22/10 release
+  touched no tracking file (all last changed 13/10). Full answer in the
+  response doc.
+
 ## Railway environment variable breach: every secret in Railway is to be treated as taken (22/10/2026)
 
 Railway's notice, pasted by Tom on 22/10/2026 (the outage of 21/10, incident
