@@ -9410,6 +9410,18 @@ from Google, Stripe, Anthropic, Zoho or Railway in the two days to 22/10/2026
 deploy check-in keeps running: the first successful deploy after Tom sets the
 new values is what brings them live.
 
+**Tom's decision, 22/10/2026: rotate later, and nothing on the site is to
+stop working.** So the order for every secret is new value first, old value
+last: create the new key or token at the provider, set it in Railway, deploy,
+read the boot log line for that connector, and only then revoke the old one.
+Never revoke first. Until Railway resumes deploys nothing can be rotated this
+way, so the two things worth doing before then cost nothing and break
+nothing: a monthly spend limit on the Anthropic account (console.anthropic.com,
+Settings, Limits), which caps what a stolen key can spend without touching
+the key the site uses; and a glance at Stripe's Payments and Events for a
+refund or payout Tom did not make. This worker does neither: both are in
+Tom's own consoles.
+
 ## Writing and reviewing website copy
 
 - Where a brief asks for copy but does not contain the underlying commercial
