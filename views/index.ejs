@@ -671,15 +671,28 @@
             pointer-events: none;
         }
 
-        /* ---- HOME PAGE OFFERS (21/10/2026): three boxes under the home
-             page headline, one per offer, each with one button. Equal
-             weight on purpose; the order is the only emphasis. Dark glass
-             over the hero photo so the headline still reads first. ---- */
+        /* ---- HOME PAGE OFFERS (21/10/2026): three boxes, one per offer,
+             each with one button. Equal weight on purpose; the order is the
+             only emphasis. Since 22/10/2026 they are the first section under
+             the hero rather than inside it (Tom, on the homepage review), so
+             the hero stays one screen and the photo shows. The section's
+             inner width matches the hero text so the boxes line up with the
+             headline above them. ---- */
+        .home-offers-section {
+            padding: 2.75rem 2rem 3rem;
+            background: var(--black);
+        }
+
+        .home-offers-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
         .home-offers {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 1.25rem;
-            margin: 0.5rem 0 0;
+            margin: 0;
         }
 
         .home-offer {
@@ -737,11 +750,14 @@
         /* The one line under the boxes: the first conversation is free,
            linking to the form (Tom, 21/10/2026). Quiet, so the boxes keep
            the weight. */
+        /* The free conversation line sits in the hero where the button was
+           (22/10/2026), above the credential line. */
         .home-offers-note {
-            font-size: 0.95rem;
+            font-size: 1.05rem;
             line-height: 1.6;
             color: var(--text);
-            margin: 1rem 0 0;
+            max-width: 560px;
+            margin: 0;
         }
         .home-offers-note a {
             color: var(--accent);
@@ -750,10 +766,10 @@
         }
         .home-offers-note a:hover, .home-offers-note a:focus-visible { color: var(--text-bright); }
 
-        .hero[data-section-id="hero"] .home-offers + .hero-proof-strip,
         .hero[data-section-id="hero"] .home-offers-note + .hero-proof-strip { margin-top: 1.6rem; }
 
         @media (max-width: 900px) {
+            .home-offers-section { padding: 2rem 1.25rem 2.5rem; }
             .home-offers { grid-template-columns: 1fr; gap: 1rem; }
             .home-offer { padding: 1.25rem 1.25rem 1.35rem; }
             .home-offer-btn { align-self: stretch; text-align: center; justify-content: center; }
@@ -3654,12 +3670,17 @@
               const _heroSecondaryHref = (content[_k + '.secondary_href'] || '').trim();
               const _heroSecondaryHrefValid = /^#[A-Za-z0-9_-]+(?:__[0-9]+)?$/.test(_heroSecondaryHref);
             %>
-            <%# On the home page the opening hero carries the three offer boxes
-                in place of its own button (lib/mainNav.js, 21/10/2026). The
-                hero's CTA field is left as it is in the CMS, so editing it
-                there changes nothing while the boxes show. %>
+            <%# On the home page the opening hero carries, in place of its own
+                button, the one line that the first conversation is free
+                (Tom, 21/10/2026). The three offer boxes follow as the first
+                section under the hero (Tom, 22/10/2026, on the homepage
+                review): with the boxes inside it the hero ran to about four
+                and a half phone screens and the photo, stretched to cover
+                that, was a blurred slice. One screen again now. The hero's
+                CTA field is left as it is in the CMS, so editing it there
+                changes nothing while the boxes show. %>
             <% if (typeof homeOffers !== 'undefined' && homeOffers && _i === 0) { %>
-            <%- include('partials/home-offers', { homeOffers }) %>
+            <p class="home-offers-note" data-home-offers-note>Not sure which is right for you? <a href="#conversation">The first conversation is free and there's no obligation.</a></p>
             <% } else { %>
             <div class="hero-cta-row">
                 <% if (_heroCtaLinkValid) { %>
@@ -3704,6 +3725,15 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
     </div>
 </section>
+<% if (typeof homeOffers !== 'undefined' && homeOffers && _i === 0) { %>
+<%# HOME PAGE OFFERS: the three boxes, one per offer, as the first section
+    under the one-screen hero (lib/mainNav.js; Tom, 21/10 and 22/10/2026). %>
+<section class="home-offers-section" data-home-offers-section>
+    <div class="home-offers-inner">
+        <%- include('partials/home-offers', { homeOffers }) %>
+    </div>
+</section>
+<% } %>
 <% } %>
 
 

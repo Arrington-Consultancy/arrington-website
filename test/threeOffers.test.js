@@ -77,26 +77,48 @@ test('the home page boxes: three offers, prices from the catalogue, every line a
   const text = boxes.map((b) => [b.audience, b.name, b.price, b.line, b.button].join(' ')).join(' ');
   assert.ok(!/[–—]/.test(text), 'a dash in the boxes');
   assert.ok(!/\bAI\b/.test(text), 'AI is the hook in a home page box (Brand OS)');
+  // Tom, 22/10/2026: the website box is for owner run businesses, like its page.
+  assert.strictEqual(boxes[1].audience, 'For owner run businesses');
+  assert.ok(!/for any business/i.test(text), '"for any business" is back on a box');
   assert.ok(!/introductory|discount|half price|% off/i.test(text), 'a price is framed as a reduction');
 });
 
-test('the boxes replace the hero button on the home page only', () => {
+test('the free conversation line replaces the hero button, and the boxes are the first section under the hero (Tom, 22/10/2026)', () => {
   const index = emitted('views/index.ejs');
   assert.ok(/typeof homeOffers !== 'undefined' && homeOffers && _i === 0/.test(index), 'the boxes are not limited to the opening hero');
-  const at = index.indexOf("include('partials/home-offers'");
-  const cta = index.indexOf('<div class="hero-cta-row">');
-  assert.ok(at > 0 && cta > at, 'the boxes do not take the place of the hero button');
+  const heroStart = index.indexOf('<!-- HERO -->');
+  const heroEnd = index.indexOf('</section>', heroStart);
+  const hero = index.slice(heroStart, heroEnd);
+  const note = hero.indexOf('<p class="home-offers-note"');
+  const cta = hero.indexOf('<div class="hero-cta-row">');
+  assert.ok(note > 0 && cta > note, 'the free conversation line does not take the place of the hero button');
+  // The boxes inside the hero made it about four and a half phone screens
+  // tall and the photo a blurred slice (homepage review, point 6). They sit
+  // in their own section directly after the hero now, and nowhere else.
+  assert.ok(!hero.includes("include('partials/home-offers'"), 'the boxes are inside the hero again');
+  const section = index.indexOf('<section class="home-offers-section"', heroEnd);
+  const include = index.indexOf("include('partials/home-offers'", heroEnd);
+  const nextSection = index.indexOf('<section', heroEnd);
+  assert.ok(section > heroEnd && include > section, 'the boxes are not in a section after the hero');
+  assert.strictEqual(nextSection, section, 'something else renders between the hero and the boxes');
+  assert.strictEqual((index.match(/include\('partials\/home-offers'/g) || []).length, 1, 'the boxes render more than once');
+  assert.ok(/\.home-offers-section\s*\{/.test(read('views/index.ejs')), 'the boxes section has no style');
   assert.ok(/homeOffers: currentPage\.slug === 'main' \?/.test(read('server.js')), 'the boxes reach a page other than the home page');
   const partial = emitted('views/partials/home-offers.ejs');
   const box = partial.slice(partial.indexOf('<div class="home-offer"'), partial.indexOf('<% }); %>'));
   assert.strictEqual((box.match(/<a /g) || []).length, 1, 'a box carries more than one link');
 });
 
-test('one line under the boxes says the first conversation is free and links to the form (Tom, 21/10/2026)', () => {
-  const partial = emitted('views/partials/home-offers.ejs');
-  const note = partial.slice(partial.indexOf('<p class="home-offers-note"'), partial.indexOf('</p>', partial.indexOf('<p class="home-offers-note"')) + 4);
-  assert.ok(note, 'the line is missing');
-  assert.ok(note.indexOf('<p class="home-offers-note"') === 0 && partial.indexOf('<p class="home-offers-note"') > partial.indexOf('<% }); %>'), 'the line is not after the boxes');
+test('the line that the first conversation is free sits in the hero, above the credential line, and links to the form (Tom, 21/10 and 22/10/2026)', () => {
+  const index = emitted('views/index.ejs');
+  const heroStart = index.indexOf('<!-- HERO -->');
+  const heroEnd = index.indexOf('</section>', heroStart);
+  const start = index.indexOf('<p class="home-offers-note"');
+  assert.ok(start > heroStart && start < heroEnd, 'the line is not in the hero');
+  assert.ok(start < index.indexOf('class="hero-proof-strip"', heroStart), 'the line is not above the credential line');
+  assert.strictEqual((index.match(/<p class="home-offers-note"/g) || []).length, 1, 'the line renders more than once');
+  assert.ok(!emitted('views/partials/home-offers.ejs').includes('home-offers-note'), 'the line is still in the boxes partial');
+  const note = index.slice(start, index.indexOf('</p>', start) + 4);
   assert.ok(note.includes('Not sure which is right for you? <a href="#conversation">The first conversation is free and there\'s no obligation.</a>'), 'the wording or the link changed');
   assert.strictEqual((note.match(/<a /g) || []).length, 1, 'the line carries more than one link');
   // The linked sentence is the one the form itself says, so the boxes never

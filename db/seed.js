@@ -8248,6 +8248,17 @@ async function seed() {
     console.error('Three offers migration failed (boot continues):', err.message);
   }
 
+  // ABACUS PROOF ON THE HOME PAGE (22/10/2026, Tom's decision on the homepage
+  // review): the Abacus and Falmouth Taxis story, in approved words only,
+  // takes the VAT Intervention's place as the second proof; the VAT case is
+  // hidden, not deleted, and stays in full on Evidence. Run once, never fatal.
+  try {
+    const note = await require('../lib/homeAbacusProof').applyHomeAbacusProof(db);
+    if (note) console.log(`Home page Abacus proof: ${note}.`);
+  } catch (err) {
+    console.error('Home page Abacus proof migration failed (boot continues):', err.message);
+  }
+
 
   // Arrington AI Workspace: ingest the encrypted snapshot into
   // workspace_records. A no-op when WORKSPACE_SNAPSHOT_KEY is unset, and

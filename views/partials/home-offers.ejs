@@ -1,12 +1,13 @@
 <%# HOME PAGE OFFERS. Three boxes, one per offer, each with one button to its
     own page (Tom's decision of 21/10/2026, "DECISION AND PLAN - Simplify to
-    three offers"). Rendered inside the home page hero, under the headline, in
-    place of the hero's own button, so the page opens with one headline and
-    three boxes. The copy, prices and links come from lib/mainNav.js
-    (homeOffers), where every line is already approved on the page it leads
-    to. Styles are in views/index.ejs (.home-offers), the only view that
-    renders this. Expects: homeOffers. Followed by one line that points at
-    the enquiry form. %>
+    three offers"). Rendered by views/index.ejs as the first section under
+    the home page hero (since 22/10/2026; until then inside the hero, which
+    made it four and a half phone screens tall and hid the photo), so the
+    page opens with one headline and three boxes. The copy, prices and links
+    come from lib/mainNav.js (homeOffers), where every line is already
+    approved on the page it leads to. Styles are in views/index.ejs
+    (.home-offers), the only view that renders this. Expects: homeOffers.
+    The line that the first conversation is free sits in the hero itself. %>
 <div class="home-offers" data-home-offers>
     <% homeOffers.forEach(function (o) { %>
     <div class="home-offer" data-offer="<%= o.id %>">
@@ -18,9 +19,3 @@
     </div>
     <% }); %>
 </div>
-<%# One line under the boxes (Tom's yes of 21/10/2026): the first
-    conversation is free, linking to the enquiry form in the footer. The
-    second sentence is the same sentence the form itself carries
-    (site-footer.ejs, .lead-form-next), so the boxes never say something the
-    form does not. %>
-<p class="home-offers-note" data-home-offers-note>Not sure which is right for you? <a href="#conversation">The first conversation is free and there's no obligation.</a></p>
