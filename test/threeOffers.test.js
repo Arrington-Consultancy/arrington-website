@@ -83,15 +83,21 @@ test('the home page boxes: three offers, prices from the catalogue, every line a
   assert.ok(!/introductory|discount|half price|% off/i.test(text), 'a price is framed as a reduction');
 });
 
-test('the free conversation line replaces the hero button, and the boxes are the first section under the hero (Tom, 22/10/2026)', () => {
+test('the hero has one gold button to the form in its own CMS text, and the boxes are the first section under the hero (Tom, 22/10/2026, layout A)', () => {
   const index = emitted('views/index.ejs');
   assert.ok(/typeof homeOffers !== 'undefined' && homeOffers && _i === 0/.test(index), 'the boxes are not limited to the opening hero');
   const heroStart = index.indexOf('<!-- HERO -->');
   const heroEnd = index.indexOf('</section>', heroStart);
   const hero = index.slice(heroStart, heroEnd);
+  const cta = hero.indexOf('<div class="hero-cta-row home-hero-cta"');
   const note = hero.indexOf('<p class="home-offers-note"');
-  const cta = hero.indexOf('<div class="hero-cta-row">');
-  assert.ok(note > 0 && cta > note, 'the free conversation line does not take the place of the hero button');
+  assert.ok(cta > 0 && note > cta, 'the home hero button is missing or the free conversation line is not under it');
+  const button = hero.slice(cta, hero.indexOf('</div>', cta));
+  assert.strictEqual((button.match(/<a /g) || []).length, 1, 'the home hero carries more than one button');
+  assert.ok(button.includes('href="#conversation"') && button.includes('btn-primary'), 'the hero button is not a gold button to the form');
+  // The button text is the hero's own CMS field, so no new words are typed
+  // here; the fallback is the live value.
+  assert.ok(button.includes("content[_k + '.cta'] || 'Tell us what is going on'"), 'the hero button text is not the hero CMS button text');
   // The boxes inside the hero made it about four and a half phone screens
   // tall and the photo a blurred slice (homepage review, point 6). They sit
   // in their own section directly after the hero now, and nowhere else.
@@ -104,12 +110,20 @@ test('the free conversation line replaces the hero button, and the boxes are the
   assert.strictEqual((index.match(/include\('partials\/home-offers'/g) || []).length, 1, 'the boxes render more than once');
   assert.ok(/\.home-offers-section\s*\{/.test(read('views/index.ejs')), 'the boxes section has no style');
   assert.ok(/homeOffers: currentPage\.slug === 'main' \?/.test(read('server.js')), 'the boxes reach a page other than the home page');
+  assert.ok(!/HOME_LAYOUT_PREVIEW|homeEvidenceFirst/.test(read('server.js') + read('views/index.ejs')), 'the layout preview switch is still in the code');
   const partial = emitted('views/partials/home-offers.ejs');
-  const box = partial.slice(partial.indexOf('<div class="home-offer"'), partial.indexOf('<% }); %>'));
+  const box = partial.slice(partial.indexOf('<div class="home-offer '), partial.indexOf('<% }); %>'));
   assert.strictEqual((box.match(/<a /g) || []).length, 1, 'a box carries more than one link');
+  // One gold button: the first box leads, the other two carry outline
+  // buttons, so the three no longer compete equally for attention.
+  assert.ok(box.includes("n === 0 ? 'home-offer--lead' : 'home-offer--side'"), 'the first box does not lead');
+  assert.ok(box.includes("n === 0 ? 'btn-primary' : 'btn-outline'"), 'the side boxes do not carry outline buttons');
+  const css = read('views/index.ejs');
+  assert.ok(/\.home-offer--lead\s*\{/.test(css) && /\.home-offer--side\s*\{/.test(css), 'the lead and side boxes have no style');
+  assert.ok(/\.page-main \.case-timeline\s*\{\s*display: grid;/.test(css), 'the turnaround phases do not run across the page on desktop');
 });
 
-test('the line that the first conversation is free sits in the hero, above the credential line, and links to the form (Tom, 21/10 and 22/10/2026)', () => {
+test('the line that the first conversation is free sits in the hero under the button, above the credential line (Tom, 21/10 and 22/10/2026)', () => {
   const index = emitted('views/index.ejs');
   const heroStart = index.indexOf('<!-- HERO -->');
   const heroEnd = index.indexOf('</section>', heroStart);
@@ -119,12 +133,12 @@ test('the line that the first conversation is free sits in the hero, above the c
   assert.strictEqual((index.match(/<p class="home-offers-note"/g) || []).length, 1, 'the line renders more than once');
   assert.ok(!emitted('views/partials/home-offers.ejs').includes('home-offers-note'), 'the line is still in the boxes partial');
   const note = index.slice(start, index.indexOf('</p>', start) + 4);
-  assert.ok(note.includes('Not sure which is right for you? <a href="#conversation">The first conversation is free and there\'s no obligation.</a>'), 'the wording or the link changed');
-  assert.strictEqual((note.match(/<a /g) || []).length, 1, 'the line carries more than one link');
-  // The linked sentence is the one the form itself says, so the boxes never
-  // promise something the form does not.
+  assert.ok(note.includes(">The first conversation is free and there's no obligation.</p>"), 'the wording changed');
+  assert.ok(!/<a /.test(note), 'the line carries a link; the button above it is the way to the form');
+  // The sentence is the one the form itself says, so the hero never
+  // promises something the form does not.
   const footer = emitted('views/partials/site-footer.ejs');
-  assert.ok(footer.includes("The first conversation is free and there's no obligation."), 'the footer no longer says the sentence the line links to');
+  assert.ok(footer.includes("The first conversation is free and there's no obligation."), 'the footer no longer says the sentence the hero repeats');
   assert.ok(!/[\u2013\u2014]/.test(note), 'a dash in the line');
   assert.ok(/\.home-offers-note\s*\{/.test(read('views/index.ejs')), 'the line has no style');
 });

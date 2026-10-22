@@ -768,8 +768,9 @@
 
         .hero[data-section-id="hero"] .home-offers-note + .hero-proof-strip { margin-top: 1.6rem; }
 
-        /* PREVIEW 22/10/2026: the hero gets one button to the form, with the
-           free conversation line under it, and the first offer leads. */
+        /* Layout A (Tom, 22/10/2026): the hero has one button to the form
+           with the free conversation line under it, and the Commercial
+           Review is the large box with the other two beside it. */
         .hero[data-section-id="hero"] .home-hero-cta { margin-top: 0.4rem; }
         .hero[data-section-id="hero"] .home-hero-cta + .home-offers-note {
             font-size: 0.92rem;
@@ -785,7 +786,7 @@
             }
             .home-offer--lead {
                 grid-row: span 2;
-                padding: 2.5rem 2.75rem;
+                padding: 2.25rem 2.5rem;
                 justify-content: center;
                 background: var(--dark-grey);
                 border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
@@ -3682,17 +3683,6 @@
     return (_isUtArticleSlug(slug) ? `/useful-thinking/${slug}` : `/${slug}`) + fragment;
   };
 %>
-<%
-  // Where the home page offers render: straight after the hero, or (evidence
-  // first) after the last case study on the page.
-  let _homeOffersAfter = sectionOrder[0];
-  if (typeof homeOffers !== 'undefined' && homeOffers && typeof homeEvidenceFirst !== 'undefined' && homeEvidenceFirst) {
-    sectionOrder.forEach(function (_sid) {
-      const _st = instanceTemplates[_sid] || _sid;
-      if (_st === 'casestudy' || _st === 'casestudy2') _homeOffersAfter = _sid;
-    });
-  }
-%>
 <div id="cms-sections">
 <% for (let _i = 0; _i < sectionOrder.length; _i++) { %>
 <% const _iid = sectionOrder[_i]; %>
@@ -3759,15 +3749,17 @@
               const _heroSecondaryHref = (content[_k + '.secondary_href'] || '').trim();
               const _heroSecondaryHrefValid = /^#[A-Za-z0-9_-]+(?:__[0-9]+)?$/.test(_heroSecondaryHref);
             %>
-            <%# On the home page the opening hero carries, in place of its own
-                button, the one line that the first conversation is free
-                (Tom, 21/10/2026). The three offer boxes follow as the first
-                section under the hero (Tom, 22/10/2026, on the homepage
-                review): with the boxes inside it the hero ran to about four
-                and a half phone screens and the photo, stretched to cover
-                that, was a blurred slice. One screen again now. The hero's
-                CTA field is left as it is in the CMS, so editing it there
-                changes nothing while the boxes show. %>
+            <%# On the home page the opening hero carries one gold button to
+                the form, in the hero's own CMS button text, with the line
+                that the first conversation is free under it (Tom,
+                22/10/2026, layout A; until then the line stood where the
+                button was, 21/10/2026). The three offer boxes follow as the
+                first section under the hero (Tom, 22/10/2026, on the
+                homepage review): with the boxes inside it the hero ran to
+                about four and a half phone screens and the photo, stretched
+                to cover that, was a blurred slice. One screen again now.
+                The hero's WhatsApp and secondary fields are not rendered on
+                the home page while the boxes show. %>
             <% if (typeof homeOffers !== 'undefined' && homeOffers && _i === 0) { %>
             <div class="hero-cta-row home-hero-cta" data-home-hero-cta>
                 <a href="#conversation" class="btn btn-primary"><%- content[_k + '.cta'] || 'Tell us what is going on' %></a>
@@ -3817,6 +3809,17 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
     </div>
 </section>
+<% if (typeof homeOffers !== 'undefined' && homeOffers && _i === 0) { %>
+<%# HOME PAGE OFFERS: the three boxes, one per offer, as the first section
+    under the one-screen hero (lib/mainNav.js; Tom, 21/10 and 22/10/2026).
+    The Commercial Review leads and the other two sit beside it with outline
+    buttons (Tom, 22/10/2026: layout A). %>
+<section class="home-offers-section" data-home-offers-section>
+    <div class="home-offers-inner">
+        <%- include('partials/home-offers', { homeOffers }) %>
+    </div>
+</section>
+<% } %>
 <% } %>
 
 
@@ -4898,15 +4901,6 @@
 <!-- contact now rendered in footer -->
 <% } %>
 
-<% if (typeof homeOffers !== 'undefined' && homeOffers && _iid === _homeOffersAfter) { %>
-<%# HOME PAGE OFFERS: the three boxes, one per offer, as the first section
-    under the one-screen hero (lib/mainNav.js; Tom, 21/10 and 22/10/2026). %>
-<section class="home-offers-section" data-home-offers-section>
-    <div class="home-offers-inner">
-        <%- include('partials/home-offers', { homeOffers }) %>
-    </div>
-</section>
-<% } %>
 
 <% } %>
 </div>
