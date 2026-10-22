@@ -9415,6 +9415,30 @@ inside the hero.
   free conversation link and credential line; the boxes follow; the Abacus
   block sits in the VAT slot; Evidence still carries both case studies.
   Form at 3.8 desktop screens (3.5 before) and 7.3 phone screens (unchanged).
+- **Layout A, LIVE 22/10/2026 afternoon (Tom: "is this visual striking
+  enough... its text heavy to the left").** Two layouts were built locally
+  from a ChatGPT critique Tom forwarded (A: offers first; B: the case
+  studies first); Tom chose A ("yes improve if needs improving"). The hero
+  has one gold button to `#conversation` in its own CMS button text
+  (`hero.cta`, live "Tell us what is going on", the same as the menu) with
+  the form's sentence "The first conversation is free and there's no
+  obligation." under it, replacing the hero link line. The Commercial Review
+  is the large box (`.home-offer--lead`); Website and Taxi office sit beside
+  it with outline buttons (`.home-offer--side`), so one gold button per
+  screen. On desktop the turnaround's three steps run across the page and
+  the Abacus story sits in two columns (`.page-main` rules after the case
+  study compaction CSS; phones keep one column). No new words. ChatGPT's
+  "Talk to Tom" was not used (not approved) and no turnaround chart was
+  drawn (no figures exist). Commit `59e5f4a`; the first deployment
+  (`699af652`) never served, so the deploy run was re-run, giving
+  `16c90917`. Inspection run `20261022T140126Z-home-layout-a-live-2`: home
+  and Evidence 200 at desktop and phone, first primary button "Tell us what
+  is going on", no overflow, no dashes, no page errors, captures read.
+  **Two screenshot traps found doing this:** a full-page capture draws the
+  fixed menu wherever the page was scrolled to (pin `#nav` and `#pageMenu`
+  with an inline style through script; `addStyleTag` is refused by the
+  CSP), and a first-screen capture must be taken before the scroll loop
+  (smooth scrolling never returned to the top on the phone).
 - **Not changed, by Tom's decision:** the Insolvent Turnaround rework waits
   on his facts about people and systems (nothing approved says "right people
   in the right jobs"); the WSA AI workspace story goes on Evidence first,
