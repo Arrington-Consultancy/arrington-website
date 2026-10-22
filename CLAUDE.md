@@ -9234,7 +9234,7 @@ export in `handover/` is stale and holds content only.
   they would be the faster restore and cost pence. The two are not
   alternatives.
 
-## Three offers: menu, home page and offer pages (APPROVED 21/10/2026, ON MAIN, WAITING FOR RAILWAY TO RESUME DEPLOYS)
+## Three offers: menu, home page and offer pages (LIVE 22/10/2026)
 
 Tom's decision of 21/10/2026, "DECISION AND PLAN - Simplify to three offers"
 (Drive `1_63u0CLmytc0Iz8GOjkeJGDB9WP4-g_qBQbVUYAVW6g`, week 1): Arrington
@@ -9329,7 +9329,33 @@ Product Guide as synthetic entries; the home page quiz block of 11/10/2026).
   re-runs the latest deploy until it returns a Deployment URL, then runs
   the production inspection and writes back the release. The old token
   `github-actions` (25/07/2026) is still listed in Railway and can be
-  deleted once the new one has deployed.
+  deleted once the new one has deployed. **Resolved 22/10/2026 at 05:43
+  UTC** (see the LIVE bullet below): the hourly check-in re-ran the deploy
+  eleven times overnight and the eleventh went through.
+- **LIVE, 22/10/2026, 05:43 UTC.** Railway resumed deploys about 26 hours
+  into the outage: the re-run of deploy run `39721186368` (attempt 3, head
+  `f285bb4`, which carries `23a1c94`, `2ba207a` and the two CLAUDE.md
+  commits) returned Deployment `645631c0`. The first inspection at 05:49
+  (`20261022T054940Z-three-offers-live`) still showed the old page, because
+  the healthcheck keeps the old deployment serving until the new build
+  answers; the second, `20261022T055659Z-three-offers-live-2`, shows the
+  release: menu Commercial Review / Website / Taxi office workspace / About
+  Us / Contact; the three boxes in the hero with "See the Commercial Review"
+  as the first primary button and "Not sure which is right for you? The
+  first conversation is free and there's no obligation." under them; no
+  "What we do" block and no quiz block in the home page's headings; the
+  Commercial Review page without "The credit" card or the Where to Start
+  back link; Website Build, the office workspace page, About Us and Owner
+  Check all 200 at desktop and phone; zero page errors on all twelve
+  captures; no overflow. The desktop and phone first-screen captures were
+  read: on an iPhone 13 the headline, the lede and the top of the first box
+  are on the first screen. The migration's seed line was not read (the
+  Railway connector is not authorised in this session); the live headings
+  prove the "What we do" section is hidden and the nav rows are off.
+  **Still Tom's:** delete the old `github-actions` project token in Railway
+  (the service, Settings, Tokens), now that `github-actions-2` has
+  deployed; and the secret rotation recorded in the breach section below,
+  new value before old, now that deploys work again.
 - **Records out of step:** 00 Brand OS, 01 and 02 still describe the
   Commercial Review as the main offer and owner run businesses as the
   audience, and 02 does not record the workspace price. Tom's or the Brain
