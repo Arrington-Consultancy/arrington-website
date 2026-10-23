@@ -9616,9 +9616,16 @@ later, and the rest can wait. **Anthropic: rotated.** New key "website Oct
 Created and Cost, not Last used, and cost appears with a delay, so a live AI
 answer after the old key is deleted is the proof. A Railway function
 service `test-anthropic-key` exists in production (Tom's old test); it may
-hold its own copy of the deleted key and can be deleted. **Next: Stripe**
-(Roll key with the old one expiring in 24 hours, then a Pay button test that
-opens Stripe's page without paying).
+hold its own copy of the deleted key and can be deleted. **Stripe: left
+alone on Tom's decision** ("no payment has ever been taken"). Checked
+rather than agreed by reflex: money taken with the key can only land in
+Tom's own account, there are no customers or payments to read or refund,
+and Stripe refuses raw card numbers sent with a secret key unless the
+account has asked for that, so the realistic risk is someone using the
+account for fraud and getting it closed. Low, and the fix (Roll key, old
+one expiring in 24 hours, then a Pay button test that opens Stripe's page
+without paying) is ready when he wants it. Gmail and Zoho, which can send
+in Tom's name, matter more and are the next ones.
 
 ## Writing and reviewing website copy
 
