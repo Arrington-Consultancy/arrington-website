@@ -103,7 +103,9 @@ test('the code-rendered half carries the approved wording and none of the old li
     ['views/where-to-start.ejs', 'can connect to the systems you already use or use AI where it is useful.', 'within days, not years'],
     ['views/where-to-start-commercial-review.ejs', 'The Commercial Review stands on its own. You are paying for our judgement and a written direction you can act on.', 'A genuine Commercial Review in its own right'],
     ['views/where-to-start-commercial-review.ejs', 'produce a written report: what we found, what we would do about it and what to do first.', 'assessment, recommendations, direction, and next steps'],
-    ['views/where-to-start-commercial-review.ejs', 'We listen for as long as it takes, whether that is thirty minutes or two hours.', 'as long as it genuinely takes'],
+    // The 'We listen for as long as it takes' line (07/10/2026) was replaced on
+    // 23/10/2026: Tom, "we spend a day in the business not just on a call".
+    ['views/where-to-start-commercial-review.ejs', 'We spend a day in the business with you, not just on a call,', 'thirty minutes or two hours'],
     ['views/where-to-start-full-commercial-review.ejs', 'We spend a lot more time following the evidence, including time inside the business where it helps, and work the recommendations through with you in far more depth.', 'Substantially more time'],
     ['views/where-to-start-full-review-website-build.ejs', 'They have grown, added services or changed direction, and the website still describes the business they used to be.', 'fresh commercial platform'],
     ['views/where-to-start-website-build.ejs', 'Built from scratch, not from a template, and completely customisable.', 'Not dropped into a template'],
