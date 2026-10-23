@@ -9491,9 +9491,12 @@ comes to you in person and you cover the travel costs, agreed before he sets
 off". Pinned by `test/reviewTravelTerms.test.js`, which also fails if any
 offer page says travel is included. Commit `781ebf2`; inspection run
 `20261023T083627Z-travel-terms`, both pages 200 at desktop and phone, both
-lines in the live text, no errors. Not changed: the city pages' step 2 ("We
-listen, go through the business and the evidence"), and the Google Business
-Profile service description, which still carries the old catalogue sentence.
+lines in the live text, no errors. The Google Business Profile Commercial
+Review service description was changed to the new catalogue sentence on
+Tom's "Change" (23/10/2026, Windsor `update_service_items`, which replaces
+the whole list, so all five services were resent with only that line
+different) and read back from Google. Not changed: the city pages' step 2
+("We listen, go through the business and the evidence").
 
 ## Railway environment variable breach: every secret in Railway is to be treated as taken (22/10/2026)
 
