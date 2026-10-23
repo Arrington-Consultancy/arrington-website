@@ -9605,6 +9605,21 @@ working again):**
   or `/thank-you` token in flight (30 minutes at most), and existing
   erasure records stop matching by email (accepted; see the CRM section).
 
+**Done so far (23/10/2026):** Tom's priority, after "this feels like a lot
+of work", is the two keys that can cost money first, then Gmail and Zoho
+later, and the rest can wait. **Anthropic: rotated.** New key "website Oct
+2026" (Default workspace, the account's only workspace, no expiry) set as
+`ANTHROPIC_API_KEY` on `arrington-prototype` and deployed by Tom about
+13:09 UK during another Railway outage banner; Ask Ruth answered live at
+13:18; the old key "Arrington Consult..." (legacy, US$8.61 spent since
+27/07, so no sign of abuse) deleted by Tom. The Anthropic keys page shows
+Created and Cost, not Last used, and cost appears with a delay, so a live AI
+answer after the old key is deleted is the proof. A Railway function
+service `test-anthropic-key` exists in production (Tom's old test); it may
+hold its own copy of the deleted key and can be deleted. **Next: Stripe**
+(Roll key with the old one expiring in 24 hours, then a Pay button test that
+opens Stripe's page without paying).
+
 ## Writing and reviewing website copy
 
 - Where a brief asks for copy but does not contain the underlying commercial
