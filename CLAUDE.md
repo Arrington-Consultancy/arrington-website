@@ -9576,6 +9576,35 @@ the key the site uses; and a glance at Stripe's Payments and Events for a
 refund or payout Tom did not make. This worker does neither: both are in
 Tom's own consoles.
 
+**How to rotate each one without a break (worked out 23/10/2026, deploys
+working again):**
+- **Stripe:** "Roll key" on the live secret key and "Roll secret" on the
+  webhook endpoint both let the old value keep working for a set time; set
+  the new values in Railway inside that window.
+- **Google OAuth client (Gmail connector and the Drive backup):** add a
+  second client secret to the OAuth client in the Cloud console, set it as
+  `GMAIL_CLIENT_SECRET`, deploy, then disable the old secret. A refresh
+  token is useless without the client secret, so this alone neutralises the
+  stolen `GMAIL_REFRESH_TOKEN` and `GOOGLE_DRIVE_REFRESH_TOKEN` with no
+  reconnect. Do not remove the app's access in Tom's Google account: that
+  cuts both connectors at once.
+- **Cloudflare Turnstile: order is critical.** A wrong secret makes
+  Cloudflare answer `invalid-input-secret`, which `turnstileBlocks` treats
+  as a rejection (it is not one of the soft reasons), so every enquiry form
+  and check would refuse submissions. Rotate without "invalidate
+  immediately" (Cloudflare keeps the old secret valid for two hours) and
+  have the new one live in Railway inside that time. A tag audit with
+  `submit=1` afterwards proves the form still takes an enquiry.
+- **App passwords** (`GMAIL_APP_PASSWORD`, `TAXI_OFFICE_IMAP_PASSWORD`):
+  create the new one, set, deploy, then delete the old one.
+- **Shared values:** `scott-demo` and `db-backup-to-drive` take
+  `SESSION_SECRET`, `ANTHROPIC_API_KEY` and the Gmail client values by
+  reference from `arrington-prototype`, so change them there once.
+  `arrington-ai-workspace` (staging) holds its own copies.
+- **Rotating `SESSION_SECRET`** signs everyone out and voids any PDF link
+  or `/thank-you` token in flight (30 minutes at most), and existing
+  erasure records stop matching by email (accepted; see the CRM section).
+
 ## Writing and reviewing website copy
 
 - Where a brief asks for copy but does not contain the underlying commercial
