@@ -9471,6 +9471,24 @@ inside the hero.
   touched no tracking file (all last changed 13/10). Full answer in the
   response doc.
 
+## Commercial Review: a day in the business (LIVE 23/10/2026)
+
+Tom, 23/10/2026: "Commercial review we spend a day in the business not just
+on a call listening". 01 Current Operating Position records Reece's review as
+carried out on site (21/09/2026), so "the call" on the review page was a
+factual error. The catalogue description (`lib/whereToStartOffers.js`, which
+the Product Guide and Where to Start read), the home page box line
+(`lib/mainNav.js`), and the review page's text, meta and schema descriptions
+now say "We spend a day in the business with you". Added on the review page:
+"Outside Devon and Cornwall, we agree travel costs with you before the day is
+booked.", following Tom's taxi page decision of 07/10/2026 (travel agreed
+before he sets off); remove it if Tom covers travel. Not changed: the taxi
+page's "by video call" line, the city pages' step 2 ("We listen, go through
+the business and the evidence"), and the Google Business Profile service
+description, which still carries the old catalogue sentence. Commit
+`3422342`; inspection run `20261023T074336Z-review-day-in-business-2`, both
+pages 200 at desktop and phone, new text in the live page, no errors.
+
 ## Railway environment variable breach: every secret in Railway is to be treated as taken (22/10/2026)
 
 Railway's notice, pasted by Tom on 22/10/2026 (the outage of 21/10, incident
