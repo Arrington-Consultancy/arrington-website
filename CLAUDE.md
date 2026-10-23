@@ -9479,15 +9479,21 @@ carried out on site (21/09/2026), so "the call" on the review page was a
 factual error. The catalogue description (`lib/whereToStartOffers.js`, which
 the Product Guide and Where to Start read), the home page box line
 (`lib/mainNav.js`), and the review page's text, meta and schema descriptions
-now say "We spend a day in the business with you". Added on the review page:
-"Outside Devon and Cornwall, we agree travel costs with you before the day is
-booked.", following Tom's taxi page decision of 07/10/2026 (travel agreed
-before he sets off); remove it if Tom covers travel. Not changed: the taxi
-page's "by video call" line, the city pages' step 2 ("We listen, go through
-the business and the evidence"), and the Google Business Profile service
-description, which still carries the old catalogue sentence. Commit
-`3422342`; inspection run `20261023T074336Z-review-day-in-business-2`, both
-pages 200 at desktop and phone, new text in the live page, no errors.
+now say "We spend a day in the business with you". Commit `3422342`;
+inspection run `20261023T074336Z-review-day-in-business-2`.
+
+**Travel (Tom, 23/10/2026: "Not covering travel, UK wide taxi we can offer
+the virtual or travel expenses covered").** We never pay travel. Outside
+Devon and Cornwall the review page says "we can do it by video call, or come
+to you and you cover the travel costs, agreed before the day is booked", and
+the taxi page (operators anywhere in the UK) says "by video call, or Tom
+comes to you in person and you cover the travel costs, agreed before he sets
+off". Pinned by `test/reviewTravelTerms.test.js`, which also fails if any
+offer page says travel is included. Commit `781ebf2`; inspection run
+`20261023T083627Z-travel-terms`, both pages 200 at desktop and phone, both
+lines in the live text, no errors. Not changed: the city pages' step 2 ("We
+listen, go through the business and the evidence"), and the Google Business
+Profile service description, which still carries the old catalogue sentence.
 
 ## Railway environment variable breach: every secret in Railway is to be treated as taken (22/10/2026)
 
