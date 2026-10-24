@@ -9627,6 +9627,24 @@ one expiring in 24 hours, then a Pay button test that opens Stripe's page
 without paying) is ready when he wants it. Gmail and Zoho, which can send
 in Tom's name, matter more and are the next ones.
 
+**Nat's note of 23/10/2026 (pasted by Tom), and what it adds.** The Railway
+workspace ("thomaswilliama-coder's Projects") also holds a service called
+`vibrant-learning`, not covered above, and the variables there include a
+second Anthropic key, a Microsoft app secret, Meta and Pipedrive keys and
+`NAT_PASSWORD` logins on staging services. Railway now refuses to redeploy
+any build made before the incident, so a variable change needs a FRESH
+build (a push to main, whose Action runs `railway up`), not Redeploy. For
+the Anthropic rotation that was checked on 24/10/2026: the deploy runs for
+`2df5a2b` and `eaac748` (12:21 and 12:22 UTC on 23/10, after Tom's change
+at 12:09 UTC) were fresh builds and succeeded; the Action uses `--detach`,
+so it proves the upload, not the switch-over. The console held only the one
+old key, so any service still holding it (staging `arrington-ai-workspace`,
+`test-anthropic-key`, possibly `vibrant-learning`) now gets no AI answers;
+none is the live site. Repository collaborators checked the same day: only
+`natparnell` and `thomaswilliama-coder`, both admin. Not readable from here:
+Railway tokens and members, Tom's GitHub security log, Stripe and Anthropic
+logs since 21/10 (Tom's consoles).
+
 ## Writing and reviewing website copy
 
 - Where a brief asks for copy but does not contain the underlying commercial
