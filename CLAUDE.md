@@ -9643,7 +9643,10 @@ old key, so any service still holding it (staging `arrington-ai-workspace`,
 none is the live site. Repository collaborators checked the same day: only
 `natparnell` and `thomaswilliama-coder`, both admin. Not readable from here:
 Railway tokens and members, Tom's GitHub security log, Stripe and Anthropic
-logs since 21/10 (Tom's consoles).
+logs since 21/10 (Tom's consoles). **Tom is on holiday from 24/10/2026** and
+will do the rest when back: Google and Zoho first, then the remainder,
+`vibrant-learning` and Stripe included. Nothing more is to be rotated
+before then.
 
 ## Writing and reviewing website copy
 
