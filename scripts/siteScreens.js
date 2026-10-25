@@ -73,7 +73,19 @@ function lighthouse(url) {
       const node = d.items && d.items[0] && (d.items[0].node || (d.items[0].items && d.items[0].items[0] && d.items[0].items[0].node));
       if (node) lcpElement = String(node.snippet || node.selector || node.nodeLabel || '').slice(0, 160);
     } catch (e) { /* audit absent */ }
+    // Why the first paint waits (25/10/2026): the server's response time,
+    // what blocks rendering, and how the largest paint's time splits up.
+    const ttfb = num('server-response-time');
+    const blocking = (((j.audits['render-blocking-resources'] || {}).details || {}).items || [])
+      .slice(0, 6).map((i) => `${String(i.url || '').replace(/^https?:\/\//, '').slice(0, 90)} (${Math.round(i.wastedMs || 0)}ms)`);
+    let lcpPhases = null;
+    try {
+      const d = j.audits['largest-contentful-paint-element'].details;
+      const tbl = (d.items || []).find((t) => t.type === 'table' && t.items && t.items.some((r) => r.phase));
+      if (tbl) lcpPhases = tbl.items.map((r) => `${r.phase} ${Math.round(r.timing)}ms`).join(', ');
+    } catch (e) { /* audit absent */ }
     return {
+      ttfb, blocking, lcpPhases,
       performance: score('performance'), accessibility: score('accessibility'), bestPractices: score('best-practices'), seo: score('seo'),
       lcp: num('largest-contentful-paint'), cls: num('cumulative-layout-shift'), tbt: num('total-blocking-time'), fcp: num('first-contentful-paint'),
       speedIndex: num('speed-index'), lcpElement,
@@ -217,6 +229,7 @@ function lighthouse(url) {
     const l = lh[u];
     if (l) lines.push(l.error ? `- Lighthouse (mobile): ERROR ${l.error}` : `- Lighthouse (mobile): performance ${l.performance}, accessibility ${l.accessibility}, best practices ${l.bestPractices}, SEO ${l.seo}; LCP ${l.lcp}, CLS ${l.cls}, TBT ${l.tbt}, FCP ${l.fcp}, speed index ${l.speedIndex}`);
     if (l && l.lcpElement) lines.push(`  - Largest paint: ${l.lcpElement}`);
+    if (l && !l.error) lines.push(`  - Server response ${l.ttfb}; render-blocking: ${l.blocking && l.blocking.length ? l.blocking.join(' | ') : 'none'}${l.lcpPhases ? `; largest paint split: ${l.lcpPhases}` : ''}`);
     if (l && l.shifts && l.shifts.length) for (const s of l.shifts) lines.push(`  - Layout shift ${s.score}: ${s.node} ${s.snippet || ''}`);
     for (const r of results.filter((x) => x.url === u)) {
       if (r.error) { lines.push(`- ${r.size}: ERROR ${r.error}`); continue; }
