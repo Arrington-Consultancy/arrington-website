@@ -9648,6 +9648,97 @@ will do the rest when back: Google and Zoho first, then the remainder,
 `vibrant-learning` and Stripe included. Nothing more is to be rotated
 before then.
 
+## Google Ads worker's brief of 25/10/2026: what was found and done
+
+"Brief for Code - everything outstanding from the ads - 25 Oct 2026" (Drive
+`1_RdmUMNxvitk5XVRXC0LKbb718cd_lExvRthOpakMh4`), worked the same evening while
+Tom was on holiday. Part A is the website; Part B needs a browser signed in to
+Microsoft Ads and Meta, which this cloud session does not have, so Part B went
+back to Tom (his own words: "If it doesn't, those jobs come back to you").
+
+- **1. Taxi websites page, paid visitors leaving in about 2 seconds: not a
+  load problem.** GA4 (Windsor, 21 to 25 Oct): all three paid sessions on
+  `/taxi-and-private-hire-operators/websites` were DESKTOP (Windows Edge
+  bing/cpc 22/10 15:00, Windows Chrome google/cpc 22/10 20:00, Mac Safari
+  google/cpc 25/10 12:00), and the page loads in 0.4 to 0.9 seconds there
+  (inspection run `20261025T210716Z-brief-25oct-checks`). The first phone
+  screen has nothing covering it (no banner on a gclid visit; the Microsoft
+  bar only after scrolling). Lighthouse mobile (simulated slow 4G, mid-range
+  phone), two runs: first paint 3.0 and 2.6 s, LCP 3.1 s, the same as the home
+  page (2.6 s) and the Cornwall page (1.9 and 2.6 s) whose paid visitors
+  stay minutes (site-screens runs `20261025T210840Z-taxi-websites-load`,
+  `20261025T211203Z-first-paint-diagnosis`). Only render-blocking file: the
+  Google Fonts stylesheet. No load change made. The likelier cause is search
+  intent: the Taxi - Search terms 22 to 25 Oct include "veezu website",
+  "edinburgh taxi", "taxi inverness scotland", "taxis websites"; "taxi
+  website" and "taxi company website" are often people looking for a taxi
+  firm to book, not operators. Only Clarity recordings can settle it, and
+  this session has no Clarity access (the Windsor `microsoft_clarity`
+  connector is not connected): in Clarity, filter by that URL and 22 and 25
+  October. Search terms and negatives are the Google Ads worker's.
+- **The 24/10 click with no GA4 session** was the one MOBILE paid click
+  (Taxi - Search, 10:00, "taxi company website", £2.93). No GA4 session from
+  any source on that page that day. Not a redirect: a `?gclid=` visit stays on
+  the same URL with a 200. Likely the visitor left before the GA4 tag sent
+  its first hit, or a content blocker stopped it; Google may also refund it
+  as an invalid click. Cannot be told apart from here.
+- **2 and 7. Google Ads already sees enquiries; no change made.** Read from
+  the account (Windsor): two conversion actions, `Contact` (WEBPAGE, ENABLED,
+  PRIMARY, one per click) and `phone + email clicks` (secondary, no longer
+  fired). `Contact` is the site's own tag on `/thank-you`, once per stored
+  enquiry. It recorded the genuine 4 September enquiry; nothing since,
+  because no ad-click visitor has enquired. The two GA4 `generate_lead`
+  events the brief cites are this worker's TEST TRACKING enquiries of 19 and
+  22 October, sent with Ads requests blocked, so Ads correctly counted
+  nothing (a test with no ad click cannot count in Ads either, which is why
+  the 6 October `ads=1` test does not appear). **Do not import GA4
+  generate_lead as a second primary action: every enquiry would count twice.**
+  Microsoft: the UET goal "Contact enquiry" fires `contact_form_submit` on
+  `/thank-you` for Microsoft-ad visitors (live since 12/10); the Microsoft
+  "no conversions in 7 days" warning means no Microsoft visitor has
+  enquired.
+- **3. Test enquiries never look like ad visits again** (commit `63f1f72`).
+  `scripts/tagAudit.js`'s test enquiry always arrives as `utm_source=test`,
+  `utm_medium=test`, with any ad utm or click id stripped from the path given
+  (`asTestArrival`). The start-up page step had sent a fake google/cpc
+  session to GA4 on EVERY tag audit run; it is a test visit now.
+  `scripts/siteScreens.js` now drops GA4, Google Ads and Meta hits on our own
+  pages, in the browser and in Lighthouse (`--blocked-url-patterns`), so a
+  run with `?gclid=` adds nothing to GA4 (commit `cc21b78`; a first run
+  without that fix was cancelled before it opened a page). It also reports
+  the largest-paint element, server response, render-blocking files and the
+  paint's split. `test/tagAuditTestSource.test.js` (2; a planted google/cpc
+  arrival watched red). GA4's own 19/10 google/cpc lead stays in GA4 history.
+- **4a. Privacy page wording: drafted, NOT live**, Drive "WEBSITE AND
+  HOSTING PROPOSAL - Privacy page wording for Facebook and Instagram lead
+  forms, 25 October 2026 (FOR TOM'S APPROVAL, NOT LIVE)", id
+  `131Jq9xOhEXpZBw0O2lyRrdPDnq8vxq8J9a6a2lOK8pQ`. The brief's "We do not run
+  such adverts at present" line is accurate in context (it is about adverts
+  to people who visited the site, and the lead campaign is not retargeting);
+  the draft rewords it so it cannot be misread, adds a section on what the
+  instant form collects (name, email, phone, dispatch system, number of
+  cars), states no retention period (Tom's 14/10 rule), and lists email,
+  which the live form requires and the brief left out.
+- **4b. "How did you hear about us?"** gains "Facebook or Instagram advert"
+  and "Microsoft or Bing advert" after "Google advert" (`lib/heardAbout.js`,
+  ids `meta_advert`, `microsoft_advert`; commit `63f1f72`).
+  `scripts/productionQa.js` now prints the served options per page. Live:
+  inspection run `20261025T211453Z-heard-about-options-live`, the home page
+  and the taxi websites page at desktop and phone serve all eight options in
+  that order, no page errors.
+- **4c. The workspace and £1,998 bundle on the taxi websites page:**
+  flagged only, Tom's decision (Part C).
+- **5. Tidewell demo:** 200 on a phone, no page errors; a test booking got
+  mock reference TW-38213 and a made-up driver (the demo's own mock
+  dispatch; nothing is sent anywhere). `/taxi-demo/office/` sends a
+  signed-out visitor to `/login`. It IS linked from the public demo's staff
+  portal page and menu, by Tom's decision of 16/10/2026 ("login access
+  obvious"), not by mistake.
+- **Part B** (Microsoft negatives, Meta test lead, Meta enhancements report):
+  back to Tom. Windsor has no Microsoft negatives action and exposes no Meta
+  enhancement settings; this session has no signed-in browser and never types
+  a password. B7 needs nothing (see 2).
+
 ## Writing and reviewing website copy
 
 - Where a brief asks for copy but does not contain the underlying commercial
