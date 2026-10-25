@@ -159,7 +159,10 @@ function slug(p) {
             const f = document.querySelector('#leadForm');
             if (!f) return null;
             const top = f.getBoundingClientRect().top + window.scrollY;
-            return { top: Math.round(top), screens: Math.round((top / window.innerHeight) * 10) / 10, viewport: window.innerHeight };
+            // The "How did you hear about us?" options as served (25/10/2026),
+            // so a change to that list can be seen on the live page.
+            const heard = [...f.querySelectorAll('select[name="heard_about"] option')].map((o) => o.textContent.trim()).filter(Boolean);
+            return { top: Math.round(top), screens: Math.round((top / window.innerHeight) * 10) / 10, viewport: window.innerHeight, heard };
           })(),
           // The first primary button on the page and where it points.
           heroCta: (() => {
@@ -272,6 +275,7 @@ function slug(p) {
     lines.push(`- Numerals drawn in: ${describeDigitFonts(r.digitFonts)}`);
     lines.push(`- Horizontal overflow: ${r.overflow === null ? 'unknown' : r.overflow ? 'YES' : 'no'}; page height ${r.height}px`);
     lines.push(`- Enquiry form starts: ${r.form ? `${r.form.top}px, ${r.form.screens} screen heights down (viewport ${r.form.viewport}px)` : 'no form found'}`);
+    if (r.form && r.form.heard && r.form.heard.length) lines.push(`- How did you hear options: ${r.form.heard.join(' | ')}`);
     lines.push(`- First primary button: ${r.heroCta ? `"${r.heroCta.text}" -> ${r.heroCta.href}` : 'none'}`);
     lines.push(`- PDF email box open without a click: ${r.docModalOpen === null ? 'no box on the page' : r.docModalOpen ? 'YES' : 'no'}; PDF request buttons on the page: ${r.docRequestButtons}`);
     lines.push(`- Own-visit analytics hits dropped: ${r.droppedHits.length}${r.droppedHits.length ? ' (' + [...new Set(r.droppedHits)].join(', ') + ')' : ''}`);
