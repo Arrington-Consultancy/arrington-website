@@ -18,8 +18,10 @@
 // (performance, accessibility, best practices, SEO) once per URL.
 //
 // It changes nothing anywhere: it only loads pages. Analytics and ad hits on
-// the pages it loads are left alone, because these are other firms' sites
-// and what they send is part of what they are.
+// other firms' pages are left alone, because what they send is part of what
+// they are. On our own site they are dropped (25/10/2026), in the browser and
+// in Lighthouse, the same list productionQa.js drops: a run opened with a
+// ?gclid= would otherwise land in GA4 as a paid visit that never happened.
 
 const fs = require('fs');
 const path = require('path');
@@ -37,6 +39,12 @@ const SIZES = [
 ];
 const MAX_FULL_HEIGHT = 9000;
 
+const OWN_SITE = /^https?:\/\/([a-z0-9-]+\.)*arringtonconsultancy\.(com|co\.uk)(\/|$)/i;
+const OWN_VISIT_HITS = /google-analytics\.com\/g\/collect|analytics\.google\.com\/g\/collect|stats\.g\.doubleclick\.net|googleads\.g\.doubleclick\.net|googleadservices\.com\/pagead|google\.com\/pagead|google\.co\.uk\/pagead|connect\.facebook\.net|facebook\.com\/tr/;
+const OWN_VISIT_PATTERNS = ['*google-analytics.com/g/collect*', '*analytics.google.com/g/collect*', '*stats.g.doubleclick.net*',
+  '*googleads.g.doubleclick.net*', '*googleadservices.com/pagead*', '*google.com/pagead*', '*google.co.uk/pagead*',
+  '*connect.facebook.net*', '*facebook.com/tr*'];
+
 function slug(u) {
   return u.replace(/^https?:\/\//, '').replace(/[^a-z0-9]+/gi, '-').replace(/-+$/, '').toLowerCase().slice(0, 60);
 }
@@ -44,8 +52,9 @@ function slug(u) {
 function lighthouse(url) {
   const file = path.join(OUT, `${slug(url)}-lighthouse.json`);
   try {
+    const blocked = OWN_SITE.test(url) ? OWN_VISIT_PATTERNS.map((p) => `--blocked-url-patterns=${p}`) : [];
     execFileSync('npx', ['--no-install', 'lighthouse', url, '--quiet', '--output=json', `--output-path=${file}`,
-      '--only-categories=performance,accessibility,best-practices,seo',
+      '--only-categories=performance,accessibility,best-practices,seo', ...blocked,
       '--chrome-flags=--headless=new --no-sandbox'], { env: { ...process.env, CHROME_PATH: chromium.executablePath() }, timeout: 180000, stdio: 'ignore' });
     const j = JSON.parse(fs.readFileSync(file, 'utf8'));
     const score = (k) => (j.categories[k] && j.categories[k].score !== null ? Math.round(j.categories[k].score * 100) : null);
@@ -56,9 +65,18 @@ function lighthouse(url) {
     // rather than guessed at (added 16/10/2026).
     const shiftItems = (j.audits['layout-shifts'] && j.audits['layout-shifts'].details && j.audits['layout-shifts'].details.items) || [];
     const shifts = shiftItems.slice(0, 5).map((i) => ({ score: i.score, node: i.node ? (i.node.selector || i.node.snippet || i.node.nodeLabel) : null, snippet: i.node ? String(i.node.snippet || '').slice(0, 160) : null }));
+    // Which element was the largest paint, so a slow LCP names its cause
+    // (added 25/10/2026 for the taxi websites page check).
+    let lcpElement = null;
+    try {
+      const d = j.audits['largest-contentful-paint-element'].details;
+      const node = d.items && d.items[0] && (d.items[0].node || (d.items[0].items && d.items[0].items[0] && d.items[0].items[0].node));
+      if (node) lcpElement = String(node.snippet || node.selector || node.nodeLabel || '').slice(0, 160);
+    } catch (e) { /* audit absent */ }
     return {
       performance: score('performance'), accessibility: score('accessibility'), bestPractices: score('best-practices'), seo: score('seo'),
       lcp: num('largest-contentful-paint'), cls: num('cumulative-layout-shift'), tbt: num('total-blocking-time'), fcp: num('first-contentful-paint'),
+      speedIndex: num('speed-index'), lcpElement,
       shifts
     };
   } catch (e) {
@@ -73,6 +91,7 @@ function lighthouse(url) {
   for (const url of URLS) {
     for (const [size, opts] of SIZES) {
       const ctx = await browser.newContext(opts);
+      if (OWN_SITE.test(url)) await ctx.route(OWN_VISIT_HITS, (route) => route.abort());
       const page = await ctx.newPage();
       const pageErrors = [];
       page.on('pageerror', (e) => pageErrors.push(String(e).slice(0, 160)));
@@ -196,7 +215,8 @@ function lighthouse(url) {
   for (const u of URLS) {
     lines.push(`## ${u}`);
     const l = lh[u];
-    if (l) lines.push(l.error ? `- Lighthouse (mobile): ERROR ${l.error}` : `- Lighthouse (mobile): performance ${l.performance}, accessibility ${l.accessibility}, best practices ${l.bestPractices}, SEO ${l.seo}; LCP ${l.lcp}, CLS ${l.cls}, TBT ${l.tbt}, FCP ${l.fcp}`);
+    if (l) lines.push(l.error ? `- Lighthouse (mobile): ERROR ${l.error}` : `- Lighthouse (mobile): performance ${l.performance}, accessibility ${l.accessibility}, best practices ${l.bestPractices}, SEO ${l.seo}; LCP ${l.lcp}, CLS ${l.cls}, TBT ${l.tbt}, FCP ${l.fcp}, speed index ${l.speedIndex}`);
+    if (l && l.lcpElement) lines.push(`  - Largest paint: ${l.lcpElement}`);
     if (l && l.shifts && l.shifts.length) for (const s of l.shifts) lines.push(`  - Layout shift ${s.score}: ${s.node} ${s.snippet || ''}`);
     for (const r of results.filter((x) => x.url === u)) {
       if (r.error) { lines.push(`- ${r.size}: ERROR ${r.error}`); continue; }
