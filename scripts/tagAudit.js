@@ -15,7 +15,8 @@
 // in GA4 DebugView for whoever has the property open.
 //
 // SUBMIT=1 also sends ONE footer enquiry from the start-up page, named
-// "TEST TRACKING", and follows it to /thank-you. During that step every
+// "TEST TRACKING", arriving as utm_source=test (never as an ad visit), and
+// follows it to /thank-you. During that step every
 // Google Ads and Meta request is aborted in the browser, so the test can
 // never record an Ads or Meta conversion. It still stores a lead row and
 // emails Tom, which is the point: it is a real submission, plainly marked.
@@ -41,11 +42,26 @@ const SUBMIT = process.env.SUBMIT === '1';
 // only when asked to prove that conversion.
 const ADS = process.env.ADS === '1';
 const CONTACT_LABEL = 'vCKKCKjSna0cEN6RgsVD';
-const START_UP = '/start-up-idea-review?utm_source=google&utm_medium=cpc&utm_campaign=Start-Up-Search';
+const START_UP = '/start-up-idea-review';
 // SUBMIT_PATH chooses the page the one test enquiry is sent from (default the
 // start-up page), so the Contact conversion can be proved from any page that
 // carries the footer form. A root-relative path only.
-const SUBMIT_PATH = /^\/(?!\/)/.test(process.env.SUBMIT_PATH || '') ? process.env.SUBMIT_PATH : START_UP;
+//
+// The test enquiry ALWAYS arrives as utm_source=test / utm_medium=test, with
+// any ad click id or utm taken off the path given (Google Ads worker's brief
+// of 25/10/2026, item 3). Until then it carried utm_source=google and
+// utm_medium=cpc, so GA4 counted the 19 October test as a lead from a Google
+// advert. A test must never show up as an ad result.
+const TEST_SOURCE = { utm_source: 'test', utm_medium: 'test', utm_campaign: 'tag-audit-test-enquiry' };
+function asTestArrival(p) {
+  const u = new URL(p, 'https://x.invalid');
+  for (const k of [...u.searchParams.keys()]) {
+    if (/^utm_|^(gclid|gbraid|wbraid|msclkid|fbclid)$/i.test(k)) u.searchParams.delete(k);
+  }
+  for (const [k, v] of Object.entries(TEST_SOURCE)) u.searchParams.set(k, v);
+  return u.pathname + u.search + u.hash;
+}
+const SUBMIT_PATH = asTestArrival(/^\/(?!\/)/.test(process.env.SUBMIT_PATH || '') ? process.env.SUBMIT_PATH : START_UP);
 
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -145,8 +161,11 @@ async function scrollThrough(page) {
     await scrollThrough(page);
   }));
 
-  results.push(await step(browser, 'start-up page (with Start-Up-Search utm) load and scroll', async (page) => {
-    await page.goto(BASE + START_UP, { waitUntil: 'networkidle' });
+  // Until 25/10/2026 this step arrived as utm_source=google&utm_medium=cpc,
+  // so every tag audit run put a paid Google session into GA4. It arrives as
+  // a test visit now; whether a page-load rule fires does not depend on it.
+  results.push(await step(browser, 'start-up page (test utm) load and scroll', async (page) => {
+    await page.goto(BASE + asTestArrival(START_UP), { waitUntil: 'networkidle' });
     await scrollThrough(page);
   }));
 

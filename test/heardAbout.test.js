@@ -20,10 +20,13 @@ const { OPTIONS, OTHER_ID, parseHeardAbout, describeHeardAbout } = require('../l
 const ROOT = path.join(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 
-test('the six options Tom asked for, in his order, with Other last', () => {
+test('the options Tom asked for, in his order, with Other last', () => {
+  // The two ad options were added on 25/10/2026 (Meta and Microsoft ads).
   assert.deepEqual(OPTIONS.map((o) => o.label), [
     'Google search',
     'Google advert',
+    'Facebook or Instagram advert',
+    'Microsoft or Bing advert',
     'Recommended by someone',
     'Social media',
     'AI assistant, such as ChatGPT',
