@@ -129,9 +129,11 @@ async function run() {
         return route.abort();
       });
       const page = await ctx.newPage();
-      await page.goto(BASE, { waitUntil: 'networkidle', timeout: 60000 });
+      await page.goto(BASE, { waitUntil: 'load', timeout: 60000 });
       await page.evaluate(() => document.fonts.ready);
-      await page.evaluate(() => Promise.all([...document.images].filter((i) => !i.complete).map((i) => new Promise((r) => { i.onload = i.onerror = r; }))));
+      // Only the hero photo matters here; lazy images further down never load
+      // and would hang a wait on every image.
+      await page.waitForFunction((s) => { const i = document.querySelector(s + ' .hero-photo img'); return !i || (i.complete && i.naturalWidth > 0); }, HERO, { timeout: 15000 }).catch(() => {});
       if (css) await page.addStyleTag({ content: css });
       // Settle any reveal animation.
       await page.waitForTimeout(1500);
