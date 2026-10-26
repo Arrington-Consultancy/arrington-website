@@ -44,7 +44,9 @@ jobs:
       - name: Install Playwright and Lighthouse
         run: |
           npm install --no-save playwright@1.47.0 lighthouse@12.2.1 pngjs@7.0.0
-          npx playwright install --with-deps chromium
+          # The browser install has stalled for 15 minutes or more on some
+          # runners (26/10/2026); give each attempt two minutes, three tries.
+          for i in 1 2 3; do timeout 120 npx playwright install --with-deps chromium && break; echo "install attempt $i stalled or failed"; sleep 5; done
 
       - name: Inspect
         env:
