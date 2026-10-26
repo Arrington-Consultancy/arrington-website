@@ -9071,9 +9071,12 @@ PROPOSAL - SEO sweep: what was fixed and what needs Tom, 11 October 2026" (id
   Windsor `create_local_post` on account `locations/3855282927663970981`;
   read back from the LocalPosts table with an explicit date range. Posts 2
   to 14 APPROVED by Tom on 12/10/2026 ("i agree", recorded in the
-  Handoff Log). A `send_later` check-in (`trig_01HAhM8euGc3ebv97EhKsCwb`,
-  26/10/2026 08:52 UTC) posts the next item if its words are still on the
-  live article page, then re-arms
+  Handoff Log). Post 2, "A Profitable Job Is Not Necessarily Good
+  Business", LIVE 26/10/2026 (local post `4778652449291972599`). A
+  `send_later` check-in (`trig_01EsBq9Qso3UNN5DHtsvrBUT`, 09/11/2026 08:52
+  UTC, post 3) posts the next item if its words are still on the live
+  article page (the summary line is checked on `/useful-thinking`, where
+  it lives; the article's own meta description can differ), then re-arms
   itself 14 days on. If this session is retired, the replacement re-arms it.
   **No new worker (Tom, 12/10/2026):** the posts stay with Website & Hosting;
   the Google Ads worker does not post to the profile. A replacement session
