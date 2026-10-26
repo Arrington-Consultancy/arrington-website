@@ -9804,6 +9804,39 @@ items 4a, 9 and 11; Tom's "Yes" in chat to the exact wording):
   this page only. `test/taxiWebsitesPage.test.js` fails on any price other
   than £999 on the page, any price in the workspace section, or "for both".
 
+## Home page hero contrast review (26/10/2026, review only, nothing changed)
+
+Tom asked for a challenge of ChatGPT's view that the hero looks too dark and
+muted: bring the supporting grey closer to white and ease the photo's dark
+overlay. Measured on the LIVE page, not assumed: `scripts/heroContrast.js` on
+the branch `review/hero-contrast-2026-10-26` (not on main; it runs through
+that branch's copy of `site-screens.yml`, with every third-party request
+aborted so no analytics hit leaves the runner). For each line of hero text it
+hides the text, captures what is behind it, and computes the WCAG ratio
+against every pixel. Run `20261026T164657Z-hero-contrast`, iPhone 13, 5th
+percentile (lowest pixel in brackets):
+
+| | Live | ChatGPT (eased overlay, whiter text) | Note line only to `--text` |
+|---|---|---|---|
+| Headline (needs 3) | 7.2 (6.2) | 4.1 (3.6) | 7.2 (6.2) |
+| Supporting line (needs 4.5) | 11.1 (4.6) | 13.6 (3.7) | 11.1 (4.6) |
+| "The first conversation is free" (needs 4.5) | 5.8 (4.5) | 9.2 (6.0) | 8.8 (6.8) |
+
+On desktop the eased overlay drops the headline's lowest pixel to 2.9, below
+the 3:1 minimum for large text. The darkness is deliberate: the home page
+gradient was raised on 15/08/2026 after a mobile contrast review found the
+headline against open sky (comment above `.hero[data-section-id="hero"]::after`
+in `views/index.ejs`). Easing it does add warmth (hero area 58% brighter, the
+sunset shows through) but halves the headline's contrast, and whiter
+supporting text flattens the hierarchy (it would match the headline colour).
+The one weak line is the muted "first conversation is free" note, which dips
+just under 4.5 over the bright laptop. Recommendation put to Tom, NOT applied:
+change only that line's colour from `--text-muted` to `--text` (the rule
+`.hero[data-section-id="hero"] .home-hero-cta + .home-offers-note`). Overlay
+unchanged. Previews were sent to Tom in chat. The runner's browser install
+stalled twice that afternoon; the review branch's workflow now times out
+each attempt after two minutes and retries.
+
 ## Writing and reviewing website copy
 
 - Where a brief asks for copy but does not contain the underlying commercial
