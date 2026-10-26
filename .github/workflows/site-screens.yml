@@ -43,7 +43,7 @@ jobs:
 
       - name: Install Playwright and Lighthouse
         run: |
-          npm install --no-save playwright@1.47.0 lighthouse@12.2.1
+          npm install --no-save playwright@1.47.0 lighthouse@12.2.1 pngjs@7.0.0
           npx playwright install --with-deps chromium
 
       - name: Inspect
@@ -52,7 +52,8 @@ jobs:
           LIGHTHOUSE: ${{ github.event.inputs.lighthouse }}
           DEMO_BOOKING: ${{ github.event.inputs.demo_booking }}
           OUT_DIR: ${{ github.workspace }}/screens-out
-        run: node scripts/siteScreens.js
+        # Review branch only (26/10/2026): the home page hero contrast check.
+        run: node scripts/heroContrast.js
 
       - name: Publish results to the site-screens branch
         env:
