@@ -9779,6 +9779,31 @@ back to Tom (his own words: "If it doesn't, those jobs come back to you").
   enhancement settings; this session has no signed-in browser and never types
   a password. B7 needs nothing (see 2).
 
+**Tom's decisions of 26/10/2026 on that brief, three website changes** (brief
+items 4a, 9 and 11; Tom's "Yes" in chat to the exact wording):
+- **Privacy page** (`views/privacy.ejs`): the approved wording (Drive
+  `131Jq9xOhEXpZBw0O2lyRrdPDnq8vxq8J9a6a2lOK8pQ`) word for word. The pixel
+  paragraph's "We do not run such adverts at present." now reads "We do not
+  currently show adverts to people because they visited this website. The
+  adverts we run on Facebook and Instagram are explained below.", and a new
+  section, "If you reply to one of our Facebook or Instagram adverts"
+  (`#facebook-instagram-forms`), sits before "If we contacted you first":
+  what the instant form collects (name, email, phone, dispatch system, roughly
+  how many cars), why, that Meta processes it under its own policy, and how
+  long we keep it with no period (the 14/10 rule). `test/metaPixel.test.js`.
+- **Dispatch condition** (`views/taxi-websites.ejs`): bookings go into any
+  dispatch system WITH A BOOKING API, never every system. The headline is "A
+  taxi website that sends bookings straight into your dispatch system, if it
+  has a booking API"; the hero's price line "£999, with the dispatch link
+  included where your system has a booking API."; the sharing description
+  carries the same condition. The ads say the same since 26/10.
+- **No workspace price on the taxi websites page** until a data processing
+  agreement exists: "The workspace is £999, separate from the website, or
+  £1,998 for both..." became "Ask us about it when we talk." The workspace
+  page itself and the home page box still show £999; Tom's decision covered
+  this page only. `test/taxiWebsitesPage.test.js` fails on any price other
+  than £999 on the page, any price in the workspace section, or "for both".
+
 ## Writing and reviewing website copy
 
 - Where a brief asks for copy but does not contain the underlying commercial

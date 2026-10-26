@@ -73,9 +73,27 @@ test('the Lead event lives only on the thank-you page, inside the stored-enquiry
   assert.ok(s.indexOf("fbq('track', 'Lead'") > s.indexOf("gtag('event', 'conversion'"), 'inside the same once-per-token guard as the Google conversion');
 });
 
-test('the Privacy page describes the pixel and says no such adverts run at present', () => {
+test('the Privacy page describes the pixel and says no advert is shown because of a visit', () => {
   const s = fs.readFileSync(path.join(views, 'privacy.ejs'), 'utf8');
   assert.match(s, /Meta \(Facebook\) pixel/);
   assert.match(s, /does not receive your name, email/);
-  assert.match(s, /do not run such adverts at present/);
+  // Tom's approved wording of 26/10/2026: the Meta lead campaign is live, so
+  // the old "We do not run such adverts at present" read as untrue beside it.
+  assert.match(s, /We do not currently show adverts to people because they visited this website\. The adverts we run on Facebook and Instagram are explained below\./);
+  assert.ok(!/do not run such adverts at present/.test(s), 'the old line is back');
+});
+
+test('the Privacy page explains the Facebook and Instagram lead form (Tom, 26/10/2026)', () => {
+  const s = fs.readFileSync(path.join(views, 'privacy.ejs'), 'utf8');
+  const start = s.indexOf('<h2 id="facebook-instagram-forms">If you reply to one of our Facebook or Instagram adverts</h2>');
+  assert.ok(start > 0, 'the section is missing');
+  assert.ok(start < s.indexOf('<h2 id="introductions">'), 'it must come before "If we contacted you first"');
+  const section = s.slice(start, s.indexOf('<h2 id="introductions">'));
+  for (const line of [
+    'Your name, email address and phone number, which dispatch system your firm uses, and roughly how many cars you run.',
+    'nothing reaches us until you press submit.',
+    'To reply to you about a website for your firm, and to check before we talk whether your dispatch system can take bookings straight from a website.',
+    "Meta, which owns Facebook and Instagram, processes what you send under its own privacy policy and passes it to us.",
+    'If you would like us to delete it, tell us and we will.'
+  ]) assert.ok(section.includes(line), 'missing: ' + line);
 });

@@ -14,7 +14,7 @@
     <%- include('partials/page-schema', { schemaName: 'Taxi and private hire websites', schemaPath: '/taxi-and-private-hire-operators/websites', schemaParent: { name: 'Taxi and private hire operators', path: '/taxi-and-private-hire-operators' }, schemaService: 'Taxi and private hire websites with bookings into the dispatch system' }) %>
     <meta property="og:type" content="website">
     <meta property="og:title" content="Taxi websites that book into your dispatch system | Arrington Consultancy">
-    <meta property="og:description" content="A £999 taxi and private hire website where online bookings go straight into your dispatch system.">
+    <meta property="og:description" content="A £999 taxi and private hire website where online bookings go straight into your dispatch system, if it has a booking API.">
     <meta property="og:url" content="https://www.arringtonconsultancy.com/taxi-and-private-hire-operators/websites">
     <meta property="og:image" content="https://www.arringtonconsultancy.com/img/logo">
     <meta name="csrf-token" content="<%= csrfToken %>">
@@ -123,8 +123,8 @@
         <div class="tw-hero-inner">
             <div class="tw-hero-text">
                 <span class="tw-label">Taxi and private hire websites</span>
-                <h1>A taxi website that sends bookings straight into your dispatch system</h1>
-                <p class="tw-lede" data-hero-lede>We build websites for taxi and private hire operators where a booking made online lands in your dispatch system like any other job, so nobody in the office has to key it in. <%= '£' + (websiteOffer.pricePence / 100).toLocaleString('en-GB') %>, with the dispatch link included.</p>
+                <h1>A taxi website that sends bookings straight into your dispatch system, if it has a booking API</h1>
+                <p class="tw-lede" data-hero-lede>We build websites for taxi and private hire operators where a booking made online lands in your dispatch system like any other job, so nobody in the office has to key it in. <%= '£' + (websiteOffer.pricePence / 100).toLocaleString('en-GB') %>, with the dispatch link included where your system has a booking API.</p>
                 <div class="tw-hero-actions">
                     <a href="#conversation" class="btn btn-primary">Tell us about your firm</a>
                 </div>
@@ -208,8 +208,12 @@
         <%# THE OFFICE WORKSPACE. A summary since 19/10/2026, when the workspace
             got its own page (/taxi-and-private-hire-operators/office-workspace,
             released on Tom's "approve"); the detail lives there, so the two
-            pages cannot drift. The first paragraph and the price line are the
-            wording Tom approved on 17/10/2026 ("yes"); the list of examples
+            pages cannot drift. The first paragraph is the wording Tom approved
+            on 17/10/2026 ("yes"). The price line ("The workspace is £999,
+            separate from the website, or £1,998 for both") came off on Tom's
+            decision of 26/10/2026: no workspace price on this page until a data
+            processing agreement exists, so it reads "Ask us about it when we
+            talk." instead. The list of examples
             (licensing dates, the email check, quotes, rotas, social) gave way
             to the workers and the checker the new page shows, and quotes and
             rotas went with it because the new page does not claim them. After
@@ -222,7 +226,7 @@
             <h2>An office workspace for your firm</h2>
             <p>Alongside the website, we can set up an office workspace: AI workers built for your firm, who know your business, your customers and how you talk to them. They draft the work and flag what needs attention, and someone in your office checks it and decides what goes out.</p>
             <p data-workspace-summary>Five workers take the booking emails, customer emails, complaints, licensing and social media off your controllers. Every booking that arrives by email is checked against the job in your dispatch system, and when something does not match, your controllers see it before the car is sent.</p>
-            <p data-workspace-price>The workspace is <%= '£' + (workspacePricePence / 100).toLocaleString('en-GB') %>, separate from the website, or <%= '£' + ((websiteOffer.pricePence + workspacePricePence) / 100).toLocaleString('en-GB') %> for both. Which workers you get, and what each one does, is agreed in a recorded planning conversation, the same way the website is, so you know exactly what the <%= '£' + (workspacePricePence / 100).toLocaleString('en-GB') %> buys before any work starts.</p>
+            <p data-workspace-ask>Ask us about it when we talk.</p>
             <p data-office-link><a class="tw-link" href="<%= workspacePath %>">See the office workspace</a>, or look round an example in the <a class="tw-link" href="/taxi-demo/staff-portal">Tidewell Cars staff office</a>, where the workers run on a made up firm.</p>
         </div>
         </div>

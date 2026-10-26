@@ -60,9 +60,11 @@ test('the hero leads with bookings into dispatch, and the £999 includes the lin
   assert.strictEqual(OFFERS.website_build.pricePence, 99900);
   const body = renderBody();
   const hero = visibleText(body.slice(body.indexOf('<header class="tw-hero"'), body.indexOf('</header>')));
-  assert.ok(hero.includes('A taxi website that sends bookings straight into your dispatch system'));
+  // Tom, 26/10/2026: only systems with a booking API, never every system.
+  assert.ok(hero.includes('A taxi website that sends bookings straight into your dispatch system, if it has a booking API'));
   assert.ok(hero.includes('so nobody in the office has to key it in'));
-  assert.ok(hero.includes('£999, with the dispatch link included.'));
+  assert.ok(hero.includes('£999, with the dispatch link included where your system has a booking API.'));
+  assert.ok(read(VIEW).includes('online bookings go straight into your dispatch system, if it has a booking API.'), 'the sharing description promises every system');
   assert.ok(!/email/i.test(hero), 'the hero still offers the email check');
   const covers = section(body, 'data-covers');
   assert.ok(covers.includes('What the £999 website covers'), 'the heading no longer says which £999 it is');
@@ -147,7 +149,9 @@ test('the office workspace: a summary with a link to its own page, its own £999
     'An office workspace for your firm',
     'Alongside the website, we can set up an office workspace: AI workers built for your firm, who know your business, your customers and how you talk to them. They draft the work and flag what needs attention, and someone in your office checks it and decides what goes out.',
     'Five workers take the booking emails, customer emails, complaints, licensing and social media off your controllers. Every booking that arrives by email is checked against the job in your dispatch system, and when something does not match, your controllers see it before the car is sent.',
-    'The workspace is £999, separate from the website, or £1,998 for both. Which workers you get, and what each one does, is agreed in a recorded planning conversation, the same way the website is, so you know exactly what the £999 buys before any work starts.',
+    // Tom, 26/10/2026: no workspace price here until a data processing
+    // agreement exists.
+    'Ask us about it when we talk.',
     'See the office workspace, or look round an example in the Tidewell Cars staff office, where the workers run on a made up firm.'
   ]) assert.ok(w.includes(line), `the approved line changed: ${line}`);
   assert.ok(!/quotes?|rotas?/i.test(w), 'quotes or rotas are back, which the workspace page does not claim');
@@ -185,12 +189,12 @@ test('the enquiry form is the main action: no checkout, no conversion, no paymen
   assert.ok(!/\/api\/checkout|data-offer=|AW-18129914078|Pay £|where-to-start\/website-build/.test(body + read(ROUTE)), 'a payment route or conversion appeared');
   assert.ok(body.includes('href="/taxi-and-private-hire-operators"'), 'the way back to dispatch advice is gone');
   assert.strictEqual(TAXI_WEBSITES_CONTACT.heading, 'Tell us about your firm');
-  // £999 for each, and their plain sum in the workspace section only.
+  // The website's £999 only. The workspace carries no price on this page
+  // (Tom, 26/10/2026), and no bundle figure either.
   const text = visibleText(body);
-  assert.ok(!/£(?!999\b|1,998\b)[0-9][0-9,]*/.test(text), 'a price other than £999 or £1,998 is on the page');
-  assert.strictEqual((text.match(/£1,998/g) || []).length, 1, '£1,998 appears other than once');
-  assert.ok(section(body, 'data-workspace').includes('£1,998 for both'), '£1,998 is outside the workspace section');
-  assert.ok(!/bundle|package price|save £|saving/i.test(text), 'the £1,998 is framed as a saving');
+  assert.ok(!/£(?!999\b)[0-9][0-9,]*/.test(text), 'a price other than £999 is on the page');
+  assert.ok(!/£/.test(section(body, 'data-workspace')), 'the workspace section shows a price');
+  assert.ok(!/bundle|package price|save £|saving|for both/i.test(text), 'a bundle or saving is back');
   assert.ok(!/save £|was £|discount|introductory|50%|half price|launch (?:price|offer)|limited time|special offer/i.test(visibleText(body)), 'a price is framed as a reduction');
 });
 
