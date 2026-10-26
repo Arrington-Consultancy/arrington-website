@@ -8855,9 +8855,13 @@ about 15:40 UTC"). Tom's decisions the same day:
   names the programme in full ("Oxford Saïd Business School, Executive
   Strategy Programme."), so the exact name is one click away. The controlled
   record is the master CV ("Saïd Business School, University of Oxford |
-  Oxford Executive Strategy Programme | Distinction | 2025"). Do not propose
-  rewording it again without a new reason, and never write "degree" or "MBA"
-  for it anywhere.
+  Oxford Executive Strategy Programme | Distinction | 2025"). Tom, the same
+  day: "It's an Oxford University Business Course, it has merits. Don't
+  undersell it because we are worried someone will misinterpret." So present
+  it with confidence as a University of Oxford qualification passed with
+  Distinction; do not hedge it, qualify it or propose rewording it. The only
+  limit is accuracy: use its real name or "Oxford Saïd, Distinction", and do
+  not call it a degree or an MBA, because it is neither.
 - **£999 payment order changed**, see the Website Build page section above.
 - Not decided, recommendations only: link the hero Google rating (dropped);
   stronger case study figures (Abacus booking figure to reconcile, 3,500
