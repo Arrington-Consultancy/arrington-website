@@ -8833,6 +8833,39 @@ Devon). Tom's brief of 19/10/2026, then "Release both together":
   from any page with the footer form.
 - Not done, Tom's later item: reporting a £999 payment to Google Ads (the
   purchase conversion label, see Payments above).
+- **Payment after acceptance (Tom, 26/10/2026, "Change it now").** "How it
+  works" said "After payment, Tom books the recorded planning conversation",
+  which let anyone pay before anything was agreed. The £999 spec's payment
+  terms (17/08/2026) say the £999 is paid "once Arrington Consultancy has
+  agreed to take the website project on". The sentence now reads "Once we
+  have agreed to take the project on, you pay the £999 and Tom books the
+  recorded planning conversation." Price, Pay button and Stripe flow are
+  unchanged. Pinned in `test/websiteBuildProof.test.js`.
+
+## Pushback review of 26/10/2026: Tom's decisions
+
+Tom asked for a challenge of four ChatGPT proposals before anything was built.
+The review is in the Website & Hosting Handoff Log (entry "26 October 2026,
+about 15:40 UTC"). Tom's decisions the same day:
+
+- **Oxford stays as it is.** The home hero line (CMS field
+  `hero.proof_line`) keeps "Oxford Saïd, Distinction"; the start-up page
+  keeps the same words. Tom: "Oxford Uni qualification I want ambiguous,
+  that's what I paid for was the Oxford uni credibility." About Us already
+  names the programme in full ("Oxford Saïd Business School, Executive
+  Strategy Programme."), so the exact name is one click away. The controlled
+  record is the master CV ("Saïd Business School, University of Oxford |
+  Oxford Executive Strategy Programme | Distinction | 2025"). Do not propose
+  rewording it again without a new reason, and never write "degree" or "MBA"
+  for it anywhere.
+- **£999 payment order changed**, see the Website Build page section above.
+- Not decided, recommendations only: link the hero Google rating (dropped);
+  stronger case study figures (Abacus booking figure to reconcile, 3,500
+  against 10,000 in older CVs, and what About Us's "grew fifteenfold"
+  measures; WSA figures need Tim's consent); the regional pages are left
+  alone until a mid-December Search Console read; ask Reece and Marc for
+  Google reviews; the Commercial Review page's og:description still mentions
+  the parked bundle credit.
 
 ## Sale readiness page
 

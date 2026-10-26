@@ -65,3 +65,12 @@ test('never the staff office, and nothing else on the page moved', () => {
   const demo = visibleText(body.match(/<p class="wts-direct-proof" data-taxi-demo-proof>[\s\S]*?<\/p>/)[0]);
   assert.ok(!/[–—-]/.test(demo), 'a dash or hyphen in the new line');
 });
+
+test('payment comes after we agree to take the project on (Tom, 26/10/2026)', () => {
+  // The £999 spec's payment terms (17/08/2026): paid "once Arrington
+  // Consultancy has agreed to take the website project on", "not as an
+  // unrestricted public purchase". The page used to say "After payment".
+  const text = visibleText(renderBody());
+  assert.ok(text.includes('Once we have agreed to take the project on, you pay the £999 and Tom books the recorded planning conversation.'), 'the payment order sentence changed');
+  assert.ok(!/After payment/i.test(text), 'the page says payment comes first again');
+});
