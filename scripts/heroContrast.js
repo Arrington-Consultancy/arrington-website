@@ -173,7 +173,7 @@ async function run() {
         const large = b.fontSize >= 24 || (b.fontSize >= 18.66 && b.fontWeight >= 700);
         res.elements.push({
           name: b.name, index: b.index, text: b.text, color: b.color, fontSize: b.fontSize, fontWeight: b.fontWeight,
-          needs: large ? 3 : 4.5, worst: r2(Math.min(...ratios)), p5: r2(pct(ratios, 0.05)), median: r2(pct(ratios, 0.5)), lines: b.rects.length
+          needs: large ? 3 : 4.5, worst: r2(ratios.reduce((m, v) => (v < m ? v : m), Infinity)), p5: r2(pct(ratios, 0.05)), median: r2(pct(ratios, 0.5)), lines: b.rects.length
         });
       }
       report.sizes[sizeName][variant] = res;
