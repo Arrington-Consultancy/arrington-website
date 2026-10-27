@@ -772,9 +772,12 @@
            with the free conversation line under it, and the Commercial
            Review is the large box with the other two beside it. */
         .hero[data-section-id="hero"] .home-hero-cta { margin-top: 0.4rem; }
+        /* The note is --text, not --text-muted (Tom, 26/10/2026): muted, it
+           dipped just under 4.5:1 over the bright laptop on a phone; --text
+           measures 8.8:1 (worst pixel 6.8) and the overlay is unchanged. */
         .hero[data-section-id="hero"] .home-hero-cta + .home-offers-note {
             font-size: 0.92rem;
-            color: var(--text-muted, var(--text));
+            color: var(--text);
             margin-top: 0.75rem;
         }
 

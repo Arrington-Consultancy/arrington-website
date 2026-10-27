@@ -9804,7 +9804,7 @@ items 4a, 9 and 11; Tom's "Yes" in chat to the exact wording):
   this page only. `test/taxiWebsitesPage.test.js` fails on any price other
   than £999 on the page, any price in the workspace section, or "for both".
 
-## Home page hero contrast review (26/10/2026, review only, nothing changed)
+## Home page hero contrast review (26/10/2026; one line changed 27/10/2026)
 
 Tom asked for a challenge of ChatGPT's view that the hero looks too dark and
 muted: bring the supporting grey closer to white and ease the photo's dark
@@ -9830,9 +9830,11 @@ in `views/index.ejs`). Easing it does add warmth (hero area 58% brighter, the
 sunset shows through) but halves the headline's contrast, and whiter
 supporting text flattens the hierarchy (it would match the headline colour).
 The one weak line is the muted "first conversation is free" note, which dips
-just under 4.5 over the bright laptop. Recommendation put to Tom, NOT applied:
-change only that line's colour from `--text-muted` to `--text` (the rule
-`.hero[data-section-id="hero"] .home-hero-cta + .home-offers-note`). Overlay
+just under 4.5 over the bright laptop. Recommendation, approved by Tom on
+27/10/2026 ("Yes sure") and applied: that line's colour only, from
+`--text-muted` to `--text` (the rule
+`.hero[data-section-id="hero"] .home-hero-cta + .home-offers-note`), pinned in
+`test/threeOffers.test.js`. Overlay, palette and every other colour
 unchanged. Previews were sent to Tom in chat. The runner's browser install
 stalled twice that afternoon; the review branch's workflow now times out
 each attempt after two minutes and retries.

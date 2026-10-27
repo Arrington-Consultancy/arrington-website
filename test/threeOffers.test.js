@@ -141,6 +141,11 @@ test('the line that the first conversation is free sits in the hero under the bu
   assert.ok(footer.includes("The first conversation is free and there's no obligation."), 'the footer no longer says the sentence the hero repeats');
   assert.ok(!/[\u2013\u2014]/.test(note), 'a dash in the line');
   assert.ok(/\.home-offers-note\s*\{/.test(read('views/index.ejs')), 'the line has no style');
+  // Contrast review (Tom, 26/10/2026): the hero note takes --text, not
+  // --text-muted, which fell just under 4.5:1 over the photo on a phone.
+  const rule = read('views/index.ejs').match(/\.home-hero-cta \+ \.home-offers-note\s*\{([^}]*)\}/);
+  assert.ok(rule, 'the hero note has no rule of its own');
+  assert.ok(/color:\s*var\(--text\);/.test(rule[1]), 'the hero note is not set in --text');
 });
 
 test('the parked pages are off the home page and out of the shared chrome, but still live', () => {
