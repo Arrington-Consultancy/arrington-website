@@ -9835,7 +9835,9 @@ just under 4.5 over the bright laptop. Recommendation, approved by Tom on
 `--text-muted` to `--text` (the rule
 `.hero[data-section-id="hero"] .home-hero-cta + .home-offers-note`), pinned in
 `test/threeOffers.test.js`. Overlay, palette and every other colour
-unchanged. Previews were sent to Tom in chat. The runner's browser install
+unchanged. Live: commit `14f2572`, deployment `54b2f910`; run
+`20261027T042913Z-hero-note-live` reads the line as rgb(200, 208, 220),
+iPhone 13 8.8 (6.82), Pixel 7 7.69 (6.71), desktop 11.6 (10.55). Previews were sent to Tom in chat. The runner's browser install
 stalled twice that afternoon; the review branch's workflow now times out
 each attempt after two minutes and retries.
 
