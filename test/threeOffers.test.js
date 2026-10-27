@@ -173,6 +173,12 @@ test('each offer page has the enquiry form as its one main action', () => {
     for (const p of PARKED) assert.ok(!html.includes(`href="/${p}"`), `${name} links to the parked /${p}`);
   }
   assert.ok(!/<h2>The credit<\/h2>/.test(cr) && !/Commercial Review and Implementation or/.test(cr), 'the Commercial Review page still advertises the parked bundles');
+  // The sharing description (Tom, 27/10/2026) is the page's own search
+  // description; it used to promise a credit against the parked bundles.
+  const crDesc = cr.match(/<meta name="description" content="([^"]*)"/)[1];
+  const crOg = cr.match(/<meta property="og:description" content="([^"]*)"/)[1];
+  assert.strictEqual(crOg, crDesc, 'the Commercial Review sharing description differs from its search description');
+  assert.ok(!/credited/i.test(cr), 'the Commercial Review page still mentions the credit');
   assert.ok(/id="wtsCheckoutSubmit"/.test(cr) && /id="wtsCheckoutSubmit"/.test(wb), 'paying was removed; it stays as the secondary route');
   assert.strictEqual(WEBSITE_BUILD_CONTACT.heading, 'Tell us what you want to build');
   assert.ok(!/commercial review/i.test(WEBSITE_BUILD_CONTACT.body), 'the website enquiry form talks about a commercial review');

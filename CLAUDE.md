@@ -8868,8 +8868,10 @@ about 15:40 UTC"). Tom's decisions the same day:
   against 10,000 in older CVs, and what About Us's "grew fifteenfold"
   measures; WSA figures need Tim's consent); the regional pages are left
   alone until a mid-December Search Console read; ask Reece and Marc for
-  Google reviews; the Commercial Review page's og:description still mentions
-  the parked bundle credit.
+  Google reviews. The Commercial Review page's og:description, which still
+  promised a credit against the parked bundles, now repeats the page's own
+  search description (Tom's "Yes", 27/10/2026; pinned in
+  `test/threeOffers.test.js`).
 
 ## Sale readiness page
 
