@@ -9843,6 +9843,60 @@ iPhone 13 8.8 (6.82), Pixel 7 7.69 (6.71), desktop 11.6 (10.55). Previews were s
 stalled twice that afternoon; the review branch's workflow now times out
 each attempt after two minutes and retries.
 
+## Critical sweep of the three-offer release: three fixes (LIVE 28/10/2026)
+
+Tom, after switching this session to a stronger model: "Website changes have
+been made on lower model. Do a critical sweep and make sure you're happy and
+it's made the site better". Scope: every commit on main since the three
+offer release (`23a1c94`, 21/10/2026). Method: Brand OS (last reviewed 22
+Oct) and the Handoff Log read first; every diff read; the seven changed pages
+read live and captured from GitHub's servers at desktop and phone (run
+`20261028T101614Z-critical-sweep-28oct`: all 200, zero page errors, no
+overflow, no dashes, no serif, metadata and structured data intact); the 80
+tests covering those pages green. Verdict given to Tom: the changes made the
+site better and nothing factual or off-brand was found. Three things to tidy,
+all approved ("Yes fix all of the above") and shipped as `f170731`, serving
+deployment `93d5b3a1` (twin `aa28dc77` ran the seed and is REMOVED):
+
+1. **Home page: the three-tile proof strip is gone.** It sat in the "Built
+   from running real businesses for over 20 years." block, directly under
+   the Abacus case study added on 22/10, reading "Built and exited: Abacus
+   and Falmouth Taxis / Turned around: Devon marine firm / Improved margin:
+   South West aesthetic clinics", so the page said Abacus three times in a
+   row and restated both case studies above it (before 22/10 it restated
+   one). The tiles are CMS rows (`filter__2.row_N_action` / `_client`) and
+   the filter template falls back to the instance's `p2` when the rows are
+   blank; production's `p2` held the same three lines as text (the July 2026
+   form of the strip), so clearing the rows alone would have printed them
+   again. `lib/homeProofStrip.js` (marker `homepage.proof_strip_2026-10-28`)
+   finds the block by its live heading, clears the six rows and `p2` only
+   while each holds the strip's own value (an edited value keeps the whole
+   strip and is logged), and leaves heading, paragraph and the "Read what we
+   have done" button. Production log (deployment `aa28dc77`): "filter__2: 7
+   value(s) cleared (the three tiles and the fallback line); the block now
+   reads heading, paragraph and button." Proved first on a rebuild of
+   production's July shape with the tiles added: cleared, rendered without
+   tiles, redeploy a no-op. `test/homeProofStrip.test.js` (6; the value guard
+   watched red). The three pieces of proof are still on Evidence in full.
+2. **Taxi operators page sells the same three offers as the menu and home
+   page.** Its offers section carried the parked £2,500 Commercial Review
+   and Implementation and "For everything else we do, see the Product
+   Guide"; the Commercial Review page had lost its credit card on 21/10 for
+   exactly that reason. Now Commercial Review, Website Build and the Taxi
+   office workspace (the workspace page's own hero line and £999, from the
+   new `lib/taxiWorkspaceOffer.js`, which also holds `WORKSPACE_PRICE_PENCE`;
+   `routes/taxiWebsites.js` re-exports it so every import still works). The
+   Product Guide line watched red when put back.
+3. **Website Build page: "Pay upfront" label removed.** The page's main
+   action is the enquiry button and, since 26/10, payment follows our
+   agreeing to take the project on; the label contradicted both.
+
+Findings reported and NOT changed: the workspace page and the home box still
+show £999 and £1,998 while the taxi websites page says "ask us" (Tom's 26/10
+decision covered that page only; already with him); "more than 18 years"
+(home Abacus), "nearly twenty years" (taxi pages) and "Two decades" (hero
+strip) are three true, approved readings of the same tenure.
+
 ## Writing and reviewing website copy
 
 - Where a brief asks for copy but does not contain the underlying commercial
