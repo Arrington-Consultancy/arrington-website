@@ -9891,6 +9891,14 @@ deployment `93d5b3a1` (twin `aa28dc77` ran the seed and is REMOVED):
    action is the enquiry button and, since 26/10, payment follows our
    agreeing to take the project on; the label contradicted both.
 
+Verified live in inspection run `20261028T103256Z-sweep-fixes-live` (the
+three pages at desktop and phone, all 200, zero page errors, no overflow, no
+dashes; captures read): the home page's proof block is heading, paragraph
+and button only (page 4973px to 4784px on desktop, 6196px to 5744px on a
+phone); the taxi page's cards read Commercial Review £500, Website Build
+£999, Taxi office workspace £999 with no Product Guide line; the Website
+Build title has no label above it.
+
 Findings reported and NOT changed: the workspace page and the home box still
 show £999 and £1,998 while the taxi websites page says "ask us" (Tom's 26/10
 decision covered that page only; already with him); "more than 18 years"
