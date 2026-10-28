@@ -1,0 +1,165 @@
+# Production inspection, 2026-10-28T10:32:56.221Z
+
+Base: https://www.arringtonconsultancy.com
+
+## / (desktop)
+- HTTP status: 200
+- Title: Business Consultant Devon & Cornwall, Arrington Consultancy
+- First h1: You’ve built something you’re proud of. So why does everything still run through you?
+- Canonical: https://www.arringtonconsultancy.com/
+- Server HTML (no JavaScript): 1 title(s) ["Business Consultant Devon & Cornwall, Arrington Consultancy"]; 1 description(s) ["Business consultancy for established owner run businesses across Devon and Cornwall. An outside view on decisions, structure and what to deal with next."]; 1 canonical(s) ["https://www.arringtonconsultancy.com/"]; 1 og:title; 1 structured data block(s); Google tag loader 1, Ads config 1
+- Robots: meta (none); X-Robots-Tag (none); in sitemap.xml: yes; links to itself on the page: 1
+- Em or en dashes in the visible text: 0
+- Numerals drawn in: 11 element(s) with numerals; faces drawn (glyphs): DM Sans 9pt 540, Poppins Medium 275, Poppins SemiBold 64; no serif
+- Horizontal overflow: no; page height 4784px
+- Enquiry form starts: 3714px, 3.7 screen heights down (viewport 1000px)
+- How did you hear options: How did you hear about us? | Google search | Google advert | Facebook or Instagram advert | Microsoft or Bing advert | Recommended by someone | Social media | AI assistant, such as ChatGPT | Other
+- First primary button: "Tell us what is going on" -> #conversation
+- PDF email box open without a click: no; PDF request buttons on the page: 0
+- Own-visit analytics hits dropped: 13 (connect.facebook.net, googleads.g.doubleclick.net, www.google-analytics.com)
+- Microsoft Clarity: ywiy9r672t; data sent to Clarity: 3 request(s) (204, 204, 204)
+- Microsoft UET: not loaded; requests to Microsoft: 0; Allow / Decline bar: not showing
+- SEO: title 59 chars; description 152 chars; h1 count 1; words 587; lang en-GB; og:image yes
+- Description: Business consultancy for established owner run businesses across Devon and Cornwall. An outside view on decisions, structure and what to deal with next.
+- Structured data: Organization/ProfessionalService, WebSite
+- Images: 2, no alt attribute 0, empty alt 0
+- Weight: 143KB transferred, load 923ms; heaviest /img/headshot.webp 94KB
+- Internal links: 13; h2: Commercial Review | Website Build | Taxi office workspace | The Insolvent Turnaround | Abacus and Falmouth Taxis | Built from running real businesses for over 20 years. | Hear it from the owners | Tell us where the pressure is showing.
+- Page errors: 0
+- Console errors: 9 (Permissions policy violation: picture-in-picture is not allowed in this document. | %c%d font-size:0;color:transparent NaN | %c%d font-size:0;color:transparent NaN | %c%o font-size:0;color:transparent {} | %c%o font-size:0;color:transparent {} | Refused to connect to 'data:,' because it violates the following Content Security Policy directive: "connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c | Refused to connect to 'data:,' because it violates the following Content Security Policy directive: "connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c | Refused to connect to 'data:,' because it violates the following Content Security Policy directive: "connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c | Refused to connect to 'data:,' because it violates the document's Content Security Policy.)
+- Screenshots: full page home-desktop.png, first screen home-desktop-top.png
+
+## / (mobile)
+- HTTP status: 200
+- Title: Business Consultant Devon & Cornwall, Arrington Consultancy
+- First h1: You’ve built something you’re proud of. So why does everything still run through you?
+- Canonical: https://www.arringtonconsultancy.com/
+- Server HTML (no JavaScript): 1 title(s) ["Business Consultant Devon & Cornwall, Arrington Consultancy"]; 1 description(s) ["Business consultancy for established owner run businesses across Devon and Cornwall. An outside view on decisions, structure and what to deal with next."]; 1 canonical(s) ["https://www.arringtonconsultancy.com/"]; 1 og:title; 1 structured data block(s); Google tag loader 1, Ads config 1
+- Robots: meta (none); X-Robots-Tag (none); in sitemap.xml: yes; links to itself on the page: 1
+- Em or en dashes in the visible text: 0
+- Numerals drawn in: 11 element(s) with numerals; faces drawn (glyphs): DM Sans 9pt 534, Poppins Medium 273, Poppins SemiBold 64; no serif
+- Horizontal overflow: no; page height 5744px
+- Enquiry form starts: 4382px, 6.6 screen heights down (viewport 664px)
+- How did you hear options: How did you hear about us? | Google search | Google advert | Facebook or Instagram advert | Microsoft or Bing advert | Recommended by someone | Social media | AI assistant, such as ChatGPT | Other
+- First primary button: "Tell us what is going on" -> #conversation
+- PDF email box open without a click: no; PDF request buttons on the page: 0
+- Own-visit analytics hits dropped: 13 (connect.facebook.net, googleads.g.doubleclick.net, www.google-analytics.com)
+- Microsoft Clarity: ywiy9r672t; data sent to Clarity: 3 request(s) (204, 204, 204)
+- Microsoft UET: not loaded; requests to Microsoft: 0; Allow / Decline bar: not showing
+- SEO: title 59 chars; description 152 chars; h1 count 1; words 573; lang en-GB; og:image yes
+- Description: Business consultancy for established owner run businesses across Devon and Cornwall. An outside view on decisions, structure and what to deal with next.
+- Structured data: Organization/ProfessionalService, WebSite
+- Images: 2, no alt attribute 0, empty alt 0
+- Weight: 143KB transferred, load 811ms; heaviest /img/headshot.webp 94KB
+- Internal links: 13; h2: Commercial Review | Website Build | Taxi office workspace | The Insolvent Turnaround | Abacus and Falmouth Taxis | Built from running real businesses for over 20 years. | Hear it from the owners | Tell us where the pressure is showing.
+- Page errors: 0
+- Console errors: 8 (Permissions policy violation: picture-in-picture is not allowed in this document. | Refused to connect to 'data:,' because it violates the following Content Security Policy directive: "connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c | Refused to connect to 'data:,' because it violates the following Content Security Policy directive: "connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c | Refused to connect to 'data:,' because it violates the document's Content Security Policy. | %c%d font-size:0;color:transparent NaN | %c%d font-size:0;color:transparent NaN | %c%o font-size:0;color:transparent {} | %c%o font-size:0;color:transparent {})
+- Screenshots: full page home-mobile.png, first screen home-mobile-top.png
+
+## /taxi-and-private-hire-operators (desktop)
+- HTTP status: 200
+- Title: Independent Taxi Dispatch System Advice | Arrington
+- First h1: Choosing or changing a taxi dispatch system? Talk to an operator first.
+- Canonical: https://www.arringtonconsultancy.com/taxi-and-private-hire-operators
+- Server HTML (no JavaScript): 1 title(s) ["Independent Taxi Dispatch System Advice | Arrington"]; 1 description(s) ["Choosing or changing a taxi dispatch system? Independent advice from Tom Arrington, a former operator who ran on iCabbi for around eight years. No supplier pays us."]; 1 canonical(s) ["https://www.arringtonconsultancy.com/taxi-and-private-hire-operators"]; 1 og:title; 2 structured data block(s); Google tag loader 1, Ads config 1
+- Robots: meta (none); X-Robots-Tag (none); in sitemap.xml: yes; links to itself on the page: 0
+- Em or en dashes in the visible text: 0
+- Numerals drawn in: 7 element(s) with numerals; faces drawn (glyphs): DM Sans 9pt 523, Poppins Medium 12; no serif
+- Horizontal overflow: no; page height 4726px
+- Enquiry form starts: 3675px, 3.7 screen heights down (viewport 1000px)
+- How did you hear options: How did you hear about us? | Google search | Google advert | Facebook or Instagram advert | Microsoft or Bing advert | Recommended by someone | Social media | AI assistant, such as ChatGPT | Other
+- First primary button: "Tell us what's going on" -> #conversation
+- PDF email box open without a click: no box on the page; PDF request buttons on the page: 0
+- Own-visit analytics hits dropped: 4 (connect.facebook.net, googleads.g.doubleclick.net, www.google-analytics.com)
+- Microsoft Clarity: ywiy9r672t; data sent to Clarity: 3 request(s) (204, 204, 204)
+- Microsoft UET: not loaded; requests to Microsoft: 0; Allow / Decline bar: not showing
+- SEO: title 51 chars; description 164 chars; h1 count 1; words 937; lang en-GB; og:image yes
+- Description: Choosing or changing a taxi dispatch system? Independent advice from Tom Arrington, a former operator who ran on iCabbi for around eight years. No supplier pays us.
+- Structured data: Organization/ProfessionalService, WebSite | BreadcrumbList, Service
+- Images: 2, no alt attribute 0, empty alt 0
+- Weight: 84KB transferred, load 796ms
+- Internal links: 14; h2: What it usually looks like | Most of the time it isn't the software | Choosing or changing a dispatch system | Websites for operators | The phones and the office | Ways to work with us | Tell us what's going on
+- Page errors: 0
+- Console errors: 9 (Permissions policy violation: picture-in-picture is not allowed in this document. | %c%d font-size:0;color:transparent NaN | %c%d font-size:0;color:transparent NaN | %c%o font-size:0;color:transparent {} | %c%o font-size:0;color:transparent {} | Refused to connect to 'data:,' because it violates the following Content Security Policy directive: "connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c | Refused to connect to 'data:,' because it violates the following Content Security Policy directive: "connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c | Refused to connect to 'data:,' because it violates the following Content Security Policy directive: "connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c | Refused to connect to 'data:,' because it violates the document's Content Security Policy.)
+- Screenshots: full page taxi-and-private-hire-operators-desktop.png, first screen taxi-and-private-hire-operators-desktop-top.png
+
+## /taxi-and-private-hire-operators (mobile)
+- HTTP status: 200
+- Title: Independent Taxi Dispatch System Advice | Arrington
+- First h1: Choosing or changing a taxi dispatch system? Talk to an operator first.
+- Canonical: https://www.arringtonconsultancy.com/taxi-and-private-hire-operators
+- Server HTML (no JavaScript): 1 title(s) ["Independent Taxi Dispatch System Advice | Arrington"]; 1 description(s) ["Choosing or changing a taxi dispatch system? Independent advice from Tom Arrington, a former operator who ran on iCabbi for around eight years. No supplier pays us."]; 1 canonical(s) ["https://www.arringtonconsultancy.com/taxi-and-private-hire-operators"]; 1 og:title; 2 structured data block(s); Google tag loader 1, Ads config 1
+- Robots: meta (none); X-Robots-Tag (none); in sitemap.xml: yes; links to itself on the page: 0
+- Em or en dashes in the visible text: 0
+- Numerals drawn in: 7 element(s) with numerals; faces drawn (glyphs): DM Sans 9pt 517, Poppins Medium 12; no serif
+- Horizontal overflow: no; page height 5818px
+- Enquiry form starts: 4497px, 6.8 screen heights down (viewport 664px)
+- How did you hear options: How did you hear about us? | Google search | Google advert | Facebook or Instagram advert | Microsoft or Bing advert | Recommended by someone | Social media | AI assistant, such as ChatGPT | Other
+- First primary button: "Tell us what's going on" -> #conversation
+- PDF email box open without a click: no box on the page; PDF request buttons on the page: 0
+- Own-visit analytics hits dropped: 4 (connect.facebook.net, googleads.g.doubleclick.net, www.google-analytics.com)
+- Microsoft Clarity: ywiy9r672t; data sent to Clarity: 3 request(s) (204, 204, 204)
+- Microsoft UET: not loaded; requests to Microsoft: 0; Allow / Decline bar: not showing
+- SEO: title 51 chars; description 164 chars; h1 count 1; words 923; lang en-GB; og:image yes
+- Description: Choosing or changing a taxi dispatch system? Independent advice from Tom Arrington, a former operator who ran on iCabbi for around eight years. No supplier pays us.
+- Structured data: Organization/ProfessionalService, WebSite | BreadcrumbList, Service
+- Images: 2, no alt attribute 0, empty alt 0
+- Weight: 84KB transferred, load 714ms
+- Internal links: 14; h2: What it usually looks like | Most of the time it isn't the software | Choosing or changing a dispatch system | Websites for operators | The phones and the office | Ways to work with us | Tell us what's going on
+- Page errors: 0
+- Console errors: 8 (Permissions policy violation: picture-in-picture is not allowed in this document. | Refused to connect to 'data:,' because it violates the following Content Security Policy directive: "connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c | Refused to connect to 'data:,' because it violates the following Content Security Policy directive: "connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c | Refused to connect to 'data:,' because it violates the document's Content Security Policy. | %c%d font-size:0;color:transparent NaN | %c%d font-size:0;color:transparent NaN | %c%o font-size:0;color:transparent {} | %c%o font-size:0;color:transparent {})
+- Screenshots: full page taxi-and-private-hire-operators-mobile.png, first screen taxi-and-private-hire-operators-mobile-top.png
+
+## /where-to-start/website-build (desktop)
+- HTTP status: 200
+- Title: Website Build | Arrington Consultancy
+- First h1: Website Build
+- Canonical: https://www.arringtonconsultancy.com/where-to-start/website-build
+- Server HTML (no JavaScript): 1 title(s) ["Website Build | Arrington Consultancy"]; 1 description(s) ["A fixed £999 Website Build for owner run businesses: planning, build, mobile-ready pages, agreed functionality and one structured round of changes."]; 1 canonical(s) ["https://www.arringtonconsultancy.com/where-to-start/website-build"]; 1 og:title; 2 structured data block(s); Google tag loader 1, Ads config 1
+- Robots: meta (none); X-Robots-Tag (none); in sitemap.xml: yes; links to itself on the page: 2
+- Em or en dashes in the visible text: 0
+- Numerals drawn in: 6 element(s) with numerals; faces drawn (glyphs): DM Sans 9pt 573, Poppins Medium 4; no serif
+- Horizontal overflow: no; page height 3139px
+- Enquiry form starts: 2088px, 2.1 screen heights down (viewport 1000px)
+- How did you hear options: How did you hear about us? | Google search | Google advert | Facebook or Instagram advert | Microsoft or Bing advert | Recommended by someone | Social media | AI assistant, such as ChatGPT | Other
+- First primary button: "Tell us what you want to build" -> #conversation
+- PDF email box open without a click: no box on the page; PDF request buttons on the page: 0
+- Own-visit analytics hits dropped: 4 (connect.facebook.net, googleads.g.doubleclick.net, www.google-analytics.com)
+- Microsoft Clarity: ywiy9r672t; data sent to Clarity: 2 request(s) (204, 204)
+- Microsoft UET: not loaded; requests to Microsoft: 0; Allow / Decline bar: not showing
+- SEO: title 37 chars; description 147 chars; h1 count 1; words 427; lang en-GB; og:image yes
+- Description: A fixed £999 Website Build for owner run businesses: planning, build, mobile-ready pages, agreed functionality and one structured round of changes.
+- Structured data: Organization/ProfessionalService, WebSite | BreadcrumbList, Service
+- Images: 1, no alt attribute 0, empty alt 0
+- Weight: 30KB transferred, load 694ms
+- Internal links: 14; h2: What you get | How it works | Price and scope | Start your Website Build | Tell us what you want to build
+- Page errors: 0
+- Console errors: 9 (Permissions policy violation: picture-in-picture is not allowed in this document. | %c%d font-size:0;color:transparent NaN | %c%d font-size:0;color:transparent NaN | %c%o font-size:0;color:transparent {} | %c%o font-size:0;color:transparent {} | Refused to connect to 'data:,' because it violates the following Content Security Policy directive: "connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c | Refused to connect to 'data:,' because it violates the following Content Security Policy directive: "connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c | Refused to connect to 'data:,' because it violates the following Content Security Policy directive: "connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c | Refused to connect to 'data:,' because it violates the document's Content Security Policy.)
+- Screenshots: full page where-to-start-website-build-desktop.png, first screen where-to-start-website-build-desktop-top.png
+
+## /where-to-start/website-build (mobile)
+- HTTP status: 200
+- Title: Website Build | Arrington Consultancy
+- First h1: Website Build
+- Canonical: https://www.arringtonconsultancy.com/where-to-start/website-build
+- Server HTML (no JavaScript): 1 title(s) ["Website Build | Arrington Consultancy"]; 1 description(s) ["A fixed £999 Website Build for owner run businesses: planning, build, mobile-ready pages, agreed functionality and one structured round of changes."]; 1 canonical(s) ["https://www.arringtonconsultancy.com/where-to-start/website-build"]; 1 og:title; 2 structured data block(s); Google tag loader 1, Ads config 1
+- Robots: meta (none); X-Robots-Tag (none); in sitemap.xml: yes; links to itself on the page: 2
+- Em or en dashes in the visible text: 0
+- Numerals drawn in: 6 element(s) with numerals; faces drawn (glyphs): DM Sans 9pt 565, Poppins Medium 4; no serif
+- Horizontal overflow: no; page height 3744px
+- Enquiry form starts: 2423px, 3.6 screen heights down (viewport 664px)
+- How did you hear options: How did you hear about us? | Google search | Google advert | Facebook or Instagram advert | Microsoft or Bing advert | Recommended by someone | Social media | AI assistant, such as ChatGPT | Other
+- First primary button: "Tell us what you want to build" -> #conversation
+- PDF email box open without a click: no box on the page; PDF request buttons on the page: 0
+- Own-visit analytics hits dropped: 4 (connect.facebook.net, googleads.g.doubleclick.net, www.google-analytics.com)
+- Microsoft Clarity: ywiy9r672t; data sent to Clarity: 3 request(s) (204, 204, 204)
+- Microsoft UET: not loaded; requests to Microsoft: 0; Allow / Decline bar: not showing
+- SEO: title 37 chars; description 147 chars; h1 count 1; words 413; lang en-GB; og:image yes
+- Description: A fixed £999 Website Build for owner run businesses: planning, build, mobile-ready pages, agreed functionality and one structured round of changes.
+- Structured data: Organization/ProfessionalService, WebSite | BreadcrumbList, Service
+- Images: 1, no alt attribute 0, empty alt 0
+- Weight: 30KB transferred, load 675ms
+- Internal links: 14; h2: What you get | How it works | Price and scope | Start your Website Build | Tell us what you want to build
+- Page errors: 0
+- Console errors: 9 (Permissions policy violation: picture-in-picture is not allowed in this document. | %c%d font-size:0;color:transparent NaN | %c%d font-size:0;color:transparent NaN | %c%o font-size:0;color:transparent {} | %c%o font-size:0;color:transparent {} | Refused to connect to 'data:,' because it violates the following Content Security Policy directive: "connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c | Refused to connect to 'data:,' because it violates the following Content Security Policy directive: "connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c | Refused to connect to 'data:,' because it violates the following Content Security Policy directive: "connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c | Refused to connect to 'data:,' because it violates the document's Content Security Policy.)
+- Screenshots: full page where-to-start-website-build-mobile.png, first screen where-to-start-website-build-mobile-top.png
