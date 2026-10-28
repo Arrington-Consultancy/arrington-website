@@ -199,7 +199,10 @@
     <main>
         <%# No "Where to Start" back link since 21/10/2026 (see the Commercial
             Review page). %>
-        <span class="wts-label">Pay upfront</span>
+        <%# No "Pay upfront" label since 28/10/2026 (Tom's "Yes fix all of the
+            above" on the critical sweep): the page's main action is the enquiry
+            button and payment follows our agreeing to take the project on, so
+            the label contradicted both. %>
         <div class="wts-hero-head">
             <h1><%= offer.name %></h1>
             <p class="wts-price">£<%= (offer.pricePence / 100).toLocaleString('en-GB') %></p>

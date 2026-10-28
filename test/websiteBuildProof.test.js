@@ -73,4 +73,7 @@ test('payment comes after we agree to take the project on (Tom, 26/10/2026)', ()
   const text = visibleText(renderBody());
   assert.ok(text.includes('Once we have agreed to take the project on, you pay the £999 and Tom books the recorded planning conversation.'), 'the payment order sentence changed');
   assert.ok(!/After payment/i.test(text), 'the page says payment comes first again');
+  // 28/10/2026 (Tom's "Yes fix all of the above"): the "Pay upfront" label
+  // above the title contradicted both the enquiry button and this sentence.
+  assert.ok(!/pay upfront/i.test(text), 'the "Pay upfront" label is back');
 });

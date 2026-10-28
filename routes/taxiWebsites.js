@@ -46,11 +46,13 @@ const { OFFERS } = require('../lib/whereToStartOffers');
 // server.js (it used to be Railway's generated domain for its own service).
 const TAXI_DEMO_URL = '/taxi-demo/';
 
-// The office workspace's price, Tom's decision of 17/10/2026. Kept here rather
-// than in the offer catalogue because it is sold on this page only, through
-// the enquiry form, with no payment page. 02 Commercial Position is Tom's to
-// update. The page shows it beside the website's price and their plain sum.
-const WORKSPACE_PRICE_PENCE = 99900;
+// The office workspace's price, Tom's decision of 17/10/2026. Not in the offer
+// catalogue because it is sold through the enquiry form with no payment page;
+// since 28/10/2026 it lives in lib/taxiWorkspaceOffer.js (so the taxi
+// operators page can show it without a circular require) and is re-exported
+// here for the routes and tests that always read it from this file. 02
+// Commercial Position is Tom's to update.
+const { WORKSPACE_PRICE_PENCE } = require('../lib/taxiWorkspaceOffer');
 
 const TAXI_WEBSITES_CONTACT = {
   heading: 'Tell us about your firm',

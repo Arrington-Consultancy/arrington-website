@@ -34,6 +34,7 @@ const db = require('../db/pool');
 const themes = require('../db/themes');
 const { getSiteShellData } = require('../lib/navShell');
 const { OFFERS } = require('../lib/whereToStartOffers');
+const { WORKSPACE_PRICE_PENCE, WORKSPACE_NAME, WORKSPACE_LEDE } = require('../lib/taxiWorkspaceOffer');
 
 const TAXI_OPERATORS_PATH = '/taxi-and-private-hire-operators';
 // The taxi websites page (routes/taxiWebsites.js, 13/10/2026). Defined here so
@@ -41,22 +42,25 @@ const TAXI_OPERATORS_PATH = '/taxi-and-private-hire-operators';
 const TAXI_WEBSITES_PATH = TAXI_OPERATORS_PATH + '/websites';
 const TAXI_WORKSPACE_PATH = TAXI_OPERATORS_PATH + '/office-workspace';
 
-// Three paid offers, each with a one-line taxi lead-in above its approved
-// catalogue description (Tom, 07/10/2026, after the second review: "lets ditch
-// the 3400 then"). The £3,400 Commercial Review and Website Build is not shown
-// here; the page links to the Product Guide for it and everything else. The
-// free conversation is a line above the cards plus the call to action (a
-// button and the footer form), not a card. Names, prices and descriptions
-// still come from the catalogue.
+// Three offers, each with a one-line taxi lead-in (Tom, 07/10/2026, after the
+// second review: "lets ditch the 3400 then"). Since 28/10/2026 (Tom's "Yes
+// fix all of the above" on the critical sweep) the three are the site's
+// three offers, the same as the menu and the home page: Commercial Review,
+// Website Build and the taxi office workspace. The £2,500 Commercial Review
+// and Implementation and the Product Guide line went with it; both are
+// parked under the three offer decision of 21/10/2026 (live at their URLs,
+// not promoted). The free conversation is a line above the cards plus the
+// call to action (a button and the footer form), not a card. Names, prices
+// and descriptions for the two catalogue offers still come from the
+// catalogue; the workspace's come from lib/taxiWorkspaceOffer.js.
 //
 // The lead-ins answer the operator's situation set out at the top of the page
 // (Tom's brief of 8 October 2026, relayed by the Google Ads worker): the
-// review finds where things are going, implementation means we stay and do it
-// with you. The website line is unchanged, as the brief asked.
-const TAXI_OFFER_ORDER = ['commercial_review', 'full_commercial_review', 'website_build'];
+// review finds where things are going. The website line is unchanged, as the
+// brief asked. The workspace card carries the workspace page's own hero line.
+const TAXI_OFFER_ORDER = ['commercial_review', 'website_build'];
 const TAXI_OFFER_LEADS = {
   commercial_review: 'We find out where the money, the drivers and the work are actually going.',
-  full_commercial_review: 'We stay and do it with you.',
   website_build: 'A website that gets the booking.'
 };
 
@@ -67,6 +71,18 @@ const TAXI_OFFER_LEADS = {
 const TAXI_OFFER_HREF = {
   website_build: TAXI_WEBSITES_PATH
 };
+
+// The workspace card, in the shape of a catalogue offer so the view treats
+// all three alike. Its page's main action is already the enquiry form.
+const TAXI_WORKSPACE_OFFER = Object.freeze({
+  id: 'taxi_office_workspace',
+  name: WORKSPACE_NAME,
+  pricePence: WORKSPACE_PRICE_PENCE,
+  publicPriceApproved: true,
+  path: TAXI_WORKSPACE_PATH,
+  href: TAXI_WORKSPACE_PATH,
+  taxiLead: WORKSPACE_LEDE
+});
 
 async function loadThemeAndShell() {
   const { rows: themeRows } = await db.query("SELECT content FROM content WHERE section_key = 'site.theme'");
@@ -91,7 +107,8 @@ const TAXI_OPERATORS_CONTACT = {
 function taxiOffers() {
   return TAXI_OFFER_ORDER.map((id) => OFFERS[id])
     .filter((o) => o && o.publicPriceApproved)
-    .map((o) => ({ ...o, taxiLead: TAXI_OFFER_LEADS[o.id], href: TAXI_OFFER_HREF[o.id] || o.path }));
+    .map((o) => ({ ...o, taxiLead: TAXI_OFFER_LEADS[o.id], href: TAXI_OFFER_HREF[o.id] || o.path }))
+    .concat([TAXI_WORKSPACE_OFFER]);
 }
 
 function mountPageRoute(app, generateCsrfToken) {
@@ -113,4 +130,4 @@ function mountPageRoute(app, generateCsrfToken) {
   });
 }
 
-module.exports = { mountPageRoute, loadThemeAndShell, TAXI_OPERATORS_PATH, TAXI_WEBSITES_PATH, TAXI_WORKSPACE_PATH, TAXI_OPERATORS_CONTACT, TAXI_OFFER_ORDER, TAXI_OFFER_LEADS, TAXI_OFFER_HREF, taxiOffers };
+module.exports = { mountPageRoute, loadThemeAndShell, TAXI_OPERATORS_PATH, TAXI_WEBSITES_PATH, TAXI_WORKSPACE_PATH, TAXI_OPERATORS_CONTACT, TAXI_OFFER_ORDER, TAXI_OFFER_LEADS, TAXI_OFFER_HREF, TAXI_WORKSPACE_OFFER, taxiOffers };

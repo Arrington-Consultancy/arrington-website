@@ -87,7 +87,6 @@
         .tx-offer .tx-offer-more { grid-column: 1 / -1; margin-top: 0.5rem; font-size: 0.92rem; }
         .tx-offer .tx-offer-lead { font-size: 1rem; font-weight: 500; color: var(--text-bright); margin-top: 0.2rem; }
         .tx-offers-intro { margin: 0; max-width: 62ch; }
-        .tx-offers-next { margin: 1.6rem 0 1.1rem; max-width: 62ch; }
         .tx-offers-actions { margin: 0; }
 
         @media (max-width: 760px) {
@@ -213,14 +212,16 @@
         </div>
         </div>
 
-        <%# THREE PAID OFFERS with a taxi lead-in each (Tom, 07/10/2026: the
-            £3,400 card dropped after the second review). Names and prices
-            read from lib/whereToStartOffers.js so the page can never disagree
-            with the offer pages; the Product Guide covers the rest. No credit
-            mechanics here. The longer catalogue description is not shown on
-            this page since 11/10/2026 (Tom's approval, to bring the page
-            under about 700 words); it stays on each offer page, one click
-            away. %>
+        <%# THE THREE OFFERS with a taxi lead-in each: the same three as the
+            menu and the home page since 28/10/2026 (Tom's "Yes fix all of the
+            above" on the critical sweep; the £2,500 bundle card and the
+            Product Guide line, both parked on 21/10/2026, came off). Names
+            and prices read from lib/whereToStartOffers.js and
+            lib/taxiWorkspaceOffer.js so the page can never disagree with the
+            offer pages. No credit mechanics here. The longer catalogue
+            description is not shown on this page since 11/10/2026 (Tom's
+            approval, to bring the page under about 700 words); it stays on
+            each offer page, one click away. %>
         <section class="tx-band surface-paper">
         <div class="tx-wrap">
         <div class="tx-section">
@@ -236,7 +237,6 @@
                 </li>
                 <% }) %>
             </ul>
-            <p class="tx-offers-next">For everything else we do, see the <a class="tx-link" href="/product-guide">Product Guide</a>.</p>
             <div class="tx-offers-actions">
                 <a href="#conversation" class="btn btn-primary">Tell us what's going on</a>
             </div>

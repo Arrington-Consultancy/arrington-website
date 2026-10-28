@@ -79,10 +79,18 @@ test('independence is stated in the hero and the iCabbi listing disclosed beside
   assert.ok(text.includes('listed on the iCabbi Marketplace'), 'the iCabbi Marketplace listing is no longer disclosed');
 });
 
-test('three taxi-framed offers from the catalogue, no £3,400, a route to the Product Guide', () => {
-  // Tom, 07/10/2026 after the second review: "lets ditch the 3400 then".
+test('the three offers the site leads with, no £2,500 bundle, no £3,400, no Product Guide line', () => {
+  // Tom, 07/10/2026 after the second review: "lets ditch the 3400 then";
+  // then 28/10/2026 ("Yes fix all of the above"): the same three offers as
+  // the menu and the home page, the parked £2,500 bundle and the Product
+  // Guide line gone.
   const offers = taxiOffers();
-  assert.deepStrictEqual(offers.map((o) => o.id), ['commercial_review', 'full_commercial_review', 'website_build']);
+  assert.deepStrictEqual(offers.map((o) => o.id), ['commercial_review', 'website_build', 'taxi_office_workspace']);
+  const workspace = offers[2];
+  assert.strictEqual(workspace.href, '/taxi-and-private-hire-operators/office-workspace');
+  assert.strictEqual(workspace.pricePence, 99900);
+  // The workspace card carries the workspace page's own hero line, word for word.
+  assert.ok(read('views/taxi-workspace.ejs').includes(`data-hero-lede>${workspace.taxiLead}<`), 'the workspace lead-in is not its page lede');
   const body = renderBody();
   const text = visibleText(body);
   for (const o of offers) {
@@ -97,15 +105,16 @@ test('three taxi-framed offers from the catalogue, no £3,400, a route to the Pr
   assert.strictEqual(offers.find((o) => o.id === 'website_build').href, '/taxi-and-private-hire-operators/websites');
   assert.ok(!body.includes('href="/where-to-start/website-build"'), 'the website card still sends taxi traffic to the payment page');
   // Tom's brief of 8 October 2026: each price answers the operator's situation.
-  for (const lead of ['We find out where the money, the drivers and the work are actually going.', 'We stay and do it with you.', 'A website that gets the booking.']) {
+  for (const lead of ['We find out where the money, the drivers and the work are actually going.', 'A website that gets the booking.', workspace.taxiLead]) {
     assert.ok(text.includes(lead), `the taxi lead-in "${lead}" is missing`);
   }
   assert.ok(text.includes("The first conversation is free. Tell us what's happening and we'll tell you where we'd look first."), 'the free conversation line is missing');
   assert.strictEqual(OFFERS.commercial_review.pricePence, 50000);
   assert.ok(!text.includes('£3,400') && !text.includes('Commercial Review and Website Build'), 'the £3,400 offer is back');
-  assert.ok(body.includes('href="/product-guide"'), 'the Product Guide route for everything else is gone');
+  assert.ok(!body.includes('/product-guide'), 'the Product Guide line is back (parked, 21/10/2026)');
+  assert.ok(!text.includes('£2,500') && !text.includes('Commercial Review and Implementation'), 'the parked £2,500 bundle is back');
   assert.ok(/class="tx-offers-actions">\s*<a href="#conversation"/.test(body), 'the conversation button after the offers is gone');
-  assert.ok(!/£(?!(?:500|999|2,500)\b)[0-9][0-9,]*/.test(text), 'an unapproved price appeared');
+  assert.ok(!/£(?!(?:500|999)\b)[0-9][0-9,]*/.test(text), 'an unapproved price appeared');
   assert.ok(!/save £|was £|discount|introductory|50%|half price|launch (?:price|offer)|limited time|taxi rate|special offer/i.test(text), 'a price is framed as a reduction');
   assert.ok(!/\/api\/checkout|data-offer=|AW-18129914078/.test(body + read(ROUTE)), 'a checkout or conversion appeared on the taxi page');
 });

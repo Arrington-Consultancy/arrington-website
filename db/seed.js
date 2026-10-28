@@ -8259,6 +8259,18 @@ async function seed() {
     console.error('Home page Abacus proof migration failed (boot continues):', err.message);
   }
 
+  // THE HOME PAGE PROOF STRIP COMES OFF (28/10/2026, Tom's "Yes fix all of
+  // the above" on the critical sweep): the three tiles under the Abacus case
+  // study restated both case studies above them. Rows and the p2 fallback are
+  // cleared only while they hold the strip's own values. Run once, never
+  // fatal.
+  try {
+    const note = await require('../lib/homeProofStrip').applyHomeProofStrip(db);
+    if (note) console.log(`Home page proof strip: ${note}.`);
+  } catch (err) {
+    console.error('Home page proof strip migration failed (boot continues):', err.message);
+  }
+
 
   // Arrington AI Workspace: ingest the encrypted snapshot into
   // workspace_records. A no-op when WORKSPACE_SNAPSHOT_KEY is unset, and
