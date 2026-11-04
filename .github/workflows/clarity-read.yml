@@ -1,0 +1,63 @@
+# Reads Microsoft Clarity's Data Export API on a runner (the build sandbox
+# cannot reach clarity.ms) and commits the report to the production-qa
+# branch, the same place the live inspections land. Needs the GitHub Actions
+# secret CLARITY_API_TOKEN (Clarity, Settings, Data export, Generate new API
+# token). Clarity allows 10 calls per project per day; a run makes 3.
+name: Clarity read
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: Days to read (1 to 3, the API's limit)
+        required: false
+        default: "3"
+      calls:
+        description: Dimension sets, semicolon separated (e.g. "URL,Device;URL,Source,Medium")
+        required: false
+        default: ""
+      label:
+        description: Short label for this run (used in the results folder name)
+        required: false
+        default: "clarity"
+
+permissions:
+  contents: write
+
+jobs:
+  read:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Read Clarity
+        env:
+          CLARITY_API_TOKEN: ${{ secrets.CLARITY_API_TOKEN }}
+          NUM_OF_DAYS: ${{ github.event.inputs.days }}
+          CALLS: ${{ github.event.inputs.calls }}
+          OUT_DIR: ${{ github.workspace }}/clarity-out
+        run: node scripts/clarityRead.js
+
+      - name: Publish results to the production-qa branch
+        env:
+          LABEL: ${{ github.event.inputs.label }}
+        run: |
+          set -e
+          STAMP="$(date -u +%Y%m%dT%H%M%SZ)-$(echo "$LABEL" | tr -c 'A-Za-z0-9-' '-' | sed 's/-*$//')"
+          mkdir -p /tmp/qa && cp -r clarity-out /tmp/qa/run
+          git config user.name "production-qa"
+          git config user.email "production-qa@users.noreply.github.com"
+          git checkout --orphan production-qa
+          git rm -rfq . 2>/dev/null || true
+          git clean -fdxq
+          mkdir -p "runs/$STAMP"
+          cp -r /tmp/qa/run/. "runs/$STAMP/"
+          echo "$STAMP" > LATEST
+          git add -A
+          git commit -qm "Clarity read $STAMP"
+          git push --force origin production-qa
+          echo "Results in runs/$STAMP on branch production-qa"
