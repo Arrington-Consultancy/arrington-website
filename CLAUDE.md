@@ -7301,6 +7301,31 @@ sent 3 requests to Clarity, all answered 204, with zero page errors. That
 proves the data leaves the site and Clarity accepts it; whether it shows as a
 recording is read in Clarity (headless browsers are usually filtered as bots).
 
+**Reading Clarity from here (04/11/2026).** Windsor's connector cap is
+full (Bing Ads, Google Ads and the Business Profile; GA4 and Search Console
+have already dropped off it), so Clarity is read directly:
+`scripts/clarityRead.js` calls the Data Export API from a GitHub Actions
+runner (`.github/workflows/clarity-read.yml`, inputs `days` 1 to 3, `calls`
+as semicolon separated dimension sets, `label`), with the token in the
+GitHub secret `CLARITY_API_TOKEN` (Tom saved the first one under the name
+`WINDSOR`; the workflow accepts either). The report lands on the
+`production-qa` branch like the live inspections (`report.md` and
+`raw.json` under `runs/<stamp>-<label>/`). Facts about the API learned from
+its real answer: dimension keys come back in Clarity's casing (`Url`); a Url
+carries its full query string, so every ad click is its own row and the
+script groups by path; `totalTime` and `activeTime` are per session AVERAGES
+in seconds for the row, so the script weights them by the row's sessions
+rather than summing; `subTotal` on the click metrics is a count of events
+(five script errors in one session read as 5); 10 calls per project per day,
+three days at most, and no recordings (those stay in Clarity, filter Custom
+tags `traffic` is `google_ads` for paid Google visits). First read, run
+`20261104T133927Z-clarity-first-read-2`: the home page had 3 visits in three
+days, all bots, so the "what puts people off the home page" question is
+unanswered; the Meta campaign `taxi_site_oct26` sent 68 visits to the taxi
+websites page landing on `#conversation` (the form), 23 seconds and 5 active
+on a phone, no enquiry. Brief filed for the Google Ads worker to drop the
+fragment from the ad link (Drive id `1K7aYSkmovKzyql01_HfZ9CUSKB25K__Wx3cCGsu8Xek`).
+
 **Since 13/10/2026** (fix brief item 4) a Microsoft advert arrival (`msclkid`,
 or `utm_source` bing/microsoft) removes `arrPaidGoogle`, so the rest of that
 visit is not labelled `google_ads` (a label already sent on earlier pages
