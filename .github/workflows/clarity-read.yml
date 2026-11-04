@@ -36,7 +36,9 @@ jobs:
 
       - name: Read Clarity
         env:
-          CLARITY_API_TOKEN: ${{ secrets.CLARITY_API_TOKEN }}
+          # Tom saved the first token under the name WINDSOR (04/11/2026), so
+          # either name works.
+          CLARITY_API_TOKEN: ${{ secrets.CLARITY_API_TOKEN || secrets.WINDSOR }}
           NUM_OF_DAYS: ${{ github.event.inputs.days }}
           CALLS: ${{ github.event.inputs.calls }}
           OUT_DIR: ${{ github.workspace }}/clarity-out
