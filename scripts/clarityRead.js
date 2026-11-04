@@ -50,49 +50,74 @@ async function fetchInsights(dimensions) {
 
 function num(v) { const n = Number(v); return Number.isFinite(n) ? n : null; }
 function fmt(n, dp = 0) { return n === null ? '' : n.toLocaleString('en-GB', { maximumFractionDigits: dp, minimumFractionDigits: dp }); }
-function secs(ms) { return ms === null ? '' : `${fmt(ms / 1000, 0)}s`; }
+function secs(sec) { return sec === null || sec === undefined ? '' : `${fmt(sec, 0)}s`; }
 
 // Clarity returns [{ metricName, information: [ { <dimension values...>, <metric fields...> } ] }].
+// Read from the real response on 04/11/2026: the dimension keys come back in
+// Clarity's own casing ('Url'), a Url carries its full query string so every
+// ad click (unique fbclid/gclid) is its own row, totalTime and activeTime are
+// per-session AVERAGES in seconds for that row, averageScrollDepth is a
+// percentage, and the click metrics' subTotal is a count of sessions. Rows
+// are therefore grouped by page path, with sessions and click counts summed
+// and time and scroll depth averaged weighted by each raw row's sessions.
+function dimValue(r, d) {
+  const k = Object.keys(r).find((x) => x.toLowerCase() === d.toLowerCase());
+  let v = k ? r[k] : '';
+  if (d.toLowerCase() === 'url' && typeof v === 'string' && v) {
+    try { v = new URL(v).pathname; } catch { /* keep as is */ }
+  }
+  return v ?? '';
+}
 function table(metrics, dimensions) {
+  const rawKey = (r) => dimensions.map((d) => { const k = Object.keys(r).find((x) => x.toLowerCase() === d.toLowerCase()); return k ? String(r[k] ?? '') : ''; }).join('\u0001');
+  const sessionsOf = new Map();
+  for (const m of metrics) if (m.metricName === 'Traffic') for (const r of m.information || []) sessionsOf.set(rawKey(r), num(r.totalSessionCount) || 0);
+  const weight = (r) => sessionsOf.get(rawKey(r)) || 0;
   const rows = new Map();
-  const key = (r) => dimensions.map((d) => r[d] ?? '').join(' | ');
+  const key = (r) => dimensions.map((d) => dimValue(r, d)).join(' | ');
   const touch = (r) => {
     const k = key(r);
-    if (!rows.has(k)) rows.set(k, Object.fromEntries(dimensions.map((d) => [d, r[d] ?? ''])));
+    if (!rows.has(k)) rows.set(k, Object.assign(Object.fromEntries(dimensions.map((d) => [d, dimValue(r, d)])), { sessions: 0, users: 0, bots: 0, dead: 0, rage: 0, quickback: 0, excessiveScroll: 0, scriptErrors: 0, errorClicks: 0, _t: 0, _a: 0, _tw: 0, _s: 0, _sw: 0 }));
     return rows.get(k);
   };
+  const add = (row, f, v) => { const n = num(v); if (n !== null) row[f] += n; };
   for (const m of metrics) {
     for (const r of m.information || []) {
       const row = touch(r);
+      const w = weight(r);
       switch (m.metricName) {
         case 'Traffic':
-          row.sessions = num(r.totalSessionCount); row.users = num(r.distinctUserCount);
-          row.bots = num(r.totalBotSessionCount); row.pagesPerSession = num(r.PagesPerSessionPercentage);
+          add(row, 'sessions', r.totalSessionCount); add(row, 'users', r.distinctUserCount); add(row, 'bots', r.totalBotSessionCount);
           break;
-        case 'ScrollDepth': row.scroll = num(r.averageScrollDepth); break;
-        case 'EngagementTime': row.total = num(r.totalTime); row.active = num(r.activeTime); break;
-        case 'DeadClickCount': row.dead = num(r.subTotal ?? r.sessionsCount); break;
-        case 'RageClickCount': row.rage = num(r.subTotal ?? r.sessionsCount); break;
-        case 'QuickbackClick': row.quickback = num(r.subTotal ?? r.sessionsCount); break;
-        case 'ExcessiveScroll': row.excessiveScroll = num(r.subTotal ?? r.sessionsCount); break;
-        case 'ScriptErrorCount': row.scriptErrors = num(r.subTotal ?? r.sessionsCount); break;
-        case 'ErrorClickCount': row.errorClicks = num(r.subTotal ?? r.sessionsCount); break;
+        case 'ScrollDepth': { const n = num(r.averageScrollDepth); if (n !== null && w) { row._s += n * w; row._sw += w; } break; }
+        case 'EngagementTime': { const t = num(r.totalTime); const a = num(r.activeTime); if (t !== null && w) { row._t += t * w; row._a += (a || 0) * w; row._tw += w; } break; }
+        case 'DeadClickCount': add(row, 'dead', r.subTotal); break;
+        case 'RageClickCount': add(row, 'rage', r.subTotal); break;
+        case 'QuickbackClick': add(row, 'quickback', r.subTotal); break;
+        case 'ExcessiveScroll': add(row, 'excessiveScroll', r.subTotal); break;
+        case 'ScriptErrorCount': add(row, 'scriptErrors', r.subTotal); break;
+        case 'ErrorClickCount': add(row, 'errorClicks', r.subTotal); break;
         default: break;
       }
     }
+  }
+  for (const row of rows.values()) {
+    row.scroll = row._sw ? row._s / row._sw : null;
+    row.perSession = row._tw ? row._t / row._tw : null;
+    row.activePerSession = row._tw ? row._a / row._tw : null;
   }
   return [...rows.values()].sort((a, b) => (b.sessions || 0) - (a.sessions || 0));
 }
 
 function renderTable(rows, dimensions) {
-  const cols = [...dimensions, 'sessions', 'users', 'scroll', 'total', 'active', 'dead', 'rage', 'quickback', 'scriptErrors'];
-  const head = [...dimensions, 'Sessions', 'Users', 'Scroll %', 'Time', 'Active', 'Dead clicks', 'Rage clicks', 'Quick backs', 'Script errors'];
+  const cols = [...dimensions, 'sessions', 'bots', 'scroll', 'perSession', 'activePerSession', 'dead', 'rage', 'quickback', 'scriptErrors'];
+  const head = [...dimensions, 'Sessions', 'Bots', 'Scroll %', 'Time/session', 'Active/session', 'Dead clicks', 'Rage clicks', 'Quick backs', 'Script errors'];
   const lines = [`| ${head.join(' | ')} |`, `| ${head.map(() => '---').join(' | ')} |`];
   for (const r of rows.slice(0, 60)) {
     lines.push(`| ${cols.map((c) => {
       if (dimensions.includes(c)) return String(r[c] ?? '').replace(/\|/g, '/');
       if (c === 'scroll') return r.scroll === null || r.scroll === undefined ? '' : fmt(r.scroll, 0);
-      if (c === 'total' || c === 'active') return r[c] === null || r[c] === undefined ? '' : secs(r[c]);
+      if (c === 'perSession' || c === 'activePerSession') return secs(r[c]);
       return r[c] === null || r[c] === undefined ? '' : fmt(r[c]);
     }).join(' | ')} |`);
   }
@@ -106,7 +131,7 @@ async function main() {
   const calls = parseCalls();
   const report = [`# Clarity read, last ${DAYS} day(s), ${new Date().toISOString()}`, '',
     `Project ywiy9r672t (www.arringtonconsultancy.com). ${calls.length} API call(s) of the 10 Clarity allows per day.`,
-    'Scroll % is the average scroll depth; Time is total engagement time and Active the part of it with the visitor doing something; the click columns count sessions with at least one such click.', ''];
+    'Rows are grouped by page path (ad click ids stripped). Scroll % is the average scroll depth; Time/session is engagement time per session and Active/session the part of it with the visitor doing something; the click columns count sessions with at least one such click.', ''];
   const raw = {};
   for (const dims of calls) {
     const label = dims.join(' x ');
