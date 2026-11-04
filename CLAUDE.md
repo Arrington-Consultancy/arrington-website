@@ -8500,6 +8500,25 @@ tom@arringtonconsultancy.com". Earlier logins are in the admin Activity log
 (`audit_log`, "marc logged in"); this worker cannot read the production
 database.
 
+### Terrel: taxi office login (04/11/2026)
+
+Tom: "want terrel to log into taxi work sapce", then "remind me how i
+create terrrels login". The account is Tom's to create (Manage Users,
+username `terrel`, one l, role Client, password set there and passed on by
+Tom; never through this worker). The grant is automatic:
+`lib/scott/guestGrant.js` is Dan's grant made reusable
+(`grantScottGuestAccess(db, { username, marker, requestedOn })`), called from
+`db/seed.js` with marker `scott.terrel_access_grant_2026-11-04`. It waits
+without stamping while the account does not exist ("no such user yet" in the
+deploy log), grants page_access on the Scott page plus an audit_log entry as
+Tom on the first deploy after the account exists, stamps, and never runs
+again, so a grant Tom later removes stays removed. Tom can still tick Page
+access himself instead. `terrel` is on the default login-alert and
+visit-summary list (`will,marc,dan,terrel`). `test/scottGuestGrant.test.js`
+(real database; the marker-while-waiting defect watched red). Commit
+`588d5bd`. Once Tom has created the account, any push to main deploys the
+grant; check the deploy log for "page access granted to 'terrel'".
+
 ### Dan: login alert and a summary of every visit (19/10/2026)
 
 Tom sent the Tidewell email to Dan (daniel@a2btransportcornwall.com, A2B
