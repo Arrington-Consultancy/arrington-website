@@ -63,14 +63,16 @@ test('the "is in now" email says where, when, and that a summary follows', () =>
   assert.doesNotMatch(text, /[–—]|--/);
 });
 
-test('Dan is watched by default, nobody else new is, and the boot log says what is recorded', () => {
+test('Dan and Terrel are watched by default, nobody else new is, and the boot log says what is recorded', () => {
   const saved = process.env.SCOTT_LOGIN_ALERT_USERNAMES;
   delete process.env.SCOTT_LOGIN_ALERT_USERNAMES;
   try {
     assert.ok(gv.isWatched('dan') && gv.isWatched('Dan'));
     assert.ok(gv.isWatched('will') && gv.isWatched('marc'));
+    assert.ok(gv.isWatched('terrel') && gv.isWatched('Terrel'), 'Terrel, added 04/11/2026');
+    assert.ok(!gv.isWatched('terrell'), 'the username is terrel, one l, as Tom wrote it');
     assert.ok(!gv.isWatched('tom') && !gv.isWatched('nat'));
-    assert.match(gv.describeGuestVisits(), /recorded for will, marc, dan; a summary is emailed after sign out or 20 minutes quiet; kept 90 days/);
+    assert.match(gv.describeGuestVisits(), /recorded for will, marc, dan, terrel; a summary is emailed after sign out or 20 minutes quiet; kept 90 days/);
   } finally {
     if (saved !== undefined) process.env.SCOTT_LOGIN_ALERT_USERNAMES = saved;
   }

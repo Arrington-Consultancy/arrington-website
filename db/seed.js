@@ -6069,6 +6069,21 @@ async function seed() {
     }
   }
 
+  // Scott AI Demonstration and the Tidewell taxi office: Terrel's viewer
+  // access (04/11/2026). Tom: "want terrel to log into taxi work sapce". Tom
+  // creates the account himself in Manage Users (username 'terrel'); this
+  // grants it page_access on the Scott page, which is what the taxi office
+  // checks, on the first deploy after the account exists. Same shape as
+  // Dan's grant above, now in lib/scott/guestGrant.js: additive, audited as
+  // Tom, no password anywhere, runs once.
+  try {
+    const { grantScottGuestAccess } = require('../lib/scott/guestGrant');
+    const r = await grantScottGuestAccess(db, { username: 'terrel', marker: 'scott.terrel_access_grant_2026-11-04', requestedOn: '04/11/2026' });
+    console.log(`Scott AI Demonstration: ${r.message}`);
+  } catch (err) {
+    console.error("Scott AI Demonstration: page-access grant for 'terrel' failed:", err.message);
+  }
+
   // Scott AI Demonstration — create Marc's viewer account and grant access
   // (10/09/2026). Tom's instruction: "I need a login to scott armchairs
   // for Marc, Ivybridge taxis, please make one" — a real prospective
