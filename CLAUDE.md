@@ -10123,3 +10123,68 @@ worker. Before the first booking is written into live iCabbi, Governance
 & Assurance is told; before the real mailbox is connected, the data
 processing agreement is signed. 02 Commercial Position recording the
 written £999 scope stays Tom's.
+
+### Release two: built and deployed (09/11/2026, commit `cd9e503`)
+
+Tom: "yes start build on what we can now" and, the same evening, "I am
+wondering about checking the inbox button, we should have an auto refresh
+set up as well as that button if it doesn't get pulled through
+automatically", plus the A2B Cornwall logo. Built in one commit against the
+scope above; `test/abacusOffice.test.js` (11, the HTTP half gated on
+`ABACUS_OFFICE_TEST_DATABASE_URL`) covers each point below. Verified in
+Chromium at desktop and iPhone 13 on a local copy: no sideways scroll on
+any page, no page or console errors, and a change made in one tab reloaded
+the inbox in another.
+
+- **Auto-refresh.** `GET /live.json` answers one stamp (case count, latest
+  case change, latest event, scoped to what the user may see). Today, Inbox
+  and Complaints carry `data-live-url` and ask every ten seconds while the
+  tab is visible and no form on the page has been touched, reload when the
+  stamp moves, and stop after an hour. The server pulls the mailbox every
+  two minutes whatever the driver (`settle` in `app.js`, shared by the page
+  views, the timer and `server.js`), and "Check the mailbox now" stays.
+- **Brands** (`ABACUS_OFFICE_BRANDS`, one `id=Name` per line or semicolon;
+  default the firm as its one brand; `ABACUS_OFFICE_MAILBOX_BRAND` names
+  which brand the connected mailbox feeds, default the first). `brand` on
+  `cases` and `users`. `scopeFor(user)`: a user with a brand sees that
+  brand's lists, counts and live stamp and gets 404 on another brand's
+  case; a user with none (Dan's office) sees everything with the brand
+  named on each row. Users gains a "Sees" column when there is more than
+  one brand. Nothing is set on production yet, so it runs as one brand.
+- **Complaints.** Operators approve them (`canApprove`), except a complaint
+  that has been passed up or is a safety matter, which needs a manager
+  (`needsManager`). The complaint reading gains `pass_to_manager` and
+  `pass_to_manager_why`; a safety matter is always true whatever the model
+  said. "Pass up to a manager" (`POST /case/:id/pass-up`) records who and
+  why, emails the manager address once (`alerts.sendNudge`, same single
+  recipient as the escalation email) and locks approval to a manager.
+  "Send the holding reply" (`POST /case/:id/holding`) saves the firm's own
+  holding text (`holdingText`, no stock line, thanks for patience) as a
+  draft in the mailbox exactly like every other reply, once, on the
+  operator's click. The nudge (`office.nudge`, every 5 minutes with the
+  sweep): a complaint with no approved reply after `complaint_nudge_hours`
+  (Settings, default 12) is passed up by the office and the manager
+  emailed once. Today shows managers a "For a manager" list.
+- **Dispatch** (`abacus-office/lib/dispatch.js`). `ABACUS_OFFICE_DISPATCH_DRIVER`
+  = `standin` (default: the booking is recorded in `dispatch_bookings` with
+  a reference such as `AB-10001`, nothing leaves the service) or `icabbi`
+  (refuses every booking with what it needs until Dan's account has API
+  access; the call itself is written once that exists). `POST /case/:id/book`
+  on a booking email: every detail required (`cleanJob`), the sign-off tick
+  required, never twice, event "signed off by <name>". A test pins that the
+  route behind the tick is the only path into dispatch.
+- **Fixed prices** (`fixed_prices`, Settings, owner or manager, per brand).
+  `firmFacts` in the prompts lists them and tells the AI to quote only a
+  matching journey and otherwise say the office will confirm; with none set
+  it says so and quotes nothing. The fare calculator waits on the tariff.
+- **Logo.** `abacus-office/public/brand/a2b-cornwall.webp` (Tom's file,
+  768x181), shown on a white tile in the bar when present;
+  `ABACUS_OFFICE_FIRM_LOGO` names another file, `none` gives the lettered
+  square. Logo colours for later: blue `#009DDA`, green `#CDD600`, teal
+  swoosh `#3CAE9B`. **Open for Tom:** the email to Dan says "Cornwall
+  Taxis" and the logo says "A2B Cornwall"; the firm name on production is
+  still the default "Abacus Taxis" until Tom sets `ABACUS_OFFICE_FIRM_NAME`.
+- **Voice** (Tom: "make sure its using the tone of voice used in tidewell
+  cars"): the office imports the Tidewell `WRITING` block (Tom's 01A rules,
+  copied 19/10/2026) and the same `humanise` cleanup rather than keeping a
+  copy, and a test fails on a second copy or a prompt without it.
