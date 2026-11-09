@@ -9964,3 +9964,101 @@ strip) are three true, approved readings of the same tenure.
   nothing in (4) without a specific reason and Tom's approval.
 - Check every string against the current Brand Operating System in Drive
   before it ships, not against a record of it in this file.
+
+## Abacus office: Dan's own staff workspace, release one (built 09/11/2026)
+
+Tom met Dan (A2B and Abacus) on 9 November 2026 and filed the brief in Drive
+(`1RscQXvuKDijSLxC4cVEHwvWbS_zqv7u6t0biTqyw23s`; decision update: Abacus
+email and complaints only, the fleet, iCabbi and the other brands deferred,
+£999 subject to a written scope). This worker's proposal
+(`1uk1IBQ-yXuRLeuKEEGrgt786320yC7aQVzImSPy1Coc`) was approved by Tom the
+same day ("yes"), after his hosting decision "his own one i host": the
+office runs as its own Railway service on Tom's account, with its own
+database, never inside the Arrington site or its database.
+
+- **Code:** `abacus-office/` in this repository (its own Express app,
+  `node abacus-office/server.js`), built from the Tidewell office. It reuses
+  `lib/taxiOffice/humanise.js`, the WRITING rules in `lib/taxiOffice/ai.js`,
+  the routing in `lib/taxiOffice/workers.js` and the mail drivers in
+  `lib/taxiOffice/mail`; everything else is its own, because the Tidewell
+  prompts name a fictional firm and a dispatch board this office does not
+  have. `abacus-office/lib/firm.js` reads the firm's name, town and facts
+  from `ABACUS_OFFICE_FIRM_*` variables (defaults "Abacus Taxis", Falmouth,
+  until Dan's facts and brand arrive), and `test/abacusOffice.test.js`
+  fails if a prompt says Tidewell, fictional or demonstration.
+- **What it does:** every email in the mailbox becomes a case
+  (`cases` table, one per message id, so a re-read never duplicates). The
+  AI reads it into a fixed shape, routes it (bookings, customer emails,
+  complaints, licensing, other) and drafts the reply; staff take the case,
+  edit the draft, guide the AI (notes kept earliest first, the draft
+  rewritten to all of them), add notes, set status (new, in progress,
+  waiting on the customer, done) and approve. **Approving saves the reply
+  as a DRAFT in the firm's mailbox for a person to send**; with the made-up
+  inbox it is saved nowhere and the page says so. Nothing in the office
+  sends to a customer; the only outgoing email is the escalation note to
+  the manager address in the variables (`lib/alerts.js`, pinned by a scan
+  of every file). A complaint carries seriousness (minor, serious, safety),
+  the AI's view of fault on what is known, staff steps, and never offers
+  money or names a driver. Every action is a `case_events` row with the
+  person's name (the accountability Dan asked for).
+- **Three levels** (`users.role`): operator reads, drafts, guides and
+  approves ordinary replies; manager also approves complaint replies,
+  reassigns and sees Activity; owner also manages users and settings. A new
+  user gets a temporary password and must choose their own at first sign
+  in. First boot creates the owner from `ABACUS_OFFICE_OWNER_USERNAME` /
+  `ABACUS_OFFICE_OWNER_PASSWORD`, or prints a one-time password in the
+  deploy log if none is set.
+- **Escalation:** a reply with no approval within `escalation_hours`
+  (Settings, default 24) goes red on Today and the manager is emailed once
+  (`ABACUS_OFFICE_SMTP_HOST/_PORT/_USER/_PASSWORD/_FROM` and
+  `ABACUS_OFFICE_MANAGER_EMAIL`; unset, Today still shows it). Never an
+  automatic send to the customer: Dan's "if nobody approves in 24 hours"
+  is answered by escalation, as the proposal says.
+- **Mailbox:** `ABACUS_OFFICE_MAIL_DRIVER` = `demo` (the made-up inbox in
+  `lib/demoInbox.js`, eleven invented emails on `example.invalid`
+  addresses, dated from today), or `gmail`, `outlook`, `imap` with
+  `ABACUS_OFFICE_GMAIL_*`, `ABACUS_OFFICE_OUTLOOK_*`,
+  `ABACUS_OFFICE_IMAP_PASSWORD` plus `ABACUS_OFFICE_MAILBOX_ADDRESS`.
+  `lib/mailbox.js` maps those names onto the Tidewell drivers'
+  `TAXI_OFFICE_*` names and passes nothing else from the environment, so
+  `GMAIL_*` (Tom's own inbox) can never reach a driver (pinned by test).
+  **The live Abacus mailbox is not connected and must not be until Dan's
+  approval and the data processing agreement, with Governance & Assurance
+  told first.**
+- **AI:** `ENABLE_ABACUS_OFFICE_AI=true` plus `ANTHROPIC_API_KEY` on the
+  `abacus-office` service (Dan's own key, Railway only, never in code or
+  chat); model `claude-opus-5-5` (`ABACUS_OFFICE_MODEL`). Off, made-up
+  emails show their prepared answers labelled as prepared; a real email is
+  left for a person to answer by hand. A model failure falls back the same
+  way and says so in the reading note.
+- **Railway:** service `abacus-office` (id
+  `7e719f26-5b44-44d5-bae2-029951c43149`) and Postgres `Postgres-bYAT`
+  (id `17287a48-3e3a-400a-92e6-92f3642519a9`), production environment of
+  the arrington-prototype project; `DATABASE_URL` is a reference to that
+  database and `SESSION_SECRET` is Railway-generated. Start command
+  `node abacus-office/server.js`, healthcheck `/health`, watch patterns
+  `abacus-office/**` and `lib/taxiOffice/**`, so a site-only push does not
+  rebuild it. Deployed by a second `railway up` step in
+  `.github/workflows/deploy.yml`. Address:
+  `https://abacus-office-production.up.railway.app` (a custom domain is a
+  later decision).
+- **Two traps found building it, both now in the code:** express-session
+  writes a redirect's headers before its save finishes, so a fast browser
+  asked for the next page before the login existed in the store and was
+  sent back to sign in; every redirect now saves first (`app.js`). And the
+  CSRF token is tied to the session id, so the sign-in page's session must
+  exist before the form posts (`saveUninitialized: true`).
+- **Tests:** `test/abacusOffice.test.js` (8; the HTTP half gated on
+  `ABACUS_OFFICE_TEST_DATABASE_URL`, declared in gatedSuites): the made-up
+  inbox and its routing, the prompt cleanliness, the variable mapping, the
+  no-send scan, the three levels, the escalation email, and over HTTP:
+  login and forced password change, one case per email across two reads,
+  an operator approving a booking (one mailbox draft) and refused on a
+  complaint, a manager approving it under their own name, guidance off and
+  on, a model failure falling back, escalation once with one email and
+  none on a second sweep, user creation. Driven in Chromium at desktop and
+  iPhone 13 as well: no overflow, no page errors.
+- **Still Dan's and Tom's** (proposal section 5): mailbox type and access,
+  staff list and levels, complaints process and escalation time, brand
+  assets, the address, standard replies and price lists; the DPA before
+  live email, the written £999 scope, hosting ownership.
