@@ -132,6 +132,22 @@ test('an escalation email names the manager address from the variables only, and
 
 const DB = process.env.ABACUS_OFFICE_TEST_DATABASE_URL;
 
+test('the owner password can be recovered from the deployment variables alone, and the one-time password is only ever printed once', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'abacus-office', 'server.js'), 'utf8');
+  const fn = src.slice(src.indexOf('async function ensureOwner'), src.indexOf('async function main'));
+  // An existing owner is reset from ABACUS_OFFICE_OWNER_PASSWORD, must change it at the next sign in, and the log says to remove the variable.
+  assert.match(fn, /if \(await store\.userCount\(\)\) \{[\s\S]*store\.setPassword\(owner\.id, password, true\)/);
+  assert.match(fn, /remove that variable now/);
+  // A short or absent value changes nothing on an existing database.
+  assert.match(fn, /if \(!password\) return;/);
+  assert.match(fn, /shorter than 10 characters; nothing changed/);
+  // A reset is a recorded event, never a silent change.
+  assert.match(fn, /kind: 'password_reset'/);
+  // The generated password is printed only on the first boot, inside the create branch, never on a reset.
+  const resetBranch = fn.slice(0, fn.indexOf('let generated'));
+  assert.doesNotMatch(resetBranch, /One-time password/);
+});
+
 test('the office over HTTP: login, forced password change, one case per email, roles, guidance, approval and escalation', { skip: DB ? false : 'set ABACUS_OFFICE_TEST_DATABASE_URL to a throwaway database' }, async (t) => {
   const { Pool } = require('pg');
   const pool = new Pool({ connectionString: DB });

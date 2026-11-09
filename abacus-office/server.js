@@ -18,9 +18,22 @@ const PORT = Number(process.env.PORT || 3400);
 const production = process.env.NODE_ENV === 'production' || Boolean(process.env.RAILWAY_ENVIRONMENT);
 
 async function ensureOwner(store) {
-  if (await store.userCount()) return;
   const username = String(process.env.ABACUS_OFFICE_OWNER_USERNAME || 'owner').trim().toLowerCase();
   let password = String(process.env.ABACUS_OFFICE_OWNER_PASSWORD || '').trim();
+  if (await store.userCount()) {
+    // The owner already exists. A password set in the variables resets it,
+    // so a lost one-time password is recovered from Railway alone: set the
+    // variable, deploy, sign in, change the password when asked, remove it.
+    if (!password) return;
+    const owner = await store.userByName(username);
+    if (!owner) { console.log(`Abacus office: ABACUS_OFFICE_OWNER_PASSWORD is set but no login "${username}" exists; nothing changed`); return; }
+    if (password.length < 10) { console.log('Abacus office: ABACUS_OFFICE_OWNER_PASSWORD is shorter than 10 characters; nothing changed'); return; }
+    await store.setPassword(owner.id, password, true);
+    if (!owner.active) await store.setUserActive(owner.id, true);
+    await store.addEvent(null, { actor: null, kind: 'password_reset', detail: `Password for "${username}" reset from the deployment variables` }).catch(() => {});
+    console.log(`Abacus office: password for "${username}" reset from ABACUS_OFFICE_OWNER_PASSWORD (must be changed at next sign in); remove that variable now`);
+    return;
+  }
   let generated = false;
   if (password.length < 10) { password = crypto.randomBytes(9).toString('base64url'); generated = true; }
   await store.createUser({ username, displayName: 'Owner', password, role: 'owner', mustChange: true });
