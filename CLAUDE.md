@@ -9155,9 +9155,11 @@ PROPOSAL - SEO sweep: what was fixed and what needs Tom, 11 October 2026" (id
   read back from the LocalPosts table with an explicit date range. Posts 2
   to 14 APPROVED by Tom on 12/10/2026 ("i agree", recorded in the
   Handoff Log). Post 2, "A Profitable Job Is Not Necessarily Good
-  Business", LIVE 26/10/2026 (local post `4778652449291972599`). A
-  `send_later` check-in (`trig_01EsBq9Qso3UNN5DHtsvrBUT`, 09/11/2026 08:52
-  UTC, post 3) posts the next item if its words are still on the live
+  Business", LIVE 26/10/2026 (local post `4778652449291972599`). Post 3,
+  "The Customer Who Messaged at 4am", LIVE 09/11/2026 (local post
+  `4630075878465515744`). A `send_later` check-in
+  (`trig_012dUx9mqG1WdvEd6ZVcda4J`, 23/11/2026 08:52 UTC, post 4,
+  "Serendipity Is Not a System") posts the next item if its words are still on the live
   article page (the summary line is checked on `/useful-thinking`, where
   it lives; the article's own meta description can differ), then re-arms
   itself 14 days on. If this session is retired, the replacement re-arms it.
