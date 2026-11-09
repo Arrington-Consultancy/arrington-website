@@ -1,0 +1,13 @@
+<%- include('partials/top', { title: 'Complaints' }) %>
+<section class="to-section-head">
+  <h1><%- include('partials/worker-icon', { id: 'complaints', tile: true }) %> Complaints</h1>
+  <p class="to-small">Every complaint, most serious first. A safety matter is marked and goes to a manager. The AI drafts the reply from what the office knows, never offers money and never names a driver; a manager approves it.</p>
+</section>
+<ul class="to-filter-bar">
+  <li><a href="/complaints"<% if (!showAll) { %> aria-current="page"<% } %>>Open</a></li>
+  <li><a href="/complaints?show=all"<% if (showAll) { %> aria-current="page"<% } %>>All</a></li>
+</ul>
+<% if (cases.length) { %>
+<ul class="to-cases"><% cases.forEach(function (c) { %><%- include('partials/case-row', { c: c }) %><% }) %></ul>
+<% } else { %><p class="to-empty">No complaints waiting.</p><% } %>
+<%- include('partials/bottom') %>

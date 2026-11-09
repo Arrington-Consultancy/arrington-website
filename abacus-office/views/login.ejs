@@ -1,0 +1,15 @@
+<%- include('partials/top', { title: 'Sign in' }) %>
+<div class="to-login">
+  <p class="to-eyebrow"><%= firm.name %> office</p>
+  <h1>Sign in</h1>
+  <% if (error) { %><p class="to-note to-note-bad" role="alert"><%= error %></p><% } %>
+  <form method="post" action="/login" class="to-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <input type="hidden" name="next" value="<%= next %>">
+    <label class="to-field"><span>Username</span><input id="username" name="username" autocomplete="username" required autofocus></label>
+    <label class="to-field"><span>Password</span><input id="password" name="password" type="password" autocomplete="current-password" required></label>
+    <button type="submit" class="to-btn to-btn-primary">Sign in</button>
+  </form>
+  <p class="to-small">Each member of staff has their own login. If you have lost yours, ask the owner.</p>
+</div>
+<%- include('partials/bottom') %>

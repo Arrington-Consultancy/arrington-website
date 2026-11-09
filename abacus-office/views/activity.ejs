@@ -1,0 +1,6 @@
+<%- include('partials/top', { title: 'Activity' }) %>
+<section class="to-section-head"><h1>Activity</h1><p class="to-small">Everything done in the office, newest first, with who did it. Each member of staff has their own login, so each action carries a name.</p></section>
+<ul class="to-history">
+  <% events.forEach(function (e) { %><li><time><%= new Date(e.at).toLocaleString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) %></time><span><strong><%= e.actor_name %></strong>: <%= e.detail %><% if (e.case_id) { %> <a href="/case/<%= e.case_id %>"><%= e.subject || 'open' %></a><% } %></span></li><% }) %>
+</ul>
+<%- include('partials/bottom') %>

@@ -1,0 +1,58 @@
+<%
+  var _user = typeof user !== 'undefined' ? user : null;
+  var _counts = typeof counts !== 'undefined' && counts ? counts : null;
+  var _section = typeof section !== 'undefined' ? section : '';
+  var _flash = typeof flash !== 'undefined' ? flash : null;
+  var _demo = typeof mailboxDemo !== 'undefined' ? mailboxDemo : true;
+  var _ai = typeof aiOn !== 'undefined' ? aiOn : false;
+%>
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <title><%= title %> | <%= firm.name %> office</title>
+  <link rel="preload" href="/assets/fonts/schibsted-grotesk.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/office.css?v=<%= ASSET_V.css %>">
+</head>
+<body class="to">
+  <a class="to-skip" href="#main">Skip to content</a>
+  <% if (_demo) { %>
+  <div class="to-ribbon to-demo-ribbon" role="note">
+    <p><span class="to-dot" aria-hidden="true"></span><span class="to-long"><strong>Made-up data.</strong> No real mailbox is connected yet. Every email here is invented, and nothing is sent anywhere.</span><span class="to-short"><strong>Made-up data.</strong> Nothing is sent.</span></p>
+  </div>
+  <% } %>
+  <header class="to-bar">
+    <div class="to-wrap to-bar-inner">
+      <a class="to-brand" href="/">
+        <span class="to-mark" aria-hidden="true"><%= firm.short.charAt(0) %></span>
+        <span><strong><%= firm.name %></strong> <span class="to-brand-sub">Office</span></span>
+      </a>
+      <div class="to-who">
+        <span class="to-date"><%= todayLong %></span>
+        <% if (_user) { %><a class="to-user" href="/account"><%= _user.display_name || _user.username %> (<%= _user.role %>)</a>
+        <form class="to-signout" method="post" action="/logout">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <button type="submit">Sign out</button>
+        </form><% } %>
+      </div>
+    </div>
+    <% if (_user) { %>
+    <nav class="to-wrap to-nav" aria-label="Office">
+      <a href="/"<% if (_section === 'today') { %> aria-current="page"<% } %>>Today<% if (_counts && _counts.overdue) { %> <span class="to-count"><%= _counts.overdue %></span><% } %></a>
+      <a href="/inbox"<% if (_section === 'inbox') { %> aria-current="page"<% } %>>Inbox<% if (_counts && (_counts.new_count + _counts.in_progress)) { %> <span class="to-count"><%= _counts.new_count + _counts.in_progress %></span><% } %></a>
+      <a href="/complaints"<% if (_section === 'complaints') { %> aria-current="page"<% } %>>Complaints<% if (_counts && _counts.complaints_open) { %> <span class="to-count"><%= _counts.complaints_open %></span><% } %></a>
+      <% if (atLeast(_user, 'manager')) { %><a href="/activity"<% if (_section === 'activity') { %> aria-current="page"<% } %>>Activity</a><% } %>
+      <% if (atLeast(_user, 'manager')) { %><a href="/settings"<% if (_section === 'settings') { %> aria-current="page"<% } %>>Settings</a><% } %>
+      <% if (atLeast(_user, 'owner')) { %><a href="/users"<% if (_section === 'users') { %> aria-current="page"<% } %>>Users</a><% } %>
+    </nav>
+    <% } %>
+  </header>
+  <main id="main" class="to-wrap to-main">
+    <% if (_user && !_ai) { %>
+      <p class="to-note to-note-warn">The AI is switched off on this server. Made-up emails show their prepared answers; anything else has to be read and answered by hand.</p>
+    <% } %>
+    <% if (_flash) { %>
+      <p class="to-flash to-flash-<%= _flash.tone %>" role="status"><%= _flash.message %></p>
+    <% } %>

@@ -1,0 +1,15 @@
+<%- include('partials/top', { title: 'Your account' }) %>
+<div class="to-login">
+  <h1>Your account</h1>
+  <p class="to-small">Signed in as <strong><%= user.username %></strong>, <%= user.role %>.</p>
+  <% if (user.must_change_password) { %><p class="to-note to-note-warn">Choose your own password before you carry on.</p><% } %>
+  <% if (error) { %><p class="to-note to-note-bad" role="alert"><%= error %></p><% } %>
+  <form method="post" action="/account/password" class="to-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <label class="to-field"><span>Current password</span><input id="current" name="current" type="password" autocomplete="current-password" required></label>
+    <label class="to-field"><span>New password (10 characters or more)</span><input id="password" name="password" type="password" autocomplete="new-password" minlength="10" required></label>
+    <label class="to-field"><span>New password again</span><input id="again" name="again" type="password" autocomplete="new-password" minlength="10" required></label>
+    <button type="submit" class="to-btn to-btn-primary">Change password</button>
+  </form>
+</div>
+<%- include('partials/bottom') %>

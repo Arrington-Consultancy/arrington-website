@@ -1,0 +1,7 @@
+<%- include('partials/top', { title: title }) %>
+<section class="to-hero">
+  <h1><%= title %></h1>
+  <p class="to-lede"><%= typeof message !== 'undefined' && message ? message : 'There is nothing at this address.' %></p>
+  <a class="to-btn" href="/">Back to Today</a>
+</section>
+<%- include('partials/bottom') %>

@@ -18,3 +18,10 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: railway up --service arrington-prototype --environment production --detach
+
+      # The Abacus office (abacus-office/): its own service in the same
+      # project, built from the repository root so it can share lib/.
+      - name: Deploy the Abacus office
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: railway up --service abacus-office --environment production --detach

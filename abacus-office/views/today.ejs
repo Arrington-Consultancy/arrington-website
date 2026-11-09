@@ -1,0 +1,39 @@
+<%- include('partials/top', { title: 'Today' }) %>
+<section class="to-hero">
+  <p class="to-eyebrow">Office, <%= todayLong %></p>
+  <h1>Here's what needs doing today.</h1>
+  <p class="to-lede">The AI reads every email that comes into <%= mailboxLabel.toLowerCase() %>, sorts it and drafts a reply. Someone in the office checks the draft, changes or guides it, and approves it. Nothing goes to a customer until a person has pressed send.</p>
+</section>
+
+<ul class="to-stats" aria-label="At a glance">
+  <% var _go = '<svg class="to-stat-go" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m9 6 6 6-6 6"/></svg>';
+     var _stats = [[counts.new_count, 'new emails nobody has taken', '/inbox?show=new'], [counts.in_progress, 'being dealt with', '/inbox?show=open'], [counts.complaints_open, 'complaints waiting for a reply', '/complaints'], [counts.overdue, 'overdue: no reply approved in ' + hours + ' hours', '/inbox?show=open']]; %>
+  <% _stats.forEach(function (st) { %><li><a class="to-stat<%= st[2].indexOf('overdue') >= 0 ? '' : '' %>" href="<%= st[2] %>"><span class="to-stat-n"><%= st[0] %></span><span class="to-stat-l"><%= st[1] %></span><%- _go %></a></li><% }) %>
+</ul>
+
+<% if (overdue.length) { %>
+<section class="to-section">
+  <div class="to-section-head"><h2>Overdue</h2><p class="to-small">No reply approved within <%= hours %> hours of the email arriving. <%= atLeast(user, 'manager') ? 'A manager was emailed, if alerts are set up.' : 'The manager has been told.' %></p></div>
+  <ul class="to-cases"><% overdue.forEach(function (c) { %><%- include('partials/case-row', { c: c }) %><% }) %></ul>
+</section>
+<% } %>
+
+<section class="to-section">
+  <div class="to-section-head"><h2>Yours</h2><p class="to-small">Cases you have taken and not yet finished.</p></div>
+  <% if (mine.length) { %><ul class="to-cases"><% mine.forEach(function (c) { %><%- include('partials/case-row', { c: c }) %><% }) %></ul>
+  <% } else { %><p class="to-empty">Nothing with you at the moment.</p><% } %>
+</section>
+
+<section class="to-section">
+  <div class="to-section-head"><h2>Nobody has these yet</h2><p class="to-small">New emails, read and drafted, waiting for someone to take them.</p></div>
+  <% if (unassigned.length) { %><ul class="to-cases"><% unassigned.forEach(function (c) { %><%- include('partials/case-row', { c: c }) %><% }) %></ul>
+  <% } else { %><p class="to-empty">Everything new has been taken.</p><% } %>
+</section>
+
+<section class="to-section">
+  <div class="to-section-head"><h2>Latest in the office</h2></div>
+  <ul class="to-history">
+    <% recent.forEach(function (e) { %><li><time><%= new Date(e.at).toLocaleString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) %></time><span><strong><%= e.actor_name %></strong>: <%= e.detail %><% if (e.case_id) { %> <a href="/case/<%= e.case_id %>"><%= e.subject || 'open' %></a><% } %></span></li><% }) %>
+  </ul>
+</section>
+<%- include('partials/bottom') %>

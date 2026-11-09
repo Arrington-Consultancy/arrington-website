@@ -1,0 +1,120 @@
+<%- include('partials/top', { title: kase.subject || 'Email' }) %>
+<%
+  var r = kase.reading || null;
+  var cpl = kase.complaint || null;
+  var kindName = { unread: 'Not read yet', bookings: 'Bookings', customer: 'Customer emails', complaints: 'Complaints', licensing: 'Licensing', other: 'Not for the office' }[kase.kind] || kase.kind;
+  var iconId = { bookings: 'bookings', customer: 'customer', complaints: 'complaints', licensing: 'licensing' }[kase.kind];
+  var overdue = kase.escalated_at && !kase.approved_at && (kase.status === 'new' || kase.status === 'in_progress');
+  var when = function (d) { return new Date(d).toLocaleString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); };
+  var mayApprove = canApprove(user, kase);
+  var needsReply = !['other', 'licensing'].includes(kase.kind);
+%>
+<p class="to-back"><a href="<%= kase.kind === 'complaints' ? '/complaints' : '/inbox' %>"><%= kase.kind === 'complaints' ? 'Complaints' : 'Inbox' %></a></p>
+
+<div class="to-email-grid">
+  <article class="to-email" aria-label="The email">
+    <header>
+      <p class="to-email-from"><%= kase.from_address %></p>
+      <p class="to-email-when">Received <%= when(kase.received_at) %></p>
+      <h1 class="to-email-subject"><%= kase.subject || '(no subject)' %></h1>
+    </header>
+    <div class="to-email-body"><%= kase.body %></div>
+    <section class="to-panel">
+      <p class="to-worker-tag">History</p>
+      <ul class="to-history">
+        <% events.forEach(function (e) { %><li><time><%= when(e.at) %></time><span><strong><%= e.actor_name %></strong>: <%= e.detail %></span></li><% }) %>
+      </ul>
+      <form method="post" action="/case/<%= kase.id %>/note" class="to-form">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <label class="to-field"><span>Add a note</span><textarea id="note" name="note" rows="2" maxlength="2000" placeholder="What you found out, who you spoke to, what you decided"></textarea></label>
+        <button type="submit" class="to-btn to-btn-quiet">Add note</button>
+      </form>
+    </section>
+  </article>
+
+  <div class="to-work">
+    <section class="to-panel">
+      <div class="to-panel-head">
+        <p class="to-worker-tag"><%= kase.reading_source === 'ai' ? 'Read by the AI' : (kase.reading_source === 'prepared' ? 'Prepared answer (made-up inbox)' : 'Not read') %></p>
+        <span><span class="to-chip"><% if (iconId) { %><%- include('partials/worker-icon', { id: iconId }) %><% } %><%= kindName %></span>
+          <% if (overdue) { %><span class="to-pill to-pill-bad">Overdue</span><% } %>
+          <% if (kase.seriousness !== 'none') { %><span class="to-pill <%= kase.seriousness === 'minor' ? 'to-pill-neutral' : 'to-pill-bad' %>"><%= kase.seriousness %></span><% } %>
+          <span class="to-pill to-pill-<%= { new: 'soon', in_progress: 'warn', waiting: 'neutral', done: 'ok' }[kase.status] %>"><%= label(kase.status) %></span></span>
+      </div>
+      <% if (kase.reading_note) { %><p class="to-note to-note-warn"><%= kase.reading_note %></p><% } %>
+      <% if (r) { %>
+        <p class="to-summary"><%= r.summary %></p>
+        <dl class="to-facts">
+          <div><dt>Customer</dt><dd><%= r.customer_name || 'Not given' %></dd></div>
+          <div><dt>Phone</dt><dd><%= r.phone || 'Not given' %></dd></div>
+          <% if (r.reference) { %><div><dt>Their reference</dt><dd><%= r.reference %></dd></div><% } %>
+          <% if (r.journey && (r.journey.date || r.journey.pickup || r.journey.destination)) { %><div><dt>Journey</dt><dd><%= [r.journey.date, r.journey.time, r.journey.pickup && ('from ' + r.journey.pickup), r.journey.destination && ('to ' + r.journey.destination), r.journey.passengers && (r.journey.passengers + ' passenger' + (r.journey.passengers === '1' ? '' : 's'))].filter(Boolean).join(', ') %></dd></div><% } %>
+        </dl>
+        <% if ((r.missing || []).length) { %><p class="to-missing"><strong>Still needed before it can be booked:</strong> <%= r.missing.join(', ') %>.</p><% } %>
+      <% } %>
+      <% if (cpl) { %>
+        <p><strong>What the customer says went wrong:</strong> <%= cpl.summary %></p>
+        <p class="to-status-line">Was the firm at fault, on what is known so far: <strong><%= cpl.firm_at_fault %></strong>.<% if (cpl.for_licensing) { %> <strong>A safety matter: a manager decides what is reported to licensing.</strong><% } %></p>
+        <% if (cpl.staff_steps && cpl.staff_steps.length) { %><p class="to-small">For the office to do:</p><ol class="to-steps"><% cpl.staff_steps.forEach(function (s) { %><li><%= s %></li><% }) %></ol><% } %>
+      <% } %>
+      <% if (aiOn) { %>
+      <form method="post" action="/case/<%= kase.id %>/read" class="to-inline-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="to-btn to-btn-quiet" data-busy="Reading...">Ask the AI to read it again</button></form>
+      <% } %>
+    </section>
+
+    <section class="to-panel">
+      <p class="to-worker-tag">Who has it, and where it is</p>
+      <div class="to-controls">
+        <p class="to-status-line"><%= kase.owner_display || kase.owner_username ? 'With ' + (kase.owner_display || kase.owner_username) : 'Nobody has taken this yet' %>.</p>
+        <% if (!kase.owner_id || kase.owner_id !== user.id) { %>
+        <form method="post" action="/case/<%= kase.id %>/take"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="to-btn">Take this case</button></form>
+        <% } %>
+        <% if (canReassign(user, kase)) { %>
+        <form method="post" action="/case/<%= kase.id %>/assign"><input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <label class="to-field"><span class="to-sr">Assign to</span><select name="owner"><option value="">Nobody</option><% users.forEach(function (u) { %><option value="<%= u.id %>"<% if (kase.owner_id === u.id) { %> selected<% } %>><%= u.display_name || u.username %> (<%= u.role %>)</option><% }) %></select></label>
+          <button type="submit" class="to-btn to-btn-quiet">Assign</button></form>
+        <% } %>
+        <form method="post" action="/case/<%= kase.id %>/status"><input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <label class="to-field"><span class="to-sr">Status</span><select name="status"><% ['new', 'in_progress', 'waiting', 'done'].forEach(function (s) { %><option value="<%= s %>"<% if (kase.status === s) { %> selected<% } %>><%= label(s) %></option><% }) %></select></label>
+          <button type="submit" class="to-btn to-btn-quiet">Set status</button></form>
+      </div>
+    </section>
+
+    <% if (needsReply) { %>
+    <section class="to-panel to-draft<%= kase.approved_at ? ' to-approved' : '' %>" id="reply">
+      <div class="to-panel-head">
+        <p class="to-worker-tag"><%= kase.approved_at ? 'Approved reply' : 'Draft reply' %></p>
+        <% if (kase.approved_at) { %><span class="to-pill to-pill-ok">Approved <%= when(kase.approved_at) %></span><% } %>
+      </div>
+      <% if (kase.approved_at) { %>
+        <p class="to-note to-note-ok"><%= mailboxDemo ? 'Approved. With a real mailbox connected this would be a draft in it now, waiting for someone to press send.' : 'Saved as a draft in ' + mailboxLabel + '. Open the mailbox to send it. Editing it here makes a new draft that needs approving again.' %></p>
+      <% } %>
+      <% if (kase.held_back) { %><p class="to-note to-note-warn"><strong>From the AI:</strong> <%= kase.held_back %></p><% } %>
+      <form method="post" action="/case/<%= kase.id %>/draft" class="to-form">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <label class="to-field"><span>The reply, as it will go to the customer</span><textarea id="draft" name="draft" rows="12" maxlength="4000" placeholder="<%= r ? '' : 'Write the reply here.' %>"><%= kase.draft %></textarea></label>
+        <div class="to-guide">
+          <% if ((kase.guidance || []).length) { %><p class="to-worker-tag">Guided so far</p><ol class="to-guide-notes"><% kase.guidance.forEach(function (n) { %><li><%= n %></li><% }) %></ol><% } %>
+          <label class="to-field"><span>Guide the AI</span><textarea id="guidance" name="guidance" rows="2" maxlength="1200" placeholder="For example: we are fully booked at that time, offer 7.15 instead. Or: our records show the car was on time."></textarea></label>
+          <p class="to-small">Tell it what the reply should say and it rewrites the draft. It does what you say, but it will not make anything up, and it never names a driver to a customer.</p>
+          <div class="to-guide-actions">
+            <button type="submit" class="to-btn" formaction="/case/<%= kase.id %>/guide" data-busy="Redrafting...">Redraft with this</button>
+            <button type="submit" class="to-btn to-btn-quiet">Save my edits</button>
+          </div>
+        </div>
+        <% if (mayApprove) { %>
+          <button type="submit" class="to-btn to-btn-primary" formaction="/case/<%= kase.id %>/approve" data-confirm="Approve this reply? <%= mailboxDemo ? 'Nothing is sent from this made-up inbox.' : 'It will be saved as a draft in ' + mailboxLabel + ' for someone to send.' %>" data-busy="Approving..."><%= kase.approved_at ? 'Approve again' : 'Approve this reply' %></button>
+          <p class="to-small"><%= kase.kind === 'complaints' ? 'A complaint reply is approved by a manager; you are one.' : 'Approving saves it as a draft in the firm\'s mailbox for a person to send. Nothing is sent from here.' %></p>
+        <% } else { %>
+          <p class="to-note to-note-warn">A complaint reply needs a manager to approve it. Get the draft right, add a note, and a manager will approve it from here.</p>
+        <% } %>
+      </form>
+    </section>
+    <% } else if (kase.kind === 'licensing') { %>
+    <section class="to-panel"><p class="to-worker-tag">Council</p><h2>This one is from the council</h2><p>It is not a customer email, so there is no customer reply to draft. Deal with it in the mailbox and mark it done here when it is.</p></section>
+    <% } else if (kase.kind === 'other') { %>
+    <section class="to-panel"><p class="to-worker-tag">Not for the office</p><h2>Nothing to answer</h2><p>The AI read this as not being from a customer or the council, so it was marked done without a reply. Change the status if that is wrong.</p></section>
+    <% } %>
+  </div>
+</div>
+<%- include('partials/bottom') %>

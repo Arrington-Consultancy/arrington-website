@@ -1,0 +1,23 @@
+<%- include('partials/top', { title: 'Settings' }) %>
+<section class="to-section-head"><h1>Settings</h1></section>
+<section class="to-panel">
+  <h2>Escalation</h2>
+  <p>A reply with nobody approving it within this many hours of the email arriving goes red on Today, and a manager is emailed once. Nothing is ever sent to the customer automatically.</p>
+  <% if (atLeast(user, 'owner')) { %>
+  <form method="post" action="/settings" class="to-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <label class="to-field"><span>Hours before a reply is overdue</span><input name="escalation_hours" type="number" min="1" max="168" value="<%= hours %>" required></label>
+    <button type="submit" class="to-btn to-btn-primary">Save</button>
+  </form>
+  <% } else { %><p class="to-status-line">Currently <strong><%= hours %> hours</strong>. The owner changes this.</p><% } %>
+</section>
+<section class="to-panel">
+  <h2>Connections</h2>
+  <p class="to-small">Set on the server by Arrington, never from this page. Values are never shown here.</p>
+  <ul class="to-history">
+    <li><time>Mailbox</time><span><%= mailStatus.replace(/^Abacus office mailbox: /, '') %></span></li>
+    <li><time>AI</time><span><%= aiStatus.replace(/^Abacus office AI: /, '') %></span></li>
+    <li><time>Alerts</time><span><%= alertStatus.replace(/^Abacus office alerts: /, '') %></span></li>
+  </ul>
+</section>
+<%- include('partials/bottom') %>

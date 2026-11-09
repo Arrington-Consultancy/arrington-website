@@ -1,0 +1,38 @@
+<%- include('partials/top', { title: 'Users' }) %>
+<section class="to-section-head"><h1>Users</h1><p class="to-small">Three levels. An <strong>operator</strong> reads, drafts, guides the AI and approves ordinary replies. A <strong>manager</strong> also approves complaint replies, reassigns cases and sees the activity log. The <strong>owner</strong> also manages users and settings.</p></section>
+<% if (error) { %><p class="to-note to-note-bad" role="alert"><%= error %></p><% } %>
+<div class="to-table-wrap"><table class="to-table to-users">
+  <thead><tr><th scope="col">Username</th><th scope="col">Name</th><th scope="col">Level</th><th scope="col">Last sign in</th><th scope="col">Actions</th></tr></thead>
+  <tbody>
+  <% users.forEach(function (u) { %>
+    <tr<%= u.active ? '' : ' class="is-cancelled"' %>>
+      <td><%= u.username %></td><td><%= u.display_name %></td>
+      <td><% if (u.id === user.id) { %><%= u.role %><% } else { %><form method="post" action="/users/<%= u.id %>"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="action" value="role"><select name="role"><% roles.forEach(function (r) { %><option value="<%= r %>"<% if (u.role === r) { %> selected<% } %>><%= r %></option><% }) %></select><button type="submit" class="to-btn to-btn-quiet">Set</button></form><% } %></td>
+      <td><%= u.last_login_at ? new Date(u.last_login_at).toLocaleString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Never' %></td>
+      <td>
+        <% if (u.id !== user.id) { %>
+          <form method="post" action="/users/<%= u.id %>"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="action" value="<%= u.active ? 'deactivate' : 'activate' %>"><button type="submit" class="to-btn to-btn-quiet"<% if (u.active) { %> data-confirm="Stop <%= u.username %> signing in?"<% } %>><%= u.active ? 'Deactivate' : 'Reactivate' %></button></form>
+          <form method="post" action="/users/<%= u.id %>"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="action" value="reset"><input name="password" type="password" minlength="10" placeholder="Temporary password" autocomplete="new-password" required><button type="submit" class="to-btn to-btn-quiet">Reset</button></form>
+        <% } else { %><span class="to-small">You (change your own password under your name at the top)</span><% } %>
+      </td>
+    </tr>
+  <% }) %>
+  </tbody>
+</table></div>
+<section class="to-panel">
+  <h2>Add a member of staff</h2>
+  <form method="post" action="/users" class="to-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="to-field-row">
+      <label class="to-field"><span>Username</span><input name="username" required pattern="[A-Za-z0-9][A-Za-z0-9._\-]{1,39}" autocomplete="off"></label>
+      <label class="to-field"><span>Name</span><input name="display_name" maxlength="120"></label>
+    </div>
+    <div class="to-field-row">
+      <label class="to-field"><span>Level</span><select name="role"><% roles.forEach(function (r) { %><option value="<%= r %>"><%= r %></option><% }) %></select></label>
+      <label class="to-field"><span>Temporary password (10 characters or more)</span><input name="password" type="password" minlength="10" required autocomplete="new-password"></label>
+    </div>
+    <button type="submit" class="to-btn to-btn-primary">Add</button>
+    <p class="to-small">Tell them the temporary password in person. They choose their own the first time they sign in.</p>
+  </form>
+</section>
+<%- include('partials/bottom') %>

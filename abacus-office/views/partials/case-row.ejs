@@ -1,0 +1,21 @@
+<%
+  var _tone = { new: 'soon', in_progress: 'warn', waiting: 'neutral', done: 'ok' }[c.status] || 'neutral';
+  var _overdue = c.escalated_at && !c.approved_at && (c.status === 'new' || c.status === 'in_progress');
+  var _kindName = { unread: 'Not read yet', bookings: 'Bookings', customer: 'Customer emails', complaints: 'Complaints', licensing: 'Licensing', other: 'Not for the office' }[c.kind] || c.kind;
+  var _iconId = { bookings: 'bookings', customer: 'customer', complaints: 'complaints', licensing: 'licensing' }[c.kind];
+%>
+<li><a class="to-case-row<%= _overdue ? ' is-overdue' : '' %><%= c.seriousness === 'safety' && c.status !== 'done' ? ' is-safety' : '' %>" href="/case/<%= c.id %>">
+  <span><span class="to-case-subject"><%= c.subject || '(no subject)' %></span><br><span class="to-small"><%= c.from_address %></span></span>
+  <span class="to-case-side">
+    <% if (_overdue) { %><span class="to-pill to-pill-bad">Overdue</span><% } %>
+    <% if (c.seriousness && c.seriousness !== 'none') { %><span class="to-pill <%= c.seriousness === 'minor' ? 'to-pill-neutral' : 'to-pill-bad' %>"><%= c.seriousness %></span><% } %>
+    <% if (c.approved_at) { %><span class="to-pill to-pill-ok">Approved</span><% } %>
+    <span class="to-pill to-pill-<%= _tone %>"><%= label(c.status) %></span>
+  </span>
+  <span class="to-case-meta">
+    <span class="to-chip"><% if (_iconId) { %><%- include('worker-icon', { id: _iconId }) %><% } %><%= _kindName %></span>
+    <span>Received <%= new Date(c.received_at).toLocaleString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) %></span>
+    <span><%= c.owner_display || c.owner_username ? 'With ' + (c.owner_display || c.owner_username) : 'Nobody has it' %></span>
+    <% if (c.reading && c.reading.summary) { %><span><%= c.reading.summary %></span><% } %>
+  </span>
+</a></li>

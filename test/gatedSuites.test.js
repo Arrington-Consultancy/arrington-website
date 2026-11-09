@@ -34,6 +34,7 @@ const GATED = [
   { file: 'quizNotifications.test.js', name: 'one email per quiz completion over HTTP', arms: 'QUIZ_TEST_DATABASE_URL (a throwaway database; the suite seeds it and starts its own server)' },
   { file: 'marketReadyNotifications.test.js', name: 'one email per Market Ready Test submission over HTTP', arms: 'QUIZ_TEST_DATABASE_URL (same throwaway database; its own port)' },
   { file: 'driveBackup.test.js', name: 'weekly database backup to Drive, the real script against a mock Drive', arms: 'BACKUP_TEST_DATABASE_URL (any seeded database; the suite only reads it) plus pg_dump, curl and jq on the PATH' },
+  { file: 'abacusOffice.test.js', name: 'the Abacus office over HTTP, model and mailbox stubbed', arms: 'ABACUS_OFFICE_TEST_DATABASE_URL (a throwaway database; the suite drops and recreates its tables)' },
   { file: 'scott/adversarialApi.test.js', name: 'Scott adversarial HTTP', arms: 'SCOTT_TEST_BASE_URL + SCOTT_DEMO_STAFF_PASSWORD, against a running server' },
   { file: 'scott/progressionApi.test.js', name: 'Scott progression over real HTTP', arms: 'SCOTT_PROGRESSION_BASE_URL + SCOTT_PROGRESSION_TOM_PASSWORD + SCOTT_DEMO_STAFF_PASSWORD, against a running server' },
   { file: 'scott/liveAiPressure.test.js', name: 'Scott live-AI pressure (SPENDS MONEY)', arms: 'RUN_SCOTT_LIVE_AI=true + ANTHROPIC_API_KEY + ENABLE_SCOTT_AI=true' },

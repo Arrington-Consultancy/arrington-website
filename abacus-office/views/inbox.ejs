@@ -1,0 +1,15 @@
+<%- include('partials/top', { title: 'Inbox' }) %>
+<section class="to-section-head">
+  <h1>Inbox</h1>
+  <p class="to-small">Every email from <%= mailboxLabel.toLowerCase() %>, read and sorted by the AI. Open one to see the draft and approve it.</p>
+</section>
+<ul class="to-filter-bar">
+  <% [['open', 'Open'], ['new', 'New'], ['mine', 'Mine'], ['waiting', 'Waiting on the customer'], ['done', 'Done'], ['all', 'All']].forEach(function (f) { %>
+    <li><a href="/inbox?show=<%= f[0] %>"<% if (show === f[0]) { %> aria-current="page"<% } %>><%= f[1] %></a></li>
+  <% }) %>
+  <li><form method="post" action="/inbox/sync" class="to-inline-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="to-btn to-btn-quiet" data-busy="Checking the mailbox...">Check the mailbox now</button></form></li>
+</ul>
+<% if (cases.length) { %>
+<ul class="to-cases"><% cases.forEach(function (c) { %><%- include('partials/case-row', { c: c }) %><% }) %></ul>
+<% } else { %><p class="to-empty">Nothing here.</p><% } %>
+<%- include('partials/bottom') %>
