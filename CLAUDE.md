@@ -10077,3 +10077,49 @@ database, never inside the Arrington site or its database.
   staff list and levels, complaints process and escalation time, brand
   assets, the address, standard replies and price lists; the DPA before
   live email, the written £999 scope, hosting ownership.
+
+### Release two: locked by Tom's email to Dan (09/11/2026)
+
+Tom's own email to Dan (sent 17:20 UTC from tom@, message id
+`1a1c14071d55ebfc`; drafted twice by this worker and rejected, then
+written by Tom and corrected for spelling and layout only) is the
+agreed scope for the next release, on Tom's "lets lock in everything we
+have said in this email". Each line is a commitment the build must meet:
+
+- **Abacus first**, the other brands after.
+- **Mailbox:** Gmail, to be confirmed; API access arranged through Tim,
+  Dan's web designer, with Dan's permission.
+- **Visibility by brand.** Abacus staff see every Abacus email, reply,
+  booking and complaint; Coastline staff see only Coastline's; Dan's own
+  office sees everything, split by brand. So every case and every user
+  carries a brand, and "everyone sees everything" holds within a brand.
+  Nothing is double booked or answered twice because everyone in a brand
+  sees the same list.
+- **Complaints:** operators handle them too, with an escalate-to-manager
+  button, and the system suggests when one should be passed up (the AI's
+  recommended level on the complaint reading). A holding reply to the
+  customer on escalation is sent by the operator in one click, never by a
+  timer.
+- **Nudge:** a complaint unanswered for 12 hours goes to a manager
+  (pencilled in; Dan may change it).
+- **Users:** three levels, staff, managers and owners ("big chiefs");
+  Dan supplies the list when users are set up.
+- **Brand:** Cornwall Taxis logo and colours, from Dan or his website.
+- **Prices:** fixed prices (airports and the like) from Dan, or from
+  iCabbi once Tom has a login; the office quotes from those, never
+  guesses. A fare calculator follows the tariff.
+- **iCabbi:** Tom becomes a user on Dan's iCabbi; API access is requested
+  on Dan's own account as his office system. Arrington is not named as
+  the developer. A booking from an email goes into dispatch only after a
+  member of staff presses the button.
+- **The standing rule, in Tom's words to Dan:** "Nothing goes to a
+  customer and nothing gets booked without one of your staff pressing the
+  button, until we know it's infallible."
+
+Also decided the same afternoon, not in the email: the office gets its
+own domain, bought by Tom (taxioffice.uk recommended, with each operator
+on a subdomain; taxihq.uk second), pointed at the Railway service by this
+worker. Before the first booking is written into live iCabbi, Governance
+& Assurance is told; before the real mailbox is connected, the data
+processing agreement is signed. 02 Commercial Position recording the
+written £999 scope stays Tom's.
