@@ -88,3 +88,41 @@
   }
   later();
 })();
+
+(function () {
+  // The list pages (Today, Inbox, Complaints) ask the office every few
+  // seconds whether anything they show has changed, and reload when it
+  // has (Tom, 9 November 2026: an auto refresh as well as the button). The
+  // server pulls the mailbox itself every couple of minutes, so a new
+  // email appears here without anyone pressing anything. Never asks while
+  // the tab is hidden, never while a form on the page has been touched, and
+  // stops after an hour rather than ask for ever.
+  var line = document.querySelector('[data-live-url]');
+  if (!line || !window.fetch) return;
+  var stamp = line.getAttribute('data-live-stamp') || '';
+  var status = document.getElementById('live-status');
+  var started = Date.now();
+  var touched = false;
+  document.addEventListener('input', function () { touched = true; });
+  function later(ms) { setTimeout(check, ms || 10000); }
+  function check() {
+    if (Date.now() - started > 60 * 60 * 1000) {
+      line.classList.add('is-stale');
+      if (status) status.textContent = 'This page stopped checking after an hour. Reload it to carry on.';
+      return;
+    }
+    if (document.hidden || touched) return later();
+    fetch(line.getAttribute('data-live-url'), { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (j && j.stamp && j.stamp !== stamp) {
+          if (status) status.textContent = 'Something changed. Refreshing...';
+          window.location.reload();
+          return;
+        }
+        later();
+      })
+      .catch(function () { later(30000); });
+  }
+  later();
+})();

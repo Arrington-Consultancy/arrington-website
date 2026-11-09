@@ -49,4 +49,19 @@ async function sendEscalation({ cases, hours, baseUrl, firmName }, env = process
   return { sent: true, messageId: info && info.messageId };
 }
 
-module.exports = { smtpConfig, describeAlertStatus, sendEscalation, __setTransportFactoryForTests };
+// A complaint past the nudge time, or one an operator has passed up, told
+// to the same manager address. Same transport, same single recipient.
+async function sendNudge({ cases, hours, baseUrl, firmName, by = '' }, env = process.env) {
+  const c = smtpConfig(env);
+  if (!c.ready) return { sent: false, reason: 'not configured' };
+  const lines = cases.map((k) => `- ${k.subject || '(no subject)'} from ${k.from_address}, received ${new Date(k.received_at).toLocaleString('en-GB', { timeZone: 'Europe/London' })}${baseUrl ? ` ${baseUrl}/case/${k.id}` : ''}`);
+  const opening = by
+    ? `${by} has passed ${cases.length === 1 ? 'a complaint' : `${cases.length} complaints`} up to a manager in the ${firmName} office.`
+    : `${cases.length === 1 ? 'One complaint has' : `${cases.length} complaints have`} sat more than ${hours} hours in the ${firmName} office with no approved reply, so ${cases.length === 1 ? 'it has' : 'they have'} been passed up to a manager.`;
+  const text = [opening, '', ...lines, '', 'Nothing has been sent to the customer beyond any holding reply the operator chose to send. A manager needs to open the case, check the draft and approve it.'].join('\n');
+  const transport = transportFactory(c);
+  const info = await transport.sendMail({ from: c.from, to: c.to, subject: `${firmName} office: ${cases.length} ${cases.length === 1 ? 'complaint' : 'complaints'} for a manager`, text });
+  return { sent: true, messageId: info && info.messageId };
+}
+
+module.exports = { smtpConfig, describeAlertStatus, sendEscalation, sendNudge, __setTransportFactoryForTests };

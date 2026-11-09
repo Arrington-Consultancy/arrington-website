@@ -102,14 +102,24 @@ test('no file in the office can send to a customer: the only transport goes to t
   for (const f of files) assert.doesNotMatch(fs.readFileSync(f, 'utf8'), /env(?:\.|\[['"])GMAIL_/, `${path.relative(ROOT, f)} never reads the Arrington inbox variables`);
 });
 
-test('three levels: an operator approves ordinary replies, only a manager approves a complaint, only a manager reassigns someone else\'s case', () => {
+test('three levels: an operator approves replies, complaints included, but a complaint passed up or a safety matter needs a manager; only a manager reassigns someone else\'s case', () => {
   const op = { id: 1, role: 'operator' }; const mgr = { id: 2, role: 'manager' }; const owner = { id: 3, role: 'owner' };
-  const booking = { kind: 'bookings', owner_id: 9 }; const complaint = { kind: 'complaints', owner_id: 9 };
+  const booking = { kind: 'bookings', owner_id: 9 }; const complaint = { kind: 'complaints', owner_id: 9, seriousness: 'minor' };
+  const passedUp = { ...complaint, passed_up_at: new Date() }; const safety = { ...complaint, seriousness: 'safety' };
   assert.equal(cases.canApprove(op, booking), true);
-  assert.equal(cases.canApprove(op, complaint), false);
-  assert.equal(cases.canApprove(mgr, complaint), true);
+  assert.equal(cases.canApprove(op, complaint), true, 'operators handle complaints (Tom\'s email to Dan, 9 November 2026)');
+  assert.equal(cases.canApprove(op, passedUp), false, 'once passed up, a manager approves');
+  assert.equal(cases.canApprove(op, safety), false, 'a safety matter always goes to a manager');
+  assert.equal(cases.canApprove(mgr, passedUp), true);
+  assert.equal(cases.canApprove(mgr, safety), true);
   assert.equal(cases.canApprove(owner, complaint), true);
   assert.equal(cases.canApprove(null, booking), false);
+  // Visibility by brand: a brand's staff see their brand, the office sees all.
+  assert.equal(cases.canSee({ brand: 'abacus' }, { brand: 'abacus' }), true);
+  assert.equal(cases.canSee({ brand: 'abacus' }, { brand: 'coastline' }), false);
+  assert.equal(cases.canSee({ brand: '' }, { brand: 'coastline' }), true);
+  assert.equal(cases.scopeFor({ brand: '' }), undefined);
+  assert.equal(cases.scopeFor({ brand: 'coastline' }), 'coastline');
   assert.equal(cases.canReassign(op, booking), false);
   assert.equal(cases.canReassign(op, { kind: 'bookings', owner_id: 1 }), true);
   assert.equal(cases.canReassign(op, { kind: 'bookings', owner_id: null }), true);
@@ -126,6 +136,66 @@ test('an escalation email names the manager address from the variables only, and
   assert.match(sent.text, /Nothing has been sent to the customer/);
   assert.match(sent.text, /case\/4/);
   assert.deepEqual(await alerts.sendEscalation({ cases: [], hours: 24, firmName: 'x' }, {}), { sent: false, reason: 'not configured' });
+});
+
+test('the office writes in the Tidewell voice: Tom\'s writing rules, word for word, in every prompt, and the same cleanup on every reply', () => {
+  // Tom, 9 November 2026: "make sure its using the tone of voice used in
+  // tidewell cars". The rules are one block (lib/taxiOffice/ai.js WRITING,
+  // copied from 01A TOM VOICE on 19/10/2026) and this office imports it
+  // rather than keeping a copy, so the two offices cannot drift apart.
+  const { WRITING } = require('../lib/taxiOffice/ai');
+  assert.match(WRITING, /HOW TO WRITE/);
+  const f = { name: 'Abacus Taxis', short: 'Abacus', town: 'Falmouth', county: 'Cornwall', phone: '', signature: 'Abacus Taxis', facts: [], demo: false };
+  for (const sys of [ai.readSystem('2026-11-09', f), ai.complaintSystem('2026-11-09', f), ai.redraftSystem('2026-11-09', f)]) {
+    assert.ok(sys.includes(WRITING), 'the whole writing block is in the prompt');
+    assert.match(sys, /Sign off with "Thanks," for most customers or "Cheers," for a regular/);
+  }
+  const src = read('abacus-office/lib/ai.js');
+  assert.match(src, /require\('\.\.\/\.\.\/lib\/taxiOffice\/ai'\)/, 'imported, not copied');
+  assert.doesNotMatch(src, /HOW TO WRITE/, 'no second copy of the rules in this office');
+  // Every reply the model writes goes through the same cleanup.
+  const r = ai.cleanReading({ intent: 'new_booking', customer_name: 'A', phone: '', reference: '', journey: {}, missing: [], seriousness: 'none', summary: 's', reply: 'Hi A,\n\nThank you for reaching out. Booked - see you then.\n\nThanks,\nAbacus Taxis' });
+  assert.equal(r.reply, 'Hi A,\n\nBooked, see you then.\n\nThanks,\nAbacus Taxis');
+  // And the holding reply, which is the firm's own words, keeps them too.
+  const office = new cases.Office({ store: {}, mailbox: {}, firm: f });
+  const holding = office.holdingText({ reading: { customer_name: 'Dave Carne' } });
+  assert.match(holding, /^Hi Dave,\n\n/);
+  assert.match(holding, /Thank you for your patience/);
+  assert.equal(keepsTheRules(holding), true);
+  assert.equal(dashesOut(holding), holding);
+});
+
+test('the AI recommends passing a complaint up, a safety matter always goes up, and the sign-off tick gates every booking', () => {
+  const c = ai.cleanComplaint({ seriousness: 'minor', summary: 's', firm_at_fault: 'no', for_licensing: false, pass_to_manager: true, pass_to_manager_why: 'They want a refund', staff_steps: [], reply: 'r' });
+  assert.equal(c.pass_to_manager, true);
+  assert.equal(c.pass_to_manager_why, 'They want a refund');
+  const quiet = ai.cleanComplaint({ seriousness: 'minor', summary: 's', firm_at_fault: 'no', for_licensing: false, pass_to_manager: 'yes', pass_to_manager_why: '', staff_steps: [], reply: 'r' });
+  assert.equal(quiet.pass_to_manager, false, 'only a real true counts');
+  const safety = ai.cleanComplaint({ seriousness: 'safety', summary: 's', firm_at_fault: 'unclear', for_licensing: true, pass_to_manager: false, pass_to_manager_why: '', staff_steps: [], reply: 'r' });
+  assert.equal(safety.pass_to_manager, true, 'a safety matter goes up whatever the model said');
+  assert.match(safety.pass_to_manager_why, /safety matter/);
+  assert.match(ai.complaintSystem('2026-11-09', { name: 'X', town: 'T', county: 'C', phone: '', signature: 'X', facts: [] }), /pass_to_manager: whether this one should be passed up/);
+
+  const dispatch = require('../abacus-office/lib/dispatch');
+  const full = { date: '2026-11-13', time: '19:30', pickup: 'The Moor', destination: 'Penryn', name: 'Claire Rowe', phone: '07700 900999' };
+  assert.deepEqual(dispatch.cleanJob(full).missing, []);
+  assert.deepEqual(dispatch.cleanJob({ ...full, phone: '' }).missing, ['a phone number']);
+  assert.deepEqual(dispatch.cleanJob({ ...full, time: '7.30pm' }).missing, ['a time as HH:MM']);
+  // The live connection refuses until it has the firm's own API access, and
+  // the refusal reaches the person as its own message, not a crash.
+  const icabbi = dispatch.createDispatch({ store: {}, env: { ABACUS_OFFICE_DISPATCH_DRIVER: 'icabbi' } });
+  assert.equal(icabbi.live, true);
+  return icabbi.book({ job: full, kase: null, brand: 'abacus', actor: null }).then(() => assert.fail('should refuse'), (e) => {
+    assert.equal(e.code, 'REFUSED');
+    assert.match(e.message, /iCabbi is not connected yet/);
+    assert.match(e.message, /Nothing was booked/);
+    assert.match(dispatch.describeDispatchStatus({ ABACUS_OFFICE_DISPATCH_DRIVER: 'icabbi' }), /NOT connected/);
+    assert.match(dispatch.describeDispatchStatus({}), /stand-in/);
+    // No AI path reaches a booking: the only caller of office.book is the route behind the tick.
+    const appSrc = read('abacus-office/app.js');
+    assert.match(appSrc, /office\.book\(req\.kase, req\.user, req\.body, req\.body\.signed_off === 'yes'\)/);
+    for (const f of ['abacus-office/lib/ai.js', 'abacus-office/lib/cases.js']) assert.doesNotMatch(read(f).replace(/\n  async book\([\s\S]*?\n  }\n/, ''), /dispatch\.book\(|\.book\(/, `${f} has no other path into dispatch`);
+  });
 });
 
 // ---- Over real HTTP, against a throwaway database -------------------------------
@@ -151,7 +221,7 @@ test('the owner password can be recovered from the deployment variables alone, a
 test('the office over HTTP: login, forced password change, one case per email, roles, guidance, approval and escalation', { skip: DB ? false : 'set ABACUS_OFFICE_TEST_DATABASE_URL to a throwaway database' }, async (t) => {
   const { Pool } = require('pg');
   const pool = new Pool({ connectionString: DB });
-  await pool.query('DROP TABLE IF EXISTS case_events, cases, settings, users, session CASCADE');
+  await pool.query('DROP TABLE IF EXISTS case_events, dispatch_bookings, fixed_prices, cases, settings, users, session CASCADE');
   const { Store } = require('../abacus-office/lib/store');
   const { createApp } = require('../abacus-office/app');
   const store = new Store(pool);
@@ -177,8 +247,10 @@ test('the office over HTTP: login, forced password change, one case per email, r
   let drafts = [];
   const box = { name: 'test', label: 'Test mailbox', demo: false, configured: () => true, missing: () => [], account: async () => null,
     listInbox: async ({ today }) => demo.seedInbox(today), saveReplyDraft: async (email, text) => { drafts.push({ to: email.from, text }); return { draftId: `d${drafts.length}` }; } };
-  const firm = { name: 'Abacus Taxis', short: 'Abacus', town: 'Falmouth', county: 'Cornwall', phone: '', signature: 'Abacus Taxis', facts: [], demo: false };
-  const { app, office } = createApp({ pool, mailbox: box, firm, sessionSecret: 'test-secret-for-the-abacus-office', production: false, aiOn: () => aiOn });
+  const firm = { name: 'Abacus Taxis', short: 'Abacus', town: 'Falmouth', county: 'Cornwall', phone: '', signature: 'Abacus Taxis', facts: [], demo: false, brands: [{ id: 'abacus', name: 'Abacus Taxis' }, { id: 'coastline', name: 'Coastline Taxis' }], mailboxBrand: 'abacus', logo: '' };
+  // The manager address the escalation, pass-up and nudge emails go to.
+  const env = { ABACUS_OFFICE_SMTP_HOST: 'h', ABACUS_OFFICE_SMTP_USER: 'u', ABACUS_OFFICE_SMTP_PASSWORD: 'p', ABACUS_OFFICE_MANAGER_EMAIL: 'manager@example.invalid' };
+  const { app, office } = createApp({ pool, mailbox: box, firm, sessionSecret: 'test-secret-for-the-abacus-office', production: false, aiOn: () => aiOn, alertsEnv: env, baseUrl: 'http://office.test' });
   const server = await new Promise((resolve) => { const s = app.listen(0, () => resolve(s)); });
   const base = `http://127.0.0.1:${server.address().port}`;
   t.after(async () => { server.close(); await pool.end(); });
@@ -250,16 +322,107 @@ test('the office over HTTP: login, forced password change, one case per email, r
   assert.ok(afterApprove.approved_at);
   assert.equal(afterApprove.status, 'waiting');
   r = await sam.post(`/case/${phone.id}/approve`, { draft: phone.draft }, `/case/${phone.id}`);
-  assert.equal(drafts.length, 1, 'an operator cannot approve a complaint reply');
+  assert.equal(drafts.length, 1, 'an operator cannot approve a SAFETY complaint reply');
   r = await sam.get(`/case/${phone.id}`);
-  assert.match(r.text, /needs a manager to approve it/);
+  assert.match(r.text, /A safety matter needs a manager to approve the reply/);
   assert.doesNotMatch(r.text, /formaction="\/case\/\d+\/approve"/, 'and sees no approve button');
+
+  // Release two (Tom's email to Dan, 9 November 2026). An operator DOES
+  // handle an ordinary complaint: the fare query is approved by sam and
+  // saved as a draft like any other reply.
+  const fare = await byId('<demo-fare@example.invalid>');
+  assert.equal(fare.kind, 'complaints');
+  r = await sam.get(`/case/${fare.id}`);
+  assert.match(r.text, /formaction="\/case\/\d+\/approve"/, 'an operator sees the approve button on an ordinary complaint');
+  assert.match(r.text, /Pass up to a manager/, 'and the button to pass it up');
+  assert.match(r.text, /Send the holding reply/, 'and the one-click holding reply');
+  r = await sam.post(`/case/${fare.id}/approve`, { draft: fare.draft }, `/case/${fare.id}`);
+  assert.equal(drafts.length, 2, 'the operator approved the fare complaint reply');
+
+  // The late-car complaint is passed up by the operator: the manager is
+  // emailed once, only a manager may approve it now, and the holding reply
+  // goes as a draft in the mailbox on the operator's click.
+  let passUpMails = [];
+  alerts.__setTransportFactoryForTests(() => ({ sendMail: async (m) => { passUpMails.push(m); return { messageId: 'p' }; } }));
+  const late = await byId('<demo-late@example.invalid>');
+  r = await sam.post(`/case/${late.id}/pass-up`, { reason: 'He is asking for a refund.' }, `/case/${late.id}`);
+  assert.equal(r.location, `/case/${late.id}`);
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  let lateNow = await byId('<demo-late@example.invalid>');
+  assert.ok(lateNow.passed_up_at, 'passed up');
+  assert.equal(lateNow.passed_up_reason, 'He is asking for a refund.');
+  assert.equal(passUpMails.length, 1, 'the manager was emailed once about the pass-up');
+  assert.equal(passUpMails[0].to, 'manager@example.invalid');
+  assert.match(passUpMails[0].text, /sam has passed a complaint up/);
+  r = await sam.post(`/case/${late.id}/approve`, { draft: late.draft }, `/case/${late.id}`);
+  assert.equal(drafts.length, 2, 'once passed up, the operator can no longer approve it');
+  r = await sam.post(`/case/${late.id}/holding`, {}, `/case/${late.id}`);
+  assert.equal(drafts.length, 3, 'the holding reply is saved as a draft in the mailbox');
+  assert.equal(drafts[2].to, late.from_address);
+  assert.match(drafts[2].text, /^Hi Dave,\n\nI'm sorry you've had cause to write to us\. I've passed this to a manager/);
+  assert.match(drafts[2].text, /Thank you for your patience/);
+  assert.equal(keepsTheRules(drafts[2].text), true, 'the holding reply keeps the writing rules');
+  r = await sam.post(`/case/${late.id}/holding`, {}, `/case/${late.id}`);
+  assert.equal(drafts.length, 3, 'the holding reply goes once');
+  lateNow = await byId('<demo-late@example.invalid>');
+  assert.ok(lateNow.holding_sent_at);
+  r = await sam.post(`/case/${late.id}/pass-up`, {}, `/case/${late.id}`);
+  assert.ok(lateNow.passed_up_at, 'a second pass-up changes nothing');
+
+  // Booking into dispatch: refused without the sign-off tick, refused with a
+  // detail missing, booked with both, and never twice.
+  const rowe = await byId('<demo-rowe@example.invalid>');
+  const bookingFields = { date: '2026-11-13', time: '19:30', pickup: 'The Moor', destination: 'Penryn', name: 'Claire Rowe', phone: '07700 900999', passengers: '2', vehicle: 'Car (up to 4)', notes: '' };
+  r = await sam.post(`/case/${rowe.id}/book`, bookingFields, `/case/${rowe.id}`);
+  assert.equal((await byId('<demo-rowe@example.invalid>')).dispatch_ref, '', 'no tick, nothing booked');
+  r = await sam.post(`/case/${rowe.id}/book`, { ...bookingFields, phone: '', signed_off: 'yes' }, `/case/${rowe.id}`);
+  assert.equal((await byId('<demo-rowe@example.invalid>')).dispatch_ref, '', 'a missing phone number, nothing booked');
+  r = await sam.post(`/case/${rowe.id}/book`, { ...bookingFields, signed_off: 'yes' }, `/case/${rowe.id}`);
+  let roweNow = await byId('<demo-rowe@example.invalid>');
+  assert.match(roweNow.dispatch_ref, /^[A-Z]{2,3}-\d{5}$/, `booked into the stand-in dispatch with a reference (got "${roweNow.dispatch_ref}")`);
+  const bookings = (await pool.query('SELECT * FROM dispatch_bookings')).rows;
+  assert.equal(bookings.length, 1);
+  assert.equal(bookings[0].job.pickup, 'The Moor');
+  assert.equal(bookings[0].booked_by_name, 'sam');
+  r = await sam.post(`/case/${rowe.id}/book`, { ...bookingFields, signed_off: 'yes' }, `/case/${rowe.id}`);
+  assert.equal((await pool.query('SELECT count(*)::int AS n FROM dispatch_bookings')).rows[0].n, 1, 'never booked twice');
+  const bookedEvent = (await pool.query("SELECT detail FROM case_events WHERE case_id = $1 AND kind = 'booked'", [rowe.id])).rows;
+  assert.equal(bookedEvent.length, 1);
+  assert.match(bookedEvent[0].detail, /signed off by sam/);
+
+  // The list pages carry the live stamp and live.json changes with the data.
+  r = await sam.get('/live.json');
+  assert.equal(r.status, 200);
+  const stampA = JSON.parse(r.text).stamp;
+  assert.match(stampA, /^\d+:/);
+  r = await sam.get('/inbox');
+  assert.match(r.text, /data-live-url="\/live\.json"/);
+  assert.match(r.text, new RegExp(`data-live-stamp="${stampA.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`), 'the page carries the stamp it was rendered with');
+  await sam.post(`/case/${rowe.id}/note`, { note: 'Rang Claire to confirm.' }, `/case/${rowe.id}`);
+  await pool.query('UPDATE cases SET updated_at = now() + interval \'1 second\' WHERE id = $1', [rowe.id]);
+  r = await sam.get('/live.json');
+  assert.notEqual(JSON.parse(r.text).stamp, stampA, 'a change moves the stamp');
+
+  // Fixed prices: a manager adds one, the AI is told about it, an operator
+  // sees it in the prompt the model gets and cannot add one.
 
   // A manager can, and the action is recorded under their name.
   const meg = client();
   await meg.post('/login', { username: 'meg', password: 'meg-pass-123456', next: '/' });
   r = await meg.post(`/case/${phone.id}/approve`, { draft: phone.draft }, `/case/${phone.id}`);
-  assert.equal(drafts.length, 2);
+  assert.equal(drafts.length, 4);
+  r = await meg.post('/settings/prices', { from_place: 'Falmouth', to_place: 'Newquay Airport', vehicle: 'Car (up to 4)', price: '65', notes: 'Daytime' }, '/settings');
+  assert.equal(r.location, '/settings');
+  const prices = await store.fixedPrices();
+  assert.equal(prices.length, 1);
+  assert.equal(prices[0].price_pence, 6500);
+  assert.equal(prices[0].brand, 'abacus', 'a price belongs to the mailbox brand by default');
+  r = await meg.post('/settings/prices', { from_place: 'Falmouth', to_place: 'Truro', price: 'about forty' }, '/settings');
+  assert.equal((await store.fixedPrices()).length, 1, 'a price that is not a number is refused');
+  assert.equal((await sam.post('/settings/prices', { from_place: 'A', to_place: 'B', price: '1' }, '/')).status, 404, 'an operator cannot reach Settings');
+  const promptedFirm = await office.firmFor(rowe);
+  assert.match(ai.readSystem('2026-11-09', promptedFirm), /Falmouth to Newquay Airport, Car \(up to 4\): £65 \(Daytime\)/, 'the AI is told the fixed price');
+  assert.match(ai.readSystem('2026-11-09', { ...firm, fixedPrices: [] }), /No fixed prices have been set, so give no price/);
   const events = (await pool.query('SELECT actor_name, kind FROM case_events WHERE case_id = $1 ORDER BY at', [phone.id])).rows;
   assert.deepEqual(events.filter((e) => e.kind === 'approved').map((e) => e.actor_name), ['meg']);
   assert.equal((await meg.get('/activity')).status, 200);
@@ -295,7 +458,6 @@ test('the office over HTTP: login, forced password change, one case per email, r
   // "other" cases never escalate.
   let mails = 0;
   alerts.__setTransportFactoryForTests(() => ({ sendMail: async () => { mails += 1; return { messageId: 'm' }; } }));
-  const env = { ABACUS_OFFICE_SMTP_HOST: 'h', ABACUS_OFFICE_SMTP_USER: 'u', ABACUS_OFFICE_SMTP_PASSWORD: 'p', ABACUS_OFFICE_MANAGER_EMAIL: 'manager@example.invalid' };
   const alertsWithEnv = { sendEscalation: (args) => alerts.sendEscalation(args, env) };
   const first = await office.sweep(alertsWithEnv, base);
   assert.ok(first.escalated >= 3, `the cases older than 24 hours escalate (${first.escalated})`);
@@ -308,6 +470,46 @@ test('the office over HTTP: login, forced password change, one case per email, r
   assert.ok(!escalated.some((c) => c.message_id === '<demo-phone@example.invalid>'), 'an approved reply does not escalate');
   r = await owner.get('/');
   assert.match(r.text, /Overdue/);
+
+  // The complaint nudge: a complaint with no approved reply past the nudge
+  // time is passed up by the office and the manager emailed once; the one
+  // already passed up by sam, and the approved ones, are left alone.
+  await store.setSetting('complaint_nudge_hours', '12');
+  await pool.query("INSERT INTO cases (message_id, from_address, subject, body, received_at, kind, seriousness, brand, status, draft) VALUES ('<nudge-me@example.invalid>', 'Old Complaint <old@example.invalid>', 'Still waiting', 'Nobody has answered me.', now() - interval '13 hours', 'complaints', 'minor', 'abacus', 'in_progress', 'Hi,\n\nSorry.\n\nThanks,\nAbacus Taxis')");
+  passUpMails = [];
+  alerts.__setTransportFactoryForTests(() => ({ sendMail: async (m) => { passUpMails.push(m); return { messageId: 'n' }; } }));
+  const nudgeAlerts = { sendNudge: (args) => alerts.sendNudge(args, env) };
+  const n1 = await office.nudge(nudgeAlerts, base);
+  assert.deepEqual(n1, { nudged: 1, emailed: true });
+  assert.equal(passUpMails.length, 1);
+  assert.match(passUpMails[0].text, /sat more than 12 hours/);
+  const nudged = await byId('<nudge-me@example.invalid>');
+  assert.ok(nudged.passed_up_at);
+  assert.equal(nudged.passed_up_reason, 'No approved reply within 12 hours');
+  assert.equal(nudged.passed_up_by, null, 'passed up by the office, not a person');
+  assert.deepEqual(await office.nudge(nudgeAlerts, base), { nudged: 0, emailed: false }, 'a second sweep nudges nothing more');
+  r = await meg.get('/');
+  assert.match(r.text, /For a manager/, 'Today shows a manager what was passed up');
+  r = await sam.get('/');
+  assert.doesNotMatch(r.text, /<h2>For a manager<\/h2>/, 'an operator is not shown the manager list');
+
+  // Visibility by brand: a Coastline operator sees none of the Abacus
+  // mailbox's cases, gets 404 on one by its address, and the office user
+  // (no brand) sees them all with the brand named on each.
+  await store.createUser({ username: 'cora', password: 'cora-pass-123456', role: 'operator', brand: 'coastline' });
+  const cora = client();
+  await cora.post('/login', { username: 'cora', password: 'cora-pass-123456', next: '/' });
+  r = await cora.get('/inbox?show=all');
+  assert.equal(r.status, 200);
+  assert.doesNotMatch(r.text, /Taxi to the station tomorrow morning/, 'an Abacus email is not in the Coastline inbox');
+  assert.match(r.text, /Nothing here/);
+  assert.equal((await cora.get(`/case/${pascoe.id}`)).status, 404, 'nor reachable by its address');
+  assert.equal((await cora.get('/live.json')).status, 200);
+  assert.match(JSON.parse((await cora.get('/live.json')).text).stamp, /^0:/, 'the live stamp counts only what she may see');
+  r = await owner.get('/inbox?show=all');
+  assert.match(r.text, /Taxi to the station tomorrow morning/);
+  assert.match(r.text, /class="to-tag">Abacus Taxis</, 'the office view names the brand on each case');
+  assert.match(r.text, /every brand/, 'and says the owner sees every brand');
 
   // Users: the owner adds an operator who must choose a password; nobody can
   // deactivate themselves.

@@ -8,6 +8,8 @@
   var when = function (d) { return new Date(d).toLocaleString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); };
   var mayApprove = canApprove(user, kase);
   var needsReply = !['other', 'licensing'].includes(kase.kind);
+  var passedUp = Boolean(kase.passed_up_at);
+  var forManager = needsManager(kase);
 %>
 <p class="to-back"><a href="<%= kase.kind === 'complaints' ? '/complaints' : '/inbox' %>"><%= kase.kind === 'complaints' ? 'Complaints' : 'Inbox' %></a></p>
 
@@ -37,7 +39,10 @@
       <div class="to-panel-head">
         <p class="to-worker-tag"><%= kase.reading_source === 'ai' ? 'Read by the AI' : (kase.reading_source === 'prepared' ? 'Prepared answer (made-up inbox)' : 'Not read') %></p>
         <span><span class="to-chip"><% if (iconId) { %><%- include('partials/worker-icon', { id: iconId }) %><% } %><%= kindName %></span>
+          <% if (manyBrands) { %><span class="to-tag"><%= brandName(kase.brand) %></span><% } %>
           <% if (overdue) { %><span class="to-pill to-pill-bad">Overdue</span><% } %>
+          <% if (passedUp && !kase.approved_at && kase.status !== 'done') { %><span class="to-pill to-pill-warn">For a manager</span><% } %>
+          <% if (kase.dispatch_ref) { %><span class="to-pill to-pill-ok">In dispatch <%= kase.dispatch_ref %></span><% } %>
           <% if (kase.seriousness !== 'none') { %><span class="to-pill <%= kase.seriousness === 'minor' ? 'to-pill-neutral' : 'to-pill-bad' %>"><%= kase.seriousness %></span><% } %>
           <span class="to-pill to-pill-<%= { new: 'soon', in_progress: 'warn', waiting: 'neutral', done: 'ok' }[kase.status] %>"><%= label(kase.status) %></span></span>
       </div>
@@ -56,6 +61,9 @@
         <p><strong>What the customer says went wrong:</strong> <%= cpl.summary %></p>
         <p class="to-status-line">Was the firm at fault, on what is known so far: <strong><%= cpl.firm_at_fault %></strong>.<% if (cpl.for_licensing) { %> <strong>A safety matter: a manager decides what is reported to licensing.</strong><% } %></p>
         <% if (cpl.staff_steps && cpl.staff_steps.length) { %><p class="to-small">For the office to do:</p><ol class="to-steps"><% cpl.staff_steps.forEach(function (s) { %><li><%= s %></li><% }) %></ol><% } %>
+      <% } %>
+      <% if (kase.kind === 'complaints' && cpl && cpl.pass_to_manager && !passedUp) { %>
+        <p class="to-passup-ai"><strong>The AI thinks this one should go to a manager.</strong> <%= cpl.pass_to_manager_why || '' %> You decide: pass it up below, or answer it yourself.</p>
       <% } %>
       <% if (aiOn) { %>
       <form method="post" action="/case/<%= kase.id %>/read" class="to-inline-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="to-btn to-btn-quiet" data-busy="Reading...">Ask the AI to read it again</button></form>
@@ -79,6 +87,62 @@
           <button type="submit" class="to-btn to-btn-quiet">Set status</button></form>
       </div>
     </section>
+
+    <% if (kase.kind === 'complaints' && kase.status !== 'done') { %>
+    <section class="to-panel to-passup" id="pass-up">
+      <p class="to-worker-tag">Passing it up</p>
+      <% if (passedUp) { %>
+        <p class="to-status-line">Passed up to a manager <%= when(kase.passed_up_at) %>: <%= kase.passed_up_reason.replace(/\.+$/, '') %>. <%= atLeast(user, 'manager') ? 'You can approve the reply.' : 'Only a manager can approve the reply now.' %></p>
+      <% } else { %>
+        <p class="to-small">If this needs someone higher up, pass it to a manager. The complaint stays with you until a manager takes it, and only a manager can approve the reply once it has gone up.<% if (kase.seriousness === 'safety') { %> This is a safety matter, so a manager approves the reply whatever you do here.<% } %></p>
+        <form method="post" action="/case/<%= kase.id %>/pass-up" class="to-form">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <label class="to-field"><span>Why (optional)</span><input name="reason" maxlength="600" placeholder="<%= cpl && cpl.pass_to_manager_why ? cpl.pass_to_manager_why : 'For example: they are asking for a refund' %>"></label>
+          <button type="submit" class="to-btn" data-confirm="Pass this complaint up to a manager?">Pass up to a manager</button>
+        </form>
+      <% } %>
+      <% if (kase.holding_sent_at) { %>
+        <p class="to-note to-note-ok">Holding reply <%= mailboxDemo ? 'approved' : 'saved as a draft in ' + mailboxLabel %> <%= when(kase.holding_sent_at) %>.</p>
+      <% } else { %>
+        <p class="to-small"><strong>Holding reply.</strong> One click tells the customer it has gone to a manager and thanks them for their patience, so they are not left waiting with nothing. Your click, never a timer.</p>
+        <div class="to-holding"><%= holdingText %></div>
+        <form method="post" action="/case/<%= kase.id %>/holding" class="to-inline-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="to-btn" data-confirm="Send the holding reply? <%= mailboxDemo ? 'Nothing is sent from this made-up inbox.' : 'It is saved as a draft in ' + mailboxLabel + ' for someone to send.' %>" data-busy="Saving...">Send the holding reply</button></form>
+      <% } %>
+    </section>
+    <% } %>
+
+    <% if (kase.kind === 'bookings' && r && ['new_booking', 'change'].includes(r.intent) && kase.status !== 'done') { %>
+    <section class="to-panel to-book" id="book">
+      <p class="to-worker-tag">Into dispatch</p>
+      <% if (kase.dispatch_ref) { %>
+        <p class="to-booked">In <%= dispatchLabel %> as <%= kase.dispatch_ref %>, booked <%= when(kase.booked_at) %>.</p>
+      <% } else { %>
+        <p class="to-small">Check every line against the email, correct anything the AI got wrong or left out, tick the box and book it. Nothing goes into dispatch until you press the button.<% if (!dispatchLive) { %> This office is on the stand-in dispatch, so the booking is recorded here only until iCabbi is connected.<% } %></p>
+        <form method="post" action="/case/<%= kase.id %>/book" class="to-form">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="to-field-row is-two">
+            <label class="to-field"><span>Date</span><input name="date" type="date" value="<%= booking.date %>" required></label>
+            <label class="to-field"><span>Pickup time</span><input name="time" type="time" value="<%= booking.time %>" required></label>
+          </div>
+          <div class="to-field-row is-two">
+            <label class="to-field"><span>Pickup</span><input name="pickup" value="<%= booking.pickup %>" maxlength="160" required></label>
+            <label class="to-field"><span>Destination</span><input name="destination" value="<%= booking.destination %>" maxlength="160" required></label>
+          </div>
+          <div class="to-field-row">
+            <label class="to-field"><span>Passenger</span><input name="name" value="<%= booking.name %>" maxlength="80" required></label>
+            <label class="to-field"><span>Phone</span><input name="phone" value="<%= booking.phone %>" maxlength="30" required></label>
+            <label class="to-field"><span>Passengers</span><input name="passengers" inputmode="numeric" value="<%= booking.passengers || '1' %>" maxlength="2"></label>
+          </div>
+          <div class="to-field-row is-two">
+            <label class="to-field"><span>Vehicle</span><select name="vehicle"><% ['Car (up to 4)', 'Estate (up to 4, more luggage)', '6 seater', '8 seater', 'Wheelchair accessible'].forEach(function (v) { %><option><%= v %></option><% }) %></select></label>
+            <label class="to-field"><span>Note for the driver (optional)</span><input name="notes" maxlength="300" placeholder="One suitcase, ring on arrival"></label>
+          </div>
+          <label class="to-check-box"><input type="checkbox" name="signed_off" value="yes" required><span>I have checked this job against the customer's email and I am booking it.</span></label>
+          <button type="submit" class="to-btn to-btn-primary" data-busy="Booking...">Book it in <%= dispatchLabel.replace(/ \(.*\)$/, '') %></button>
+        </form>
+      <% } %>
+    </section>
+    <% } %>
 
     <% if (needsReply) { %>
     <section class="to-panel to-draft<%= kase.approved_at ? ' to-approved' : '' %>" id="reply">
@@ -104,9 +168,9 @@
         </div>
         <% if (mayApprove) { %>
           <button type="submit" class="to-btn to-btn-primary" formaction="/case/<%= kase.id %>/approve" data-confirm="Approve this reply? <%= mailboxDemo ? 'Nothing is sent from this made-up inbox.' : 'It will be saved as a draft in ' + mailboxLabel + ' for someone to send.' %>" data-busy="Approving..."><%= kase.approved_at ? 'Approve again' : 'Approve this reply' %></button>
-          <p class="to-small"><%= kase.kind === 'complaints' ? 'A complaint reply is approved by a manager; you are one.' : 'Approving saves it as a draft in the firm\'s mailbox for a person to send. Nothing is sent from here.' %></p>
+          <p class="to-small"><%= forManager ? 'This one is approved by a manager; you are one.' : 'Approving saves it as a draft in the firm\'s mailbox for a person to send. Nothing is sent from here.' %></p>
         <% } else { %>
-          <p class="to-note to-note-warn">A complaint reply needs a manager to approve it. Get the draft right, add a note, and a manager will approve it from here.</p>
+          <p class="to-note to-note-warn"><%= passedUp ? 'This complaint was passed up, so a manager approves the reply.' : 'A safety matter needs a manager to approve the reply.' %> Get the draft right, add a note, and a manager will approve it from here.</p>
         <% } %>
       </form>
     </section>

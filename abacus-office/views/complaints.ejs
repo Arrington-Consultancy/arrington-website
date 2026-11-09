@@ -1,8 +1,9 @@
 <%- include('partials/top', { title: 'Complaints' }) %>
 <section class="to-section-head">
   <h1><%- include('partials/worker-icon', { id: 'complaints', tile: true }) %> Complaints</h1>
-  <p class="to-small">Every complaint, most serious first. A safety matter is marked and goes to a manager. The AI drafts the reply from what the office knows, never offers money and never names a driver; a manager approves it.</p>
+  <p class="to-small">Every complaint, most serious first. The AI drafts the reply from what the office knows, never offers money and never names a driver. An operator answers most of them, and passes one up to a manager when it needs to go higher; the AI says when it thinks it should. A safety matter always goes to a manager, and so does any complaint with no approved reply after <%= nudgeHours %> hours.</p>
 </section>
+<p class="to-live-line to-small" data-live-url="/live.json" data-live-stamp="<%= liveStamp %>"><span id="live-status">This page checks the mailbox itself every couple of minutes and refreshes when something changes.</span></p>
 <ul class="to-filter-bar">
   <li><a href="/complaints"<% if (!showAll) { %> aria-current="page"<% } %>>Open</a></li>
   <li><a href="/complaints?show=all"<% if (showAll) { %> aria-current="page"<% } %>>All</a></li>

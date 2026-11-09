@@ -7,12 +7,21 @@
 //
 // Who may do what (the three levels in the proposal):
 //   operator  reads, edits drafts, guides the AI, changes status, takes a
-//             case, approves ordinary replies (bookings and customer emails)
-//   manager   all of that, approves complaints, reassigns to anyone, sees
-//             the activity log
-//   owner     all of that, manages users and settings
+//             case, approves replies, complaints included (Tom's email to
+//             Dan, 9 November 2026), passes a complaint up to a manager and
+//             sends the holding reply, books a job into dispatch after
+//             signing it off
+//   manager   all of that, approves a complaint that was passed up or is a
+//             safety matter, reassigns to anyone, sees the activity log
+//   owner     all of that, manages users, brands, prices and settings
+//
+// Visibility by brand: a case carries the brand of the mailbox it came in
+// on; a user with a brand sees only that brand's cases, a user with none
+// (the owner's own office) sees every brand.
 
 const ai = require('./ai');
+const { cleanJob } = require('./dispatch');
+const { brandName } = require('./firm');
 const { seedInbox, todayLondon } = require('./demoInbox');
 const { workerForIntent } = require('../../lib/taxiOffice/workers');
 
@@ -34,11 +43,24 @@ function kindFor(intent) {
 
 const LEVEL = { operator: 1, manager: 2, owner: 3 };
 function atLeast(user, role) { return Boolean(user) && (LEVEL[user.role] || 0) >= LEVEL[role]; }
+// Who approves. An operator approves any reply, a complaint included,
+// unless it has been passed up to a manager or is a safety matter: those
+// need a manager (the AI's recommendation only suggests passing up; the
+// operator decides, and a safety matter is never theirs to close).
+function needsManager(kase) {
+  return kase.kind === 'complaints' && (Boolean(kase.passed_up_at) || kase.seriousness === 'safety');
+}
 function canApprove(user, kase) {
   if (!user) return false;
-  if (kase.kind === 'complaints') return atLeast(user, 'manager');
+  if (needsManager(kase)) return atLeast(user, 'manager');
   return atLeast(user, 'operator');
 }
+function canSee(user, kase) {
+  if (!user || !kase) return false;
+  return !user.brand || user.brand === (kase.brand || '');
+}
+// Which brand's cases a user is shown: undefined is every brand.
+function scopeFor(user) { return user && user.brand ? user.brand : undefined; }
 function canReassign(user, kase) {
   if (!user) return false;
   if (atLeast(user, 'manager')) return true;
@@ -51,10 +73,11 @@ function preparedFor(kase) {
 }
 
 class Office {
-  constructor({ store, mailbox, firm, aiOn = ai.aiEnabled, now = () => new Date() }) {
+  constructor({ store, mailbox, firm, dispatch = null, aiOn = ai.aiEnabled, now = () => new Date() }) {
     this.store = store;
     this.mailbox = mailbox;
     this.firm = firm;
+    this.dispatch = dispatch;
     this.aiOn = aiOn;
     this.now = now;
     this.reading = new Set();
@@ -69,13 +92,20 @@ class Office {
     const emails = await this.mailbox.listInbox({ max: 50, days: 14, today: this.today() });
     const created = [];
     for (const e of emails) {
-      const row = await this.store.insertCase(e);
+      const row = await this.store.insertCase(e, this.firm.mailboxBrand || '');
       if (row) {
         created.push(row);
         await this.store.addEvent(row.id, { kind: 'arrived', detail: `Arrived from ${this.mailbox.label}` });
       }
     }
     return created;
+  }
+
+  // The firm as the AI may describe it for this case: the configured facts
+  // plus the fixed prices set for the case's brand.
+  async firmFor(kase) {
+    const prices = await this.store.fixedPrices(kase && kase.brand ? kase.brand : undefined).catch(() => []);
+    return { ...this.firm, fixedPrices: prices };
   }
 
   emailOf(kase) {
@@ -93,9 +123,10 @@ class Office {
       let complaint = null;
       if (this.aiOn()) {
         try {
-          reading = await ai.readEmail(this.emailOf(kase), this.today(), this.firm);
+          const f = await this.firmFor(kase);
+          reading = await ai.readEmail(this.emailOf(kase), this.today(), f);
           source = 'ai';
-          if (reading.intent === 'complaint') complaint = await ai.draftComplaint({ email: this.emailOf(kase), notes: [] }, this.today(), this.firm);
+          if (reading.intent === 'complaint') complaint = await ai.draftComplaint({ email: this.emailOf(kase), notes: [] }, this.today(), f);
         } catch (e) {
           note = `The AI could not read this email (${e.code || e.status || 'error'}). `;
         }
@@ -169,7 +200,7 @@ class Office {
       await this.store.addEvent(kase.id, { actor: user, kind: 'guided', detail: `${t} (the AI is off, so the draft was not rewritten)` });
       return { rewritten: false };
     }
-    const out = await ai.redraft({ email: this.emailOf(kase), draft: kase.draft, notes }, this.today(), this.firm);
+    const out = await ai.redraft({ email: this.emailOf(kase), draft: kase.draft, notes }, this.today(), await this.firmFor(kase));
     await this.store.updateCase(kase.id, { guidance: notes, draft: out.reply, held_back: out.held_back, approved_at: null, approved_by: null });
     await this.store.addEvent(kase.id, { actor: user, kind: 'guided', detail: t + (out.held_back ? ` (held back: ${out.held_back})` : '') });
     return { rewritten: true, heldBack: out.held_back };
@@ -178,12 +209,69 @@ class Office {
   // Approve the reply: saved as a draft in the firm's mailbox for a person
   // to send. Nothing goes to the customer from here.
   async approve(kase, user) {
-    if (!canApprove(user, kase)) throw refuse(kase.kind === 'complaints' ? 'A complaint reply needs a manager to approve it.' : 'You cannot approve this.');
+    if (!canApprove(user, kase)) throw refuse(needsManager(kase) ? (kase.passed_up_at ? 'This complaint was passed up, so a manager approves the reply.' : 'A safety matter needs a manager to approve the reply.') : 'You cannot approve this.');
     if (!String(kase.draft || '').trim()) throw refuse('There is no reply to approve.');
     const { draftId } = await this.mailbox.saveReplyDraft(this.emailOf(kase), kase.draft);
     await this.store.updateCase(kase.id, { approved_at: this.now(), approved_by: user.id, saved_draft_id: draftId || null, status: 'waiting', owner_id: kase.owner_id || user.id });
     await this.store.addEvent(kase.id, { actor: user, kind: 'approved', detail: this.mailbox.demo ? 'Reply approved. This is the made-up inbox, so the draft was saved nowhere.' : `Reply approved and saved as a draft in ${this.mailbox.label} for someone to send${draftId ? ` (draft ${draftId})` : ''}.` });
     return { draftId: draftId || null };
+  }
+
+  // An operator passes a complaint up to a manager (Tom's email to Dan: an
+  // escalate button, with the AI suggesting when). The case stays open
+  // under the operator until a manager takes it; from here only a manager
+  // may approve the reply.
+  async passUp(kase, user, reason) {
+    if (kase.kind !== 'complaints') throw refuse('Only a complaint is passed up to a manager.');
+    if (kase.passed_up_at) throw refuse('This complaint has already been passed up.');
+    const why = String(reason || '').trim().slice(0, 600) || (kase.complaint && kase.complaint.pass_to_manager_why) || 'Passed up by the operator';
+    await this.store.updateCase(kase.id, { passed_up_at: this.now(), passed_up_by: user ? user.id : null, passed_up_reason: why, status: kase.status === 'new' ? 'in_progress' : kase.status, owner_id: kase.owner_id || (user ? user.id : null) });
+    await this.store.addEvent(kase.id, { actor: user, kind: 'passed_up', detail: `Passed up to a manager: ${why}` });
+    return this.store.caseById(kase.id);
+  }
+
+  // The holding reply the operator sends the customer when a complaint is
+  // passed up: one click, the operator's click, never a timer. It goes the
+  // same way as every reply, as a draft in the firm's mailbox for a person
+  // to send; the text is the firm's, in its own words, not the AI's.
+  holdingText(kase) {
+    const r = kase.reading || {};
+    const first = String(r.customer_name || '').trim().split(/\s+/)[0] || 'there';
+    return `Hi ${first},
+
+I'm sorry you've had cause to write to us. I've passed this to a manager so it gets looked at properly, and they will come back to you once they have been through what happened. Thank you for your patience in the meantime.
+
+Thanks,
+${this.firm.signature}`;
+  }
+  async sendHolding(kase, user) {
+    if (kase.kind !== 'complaints') throw refuse('A holding reply is for a complaint.');
+    if (kase.holding_sent_at) throw refuse('The holding reply has already gone.');
+    const text = this.holdingText(kase);
+    const { draftId } = await this.mailbox.saveReplyDraft(this.emailOf(kase), text);
+    await this.store.updateCase(kase.id, { holding_sent_at: this.now() });
+    await this.store.addEvent(kase.id, { actor: user, kind: 'holding_reply', detail: this.mailbox.demo ? 'Holding reply approved. This is the made-up inbox, so it was saved nowhere.' : `Holding reply saved as a draft in ${this.mailbox.label} for someone to send${draftId ? ` (draft ${draftId})` : ''}.` });
+    return { text, draftId: draftId || null };
+  }
+
+  // A member of staff books the job from an email into dispatch. Only with
+  // the sign-off tick, only with every detail present, and only through the
+  // dispatch connection, which is the stand-in until iCabbi is connected.
+  bookingFrom(kase) {
+    const r = kase.reading || {}; const j = r.journey || {};
+    return { date: j.date || '', time: j.time || '', pickup: j.pickup || '', destination: j.destination || '', passengers: j.passengers || '', name: r.customer_name || '', phone: r.phone || '', vehicle: '', notes: '' };
+  }
+  async book(kase, user, input, signedOff) {
+    if (!this.dispatch) throw refuse('No dispatch connection is set up on this office.');
+    if (!['bookings'].includes(kase.kind)) throw refuse('Only a booking email is booked into dispatch.');
+    if (kase.dispatch_ref) throw refuse(`This job is already in dispatch as ${kase.dispatch_ref}.`);
+    if (!signedOff) throw refuse('Tick the sign-off box to confirm you have checked the job against the email. Nothing was booked.');
+    const { job, missing } = cleanJob(input || {});
+    if (missing.length) throw refuse(`Still needed before it can be booked: ${missing.join(', ')}. Nothing was booked.`);
+    const { ref } = await this.dispatch.book({ job, kase, brand: kase.brand || '', actor: user });
+    await this.store.updateCase(kase.id, { dispatch_ref: ref, booked_at: this.now(), booked_by: user.id, status: kase.status === 'new' ? 'in_progress' : kase.status, owner_id: kase.owner_id || user.id });
+    await this.store.addEvent(kase.id, { actor: user, kind: 'booked', detail: `Booked into ${this.dispatch.label} as ${ref}: ${job.date} ${job.time}, ${job.pickup} to ${job.destination}, ${job.passengers} passenger${job.passengers === '1' ? '' : 's'}, signed off by ${user.display_name || user.username}` });
+    return { ref, job };
   }
 
   // The escalation sweep: a reply that has waited past the set time with
@@ -206,6 +294,31 @@ class Office {
     }
     return { escalated: due.length, emailed };
   }
+
+  // The complaint nudge (Tom's email to Dan: a complaint unanswered for 12
+  // hours goes to a manager). Past the nudge time with no approved reply,
+  // the complaint is passed up by the office itself and a manager is
+  // emailed once. Nothing goes to the customer.
+  async nudge(alerts, baseUrl) {
+    const hours = await this.store.complaintNudgeHours();
+    const due = await this.store.complaintNudgeCandidates(hours);
+    if (!due.length) return { nudged: 0, emailed: false };
+    for (const c of due) {
+      await this.store.updateCase(c.id, { passed_up_at: this.now(), passed_up_by: null, passed_up_reason: `No approved reply within ${hours} hours` });
+      await this.store.addEvent(c.id, { kind: 'passed_up', detail: `Passed up to a manager by the office: no approved reply within ${hours} hours` });
+    }
+    let emailed = false;
+    if (alerts && alerts.sendNudge) {
+      try {
+        const r = await alerts.sendNudge({ cases: due, hours, baseUrl, firmName: this.firm.name });
+        emailed = r.sent;
+        if (r.sent) await this.store.markPassedUpNotified(due.map((c) => c.id));
+      } catch (e) {
+        console.error('Abacus office: nudge email failed', e.message);
+      }
+    }
+    return { nudged: due.length, emailed };
+  }
 }
 
 function refuse(message) { const e = new Error(message); e.code = 'REFUSED'; return e; }
@@ -220,4 +333,4 @@ function londonStamp(d) {
   return `${g('year')}-${g('month')}-${g('day')}T${g('hour') === '24' ? '00' : g('hour')}:${g('minute')}`;
 }
 
-module.exports = { Office, kindFor, canApprove, canReassign, atLeast, label, londonStamp, LEVEL };
+module.exports = { Office, kindFor, canApprove, canReassign, canSee, scopeFor, needsManager, atLeast, label, londonStamp, brandName, LEVEL };

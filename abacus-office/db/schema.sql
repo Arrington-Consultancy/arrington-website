@@ -66,3 +66,55 @@ CREATE TABLE IF NOT EXISTS settings (
   value TEXT NOT NULL DEFAULT '',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Release two (Tom's email to Dan, 9 November 2026). Every statement below
+-- is idempotent, so an existing database gains the columns at boot.
+
+-- Visibility by brand: a case belongs to the brand whose mailbox it came in
+-- on; a user with a brand sees that brand only, a user with none (Dan's own
+-- office) sees everything, split by brand.
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS brand VARCHAR(40) NOT NULL DEFAULT '';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS brand VARCHAR(40) NOT NULL DEFAULT '';
+CREATE INDEX IF NOT EXISTS cases_brand_idx ON cases (brand, status);
+
+-- A complaint passed up to a manager by an operator (or by the nudge), and
+-- the holding reply the operator sent on the way.
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS passed_up_at TIMESTAMPTZ;
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS passed_up_by INTEGER REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS passed_up_reason TEXT NOT NULL DEFAULT '';
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS passed_up_notified_at TIMESTAMPTZ;
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS holding_sent_at TIMESTAMPTZ;
+
+-- A booking put into dispatch by a member of staff who signed it off.
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS dispatch_ref VARCHAR(60) NOT NULL DEFAULT '';
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS booked_at TIMESTAMPTZ;
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS booked_by INTEGER REFERENCES users(id) ON DELETE SET NULL;
+
+-- What the stand-in dispatch holds. The live connection (iCabbi, on Dan's
+-- own account) replaces this table with the vendor's API; nothing here is
+-- ever sent to a vendor.
+CREATE TABLE IF NOT EXISTS dispatch_bookings (
+  id SERIAL PRIMARY KEY,
+  ref VARCHAR(60) UNIQUE NOT NULL,
+  case_id INTEGER REFERENCES cases(id) ON DELETE SET NULL,
+  brand VARCHAR(40) NOT NULL DEFAULT '',
+  job JSONB NOT NULL,
+  booked_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  booked_by_name VARCHAR(120) NOT NULL DEFAULT '',
+  status VARCHAR(20) NOT NULL DEFAULT 'booked' CHECK (status IN ('booked', 'cancelled')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- The firm's fixed prices (airports and the like), typed in by the owner or
+-- a manager, or later read from iCabbi. The AI quotes only from this table.
+CREATE TABLE IF NOT EXISTS fixed_prices (
+  id SERIAL PRIMARY KEY,
+  brand VARCHAR(40) NOT NULL DEFAULT '',
+  from_place VARCHAR(120) NOT NULL,
+  to_place VARCHAR(120) NOT NULL,
+  vehicle VARCHAR(60) NOT NULL DEFAULT 'Car (up to 4)',
+  price_pence INTEGER NOT NULL CHECK (price_pence >= 0),
+  notes VARCHAR(200) NOT NULL DEFAULT '',
+  updated_by VARCHAR(120) NOT NULL DEFAULT '',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

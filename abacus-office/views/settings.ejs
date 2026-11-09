@@ -1,21 +1,54 @@
 <%- include('partials/top', { title: 'Settings' }) %>
 <section class="to-section-head"><h1>Settings</h1></section>
 <section class="to-panel">
-  <h2>Escalation</h2>
-  <p>A reply with nobody approving it within this many hours of the email arriving goes red on Today, and a manager is emailed once. Nothing is ever sent to the customer automatically.</p>
+  <h2>Escalation and the complaint nudge</h2>
+  <p>A reply with nobody approving it within the first time goes red on Today, and a manager is emailed once. A complaint with no approved reply within the second time is passed up to a manager, who is emailed once. Nothing is ever sent to the customer automatically.</p>
   <% if (atLeast(user, 'owner')) { %>
   <form method="post" action="/settings" class="to-form">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-    <label class="to-field"><span>Hours before a reply is overdue</span><input name="escalation_hours" type="number" min="1" max="168" value="<%= hours %>" required></label>
+    <div class="to-field-row">
+      <label class="to-field"><span>Hours before any reply is overdue</span><input name="escalation_hours" type="number" min="1" max="168" value="<%= hours %>" required></label>
+      <label class="to-field"><span>Hours before a complaint goes to a manager</span><input name="complaint_nudge_hours" type="number" min="1" max="168" value="<%= nudgeHours %>" required></label>
+    </div>
     <button type="submit" class="to-btn to-btn-primary">Save</button>
   </form>
-  <% } else { %><p class="to-status-line">Currently <strong><%= hours %> hours</strong>. The owner changes this.</p><% } %>
+  <% } else { %><p class="to-status-line">Currently <strong><%= hours %> hours</strong> for any reply and <strong><%= nudgeHours %> hours</strong> for a complaint. The owner changes these.</p><% } %>
+</section>
+<section class="to-panel" id="prices">
+  <h2>Fixed prices</h2>
+  <p>Airports and the like. The AI quotes a price only when a customer's journey matches a line here, in either direction. For every other journey it gives no price and says the office will confirm it.</p>
+  <% if (prices.length) { %>
+  <div class="to-table-wrap"><table class="to-table to-prices">
+    <thead><tr><% if (manyBrands) { %><th scope="col">Brand</th><% } %><th scope="col">From</th><th scope="col">To</th><th scope="col">Vehicle</th><th scope="col">Price</th><th scope="col">Notes</th><th scope="col"></th></tr></thead>
+    <tbody><% prices.forEach(function (p) { %>
+      <tr><% if (manyBrands) { %><td><%= brandName(p.brand) %></td><% } %><td><%= p.from_place %></td><td><%= p.to_place %></td><td><%= p.vehicle %></td><td class="to-num">£<%= (p.price_pence / 100).toFixed(2) %></td><td><%= p.notes %></td>
+        <td><form method="post" action="/settings/prices/<%= p.id %>/delete"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="to-btn to-btn-quiet" data-confirm="Remove this price?">Remove</button></form></td></tr>
+    <% }) %></tbody>
+  </table></div>
+  <% } else { %><p class="to-empty">No fixed prices yet, so the AI quotes nothing. Add the airport runs and any other set fares below.</p><% } %>
+  <form method="post" action="/settings/prices" class="to-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="to-field-row">
+      <label class="to-field"><span>From</span><input name="from_place" maxlength="120" required placeholder="Falmouth"></label>
+      <label class="to-field"><span>To</span><input name="to_place" maxlength="120" required placeholder="Newquay Airport"></label>
+    </div>
+    <div class="to-field-row">
+      <label class="to-field"><span>Vehicle</span><select name="vehicle"><% ['Car (up to 4)', 'Estate (up to 4, more luggage)', '6 seater', '8 seater', 'Wheelchair accessible'].forEach(function (v) { %><option><%= v %></option><% }) %></select></label>
+      <label class="to-field"><span>Price in pounds</span><input name="price" inputmode="decimal" required placeholder="65 or 65.50"></label>
+    </div>
+    <div class="to-field-row">
+      <label class="to-field"><span>Notes (optional)</span><input name="notes" maxlength="200" placeholder="Daytime, up to 2 cases each"></label>
+      <% if (manyBrands && !user.brand) { %><label class="to-field"><span>Brand</span><select name="brand"><% brands.forEach(function (b) { %><option value="<%= b.id %>"><%= b.name %></option><% }) %></select></label><% } %>
+    </div>
+    <button type="submit" class="to-btn to-btn-primary">Add price</button>
+  </form>
 </section>
 <section class="to-panel">
   <h2>Connections</h2>
   <p class="to-small">Set on the server by Arrington, never from this page. Values are never shown here.</p>
   <ul class="to-history">
     <li><time>Mailbox</time><span><%= mailStatus.replace(/^Abacus office mailbox: /, '') %></span></li>
+    <li><time>Dispatch</time><span><%= dispatchStatus.replace(/^Abacus office dispatch: /, '') %></span></li>
     <li><time>AI</time><span><%= aiStatus.replace(/^Abacus office AI: /, '') %></span></li>
     <li><time>Alerts</time><span><%= alertStatus.replace(/^Abacus office alerts: /, '') %></span></li>
   </ul>

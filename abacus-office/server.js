@@ -12,6 +12,7 @@ const { createMailbox, describeMailStatus } = require('./lib/mailbox');
 const { firm } = require('./lib/firm');
 const ai = require('./lib/ai');
 const alerts = require('./lib/alerts');
+const { describeDispatchStatus } = require('./lib/dispatch');
 const crypto = require('crypto');
 
 const PORT = Number(process.env.PORT || 3400);
@@ -52,6 +53,8 @@ async function main() {
   console.log(describeMailStatus());
   console.log(ai.describeAiStatus());
   console.log(alerts.describeAlertStatus());
+  console.log(describeDispatchStatus());
+  console.log(`Abacus office brands: ${f.brands.map((b) => `${b.id} (${b.name})`).join(', ')}; the mailbox is ${f.mailboxBrand}; logo ${f.logo || 'none, lettered square'}`);
   const mailbox = createMailbox();
   const { app, office } = createApp({ pool, mailbox, firm: f, sessionSecret: secret, production });
   app.listen(PORT, () => console.log(`Abacus office running on port ${PORT}`));
@@ -60,14 +63,18 @@ async function main() {
 
   const baseUrl = String(process.env.ABACUS_OFFICE_PUBLIC_URL || '').replace(/\/$/, '');
   const guarded = (name, fn) => async () => { try { await fn(); } catch (e) { console.error(`Abacus office: ${name} failed`, e.message); } };
-  // Pull the mailbox and read what is new; then look for anything overdue.
-  const tick = guarded('mail poll', async () => { await office.sync(); await office.readAllUnread(); });
+  // Pull the mailbox and read what is new (the app also does this on its
+  // own two-minute timer and on page views; this first pull is so the
+  // inbox is ready before anyone opens it), then look for anything overdue
+  // and any complaint past the nudge time.
+  const tick = guarded('mail poll', async () => { await app.locals.settle(); });
   const sweep = guarded('escalation sweep', async () => {
     const r = await office.sweep(alerts, baseUrl);
     if (r.escalated) console.log(`Abacus office: ${r.escalated} case(s) escalated${r.emailed ? ', manager emailed' : ', no email configured'}`);
+    const n = await office.nudge(alerts, baseUrl);
+    if (n.nudged) console.log(`Abacus office: ${n.nudged} complaint(s) passed up to a manager by the nudge${n.emailed ? ', manager emailed' : ', no email configured'}`);
   });
   setTimeout(() => { tick().then(sweep); }, 5000);
-  setInterval(tick, (mailbox.demo ? 30 : 2) * 60 * 1000).unref();
   setInterval(sweep, 5 * 60 * 1000).unref();
 }
 

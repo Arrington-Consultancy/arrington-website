@@ -370,3 +370,38 @@ p { margin: 0 0 0.8rem; }
 .to-empty { color: var(--ink-2); background: var(--paper); border: 1px dashed var(--line); border-radius: 10px; padding: 1rem; }
 .to-status-line { font-size: 0.9rem; color: var(--ink-2); }
 .to-approved { border-color: var(--ok); }
+
+/* ---- Release two (9 November 2026) ---- */
+/* The firm's own logo in the bar, on a light tile so a dark-blue mark reads
+   on the night bar. */
+.to-logo { display: inline-grid; place-items: center; background: #fff; border-radius: 8px; padding: 0.25rem 0.5rem; }
+.to-logo img { display: block; height: 1.9rem; width: auto; max-width: 9rem; }
+/* The list pages check themselves. */
+.to-live-line { margin: -0.4rem 0 1rem; display: flex; align-items: center; gap: 0.5rem; }
+.to-live-line::before { content: ''; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--ok); flex: none; animation: to-pulse 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .to-live-line::before { animation: none; } }
+.to-live-line.is-stale::before { background: var(--warn); animation: none; }
+/* Passing a complaint up, the holding reply, and booking into dispatch. */
+.to-passup { border-left: 4px solid var(--warn); }
+.to-passup-ai { background: var(--warn-bg); color: var(--warn); padding: 0.55rem 0.75rem; border-radius: 8px; font-size: 0.92rem; }
+.to-passup-ai strong { color: inherit; }
+.to-holding { white-space: pre-line; background: var(--sand); border: 1px solid var(--sand-2); border-radius: 8px; padding: 0.8rem; line-height: 1.6; font-size: 0.95rem; }
+.to-book { border-left: 4px solid var(--teal); }
+.to-book .to-field-row { grid-template-columns: 1fr 1fr; }
+@media (min-width: 40rem) { .to-book .to-field-row { grid-template-columns: 1fr 1fr 1fr; } .to-book .to-field-row.is-two { grid-template-columns: 1fr 1fr; } }
+.to-booked { background: var(--ok-bg); color: var(--ok); padding: 0.7rem 0.9rem; border-radius: 8px; font-weight: 600; }
+.to-prices td { white-space: nowrap; }
+.to-prices td:nth-child(2), .to-prices td:nth-child(3) { white-space: normal; }
+/* A phone must never scroll sideways: a long email address in a case row,
+   the three-column booking form and the prices table all stay inside. */
+.to-case-row { grid-template-columns: minmax(0, 1fr) auto; }
+.to-case-row > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 40rem) { .to-case-row { grid-template-columns: minmax(0, 1fr); } .to-case-side { justify-content: flex-start; } }
+.to-email-grid { grid-template-columns: minmax(0, 1fr); }
+.to-field input, .to-field select { min-width: 0; }
+.to-book .to-field-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+@media (min-width: 40rem) { .to-book .to-field-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } .to-book .to-field-row.is-two { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.to-table.to-prices { min-width: 40rem; }
+.to-panel { min-width: 0; }
+.to-history li { grid-template-columns: 7.5rem minmax(0, 1fr); }
+.to-history span { min-width: 0; overflow-wrap: anywhere; }

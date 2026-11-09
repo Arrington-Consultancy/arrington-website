@@ -89,6 +89,8 @@ const COMPLAINT_SCHEMA = obj({
   summary: str,
   firm_at_fault: { type: 'string', enum: ['yes', 'no', 'partly', 'unclear'] },
   for_licensing: { type: 'boolean' },
+  pass_to_manager: { type: 'boolean' },
+  pass_to_manager_why: str,
   staff_steps: { type: 'array', items: str },
   reply: str
 });
@@ -113,7 +115,14 @@ function firmFacts(f) {
   const lines = ['WHAT YOU MAY SAY ABOUT THE FIRM (rely on these and nothing else about the firm)'];
   if (f.phone) lines.push(`- The office number is ${f.phone}.`);
   for (const fact of f.facts) lines.push(`- ${fact}`);
-  if (lines.length === 1) lines.push('- Nothing has been given to you about prices, hours, vehicles or policies. Do not state any. If the customer needs one of those, say the office will confirm it.');
+  const prices = f.fixedPrices || [];
+  if (prices.length) {
+    lines.push('- FIXED PRICES the office has set. Quote one only when the journey asked for matches a line below (same places, in either direction, and the vehicle fits the passengers). For any other journey give no price: say the office will confirm it.');
+    for (const x of prices) lines.push(`  - ${x.from_place} to ${x.to_place}, ${x.vehicle}: £${(x.price_pence / 100).toFixed(2).replace(/\.00$/, '')}${x.notes ? ` (${x.notes})` : ''}`);
+  } else {
+    lines.push('- No fixed prices have been set, so give no price for any journey. If the customer asks for one, say the office will confirm it.');
+  }
+  if (!f.phone && !f.facts.length && !prices.length) lines.push('- Nothing has been given to you about hours, vehicles or policies. Do not state any. If the customer needs one of those, say the office will confirm it.');
   return lines.join('\n');
 }
 
@@ -159,6 +168,7 @@ function complaintSystem(today, f) {
     '- firm_at_fault: yes, no, partly or unclear, from the office\'s notes alone; unclear when there are none.',
     '- seriousness: minor, serious or safety, as defined for the office (safety covers a phone used while driving, dangerous driving, a car that is not safe, an assault or threat, or a driver\'s fitness to hold a licence).',
     '- for_licensing: true only for a safety matter.',
+    '- pass_to_manager: whether this one should be passed up to a manager rather than answered by the operator who opens it. True for every safety matter, for anything that may end in a refund or compensation, for a repeated problem, for a threat of a review, the council or legal action, or for a customer who is very angry. False for a small fare query or a one-off delay the operator can answer from the record. pass_to_manager_why: one short sentence saying why, or an empty string when false.',
     '- summary: one short sentence saying what the customer says went wrong.',
     '- staff_steps: two to four short things the office must do, such as finding the job in dispatch, speaking to the driver, ringing the customer, or deciding whether to refund.',
     '',
@@ -232,11 +242,15 @@ function cleanReading(d) {
 }
 
 function cleanComplaint(d) {
+  const seriousness = ['minor', 'serious', 'safety'].includes(d.seriousness) ? d.seriousness : 'minor';
   return {
-    seriousness: ['minor', 'serious', 'safety'].includes(d.seriousness) ? d.seriousness : 'minor',
+    seriousness,
     summary: noDashes(clip(d.summary, 300)),
     firm_at_fault: ['yes', 'no', 'partly', 'unclear'].includes(d.firm_at_fault) ? d.firm_at_fault : 'unclear',
     for_licensing: d.for_licensing === true,
+    // A safety matter always goes up, whatever the model said.
+    pass_to_manager: seriousness === 'safety' || d.pass_to_manager === true,
+    pass_to_manager_why: seriousness === 'safety' && !String(d.pass_to_manager_why || '').trim() ? 'A safety matter goes to a manager.' : noDashes(clip(d.pass_to_manager_why, 240)),
     staff_steps: (d.staff_steps || []).map((x) => s(x, 200)).filter(Boolean).slice(0, 5),
     reply: humanise(String(d.reply || '').slice(0, 2500))
   };
