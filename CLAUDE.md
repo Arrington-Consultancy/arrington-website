@@ -10007,7 +10007,16 @@ database, never inside the Arrington site or its database.
   user gets a temporary password and must choose their own at first sign
   in. First boot creates the owner from `ABACUS_OFFICE_OWNER_USERNAME` /
   `ABACUS_OFFICE_OWNER_PASSWORD`, or prints a one-time password in the
-  deploy log if none is set.
+  deploy log if none is set. **A lost owner password is recovered from
+  Railway alone** (commit `5120741`, 09/11/2026, after Tom could not copy
+  the one-time password from the log): set `ABACUS_OFFICE_OWNER_PASSWORD`
+  (10 or more characters) while the owner exists, wait for the redeploy,
+  sign in as `owner`, change the password when asked, then delete the
+  variable. The boot line says "reset ... remove that variable now"; a
+  shorter value is refused and logged, and a reset is a `password_reset`
+  event. Two traps from the day: a failed login is a 401, not a lock (the
+  limiter is 8 wrong tries in 15 minutes per address), and attempts made
+  before the redeploy finished fail against the old password.
 - **Escalation:** a reply with no approval within `escalation_hours`
   (Settings, default 24) goes red on Today and the manager is emailed once
   (`ABACUS_OFFICE_SMTP_HOST/_PORT/_USER/_PASSWORD/_FROM` and
@@ -10030,7 +10039,13 @@ database, never inside the Arrington site or its database.
   chat); model `claude-opus-5-5` (`ABACUS_OFFICE_MODEL`). Off, made-up
   emails show their prepared answers labelled as prepared; a real email is
   left for a person to answer by hand. A model failure falls back the same
-  way and says so in the reading note.
+  way and says so in the reading note. **ON since 09/11/2026 16:25 UTC:**
+  Tom set the key, this worker set the flag; boot line "AI: on ... key
+  present (106 chars)", probe "ok, claude-opus-5-5 answered" (deployment
+  `855399f2`). The first attempt stored 391 characters starting `curl
+  https://api.anthropic.com`, the console's whole example command rather
+  than the key; the probe line shows the start of the failing value, so
+  read it before assuming the key is bad. Rollback: set the flag to `false`.
 - **Railway:** service `abacus-office` (id
   `7e719f26-5b44-44d5-bae2-029951c43149`) and Postgres `Postgres-bYAT`
   (id `17287a48-3e3a-400a-92e6-92f3642519a9`), production environment of
