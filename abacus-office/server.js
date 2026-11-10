@@ -61,6 +61,14 @@ async function main() {
   const moved = await pool.query('UPDATE cases SET brand = $1 WHERE NOT (brand = ANY($2::text[])) RETURNING id', [f.mailboxBrand, known]);
   const freed = await pool.query("UPDATE users SET brand = '' WHERE brand <> '' AND NOT (brand = ANY($1::text[])) RETURNING id", [known]);
   if (moved.rowCount || freed.rowCount) console.log(`Abacus office: ${moved.rowCount} case(s) moved to ${f.mailboxBrand} and ${freed.rowCount} user(s) set to every company, because their company is no longer set up`);
+  // No mailbox (Tom, 10 November 2026: disconnect the current emails): the
+  // made-up emails, and everything recorded against them, are cleared so
+  // the office starts empty. Only the invented ones: their message ids are
+  // all <demo-...@example.invalid>, which no real email can carry.
+  if (String(process.env.ABACUS_OFFICE_MAIL_DRIVER || '').trim().toLowerCase() === 'none') {
+    const cleared = await pool.query("DELETE FROM cases WHERE message_id LIKE '<demo-%@example.invalid>' RETURNING id");
+    if (cleared.rowCount) console.log(`Abacus office: ${cleared.rowCount} made-up email(s) cleared, because no mailbox is connected`);
+  }
   const mailbox = createMailbox(process.env, { store });
   if (mailbox.reload) await mailbox.reload();
   console.log(describeMailStatus(process.env, mailbox));

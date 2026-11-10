@@ -294,6 +294,6 @@ async function probe() {
 }
 
 module.exports = {
-  MODEL, INTENTS, aiEnabled, describeAiStatus, readEmail, draftComplaint, redraft, probe,
+  MODEL, INTENTS, aiEnabled, describeAiStatus, callJson, readEmail, draftComplaint, redraft, probe,
   readSystem, complaintSystem, redraftSystem, cleanReading, cleanComplaint, cleanRedraft, longDate, emailText, __setClientFactoryForTests
 };

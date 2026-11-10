@@ -208,6 +208,30 @@ class Store {
     return (await this.q(`SELECT * FROM dispatch_bookings${brand ? ' WHERE brand = $1' : ''} ORDER BY created_at DESC LIMIT $${params.length}`, params)).rows;
   }
 
+  // ---- compositions (the Write worker) ----
+  async insertComposition(c) {
+    const r = await this.q(`INSERT INTO compositions (brand, kind, relationship, to_name, to_address, prompt, quoted, subject, body, held_back, source, created_by, created_by_name)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
+      [c.brand || '', c.kind, c.relationship, c.to_name || '', c.to_address || '', c.prompt || '', c.quoted || '', c.subject || '', c.body || '', c.held_back || '', c.source || 'none', c.actor ? c.actor.id : null, c.actor ? (c.actor.display_name || c.actor.username) : '']);
+    return r.rows[0];
+  }
+  async compositionById(id) { return (await this.q('SELECT * FROM compositions WHERE id = $1', [id])).rows[0] || null; }
+  async updateComposition(id, fields) {
+    const keys = Object.keys(fields);
+    if (!keys.length) return;
+    const sets = keys.map((k, i) => `${k} = $${i + 2}`);
+    await this.q(`UPDATE compositions SET ${sets.join(', ')}, updated_at = now() WHERE id = $1`, [id, ...keys.map((k) => (fields[k] !== null && typeof fields[k] === 'object' && !(fields[k] instanceof Date)) ? JSON.stringify(fields[k]) : fields[k])]);
+  }
+  // Drafts a person may see: their own, or, for a manager or the owner,
+  // everyone's in the companies they see.
+  async compositions({ userId, brand, limit = 50 } = {}) {
+    const where = ["status <> 'discarded'"]; const params = [];
+    if (userId) { params.push(userId); where.push(`created_by = $${params.length}`); }
+    if (brand) { params.push(brand); where.push(`brand = $${params.length}`); }
+    params.push(limit);
+    return (await this.q(`SELECT * FROM compositions WHERE ${where.join(' AND ')} ORDER BY updated_at DESC LIMIT $${params.length}`, params)).rows;
+  }
+
   // ---- fixed prices ----
   async fixedPrices(brand) {
     const params = brand ? [brand] : [];

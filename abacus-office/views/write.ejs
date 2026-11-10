@@ -1,0 +1,37 @@
+<%- include('partials/top', { title: 'Write' }) %>
+<section class="to-section-head">
+  <h1>Write an email</h1>
+  <p class="to-small">Say what it is for and the AI drafts it in the house voice. You check it, change it or guide it, then approve it. <%= mailboxCanHold ? 'Approved emails wait as drafts in the mailbox for you to send.' : 'No mailbox is connected yet, so you copy an approved email into your own email to send it.' %></p>
+</section>
+<section class="to-panel">
+  <form method="post" action="/write" class="to-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="to-field-row is-two">
+      <label class="to-field"><span>What kind of email</span><select id="kind" name="kind"><% Object.keys(kinds).forEach(function (k) { %><option value="<%= k %>"><%= kinds[k] %></option><% }) %></select></label>
+      <label class="to-field"><span>Who it is to</span><select id="relationship" name="relationship"><% Object.keys(relationships).forEach(function (k) { %><option value="<%= k %>"<% if (k === 'new') { %> selected<% } %>><%= relationships[k].label %></option><% }) %></select></label>
+    </div>
+    <div class="to-field-row is-two">
+      <label class="to-field"><span>Their name or business (optional)</span><input id="to_name" name="to_name" maxlength="160" placeholder="Sarah Price, The Greenbank Hotel"></label>
+      <label class="to-field"><span>Their email address (optional for now)</span><input id="to_address" name="to_address" type="email" maxlength="200" placeholder="name@example.com"></label>
+    </div>
+    <% if (manyBrands && !ownBrand) { %>
+    <label class="to-field"><span>Which company it is from</span><select id="brand" name="brand"><% firm.brands.forEach(function (b) { %><option value="<%= b.id %>"<% if (b.id === firm.mailboxBrand) { %> selected<% } %>><%= b.name %></option><% }) %></select></label>
+    <% } %>
+    <label class="to-field"><span>What should it say?</span><textarea id="prompt" name="prompt" rows="4" maxlength="2000" required placeholder="For example: introduce us to the hotel's front desk, we can do their guests' station and airport runs on account, monthly invoice, ask if they would like a quick call."></textarea></label>
+    <label class="to-field"><span>For a reply: paste the email you are answering</span><textarea id="quoted" name="quoted" rows="4" maxlength="6000" placeholder="Only needed when the kind is a reply."></textarea></label>
+    <button type="submit" class="to-btn to-btn-primary" data-busy="Drafting...">Draft it</button>
+  </form>
+</section>
+<section class="to-panel">
+  <h2><%= atLeast(user, 'manager') ? 'Drafts' : 'Your drafts' %></h2>
+  <% if (!drafts.length) { %>
+    <p class="to-empty">Nothing drafted yet.</p>
+  <% } else { %>
+  <ul class="to-history">
+    <% drafts.forEach(function (d) { %>
+    <li><time><%= new Date(d.updated_at).toLocaleString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) %></time><span><a href="/write/<%= d.id %>"><%= d.subject || '(no subject yet)' %></a> <span class="to-small"><%= kinds[d.kind] ? kinds[d.kind].split(':')[0] : d.kind %><%= d.to_name || d.to_address ? ', to ' + (d.to_name || d.to_address) : '' %><%= manyBrands ? ', ' + brandName(d.brand) : '' %><%= atLeast(user, 'manager') && d.created_by_name ? ', by ' + d.created_by_name : '' %></span> <span class="to-pill<%= d.status === 'approved' ? ' to-pill-ok' : '' %>"><%= d.status === 'approved' ? 'Approved' : 'Draft' %></span></span></li>
+    <% }) %>
+  </ul>
+  <% } %>
+</section>
+<%- include('partials/bottom') %>

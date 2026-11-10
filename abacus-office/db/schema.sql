@@ -126,3 +126,31 @@ ALTER TABLE dispatch_bookings ADD COLUMN IF NOT EXISTS external_id VARCHAR(60) N
 ALTER TABLE dispatch_bookings ADD COLUMN IF NOT EXISTS dispatch_status VARCHAR(30) NOT NULL DEFAULT '';
 ALTER TABLE dispatch_bookings ADD COLUMN IF NOT EXISTS status_detail VARCHAR(200) NOT NULL DEFAULT '';
 ALTER TABLE dispatch_bookings ADD COLUMN IF NOT EXISTS status_checked_at TIMESTAMPTZ;
+
+-- The Write worker (10 November 2026): emails staff ask the AI to draft,
+-- a new email, a reply or outreach, in the company's name. Approving saves
+-- it as a draft in the mailbox for a person to send; nothing is sent here.
+CREATE TABLE IF NOT EXISTS compositions (
+  id SERIAL PRIMARY KEY,
+  brand VARCHAR(40) NOT NULL DEFAULT '',
+  kind VARCHAR(20) NOT NULL DEFAULT 'new' CHECK (kind IN ('new', 'reply', 'outreach')),
+  relationship VARCHAR(20) NOT NULL DEFAULT 'new' CHECK (relationship IN ('familiar', 'new', 'formal')),
+  to_name VARCHAR(160) NOT NULL DEFAULT '',
+  to_address VARCHAR(200) NOT NULL DEFAULT '',
+  prompt TEXT NOT NULL DEFAULT '',
+  quoted TEXT NOT NULL DEFAULT '',
+  subject VARCHAR(200) NOT NULL DEFAULT '',
+  body TEXT NOT NULL DEFAULT '',
+  held_back VARCHAR(400) NOT NULL DEFAULT '',
+  guidance JSONB NOT NULL DEFAULT '[]',
+  source VARCHAR(20) NOT NULL DEFAULT 'none',
+  status VARCHAR(20) NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'approved', 'discarded')),
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_by_name VARCHAR(120) NOT NULL DEFAULT '',
+  approved_by_name VARCHAR(120) NOT NULL DEFAULT '',
+  approved_at TIMESTAMPTZ,
+  mailbox_draft_id VARCHAR(200) NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS compositions_by_idx ON compositions (created_by, updated_at DESC);

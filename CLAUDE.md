@@ -10300,3 +10300,43 @@ logos were pasted into chat, which this sandbox cannot save, and its
 network cannot fetch them, so they go in once Tom puts the files in Drive.
 On boot, a case whose company is no longer set up moves to the mailbox's
 company and such a user is set to every company, logged.
+
+### The Write worker, and the made-up emails disconnected (10/11/2026)
+
+Tom: "we need to disconnect the current emails to the a2b staff site. I
+want an Ai worker who can draft emails with prompts as well. staff need to
+be able to draft with outreach, all while using my voice rules".
+
+- **Disconnected.** `ABACUS_OFFICE_MAIL_DRIVER=none` on abacus-office: a
+  `none` driver in `abacus-office/lib/mailbox.js` reads nothing, and at
+  boot `server.js` deletes only the invented emails (message ids
+  `<demo-...@example.invalid>`) and what hangs off them. The inbox says no
+  mailbox is connected and points to Write. Setting the driver back to
+  `demo` brings the made-up inbox back; `gmail` (after the DPA) brings
+  the real one.
+- **Write** (`/write`, every member of staff; `lib/compose.js`,
+  `views/write.ejs`, `views/writing.ejs`, table `compositions`). Staff
+  pick a new email, a reply (paste the email being answered) or outreach,
+  who it is to (someone we know well, a new or professional contact,
+  formal), optionally a name and address, and say what it should do. The
+  AI drafts it; staff edit it, guide it (every note kept, earliest first)
+  or discard it. Approving saves it as a fresh draft in the company's
+  mailbox (`saveNewDraft`, a new `fresh` flag in the Gmail, IMAP and
+  Outlook drivers so it is a new message, not a "Re:" reply) for a person
+  to send; with no mailbox it is marked approved and staff copy it into
+  their own email. An edit after approval puts it back to draft. A draft
+  is its writer's; managers and owners see everyone's. An operator writes
+  for their own company; managers and owners choose.
+- **Voice.** Tom's 01A TOM VOICE - WORKER SPEC (read 10/11/2026, last
+  reviewed 14/10/2026): the office's `WRITING` block plus `EMAIL_TRACK`
+  in `lib/compose.js`, which carries the 14 October email track the
+  office copy lacked (cut to about two thirds, register and sign-off by
+  relationship: "Cheers,", "Thanks,", "Kind regards," for formal, which
+  staff choose, since 01A says to ask). Outreach adds its own block: say
+  who is writing, the reason only from staff, one small ask, fit before
+  sale, nothing invented about the reader. The office replaces any
+  sign-off the model writes with its own (staff first name, company).
+  Written for the firm's staff, not as Tom: his own tag lines are left
+  out. Re-read 01A whenever it changes.
+- `test/abacusOfficeWrite.test.js` (a draft opened by another operator,
+  watched red).

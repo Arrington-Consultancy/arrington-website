@@ -1,7 +1,7 @@
 <%- include('partials/top', { title: 'Inbox' }) %>
 <section class="to-section-head">
   <h1>Inbox</h1>
-  <p class="to-small">Every email from <%= mailboxLabel.toLowerCase() %>, read and sorted by the AI. Open one to see the draft and approve it.</p>
+  <p class="to-small"><% if (typeof mailboxNone !== 'undefined' && mailboxNone) { %>No mailbox is connected yet, so nothing arrives here. Once the company's mailbox is connected, every email is read and sorted by the AI and lands here. To write an email now, use <a href="/write">Write</a>.<% } else { %>Every email from <%= mailboxLabel.toLowerCase() %>, read and sorted by the AI. Open one to see the draft and approve it.<% } %></p>
 </section>
 <% if (typeof mailError !== 'undefined' && mailError) { %><p class="to-note to-note-warn" role="status"><%= mailError %></p><% } %>
 <p class="to-live-line to-small" data-live-url="/live.json" data-live-stamp="<%= liveStamp %>"><span id="live-status">This page checks the mailbox itself every couple of minutes and refreshes when something changes.</span></p>

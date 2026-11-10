@@ -47,7 +47,26 @@ function demoDriver() {
     missing: () => [],
     listInbox: async ({ today = demoInbox.todayLondon() } = {}) => demoInbox.seedInbox(today),
     account: async () => null,
-    saveReplyDraft: async () => ({ draftId: null })
+    saveReplyDraft: async () => ({ draftId: null }),
+    saveNewDraft: async () => ({ draftId: null })
+  };
+}
+
+// No mailbox at all (Tom, 10 November 2026: "we need to disconnect the
+// current emails to the a2b staff site"). Nothing is read, the made-up
+// emails are cleared at boot, and a draft is kept in the office only.
+function noneDriver() {
+  return {
+    name: 'none',
+    label: 'No mailbox connected',
+    demo: false,
+    none: true,
+    configured: () => false,
+    missing: () => [],
+    listInbox: async () => [],
+    account: async () => null,
+    saveReplyDraft: async () => ({ draftId: null }),
+    saveNewDraft: async () => ({ draftId: null })
   };
 }
 
@@ -141,6 +160,8 @@ function liveMailbox(name, env, { store, secretEnv = env, fetch } = {}) {
     reload,
     async listInbox(opts) { return (await checked()).listInbox(opts); },
     async saveReplyDraft(email, text) { return (await checked()).saveReplyDraft(email, text); },
+    // A new email, not a reply: a draft in the mailbox addressed to "to".
+    async saveNewDraft(to, subject, text) { return (await checked()).saveReplyDraft({ from: to, subject, fresh: true, messageId: '', threadId: '' }, text); },
     async account() { if (!inner) build(); return inner.account(); }
   };
   return box;
@@ -149,13 +170,15 @@ function liveMailbox(name, env, { store, secretEnv = env, fetch } = {}) {
 function createMailbox(env = process.env, { store, fetch } = {}) {
   const name = driverName(env);
   if (name === 'demo') return demoDriver();
-  if (!mail.DRIVERS[name]) throw new Error(`Unknown mailbox driver "${name}". Known: demo, ${Object.keys(mail.DRIVERS).filter((d) => d !== 'demo').join(', ')}`);
+  if (name === 'none') return noneDriver();
+  if (!mail.DRIVERS[name]) throw new Error(`Unknown mailbox driver "${name}". Known: demo, none, ${Object.keys(mail.DRIVERS).filter((d) => d !== 'demo').join(', ')}`);
   return liveMailbox(name, env, { store, fetch });
 }
 
 function describeMailStatus(env = process.env, box = null) {
   const name = driverName(env);
   if (name === 'demo') return 'Abacus office mailbox: made-up inbox (no real mailbox is connected; nothing is read from or saved to a live account)';
+  if (name === 'none') return 'Abacus office mailbox: none connected (nothing is read; the made-up emails are cleared; drafts are kept in the office only)';
   if (!mail.DRIVERS[name]) return `Abacus office mailbox: unknown driver "${name}"; the office will not start`;
   if (!box) box = createMailbox(env);
   const refused = box.refusal ? box.refusal() : '';
