@@ -10181,9 +10181,10 @@ the inbox in another.
   768x181), shown on a white tile in the bar when present;
   `ABACUS_OFFICE_FIRM_LOGO` names another file, `none` gives the lettered
   square. Logo colours for later: blue `#009DDA`, green `#CDD600`, teal
-  swoosh `#3CAE9B`. **Open for Tom:** the email to Dan says "Cornwall
-  Taxis" and the logo says "A2B Cornwall"; the firm name on production is
-  still the default "Abacus Taxis" until Tom sets `ABACUS_OFFICE_FIRM_NAME`.
+  swoosh `#3CAE9B`. **Firm name decided (Tom, 10/11/2026: "Cornwall
+  taxis"):** `ABACUS_OFFICE_FIRM_NAME`, `_SHORT` and `_SIGNATURE` are all
+  "Cornwall Taxis" on the service, set by this worker; the logo still reads
+  A2B Cornwall until Dan sends the Cornwall Taxis brand.
 - **The reply asks for what iCabbi needs (Tom, 10/11/2026: "when we reply
   AI to the customer we need to ask for phone number, how many people
   etc").** `REQUIRED` in `abacus-office/lib/dispatch.js` is the one list:
