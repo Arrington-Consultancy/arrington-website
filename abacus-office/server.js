@@ -14,6 +14,7 @@ const ai = require('./lib/ai');
 const alerts = require('./lib/alerts');
 const { describeDispatchStatus } = require('./lib/dispatch');
 const crypto = require('crypto');
+const { summaryLine: visitLine } = require('./lib/visits');
 
 const PORT = Number(process.env.PORT || 3400);
 const production = process.env.NODE_ENV === 'production' || Boolean(process.env.RAILWAY_ENVIRONMENT);
@@ -69,6 +70,8 @@ async function main() {
     const cleared = await pool.query("DELETE FROM cases WHERE message_id LIKE '<demo-%@example.invalid>' RETURNING id");
     if (cleared.rowCount) console.log(`Abacus office: ${cleared.rowCount} made-up email(s) cleared, because no mailbox is connected`);
   }
+  const prunedVisits = await store.pruneVisits();
+  if (prunedVisits) console.log(`Abacus office: ${prunedVisits} visit(s) older than 90 days deleted`);
   const mailbox = createMailbox(process.env, { store });
   if (mailbox.reload) await mailbox.reload();
   console.log(describeMailStatus(process.env, mailbox));
@@ -89,6 +92,8 @@ async function main() {
     if (r.escalated) console.log(`Abacus office: ${r.escalated} case(s) escalated${r.emailed ? ', manager emailed' : ', no email configured'}`);
     const n = await office.nudge(alerts, baseUrl);
     if (n.nudged) console.log(`Abacus office: ${n.nudged} complaint(s) passed up to a manager by the nudge${n.emailed ? ', manager emailed' : ', no email configured'}`);
+    // A visit with 20 quiet minutes is closed and written to the log.
+    for (const v of await store.closeVisits({ idleOnly: true, how: 'idle' })) console.log(visitLine(v));
   });
   setTimeout(() => { tick().then(sweep); }, 5000);
   setInterval(sweep, 5 * 60 * 1000).unref();

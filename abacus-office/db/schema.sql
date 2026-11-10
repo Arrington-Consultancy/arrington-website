@@ -167,3 +167,21 @@ BEGIN
     ALTER TABLE compositions ADD CONSTRAINT compositions_kind_check CHECK (kind IN ('new', 'reply', 'outreach', 'council_new', 'council_reply'));
   END IF;
 END $$;
+
+-- Who has been in (Tom, 10 November 2026: "Let's find out what dan does
+-- when he logs on"). One row per visit: a sign-in, or the first page after
+-- 20 minutes without one, opens it; every page opened and button pressed is
+-- added; signing out or 20 quiet minutes closes it. Shown on Activity to
+-- managers and owners. Kept 90 days.
+CREATE TABLE IF NOT EXISTS visits (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  user_name VARCHAR(120) NOT NULL DEFAULT '',
+  started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  ended_at TIMESTAMPTZ,
+  ended_how VARCHAR(20) NOT NULL DEFAULT '',
+  pages JSONB NOT NULL DEFAULT '[]'
+);
+CREATE UNIQUE INDEX IF NOT EXISTS visits_one_open ON visits (user_id) WHERE ended_at IS NULL;
+CREATE INDEX IF NOT EXISTS visits_by_start ON visits (started_at DESC);

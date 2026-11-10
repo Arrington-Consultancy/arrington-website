@@ -1,6 +1,23 @@
 <%- include('partials/top', { title: 'Activity' }) %>
 <section class="to-section-head"><h1>Activity</h1><p class="to-small">Everything done in the office, newest first, with who did it. Each member of staff has their own login, so each action carries a name.</p></section>
-<ul class="to-history">
-  <% events.forEach(function (e) { %><li><time><%= new Date(e.at).toLocaleString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) %></time><span><strong><%= e.actor_name %></strong>: <%= e.detail %><% if (e.case_id) { %> <a href="/case/<%= e.case_id %>"><%= e.subject || 'open' %></a><% } %></span></li><% }) %>
-</ul>
+<section class="to-panel">
+  <h2>Who has been in</h2>
+  <p class="to-small">Each visit, newest first: when someone signed in, how long they stayed and every page they opened or button they pressed. A visit ends when they sign out or after 20 quiet minutes. Kept for 90 days.</p>
+  <% if (!visits.length) { %>
+    <p class="to-empty">Nobody has signed in since visits started being recorded.</p>
+  <% } else { %>
+  <ul class="to-history">
+    <% visits.forEach(function (v) { var steps = Array.isArray(v.pages) ? v.pages : []; %>
+    <li><time><%= ukTime(v.started_at) %></time><span><strong><%= v.user_name %></strong>: <%= visitMinutes(v) %> min, <%= steps.length %> step<%= steps.length === 1 ? '' : 's' %>, <%= v.ended_at ? (v.ended_how === 'signed out' ? 'signed out' : 'left') : 'still in' %>
+      <details><summary>What they did</summary><ol class="to-steps"><% steps.forEach(function (x) { %><li><%= new Date(x.at).toLocaleTimeString('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit' }) %> <%= x.what %></li><% }) %></ol></details></span></li>
+    <% }) %>
+  </ul>
+  <% } %>
+</section>
+<section class="to-panel">
+  <h2>What was done</h2>
+  <ul class="to-history">
+    <% events.forEach(function (e) { %><li><time><%= new Date(e.at).toLocaleString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) %></time><span><strong><%= e.actor_name %></strong>: <%= e.detail %><% if (e.case_id) { %> <a href="/case/<%= e.case_id %>"><%= e.subject || 'open' %></a><% } %></span></li><% }) %>
+  </ul>
+</section>
 <%- include('partials/bottom') %>

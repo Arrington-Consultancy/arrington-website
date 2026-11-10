@@ -10385,3 +10385,17 @@ compositions kind CHECK is widened once by a guarded `DO` block in
 (the handler used `res` without taking it), and an action that redirects
 itself could redirect twice; both fixed (`res.locals.redirected`). Tests in
 `test/abacusOfficeCouncil.test.js`.
+
+**Who has been in (10/11/2026, Tom: "Let's find out what dan does when he
+logs on").** Table `visits`, `abacus-office/lib/visits.js`. A sign-in (or
+the first page after 20 quiet minutes) opens a visit; every page opened and
+button pressed by a signed-in person is added as a plain line ("opened
+Council", "email 12: approved the reply"); the live refresh and other
+background requests are not; sign-out or 20 quiet minutes (the 5-minute
+sweep) closes it. A partial unique index keeps one open visit per person.
+Shown on Activity ("Who has been in", managers and owners, Dan included, so
+it is not hidden from him); deleted after 90 days. The log carries
+`Abacus office: <username> signed in` and, when a visit closes,
+`Abacus office visit: <name>, <time>, <n> min, <steps>, ended ...: <what
+they did>`, so this worker can read a visit from Railway for Tom. No email
+is sent about a visit. `test/abacusOfficeVisits.test.js`.

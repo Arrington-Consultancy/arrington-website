@@ -209,6 +209,38 @@ class Store {
     return (await this.q(`SELECT * FROM dispatch_bookings${brand ? ' WHERE brand = $1' : ''} ORDER BY created_at DESC LIMIT $${params.length}`, params)).rows;
   }
 
+  // ---- visits (who has been in, and what they did) ----
+  // Close a user's visit that has been quiet for 20 minutes, then add this
+  // line to the open one, opening a new one if there is none. The partial
+  // unique index makes the add atomic, so racing requests share one visit.
+  // Returns any visits it closed, so the caller can log them.
+  async touchVisit(user, line, { fresh = false } = {}) {
+    if (!user) return [];
+    const closed = await this.closeVisits({ userId: user.id, idleOnly: !fresh, how: fresh ? 'signed in again' : 'idle' });
+    const entry = JSON.stringify([{ at: new Date().toISOString(), what: String(line).slice(0, 200) }]);
+    await this.q(`INSERT INTO visits (user_id, user_name, pages) VALUES ($1, $2, $3::jsonb)
+      ON CONFLICT (user_id) WHERE ended_at IS NULL DO UPDATE SET last_at = now(),
+        pages = CASE WHEN jsonb_array_length(visits.pages) >= 300 THEN visits.pages ELSE visits.pages || EXCLUDED.pages END`,
+    [user.id, user.username, entry]);
+    return closed;
+  }
+  // Close visits: one user's (all open, or only idle ones), or every idle
+  // visit in the office. Returns the closed rows.
+  async closeVisits({ userId, idleOnly = true, how = 'idle' } = {}) {
+    const where = ['ended_at IS NULL']; const params = [how];
+    if (userId) { params.push(userId); where.push(`user_id = $${params.length}`); }
+    if (idleOnly) where.push("last_at < now() - interval '20 minutes'");
+    return (await this.q(`UPDATE visits SET ended_at = last_at, ended_how = $1 WHERE ${where.join(' AND ')} RETURNING *`, params)).rows;
+  }
+  async endVisit(user, line) {
+    if (!user) return [];
+    const closed = await this.touchVisit(user, line);
+    const ended = (await this.q("UPDATE visits SET ended_at = now(), ended_how = 'signed out' WHERE user_id = $1 AND ended_at IS NULL RETURNING *", [user.id])).rows;
+    return [...closed, ...ended];
+  }
+  async recentVisits(limit = 40) { return (await this.q('SELECT * FROM visits ORDER BY started_at DESC LIMIT $1', [limit])).rows; }
+  async pruneVisits() { return (await this.q("DELETE FROM visits WHERE started_at < now() - interval '90 days'")).rowCount; }
+
   // ---- compositions (the Write worker) ----
   async insertComposition(c) {
     const r = await this.q(`INSERT INTO compositions (brand, kind, relationship, to_name, to_address, prompt, quoted, subject, body, held_back, source, created_by, created_by_name)

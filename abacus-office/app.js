@@ -26,6 +26,7 @@ const fs = require('fs');
 const { Store, ROLES } = require('./lib/store');
 const { Office, canApprove, canReassign, canSee, scopeFor, caseScope, seesCouncil, needsManager, atLeast, label, brandName } = require('./lib/cases');
 const ai = require('./lib/ai');
+const visits = require('./lib/visits');
 const alerts = require('./lib/alerts');
 const { createDispatch } = require('./lib/dispatch');
 const { longDate } = require('./lib/demoInbox');
@@ -157,6 +158,17 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     } catch (e) { next(e); }
   });
 
+  // Who has been in: every page opened and button pressed by a signed-in
+  // person goes on their visit (lib/visits.js). Never awaited, never able
+  // to break a page; a visit closed as idle is written to the log.
+  const logVisits = (rows) => { for (const v of rows || []) console.log(visits.summaryLine(v)); };
+  app.use((req, res, next) => {
+    if (req.user && !visits.isBackground(req) && req.path !== '/login' && req.path !== '/logout') {
+      store.touchVisit(req.user, visits.describe(req.method, req.path, req.query)).then(logVisits).catch((e) => console.error('Abacus office: visit not recorded', e.message));
+    }
+    next();
+  });
+
   const flash = (req, tone, message) => { req.session.flash = { tone, message }; };
   // Same race for every redirect after a change: save the session first.
   app.use((req, res, next) => {
@@ -179,6 +191,10 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
       const user = await store.userByName(username);
       const ok = user && user.active ? await bcrypt.compare(password, user.password_hash) : (await bcrypt.compare(password, DUMMY_HASH), false);
       if (!ok) return res.status(401).render('login', { title: 'Sign in', section: 'login', error: 'That username and password do not match.', next: safeNext(req.body.next) });
+      // The visit opens before the redirect, so the first page after it
+      // lands on this visit rather than racing it.
+      console.log(`Abacus office: ${user.username} signed in`);
+      await store.touchVisit(user, 'signed in', { fresh: true }).then(logVisits).catch((e) => console.error('Abacus office: visit not recorded', e.message));
       req.session.regenerate((err) => {
         if (err) return next(err);
         req.session.userId = user.id;
@@ -193,7 +209,10 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
       });
     } catch (e) { next(e); }
   });
-  app.post('/logout', (req, res) => { req.session.destroy(() => res.redirect('/login')); });
+  app.post('/logout', async (req, res) => {
+    if (req.user) await store.endVisit(req.user, 'signed out').then(logVisits).catch((e) => console.error('Abacus office: visit not recorded', e.message));
+    req.session.destroy(() => res.redirect('/login'));
+  });
 
   const requireUser = (req, res, next) => {
     if (!req.user) return res.redirect(`/login?next=${encodeURIComponent(req.originalUrl)}`);
@@ -392,7 +411,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   }));
 
   app.get('/activity', requireRole('manager'), wrap(async (req, res) => {
-    res.render('activity', { title: 'Activity', section: 'activity', events: await store.recentEvents(200) });
+    res.render('activity', { title: 'Activity', section: 'activity', events: await store.recentEvents(200), visits: await store.recentVisits(40), visitMinutes: visits.minutes, ukTime: visits.ukTime });
   }));
 
   app.get('/users', requireRole('owner'), wrap(async (req, res) => {
