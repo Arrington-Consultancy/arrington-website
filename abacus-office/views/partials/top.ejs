@@ -26,7 +26,7 @@
   <header class="to-bar">
     <div class="to-wrap to-bar-inner">
       <a class="to-brand" href="/">
-        <% if (firm.logo) { %><span class="to-logo"><img src="<%= firm.logo %>" alt="" width="128" height="30"></span><% } else { %><span class="to-mark" aria-hidden="true"><%= firm.short.charAt(0) %></span><% } %>
+        <% var _bar = typeof barLogo !== 'undefined' ? barLogo : firm.logo; %><% if (_bar) { %><span class="to-logo"><img src="<%= _bar %>" alt="" height="30"></span><% } else { %><span class="to-mark" aria-hidden="true"><%= firm.short.charAt(0) %></span><% } %>
         <span><strong><%= firm.name %></strong> <span class="to-brand-sub">Office</span></span>
       </a>
       <div class="to-who">

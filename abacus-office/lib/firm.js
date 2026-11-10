@@ -29,11 +29,25 @@ function brands() {
     const i = x.indexOf('=');
     const id = (i >= 0 ? x.slice(0, i) : x).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40);
     const name = (i >= 0 ? x.slice(i + 1) : x).trim().slice(0, 80) || id;
-    return id ? { id, name } : null;
+    return id ? { id, name, logo: brandLogo(id) } : null;
   }).filter(Boolean);
   if (list.length) return list;
   const short = text('ABACUS_OFFICE_FIRM_SHORT', 'Abacus');
-  return [{ id: short.toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40) || 'abacus', name: text('ABACUS_OFFICE_FIRM_NAME', 'Abacus Taxis') }];
+  const id = short.toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40) || 'abacus';
+  return [{ id, name: text('ABACUS_OFFICE_FIRM_NAME', 'Abacus Taxis'), logo: brandLogo(id) }];
+}
+
+// Each company's own logo, so a case, a list and an operator's portal show
+// whose it is (Tom, 10 November 2026: "the staff portals for these
+// companies need their logos so its identifiable"). The file is
+// abacus-office/public/brand/<company id>.webp (or .png, .jpg); none means
+// the company's name is shown instead.
+function brandLogo(id) {
+  const dir = path.join(__dirname, '..', 'public', 'brand');
+  for (const ext of ['webp', 'png', 'jpg']) {
+    if (fs.existsSync(path.join(dir, `${id}.${ext}`))) return `/brand/${id}.${ext}`;
+  }
+  return '';
 }
 
 // The logo in the office bar: a file under abacus-office/public/brand,
@@ -74,4 +88,4 @@ function brandName(f, id) {
   return b ? b.name : (id || f.name);
 }
 
-module.exports = { firm, brands, brandName, logo };
+module.exports = { firm, brands, brandName, logo, brandLogo };

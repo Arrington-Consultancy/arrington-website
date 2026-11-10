@@ -16,7 +16,7 @@
   </span>
   <span class="to-case-meta">
     <span class="to-chip"><% if (_iconId) { %><%- include('worker-icon', { id: _iconId }) %><% } %><%= _kindName %></span>
-    <% if (manyBrands) { %><span class="to-tag"><%= brandName(c.brand) %></span><% } %>
+    <% if (manyBrands) { %><% if (brandLogo(c.brand)) { %><span class="to-tag to-tag-logo"><img src="<%= brandLogo(c.brand) %>" alt="<%= brandName(c.brand) %>" height="18"></span><% } else { %><span class="to-tag"><%= brandName(c.brand) %></span><% } %><% } %>
     <span>Received <%= new Date(c.received_at).toLocaleString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) %></span>
     <span><%= c.owner_display || c.owner_username ? 'With ' + (c.owner_display || c.owner_username) : 'Nobody has it' %></span>
     <% if (c.reading && c.reading.summary) { %><span><%= c.reading.summary %></span><% } %>

@@ -412,3 +412,7 @@ p { margin: 0 0 0.8rem; }
 .to-details { margin-top: 1rem; border-top: 1px solid var(--line); padding-top: 0.8rem; }
 .to-details summary { cursor: pointer; font-weight: 600; }
 .to-details code { overflow-wrap: anywhere; }
+
+/* Each company's logo on its cases, so it is clear whose a case is. */
+.to-tag-logo { background: #fff; border: 1px solid var(--line); padding: 0.1rem 0.35rem; line-height: 0; }
+.to-tag-logo img { display: block; height: 1.1rem; width: auto; max-width: 7rem; }

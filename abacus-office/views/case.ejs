@@ -39,7 +39,7 @@
       <div class="to-panel-head">
         <p class="to-worker-tag"><%= kase.reading_source === 'ai' ? 'Read by the AI' : (kase.reading_source === 'prepared' ? 'Prepared answer (made-up inbox)' : 'Not read') %></p>
         <span><span class="to-chip"><% if (iconId) { %><%- include('partials/worker-icon', { id: iconId }) %><% } %><%= kindName %></span>
-          <% if (manyBrands) { %><span class="to-tag"><%= brandName(kase.brand) %></span><% } %>
+          <% if (manyBrands) { %><% if (brandLogo(kase.brand)) { %><span class="to-tag to-tag-logo"><img src="<%= brandLogo(kase.brand) %>" alt="<%= brandName(kase.brand) %>" height="18"></span><% } else { %><span class="to-tag"><%= brandName(kase.brand) %></span><% } %><% } %>
           <% if (overdue) { %><span class="to-pill to-pill-bad">Overdue</span><% } %>
           <% if (passedUp && !kase.approved_at && kase.status !== 'done') { %><span class="to-pill to-pill-warn">For a manager</span><% } %>
           <% if (kase.dispatch_ref) { %><span class="to-pill to-pill-ok">In dispatch <%= kase.dispatch_ref %></span><% } %>

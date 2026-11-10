@@ -53,7 +53,14 @@ async function main() {
   console.log(ai.describeAiStatus());
   console.log(alerts.describeAlertStatus());
   console.log(describeDispatchStatus());
-  console.log(`Abacus office brands: ${f.brands.map((b) => `${b.id} (${b.name})`).join(', ')}; the mailbox is ${f.mailboxBrand}; logo ${f.logo || 'none, lettered square'}`);
+  console.log(`Abacus office brands: ${f.brands.map((b) => `${b.id} (${b.name}${b.logo ? ', logo' : ', no logo yet'})`).join(', ')}; the mailbox is ${f.mailboxBrand}; logo ${f.logo || 'none, lettered square'}`);
+  // A case or user still carrying a company that is no longer set up goes
+  // to the mailbox's company (cases) or to every company (users), so
+  // nothing is stranded where nobody can see it.
+  const known = f.brands.map((b) => b.id);
+  const moved = await pool.query('UPDATE cases SET brand = $1 WHERE NOT (brand = ANY($2::text[])) RETURNING id', [f.mailboxBrand, known]);
+  const freed = await pool.query("UPDATE users SET brand = '' WHERE brand <> '' AND NOT (brand = ANY($1::text[])) RETURNING id", [known]);
+  if (moved.rowCount || freed.rowCount) console.log(`Abacus office: ${moved.rowCount} case(s) moved to ${f.mailboxBrand} and ${freed.rowCount} user(s) set to every company, because their company is no longer set up`);
   const mailbox = createMailbox(process.env, { store });
   if (mailbox.reload) await mailbox.reload();
   console.log(describeMailStatus(process.env, mailbox));

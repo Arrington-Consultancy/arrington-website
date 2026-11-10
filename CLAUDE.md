@@ -10285,3 +10285,18 @@ serves more than one company. The three companies are set as
 `ABACUS_OFFICE_BRANDS` on the abacus-office service (`id=Name; id=Name;
 id=Name`); not set yet, waiting on Tom's three names.
 `test/abacusOfficeVisibility.test.js` (two planted defects watched red).
+
+**The three companies and their logos (Tom, 10/11/2026: "Coastline Abacus
+and Falmouth Taxis and a2b cornwall the staff portals for these companies
+need their logos so its identifiable").** `ABACUS_OFFICE_BRANDS` on
+abacus-office is `abacus=Abacus & Falmouth Taxis; coastline=Coastline
+Travel; a2b=A2B Cornwall`; Abacus is first, so the connected mailbox
+feeds Abacus until `ABACUS_OFFICE_MAILBOX_BRAND` says otherwise. Each
+company's logo is `abacus-office/public/brand/<id>.webp` (or .png, .jpg):
+it shows on every case of that company and in the bar of an operator set
+to it; managers and owners see the A2B Cornwall logo in the bar. A company
+with no file shows its name. `a2b.webp` is in; Coastline's and Abacus's
+logos were pasted into chat, which this sandbox cannot save, and its
+network cannot fetch them, so they go in once Tom puts the files in Drive.
+On boot, a case whose company is no longer set up moves to the mailbox's
+company and such a user is set to every company, logged.

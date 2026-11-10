@@ -103,6 +103,8 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     res.locals.canReassign = canReassign;
     res.locals.needsManager = needsManager;
     res.locals.brandName = (id) => brandName(firm, id);
+    res.locals.brandLogo = (id) => ((firm.brands || []).find((b) => b.id === id) || {}).logo || '';
+    res.locals.barLogo = firm.logo;
     res.locals.manyBrands = (firm.brands || []).length > 1;
     res.locals.dispatchLabel = dispatch.label;
     res.locals.dispatchLive = Boolean(dispatch.live);
@@ -145,6 +147,9 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
       if (req.user && !req.user.active) { req.user = null; req.session.userId = null; }
       res.locals.user = req.user;
       res.locals.csrfToken = generateCsrfToken(req, res);
+      // An operator of one company sees that company's logo in the bar;
+      // managers, owners and anyone covering every company see the group's.
+      if (req.user && scopeFor(req.user)) res.locals.barLogo = ((firm.brands || []).find((b) => b.id === req.user.brand) || {}).logo || firm.logo;
       if (req.session.flash) { res.locals.flash = req.session.flash; delete req.session.flash; }
       res.locals.counts = req.user ? await store.counts(caseScope(req.user)) : null;
       next();
