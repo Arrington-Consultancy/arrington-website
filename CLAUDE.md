@@ -10055,8 +10055,13 @@ database, never inside the Arrington site or its database.
   `abacus-office/**` and `lib/taxiOffice/**`, so a site-only push does not
   rebuild it. Deployed by a second `railway up` step in
   `.github/workflows/deploy.yml`. Address:
-  `https://abacus-office-production.up.railway.app` (a custom domain is a
-  later decision).
+  `https://www.a2bstaff.com` since 10/11/2026 (Tom's domain, bought at
+  GoDaddy: `www` is a CNAME to Railway with a valid certificate, the bare
+  `a2bstaff.com` forwards to `www` through GoDaddy, and
+  `ABACUS_OFFICE_PUBLIC_URL` is set to it, so links in the office's emails
+  use it). The Railway address `abacus-office-production.up.railway.app`
+  still answers. A Google redirect URI for the mailbox connection must use
+  `https://www.a2bstaff.com/settings/mailbox/callback`.
 - **Two traps found building it, both now in the code:** express-session
   writes a redirect's headers before its save finishes, so a fast browser
   asked for the next page before the login existed in the store and was
