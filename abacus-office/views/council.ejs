@@ -1,0 +1,14 @@
+<%- include('partials/top', { title: 'Council' }) %>
+<section class="to-section-head">
+  <h1><%- include('partials/worker-icon', { id: 'licensing', tile: true }) %> Council</h1>
+  <p class="to-small">Every email from a council or its licensing team, soonest deadline first. Only managers and owners see these. The AI sets out what the council is asking for and by when, and drafts the firm's reply; a manager or owner checks it, guides it if needed, and approves it. Approving saves it as a draft in the mailbox for a person to send. Nothing goes to the council from here.</p>
+</section>
+<p class="to-live-line to-small" data-live-url="/live.json" data-live-stamp="<%= liveStamp %>"><span id="live-status">This page checks the mailbox itself every couple of minutes and refreshes when something changes.</span></p>
+<ul class="to-filter-bar">
+  <li><a href="/council"<% if (!showAll) { %> aria-current="page"<% } %>>Open</a></li>
+  <li><a href="/council?show=all"<% if (showAll) { %> aria-current="page"<% } %>>All</a></li>
+</ul>
+<% if (cases.length) { %>
+<ul class="to-cases"><% cases.forEach(function (c) { %><%- include('partials/case-row', { c: c }) %><% }) %></ul>
+<% } else { %><p class="to-empty">Nothing from the council waiting.</p><% } %>
+<%- include('partials/bottom') %>

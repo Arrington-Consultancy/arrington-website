@@ -52,6 +52,9 @@ function needsManager(kase) {
 }
 function canApprove(user, kase) {
   if (!user) return false;
+  // A reply to the council is a manager's or owner's, like the council
+  // emails themselves.
+  if (kase.kind === 'licensing') return seesCouncil(user);
   if (needsManager(kase)) return atLeast(user, 'manager');
   return atLeast(user, 'operator');
 }
@@ -80,7 +83,7 @@ function canReassign(user, kase) {
 
 function preparedFor(kase) {
   const demo = seedInbox(todayLondon()).find((e) => (e.messageId || e.id) === kase.message_id);
-  return demo ? { reading: demo.prepared, complaint: demo.preparedComplaint || null } : null;
+  return demo ? { reading: demo.prepared, complaint: demo.preparedComplaint || null, council: demo.preparedCouncil || null } : null;
 }
 
 class Office {
@@ -135,19 +138,21 @@ class Office {
     try {
       let reading = null; let source = 'none'; let note = '';
       let complaint = null;
+      let council = null;
       if (this.aiOn()) {
         try {
           const f = await this.firmFor(kase);
           reading = await ai.readEmail(this.emailOf(kase), this.today(), f);
           source = 'ai';
           if (reading.intent === 'complaint') complaint = await ai.draftComplaint({ email: this.emailOf(kase), notes: [] }, this.today(), f);
+          if (reading.intent === 'council') council = await ai.draftCouncil({ email: this.emailOf(kase), notes: [] }, this.today(), f);
         } catch (e) {
           note = `The AI could not read this email (${e.code || e.status || 'error'}). `;
         }
       }
       if (!reading) {
         const p = preparedFor(kase);
-        if (p) { reading = p.reading; complaint = p.complaint; source = 'prepared'; note += 'This is the answer prepared for the made-up inbox, not the AI\'s reading.'; }
+        if (p) { reading = p.reading; complaint = p.complaint; council = p.council; source = 'prepared'; note += 'This is the answer prepared for the made-up inbox, not the AI\'s reading.'; }
         else { note += this.aiOn() ? 'Read it yourself and write the reply below.' : 'The AI is switched off on this server, so read it yourself and write the reply below.'; }
       }
       const fields = { reading_source: source, reading_note: note.trim() };
@@ -155,8 +160,9 @@ class Office {
         fields.reading = reading;
         fields.kind = kindFor(reading.intent);
         fields.seriousness = reading.intent === 'complaint' ? (complaint ? complaint.seriousness : reading.seriousness) : 'none';
-        fields.draft = complaint ? complaint.reply : reading.reply;
+        fields.draft = complaint ? complaint.reply : (council ? council.reply : reading.reply);
         fields.complaint = complaint;
+        fields.council = council;
         if (kase.status === 'new' && fields.kind === 'other') fields.status = 'done';
       }
       await this.store.updateCase(kase.id, fields);
@@ -214,7 +220,7 @@ class Office {
       await this.store.addEvent(kase.id, { actor: user, kind: 'guided', detail: `${t} (the AI is off, so the draft was not rewritten)` });
       return { rewritten: false };
     }
-    const out = await ai.redraft({ email: this.emailOf(kase), draft: kase.draft, notes }, this.today(), await this.firmFor(kase));
+    const out = await ai.redraft({ email: this.emailOf(kase), draft: kase.draft, notes, council: kase.kind === 'licensing' }, this.today(), await this.firmFor(kase));
     await this.store.updateCase(kase.id, { guidance: notes, draft: out.reply, held_back: out.held_back, approved_at: null, approved_by: null });
     await this.store.addEvent(kase.id, { actor: user, kind: 'guided', detail: t + (out.held_back ? ` (held back: ${out.held_back})` : '') });
     return { rewritten: true, heldBack: out.held_back };
@@ -223,7 +229,7 @@ class Office {
   // Approve the reply: saved as a draft in the firm's mailbox for a person
   // to send. Nothing goes to the customer from here.
   async approve(kase, user) {
-    if (!canApprove(user, kase)) throw refuse(needsManager(kase) ? (kase.passed_up_at ? 'This complaint was passed up, so a manager approves the reply.' : 'A safety matter needs a manager to approve the reply.') : 'You cannot approve this.');
+    if (!canApprove(user, kase)) throw refuse(kase.kind === 'licensing' ? 'A reply to the council is approved by a manager or owner.' : needsManager(kase) ? (kase.passed_up_at ? 'This complaint was passed up, so a manager approves the reply.' : 'A safety matter needs a manager to approve the reply.') : 'You cannot approve this.');
     if (!String(kase.draft || '').trim()) throw refuse('There is no reply to approve.');
     const { draftId } = await this.mailbox.saveReplyDraft(this.emailOf(kase), kase.draft);
     await this.store.updateCase(kase.id, { approved_at: this.now(), approved_by: user.id, saved_draft_id: draftId || null, status: 'waiting', owner_id: kase.owner_id || user.id });

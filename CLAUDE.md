@@ -10345,3 +10345,24 @@ be able to draft with outreach, all while using my voice rules".
   out. Re-read 01A whenever it changes.
 - `test/abacusOfficeWrite.test.js` (a draft opened by another operator,
   watched red).
+
+### The Council worker (10/11/2026)
+
+Tom: "I want a council worker on there for top tier login owners and
+managers". A **Council** item in the menu for managers and owners only
+(`/council`, 404 for an operator; a count of open council emails), listing
+every council or licensing email soonest deadline first. When an email is
+read as `council`, `ai.draftCouncil` (`councilSystem` in
+`abacus-office/lib/ai.js`) sets out what the council asks for, the deadline
+(a real date or nothing), its reference, what it concerns, steps for the
+office, and drafts the firm's reply ("Dear Licensing Team," or the officer,
+"Kind regards," and the signature; Tom's WRITING rules). It never says a
+document was sent unless staff said so, and never invents a rule, fee or
+date. Stored in a new `cases.council` JSONB column. Guiding the AI on a
+council email uses `councilRedraftSystem` (a licence, plate or driver may be
+named). Only a manager or owner approves it (`canApprove`), and approving
+saves a draft in the mailbox like every other reply; nothing is sent. The
+case screen shows the council panel in place of the customer facts; the old
+"no reply to draft" panel is gone. The made-up council email has a prepared
+answer (`preparedCouncil`). `test/abacusOfficeCouncil.test.js` (5; the
+manager-only approval watched red).

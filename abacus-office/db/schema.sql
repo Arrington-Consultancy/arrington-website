@@ -85,6 +85,10 @@ ALTER TABLE cases ADD COLUMN IF NOT EXISTS passed_up_reason TEXT NOT NULL DEFAUL
 ALTER TABLE cases ADD COLUMN IF NOT EXISTS passed_up_notified_at TIMESTAMPTZ;
 ALTER TABLE cases ADD COLUMN IF NOT EXISTS holding_sent_at TIMESTAMPTZ;
 
+-- The council worker (10 November 2026): what a council email asks for, by
+-- when, and the drafted reply, for managers and owners only.
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS council JSONB;
+
 -- A booking put into dispatch by a member of staff who signed it off.
 ALTER TABLE cases ADD COLUMN IF NOT EXISTS dispatch_ref VARCHAR(60) NOT NULL DEFAULT '';
 ALTER TABLE cases ADD COLUMN IF NOT EXISTS booked_at TIMESTAMPTZ;

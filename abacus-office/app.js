@@ -286,6 +286,17 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     res.render('complaints', { title: 'Complaints', section: 'complaints', cases, showAll: req.query.show === 'all', liveStamp: await store.liveStamp(scope), lastSync, nudgeHours: await store.complaintNudgeHours() });
   }));
 
+  // The council worker: managers and owners only, like the council emails
+  // themselves. Soonest deadline first, then oldest.
+  app.get('/council', requireRole('manager'), wrap(async (req, res) => {
+    const scope = caseScope(req.user);
+    const showAll = req.query.show === 'all';
+    const cases = (await store.listCases({ kind: 'licensing', brand: scope, limit: 200 })).filter((c) => showAll || c.status !== 'done');
+    const due = (c) => (c.council && c.council.deadline) || '9999-12-31';
+    cases.sort((a, b) => due(a).localeCompare(due(b)) || (new Date(a.received_at) - new Date(b.received_at)));
+    res.render('council', { title: 'Council', section: 'council', cases, showAll, liveStamp: await store.liveStamp(scope), lastSync });
+  }));
+
   const loadCase = wrap(async (req, res, next) => {
     const id = Number(req.params.id);
     const kase = Number.isInteger(id) ? await store.caseById(id) : null;
@@ -296,7 +307,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   app.get('/case/:id', loadCase, wrap(async (req, res) => {
     const kase = req.kase.reading || req.kase.reading_source !== 'none' ? req.kase : await office.read(req.kase, { actor: req.user });
     const [events, users] = await Promise.all([store.eventsFor(kase.id), store.users()]);
-    res.render('case', { title: kase.subject || 'Email', section: 'inbox', kase, events, users: users.filter((u) => u.active && (atLeast(u, 'manager') || !u.brand || u.brand === (kase.brand || ''))), booking: office.bookingFrom(kase), dispatchRow: kase.dispatch_ref ? (await store.dispatchBookingsForCase(kase.id)).filter((b) => b.ref === kase.dispatch_ref).pop() || null : null, statusWords: require('./lib/icabbi').statusWords, holdingText: kase.kind === 'complaints' ? office.holdingText(kase) : '' });
+    res.render('case', { title: kase.subject || 'Email', section: kase.kind === 'complaints' ? 'complaints' : (kase.kind === 'licensing' ? 'council' : 'inbox'), kase, events, users: users.filter((u) => u.active && (atLeast(u, 'manager') || !u.brand || u.brand === (kase.brand || ''))), booking: office.bookingFrom(kase), dispatchRow: kase.dispatch_ref ? (await store.dispatchBookingsForCase(kase.id)).filter((b) => b.ref === kase.dispatch_ref).pop() || null : null, statusWords: require('./lib/icabbi').statusWords, holdingText: kase.kind === 'complaints' ? office.holdingText(kase) : '' });
   }));
   const act = (p, fn) => app.post(`/case/:id/${p}`, loadCase, wrap(async (req, res) => { await fn(req, res); if (!res.headersSent) res.redirect(`/case/${req.kase.id}`); }));
   // Managers and owners put an email under the right company, when one

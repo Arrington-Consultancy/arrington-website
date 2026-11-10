@@ -2,16 +2,19 @@
 <%
   var r = kase.reading || null;
   var cpl = kase.complaint || null;
-  var kindName = { unread: 'Not read yet', bookings: 'Bookings', customer: 'Customer emails', complaints: 'Complaints', licensing: 'Licensing', other: 'Not for the office' }[kase.kind] || kase.kind;
+  var cnl = kase.kind === 'licensing' ? (kase.council || null) : null;
+  var isCouncil = kase.kind === 'licensing';
+  var ymdLong = function (d) { return new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }); };
+  var kindName = { unread: 'Not read yet', bookings: 'Bookings', customer: 'Customer emails', complaints: 'Complaints', licensing: 'Council', other: 'Not for the office' }[kase.kind] || kase.kind;
   var iconId = { bookings: 'bookings', customer: 'customer', complaints: 'complaints', licensing: 'licensing' }[kase.kind];
   var overdue = kase.escalated_at && !kase.approved_at && (kase.status === 'new' || kase.status === 'in_progress');
   var when = function (d) { return new Date(d).toLocaleString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); };
   var mayApprove = canApprove(user, kase);
-  var needsReply = !['other', 'licensing'].includes(kase.kind);
+  var needsReply = kase.kind !== 'other';
   var passedUp = Boolean(kase.passed_up_at);
   var forManager = needsManager(kase);
 %>
-<p class="to-back"><a href="<%= kase.kind === 'complaints' ? '/complaints' : '/inbox' %>"><%= kase.kind === 'complaints' ? 'Complaints' : 'Inbox' %></a></p>
+<p class="to-back"><a href="<%= kase.kind === 'complaints' ? '/complaints' : (isCouncil ? '/council' : '/inbox') %>"><%= kase.kind === 'complaints' ? 'Complaints' : (isCouncil ? 'Council' : 'Inbox') %></a></p>
 
 <div class="to-email-grid">
   <article class="to-email" aria-label="The email">
@@ -47,7 +50,18 @@
           <span class="to-pill to-pill-<%= { new: 'soon', in_progress: 'warn', waiting: 'neutral', done: 'ok' }[kase.status] %>"><%= label(kase.status) %></span></span>
       </div>
       <% if (kase.reading_note) { %><p class="to-note to-note-warn"><%= kase.reading_note %></p><% } %>
-      <% if (r) { %>
+      <% if (r && isCouncil) { %>
+        <p class="to-summary"><%= (cnl && cnl.summary) || r.summary %></p>
+        <% if (cnl) { %>
+        <dl class="to-facts">
+          <div><dt>Deadline</dt><dd><%= cnl.deadline ? ymdLong(cnl.deadline) : 'None given' %></dd></div>
+          <% if (cnl.reference) { %><div><dt>Council reference</dt><dd><%= cnl.reference %></dd></div><% } %>
+          <% if (cnl.about) { %><div><dt>About</dt><dd><%= cnl.about %></dd></div><% } %>
+        </dl>
+        <% if ((cnl.asks || []).length) { %><p class="to-small">What the council is asking for:</p><ul class="to-steps"><% cnl.asks.forEach(function (a) { %><li><%= a %></li><% }) %></ul><% } %>
+        <% if ((cnl.staff_steps || []).length) { %><p class="to-small">For the office to do:</p><ol class="to-steps"><% cnl.staff_steps.forEach(function (x) { %><li><%= x %></li><% }) %></ol><% } %>
+        <% } else { %><p class="to-small">The council worker has not set this one out yet. Ask the AI to read it again, or write the reply below.</p><% } %>
+      <% } else if (r) { %>
         <p class="to-summary"><%= r.summary %></p>
         <dl class="to-facts">
           <div><dt>Customer</dt><dd><%= r.customer_name || 'Not given' %></dd></div>
@@ -177,11 +191,11 @@
       <% if (kase.held_back) { %><p class="to-note to-note-warn"><strong>From the AI:</strong> <%= kase.held_back %></p><% } %>
       <form method="post" action="/case/<%= kase.id %>/draft" class="to-form">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-        <label class="to-field"><span>The reply, as it will go to the customer</span><textarea id="draft" name="draft" rows="12" maxlength="4000" placeholder="<%= r ? '' : 'Write the reply here.' %>"><%= kase.draft %></textarea></label>
+        <label class="to-field"><span>The reply, as it will go to <%= isCouncil ? 'the council' : 'the customer' %></span><textarea id="draft" name="draft" rows="12" maxlength="4000" placeholder="<%= r ? '' : 'Write the reply here.' %>"><%= kase.draft %></textarea></label>
         <div class="to-guide">
           <% if ((kase.guidance || []).length) { %><p class="to-worker-tag">Guided so far</p><ol class="to-guide-notes"><% kase.guidance.forEach(function (n) { %><li><%= n %></li><% }) %></ol><% } %>
-          <label class="to-field"><span>Guide the AI</span><textarea id="guidance" name="guidance" rows="2" maxlength="1200" placeholder="For example: we are fully booked at that time, offer 7.15 instead. Or: our records show the car was on time."></textarea></label>
-          <p class="to-small">Tell it what the reply should say and it rewrites the draft. It does what you say, but it will not make anything up, and it never names a driver to a customer.</p>
+          <label class="to-field"><span>Guide the AI</span><textarea id="guidance" name="guidance" rows="2" maxlength="1200" placeholder="<%= isCouncil ? 'For example: both certificates were sent this morning. Or: the compliance test is booked for Thursday.' : 'For example: we are fully booked at that time, offer 7.15 instead. Or: our records show the car was on time.' %>"></textarea></label>
+          <p class="to-small"><%= isCouncil ? 'Tell it what the reply should say and it rewrites the draft. It does what you say, but it will not make up a date, a rule or a fact.' : 'Tell it what the reply should say and it rewrites the draft. It does what you say, but it will not make anything up, and it never names a driver to a customer.' %></p>
           <div class="to-guide-actions">
             <button type="submit" class="to-btn" formaction="/case/<%= kase.id %>/guide" data-busy="Redrafting...">Redraft with this</button>
             <button type="submit" class="to-btn to-btn-quiet">Save my edits</button>
@@ -191,12 +205,10 @@
           <button type="submit" class="to-btn to-btn-primary" formaction="/case/<%= kase.id %>/approve" data-confirm="Approve this reply? <%= mailboxDemo ? 'Nothing is sent from this made-up inbox.' : 'It will be saved as a draft in ' + mailboxLabel + ' for someone to send.' %>" data-busy="Approving..."><%= kase.approved_at ? 'Approve again' : 'Approve this reply' %></button>
           <p class="to-small"><%= forManager ? 'This one is approved by a manager; you are one.' : 'Approving saves it as a draft in the firm\'s mailbox for a person to send. Nothing is sent from here.' %></p>
         <% } else { %>
-          <p class="to-note to-note-warn"><%= passedUp ? 'This complaint was passed up, so a manager approves the reply.' : 'A safety matter needs a manager to approve the reply.' %> Get the draft right, add a note, and a manager will approve it from here.</p>
+          <p class="to-note to-note-warn"><%= isCouncil ? 'A reply to the council is approved by a manager or owner.' : (passedUp ? 'This complaint was passed up, so a manager approves the reply.' : 'A safety matter needs a manager to approve the reply.') %> Get the draft right, add a note, and a manager will approve it from here.</p>
         <% } %>
       </form>
     </section>
-    <% } else if (kase.kind === 'licensing') { %>
-    <section class="to-panel"><p class="to-worker-tag">Council</p><h2>This one is from the council</h2><p>It is not a customer email, so there is no customer reply to draft. Deal with it in the mailbox and mark it done here when it is.</p></section>
     <% } else if (kase.kind === 'other') { %>
     <section class="to-panel"><p class="to-worker-tag">Not for the office</p><h2>Nothing to answer</h2><p>The AI read this as not being from a customer or the council, so it was marked done without a reply. Change the status if that is wrong.</p></section>
     <% } %>

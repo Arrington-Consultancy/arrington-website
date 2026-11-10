@@ -126,6 +126,7 @@ class Store {
       count(*) FILTER (WHERE kind = 'complaints' AND status <> 'done' AND seriousness = 'safety')::int AS safety_open,
       count(*) FILTER (WHERE escalated_at IS NOT NULL AND approved_at IS NULL AND status IN ('new', 'in_progress'))::int AS overdue,
       count(*) FILTER (WHERE kind = 'complaints' AND status <> 'done' AND passed_up_at IS NOT NULL AND approved_at IS NULL)::int AS passed_up,
+      count(*) FILTER (WHERE kind = 'licensing' AND status <> 'done')::int AS council_open,
       count(*) FILTER (WHERE kind = 'unread')::int AS unread
       FROM cases${w.length ? ` WHERE ${w.join(' AND ')}` : ''}`, params);
     return r.rows[0];

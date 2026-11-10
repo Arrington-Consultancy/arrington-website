@@ -1,7 +1,7 @@
 <%
   var _tone = { new: 'soon', in_progress: 'warn', waiting: 'neutral', done: 'ok' }[c.status] || 'neutral';
   var _overdue = c.escalated_at && !c.approved_at && (c.status === 'new' || c.status === 'in_progress');
-  var _kindName = { unread: 'Not read yet', bookings: 'Bookings', customer: 'Customer emails', complaints: 'Complaints', licensing: 'Licensing', other: 'Not for the office' }[c.kind] || c.kind;
+  var _kindName = { unread: 'Not read yet', bookings: 'Bookings', customer: 'Customer emails', complaints: 'Complaints', licensing: 'Council', other: 'Not for the office' }[c.kind] || c.kind;
   var _iconId = { bookings: 'bookings', customer: 'customer', complaints: 'complaints', licensing: 'licensing' }[c.kind];
 %>
 <li><a class="to-case-row<%= _overdue ? ' is-overdue' : '' %><%= c.seriousness === 'safety' && c.status !== 'done' ? ' is-safety' : '' %>" href="/case/<%= c.id %>">
@@ -11,6 +11,7 @@
     <% if (c.passed_up_at && !c.approved_at && c.status !== 'done') { %><span class="to-pill to-pill-warn">For a manager</span><% } %>
     <% if (c.dispatch_ref) { %><span class="to-pill to-pill-ok">In dispatch <%= c.dispatch_ref %></span><% } %>
     <% if (c.seriousness && c.seriousness !== 'none') { %><span class="to-pill <%= c.seriousness === 'minor' ? 'to-pill-neutral' : 'to-pill-bad' %>"><%= c.seriousness %></span><% } %>
+    <% if (c.kind === 'licensing' && c.council && c.council.deadline && c.status !== 'done') { %><span class="to-pill to-pill-warn">Due <%= new Date(c.council.deadline + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }) %></span><% } %>
     <% if (c.approved_at) { %><span class="to-pill to-pill-ok">Approved</span><% } %>
     <span class="to-pill to-pill-<%= _tone %>"><%= label(c.status) %></span>
   </span>

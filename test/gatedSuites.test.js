@@ -37,6 +37,7 @@ const GATED = [
   { file: 'abacusOffice.test.js', name: 'the Abacus office over HTTP, model and mailbox stubbed', arms: 'ABACUS_OFFICE_TEST_DATABASE_URL (a throwaway database; the suite drops and recreates its tables)' },
   { file: 'abacusOfficeWrite.test.js', name: 'the Write worker over HTTP, model and mailbox stubbed', arms: 'ABACUS_OFFICE_TEST_DATABASE_URL (works in a schema of its own)' },
   { file: 'abacusOfficeVisibility.test.js', name: 'who sees which company and the council emails, over HTTP', arms: 'ABACUS_OFFICE_TEST_DATABASE_URL (works in a schema of its own)' },
+  { file: 'abacusOfficeCouncil.test.js', name: 'the council page and its reply, over HTTP', arms: 'ABACUS_OFFICE_TEST_DATABASE_URL (works in a schema of its own)' },
   { file: 'abacusOfficeIcabbi.test.js', name: 'the Abacus office iCabbi connection through the office, iCabbi stubbed', arms: 'ABACUS_OFFICE_TEST_DATABASE_URL (works in a schema of its own, so it never touches the tables the other office suites drop)' },
   { file: 'abacusOfficeMailbox.test.js', name: 'connecting the Abacus office mailbox over HTTP, Google stubbed', arms: 'ABACUS_OFFICE_MAILBOX_TEST_DATABASE_URL (a second throwaway database; the suite drops and recreates its tables)' },
   { file: 'scott/adversarialApi.test.js', name: 'Scott adversarial HTTP', arms: 'SCOTT_TEST_BASE_URL + SCOTT_DEMO_STAFF_PASSWORD, against a running server' },
