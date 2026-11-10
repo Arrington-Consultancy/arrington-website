@@ -11,4 +11,36 @@
 <% if (cases.length) { %>
 <ul class="to-cases"><% cases.forEach(function (c) { %><%- include('partials/case-row', { c: c }) %><% }) %></ul>
 <% } else { %><p class="to-empty">Nothing from the council waiting.</p><% } %>
+<section class="to-panel" id="write-to-council">
+  <h2>Write to the council</h2>
+  <p class="to-small">Start a new email to the licensing team, or paste an email they sent and the AI drafts the answer. Say what it should say; you then check it, guide it and approve it. <%= mailboxCanHold ? 'Approving saves it as a draft in the mailbox for a person to send.' : 'No mailbox is connected yet, so you copy an approved email into your own email to send it.' %></p>
+  <form method="post" action="/write" class="to-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="to-field-row is-two">
+      <label class="to-field"><span>What kind of email</span><select id="council-kind" name="kind"><% Object.keys(councilKinds).forEach(function (k) { %><option value="<%= k %>"><%= councilKinds[k] %></option><% }) %></select></label>
+      <% if (manyBrands) { %>
+      <label class="to-field"><span>Which company it is from</span><select id="council-brand" name="brand"><% firm.brands.forEach(function (b) { %><option value="<%= b.id %>"<% if (b.id === firm.mailboxBrand) { %> selected<% } %>><%= b.name %></option><% }) %></select></label>
+      <% } %>
+    </div>
+    <div class="to-field-row is-two">
+      <label class="to-field"><span>Officer's name (optional)</span><input id="council-to-name" name="to_name" maxlength="160" placeholder="Leave blank for Dear Licensing Team"></label>
+      <label class="to-field"><span>Their email address (optional for now)</span><input id="council-to-address" name="to_address" type="email" maxlength="200" placeholder="licensing@example.gov.uk"></label>
+    </div>
+    <label class="to-field"><span>What should it say?</span><textarea id="council-prompt" name="prompt" rows="4" maxlength="2000" required placeholder="For example: licence 14's new insurance certificate is attached, cover runs to 7 November next year. Or: we can't get the compliance test done by Friday, the garage has us booked for the 19th, ask if that is all right."></textarea></label>
+    <label class="to-field"><span>For a reply: paste the council's email</span><textarea id="council-quoted" name="quoted" rows="5" maxlength="6000" placeholder="Only needed when it is a reply to the council."></textarea></label>
+    <button type="submit" class="to-btn to-btn-primary" data-busy="Drafting...">Draft it</button>
+  </form>
+</section>
+<section class="to-panel">
+  <h2>Emails to the council</h2>
+  <% if (!drafts.length) { %>
+    <p class="to-empty">Nothing written to the council yet.</p>
+  <% } else { %>
+  <ul class="to-history">
+    <% drafts.forEach(function (d) { %>
+    <li><time><%= new Date(d.updated_at).toLocaleString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) %></time><span><a href="/write/<%= d.id %>"><%= d.subject || '(no subject yet)' %></a> <span class="to-small"><%= councilKinds[d.kind] || d.kind %><%= d.to_name ? ', to ' + d.to_name : '' %><%= manyBrands ? ', ' + brandName(d.brand) : '' %><%= d.created_by_name ? ', by ' + d.created_by_name : '' %></span> <span class="to-pill<%= d.status === 'approved' ? ' to-pill-ok' : '' %>"><%= d.status === 'approved' ? 'Approved' : 'Draft' %></span></span></li>
+    <% }) %>
+  </ul>
+  <% } %>
+</section>
 <%- include('partials/bottom') %>

@@ -24,7 +24,7 @@ const morgan = require('morgan');
 const fs = require('fs');
 
 const { Store, ROLES } = require('./lib/store');
-const { Office, canApprove, canReassign, canSee, scopeFor, caseScope, needsManager, atLeast, label, brandName } = require('./lib/cases');
+const { Office, canApprove, canReassign, canSee, scopeFor, caseScope, seesCouncil, needsManager, atLeast, label, brandName } = require('./lib/cases');
 const ai = require('./lib/ai');
 const alerts = require('./lib/alerts');
 const { createDispatch } = require('./lib/dispatch');
@@ -161,7 +161,9 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   // Same race for every redirect after a change: save the session first.
   app.use((req, res, next) => {
     const redirect = res.redirect.bind(res);
-    res.redirect = (...args) => (req.session ? req.session.save(() => redirect(...args)) : redirect(...args));
+    // redirected marks a redirect already on its way, so an action that
+    // redirects itself is not followed by a second one while the save runs.
+    res.redirect = (...args) => { res.locals.redirected = true; return req.session ? req.session.save(() => redirect(...args)) : redirect(...args); };
     next();
   });
   const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 8, standardHeaders: true, legacyHeaders: false });
@@ -294,7 +296,8 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     const cases = (await store.listCases({ kind: 'licensing', brand: scope, limit: 200 })).filter((c) => showAll || c.status !== 'done');
     const due = (c) => (c.council && c.council.deadline) || '9999-12-31';
     cases.sort((a, b) => due(a).localeCompare(due(b)) || (new Date(a.received_at) - new Date(b.received_at)));
-    res.render('council', { title: 'Council', section: 'council', cases, showAll, liveStamp: await store.liveStamp(scope), lastSync });
+    const drafts = await store.compositions({ council: true });
+    res.render('council', { title: 'Council', section: 'council', cases, showAll, liveStamp: await store.liveStamp(scope), lastSync, drafts, councilKinds: require('./lib/compose').COUNCIL_KINDS, mailboxCanHold: mailboxCanHold() });
   }));
 
   const loadCase = wrap(async (req, res, next) => {
@@ -309,7 +312,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     const [events, users] = await Promise.all([store.eventsFor(kase.id), store.users()]);
     res.render('case', { title: kase.subject || 'Email', section: kase.kind === 'complaints' ? 'complaints' : (kase.kind === 'licensing' ? 'council' : 'inbox'), kase, events, users: users.filter((u) => u.active && (atLeast(u, 'manager') || !u.brand || u.brand === (kase.brand || ''))), booking: office.bookingFrom(kase), dispatchRow: kase.dispatch_ref ? (await store.dispatchBookingsForCase(kase.id)).filter((b) => b.ref === kase.dispatch_ref).pop() || null : null, statusWords: require('./lib/icabbi').statusWords, holdingText: kase.kind === 'complaints' ? office.holdingText(kase) : '' });
   }));
-  const act = (p, fn) => app.post(`/case/:id/${p}`, loadCase, wrap(async (req, res) => { await fn(req, res); if (!res.headersSent) res.redirect(`/case/${req.kase.id}`); }));
+  const act = (p, fn) => app.post(`/case/:id/${p}`, loadCase, wrap(async (req, res) => { await fn(req, res); if (!res.headersSent && !res.locals.redirected) res.redirect(`/case/${req.kase.id}`); }));
   // Managers and owners put an email under the right company, when one
   // mailbox serves more than one.
   act('company', async (req) => {
@@ -481,7 +484,8 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   const companyOf = (brand) => brandName(firm, brand);
   // A draft is its writer's, and every draft is open to managers and the
   // owner, who see every company.
-  const mayOpenDraft = (user, c) => Boolean(c) && c.status !== 'discarded' && (c.created_by === user.id || atLeast(user, 'manager'));
+  // A draft to the council is for managers and owners only, whoever wrote it.
+  const mayOpenDraft = (user, c) => Boolean(c) && c.status !== 'discarded' && (!compose.isCouncilKind(c.kind) || seesCouncil(user)) && (c.created_by === user.id || atLeast(user, 'manager'));
   const loadDraft = wrap(async (req, res, next) => {
     const c = await store.compositionById(Number(req.params.id));
     if (!mayOpenDraft(req.user, c)) return res.status(404).render('missing', { title: 'Not found' });
@@ -491,22 +495,27 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   const mailboxCanHold = () => !mailbox.demo && !mailbox.none && typeof mailbox.saveNewDraft === 'function' && mailbox.configured();
 
   app.get('/write', wrap(async (req, res) => {
-    const drafts = await store.compositions(atLeast(req.user, 'manager') ? {} : { userId: req.user.id });
+    const drafts = await store.compositions(atLeast(req.user, 'manager') ? { council: false } : { userId: req.user.id, council: false });
     res.render('write', { title: 'Write', section: 'write', drafts, kinds: compose.KINDS, relationships: compose.RELATIONSHIPS, ownBrand: scopeFor(req.user) || '', mailboxCanHold: mailboxCanHold() });
   }));
   app.post('/write', wrap(async (req, res) => {
     const b = req.body;
-    const kind = compose.KINDS[b.kind] ? b.kind : 'new';
-    const relationship = compose.RELATIONSHIPS[b.relationship] ? b.relationship : 'new';
+    const kind = compose.isKind(b.kind) ? b.kind : 'new';
+    const council = compose.isCouncilKind(kind);
+    // An operator never writes to the council, and never learns this route
+    // takes it: the same 404 as any page that is not theirs.
+    if (council && !seesCouncil(req.user)) return res.status(404).render('missing', { title: 'Not found' });
+    const back = council ? '/council#write-to-council' : '/write';
+    const relationship = council ? 'formal' : (Object.prototype.hasOwnProperty.call(compose.RELATIONSHIPS, b.relationship) ? b.relationship : 'new');
     const prompt = String(b.prompt || '').trim().slice(0, 2000);
     const toAddress = String(b.to_address || '').trim().slice(0, 200);
     const toName = String(b.to_name || '').replace(/\s+/g, ' ').trim().slice(0, 160);
-    const quoted = kind === 'reply' ? String(b.quoted || '').trim().slice(0, 6000) : '';
+    const quoted = kind === 'reply' || kind === 'council_reply' ? String(b.quoted || '').trim().slice(0, 6000) : '';
     const own = scopeFor(req.user);
     const brand = own || ((firm.brands || []).some((x) => x.id === String(b.brand || '')) ? String(b.brand) : firm.mailboxBrand);
-    if (prompt.length < 5) { flash(req, 'warn', 'Say what the email is for, in a sentence or two.'); return res.redirect('/write'); }
-    if (toAddress && !EMAIL_RE.test(toAddress)) { flash(req, 'warn', 'That email address does not look right. Leave it blank if you do not have it yet.'); return res.redirect('/write'); }
-    if (kind === 'reply' && !quoted) { flash(req, 'warn', 'Paste the email you are replying to, so the draft answers it.'); return res.redirect('/write'); }
+    if (prompt.length < 5) { flash(req, 'warn', 'Say what the email is for, in a sentence or two.'); return res.redirect(back); }
+    if (toAddress && !EMAIL_RE.test(toAddress)) { flash(req, 'warn', 'That email address does not look right. Leave it blank if you do not have it yet.'); return res.redirect(back); }
+    if ((kind === 'reply' || kind === 'council_reply') && !quoted) { flash(req, 'warn', kind === 'council_reply' ? "Paste the council's email, so the draft answers it." : 'Paste the email you are replying to, so the draft answers it.'); return res.redirect(back); }
     const row = { brand, kind, relationship, to_name: toName, to_address: toAddress, prompt, quoted, company_name: companyOf(brand) };
     let drafted = null; let note = '';
     if (aiOn()) {
@@ -515,16 +524,16 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
         note = 'The AI could not draft it just now, so it is here to write by hand. Try Guide the AI in a minute.';
       }
     } else note = 'The AI is switched off, so write it here by hand.';
-    const blank = `Hello,\n\n\n\n${compose.signoff(relationship, staffName(req.user), companyOf(brand))}`;
+    const blank = `${council ? `Dear ${toName || 'Licensing Team'},` : 'Hello,'}\n\n\n\n${compose.signoff(relationship, staffName(req.user), companyOf(brand))}`;
     const c = await store.insertComposition({ ...row, subject: drafted ? drafted.subject : '', body: drafted ? drafted.body : blank, held_back: drafted ? drafted.heldBack : '', source: drafted ? 'ai' : 'none', actor: req.user });
-    await store.addEvent(null, { actor: req.user, kind: 'write_drafted', detail: `${compose.KINDS[kind]} drafted for ${companyOf(brand)}${toName || toAddress ? ` to ${toName || toAddress}` : ''}` });
+    await store.addEvent(null, { actor: req.user, kind: 'write_drafted', detail: `${compose.ALL_KINDS[kind]} drafted for ${companyOf(brand)}${toName || toAddress ? ` to ${toName || toAddress}` : ''}` });
     if (note) flash(req, 'warn', note);
     res.redirect(`/write/${c.id}`);
   }));
   app.get('/write/:id', loadDraft, wrap(async (req, res) => {
-    res.render('writing', { title: req.draft.subject || 'Draft', section: 'write', c: req.draft, kinds: compose.KINDS, relationships: compose.RELATIONSHIPS, mailboxCanHold: mailboxCanHold(), companyName: companyOf(req.draft.brand) });
+    res.render('writing', { title: req.draft.subject || 'Draft', section: compose.isCouncilKind(req.draft.kind) ? 'council' : 'write', council: compose.isCouncilKind(req.draft.kind), c: req.draft, kinds: compose.ALL_KINDS, relationships: compose.RELATIONSHIPS, mailboxCanHold: mailboxCanHold(), companyName: companyOf(req.draft.brand) });
   }));
-  const writeAct = (p, fn) => app.post(`/write/:id/${p}`, loadDraft, wrap(async (req, res) => { await fn(req, res); if (!res.headersSent) res.redirect(`/write/${req.draft.id}`); }));
+  const writeAct = (p, fn) => app.post(`/write/:id/${p}`, loadDraft, wrap(async (req, res) => { await fn(req, res); if (!res.headersSent && !res.locals.redirected) res.redirect(`/write/${req.draft.id}`); }));
   // Saving an edit takes an approved draft back to a draft, so what is in
   // the mailbox is always what someone approved.
   const takeEdits = (req) => {
@@ -573,14 +582,14 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
       draftId = String((r && r.draftId) || '');
     }
     await store.updateComposition(req.draft.id, { status: 'approved', approved_at: now(), approved_by_name: staffName(req.user), mailbox_draft_id: draftId });
-    await store.addEvent(null, { actor: req.user, kind: 'write_approved', detail: `${compose.KINDS[c.kind]} approved for ${companyOf(c.brand)}${c.to_address ? ` to ${c.to_address}` : ''}${draftId ? `, saved as a draft in ${mailbox.label}` : ''}` });
+    await store.addEvent(null, { actor: req.user, kind: 'write_approved', detail: `${compose.ALL_KINDS[c.kind]} approved for ${companyOf(c.brand)}${c.to_address ? ` to ${c.to_address}` : ''}${draftId ? `, saved as a draft in ${mailbox.label}` : ''}` });
     flash(req, 'ok', mailboxCanHold() ? `Approved and saved as a draft in ${mailbox.label}. Open the mailbox to send it.` : 'Approved. No mailbox is connected yet, so copy it into your email and send it from there.');
   });
-  writeAct('discard', async (req) => {
+  writeAct('discard', async (req, res) => {
     await store.updateComposition(req.draft.id, { status: 'discarded' });
-    await store.addEvent(null, { actor: req.user, kind: 'write_discarded', detail: `${compose.KINDS[req.draft.kind]} for ${companyOf(req.draft.brand)} discarded` });
+    await store.addEvent(null, { actor: req.user, kind: 'write_discarded', detail: `${compose.ALL_KINDS[req.draft.kind]} for ${companyOf(req.draft.brand)} discarded` });
     flash(req, 'ok', 'Discarded.');
-    res.redirect('/write');
+    res.redirect(compose.isCouncilKind(req.draft.kind) ? '/council' : '/write');
   });
 
   // ---- Connecting the firm's own mailbox (Tom, 10 November 2026: "We

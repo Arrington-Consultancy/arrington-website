@@ -137,7 +137,7 @@ ALTER TABLE dispatch_bookings ADD COLUMN IF NOT EXISTS status_checked_at TIMESTA
 CREATE TABLE IF NOT EXISTS compositions (
   id SERIAL PRIMARY KEY,
   brand VARCHAR(40) NOT NULL DEFAULT '',
-  kind VARCHAR(20) NOT NULL DEFAULT 'new' CHECK (kind IN ('new', 'reply', 'outreach')),
+  kind VARCHAR(20) NOT NULL DEFAULT 'new' CHECK (kind IN ('new', 'reply', 'outreach', 'council_new', 'council_reply')),
   relationship VARCHAR(20) NOT NULL DEFAULT 'new' CHECK (relationship IN ('familiar', 'new', 'formal')),
   to_name VARCHAR(160) NOT NULL DEFAULT '',
   to_address VARCHAR(200) NOT NULL DEFAULT '',
@@ -158,3 +158,12 @@ CREATE TABLE IF NOT EXISTS compositions (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS compositions_by_idx ON compositions (created_by, updated_at DESC);
+-- Writing to the council (10 November 2026): an existing database widens
+-- the kinds once; a database that already allows them is left alone.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'compositions'::regclass AND conname = 'compositions_kind_check' AND pg_get_constraintdef(oid) LIKE '%council_reply%') THEN
+    ALTER TABLE compositions DROP CONSTRAINT IF EXISTS compositions_kind_check;
+    ALTER TABLE compositions ADD CONSTRAINT compositions_kind_check CHECK (kind IN ('new', 'reply', 'outreach', 'council_new', 'council_reply'));
+  END IF;
+END $$;

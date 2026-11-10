@@ -225,8 +225,12 @@ class Store {
   }
   // Drafts a person may see: their own, or, for a manager or the owner,
   // everyone's in the companies they see.
-  async compositions({ userId, brand, limit = 50 } = {}) {
+  // council: true lists only the drafts written to the council, false
+  // leaves them out (they live on the Council page, for managers and owners).
+  async compositions({ userId, brand, council, limit = 50 } = {}) {
     const where = ["status <> 'discarded'"]; const params = [];
+    if (council === true) where.push("kind LIKE 'council_%'");
+    if (council === false) where.push("kind NOT LIKE 'council_%'");
     if (userId) { params.push(userId); where.push(`created_by = $${params.length}`); }
     if (brand) { params.push(brand); where.push(`brand = $${params.length}`); }
     params.push(limit);

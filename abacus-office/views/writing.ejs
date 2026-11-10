@@ -3,18 +3,18 @@
   var notes = Array.isArray(c.guidance) ? c.guidance : [];
   var when = function (d) { return new Date(d).toLocaleString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); };
 %>
-<p class="to-back"><a href="/write">Write</a></p>
+<p class="to-back"><a href="<%= council ? '/council' : '/write' %>"><%= council ? 'Council' : 'Write' %></a></p>
 <div class="to-email-grid">
   <article class="to-email" aria-label="What was asked for">
     <header>
       <p class="to-email-from"><%= kinds[c.kind] %></p>
-      <p class="to-email-when">From <%= companyName %>, to <%= relationships[c.relationship] ? relationships[c.relationship].label.toLowerCase() : c.relationship %><%= c.to_name ? ': ' + c.to_name : '' %>. Started by <%= c.created_by_name || 'someone' %> <%= when(c.created_at) %>.</p>
+      <p class="to-email-when">From <%= companyName %>, to <%= council ? 'the council' : (relationships[c.relationship] ? relationships[c.relationship].label.toLowerCase() : c.relationship) %><%= c.to_name ? ': ' + c.to_name : '' %>. Started by <%= c.created_by_name || 'someone' %> <%= when(c.created_at) %>.</p>
       <h1 class="to-email-subject">What it is for</h1>
     </header>
     <div class="to-email-body"><%= c.prompt %></div>
     <% if (c.quoted) { %>
     <section class="to-panel">
-      <p class="to-worker-tag">The email being answered</p>
+      <p class="to-worker-tag"><%= council ? "The council's email being answered" : 'The email being answered' %></p>
       <div class="to-email-body"><%= c.quoted %></div>
     </section>
     <% } %>
@@ -43,7 +43,7 @@
           <button type="submit" class="to-btn to-btn-primary" formaction="/write/<%= c.id %>/approve" data-confirm="Approve this email? <%= mailboxCanHold ? 'It will wait as a draft in the mailbox for you to send.' : 'No mailbox is connected, so you copy it into your email to send it.' %>" data-busy="Approving..."><%= c.status === 'approved' ? 'Approve again' : 'Approve' %></button>
           <button type="button" class="to-btn to-btn-quiet" data-copy="<%= 'Subject: ' + c.subject + '\n\n' + c.body %>">Copy</button>
         </div>
-        <label class="to-field"><span>Guide the AI</span><textarea id="guidance" name="guidance" rows="2" maxlength="1200" placeholder="For example: shorter, and mention we do school runs too. Or: they are a regular, keep it friendly."></textarea></label>
+        <label class="to-field"><span>Guide the AI</span><textarea id="guidance" name="guidance" rows="2" maxlength="1200" placeholder="<%= council ? 'For example: say the certificate is attached, and ask them to confirm the licence is back in date. Or: give the reference in the first line.' : 'For example: shorter, and mention we do school runs too. Or: they are a regular, keep it friendly.' %>"></textarea></label>
         <button type="submit" class="to-btn to-btn-quiet" formaction="/write/<%= c.id %>/guide" data-busy="Redrafting...">Redraft with this</button>
       </form>
       <p class="to-small">Nothing is sent from the office. <%= mailboxCanHold ? 'Approving saves it as a draft in the company mailbox; a person sends it.' : 'Copy an approved email into your own email and send it from there.' %></p>

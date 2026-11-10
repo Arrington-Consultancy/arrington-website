@@ -10366,3 +10366,22 @@ case screen shows the council panel in place of the customer facts; the old
 "no reply to draft" panel is gone. The made-up council email has a prepared
 answer (`preparedCouncil`). `test/abacusOfficeCouncil.test.js` (5; the
 manager-only approval watched red).
+
+**Writing to the council (10/11/2026, Tom: "So council we need a compose
+section where we can send an out message and steer the AI AND PASTE
+RELPLIES").** The Council page has a "Write to the council" form: a new
+email to the council, or a reply with the council's email pasted in. It uses
+the Write worker (`/write/:id`: edit, Guide the AI, approve into the mailbox
+as a draft, discard) with two compose kinds, `council_new` and
+`council_reply` (`COUNCIL_KINDS` in `abacus-office/lib/compose.js`, always
+formal, "Dear Licensing Team," or the officer, "Kind regards,"; the
+`COUNCIL` block forbids inventing a rule, fee, date or reference and saying
+anything was sent unless staff said so; a reply answers each point and
+lists in held_back any point staff gave no answer to). Managers and owners
+only: an operator gets 404 posting a council kind or opening a council
+draft; council drafts are listed on the Council page, not on Write. The
+compositions kind CHECK is widened once by a guarded `DO` block in
+`db/schema.sql`. **Found on the way:** Discard on any Write draft gave a 500
+(the handler used `res` without taking it), and an action that redirects
+itself could redirect twice; both fixed (`res.locals.redirected`). Tests in
+`test/abacusOfficeCouncil.test.js`.
