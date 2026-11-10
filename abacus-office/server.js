@@ -14,7 +14,7 @@ const ai = require('./lib/ai');
 const alerts = require('./lib/alerts');
 const { describeDispatchStatus } = require('./lib/dispatch');
 const crypto = require('crypto');
-const { summaryLine: visitLine } = require('./lib/visits');
+const notify = require('./lib/notify');
 
 const PORT = Number(process.env.PORT || 3400);
 const production = process.env.NODE_ENV === 'production' || Boolean(process.env.RAILWAY_ENVIRONMENT);
@@ -54,6 +54,7 @@ async function main() {
   console.log(ai.describeAiStatus());
   console.log(alerts.describeAlertStatus());
   console.log(describeDispatchStatus());
+  console.log(notify.describeNoticeStatus());
   console.log(`Abacus office brands: ${f.brands.map((b) => `${b.id} (${b.name}${b.logo ? ', logo' : ', no logo yet'})`).join(', ')}; the mailbox is ${f.mailboxBrand}; logo ${f.logo || 'none, lettered square'}`);
   // A case or user still carrying a company that is no longer set up goes
   // to the mailbox's company (cases) or to every company (users), so
@@ -93,7 +94,7 @@ async function main() {
     const n = await office.nudge(alerts, baseUrl);
     if (n.nudged) console.log(`Abacus office: ${n.nudged} complaint(s) passed up to a manager by the nudge${n.emailed ? ', manager emailed' : ', no email configured'}`);
     // A visit with 20 quiet minutes is closed and written to the log.
-    for (const v of await store.closeVisits({ idleOnly: true, how: 'idle' })) console.log(visitLine(v));
+    notify.closed(await store.closeVisits({ idleOnly: true, how: 'idle' }));
   });
   setTimeout(() => { tick().then(sweep); }, 5000);
   setInterval(sweep, 5 * 60 * 1000).unref();

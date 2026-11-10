@@ -10399,3 +10399,18 @@ it is not hidden from him); deleted after 90 days. The log carries
 `Abacus office visit: <name>, <time>, <n> min, <steps>, ended ...: <what
 they did>`, so this worker can read a visit from Railway for Tom. No email
 is sent about a visit. `test/abacusOfficeVisits.test.js`.
+
+**Tom is emailed when Dan is in, and what he did (10/11/2026, Tom: "I want
+to know when he is in and what he does").** The office has no email account,
+so `abacus-office/lib/notify.js` posts a notice to the site's
+`POST /api/office-notice` (`routes/officeNotice.js`, mounted ahead of CSRF
+beside the CSP report route), which emails Tom through the guest-alert
+transport (`sendNotice`: from and to tom@, the caller cannot choose the
+recipient, subject on one line). Two emails per visit: "<name> is in the
+office now" at sign-in, "what <name> did (<n> min)" with every step when the
+visit ends (sign-out, or the 5-minute sweep after 20 quiet minutes).
+Watched usernames `ABACUS_OFFICE_WATCH_USERNAMES` (default `dan`; empty
+watches nobody). Key: `OFFICE_NOTICE_KEY` on arrington-prototype and
+`ABACUS_OFFICE_NOTICE_KEY` on abacus-office (a Railway reference to it), 32+
+characters, or the route 404s and the office sends nothing; both boot lines
+report the key's length only. `test/officeNotice.test.js`.

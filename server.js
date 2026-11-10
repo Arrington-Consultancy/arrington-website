@@ -18,6 +18,7 @@ const contentRoutes = require('./routes/content');
 const adminRoutes = require('./routes/admin');
 const leadRoutes = require('./routes/leads');
 const cspReportRoutes = require('./routes/cspReport');
+const officeNoticeRoutes = require('./routes/officeNotice');
 const marketReadyTest = require('./routes/marketReadyTest');
 const commercialGapsReview = require('./routes/commercialGapsReview');
 const whereToStart = require('./routes/whereToStart');
@@ -825,8 +826,11 @@ const { generateCsrfToken, doubleCsrfProtection } = doubleCsrf({
 });
 
 // Browsers POST CSP violation reports with no token, so this is mounted
-// ahead of the CSRF middleware. It is the only route that is.
+// ahead of the CSRF middleware. It and the office notices below are the only routes that are.
 app.use(cspReportRoutes);
+// The Abacus office's visit notices (routes/officeNotice.js): a server
+// caller carrying its own key, not a browser, so also ahead of CSRF.
+app.use(officeNoticeRoutes);
 
 // Apply CSRF to all non-GET routes
 app.use((req, res, next) => {
@@ -1505,6 +1509,7 @@ loadPermissions().then(() => {
     console.log(`[${isProd ? 'PROD' : 'DEV'}] Arrington CMS running on port ${PORT}`);
     console.log(require('./lib/scott/orchestrator').describeScottAIStatus());
     console.log(require('./lib/scott/gapNotifier').describeLoginAlerts());
+    console.log(officeNoticeRoutes.describeOfficeNotices());
     console.log(guestVisits.describeGuestVisits());
     guestVisits.startSweeping();
     // The taxi office's AI workers: which switch is set, and one tiny call

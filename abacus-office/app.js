@@ -27,6 +27,7 @@ const { Store, ROLES } = require('./lib/store');
 const { Office, canApprove, canReassign, canSee, scopeFor, caseScope, seesCouncil, needsManager, atLeast, label, brandName } = require('./lib/cases');
 const ai = require('./lib/ai');
 const visits = require('./lib/visits');
+const notify = require('./lib/notify');
 const alerts = require('./lib/alerts');
 const { createDispatch } = require('./lib/dispatch');
 const { longDate } = require('./lib/demoInbox');
@@ -161,7 +162,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   // Who has been in: every page opened and button pressed by a signed-in
   // person goes on their visit (lib/visits.js). Never awaited, never able
   // to break a page; a visit closed as idle is written to the log.
-  const logVisits = (rows) => { for (const v of rows || []) console.log(visits.summaryLine(v)); };
+  const logVisits = (rows) => notify.closed(rows);
   app.use((req, res, next) => {
     if (req.user && !visits.isBackground(req) && req.path !== '/login' && req.path !== '/logout') {
       store.touchVisit(req.user, visits.describe(req.method, req.path, req.query)).then(logVisits).catch((e) => console.error('Abacus office: visit not recorded', e.message));
@@ -194,6 +195,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
       // The visit opens before the redirect, so the first page after it
       // lands on this visit rather than racing it.
       console.log(`Abacus office: ${user.username} signed in`);
+      notify.signedIn(user).catch(() => {});
       await store.touchVisit(user, 'signed in', { fresh: true }).then(logVisits).catch((e) => console.error('Abacus office: visit not recorded', e.message));
       req.session.regenerate((err) => {
         if (err) return next(err);
