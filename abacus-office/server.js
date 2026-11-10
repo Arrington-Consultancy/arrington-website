@@ -46,7 +46,7 @@ async function main() {
   const store = new Store(pool);
   await store.ensureSchema();
   await ensureOwner(store);
-  const secret = String(process.env.SESSION_SECRET || '').trim();
+  const secret = String(process.env.SESSION_SECRET ?? '').trim();
   console.log(`Abacus office: session secret ${secret ? `set (${secret.length} chars)` : 'MISSING'}`);
   const f = firm();
   console.log(`Abacus office: firm "${f.name}", ${f.town}; ${f.demo ? 'MADE-UP DATA ONLY' : 'real mailbox configured'}`);
