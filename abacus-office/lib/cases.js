@@ -89,6 +89,9 @@ class Office {
   // the new cases. Reading them is a separate step so a slow model never
   // blocks the inbox arriving.
   async sync() {
+    // A real mailbox not connected yet has nothing to pull. Not an error:
+    // Settings says what it still needs.
+    if (!this.mailbox.demo && this.mailbox.configured && !this.mailbox.configured()) return [];
     const emails = await this.mailbox.listInbox({ max: 50, days: 14, today: this.today() });
     const created = [];
     for (const e of emails) {

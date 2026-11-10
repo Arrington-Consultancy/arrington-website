@@ -81,7 +81,7 @@ test('the mailbox mapping passes only ABACUS_OFFICE_* variables to a driver, nev
   assert.deepEqual(Object.keys(mapped).sort(), ['TAXI_OFFICE_DEMO_ADDRESS', 'TAXI_OFFICE_GMAIL_CLIENT_ID', 'TAXI_OFFICE_MAIL_DRIVER']);
   assert.equal(JSON.stringify(mapped).includes('tom'), false);
   assert.equal(JSON.stringify(mapped).includes('tidewell'), false);
-  assert.match(mailbox.describeMailStatus(env), /NOT configured, missing ABACUS_OFFICE_GMAIL_CLIENT_SECRET, ABACUS_OFFICE_GMAIL_REFRESH_TOKEN/);
+  assert.match(mailbox.describeMailStatus(env), /NOT connected, missing ABACUS_OFFICE_GMAIL_CLIENT_SECRET \(or enter it in Settings\), ABACUS_OFFICE_GMAIL_REFRESH_TOKEN \(or connect it from Settings\)/);
   assert.match(mailbox.describeMailStatus({}), /made-up inbox/);
   const box = mailbox.createMailbox({});
   assert.equal(box.demo, true);

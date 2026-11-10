@@ -50,12 +50,13 @@ async function main() {
   console.log(`Abacus office: session secret ${secret ? `set (${secret.length} chars)` : 'MISSING'}`);
   const f = firm();
   console.log(`Abacus office: firm "${f.name}", ${f.town}; ${f.demo ? 'MADE-UP DATA ONLY' : 'real mailbox configured'}`);
-  console.log(describeMailStatus());
   console.log(ai.describeAiStatus());
   console.log(alerts.describeAlertStatus());
   console.log(describeDispatchStatus());
   console.log(`Abacus office brands: ${f.brands.map((b) => `${b.id} (${b.name})`).join(', ')}; the mailbox is ${f.mailboxBrand}; logo ${f.logo || 'none, lettered square'}`);
-  const mailbox = createMailbox();
+  const mailbox = createMailbox(process.env, { store });
+  if (mailbox.reload) await mailbox.reload();
+  console.log(describeMailStatus(process.env, mailbox));
   const { app, office } = createApp({ pool, mailbox, firm: f, sessionSecret: secret, production });
   app.listen(PORT, () => console.log(`Abacus office running on port ${PORT}`));
 

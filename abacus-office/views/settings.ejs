@@ -43,6 +43,53 @@
     <button type="submit" class="to-btn to-btn-primary">Add price</button>
   </form>
 </section>
+<section class="to-panel" id="mailbox">
+  <h2>The bookings mailbox</h2>
+  <% if (mailboxDemo) { %>
+  <p>The office is reading a made-up inbox. The firm's real mailbox is connected only once the data processing agreement between the firm and Arrington Consultancy is signed.</p>
+  <% } else if (mailConnect.stored.connected) { %>
+  <p class="to-status-line"><strong><%= mailConnect.stored.account %></strong> is connected<% if (mailConnect.stored.by) { %>, by <%= mailConnect.stored.by %><% } %><% if (mailConnect.stored.at) { %> on <%= new Date(mailConnect.stored.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/London' }) %><% } %>. The office reads its inbox and saves approved replies there as drafts. It never sends.</p>
+  <% } else if (mailConnect.envToken) { %>
+  <p class="to-status-line">Connected through a token set on the server for <strong><%= mailConnect.address %></strong>. It reads the inbox and saves drafts. It never sends.</p>
+  <% } else { %>
+  <p>Not connected yet. Whoever can sign in to <strong><%= mailConnect.address || 'the bookings mailbox' %></strong> presses Connect, signs in to Google as that mailbox and presses Allow. The office checks Google gives back that exact address and refuses any other.</p>
+  <% } %>
+  <% if (!mailboxDemo && atLeast(user, 'owner')) { %>
+    <% if (mailConnect.keyReady && !mailConnect.clientInRailway) { %>
+    <form method="post" action="/settings/mailbox/client" class="to-form" autocomplete="off">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <p class="to-small"><%= mailConnect.stored.clientFromSettings ? 'Google client saved' + (mailConnect.stored.clientId ? ' (' + mailConnect.stored.clientId.slice(0, 12) + '...)' : '') + '. Enter it again only to replace it.' : 'First, the Google client details from the firm\'s Google Cloud project (see the steps below). They are typed in here so the secret never travels by email or chat.' %></p>
+      <div class="to-field-row">
+        <label class="to-field"><span>Client ID</span><input id="client_id" name="client_id" maxlength="120" required spellcheck="false" placeholder="ends .apps.googleusercontent.com"></label>
+        <label class="to-field"><span>Client secret</span><input id="client_secret" name="client_secret" type="password" maxlength="80" required spellcheck="false"></label>
+      </div>
+      <button type="submit" class="to-btn">Save the client details</button>
+    </form>
+    <% } %>
+    <% if (mailConnect.ready) { %>
+    <div class="to-actions">
+      <a class="to-btn <%= mailConnect.stored.connected ? '' : 'to-btn-primary' %>" href="/settings/mailbox/connect"><%= mailConnect.stored.connected ? 'Connect again' : 'Connect the mailbox' %></a>
+      <% if (mailConnect.stored.connected) { %>
+      <form method="post" action="/settings/mailbox/disconnect" class="to-inline-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="to-btn to-btn-quiet" data-confirm="Disconnect the mailbox? The office stops reading it straight away and the token is cancelled at Google.">Disconnect</button></form>
+      <% } %>
+    </div>
+    <p class="to-small">Google asks to read the mailbox and to create drafts in it. The office reads the inbox and saves replies as drafts only; a person sends them from the mailbox.</p>
+    <% } else { %>
+    <p class="to-small">Before it can be connected, this is still needed: <%= mailConnect.blockers.join('; ') %>.</p>
+    <% } %>
+  <% } %>
+  <details class="to-details">
+    <summary>Setting up the Google side (for whoever runs the firm's Google account)</summary>
+    <ol class="to-steps">
+      <li>In Google Cloud, in the firm's own Google Workspace, create a project and enable the Gmail API.</li>
+      <li>OAuth consent screen: user type Internal, so only the firm's own accounts can use it. Internal needs no Google review, and its tokens do not expire after seven days.</li>
+      <li>Credentials, Create OAuth client ID, Web application. Authorised redirect URI, exactly: <code><%= baseUrl %><%= mailConnect.redirectUri %></code></li>
+      <li>Sign in here as the owner and type the client ID and secret into the form above. Never send them by email or message.</li>
+      <li>Press Connect the mailbox and sign in to Google as the bookings mailbox.</li>
+    </ol>
+    <p class="to-small">If the mailbox is a free Gmail account rather than Google Workspace, Internal is not available. Use an app password over IMAP instead; Arrington sets that up.</p>
+  </details>
+</section>
 <section class="to-panel">
   <h2>Connections</h2>
   <p class="to-small">Set on the server by Arrington, never from this page. Values are never shown here.</p>

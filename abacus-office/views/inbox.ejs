@@ -3,6 +3,7 @@
   <h1>Inbox</h1>
   <p class="to-small">Every email from <%= mailboxLabel.toLowerCase() %>, read and sorted by the AI. Open one to see the draft and approve it.</p>
 </section>
+<% if (typeof mailError !== 'undefined' && mailError) { %><p class="to-note to-note-warn" role="status"><%= mailError %></p><% } %>
 <p class="to-live-line to-small" data-live-url="/live.json" data-live-stamp="<%= liveStamp %>"><span id="live-status">This page checks the mailbox itself every couple of minutes and refreshes when something changes.</span></p>
 <ul class="to-filter-bar">
   <% [['open', 'Open'], ['new', 'New'], ['mine', 'Mine'], ['waiting', 'Waiting on the customer'], ['done', 'Done'], ['all', 'All']].forEach(function (f) { %>

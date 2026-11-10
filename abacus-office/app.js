@@ -29,6 +29,9 @@ const ai = require('./lib/ai');
 const alerts = require('./lib/alerts');
 const { createDispatch } = require('./lib/dispatch');
 const { longDate } = require('./lib/demoInbox');
+const mailboxLib = require('./lib/mailbox');
+const secretBox = require('./lib/secretBox');
+const gmailConnect = require('../lib/taxiOffice/mail/gmailConnect');
 
 const ROOT = path.join(__dirname, '..');
 const DUMMY_HASH = bcrypt.hashSync(crypto.randomBytes(16).toString('hex'), 12);
@@ -37,7 +40,7 @@ function assetVersion(rel) {
   try { return crypto.createHash('sha256').update(fs.readFileSync(path.join(__dirname, 'public', rel))).digest('hex').slice(0, 10); } catch { return 'dev'; }
 }
 
-function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.SESSION_SECRET, production = process.env.NODE_ENV === 'production', aiOn = ai.aiEnabled, now = () => new Date(), alertsEnv = process.env, baseUrl = String(process.env.ABACUS_OFFICE_PUBLIC_URL || '').replace(/\/$/, '') }) {
+function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.SESSION_SECRET, production = process.env.NODE_ENV === 'production', aiOn = ai.aiEnabled, now = () => new Date(), alertsEnv = process.env, mailEnv = process.env, fetchImpl = globalThis.fetch, baseUrl = String(process.env.ABACUS_OFFICE_PUBLIC_URL || '').replace(/\/$/, '') }) {
   if (!sessionSecret || sessionSecret.length < 16) throw new Error('SESSION_SECRET must be set (16 characters or more)');
   const store = new Store(pool);
   if (!dispatch) dispatch = createDispatch({ store, prefix: String(firm.short || 'AB').replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase() || 'AB' });
@@ -200,11 +203,18 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   // this hour, so a person arriving sees today's emails without a button.
   let lastSync = 0;
   let syncing = false;
+  let mailError = '';
   async function settle() {
     if (syncing || Date.now() - lastSync < 2 * 60 * 1000) return;
     syncing = true;
-    try { await office.sync(); await office.readAllUnread(); lastSync = Date.now(); } catch (e) { console.error('Abacus office: sync failed', e.message); } finally { syncing = false; }
+    try { await office.sync(); mailError = ''; await office.readAllUnread(); lastSync = Date.now(); } catch (e) {
+      // Shown to staff on the inbox, so a mailbox that stops answering is
+      // seen rather than looking like a quiet day.
+      mailError = e.code === 'MAILBOX_REFUSED' ? `The mailbox was not read: ${e.message}.` : `The mailbox could not be read just now (${String(e.message).slice(0, 160)}). The office tries again every couple of minutes.`;
+      console.error('Abacus office: sync failed', e.message);
+    } finally { syncing = false; }
   }
+  app.use((req, res, next) => { res.locals.mailError = mailError; next(); });
   app.use(wrap(async (req, res, next) => { await settle(); next(); }));
   // The same pull on a timer, so an open page sees a new email within a
   // couple of minutes whether or not anyone touches it.
@@ -250,7 +260,12 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   }));
   app.post('/inbox/sync', wrap(async (req, res) => {
     lastSync = 0;
-    const created = await office.sync();
+    let created;
+    try { created = await office.sync(); mailError = ''; } catch (e) {
+      mailError = e.code === 'MAILBOX_REFUSED' ? `The mailbox was not read: ${e.message}.` : `The mailbox could not be read just now (${String(e.message).slice(0, 160)}).`;
+      flash(req, 'warn', mailError);
+      return res.redirect('/inbox');
+    }
     const read = await office.readAllUnread();
     lastSync = Date.now();
     flash(req, 'ok', `${created.length} new ${created.length === 1 ? 'email' : 'emails'} from ${mailbox.label}${read ? `, ${read} read` : ''}. The inbox also checks itself every couple of minutes.`);
@@ -363,7 +378,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   }));
 
   app.get('/settings', requireRole('manager'), wrap(async (req, res) => {
-    res.render('settings', { title: 'Settings', section: 'settings', hours: await store.escalationHours(), nudgeHours: await store.complaintNudgeHours(), prices: await store.fixedPrices(scopeFor(req.user)), brands: firm.brands || [], alertStatus: alerts.describeAlertStatus(alertsEnv), mailStatus: require('./lib/mailbox').describeMailStatus(), aiStatus: ai.describeAiStatus(), dispatchStatus: require('./lib/dispatch').describeDispatchStatus() });
+    res.render('settings', { baseUrl: baseUrl || `${req.protocol}://${req.get('host')}`, title: 'Settings', section: 'settings', hours: await store.escalationHours(), nudgeHours: await store.complaintNudgeHours(), prices: await store.fixedPrices(scopeFor(req.user)), brands: firm.brands || [], alertStatus: alerts.describeAlertStatus(alertsEnv), mailStatus: mailboxLib.describeMailStatus(mailEnv, mailbox), mailConnect: connectState(), aiStatus: ai.describeAiStatus(), dispatchStatus: require('./lib/dispatch').describeDispatchStatus() });
   }));
   app.post('/settings', requireRole('owner'), wrap(async (req, res) => {
     const n = Number(req.body.escalation_hours);
@@ -395,6 +410,85 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     if (row) { await store.deleteFixedPrice(id); await store.addEvent(null, { actor: req.user, kind: 'price_removed', detail: `Fixed price removed: ${row.from_place} to ${row.to_place}, ${row.vehicle}` }); }
     flash(req, 'ok', row ? 'Price removed.' : 'That price was already gone.');
     res.redirect('/settings');
+  }));
+
+  // ---- Connecting the firm's own mailbox (Tom, 10 November 2026: "We
+  // need the email api as well"). The owner presses Connect in Settings,
+  // signs in to Google as the firm's mailbox, and the token comes straight
+  // back here, sealed into the database. It is never shown, so nobody has
+  // to copy it into a chat, an email or a variable. Google's answer is
+  // checked: a token for any other address is cancelled on the spot.
+  // Connecting needs the driver set to gmail, which is Tom's to do in
+  // Railway once the data processing agreement is signed.
+  const callbackUrl = (req) => `${baseUrl || `${req.protocol}://${req.get('host')}`}/settings/mailbox/callback`;
+  const effEnv = () => (mailbox.effectiveEnv ? mailbox.effectiveEnv() : mailboxLib.driverEnv(mailEnv));
+  function connectState() {
+    const env = effEnv();
+    const blockers = [];
+    if (mailboxLib.driverName(mailEnv) !== 'gmail') blockers.push('ABACUS_OFFICE_MAIL_DRIVER is not gmail (set it only once the data processing agreement is signed)');
+    if (!mailboxLib.expectedAddress(mailEnv)) blockers.push('ABACUS_OFFICE_MAILBOX_ADDRESS, the bookings mailbox\'s own address');
+    gmailConnect.missing(env).forEach((v) => blockers.push(`the Google client ${/SECRET/.test(v) ? 'secret' : 'ID'} (in the form above)`));
+    if (!secretBox.available(mailEnv)) blockers.push(`ABACUS_OFFICE_TOKEN_KEY (${secretBox.MIN_KEY} characters or more), which seals the token`);
+    const stored = mailbox.stored ? mailbox.stored() : { connected: false };
+    return { ready: blockers.length === 0, blockers, stored, driverGmail: mailboxLib.driverName(mailEnv) === 'gmail', keyReady: secretBox.available(mailEnv), clientInRailway: Boolean(String(mailboxLib.driverEnv(mailEnv).TAXI_OFFICE_GMAIL_CLIENT_SECRET || '').trim()), address: mailboxLib.expectedAddress(mailEnv), redirectUri: '/settings/mailbox/callback', envToken: Boolean(String(env.TAXI_OFFICE_GMAIL_REFRESH_TOKEN || '').trim()) };
+  }
+  app.get('/settings/mailbox/connect', requireRole('owner'), wrap(async (req, res) => {
+    const c = connectState();
+    if (!c.ready) { flash(req, 'warn', `The mailbox cannot be connected yet. Still needed: ${c.blockers.join('; ')}.`); return res.redirect('/settings#mailbox'); }
+    const state = crypto.randomBytes(24).toString('hex');
+    req.session.mailboxConnectState = state;
+    res.redirect(gmailConnect.authorizeUrl({ env: effEnv(), redirectUri: callbackUrl(req), state, loginHint: c.address }));
+  }));
+  app.get('/settings/mailbox/callback', requireRole('owner'), wrap(async (req, res) => {
+    const expected = req.session.mailboxConnectState;
+    delete req.session.mailboxConnectState;
+    const c = connectState();
+    const back = (tone, message) => { flash(req, tone, message); res.redirect('/settings#mailbox'); };
+    if (!c.ready) return back('warn', `The mailbox cannot be connected yet. Still needed: ${c.blockers.join('; ')}.`);
+    if (req.query.error) return back('warn', `Google did not connect it: ${String(req.query.error).slice(0, 100)}.`);
+    if (!expected || req.query.state !== expected) return back('warn', 'That could not be checked as the connection you started. Start again from Settings, in an ordinary browser window.');
+    if (typeof req.query.code !== 'string' || !req.query.code) return back('warn', 'Google did not send back what it should. Start again.');
+    const result = await gmailConnect.finish({ env: effEnv(), code: req.query.code, redirectUri: callbackUrl(req), expected: c.address, fetch: fetchImpl, mailboxName: 'the bookings mailbox' });
+    if (!result.ok) {
+      console.warn(`Abacus office: mailbox connection refused: ${result.message}`);
+      await store.addEvent(null, { actor: req.user, kind: 'mailbox_refused', detail: `Mailbox connection refused${result.account ? ` (${result.account})` : ''}` });
+      return back('warn', result.message);
+    }
+    await store.setSetting(mailboxLib.STORED.token, secretBox.seal(result.refreshToken, mailEnv));
+    await store.setSetting(mailboxLib.STORED.account, result.account);
+    await store.setSetting(mailboxLib.STORED.by, req.user.display_name || req.user.username);
+    await store.setSetting(mailboxLib.STORED.at, new Date().toISOString());
+    await store.addEvent(null, { actor: req.user, kind: 'mailbox_connected', detail: `Mailbox ${result.account} connected` });
+    console.log(`Abacus office: mailbox ${result.account} connected from Settings by ${req.user.username}; token sealed in the database`);
+    if (mailbox.reload) await mailbox.reload();
+    lastSync = 0;
+    back('ok', `${result.account} is connected. The inbox fills from it within a couple of minutes, and replies are saved there as drafts. Nothing is sent from the office.`);
+  }));
+  app.post('/settings/mailbox/client', requireRole('owner'), wrap(async (req, res) => {
+    const id = String(req.body.client_id || '').trim();
+    const secret = String(req.body.client_secret || '').trim();
+    if (!secretBox.available(mailEnv)) { flash(req, 'warn', 'The server is not ready to keep a secret yet (ABACUS_OFFICE_TOKEN_KEY). Nothing was saved.'); return res.redirect('/settings#mailbox'); }
+    if (!/^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(id)) { flash(req, 'warn', 'That does not look like a Google client ID. It ends .apps.googleusercontent.com. Nothing was saved.'); return res.redirect('/settings#mailbox'); }
+    if (!/^[A-Za-z0-9_-]{20,80}$/.test(secret)) { flash(req, 'warn', 'That does not look like a Google client secret. Copy it again from Google Cloud. Nothing was saved.'); return res.redirect('/settings#mailbox'); }
+    await store.setSetting(mailboxLib.CLIENT.id, id);
+    await store.setSetting(mailboxLib.CLIENT.secret, secretBox.seal(secret, mailEnv));
+    await store.addEvent(null, { actor: req.user, kind: 'mailbox_client_saved', detail: 'Google client details saved for the mailbox connection' });
+    if (mailbox.reload) await mailbox.reload();
+    flash(req, 'ok', 'Saved. The secret is sealed and is not shown again. Now press Connect the mailbox.');
+    res.redirect('/settings#mailbox');
+  }));
+  app.post('/settings/mailbox/disconnect', requireRole('owner'), wrap(async (req, res) => {
+    const sealed = await store.setting(mailboxLib.STORED.token);
+    const token = sealed ? secretBox.open(sealed, mailEnv) : null;
+    if (token) {
+      // Cancel it at Google too, so the old token is useless wherever it is.
+      try { await fetchImpl('https://oauth2.googleapis.com/revoke', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ token }).toString() }); } catch { /* best effort */ }
+    }
+    for (const k of Object.values(mailboxLib.STORED)) await store.setSetting(k, '');
+    await store.addEvent(null, { actor: req.user, kind: 'mailbox_disconnected', detail: 'Mailbox disconnected' });
+    if (mailbox.reload) await mailbox.reload();
+    flash(req, 'ok', 'The mailbox is disconnected and its token cancelled at Google. Nothing more is read from it.');
+    res.redirect('/settings#mailbox');
   }));
 
   app.use((req, res) => res.status(404).render('missing', { title: 'Not found' }));

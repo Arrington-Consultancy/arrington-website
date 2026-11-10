@@ -405,3 +405,10 @@ p { margin: 0 0 0.8rem; }
 .to-panel { min-width: 0; }
 .to-history li { grid-template-columns: 7.5rem minmax(0, 1fr); }
 .to-history span { min-width: 0; overflow-wrap: anywhere; }
+
+/* The bookings mailbox panel in Settings. */
+.to-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.8rem; margin: 0.8rem 0 0.4rem; }
+.to-actions .to-inline-form { margin: 0; }
+.to-details { margin-top: 1rem; border-top: 1px solid var(--line); padding-top: 0.8rem; }
+.to-details summary { cursor: pointer; font-weight: 600; }
+.to-details code { overflow-wrap: anywhere; }

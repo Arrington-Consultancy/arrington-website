@@ -51,23 +51,122 @@ function demoDriver() {
   };
 }
 
-function createMailbox(env = process.env) {
-  const name = driverName(env);
-  if (name === 'demo') return demoDriver();
-  if (!mail.DRIVERS[name]) throw new Error(`Unknown mailbox driver "${name}". Known: demo, ${Object.keys(mail.DRIVERS).filter((d) => d !== 'demo').join(', ')}`);
-  const box = mail.createMailbox(name, { env: driverEnv(env) });
-  box.demo = false;
+// The settings rows that hold a mailbox connected from Settings: the sealed
+// Gmail refresh token, which address it reads, and who connected it when.
+const STORED = { token: 'mailbox_gmail_token', account: 'mailbox_gmail_account', by: 'mailbox_gmail_connected_by', at: 'mailbox_gmail_connected_at' };
+// The Google client the firm creates, typed into Settings by the owner so
+// its secret never travels by email or chat. The secret is sealed like the
+// token; the client id is not a secret.
+const CLIENT = { id: 'mailbox_gmail_client_id', secret: 'mailbox_gmail_client_secret' };
+
+class MailboxRefused extends Error {
+  constructor(message) { super(message); this.code = 'MAILBOX_REFUSED'; }
+}
+
+const expectedAddress = (env = process.env) => String(env.ABACUS_OFFICE_MAILBOX_ADDRESS || '').trim().toLowerCase();
+
+// A real mailbox, wrapped so the office never reads or writes one it was
+// not given. Before the first read it asks the provider which address the
+// credentials open and refuses anything but ABACUS_OFFICE_MAILBOX_ADDRESS.
+// For Gmail the refresh token comes from the variable if it is set,
+// otherwise from the sealed copy saved when the firm connected it from
+// Settings; reload() picks up a new connection without a restart.
+function liveMailbox(name, env, { store, secretEnv = env, fetch } = {}) {
+  const secretBox = require('./secretBox');
+  let inner = null;
+  let checkedFor = null;
+  let stored = { token: '', account: '', by: '', at: '', clientId: '', clientSecret: '' };
+
+  // The driver's variables: Railway's first, then what was saved from
+  // Settings for anything Railway does not set.
+  function effectiveEnv() {
+    const e = driverEnv(env);
+    const fill = (k, v) => { if (!String(e[k] || '').trim() && v) e[k] = v; };
+    if (name === 'gmail') {
+      fill('TAXI_OFFICE_GMAIL_CLIENT_ID', stored.clientId);
+      fill('TAXI_OFFICE_GMAIL_CLIENT_SECRET', stored.clientSecret);
+      fill('TAXI_OFFICE_GMAIL_REFRESH_TOKEN', stored.token);
+    }
+    return e;
+  }
+
+  function build() {
+    const e = effectiveEnv();
+    inner = mail.createMailbox(name, fetch ? { env: e, fetch } : { env: e });
+    checkedFor = null;
+  }
+
+  async function reload() {
+    if (store && name === 'gmail') {
+      const sealed = await store.setting(STORED.token).catch(() => '');
+      const sealedSecret = await store.setting(CLIENT.secret).catch(() => '');
+      stored = {
+        token: sealed ? (secretBox.open(sealed, secretEnv) || '') : '',
+        sealedButUnreadable: (Boolean(sealed) && !secretBox.open(sealed, secretEnv)) || (Boolean(sealedSecret) && !secretBox.open(sealedSecret, secretEnv)),
+        clientId: await store.setting(CLIENT.id).catch(() => ''),
+        clientSecret: sealedSecret ? (secretBox.open(sealedSecret, secretEnv) || '') : '',
+        account: await store.setting(STORED.account).catch(() => ''),
+        by: await store.setting(STORED.by).catch(() => ''),
+        at: await store.setting(STORED.at).catch(() => '')
+      };
+    }
+    build();
+    return box;
+  }
+
+  async function checked() {
+    if (!inner) build();
+    const refused = inner.refusal ? inner.refusal() : '';
+    if (refused) throw new MailboxRefused(refused);
+    if (!inner.configured()) throw new MailboxRefused(`${inner.label} is not connected yet`);
+    const want = expectedAddress(env);
+    if (!want) throw new MailboxRefused('ABACUS_OFFICE_MAILBOX_ADDRESS is not set, so the office does not know which mailbox it may read');
+    if (checkedFor === want) return inner;
+    const got = await inner.account();
+    if (got && got !== want) throw new MailboxRefused(`the credentials open ${got}, not ${want}; nothing was read`);
+    checkedFor = want;
+    return inner;
+  }
+
+  const box = {
+    name,
+    get label() { return (inner || (build(), inner)).label; },
+    demo: false,
+    configured: () => { if (!inner) build(); return inner.configured() && !(inner.refusal && inner.refusal()); },
+    missing: () => { if (!inner) build(); return inner.missing(); },
+    refusal: () => { if (!inner) build(); return inner.refusal ? inner.refusal() : ''; },
+    stored: () => ({ account: stored.account, by: stored.by, at: stored.at, connected: Boolean(stored.token), unreadable: Boolean(stored.sealedButUnreadable), clientId: stored.clientId, clientFromSettings: Boolean(stored.clientId && stored.clientSecret) }),
+    effectiveEnv,
+    expected: () => expectedAddress(env),
+    reload,
+    async listInbox(opts) { return (await checked()).listInbox(opts); },
+    async saveReplyDraft(email, text) { return (await checked()).saveReplyDraft(email, text); },
+    async account() { if (!inner) build(); return inner.account(); }
+  };
   return box;
 }
 
-function describeMailStatus(env = process.env) {
+function createMailbox(env = process.env, { store, fetch } = {}) {
+  const name = driverName(env);
+  if (name === 'demo') return demoDriver();
+  if (!mail.DRIVERS[name]) throw new Error(`Unknown mailbox driver "${name}". Known: demo, ${Object.keys(mail.DRIVERS).filter((d) => d !== 'demo').join(', ')}`);
+  return liveMailbox(name, env, { store, fetch });
+}
+
+function describeMailStatus(env = process.env, box = null) {
   const name = driverName(env);
   if (name === 'demo') return 'Abacus office mailbox: made-up inbox (no real mailbox is connected; nothing is read from or saved to a live account)';
   if (!mail.DRIVERS[name]) return `Abacus office mailbox: unknown driver "${name}"; the office will not start`;
-  const box = createMailbox(env);
+  if (!box) box = createMailbox(env);
   const refused = box.refusal ? box.refusal() : '';
-  const state = refused ? `REFUSED: ${refused}` : box.configured() ? 'configured' : `NOT configured, missing ${box.missing().map((v) => v === 'TAXI_OFFICE_DEMO_ADDRESS' ? 'ABACUS_OFFICE_MAILBOX_ADDRESS' : v.replace(/^TAXI_OFFICE_/, 'ABACUS_OFFICE_')).join(', ')}`;
-  return `Abacus office mailbox: ${box.label}, ${state}`;
+  const s = box.stored ? box.stored() : {};
+  const via = s.connected ? `, connected from Settings${s.by ? ` by ${s.by}` : ''}${s.at ? ` on ${s.at.slice(0, 10)}` : ''}` : '';
+  const unreadable = s.unreadable ? ' (a token was saved from Settings but ABACUS_OFFICE_TOKEN_KEY no longer opens it; connect again)' : '';
+  const want = expectedAddress(env);
+  const state = refused ? `REFUSED: ${refused}`
+    : box.configured() ? `configured${via}`
+    : `NOT connected, missing ${box.missing().map((v) => v === 'TAXI_OFFICE_DEMO_ADDRESS' ? 'ABACUS_OFFICE_MAILBOX_ADDRESS' : v === 'TAXI_OFFICE_GMAIL_REFRESH_TOKEN' ? 'ABACUS_OFFICE_GMAIL_REFRESH_TOKEN (or connect it from Settings)' : /GMAIL_CLIENT/.test(v) ? `${v.replace(/^TAXI_OFFICE_/, 'ABACUS_OFFICE_')} (or enter it in Settings)` : v.replace(/^TAXI_OFFICE_/, 'ABACUS_OFFICE_')).join(', ')}${unreadable}`;
+  return `Abacus office mailbox: ${box.label}${want ? ` for ${want}` : ''}, ${state}`;
 }
 
-module.exports = { createMailbox, describeMailStatus, driverName, driverEnv, MAPPED };
+module.exports = { createMailbox, describeMailStatus, driverName, driverEnv, expectedAddress, MailboxRefused, STORED, CLIENT, MAPPED };
