@@ -24,7 +24,7 @@ const morgan = require('morgan');
 const fs = require('fs');
 
 const { Store, ROLES } = require('./lib/store');
-const { Office, canApprove, canReassign, canSee, scopeFor, needsManager, atLeast, label, brandName } = require('./lib/cases');
+const { Office, canApprove, canReassign, canSee, scopeFor, caseScope, needsManager, atLeast, label, brandName } = require('./lib/cases');
 const ai = require('./lib/ai');
 const alerts = require('./lib/alerts');
 const { createDispatch } = require('./lib/dispatch');
@@ -146,7 +146,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
       res.locals.user = req.user;
       res.locals.csrfToken = generateCsrfToken(req, res);
       if (req.session.flash) { res.locals.flash = req.session.flash; delete req.session.flash; }
-      res.locals.counts = req.user ? await store.counts(scopeFor(req.user)) : null;
+      res.locals.counts = req.user ? await store.counts(caseScope(req.user)) : null;
       next();
     } catch (e) { next(e); }
   });
@@ -228,17 +228,17 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   // the case count plus the latest change, scoped to what this user sees.
   app.get('/live.json', wrap(async (req, res) => {
     res.set('Cache-Control', 'no-store');
-    res.json({ stamp: await store.liveStamp(scopeFor(req.user)), checkedAt: lastSync, syncing: syncing });
+    res.json({ stamp: await store.liveStamp(caseScope(req.user)), checkedAt: lastSync, syncing: syncing });
   }));
 
   app.get('/', wrap(async (req, res) => {
-    const scope = scopeFor(req.user);
+    const scope = caseScope(req.user);
     const [overdue, passedUp, mine, open, recent, stamp] = await Promise.all([
       store.listCases({ escalated: true, brand: scope, limit: 20 }),
       store.listCases({ passedUp: true, brand: scope, limit: 20 }),
       store.listCases({ ownerId: req.user.id, open: true, brand: scope, limit: 20 }),
       store.listCases({ open: true, brand: scope, limit: 50 }),
-      store.recentEvents(12),
+      store.recentEvents(12, scope),
       store.liveStamp(scope)
     ]);
     const showPassedUp = atLeast(req.user, 'manager') ? passedUp : [];
@@ -253,7 +253,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
 
   app.get('/inbox', wrap(async (req, res) => {
     const show = String(req.query.show || 'open');
-    const scope = scopeFor(req.user);
+    const scope = caseScope(req.user);
     const filter = { open: { open: true }, new: { status: 'new' }, mine: { ownerId: req.user.id, open: true }, waiting: { status: 'waiting' }, done: { status: 'done' }, all: {} }[show] || { open: true };
     const cases = await store.listCases({ ...filter, brand: scope, limit: 200 });
     res.render('inbox', { title: 'Inbox', section: 'inbox', cases, show, liveStamp: await store.liveStamp(scope), lastSync });
@@ -273,7 +273,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   }));
 
   app.get('/complaints', wrap(async (req, res) => {
-    const scope = scopeFor(req.user);
+    const scope = caseScope(req.user);
     const cases = (await store.listCases({ kind: 'complaints', brand: scope, limit: 200 })).filter((c) => req.query.show === 'all' || c.status !== 'done');
     const order = { safety: 0, serious: 1, minor: 2, none: 3 };
     cases.sort((a, b) => (order[a.seriousness] - order[b.seriousness]) || (new Date(a.received_at) - new Date(b.received_at)));
@@ -290,9 +290,21 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   app.get('/case/:id', loadCase, wrap(async (req, res) => {
     const kase = req.kase.reading || req.kase.reading_source !== 'none' ? req.kase : await office.read(req.kase, { actor: req.user });
     const [events, users] = await Promise.all([store.eventsFor(kase.id), store.users()]);
-    res.render('case', { title: kase.subject || 'Email', section: 'inbox', kase, events, users: users.filter((u) => u.active && (!u.brand || u.brand === (kase.brand || ''))), booking: office.bookingFrom(kase), dispatchRow: kase.dispatch_ref ? (await store.dispatchBookingsForCase(kase.id)).filter((b) => b.ref === kase.dispatch_ref).pop() || null : null, statusWords: require('./lib/icabbi').statusWords, holdingText: kase.kind === 'complaints' ? office.holdingText(kase) : '' });
+    res.render('case', { title: kase.subject || 'Email', section: 'inbox', kase, events, users: users.filter((u) => u.active && (atLeast(u, 'manager') || !u.brand || u.brand === (kase.brand || ''))), booking: office.bookingFrom(kase), dispatchRow: kase.dispatch_ref ? (await store.dispatchBookingsForCase(kase.id)).filter((b) => b.ref === kase.dispatch_ref).pop() || null : null, statusWords: require('./lib/icabbi').statusWords, holdingText: kase.kind === 'complaints' ? office.holdingText(kase) : '' });
   }));
   const act = (p, fn) => app.post(`/case/:id/${p}`, loadCase, wrap(async (req, res) => { await fn(req, res); if (!res.headersSent) res.redirect(`/case/${req.kase.id}`); }));
+  // Managers and owners put an email under the right company, when one
+  // mailbox serves more than one.
+  act('company', async (req) => {
+    if (!atLeast(req.user, 'manager')) { flash(req, 'warn', 'A manager or the owner moves an email to another company.'); return; }
+    const to = String(req.body.brand || '');
+    const target = (firm.brands || []).find((b) => b.id === to);
+    if (!target) { flash(req, 'warn', 'That company is not set up on this office.'); return; }
+    if ((req.kase.brand || '') === to) return;
+    await store.updateCase(req.kase.id, { brand: to });
+    await store.addEvent(req.kase.id, { actor: req.user, kind: 'company', detail: `Moved to ${target.name}` });
+    flash(req, 'ok', `Moved to ${target.name}.`);
+  });
   act('read', async (req) => { await office.read(req.kase, { actor: req.user, force: true }); flash(req, 'ok', 'Read again.'); });
   act('take', async (req) => { await office.take(req.kase, req.user); });
   act('assign', async (req) => {

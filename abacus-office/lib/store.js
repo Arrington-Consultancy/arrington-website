@@ -13,6 +13,21 @@ const STATUSES = ['new', 'in_progress', 'waiting', 'done'];
 const KINDS = ['unread', 'bookings', 'customer', 'complaints', 'licensing', 'other'];
 const DEFAULT_SETTINGS = { escalation_hours: '24', complaint_nudge_hours: '12' };
 
+// A list's scope: a company id (string) or { brand, hideCouncil }. An
+// undefined company is every company; hideCouncil leaves out the council
+// (licensing) emails, which only managers and owners see.
+function scopeOf(scope) {
+  if (scope && typeof scope === 'object') return { brand: scope.brand || '', hideCouncil: Boolean(scope.hideCouncil) };
+  return { brand: scope || '', hideCouncil: false };
+}
+function scopeWhere(scope, params, alias = '') {
+  const sc = scopeOf(scope);
+  const out = [];
+  if (sc.brand) { params.push(sc.brand); out.push(`${alias}brand = $${params.length}`); }
+  if (sc.hideCouncil) out.push(`${alias}kind <> 'licensing'`);
+  return out;
+}
+
 class Store {
   constructor(pool) { this.pool = pool; }
   q(text, params) { return this.pool.query(text, params); }
@@ -86,7 +101,7 @@ class Store {
     const add = (sql, v) => { params.push(v); where.push(sql.replace('?', `$${params.length}`)); };
     // brand: undefined means every brand (the office view); a string means
     // that brand only, which is what a brand's own staff get.
-    if (brand !== undefined && brand !== null && brand !== '') add('c.brand = ?', brand);
+    where.push(...scopeWhere(brand, params, 'c.'));
     if (status) add('c.status = ?', status);
     if (passedUp) where.push('c.passed_up_at IS NOT NULL AND c.approved_at IS NULL AND c.status <> \'done\'');
     if (kind) add('c.kind = ?', kind);
@@ -99,8 +114,9 @@ class Store {
        ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY c.received_at DESC LIMIT $${params.length}`, params);
     return r.rows;
   }
-  async counts(brand) {
-    const params = brand ? [brand] : [];
+  async counts(scope) {
+    const params = [];
+    const w = scopeWhere(scope, params);
     const r = await this.q(`SELECT
       count(*) FILTER (WHERE status = 'new')::int AS new_count,
       count(*) FILTER (WHERE status = 'in_progress')::int AS in_progress,
@@ -111,16 +127,21 @@ class Store {
       count(*) FILTER (WHERE escalated_at IS NOT NULL AND approved_at IS NULL AND status IN ('new', 'in_progress'))::int AS overdue,
       count(*) FILTER (WHERE kind = 'complaints' AND status <> 'done' AND passed_up_at IS NOT NULL AND approved_at IS NULL)::int AS passed_up,
       count(*) FILTER (WHERE kind = 'unread')::int AS unread
-      FROM cases${brand ? ' WHERE brand = $1' : ''}`, params);
+      FROM cases${w.length ? ` WHERE ${w.join(' AND ')}` : ''}`, params);
     return r.rows[0];
   }
   // One value that changes whenever anything a list page shows has changed,
   // so a page can ask "anything new?" cheaply and reload only then.
-  async liveStamp(brand) {
-    const params = brand ? [brand] : [];
+  async liveStamp(scope) {
+    const params = [];
+    const wc = scopeWhere(scope, params, 'c.');
+    const sc = scopeOf(scope);
+    const ek = [];
+    if (sc.brand) ek.push('k.brand = $1');
+    if (sc.hideCouncil) ek.push("k.kind <> 'licensing'");
     const r = await this.q(`SELECT count(*)::int AS n, coalesce(max(c.updated_at), 'epoch')::text AS latest,
-        coalesce((SELECT max(e.at) FROM case_events e JOIN cases k ON k.id = e.case_id${brand ? ' WHERE k.brand = $1' : ''}), 'epoch')::text AS latest_event
-      FROM cases c${brand ? ' WHERE c.brand = $1' : ''}`, params);
+        coalesce((SELECT max(e.at) FROM case_events e JOIN cases k ON k.id = e.case_id${ek.length ? ` WHERE ${ek.join(' AND ')}` : ''}), 'epoch')::text AS latest_event
+      FROM cases c${wc.length ? ` WHERE ${wc.join(' AND ')}` : ''}`, params);
     return `${r.rows[0].n}:${r.rows[0].latest}:${r.rows[0].latest_event}`;
   }
   async updateCase(id, fields) {
@@ -207,8 +228,18 @@ class Store {
     await this.q('INSERT INTO case_events (case_id, actor_id, actor_name, kind, detail) VALUES ($1, $2, $3, $4, $5)', [caseId, actor ? actor.id : null, actor ? (actor.display_name || actor.username) : 'the office', kind, String(detail).slice(0, 2000)]);
   }
   async eventsFor(caseId) { return (await this.q('SELECT * FROM case_events WHERE case_id = $1 ORDER BY at', [caseId])).rows; }
-  async recentEvents(limit = 100) {
-    return (await this.q('SELECT e.*, c.subject FROM case_events e LEFT JOIN cases c ON c.id = e.case_id ORDER BY e.at DESC LIMIT $1', [limit])).rows;
+  // The latest happenings. With a scope, only events on cases inside it
+  // (an operator never sees another company's or the council's subjects);
+  // office-wide events with no case are for managers and owners.
+  async recentEvents(limit = 100, scope) {
+    if (scope === undefined) return (await this.q('SELECT e.*, c.subject FROM case_events e LEFT JOIN cases c ON c.id = e.case_id ORDER BY e.at DESC LIMIT $1', [limit])).rows;
+    const params = [];
+    const w = scopeWhere(scope, params, 'c.');
+    const sc = scopeOf(scope);
+    const wide = sc.brand || sc.hideCouncil ? 'c.id IS NOT NULL' : 'TRUE';
+    params.push(limit);
+    return (await this.q(`SELECT e.*, c.subject FROM case_events e LEFT JOIN cases c ON c.id = e.case_id
+      WHERE ${[wide, ...w].join(' AND ')} ORDER BY e.at DESC LIMIT $${params.length}`, params)).rows;
   }
 }
 

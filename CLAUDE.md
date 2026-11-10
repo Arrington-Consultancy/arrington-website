@@ -10269,3 +10269,19 @@ wording after being told iCabbi know him from the Marketplace listing.
 - **Not built yet:** changing an existing iCabbi booking from a change
   email (`/bookings/update/{trip}` exists; staff change it in iCabbi for
   now), and iCabbi webhooks (polling is used instead).
+
+### Three companies, and council emails for managers only (10/11/2026)
+
+Tom: "three different companies that owners and managers can see, also
+managers and owners can see council worker". `canSee`, `scopeFor` and
+`caseScope` in `abacus-office/lib/cases.js` are the rule: owners and
+managers see every company and the council (licensing) emails whatever
+company they are set to; an operator sees the company set on their user
+(every company when none is set) and never a council email, not in a
+list, a count, the live stamp, Today's recent activity, or by the case's
+address (404). Managers and owners can move an email to another company
+from the case page ("Move to company"), which matters while one mailbox
+serves more than one company. The three companies are set as
+`ABACUS_OFFICE_BRANDS` on the abacus-office service (`id=Name; id=Name;
+id=Name`); not set yet, waiting on Tom's three names.
+`test/abacusOfficeVisibility.test.js` (two planted defects watched red).

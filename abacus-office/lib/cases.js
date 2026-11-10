@@ -55,12 +55,23 @@ function canApprove(user, kase) {
   if (needsManager(kase)) return atLeast(user, 'manager');
   return atLeast(user, 'operator');
 }
+// Who sees what (Tom, 10 November 2026: "three different companies that
+// owners and managers can see, also managers and owners can see council
+// worker"). Owners and managers see every company and the council emails.
+// An operator sees their own company only (every company when they have
+// none set) and never a council email.
+function seesCouncil(user) { return atLeast(user, 'manager'); }
 function canSee(user, kase) {
   if (!user || !kase) return false;
+  if (kase.kind === 'licensing' && !seesCouncil(user)) return false;
+  if (atLeast(user, 'manager')) return true;
   return !user.brand || user.brand === (kase.brand || '');
 }
-// Which brand's cases a user is shown: undefined is every brand.
-function scopeFor(user) { return user && user.brand ? user.brand : undefined; }
+// Which company's cases a user is shown: undefined is every company.
+function scopeFor(user) { return user && user.brand && !atLeast(user, 'manager') ? user.brand : undefined; }
+// The full scope for a list, count or live stamp: the company, and whether
+// council emails are left out.
+function caseScope(user) { return { brand: scopeFor(user), hideCouncil: !seesCouncil(user) }; }
 function canReassign(user, kase) {
   if (!user) return false;
   if (atLeast(user, 'manager')) return true;
@@ -390,4 +401,4 @@ function londonStamp(d) {
   return `${g('year')}-${g('month')}-${g('day')}T${g('hour') === '24' ? '00' : g('hour')}:${g('minute')}`;
 }
 
-module.exports = { Office, kindFor, canApprove, canReassign, canSee, scopeFor, needsManager, atLeast, label, londonStamp, brandName, LEVEL };
+module.exports = { Office, kindFor, canApprove, canReassign, canSee, scopeFor, caseScope, seesCouncil, needsManager, atLeast, label, londonStamp, brandName, LEVEL };
