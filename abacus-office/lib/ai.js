@@ -16,6 +16,7 @@
 
 const { WRITING, noDashes } = require('../../lib/taxiOffice/ai');
 const { humanise } = require('../../lib/taxiOffice/humanise');
+const { REQUIRED, missingFromReading } = require('./dispatch');
 const { firm: firmConfig } = require('./firm');
 
 const MODEL = (process.env.ABACUS_OFFICE_MODEL || 'claude-opus-5-5').trim();
@@ -77,7 +78,7 @@ const READ_SCHEMA = obj({
   customer_name: str,
   phone: str,
   reference: str,
-  journey: obj({ date: str, time: str, pickup: str, destination: str, passengers: str }),
+  journey: obj({ date: str, time: str, pickup: str, destination: str, passengers: str, flight: str }),
   missing: { type: 'array', items: str },
   seriousness: { type: 'string', enum: SERIOUSNESS },
   summary: str,
@@ -136,13 +137,14 @@ function readSystem(today, f) {
     'THE DETAILS',
     `- intent: new_booking (a new job), change (alter a job they already have), cancel, enquiry (a question about a journey that is not yet a booking), complaint (a customer unhappy with a journey, a driver, a car or a charge), lost_property, account (opening or asking about a business account or an invoice), council (anything from a council or its licensing team), other (anything else, including sales pitches and messages that are not for the office).`,
     '- Work out every date from the time the email was received: "tomorrow" is the day after it arrived and "yesterday" the day before. Write dates as YYYY-MM-DD and times as 24-hour HH:MM.',
-    '- journey: for a booking, change, cancellation, complaint or lost property email, the journey it is about as far as the email says; passengers as a number written as text, or an empty string. Empty strings for anything the email does not say. Never guess an address, a time or a phone number.',
-    '- missing: for a new booking only, what staff still need before it can be booked (for example "pickup address", "pickup time", "phone number"). Enough to book is a date, a pickup time, a pickup the driver can find, where they are going and a phone number. Empty otherwise.',
+    '- journey: for a booking, change, cancellation, complaint or lost property email, the journey it is about as far as the email says; passengers as a number written as text, or an empty string; flight as the flight number if one is given. Empty strings for anything the email does not say. Never guess an address, a time, a phone number or how many are travelling: "we" or "us" is not a number.',
+    `- missing: for a new booking only, what staff still need before it can be booked. A booking needs all of: ${REQUIRED.map(([, label]) => label).join(', ')}; and a flight number when the pickup is an airport. List each one the email does not give. Empty otherwise.`,
     '- seriousness: for a complaint, minor (a small delay, a manner, a small fare query), serious (a missed job, a wrong charge, a lost item of value, a repeated problem) or safety (a phone used while driving, dangerous driving, a car that is not safe, an assault or a threat, anything about a driver\'s fitness to hold a licence). For anything that is not a complaint, none.',
     '- summary: one plain sentence saying what the email wants.',
     '',
     'THE REPLY',
-    '- Assume staff will put a booking into the dispatch system before they send the reply, so the reply can confirm what the customer asked for; if details are missing, do not confirm, ask for exactly what is missing.',
+    '- Assume staff will put a booking into the dispatch system before they send the reply, so the reply can confirm what the customer asked for.',
+    '- If anything in the missing list is not in the email, do not confirm the booking: ask for every missing item in the one reply, in plain words, so the customer can answer in one go (for example a mobile number for the driver, how many people are travelling and whether there is much luggage, the full pickup address, the flight number). Never ask for something the email already gives.',
     '- Do not give a price, a time or a policy that the facts below do not support.',
     '- Never promise anything the email did not ask for.',
     '- For a complaint the reply is an empty string: the complaint is drafted separately with what the office knows. For a council email and for "other", the reply is an empty string.',
@@ -228,17 +230,21 @@ const s = (v, n) => noDashes(String(v || '').slice(0, n)).trim();
 function cleanReading(d) {
   const j = d.journey || {};
   const intent = INTENTS.includes(d.intent) ? d.intent : 'other';
-  return {
+  const out = {
     intent,
     customer_name: s(d.customer_name, 80),
     phone: s(d.phone, 30),
     reference: s(d.reference, 40),
-    journey: { date: s(j.date, 10), time: s(j.time, 5), pickup: s(j.pickup, 160), destination: s(j.destination, 160), passengers: s(j.passengers, 4) },
-    missing: (d.missing || []).map((x) => s(x, 60)).filter(Boolean).slice(0, 6),
+    journey: { date: s(j.date, 10), time: s(j.time, 5), pickup: s(j.pickup, 160), destination: s(j.destination, 160), passengers: s(j.passengers, 4).replace(/\D/g, ''), flight: s(j.flight, 12).toUpperCase().replace(/\s+/g, '') },
+    missing: [],
     seriousness: intent === 'complaint' ? (['minor', 'serious', 'safety'].includes(d.seriousness) ? d.seriousness : 'minor') : 'none',
     summary: noDashes(clip(d.summary, 300)),
     reply: ['complaint', 'council', 'other'].includes(intent) ? '' : humanise(String(d.reply || '').slice(0, 2500))
   };
+  // What is missing is decided by code from the fields, not by the model's
+  // own list: the reply then asks for every one of them (Tom, 10/11/2026).
+  if (intent === 'new_booking') out.missing = missingFromReading(out);
+  return out;
 }
 
 function cleanComplaint(d) {

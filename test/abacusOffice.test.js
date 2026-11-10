@@ -177,10 +177,24 @@ test('the AI recommends passing a complaint up, a safety matter always goes up, 
   assert.match(ai.complaintSystem('2026-11-09', { name: 'X', town: 'T', county: 'C', phone: '', signature: 'X', facts: [] }), /pass_to_manager: whether this one should be passed up/);
 
   const dispatch = require('../abacus-office/lib/dispatch');
-  const full = { date: '2026-11-13', time: '19:30', pickup: 'The Moor', destination: 'Penryn', name: 'Claire Rowe', phone: '07700 900999' };
+  const full = { date: '2026-11-13', time: '19:30', pickup: 'The Moor', destination: 'Penryn', name: 'Claire Rowe', phone: '07700 900999', passengers: '2' };
   assert.deepEqual(dispatch.cleanJob(full).missing, []);
   assert.deepEqual(dispatch.cleanJob({ ...full, phone: '' }).missing, ['a phone number']);
   assert.deepEqual(dispatch.cleanJob({ ...full, time: '7.30pm' }).missing, ['a time as HH:MM']);
+  assert.deepEqual(dispatch.cleanJob({ ...full, passengers: '' }).missing, ['how many passengers'], 'a job is never booked with the passengers guessed');
+  // What the reply asks the customer for is decided by code from the fields
+  // (Tom, 10/11/2026: "we need to ask for phone number, how many people etc"),
+  // so a model that writes an empty missing list still gets every question asked.
+  const reading = (over) => ai.cleanReading({ intent: 'new_booking', customer_name: 'Mark', phone: '', reference: '', journey: { date: '2026-11-14', time: '', pickup: 'Newquay Airport', destination: 'Falmouth', passengers: 'we', flight: '' }, missing: [], seriousness: 'none', summary: 's', reply: 'r', ...over });
+  const asked = reading({}).missing;
+  assert.ok(asked.some((x) => /mobile number/.test(x)), 'asks for a phone number');
+  assert.ok(asked.some((x) => /how many people/.test(x)), 'asks how many are travelling; "we" is not a number');
+  assert.ok(asked.some((x) => /pickup time/.test(x)));
+  assert.ok(asked.some((x) => /flight number/.test(x)), 'an airport pickup asks for the flight number');
+  assert.deepEqual(reading({ phone: '07700 900999', journey: { date: '2026-11-14', time: '09:00', pickup: '3 Fore Street', destination: 'Falmouth', passengers: '3', flight: '' } }).missing, [], 'nothing asked for when the email gives it all');
+  const sys = ai.readSystem('2026-11-10', { name: 'X', town: 'T', county: 'C', phone: '', signature: 'X', facts: [] });
+  for (const [, label] of dispatch.REQUIRED) assert.ok(sys.includes(label), `the reading prompt names ${label}`);
+  assert.match(sys, /ask for every missing item in the one reply/);
   // The live connection refuses until it has the firm's own API access, and
   // the refusal reaches the person as its own message, not a crash.
   const icabbi = dispatch.createDispatch({ store: {}, env: { ABACUS_OFFICE_DISPATCH_DRIVER: 'icabbi' } });
@@ -459,6 +473,10 @@ test('the office over HTTP: login, forced password change, one case per email, r
   let mails = 0;
   alerts.__setTransportFactoryForTests(() => ({ sendMail: async () => { mails += 1; return { messageId: 'm' }; } }));
   const alertsWithEnv = { sendEscalation: (args) => alerts.sendEscalation(args, env) };
+  // The made-up emails are dated from today, so which of them are more than
+  // 24 hours old depends on the time of day the test runs. Age three of
+  // the unapproved ones here so the sweep has a fixed set to find.
+  await pool.query("UPDATE cases SET received_at = now() - interval '30 hours' WHERE message_id IN ('<demo-account@example.invalid>', '<demo-umbrella@example.invalid>', '<demo-hocking@example.invalid>')");
   const first = await office.sweep(alertsWithEnv, base);
   assert.ok(first.escalated >= 3, `the cases older than 24 hours escalate (${first.escalated})`);
   assert.equal(first.emailed, true);

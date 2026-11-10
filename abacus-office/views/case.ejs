@@ -131,11 +131,14 @@
           <div class="to-field-row">
             <label class="to-field"><span>Passenger</span><input name="name" value="<%= booking.name %>" maxlength="80" required></label>
             <label class="to-field"><span>Phone</span><input name="phone" value="<%= booking.phone %>" maxlength="30" required></label>
-            <label class="to-field"><span>Passengers</span><input name="passengers" inputmode="numeric" value="<%= booking.passengers || '1' %>" maxlength="2"></label>
+            <label class="to-field"><span>Passengers</span><input name="passengers" inputmode="numeric" value="<%= booking.passengers %>" maxlength="2" required placeholder="How many"></label>
           </div>
           <div class="to-field-row is-two">
             <label class="to-field"><span>Vehicle</span><select name="vehicle"><% ['Car (up to 4)', 'Estate (up to 4, more luggage)', '6 seater', '8 seater', 'Wheelchair accessible'].forEach(function (v) { %><option><%= v %></option><% }) %></select></label>
             <label class="to-field"><span>Note for the driver (optional)</span><input name="notes" maxlength="300" placeholder="One suitcase, ring on arrival"></label>
+          </div>
+          <div class="to-field-row is-two">
+            <label class="to-field"><span>Flight number (airport pickups)</span><input name="flight" value="<%= booking.flight || '' %>" maxlength="12" placeholder="e.g. FR 1234"></label>
           </div>
           <label class="to-check-box"><input type="checkbox" name="signed_off" value="yes" required><span>I have checked this job against the customer's email and I am booking it.</span></label>
           <button type="submit" class="to-btn to-btn-primary" data-busy="Booking...">Book it in <%= dispatchLabel.replace(/ \(.*\)$/, '') %></button>

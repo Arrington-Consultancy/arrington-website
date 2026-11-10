@@ -259,7 +259,7 @@ ${this.firm.signature}`;
   // dispatch connection, which is the stand-in until iCabbi is connected.
   bookingFrom(kase) {
     const r = kase.reading || {}; const j = r.journey || {};
-    return { date: j.date || '', time: j.time || '', pickup: j.pickup || '', destination: j.destination || '', passengers: j.passengers || '', name: r.customer_name || '', phone: r.phone || '', vehicle: '', notes: '' };
+    return { date: j.date || '', time: j.time || '', pickup: j.pickup || '', destination: j.destination || '', passengers: j.passengers || '', name: r.customer_name || '', phone: r.phone || '', vehicle: '', notes: '', flight: j.flight || '' };
   }
   async book(kase, user, input, signedOff) {
     if (!this.dispatch) throw refuse('No dispatch connection is set up on this office.');

@@ -29,19 +29,47 @@ function driverName(env = process.env) {
   return LABELS[n] ? n : 'standin';
 }
 
-// What a job must carry before it can be booked anywhere. The reading gives
-// most of it; a member of staff fills or corrects the rest on the form.
-const REQUIRED = [['date', 'a date'], ['time', 'a pickup time'], ['pickup', 'a pickup address'], ['destination', 'a destination'], ['name', 'the passenger\'s name'], ['phone', 'a phone number']];
+// What a job must carry before it can be booked anywhere, and what a
+// booking reply must ask the customer for when the email does not say
+// (Tom, 10 November 2026: "when we reply AI to the customer we need to ask
+// for phone number, how many people etc"). One list, used by the reading,
+// the reply and the booking form, so the three cannot disagree. It is what
+// iCabbi's booking API takes: date, time, pickup, destination, the
+// passenger's name and phone, how many are travelling (which picks the
+// car), and a flight number when the pickup is an airport.
+const REQUIRED = [
+  ['date', 'a date', 'the date'],
+  ['time', 'a pickup time', 'the pickup time'],
+  ['pickup', 'a pickup address', 'the full pickup address'],
+  ['destination', 'a destination', 'where they are going'],
+  ['name', 'the passenger\'s name', 'the passenger\'s name'],
+  ['phone', 'a phone number', 'a mobile number for the driver'],
+  ['passengers', 'how many passengers', 'how many people are travelling (and any large luggage), so the right size of car is sent']
+];
+const AIRPORT = /\b(airport|terminal)\b/i;
+
+// What is still missing from a reading of a booking email, worked out in
+// plain code from the fields the reading holds, so the reply always asks
+// for it whatever the model wrote in its own list. Returns the customer
+// facing wording.
+function missingFromReading(reading) {
+  const r = reading || {}; const j = r.journey || {};
+  const have = { date: j.date, time: j.time, pickup: j.pickup, destination: j.destination, name: r.customer_name, phone: r.phone, passengers: j.passengers };
+  const out = REQUIRED.filter(([k]) => !String(have[k] || '').trim()).map(([, , ask]) => ask);
+  if (j.pickup && AIRPORT.test(j.pickup) && !String(j.flight || '').trim()) out.push('the flight number, so the driver can watch for a late arrival');
+  return out;
+}
 
 function cleanJob(input) {
   const s = (v, n) => String(v || '').replace(/\s+/g, ' ').trim().slice(0, n);
   const job = {
     date: s(input.date, 10), time: s(input.time, 5), pickup: s(input.pickup, 160), destination: s(input.destination, 160),
-    name: s(input.name, 80), phone: s(input.phone, 30), passengers: s(input.passengers, 3) || '1', vehicle: s(input.vehicle, 60) || 'Car (up to 4)', notes: s(input.notes, 300)
+    name: s(input.name, 80), phone: s(input.phone, 30), passengers: s(input.passengers, 3), vehicle: s(input.vehicle, 60) || 'Car (up to 4)', notes: s(input.notes, 300), flight: s(input.flight, 12)
   };
   const missing = REQUIRED.filter(([k]) => !job[k]).map(([, label]) => label);
   if (job.date && !/^\d{4}-\d{2}-\d{2}$/.test(job.date)) missing.push('a date as YYYY-MM-DD');
   if (job.time && !/^\d{2}:\d{2}$/.test(job.time)) missing.push('a time as HH:MM');
+  if (job.passengers && !/^\d{1,2}$/.test(job.passengers)) missing.push('passengers as a number');
   return { job, missing };
 }
 
@@ -87,4 +115,4 @@ function describeDispatchStatus(env = process.env) {
   return `Abacus office dispatch: iCabbi, ${d.configured ? 'credentials present, booking call not yet written' : 'NOT connected (needs ABACUS_OFFICE_ICABBI_BASE_URL, _API_KEY, _SECRET)'}`;
 }
 
-module.exports = { createDispatch, describeDispatchStatus, driverName, cleanJob, LABELS, DispatchNotConnected, REQUIRED };
+module.exports = { createDispatch, describeDispatchStatus, driverName, cleanJob, missingFromReading, LABELS, DispatchNotConnected, REQUIRED };

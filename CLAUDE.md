@@ -10184,6 +10184,20 @@ the inbox in another.
   swoosh `#3CAE9B`. **Open for Tom:** the email to Dan says "Cornwall
   Taxis" and the logo says "A2B Cornwall"; the firm name on production is
   still the default "Abacus Taxis" until Tom sets `ABACUS_OFFICE_FIRM_NAME`.
+- **The reply asks for what iCabbi needs (Tom, 10/11/2026: "when we reply
+  AI to the customer we need to ask for phone number, how many people
+  etc").** `REQUIRED` in `abacus-office/lib/dispatch.js` is the one list:
+  date, pickup time, full pickup address, destination, the passenger's
+  name, a mobile number for the driver, how many people are travelling
+  (and any large luggage), plus the flight number when the pickup is an
+  airport. `missingFromReading` works out what the email did not give in
+  plain code, so the reading's missing list no longer depends on the
+  model; the reply prompt names the same list and must ask for every
+  missing item in the one reply and never confirm until it has them;
+  "we" or "us" is not a passenger count. The booking form requires
+  passengers (no default of 1) and carries a flight number field, and
+  `cleanJob` refuses a job without a passenger count. The escalation
+  test now ages three cases itself: it had depended on the time of day.
 - **Voice** (Tom: "make sure its using the tone of voice used in tidewell
   cars"): the office imports the Tidewell `WRITING` block (Tom's 01A rules,
   copied 19/10/2026) and the same `humanise` cleanup rather than keeping a
