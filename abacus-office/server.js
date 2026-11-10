@@ -49,7 +49,7 @@ async function main() {
   const secret = String(process.env.SESSION_SECRET ?? '').trim();
   console.log(`Abacus office: session secret ${secret ? `set (${secret.length} chars)` : 'MISSING'}`);
   const f = firm();
-  console.log(`Abacus office: firm "${f.name}", ${f.town}; ${f.demo ? 'MADE-UP DATA ONLY' : 'real mailbox configured'}`);
+  console.log(`Abacus office: firm "${f.name}", ${f.town}; ${f.demo ? 'MADE-UP DATA ONLY' : String(process.env.ABACUS_OFFICE_MAIL_DRIVER || '').trim().toLowerCase() === 'none' ? 'no mailbox connected' : 'real mailbox configured'}`);
   console.log(ai.describeAiStatus());
   console.log(alerts.describeAlertStatus());
   console.log(describeDispatchStatus());
