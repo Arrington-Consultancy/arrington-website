@@ -11,4 +11,24 @@
 <% if (cases.length) { %>
 <ul class="to-cases"><% cases.forEach(function (c) { %><%- include('partials/case-row', { c: c }) %><% }) %></ul>
 <% } else { %><p class="to-empty">No complaints waiting.</p><% } %>
+<section class="to-panel" id="log-a-complaint">
+  <h2>Log a complaint</h2>
+  <p class="to-small">For a complaint that came in another way: a Google review, a Facebook comment or message, a phone call, someone at the office. Paste or type it in and say where it came from. The AI reads it with that in mind: a public review gets a short public reply that asks them to get in touch directly, anything else gets a full reply. You check it, guide it and approve it like any other.</p>
+  <form method="post" action="/complaints/log" class="to-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="to-field-row is-two">
+      <label class="to-field"><span>Where it came in</span><select id="log-channel" name="channel" required><option value="">Choose...</option><% Object.keys(channels).forEach(function (k) { %><option value="<%= k %>"><%= channels[k].label %></option><% }) %></select></label>
+      <label class="to-field"><span>When it came in</span><input id="log-date" name="date" type="date" max="<%= todayYmd %>" value="<%= todayYmd %>"></label>
+    </div>
+    <div class="to-field-row is-two">
+      <label class="to-field"><span>Their name (as shown, if any)</span><input id="log-name" name="name" maxlength="160" placeholder="Sarah P."></label>
+      <label class="to-field"><span>How to reach them (optional)</span><input id="log-contact" name="contact" maxlength="200" placeholder="Email address or phone number, if you have it"></label>
+    </div>
+    <% if (manyBrands && !ownBrand) { %>
+    <label class="to-field"><span>Which company it is about</span><select id="log-brand" name="brand"><% firm.brands.forEach(function (b) { %><option value="<%= b.id %>"<% if (b.id === firm.mailboxBrand) { %> selected<% } %>><%= b.name %></option><% }) %></select></label>
+    <% } %>
+    <label class="to-field"><span>The complaint</span><textarea id="log-text" name="text" rows="6" maxlength="8000" required placeholder="Paste the review or message, or type what they told you on the phone."></textarea></label>
+    <button type="submit" class="to-btn to-btn-primary" data-busy="Reading it...">Log it and draft a reply</button>
+  </form>
+</section>
 <%- include('partials/bottom') %>

@@ -10414,3 +10414,23 @@ watches nobody). Key: `OFFICE_NOTICE_KEY` on arrington-prototype and
 `ABACUS_OFFICE_NOTICE_KEY` on abacus-office (a Railway reference to it), 32+
 characters, or the route 404s and the office sends nothing; both boot lines
 report the key's length only. `test/officeNotice.test.js`.
+
+**Complaints from other channels (10/11/2026, Tom: "Complaints should have
+a text box we can put a complaint into ... google reviews, Facebook, email
+or other. The AI needs to know what channel so maybe have a drop down
+menu").** "Log a complaint" on the Complaints page: where it came in
+(`abacus-office/lib/channels.js`: Google review, Facebook review or comment,
+Facebook or Instagram message, email, phone call, in person, other), date,
+name, optional contact, company (managers and owners choose; an operator
+logs for their own), and the text. It becomes a complaint case
+(`cases.channel`, `cases.contact`; message id `<logged-...@office>`, so it is
+never mistaken for a mailbox email) and the AI drafts with the channel: a
+public review or comment gets a short public reply that thanks them, says
+sorry once only if the firm was at fault, asks them to get in touch, and
+carries no booking details, driver or what the office found, ending with the
+firm's name; a phone call or visit gets a follow-up message; the rest a full
+reply. Approving an email one with an address saves a new draft in the
+mailbox; anything else is approved for staff to copy and post or send where
+it came in (the case says where, with a Copy button). No mailbox holding
+reply on a typed-in complaint. Nothing is posted to Google or Facebook from
+the office. `test/abacusOfficeLoggedComplaints.test.js`.

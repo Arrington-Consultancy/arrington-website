@@ -93,6 +93,10 @@ ALTER TABLE cases ADD COLUMN IF NOT EXISTS council JSONB;
 ALTER TABLE cases ADD COLUMN IF NOT EXISTS dispatch_ref VARCHAR(60) NOT NULL DEFAULT '';
 ALTER TABLE cases ADD COLUMN IF NOT EXISTS booked_at TIMESTAMPTZ;
 ALTER TABLE cases ADD COLUMN IF NOT EXISTS booked_by INTEGER REFERENCES users(id) ON DELETE SET NULL;
+-- A complaint typed in by staff from another channel (10 November 2026):
+-- where it came in, and how to reach the customer if staff have it.
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS channel VARCHAR(20) NOT NULL DEFAULT 'email';
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS contact VARCHAR(200) NOT NULL DEFAULT '';
 
 -- What the stand-in dispatch holds. The live connection (iCabbi, on Dan's
 -- own account) replaces this table with the vendor's API; nothing here is

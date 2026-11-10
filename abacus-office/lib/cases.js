@@ -24,6 +24,8 @@ const { cleanJob } = require('./dispatch');
 const { brandName } = require('./firm');
 const { seedInbox, todayLondon } = require('./demoInbox');
 const { workerForIntent } = require('../../lib/taxiOffice/workers');
+const { CHANNELS, isChannel, isLogged } = require('./channels');
+const EMAIL_RE = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/;
 
 // Which worker an email belongs to, from its reading. The Tidewell office's
 // routing plus the intents this office reads that Tidewell's does not.
@@ -126,7 +128,26 @@ class Office {
   }
 
   emailOf(kase) {
-    return { id: kase.mailbox_email_id, from: kase.from_address, subject: kase.subject, body: kase.body, receivedAt: londonStamp(kase.received_at), threadId: kase.thread_id, messageId: kase.message_id };
+    return { id: kase.mailbox_email_id, from: kase.from_address, subject: kase.subject, body: kase.body, receivedAt: londonStamp(kase.received_at), threadId: kase.thread_id, messageId: kase.message_id, channel: kase.channel || 'email', logged: isLogged(kase) };
+  }
+
+  // A complaint that came in another way (a Google review, a Facebook
+  // comment, a phone call...), typed in by a member of staff. It is a
+  // complaint from the start; the AI reads it with its channel and drafts
+  // the reply that suits it. Returns the new case, read.
+  async logComplaint(user, input) {
+    const channel = isChannel(input.channel) ? input.channel : '';
+    if (!channel) throw refuse('Choose where the complaint came in.');
+    const text = String(input.text || '').replace(/\r\n/g, '\n').trim().slice(0, 8000);
+    if (text.length < 10) throw refuse('Paste or type the complaint itself.');
+    const name = String(input.name || '').replace(/\s+/g, ' ').trim().slice(0, 160);
+    const contact = String(input.contact || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+    const when = /^\d{4}-\d{2}-\d{2}$/.test(String(input.date || '')) ? new Date(`${input.date}T12:00:00Z`) : this.now();
+    if (when > this.now()) throw refuse('The date it came in cannot be in the future.');
+    const label = CHANNELS[channel].label;
+    const row = await this.store.insertLoggedComplaint({ brand: input.brand || '', channel, name: name || `Someone (${label.toLowerCase()})`, contact, subject: `${label}: ${text.split('\n')[0].slice(0, 80)}`, text, receivedAt: when });
+    await this.store.addEvent(row.id, { actor: user, kind: 'logged', detail: `Typed in from a ${label.toLowerCase()} by ${user.display_name || user.username}` });
+    return this.read(row, { actor: user });
   }
 
   // Read one case: the AI when it is on, otherwise the prepared answer for
@@ -144,6 +165,9 @@ class Office {
           const f = await this.firmFor(kase);
           reading = await ai.readEmail(this.emailOf(kase), this.today(), f);
           source = 'ai';
+          // Staff typed it in as a complaint, so it is one, whatever the
+          // reading made of it.
+          if (isLogged(kase)) reading = { ...reading, intent: 'complaint', reply: '' };
           if (reading.intent === 'complaint') complaint = await ai.draftComplaint({ email: this.emailOf(kase), notes: [] }, this.today(), f);
           if (reading.intent === 'council') council = await ai.draftCouncil({ email: this.emailOf(kase), notes: [] }, this.today(), f);
         } catch (e) {
@@ -152,7 +176,7 @@ class Office {
       }
       if (!reading) {
         const p = preparedFor(kase);
-        if (p) { reading = p.reading; complaint = p.complaint; council = p.council; source = 'prepared'; note += 'This is the answer prepared for the made-up inbox, not the AI\'s reading.'; }
+        if (p && !isLogged(kase)) { reading = p.reading; complaint = p.complaint; council = p.council; source = 'prepared'; note += 'This is the answer prepared for the made-up inbox, not the AI\'s reading.'; }
         else { note += this.aiOn() ? 'Read it yourself and write the reply below.' : 'The AI is switched off on this server, so read it yourself and write the reply below.'; }
       }
       const fields = { reading_source: source, reading_note: note.trim() };
@@ -165,6 +189,7 @@ class Office {
         fields.council = council;
         if (kase.status === 'new' && fields.kind === 'other') fields.status = 'done';
       }
+      if (isLogged(kase)) fields.kind = 'complaints';
       await this.store.updateCase(kase.id, fields);
       await this.store.addEvent(kase.id, { actor, kind: 'read', detail: reading ? `Read by ${source === 'ai' ? 'the AI' : 'the prepared answer'}: ${reading.summary}` : `Not read: ${note.trim()}` });
       return this.store.caseById(kase.id);
@@ -231,6 +256,7 @@ class Office {
   async approve(kase, user) {
     if (!canApprove(user, kase)) throw refuse(kase.kind === 'licensing' ? 'A reply to the council is approved by a manager or owner.' : needsManager(kase) ? (kase.passed_up_at ? 'This complaint was passed up, so a manager approves the reply.' : 'A safety matter needs a manager to approve the reply.') : 'You cannot approve this.');
     if (!String(kase.draft || '').trim()) throw refuse('There is no reply to approve.');
+    if (isLogged(kase)) return this.approveLogged(kase, user);
     const { draftId } = await this.mailbox.saveReplyDraft(this.emailOf(kase), kase.draft);
     await this.store.updateCase(kase.id, { approved_at: this.now(), approved_by: user.id, saved_draft_id: draftId || null, status: 'waiting', owner_id: kase.owner_id || user.id });
     await this.store.addEvent(kase.id, { actor: user, kind: 'approved', detail: this.mailbox.demo ? 'Reply approved. This is the made-up inbox, so the draft was saved nowhere.' : `Reply approved and saved as a draft in ${this.mailbox.label} for someone to send${draftId ? ` (draft ${draftId})` : ''}.` });
@@ -264,8 +290,25 @@ I'm sorry you've had cause to write to us. I've passed this to a manager so it g
 Thanks,
 ${this.firm.signature}`;
   }
+  // A complaint typed in from another channel: an email one with an
+  // address goes into the mailbox as a new draft, like any other reply;
+  // anything else is approved for staff to copy and post or send where it
+  // came in, and the case says where.
+  async approveLogged(kase, user) {
+    const ch = CHANNELS[kase.channel] || CHANNELS.other;
+    const canHold = !this.mailbox.demo && !this.mailbox.none && typeof this.mailbox.saveNewDraft === 'function' && (!this.mailbox.configured || this.mailbox.configured());
+    let draftId = null;
+    if (kase.channel === 'email' && EMAIL_RE.test(kase.contact || '') && canHold) {
+      draftId = (await this.mailbox.saveNewDraft(kase.contact, 'Your complaint', kase.draft)).draftId || null;
+    }
+    await this.store.updateCase(kase.id, { approved_at: this.now(), approved_by: user.id, saved_draft_id: draftId, status: 'waiting', owner_id: kase.owner_id || user.id });
+    await this.store.addEvent(kase.id, { actor: user, kind: 'approved', detail: draftId ? `Reply approved and saved as a draft in ${this.mailbox.label} to ${kase.contact} for someone to send.` : `Reply approved. It came in as a ${ch.label.toLowerCase()}: ${ch.send}` });
+    return { draftId, copyOut: !draftId, send: ch.send };
+  }
+
   async sendHolding(kase, user) {
     if (kase.kind !== 'complaints') throw refuse('A holding reply is for a complaint.');
+    if (isLogged(kase)) throw refuse('This complaint came in another way, so answer it with the reply below.');
     if (kase.holding_sent_at) throw refuse('The holding reply has already gone.');
     const text = this.holdingText(kase);
     const { draftId } = await this.mailbox.saveReplyDraft(this.emailOf(kase), text);

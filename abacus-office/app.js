@@ -27,6 +27,7 @@ const { Store, ROLES } = require('./lib/store');
 const { Office, canApprove, canReassign, canSee, scopeFor, caseScope, seesCouncil, needsManager, atLeast, label, brandName } = require('./lib/cases');
 const ai = require('./lib/ai');
 const visits = require('./lib/visits');
+const { CHANNELS, isLogged } = require('./lib/channels');
 const notify = require('./lib/notify');
 const alerts = require('./lib/alerts');
 const { createDispatch } = require('./lib/dispatch');
@@ -109,6 +110,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     res.locals.brandLogo = (id) => ((firm.brands || []).find((b) => b.id === id) || {}).logo || '';
     res.locals.barLogo = firm.logo;
     res.locals.manyBrands = (firm.brands || []).length > 1;
+    res.locals.channels = CHANNELS;
     res.locals.dispatchLabel = dispatch.label;
     res.locals.dispatchLive = Boolean(dispatch.live);
     res.locals.counts = null;
@@ -306,7 +308,23 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     const cases = (await store.listCases({ kind: 'complaints', brand: scope, limit: 200 })).filter((c) => req.query.show === 'all' || c.status !== 'done');
     const order = { safety: 0, serious: 1, minor: 2, none: 3 };
     cases.sort((a, b) => (order[a.seriousness] - order[b.seriousness]) || (new Date(a.received_at) - new Date(b.received_at)));
-    res.render('complaints', { title: 'Complaints', section: 'complaints', cases, showAll: req.query.show === 'all', liveStamp: await store.liveStamp(scope), lastSync, nudgeHours: await store.complaintNudgeHours() });
+    res.render('complaints', { title: 'Complaints', section: 'complaints', cases, showAll: req.query.show === 'all', liveStamp: await store.liveStamp(scope), lastSync, nudgeHours: await store.complaintNudgeHours(), channels: CHANNELS, ownBrand: scopeFor(req.user) || '', todayYmd: office.today() });
+  }));
+  // A complaint that came in another way: a Google review, a Facebook
+  // comment, a phone call (Tom, 10 November 2026). Staff type or paste it
+  // in, choose the channel, and the AI drafts the reply that suits it.
+  app.post('/complaints/log', wrap(async (req, res) => {
+    const own = scopeFor(req.user);
+    const brand = own || ((firm.brands || []).some((x) => x.id === String(req.body.brand || '')) ? String(req.body.brand) : (firm.mailboxBrand || ''));
+    try {
+      const kase = await office.logComplaint(req.user, { channel: String(req.body.channel || ''), name: req.body.name, contact: req.body.contact, date: String(req.body.date || ''), text: req.body.text, brand });
+      if (!kase.reading) flash(req, 'warn', kase.reading_note || 'Logged. Write the reply below.');
+      return res.redirect(`/case/${kase.id}`);
+    } catch (e) {
+      if (e.code !== 'REFUSED') throw e;
+      flash(req, 'warn', e.message);
+      return res.redirect('/complaints#log-a-complaint');
+    }
   }));
 
   // The council worker: managers and owners only, like the council emails
@@ -397,7 +415,8 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   act('approve', async (req) => {
     if (req.body.draft !== undefined && String(req.body.draft) !== String(req.kase.draft)) await office.saveDraft(req.kase, req.user, req.body.draft);
     const fresh = await store.caseById(req.kase.id);
-    await office.approve(fresh, req.user);
+    const done = await office.approve(fresh, req.user);
+    if (done && done.copyOut) { flash(req, 'ok', `Approved. ${done.send}`); return; }
     flash(req, 'ok', (mailbox.demo || mailbox.none) ? 'Approved. With a real mailbox connected this would now be a draft in it, ready to send.' : `Approved and saved as a draft in ${mailbox.label}. Open the mailbox to send it.`);
   });
 

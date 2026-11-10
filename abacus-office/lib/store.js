@@ -95,6 +95,17 @@ class Store {
     );
     return r.rows[0] || null;
   }
+  // A complaint typed in by staff (lib/channels.js). Its message id is made
+  // here and can never be a real email's, so the mailbox sync never meets it.
+  async insertLoggedComplaint({ brand, channel, name, contact, subject, text, receivedAt }) {
+    const id = `<logged-${require('crypto').randomUUID()}@office>`;
+    const r = await this.q(
+      `INSERT INTO cases (message_id, mailbox_email_id, thread_id, from_address, subject, body, received_at, brand, kind, channel, contact)
+       VALUES ($1, '', '', $2, $3, $4, $5, $6, 'complaints', $7, $8) RETURNING *`,
+      [id, String(name || '').slice(0, 300), String(subject || '').slice(0, 500), String(text || '').slice(0, 20000), receivedAt, String(brand || '').slice(0, 40), channel, String(contact || '').slice(0, 200)]
+    );
+    return r.rows[0];
+  }
   async listCases({ status, kind, ownerId, open, escalated, passedUp, brand, limit = 200 } = {}) {
     const where = [];
     const params = [];

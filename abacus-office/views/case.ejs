@@ -12,6 +12,9 @@
   var mayApprove = canApprove(user, kase);
   var needsReply = kase.kind !== 'other';
   var passedUp = Boolean(kase.passed_up_at);
+  var logged = /^<logged-/.test(String(kase.message_id || ''));
+  var ch = logged ? (channels[kase.channel] || channels.other) : null;
+  var savedToMailbox = Boolean(kase.saved_draft_id);
   var forManager = needsManager(kase);
 %>
 <p class="to-back"><a href="<%= kase.kind === 'complaints' ? '/complaints' : (isCouncil ? '/council' : '/inbox') %>"><%= kase.kind === 'complaints' ? 'Complaints' : (isCouncil ? 'Council' : 'Inbox') %></a></p>
@@ -19,8 +22,8 @@
 <div class="to-email-grid">
   <article class="to-email" aria-label="The email">
     <header>
-      <p class="to-email-from"><%= kase.from_address %></p>
-      <p class="to-email-when">Received <%= when(kase.received_at) %></p>
+      <p class="to-email-from"><%= kase.from_address %><% if (logged && kase.contact) { %>, <%= kase.contact %><% } %></p>
+      <p class="to-email-when"><% if (logged) { %>Came in by <%= ch.label.toLowerCase() %>, <%= new Date(kase.received_at).toLocaleDateString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', year: 'numeric' }) %>. Typed in by staff.<% } else { %>Received <%= when(kase.received_at) %><% } %></p>
       <h1 class="to-email-subject"><%= kase.subject || '(no subject)' %></h1>
     </header>
     <div class="to-email-body"><%= kase.body %></div>
@@ -120,7 +123,8 @@
           <button type="submit" class="to-btn" data-confirm="Pass this complaint up to a manager?">Pass up to a manager</button>
         </form>
       <% } %>
-      <% if (kase.holding_sent_at) { %>
+      <% if (logged) { %>
+      <% } else if (kase.holding_sent_at) { %>
         <p class="to-note to-note-ok">Holding reply <%= mailboxDemo ? 'approved' : 'saved as a draft in ' + mailboxLabel %> <%= when(kase.holding_sent_at) %>.</p>
       <% } else { %>
         <p class="to-small"><strong>Holding reply.</strong> One click tells the customer it has gone to a manager and thanks them for their patience, so they are not left waiting with nothing. Your click, never a timer.</p>
@@ -186,12 +190,13 @@
         <% if (kase.approved_at) { %><span class="to-pill to-pill-ok">Approved <%= when(kase.approved_at) %></span><% } %>
       </div>
       <% if (kase.approved_at) { %>
-        <p class="to-note to-note-ok"><%= mailboxDemo ? 'Approved. With a real mailbox connected this would be a draft in it now, waiting for someone to press send.' : 'Saved as a draft in ' + mailboxLabel + '. Open the mailbox to send it. Editing it here makes a new draft that needs approving again.' %></p>
+        <p class="to-note to-note-ok"><%= logged && !savedToMailbox ? 'Approved. It came in as a ' + ch.label.toLowerCase() + ': ' + ch.send + ' Nothing has been posted or sent from here.' : (mailboxDemo ? 'Approved. With a real mailbox connected this would be a draft in it now, waiting for someone to press send.' : 'Saved as a draft in ' + mailboxLabel + '. Open the mailbox to send it. Editing it here makes a new draft that needs approving again.') %></p>
+        <% if (logged && !savedToMailbox) { %><button type="button" class="to-btn to-btn-quiet" data-copy="<%= kase.draft %>">Copy the reply</button><% } %>
       <% } %>
       <% if (kase.held_back) { %><p class="to-note to-note-warn"><strong>From the AI:</strong> <%= kase.held_back %></p><% } %>
       <form method="post" action="/case/<%= kase.id %>/draft" class="to-form">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-        <label class="to-field"><span>The reply, as it will go to <%= isCouncil ? 'the council' : 'the customer' %></span><textarea id="draft" name="draft" rows="12" maxlength="4000" placeholder="<%= r ? '' : 'Write the reply here.' %>"><%= kase.draft %></textarea></label>
+        <label class="to-field"><span><%= ch && ch.public ? 'The reply, as it will be posted publicly under their ' + ch.label.toLowerCase() : 'The reply, as it will go to ' + (isCouncil ? 'the council' : 'the customer') %></span><textarea id="draft" name="draft" rows="12" maxlength="4000" placeholder="<%= r ? '' : 'Write the reply here.' %>"><%= kase.draft %></textarea></label>
         <div class="to-guide">
           <% if ((kase.guidance || []).length) { %><p class="to-worker-tag">Guided so far</p><ol class="to-guide-notes"><% kase.guidance.forEach(function (n) { %><li><%= n %></li><% }) %></ol><% } %>
           <label class="to-field"><span>Guide the AI</span><textarea id="guidance" name="guidance" rows="2" maxlength="1200" placeholder="<%= isCouncil ? 'For example: both certificates were sent this morning. Or: the compliance test is booked for Thursday.' : 'For example: we are fully booked at that time, offer 7.15 instead. Or: our records show the car was on time.' %>"></textarea></label>
@@ -202,8 +207,8 @@
           </div>
         </div>
         <% if (mayApprove) { %>
-          <button type="submit" class="to-btn to-btn-primary" formaction="/case/<%= kase.id %>/approve" data-confirm="Approve this reply? <%= mailboxDemo ? 'Nothing is sent from this made-up inbox.' : 'It will be saved as a draft in ' + mailboxLabel + ' for someone to send.' %>" data-busy="Approving..."><%= kase.approved_at ? 'Approve again' : 'Approve this reply' %></button>
-          <p class="to-small"><%= forManager ? 'This one is approved by a manager; you are one.' : 'Approving saves it as a draft in the firm\'s mailbox for a person to send. Nothing is sent from here.' %></p>
+          <button type="submit" class="to-btn to-btn-primary" formaction="/case/<%= kase.id %>/approve" data-confirm="Approve this reply? <%= logged ? 'You then copy it and send or post it where it came in.' : (mailboxDemo ? 'Nothing is sent from this made-up inbox.' : 'It will be saved as a draft in ' + mailboxLabel + ' for someone to send.') %>" data-busy="Approving..."><%= kase.approved_at ? 'Approve again' : 'Approve this reply' %></button>
+          <p class="to-small"><%= forManager ? 'This one is approved by a manager; you are one.' : (logged ? 'It came in as a ' + ch.label.toLowerCase() + '. Once approved: ' + ch.send + ' Nothing is posted or sent from here.' : 'Approving saves it as a draft in the firm\'s mailbox for a person to send. Nothing is sent from here.') %></p>
         <% } else { %>
           <p class="to-note to-note-warn"><%= isCouncil ? 'A reply to the council is approved by a manager or owner.' : (passedUp ? 'This complaint was passed up, so a manager approves the reply.' : 'A safety matter needs a manager to approve the reply.') %> Get the draft right, add a note, and a manager will approve it from here.</p>
         <% } %>
