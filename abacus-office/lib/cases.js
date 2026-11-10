@@ -271,10 +271,64 @@ ${this.firm.signature}`;
     if (!signedOff) throw refuse('Tick the sign-off box to confirm you have checked the job against the email. Nothing was booked.');
     const { job, missing } = cleanJob(input || {});
     if (missing.length) throw refuse(`Still needed before it can be booked: ${missing.join(', ')}. Nothing was booked.`);
-    const { ref } = await this.dispatch.book({ job, kase, brand: kase.brand || '', actor: user });
+    const summary = `${job.date} ${job.time}, ${job.pickup} to ${job.destination}, ${job.passengers} passenger${job.passengers === '1' ? '' : 's'}`;
+    let result;
+    try {
+      result = await this.dispatch.book({ job, kase, brand: kase.brand || '', actor: user });
+    } catch (e) {
+      // What happened is recorded on the case whatever it was, so the next
+      // person can see that someone tried and what iCabbi said.
+      const kind = e.checkedOnly ? 'dispatch_checked' : e.uncertain ? 'dispatch_uncertain' : 'dispatch_refused';
+      await this.store.addEvent(kase.id, { actor: user, kind, detail: `${summary}: ${e.message}` }).catch(() => {});
+      throw e;
+    }
+    const { ref } = result;
     await this.store.updateCase(kase.id, { dispatch_ref: ref, booked_at: this.now(), booked_by: user.id, status: kase.status === 'new' ? 'in_progress' : kase.status, owner_id: kase.owner_id || user.id });
-    await this.store.addEvent(kase.id, { actor: user, kind: 'booked', detail: `Booked into ${this.dispatch.label} as ${ref}: ${job.date} ${job.time}, ${job.pickup} to ${job.destination}, ${job.passengers} passenger${job.passengers === '1' ? '' : 's'}, signed off by ${user.display_name || user.username}` });
-    return { ref, job };
+    await this.store.addEvent(kase.id, { actor: user, kind: 'booked', detail: `Booked into ${this.dispatch.label} as ${ref}: ${summary}, signed off by ${user.display_name || user.username}${result.statusWords ? ` (${result.statusWords})` : ''}` });
+    return { ref, job, statusWords: result.statusWords || '' };
+  }
+
+  // Cancelling a job this office put into dispatch: the same sign-off tick,
+  // and a reason that goes on the record.
+  async cancelBooking(kase, user, signedOff, reason) {
+    if (!kase.dispatch_ref) throw refuse('This case has nothing in dispatch to cancel.');
+    if (!signedOff) throw refuse('Tick the box to confirm the customer asked for this to be cancelled. Nothing was cancelled.');
+    const why = String(reason || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+    if (!why) throw refuse('Say why it is being cancelled. Nothing was cancelled.');
+    const ref = kase.dispatch_ref;
+    let result;
+    try { result = await this.dispatch.cancel({ ref, kase, actor: user }); } catch (e) {
+      await this.store.addEvent(kase.id, { actor: user, kind: e.uncertain ? 'dispatch_uncertain' : 'dispatch_refused', detail: `Cancelling ${ref}: ${e.message}` }).catch(() => {});
+      throw e;
+    }
+    await this.store.updateCase(kase.id, { dispatch_ref: '' });
+    await this.store.addEvent(kase.id, { actor: user, kind: 'dispatch_cancelled', detail: `${ref} ${result.statusWords || 'cancelled'} Reason: ${why}. Signed off by ${user.display_name || user.username}` });
+    return result;
+  }
+
+  // Read the status of every live booking still moving and note any change
+  // on its case: driver assigned, on the way, completed, cancelled outside
+  // the office. Read only.
+  async refreshStatuses(limit = 30) {
+    if (!this.dispatch || !this.dispatch.live || !this.dispatch.configured) return { checked: 0, changed: 0 };
+    const rows = await this.store.liveDispatchBookings(limit);
+    let changed = 0;
+    for (const row of rows) {
+      let st;
+      try { st = await this.dispatch.status(row.ref); } catch (e) { await this.store.setDispatchStatus(row.ref, {}); continue; }
+      if (!st) continue;
+      const detail = [st.driver && `driver ${st.driver}`, st.vehicle && `car ${st.vehicle}`].filter(Boolean).join(', ');
+      const cancelled = /CANCELLED$/.test(st.status);
+      await this.store.setDispatchStatus(row.ref, { dispatchStatus: st.status, detail, status: cancelled ? 'cancelled' : null });
+      if (st.status !== row.dispatch_status) {
+        changed += 1;
+        if (row.case_id) {
+          await this.store.addEvent(row.case_id, { kind: 'dispatch_status', detail: `iCabbi: ${row.ref} ${st.words}${detail ? ` (${detail})` : ''}` });
+          if (cancelled) await this.store.updateCase(row.case_id, { dispatch_ref: '' });
+        }
+      }
+    }
+    return { checked: rows.length, changed };
   }
 
   // The escalation sweep: a reply that has waited past the set time with

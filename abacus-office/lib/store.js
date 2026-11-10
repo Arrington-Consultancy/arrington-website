@@ -161,10 +161,26 @@ class Store {
     const r = await this.q('SELECT count(*)::int AS n FROM dispatch_bookings');
     return `${prefix}-${String(10001 + r.rows[0].n).padStart(5, '0')}`;
   }
-  async insertDispatchBooking({ ref, caseId, brand, job, actor }) {
-    const r = await this.q('INSERT INTO dispatch_bookings (ref, case_id, brand, job, booked_by, booked_by_name) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-      [ref, caseId, brand || '', JSON.stringify(job), actor ? actor.id : null, actor ? (actor.display_name || actor.username) : '']);
+  async insertDispatchBooking({ ref, caseId, brand, job, actor, externalId = '', dispatchStatus = '' }) {
+    const r = await this.q('INSERT INTO dispatch_bookings (ref, case_id, brand, job, booked_by, booked_by_name, external_id, dispatch_status, status_checked_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now()) RETURNING *',
+      [ref, caseId, brand || '', JSON.stringify(job), actor ? actor.id : null, actor ? (actor.display_name || actor.username) : '', externalId, dispatchStatus]);
     return r.rows[0];
+  }
+  async dispatchBookingsForCase(caseId) {
+    return (await this.q('SELECT * FROM dispatch_bookings WHERE case_id = $1 ORDER BY created_at', [caseId])).rows;
+  }
+  async setDispatchStatus(ref, { status, dispatchStatus, detail = null }) {
+    const r = await this.q(`UPDATE dispatch_bookings SET status = COALESCE($2, status), dispatch_status = COALESCE($3, dispatch_status), status_detail = COALESCE($4, status_detail), status_checked_at = now()
+      WHERE ref = $1 RETURNING *`, [ref, status || null, dispatchStatus || null, detail]);
+    return r.rows[0] || null;
+  }
+  // Live bookings whose status is still moving: from yesterday onwards,
+  // not finished, oldest check first.
+  async liveDispatchBookings(limit = 30) {
+    return (await this.q(`SELECT * FROM dispatch_bookings WHERE external_id <> '' AND status = 'booked'
+      AND dispatch_status NOT IN ('NOSHOW', 'COMPLETE', 'COMPLETED', 'CUSTOMER_CANCELLED', 'DRIVER_CANCELLED', 'DISPATCH_CANCELLED')
+      AND (job->>'date') >= to_char((now() AT TIME ZONE 'Europe/London') - interval '1 day', 'YYYY-MM-DD')
+      ORDER BY status_checked_at NULLS FIRST LIMIT $1`, [limit])).rows;
   }
   async dispatchBookings({ brand, limit = 100 } = {}) {
     const params = brand ? [brand, limit] : [limit];

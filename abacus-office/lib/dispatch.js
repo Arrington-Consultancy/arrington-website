@@ -81,38 +81,87 @@ function standinDriver(store, prefix) {
     async book({ job, kase, brand, actor }) {
       const ref = await store.nextDispatchRef(prefix);
       await store.insertDispatchBooking({ ref, caseId: kase ? kase.id : null, brand, job, actor });
-      return { ref };
-    }
+      return { ref, status: 'booked', statusWords: 'recorded in this office' };
+    },
+    async cancel({ ref }) {
+      await store.setDispatchStatus(ref, { status: 'cancelled', dispatchStatus: 'CANCELLED' });
+      return { statusWords: 'cancelled' };
+    },
+    async status() { return null; }
   };
 }
 
-function icabbiDriver(env = process.env) {
-  const have = (k) => Boolean(String(env[k] || '').trim());
-  const configured = have('ABACUS_OFFICE_ICABBI_API_KEY') && have('ABACUS_OFFICE_ICABBI_SECRET') && have('ABACUS_OFFICE_ICABBI_BASE_URL');
+// The live iCabbi connection (./icabbi.js). A booking goes in only after a
+// member of staff has ticked the sign-off and pressed the button, and only
+// once iCabbi's own check has passed and the board shows no booking for the
+// same phone within 45 minutes. With ABACUS_OFFICE_ICABBI_LIVE_WRITES not
+// "true" it stops after those two checks and writes nothing.
+function icabbiDriver(env = process.env, { store, fetch } = {}) {
+  const icabbi = require('./icabbi');
+  const client = icabbi.createClient(env, fetch ? { fetch } : {});
+  const s = client.settings;
   return {
     name: 'icabbi',
     label: LABELS.icabbi,
     live: true,
-    configured,
-    async book() {
-      if (!configured) throw new DispatchNotConnected('iCabbi is not connected yet. It needs API access on the firm\'s own iCabbi account (ABACUS_OFFICE_ICABBI_BASE_URL, _API_KEY and _SECRET on this service). Nothing was booked.');
-      // Written against iCabbi's booking API once the first operator's
-      // access is in hand; the request shape depends on their account.
-      throw new DispatchNotConnected('The iCabbi booking call is not written yet. Nothing was booked.');
+    get configured() { return client.configured(); },
+    writes: s.writes,
+    client,
+    async book({ job, kase, brand, actor }) {
+      if (!client.configured()) throw new DispatchNotConnected(`iCabbi is not connected yet. It needs API access on the firm's own iCabbi account (${client.missing().join(', ')} on this service). Nothing was booked.`);
+      const prior = store && kase ? await store.dispatchBookingsForCase(kase.id) : [];
+      const ref = `${String(brand || 'office').slice(0, 12)}-${kase ? kase.id : 'x'}-${prior.length + 1}`;
+      const actorName = actor ? (actor.display_name || actor.username) : '';
+      const booking = icabbi.toBooking(job, s, { ref, idempotencyKey: `office-${ref}`, actorName });
+      await client.check(booking);
+      const twin = icabbi.twinOnBoard(await client.upcomingFor(booking.phone, job.date), booking.date);
+      if (twin) {
+        const at = String(twin.date || twin.pickup_date || '').slice(11, 16);
+        throw new DispatchNotConnected(`iCabbi already has a booking for ${booking.phone}${at ? ` at ${at}` : ''}${twin.trip_id ? ` (trip ${twin.trip_id})` : ''}${twin.address && twin.address.formatted ? ` from ${twin.address.formatted}` : ''}. It looks like the same job, so nothing was booked. Check the board.`);
+      }
+      if (!s.writes) {
+        const e = new DispatchNotConnected('iCabbi checked these details and accepted them, and nothing on the board clashes. Live booking is switched off on this office, so nothing went into iCabbi.');
+        e.checkedOnly = true;
+        throw e;
+      }
+      const { body } = await client.add(booking);
+      const b = body.booking || {};
+      const tripId = String(b.trip_id || b.perma_id || b.id || '').slice(0, 40);
+      if (!tripId) throw new DispatchNotConnected('iCabbi took the booking but did not say its trip number. Look it up on the board before doing anything else.');
+      if (store) await store.insertDispatchBooking({ ref: tripId, caseId: kase ? kase.id : null, brand, job, actor, externalId: tripId, dispatchStatus: String(b.status || 'NEW') });
+      return { ref: tripId, status: String(b.status || 'NEW'), statusWords: icabbi.statusWords(b.status || 'NEW') };
+    },
+    async cancel({ ref }) {
+      const { body } = await client.cancel(ref);
+      if (store) await store.setDispatchStatus(ref, { status: 'cancelled', dispatchStatus: 'DISPATCH_CANCELLED' });
+      const fee = Array.isArray(body.fee) && body.fee.length ? ' iCabbi recorded a cancellation fee on it.' : '';
+      return { statusWords: `cancelled in iCabbi.${fee}` };
+    },
+    // -> { status, words, final, driver } for one trip, read live.
+    async status(ref) {
+      const { body } = await client.get(ref);
+      const b = body.booking || {};
+      const st = String(b.status || '').toUpperCase();
+      const driver = b.driver && (b.driver.name || b.driver.ref) ? String(b.driver.name || b.driver.ref).slice(0, 60) : '';
+      const vehicle = b.vehicle && (b.vehicle.ref || b.vehicle.reg) ? String(b.vehicle.ref || b.vehicle.reg).slice(0, 20) : '';
+      return { status: st, words: icabbi.statusWords(st), final: icabbi.FINAL.has(st), driver, vehicle };
     }
   };
 }
 
-function createDispatch({ store, env = process.env, prefix = 'AB' } = {}) {
+function createDispatch({ store, env = process.env, prefix = 'AB', fetch } = {}) {
   const name = driverName(env);
-  return name === 'icabbi' ? icabbiDriver(env) : standinDriver(store, prefix);
+  return name === 'icabbi' ? icabbiDriver(env, { store, fetch }) : standinDriver(store, prefix);
 }
 
 function describeDispatchStatus(env = process.env) {
   const name = driverName(env);
   if (name === 'standin') return 'Abacus office dispatch: stand-in (bookings are recorded in this office only; no live dispatch system is connected)';
-  const d = icabbiDriver(env);
-  return `Abacus office dispatch: iCabbi, ${d.configured ? 'credentials present, booking call not yet written' : 'NOT connected (needs ABACUS_OFFICE_ICABBI_BASE_URL, _API_KEY, _SECRET)'}`;
+  const icabbi = require('./icabbi');
+  const s = icabbi.settings(env);
+  if (!icabbi.configured(s)) return `Abacus office dispatch: iCabbi, NOT connected (needs ${icabbi.missing(s).join(', ')})`;
+  const types = Object.keys(s.vehicleTypes).length;
+  return `Abacus office dispatch: iCabbi at ${s.base}, keys present; ${s.writes ? 'LIVE: signed-off bookings go into iCabbi' : 'check only: iCabbi checks each booking and nothing is written (ABACUS_OFFICE_ICABBI_LIVE_WRITES is not true)'}; ${types ? `${types} vehicle type${types === 1 ? '' : 's'} mapped` : 'no vehicle types mapped, so only ordinary cars can be booked'}`;
 }
 
 module.exports = { createDispatch, describeDispatchStatus, driverName, cleanJob, missingFromReading, LABELS, DispatchNotConnected, REQUIRED };

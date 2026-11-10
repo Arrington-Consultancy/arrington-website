@@ -40,10 +40,10 @@ function assetVersion(rel) {
   try { return crypto.createHash('sha256').update(fs.readFileSync(path.join(__dirname, 'public', rel))).digest('hex').slice(0, 10); } catch { return 'dev'; }
 }
 
-function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.SESSION_SECRET, production = process.env.NODE_ENV === 'production', aiOn = ai.aiEnabled, now = () => new Date(), alertsEnv = process.env, mailEnv = process.env, fetchImpl = globalThis.fetch, baseUrl = String(process.env.ABACUS_OFFICE_PUBLIC_URL || '').replace(/\/$/, '') }) {
+function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.SESSION_SECRET, production = process.env.NODE_ENV === 'production', aiOn = ai.aiEnabled, now = () => new Date(), alertsEnv = process.env, mailEnv = process.env, dispatchEnv = process.env, fetchImpl = globalThis.fetch, baseUrl = String(process.env.ABACUS_OFFICE_PUBLIC_URL || '').replace(/\/$/, '') }) {
   if (!sessionSecret || sessionSecret.length < 16) throw new Error('SESSION_SECRET must be set (16 characters or more)');
   const store = new Store(pool);
-  if (!dispatch) dispatch = createDispatch({ store, prefix: String(firm.short || 'AB').replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase() || 'AB' });
+  if (!dispatch) dispatch = createDispatch({ store, env: dispatchEnv, fetch: fetchImpl, prefix: String(firm.short || 'AB').replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase() || 'AB' });
   const office = new Office({ store, mailbox, firm, dispatch, aiOn, now });
   const app = express();
   app.set('trust proxy', 1);
@@ -290,7 +290,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   app.get('/case/:id', loadCase, wrap(async (req, res) => {
     const kase = req.kase.reading || req.kase.reading_source !== 'none' ? req.kase : await office.read(req.kase, { actor: req.user });
     const [events, users] = await Promise.all([store.eventsFor(kase.id), store.users()]);
-    res.render('case', { title: kase.subject || 'Email', section: 'inbox', kase, events, users: users.filter((u) => u.active && (!u.brand || u.brand === (kase.brand || ''))), booking: office.bookingFrom(kase), holdingText: kase.kind === 'complaints' ? office.holdingText(kase) : '' });
+    res.render('case', { title: kase.subject || 'Email', section: 'inbox', kase, events, users: users.filter((u) => u.active && (!u.brand || u.brand === (kase.brand || ''))), booking: office.bookingFrom(kase), dispatchRow: kase.dispatch_ref ? (await store.dispatchBookingsForCase(kase.id)).filter((b) => b.ref === kase.dispatch_ref).pop() || null : null, statusWords: require('./lib/icabbi').statusWords, holdingText: kase.kind === 'complaints' ? office.holdingText(kase) : '' });
   }));
   const act = (p, fn) => app.post(`/case/:id/${p}`, loadCase, wrap(async (req, res) => { await fn(req, res); if (!res.headersSent) res.redirect(`/case/${req.kase.id}`); }));
   act('read', async (req) => { await office.read(req.kase, { actor: req.user, force: true }); flash(req, 'ok', 'Read again.'); });
@@ -318,8 +318,28 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     flash(req, 'ok', mailbox.demo ? 'Holding reply approved. With a real mailbox connected it would now be a draft in it, ready to send.' : `Holding reply saved as a draft in ${mailbox.label}. Open the mailbox to send it.`);
   });
   act('book', async (req) => {
-    const { ref } = await office.book(req.kase, req.user, req.body, req.body.signed_off === 'yes');
-    flash(req, 'ok', `Booked into ${dispatch.label} as ${ref}.`);
+    try {
+      const { ref, statusWords } = await office.book(req.kase, req.user, req.body, req.body.signed_off === 'yes');
+      flash(req, 'ok', `Booked into ${dispatch.label} as ${ref}${statusWords ? `, ${statusWords}` : ''}.`);
+    } catch (e) {
+      if (!e.checkedOnly) throw e;
+      flash(req, 'ok', e.message);
+    }
+  });
+  act('cancel-booking', async (req) => {
+    const r = await office.cancelBooking(req.kase, req.user, req.body.signed_off === 'yes', req.body.reason);
+    flash(req, 'ok', `${req.kase.dispatch_ref} ${r.statusWords || 'cancelled'}`);
+  });
+  // Ask iCabbi for this case's booking status now, rather than waiting for
+  // the next round of checks.
+  act('dispatch-status', async (req) => {
+    if (!req.kase.dispatch_ref || !dispatch.live) return;
+    const st = await dispatch.status(req.kase.dispatch_ref);
+    if (st) {
+      const detail = [st.driver && `driver ${st.driver}`, st.vehicle && `car ${st.vehicle}`].filter(Boolean).join(', ');
+      await store.setDispatchStatus(req.kase.dispatch_ref, { dispatchStatus: st.status, detail });
+      flash(req, 'ok', `iCabbi says ${req.kase.dispatch_ref} is ${st.words}${detail ? ` (${detail})` : ''}.`);
+    }
   });
   act('approve', async (req) => {
     if (req.body.draft !== undefined && String(req.body.draft) !== String(req.kase.draft)) await office.saveDraft(req.kase, req.user, req.body.draft);
@@ -403,6 +423,14 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
       flash(req, 'ok', 'Price added. The AI will quote it from now on.');
     } catch (e) { flash(req, 'warn', e.message); }
     res.redirect('/settings');
+  }));
+  // The firm's own iCabbi vehicle types, read live, so Arrington can set
+  // ABACUS_OFFICE_ICABBI_VEHICLE_TYPES from the real keys.
+  app.get('/settings/icabbi-vehicles', requireRole('manager'), wrap(async (req, res) => {
+    if (!dispatch.live || !dispatch.client) { flash(req, 'warn', 'iCabbi is not the dispatch connection on this office yet.'); return res.redirect('/settings'); }
+    let types = []; let error = '';
+    try { types = await dispatch.client.vehicleTypes(); } catch (e) { error = e.message; }
+    res.render('icabbi-vehicles', { title: 'iCabbi vehicle types', section: 'settings', types, error, mapped: dispatch.client.settings.vehicleTypes });
   }));
   app.post('/settings/prices/:id/delete', requireRole('manager'), wrap(async (req, res) => {
     const id = Number(req.params.id);

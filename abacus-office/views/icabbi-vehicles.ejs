@@ -1,0 +1,19 @@
+<%- include('partials/top', { title: 'iCabbi vehicle types' }) %>
+<section class="to-section-head"><h1>iCabbi vehicle types</h1></section>
+<section class="to-panel">
+  <p>The vehicle types on the firm's own iCabbi account, read live. The office books a car type into iCabbi only when it has been matched to one of these, so a job for an 8 seater can never go out as an ordinary car. Arrington sets the matching on the server.</p>
+  <% if (error) { %>
+    <p class="to-note to-note-warn"><%= error %></p>
+  <% } else if (!types.length) { %>
+    <p class="to-empty">iCabbi listed no vehicle types.</p>
+  <% } else { %>
+  <div class="to-table-wrap"><table class="to-table">
+    <thead><tr><th scope="col">Key</th><th scope="col">Name</th><th scope="col">Seats</th><th scope="col">Wheelchair</th><th scope="col">Matched to</th></tr></thead>
+    <tbody><% types.forEach(function (t) { var m = Object.keys(mapped).filter(function (k) { return mapped[k] === t.key; }); %>
+      <tr><td><code><%= t.key %></code></td><td><%= t.title %></td><td class="to-num"><%= t.seats || '' %></td><td><%= t.wheelchair ? 'Yes' : '' %></td><td><%= m.join(', ') %></td></tr>
+    <% }) %></tbody>
+  </table></div>
+  <% } %>
+  <p><a href="/settings">Back to Settings</a></p>
+</section>
+<%- include('partials/bottom') %>

@@ -77,6 +77,13 @@ async function main() {
   });
   setTimeout(() => { tick().then(sweep); }, 5000);
   setInterval(sweep, 5 * 60 * 1000).unref();
+  // Live dispatch: read the status of bookings still moving every three
+  // minutes and note changes on their cases. Read only.
+  const statuses = guarded('dispatch status check', async () => {
+    const r = await office.refreshStatuses();
+    if (r.changed) console.log(`Abacus office: ${r.changed} dispatch status change(s) noted from ${r.checked} live booking(s)`);
+  });
+  setInterval(statuses, 3 * 60 * 1000).unref();
 }
 
 process.on('unhandledRejection', (e) => console.error('Abacus office: unhandled rejection', e));

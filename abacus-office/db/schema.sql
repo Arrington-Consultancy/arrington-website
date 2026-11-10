@@ -118,3 +118,11 @@ CREATE TABLE IF NOT EXISTS fixed_prices (
   updated_by VARCHAR(120) NOT NULL DEFAULT '',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- The live dispatch connection (iCabbi, 10 November 2026): the trip number
+-- iCabbi gives a booking, its last known status in iCabbi's words, and
+-- when that was read.
+ALTER TABLE dispatch_bookings ADD COLUMN IF NOT EXISTS external_id VARCHAR(60) NOT NULL DEFAULT '';
+ALTER TABLE dispatch_bookings ADD COLUMN IF NOT EXISTS dispatch_status VARCHAR(30) NOT NULL DEFAULT '';
+ALTER TABLE dispatch_bookings ADD COLUMN IF NOT EXISTS status_detail VARCHAR(200) NOT NULL DEFAULT '';
+ALTER TABLE dispatch_bookings ADD COLUMN IF NOT EXISTS status_checked_at TIMESTAMPTZ;

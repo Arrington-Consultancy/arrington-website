@@ -95,7 +95,7 @@
   <p class="to-small">Set on the server by Arrington, never from this page. Values are never shown here.</p>
   <ul class="to-history">
     <li><time>Mailbox</time><span><%= mailStatus.replace(/^Abacus office mailbox: /, '') %></span></li>
-    <li><time>Dispatch</time><span><%= dispatchStatus.replace(/^Abacus office dispatch: /, '') %></span></li>
+    <li><time>Dispatch</time><span><%= dispatchStatus.replace(/^Abacus office dispatch: /, '') %><% if (dispatchLive) { %> <a href="/settings/icabbi-vehicles">See iCabbi's vehicle types</a><% } %></span></li>
     <li><time>AI</time><span><%= aiStatus.replace(/^Abacus office AI: /, '') %></span></li>
     <li><time>Alerts</time><span><%= alertStatus.replace(/^Abacus office alerts: /, '') %></span></li>
   </ul>
