@@ -10203,3 +10203,69 @@ the inbox in another.
   cars"): the office imports the Tidewell `WRITING` block (Tom's 01A rules,
   copied 19/10/2026) and the same `humanise` cleanup rather than keeping a
   copy, and a test fails on a second copy or a prompt without it.
+
+### The email API and the iCabbi connection (built 10/11/2026)
+
+Tom: "We need the email api as well", after choosing the iCabbi connection
+as the next build. Both are written, tested against fakes built from each
+provider's own documentation, and deployed inert: production stays on the
+made-up inbox and the stand-in dispatch until Tom changes two variables.
+Dan was sent the email asking iCabbi for API keys (reply in the thread
+"Abacus office: a few things I need from you", 10/11/2026), worded on
+Tom's decision as "One of our staff is building a tool". Tom kept that
+wording after being told iCabbi know him from the Marketplace listing.
+
+- **Email (`abacus-office/lib/mailbox.js`, `lib/secretBox.js`, Settings
+  panel "The bookings mailbox").** The owner types the firm's Google
+  client ID and secret into Settings, presses Connect, and signs in to
+  Google as the bookings mailbox. The token comes straight back to the
+  office and is sealed in the database (AES-256-GCM under
+  `ABACUS_OFFICE_TOKEN_KEY`, Railway only); nobody copies a secret into a
+  chat, an email or a variable. A token for any address other than
+  `ABACUS_OFFICE_MAILBOX_ADDRESS` is cancelled at Google, and the office
+  asks Google which address it opens before its first read and refuses
+  anything else. Disconnect cancels the token. Scopes are read and
+  compose (drafts) only; nothing sends. Railway variables win over saved
+  values. The Google side is the firm's: a Cloud project in Dan's own
+  Workspace with an **Internal** consent screen (no Google review, no
+  seven-day token expiry), redirect URI
+  `<office address>/settings/mailbox/callback`. A free Gmail account
+  cannot use Internal; the IMAP app-password driver covers that case.
+  `test/abacusOfficeMailbox.test.js` (needs its own throwaway database,
+  `ABACUS_OFFICE_MAILBOX_TEST_DATABASE_URL`).
+- **iCabbi (`abacus-office/lib/icabbi.js`, `lib/dispatch.js`).** Written
+  against iCabbi's published spec (version 242, `/v2`, Basic auth with the
+  app key and secret key). A signed-off booking goes: `POST
+  /bookings/check` (iCabbi validates it, nothing saved), then `GET
+  /bookings/upcoming` for the same phone that day (a booking within 45
+  minutes is refused as the same job), then `POST /bookings/add/` with an
+  idempotency key per case and attempt, so a retry cannot book twice. The
+  trip number goes on the case. Statuses are read every three minutes
+  (`GET /bookings/index/{trip}`) and changes are noted on the case;
+  "Check the status now" asks at once. Cancelling needs a tick and a
+  reason (`POST /bookings/cancel/{trip}`). Phones go to E.164 and times
+  carry London's offset; a phone it cannot be sure of, or a vehicle with
+  no iCabbi type mapped, is refused rather than guessed (an 8 seater must
+  never go out as a car). A timeout or 5xx on an add tells staff the
+  booking may have gone in and to look at the board. Settings links to
+  the firm's own vehicle types, read live (`GET /config/vehicletypes`).
+  `test/abacusOfficeIcabbi.test.js` (the office-level part works in its
+  own schema of `ABACUS_OFFICE_TEST_DATABASE_URL`).
+- **Two-step switch-on for iCabbi.** With the keys set and
+  `ABACUS_OFFICE_ICABBI_LIVE_WRITES` not exactly `true`, pressing Book runs
+  iCabbi's check and the board check and stops, saying nothing went in.
+  That is how the first tests run against Dan's real account without
+  sending a car anywhere (there is no iCabbi test company). Set it to
+  `true` only after those checks pass on real jobs and Governance &
+  Assurance has been told.
+- **Variables, all on the `abacus-office` service, none set yet:**
+  mailbox: `ABACUS_OFFICE_MAIL_DRIVER=gmail` (only once the DPA is signed),
+  `ABACUS_OFFICE_MAILBOX_ADDRESS`, `ABACUS_OFFICE_TOKEN_KEY` (32+ random
+  characters); iCabbi: `ABACUS_OFFICE_DISPATCH_DRIVER=icabbi`,
+  `ABACUS_OFFICE_ICABBI_BASE_URL` (https, the API address iCabbi gives
+  with the keys), `_API_KEY`, `_SECRET`,
+  `ABACUS_OFFICE_ICABBI_VEHICLE_TYPES` (`Car (up to 4)=R4; 8 seater=...`
+  from the firm's own keys), optional `_SITE_ID`, and `_LIVE_WRITES`.
+- **Not built yet:** changing an existing iCabbi booking from a change
+  email (`/bookings/update/{trip}` exists; staff change it in iCabbi for
+  now), and iCabbi webhooks (polling is used instead).
