@@ -527,7 +527,7 @@ test('the office over HTTP: login, forced password change, one case per email, r
   r = await owner.get('/inbox?show=all');
   assert.match(r.text, /Taxi to the station tomorrow morning/);
   assert.match(r.text, /class="to-tag">Abacus Taxis</, 'the office view names the brand on each case');
-  assert.match(r.text, /every brand/, 'and says the owner sees every brand');
+  assert.match(r.text, /<option value="" selected>All companies<\/option>/, 'and the owner\'s company menu says all companies');
 
   // Users: the owner adds an operator who must choose a password; nobody can
   // deactivate themselves.

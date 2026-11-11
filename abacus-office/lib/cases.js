@@ -74,9 +74,22 @@ function canSee(user, kase) {
 }
 // Which company's cases a user is shown: undefined is every company.
 function scopeFor(user) { return user && user.brand && !atLeast(user, 'manager') ? user.brand : undefined; }
+// Each company has its own portal (Tom, 11 November 2026: "the two other
+// companies portals to be there, owner having drop down access"). Anyone
+// who sees every company (managers, the owner, an operator with no company
+// set) chooses which portal to look at from the bar; '' is all companies
+// together. An operator of one company is always in that company's portal.
+function canSwitchPortal(user) { return Boolean(user) && !scopeFor(user); }
+function portalFor(user, chosen, brands) {
+  const own = scopeFor(user);
+  if (own) return own;
+  const want = String(chosen || '');
+  return (brands || []).some((b) => b.id === want) ? want : '';
+}
 // The full scope for a list, count or live stamp: the company, and whether
-// council emails are left out.
-function caseScope(user) { return { brand: scopeFor(user), hideCouncil: !seesCouncil(user) }; }
+// council emails are left out. A chosen portal narrows it; it never widens
+// what an operator sees.
+function caseScope(user, portal) { return { brand: scopeFor(user) || portal || undefined, hideCouncil: !seesCouncil(user) }; }
 function canReassign(user, kase) {
   if (!user) return false;
   if (atLeast(user, 'manager')) return true;
@@ -450,4 +463,4 @@ function londonStamp(d) {
   return `${g('year')}-${g('month')}-${g('day')}T${g('hour') === '24' ? '00' : g('hour')}:${g('minute')}`;
 }
 
-module.exports = { Office, kindFor, canApprove, canReassign, canSee, scopeFor, caseScope, seesCouncil, needsManager, atLeast, label, londonStamp, brandName, LEVEL };
+module.exports = { Office, kindFor, canApprove, canReassign, canSee, scopeFor, caseScope, canSwitchPortal, portalFor, seesCouncil, needsManager, atLeast, label, londonStamp, brandName, LEVEL };

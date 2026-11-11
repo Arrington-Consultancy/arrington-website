@@ -19,7 +19,7 @@
     <div class="to-field-row is-two">
       <label class="to-field"><span>What kind of email</span><select id="council-kind" name="kind"><% Object.keys(councilKinds).forEach(function (k) { %><option value="<%= k %>"><%= councilKinds[k] %></option><% }) %></select></label>
       <% if (manyBrands) { %>
-      <label class="to-field"><span>Which company it is from</span><select id="council-brand" name="brand"><% firm.brands.forEach(function (b) { %><option value="<%= b.id %>"<% if (b.id === firm.mailboxBrand) { %> selected<% } %>><%= b.name %></option><% }) %></select></label>
+      <label class="to-field"><span>Which company it is from</span><select id="council-brand" name="brand"><% firm.brands.forEach(function (b) { %><option value="<%= b.id %>"<% if (b.id === defaultBrand) { %> selected<% } %>><%= b.name %></option><% }) %></select></label>
       <% } %>
     </div>
     <div class="to-field-row is-two">

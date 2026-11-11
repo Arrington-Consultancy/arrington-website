@@ -25,7 +25,7 @@
       <label class="to-field"><span>How to reach them (optional)</span><input id="log-contact" name="contact" maxlength="200" placeholder="Email address or phone number, if you have it"></label>
     </div>
     <% if (manyBrands && !ownBrand) { %>
-    <label class="to-field"><span>Which company it is about</span><select id="log-brand" name="brand"><% firm.brands.forEach(function (b) { %><option value="<%= b.id %>"<% if (b.id === firm.mailboxBrand) { %> selected<% } %>><%= b.name %></option><% }) %></select></label>
+    <label class="to-field"><span>Which company it is about</span><select id="log-brand" name="brand"><% firm.brands.forEach(function (b) { %><option value="<%= b.id %>"<% if (b.id === defaultBrand) { %> selected<% } %>><%= b.name %></option><% }) %></select></label>
     <% } %>
     <label class="to-field"><span>The complaint</span><textarea id="log-text" name="text" rows="6" maxlength="8000" required placeholder="Paste the review or message, or type what they told you on the phone."></textarea></label>
     <button type="submit" class="to-btn to-btn-primary" data-busy="Reading it...">Log it and draft a reply</button>

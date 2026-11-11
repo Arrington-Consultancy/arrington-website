@@ -126,3 +126,14 @@
   }
   later();
 })();
+
+(function () {
+  // The company menu opens the chosen company's portal as soon as it is
+  // picked. Without this file the Open button beside it does the same.
+  document.documentElement.classList.add('js');
+  var select = document.querySelector('select[data-autosubmit]');
+  if (!select) return;
+  select.addEventListener('change', function () {
+    if (select.form.requestSubmit) select.form.requestSubmit(); else select.form.submit();
+  });
+})();

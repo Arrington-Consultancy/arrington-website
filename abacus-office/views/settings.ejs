@@ -38,7 +38,7 @@
     </div>
     <div class="to-field-row">
       <label class="to-field"><span>Notes (optional)</span><input name="notes" maxlength="200" placeholder="Daytime, up to 2 cases each"></label>
-      <% if (manyBrands && !user.brand) { %><label class="to-field"><span>Brand</span><select name="brand"><% brands.forEach(function (b) { %><option value="<%= b.id %>"><%= b.name %></option><% }) %></select></label><% } %>
+      <% if (manyBrands && !user.brand) { %><label class="to-field"><span>Brand</span><select name="brand"><% brands.forEach(function (b) { %><option value="<%= b.id %>"<% if (b.id === defaultBrand) { %> selected<% } %>><%= b.name %></option><% }) %></select></label><% } %>
     </div>
     <button type="submit" class="to-btn to-btn-primary">Add price</button>
   </form>

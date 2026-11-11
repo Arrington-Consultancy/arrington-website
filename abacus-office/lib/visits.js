@@ -44,6 +44,7 @@ function describe(method, path, query = {}) {
   if ((m = p.match(/^\/write\/(\d+)\/([a-z-]+)$/))) return `draft ${m[1]}: ${ACTIONS[m[2]] || m[2]}`;
   if (p === '/write') return 'asked the AI to draft an email';
   if (p === '/inbox/sync') return 'checked the mailbox';
+  if (p === '/portal') return 'switched company';
   if (p === '/account/password') return 'changed their password';
   return `pressed a button (${p.slice(0, 80)})`;
 }

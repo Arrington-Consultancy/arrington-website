@@ -12,7 +12,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex, nofollow">
-  <title><%= title %> | <%= firm.name %> office</title>
+  <title><%= title %> | <%= typeof barName !== 'undefined' ? barName : firm.name %> office</title>
   <link rel="preload" href="/assets/fonts/schibsted-grotesk.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/office.css?v=<%= ASSET_V.css %>">
 </head>
@@ -26,12 +26,24 @@
   <header class="to-bar">
     <div class="to-wrap to-bar-inner">
       <a class="to-brand" href="/">
-        <% var _bar = typeof barLogo !== 'undefined' ? barLogo : firm.logo; %><% if (_bar) { %><span class="to-logo"><img src="<%= _bar %>" alt="" height="30"></span><% } else { %><span class="to-mark" aria-hidden="true"><%= firm.short.charAt(0) %></span><% } %>
-        <span><strong><%= firm.name %></strong> <span class="to-brand-sub">Office</span></span>
+        <% var _bar = typeof barLogo !== 'undefined' ? barLogo : firm.logo; var _barName = typeof barName !== 'undefined' ? barName : firm.name; var _barMark = typeof barMark !== 'undefined' ? barMark : firm.short.charAt(0); %><% if (_bar) { %><span class="to-logo"><img src="<%= _bar %>" alt="" height="30"></span><% } else { %><span class="to-mark" aria-hidden="true"><%= _barMark %></span><% } %>
+        <span><strong><%= _barName %></strong> <span class="to-brand-sub">Office</span></span>
       </a>
       <div class="to-who">
+        <% if (_user && typeof canSwitchPortal !== 'undefined' && canSwitchPortal) { %>
+        <form class="to-portal" method="post" action="/portal">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <input type="hidden" name="back" value="<%= typeof currentPath !== 'undefined' ? currentPath : '/' %>">
+          <label for="portal-brand"><span class="to-portal-label">Company</span></label>
+          <select id="portal-brand" name="brand" data-autosubmit>
+            <option value=""<% if (!portal) { %> selected<% } %>>All companies</option>
+            <% firm.brands.forEach(function (b) { %><option value="<%= b.id %>"<% if (portal === b.id) { %> selected<% } %>><%= b.name %></option><% }) %>
+          </select>
+          <button type="submit" class="to-portal-go">Open</button>
+        </form>
+        <% } %>
         <span class="to-date"><%= todayLong %></span>
-        <% if (_user) { %><a class="to-user" href="/account"><%= _user.display_name || _user.username %> (<%= _user.role %><%= manyBrands ? ', ' + (_user.brand ? brandName(_user.brand) : 'every brand') : '' %>)</a>
+        <% if (_user) { %><a class="to-user" href="/account"><%= _user.display_name || _user.username %> (<%= _user.role %><%= manyBrands && _user.role === 'operator' ? ', ' + (_user.brand ? brandName(_user.brand) : 'every company') : '' %>)</a>
         <form class="to-signout" method="post" action="/logout">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <button type="submit">Sign out</button>

@@ -24,7 +24,7 @@ const morgan = require('morgan');
 const fs = require('fs');
 
 const { Store, ROLES } = require('./lib/store');
-const { Office, canApprove, canReassign, canSee, scopeFor, caseScope, seesCouncil, needsManager, atLeast, label, brandName } = require('./lib/cases');
+const { Office, canApprove, canReassign, canSee, scopeFor, caseScope, canSwitchPortal, portalFor, seesCouncil, needsManager, atLeast, label, brandName } = require('./lib/cases');
 const ai = require('./lib/ai');
 const visits = require('./lib/visits');
 const { CHANNELS, isLogged } = require('./lib/channels');
@@ -110,6 +110,9 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     res.locals.brandLogo = (id) => ((firm.brands || []).find((b) => b.id === id) || {}).logo || '';
     res.locals.barLogo = firm.logo;
     res.locals.manyBrands = (firm.brands || []).length > 1;
+    res.locals.portal = '';
+    res.locals.defaultBrand = firm.mailboxBrand || '';
+    res.locals.canSwitchPortal = false;
     res.locals.channels = CHANNELS;
     res.locals.dispatchLabel = dispatch.label;
     res.locals.dispatchLive = Boolean(dispatch.live);
@@ -152,11 +155,22 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
       if (req.user && !req.user.active) { req.user = null; req.session.userId = null; }
       res.locals.user = req.user;
       res.locals.csrfToken = generateCsrfToken(req, res);
-      // An operator of one company sees that company's logo in the bar;
-      // managers, owners and anyone covering every company see the group's.
-      if (req.user && scopeFor(req.user)) res.locals.barLogo = ((firm.brands || []).find((b) => b.id === req.user.brand) || {}).logo || firm.logo;
+      // Which company's portal this page is: an operator's own company, or
+      // the one chosen from the bar by someone who sees every company ('' is
+      // all companies together, under the group's own name and logo).
+      req.portal = req.user ? portalFor(req.user, req.session.portal, firm.brands) : '';
+      const pb = (firm.brands || []).find((b) => b.id === req.portal);
+      res.locals.portal = req.portal;
+      res.locals.currentPath = req.originalUrl;
+      res.locals.canSwitchPortal = Boolean(req.user) && canSwitchPortal(req.user) && (firm.brands || []).length > 1;
+      res.locals.barLogo = pb ? pb.logo : firm.logo;
+      res.locals.barName = pb ? pb.name : firm.name;
+      res.locals.barMark = (pb ? pb.name : firm.short).charAt(0);
+      // The company a new complaint, email or price is for unless staff say
+      // otherwise: the portal they are in.
+      res.locals.defaultBrand = req.portal || firm.mailboxBrand || '';
       if (req.session.flash) { res.locals.flash = req.session.flash; delete req.session.flash; }
-      res.locals.counts = req.user ? await store.counts(caseScope(req.user)) : null;
+      res.locals.counts = req.user ? await store.counts(caseScope(req.user, req.portal)) : null;
       next();
     } catch (e) { next(e); }
   });
@@ -173,6 +187,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   });
 
   const flash = (req, tone, message) => { req.session.flash = { tone, message }; };
+
   // Same race for every redirect after a change: save the session first.
   app.use((req, res, next) => {
     const redirect = res.redirect.bind(res);
@@ -224,11 +239,25 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     next();
   };
   const requireRole = (role) => (req, res, next) => (atLeast(req.user, role) ? next() : res.status(404).render('missing', { title: 'Not found' }));
+
   const wrap = (fn) => (req, res, next) => fn(req, res, next).catch((e) => {
     if (e.code === 'REFUSED') { flash(req, 'warn', e.message); return res.redirect(req.get('referer') || '/'); }
     next(e);
   });
   app.use(requireUser);
+
+  // Switch portal from the bar's company menu. Only for someone who sees
+  // every company; an operator of one company has no menu and this changes
+  // nothing for them. Back to the page they were on, if it is one of ours.
+  app.post('/portal', wrap(async (req, res) => {
+    if (!req.user) return res.redirect('/login');
+    if (canSwitchPortal(req.user)) {
+      req.session.portal = portalFor(req.user, req.body.brand, firm.brands);
+    }
+    // Back to the page they were on, if it is a plain path on this office.
+    const back = String(req.body.back || '/').slice(0, 200);
+    res.redirect(/^\/(?![\/\\])[A-Za-z0-9/_?=&.-]*$/.test(back) ? back : '/');
+  }));
 
   // Every page first makes sure the inbox has been pulled and read once
   // this hour, so a person arriving sees today's emails without a button.
@@ -259,11 +288,11 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   // the case count plus the latest change, scoped to what this user sees.
   app.get('/live.json', wrap(async (req, res) => {
     res.set('Cache-Control', 'no-store');
-    res.json({ stamp: await store.liveStamp(caseScope(req.user)), checkedAt: lastSync, syncing: syncing });
+    res.json({ stamp: await store.liveStamp(caseScope(req.user, req.portal)), checkedAt: lastSync, syncing: syncing });
   }));
 
   app.get('/', wrap(async (req, res) => {
-    const scope = caseScope(req.user);
+    const scope = caseScope(req.user, req.portal);
     const [overdue, passedUp, mine, open, recent, stamp] = await Promise.all([
       store.listCases({ escalated: true, brand: scope, limit: 20 }),
       store.listCases({ passedUp: true, brand: scope, limit: 20 }),
@@ -284,7 +313,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
 
   app.get('/inbox', wrap(async (req, res) => {
     const show = String(req.query.show || 'open');
-    const scope = caseScope(req.user);
+    const scope = caseScope(req.user, req.portal);
     const filter = { open: { open: true }, new: { status: 'new' }, mine: { ownerId: req.user.id, open: true }, waiting: { status: 'waiting' }, done: { status: 'done' }, all: {} }[show] || { open: true };
     const cases = await store.listCases({ ...filter, brand: scope, limit: 200 });
     res.render('inbox', { title: 'Inbox', section: 'inbox', cases, show, liveStamp: await store.liveStamp(scope), lastSync });
@@ -304,7 +333,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   }));
 
   app.get('/complaints', wrap(async (req, res) => {
-    const scope = caseScope(req.user);
+    const scope = caseScope(req.user, req.portal);
     const cases = (await store.listCases({ kind: 'complaints', brand: scope, limit: 200 })).filter((c) => req.query.show === 'all' || c.status !== 'done');
     const order = { safety: 0, serious: 1, minor: 2, none: 3 };
     cases.sort((a, b) => (order[a.seriousness] - order[b.seriousness]) || (new Date(a.received_at) - new Date(b.received_at)));
@@ -330,12 +359,12 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   // The council worker: managers and owners only, like the council emails
   // themselves. Soonest deadline first, then oldest.
   app.get('/council', requireRole('manager'), wrap(async (req, res) => {
-    const scope = caseScope(req.user);
+    const scope = caseScope(req.user, req.portal);
     const showAll = req.query.show === 'all';
     const cases = (await store.listCases({ kind: 'licensing', brand: scope, limit: 200 })).filter((c) => showAll || c.status !== 'done');
     const due = (c) => (c.council && c.council.deadline) || '9999-12-31';
     cases.sort((a, b) => due(a).localeCompare(due(b)) || (new Date(a.received_at) - new Date(b.received_at)));
-    const drafts = await store.compositions({ council: true });
+    const drafts = await store.compositions({ council: true, brand: req.portal || undefined });
     res.render('council', { title: 'Council', section: 'council', cases, showAll, liveStamp: await store.liveStamp(scope), lastSync, drafts, councilKinds: require('./lib/compose').COUNCIL_KINDS, mailboxCanHold: mailboxCanHold() });
   }));
 
@@ -470,7 +499,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   }));
 
   app.get('/settings', requireRole('manager'), wrap(async (req, res) => {
-    res.render('settings', { baseUrl: baseUrl || `${req.protocol}://${req.get('host')}`, title: 'Settings', section: 'settings', hours: await store.escalationHours(), nudgeHours: await store.complaintNudgeHours(), prices: await store.fixedPrices(scopeFor(req.user)), brands: firm.brands || [], alertStatus: alerts.describeAlertStatus(alertsEnv), mailStatus: mailboxLib.describeMailStatus(mailEnv, mailbox), mailConnect: connectState(), aiStatus: ai.describeAiStatus(), dispatchStatus: require('./lib/dispatch').describeDispatchStatus() });
+    res.render('settings', { baseUrl: baseUrl || `${req.protocol}://${req.get('host')}`, title: 'Settings', section: 'settings', hours: await store.escalationHours(), nudgeHours: await store.complaintNudgeHours(), prices: await store.fixedPrices(scopeFor(req.user) || req.portal || undefined), brands: firm.brands || [], alertStatus: alerts.describeAlertStatus(alertsEnv), mailStatus: mailboxLib.describeMailStatus(mailEnv, mailbox), mailConnect: connectState(), aiStatus: ai.describeAiStatus(), dispatchStatus: require('./lib/dispatch').describeDispatchStatus() });
   }));
   app.post('/settings', requireRole('owner'), wrap(async (req, res) => {
     const n = Number(req.body.escalation_hours);
@@ -535,7 +564,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   const mailboxCanHold = () => !mailbox.demo && !mailbox.none && typeof mailbox.saveNewDraft === 'function' && mailbox.configured();
 
   app.get('/write', wrap(async (req, res) => {
-    const drafts = await store.compositions(atLeast(req.user, 'manager') ? { council: false } : { userId: req.user.id, council: false });
+    const drafts = await store.compositions(atLeast(req.user, 'manager') ? { council: false, brand: req.portal || undefined } : { userId: req.user.id, council: false });
     res.render('write', { title: 'Write', section: 'write', drafts, kinds: compose.KINDS, relationships: compose.RELATIONSHIPS, ownBrand: scopeFor(req.user) || '', mailboxCanHold: mailboxCanHold() });
   }));
   app.post('/write', wrap(async (req, res) => {

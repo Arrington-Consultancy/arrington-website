@@ -15,7 +15,7 @@
       <label class="to-field"><span>Their email address (optional for now)</span><input id="to_address" name="to_address" type="email" maxlength="200" placeholder="name@example.com"></label>
     </div>
     <% if (manyBrands && !ownBrand) { %>
-    <label class="to-field"><span>Which company it is from</span><select id="brand" name="brand"><% firm.brands.forEach(function (b) { %><option value="<%= b.id %>"<% if (b.id === firm.mailboxBrand) { %> selected<% } %>><%= b.name %></option><% }) %></select></label>
+    <label class="to-field"><span>Which company it is from</span><select id="brand" name="brand"><% firm.brands.forEach(function (b) { %><option value="<%= b.id %>"<% if (b.id === defaultBrand) { %> selected<% } %>><%= b.name %></option><% }) %></select></label>
     <% } %>
     <label class="to-field"><span>What should it say?</span><textarea id="prompt" name="prompt" rows="4" maxlength="2000" required placeholder="For example: introduce us to the hotel's front desk, we can do their guests' station and airport runs on account, monthly invoice, ask if they would like a quick call."></textarea></label>
     <label class="to-field"><span>For a reply: paste the email you are answering</span><textarea id="quoted" name="quoted" rows="4" maxlength="6000" placeholder="Only needed when the kind is a reply."></textarea></label>

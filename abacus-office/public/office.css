@@ -77,6 +77,16 @@ p { margin: 0 0 0.8rem; }
 .to-signout button { font: inherit; font-weight: 600; color: var(--on-night); background: transparent; border: 1px solid var(--on-night-muted); border-radius: 999px; min-height: 32px; padding: 0.2rem 0.8rem; cursor: pointer; }
 .to-signout button:hover { color: #fff; background: var(--night-2); border-color: #fff; }
 .to-signout button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+/* The company menu (managers and the owner): which company's portal this is. */
+.to-portal { margin: 0; display: inline-flex; align-items: center; gap: 0.45rem; }
+.to-portal-label { color: var(--on-night-muted); font-weight: 600; }
+.to-portal select { font: inherit; font-weight: 700; color: #fff; background: var(--night-2); border: 1px solid var(--night-3); border-radius: 8px; min-height: 36px; padding: 0.25rem 2rem 0.25rem 0.65rem; max-width: 14rem; appearance: none; -webkit-appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--on-night) 50%), linear-gradient(135deg, var(--on-night) 50%, transparent 50%); background-position: right 0.9rem center, right 0.6rem center; background-size: 0.3rem 0.3rem; background-repeat: no-repeat; cursor: pointer; }
+.to-portal select:hover { border-color: var(--on-night-muted); }
+.to-portal select:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.to-portal select option { color: var(--ink); background: var(--paper); }
+.to-portal-go { font: inherit; font-weight: 600; color: var(--on-night); background: transparent; border: 1px solid var(--on-night-muted); border-radius: 999px; min-height: 32px; padding: 0.2rem 0.8rem; cursor: pointer; }
+.js .to-portal-go { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-width: 30rem) { .to-portal { order: -1; width: 100%; } .to-portal select { flex: 1; max-width: none; } }
 .to-user { display: none; }
 @media (min-width: 48rem) { .to-user { display: inline; } }
 .to-date { color: var(--on-night); font-weight: 600; }
