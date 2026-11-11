@@ -307,3 +307,43 @@ test('a missing variable is named, and a dump that is too small is refused',
       await google.close();
     }
   });
+
+// A second database (the Abacus office, 11 November 2026) runs the same
+// script with its own folder and file prefix, so neither run names, keeps
+// or deletes the other's files.
+test('a second database uses its own folder and file name, and never touches the website backups',
+  { skip: !DB && 'set BACKUP_TEST_DATABASE_URL to a seeded database (the suite only reads it)' },
+  async () => {
+    const google = mockGoogle({ refreshToken: 'rt-secret-123' });
+    const port = await google.listen();
+    try {
+      const webFolder = google.newId('folder');
+      google.store.set(webFolder, { id: webFolder, name: 'Arrington website database backups', mimeType: 'application/vnd.google-apps.folder', createdTime: '2026-07-01T00:00:00.000Z' });
+      const webFile = google.newId('file');
+      google.store.set(webFile, { id: webFile, name: 'arrington-website-db-2026-01-05.sql.gz', parents: [webFolder], mimeType: 'application/gzip', bytes: Buffer.from('old'), createdTime: '2026-01-05T03:00:00.000Z' });
+      const base = {
+        DATABASE_URL: DB,
+        GOOGLE_DRIVE_CLIENT_ID: 'cid', GOOGLE_DRIVE_CLIENT_SECRET: 'csecret-abc', GOOGLE_DRIVE_REFRESH_TOKEN: 'rt-secret-123',
+        GOOGLE_OAUTH_TOKEN_URL: `http://127.0.0.1:${port}/token`,
+        GOOGLE_DRIVE_API_BASE: `http://127.0.0.1:${port}`,
+        BACKUP_FOLDER_NAME: 'A2B office database backups',
+        BACKUP_KEEP: '1'
+      };
+      const bad = await runScript({ ...base, BACKUP_FILE_PREFIX: '../x' });
+      assert.notEqual(bad.status, 0);
+      assert.match(bad.stderr, /BACKUP_FILE_PREFIX must be lower case letters, digits and hyphens/);
+
+      const r = await runScript({ ...base, BACKUP_FILE_PREFIX: 'abacus-office-db\n' });
+      assert.equal(r.status, 0, `script failed:\n${r.stdout}\n${r.stderr}`);
+      const today = new Date().toISOString().slice(0, 10);
+      const folders = [...google.store.values()].filter((f) => f.mimeType === 'application/vnd.google-apps.folder');
+      const office = folders.find((f) => f.name === 'A2B office database backups');
+      assert.ok(office, 'the office folder was created');
+      const up = [...google.store.values()].filter((f) => f.name === `abacus-office-db-${today}.sql.gz`);
+      assert.equal(up.length, 1);
+      assert.deepEqual(up[0].parents, [office.id], 'the office backup goes in the office folder');
+      assert.ok(google.store.has(webFile), 'the website backup in the other folder is untouched, even with BACKUP_KEEP=1');
+    } finally {
+      await google.close();
+    }
+  });

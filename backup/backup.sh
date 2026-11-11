@@ -27,6 +27,9 @@
 #   BACKUP_FOLDER_NAME           optional, default "Arrington website database backups"
 #   BACKUP_KEEP                  optional, default 12 (weekly runs, about three months)
 #   BACKUP_MIN_BYTES             optional, default 20000; a smaller dump is treated as a failure
+#   BACKUP_FILE_PREFIX           optional, default "arrington-website-db"; lower case letters,
+#                                digits and hyphens. A second database (the Abacus office) uses
+#                                its own prefix and folder, so neither run touches the other's files.
 # Test hooks (the test suite points them at a local mock; leave unset in production):
 #   GOOGLE_OAUTH_TOKEN_URL, GOOGLE_DRIVE_API_BASE
 #
@@ -46,7 +49,7 @@ REFRESH_TOKEN="$(trim "${GOOGLE_DRIVE_REFRESH_TOKEN:-}")"
 FOLDER_NAME="$(trim "${BACKUP_FOLDER_NAME:-Arrington website database backups}")"
 KEEP="$(trim "${BACKUP_KEEP:-12}")"
 MIN_BYTES="$(trim "${BACKUP_MIN_BYTES:-20000}")"
-PREFIX="arrington-website-db"
+PREFIX="$(trim "${BACKUP_FILE_PREFIX:-arrington-website-db}")"
 TOKEN_URL="${GOOGLE_OAUTH_TOKEN_URL:-https://oauth2.googleapis.com/token}"
 API="${GOOGLE_DRIVE_API_BASE:-https://www.googleapis.com}"
 
@@ -60,6 +63,7 @@ done
 case "$KEEP" in ''|*[!0-9]*) fail "BACKUP_KEEP must be a whole number, got '$KEEP'";; esac
 [ "$KEEP" -ge 1 ] || fail "BACKUP_KEEP must be at least 1"
 case "$MIN_BYTES" in ''|*[!0-9]*) fail "BACKUP_MIN_BYTES must be a whole number";; esac
+printf '%s' "$PREFIX" | grep -Eq '^[a-z0-9]+(-[a-z0-9]+)*$' || fail "BACKUP_FILE_PREFIX must be lower case letters, digits and hyphens"
 command -v pg_dump >/dev/null || fail "pg_dump is not installed in this image"
 
 WORK="$(mktemp -d)"
