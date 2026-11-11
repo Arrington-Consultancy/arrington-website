@@ -10469,3 +10469,52 @@ Users page right after the merge. Tests updated in
 `test/abacusOfficeVisibility.test.js`, `test/abacusOfficePortals.test.js`
 (managers created through the Users page; the owner rule watched red) and
 `test/abacusOfficeWrite.test.js`.
+
+**Office tools and a sweep, ON THE BRANCH ONLY, NOT MERGED (11/11/2026,
+Tom: "I don't want him to see any more we build yet... let's build every
+thing we can. Then do huge sweep").** On `claude/new-session-hbgp04` with
+the portals; nothing on main. Built:
+- **Search** on the inbox (`store.searchCases`): subject, sender, the
+  email, dispatch reference, contact, the customer's name and phone as
+  read, or a case number; every status; only what the person may see; `%`
+  and `_` are characters, not wildcards.
+- **Standard replies** (`standard_replies` table, Settings, managers):
+  per company or for every company; a manager set to one company keeps
+  that company's. "Use a standard reply" on a case puts one into the draft
+  (replaces it after a question); the AI is given the company's replies
+  in `firmFacts` and the Write worker's `firmLines`, via `office.firmFor`.
+- **Tariff and fare calculator** (`lib/fares.js`, pure; `/fares`, all
+  staff; tariff in Settings per company, stored in `settings` as
+  `tariff:<company>`): hire charge, per mile, waiting, minimum; night,
+  Sunday, bank holiday (England and Wales, to the end of 2028) and
+  Christmas/Boxing Day/New Year's Day rates, highest one wins; 6 and 8
+  seater uplift on top; nearest 10p. Staff give the miles; a matching fixed
+  price is shown first. The AI never quotes from the tariff.
+- **Change or cancel a booking by reference**: a change email changes the
+  job it names (or the one this case booked) with the sign-off tick and a
+  record of exactly what changed, on both emails' histories; a cancel
+  email cancels by reference. Stand-in updates its row; iCabbi runs its
+  check then `POST /bookings/update/{id}` only with live writes on. Only a
+  booking this office holds, still booked, in a company the person sees.
+- **Reports** (`/reports`, managers and the owner, 7/30/90 days, scoped to
+  what they see and the portal): emails in, approved, typical and 90th
+  percentile time to approval, into dispatch, open, overdue, by worker,
+  complaints by seriousness and channel, approvals by person, by company.
+  **Spreadsheet download** (`/reports/cases.csv`): cells that start with
+  `= + - @` are made plain text; the download is recorded in Activity.
+Sweep fixes, also branch only: **a live desktop bug** (the case page fell
+to one column on a desktop because a phone rule had no media query, and
+the sticky email then slid over the reply and booking forms; main has it
+at `abacus-office/public/office.css`, the unscoped
+`.to-email-grid { grid-template-columns: minmax(0, 1fr); }`); a manager
+set to one company could open another company's Write draft by its address
+and saw every company's Activity and visits; a reply could be approved
+twice, putting two drafts in the mailbox; a case could be assigned to
+someone who could not see it; promoting a user to owner now clears their
+company; the old Tidewell live-address poller in `office.js` ran beside the
+list poller on every page and is gone; every `select[data-autosubmit]`
+works, not just the first. Tests: `test/abacusOfficeTools.test.js` (gated;
+search scope, the reference check and the double approval each watched
+red). 52 office tests pass; browser pass of 27 pages at desktop and
+iPhone 13, no errors, no sideways scroll. On a phone the owner's menu is
+four rows (ten items); it is not sticky there, so it scrolls away.

@@ -236,8 +236,10 @@
             <button type="submit" class="to-btn to-btn-quiet">Save my edits</button>
           </div>
         </div>
-        <% if (mayApprove) { %>
-          <button type="submit" class="to-btn to-btn-primary" formaction="/case/<%= kase.id %>/approve" data-confirm="Approve this reply? <%= logged ? 'You then copy it and send or post it where it came in.' : (mailboxDemo ? 'Nothing is sent from this made-up inbox.' : 'It will be saved as a draft in ' + mailboxLabel + ' for someone to send.') %>" data-busy="Approving..."><%= kase.approved_at ? 'Approve again' : 'Approve this reply' %></button>
+        <% if (mayApprove && kase.approved_at) { %>
+          <p class="to-small">Approved. To send something different, change the reply above and save it, then approve it again.</p>
+        <% } else if (mayApprove) { %>
+          <button type="submit" class="to-btn to-btn-primary" formaction="/case/<%= kase.id %>/approve" data-confirm="Approve this reply? <%= logged ? 'You then copy it and send or post it where it came in.' : (mailboxDemo ? 'Nothing is sent from this made-up inbox.' : 'It will be saved as a draft in ' + mailboxLabel + ' for someone to send.') %>" data-busy="Approving...">Approve this reply</button>
           <p class="to-small"><%= forManager ? 'This one is approved by a manager; you are one.' : (logged ? 'It came in as a ' + ch.label.toLowerCase() + '. Once approved: ' + ch.send + ' Nothing is posted or sent from here.' : 'Approving saves it as a draft in the firm\'s mailbox for a person to send. Nothing is sent from here.') %></p>
         <% } else { %>
           <p class="to-note to-note-warn"><%= isCouncil ? 'A reply to the council is approved by a manager or owner.' : (passedUp ? 'This complaint was passed up, so a manager approves the reply.' : 'A safety matter needs a manager to approve the reply.') %> Get the draft right, add a note, and a manager will approve it from here.</p>

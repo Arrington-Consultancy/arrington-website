@@ -195,6 +195,26 @@ test('over HTTP: search, standard replies, fares, changing a booking, reports an
   assert.match(r.text, /Coastline/);
   assert.doesNotMatch(r.text, /Airport run for the Penroses/, 'a Coastline manager downloads Coastline\'s emails only');
 
+  // ---- Sweep fixes: no second copy of an approved reply, no case given to
+  // someone who cannot see it, and a manager set to one company opens only
+  // that company's drafts.
+  const enquiry = await mk('en1', { subject: 'What time do you open', reading: { intent: 'enquiry', summary: 'x' } });
+  await store.updateCase(enquiry, { draft: 'Hi, we are open all day. Thanks, Cornwall Taxis' });
+  let saves = 0;
+  mailbox.saveReplyDraft = async () => { saves += 1; return {}; };
+  await sam.post(`/case/${enquiry}/approve`, {}, `/case/${enquiry}`);
+  await sam.post(`/case/${enquiry}/approve`, {}, `/case/${enquiry}`);
+  assert.equal(saves, 1, 'approving twice saves one draft');
+  assert.match(await sam.flashAfter(`/case/${enquiry}`), /already approved/);
+  await sam.post(`/case/${enquiry}/approve`, { draft: 'Hi, we are open all day and all night. Thanks, Cornwall Taxis' }, `/case/${enquiry}`);
+  assert.equal(saves, 2, 'a changed reply can be approved again');
+  const coraId = (await store.users()).find((u) => u.username === 'cora').id;
+  await own.post(`/case/${enquiry}/assign`, { owner: String(coraId) }, `/case/${enquiry}`);
+  assert.notEqual((await store.caseById(enquiry)).owner_id, coraId, 'an Abacus email is not given to a Coastline manager');
+  const abacusDraft = await store.insertComposition({ brand: 'abacus', kind: 'new', relationship: 'new', prompt: 'x', subject: 'Abacus outreach', body: 'Hello there', actor: null });
+  assert.equal((await cora.get(`/write/${abacusDraft.id}`)).status, 404, 'a Coastline manager cannot open an Abacus draft');
+  assert.equal((await own.get(`/write/${abacusDraft.id}`)).status, 200);
+
   // ---- Activity for a manager set to one company.
   r = await cora.get('/activity');
   assert.equal(r.status, 200);

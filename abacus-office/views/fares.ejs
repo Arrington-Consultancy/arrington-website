@@ -5,7 +5,7 @@
 %>
 <section class="to-section-head">
   <h1>Fares</h1>
-  <p class="to-small">Work out a fare from <%= manyBrands ? brandName(brand) + "'s" : "the firm's" %> tariff to answer a customer. Give the miles; the office does not guess a distance. A fixed price for the journey always comes first. It is a guide: the meter, or the fixed price, is what the customer pays.</p>
+  <p class="to-small">Work out a fare from the tariff<%= manyBrands ? ' for ' + brandName(brand) : '' %> to answer a customer. Give the miles; the office does not guess a distance. A fixed price for the journey always comes first. It is a guide: the meter, or the fixed price, is what the customer pays.</p>
 </section>
 
 <div class="to-email-grid">
@@ -44,7 +44,7 @@
       <p class="to-fare<%= fixed ? ' is-secondary' : '' %>"><%= fmt(result.pence) %></p>
       <p class="to-small"><%= ymdLong(input.date) %> at <%= input.time %>, <%= result.vehicle %>, <%= result.rateName %>.</p>
       <div class="to-table-wrap"><table class="to-table is-compact">
-        <tbody><% result.lines.forEach(function (l) { %><tr><td><%= l[0] %></td><td class="to-num"><%= l[1] < 0 ? '−' + fmt(-l[1]) : fmt(l[1]) %></td></tr><% }) %></tbody>
+        <tbody><% result.lines.forEach(function (l) { %><tr><td><%= l[0] %></td><td class="to-num"><%= l[1] < 0 ? 'less ' + fmt(-l[1]) : fmt(l[1]) %></td></tr><% }) %></tbody>
         <tfoot><tr><th scope="row">Fare</th><td class="to-num"><strong><%= fmt(result.pence) %></strong></td></tr></tfoot>
       </table></div>
       <% result.notes.forEach(function (n) { %><p class="to-small"><%= n %></p><% }) %>

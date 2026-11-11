@@ -14,7 +14,9 @@ const PAGES = {
   '/activity': 'Activity',
   '/users': 'Users',
   '/settings': 'Settings',
-  '/account': 'their account'
+  '/account': 'their account',
+  '/fares': 'the fare calculator',
+  '/reports': 'Reports'
 };
 
 const ACTIONS = {
@@ -22,7 +24,11 @@ const ACTIONS = {
   take: 'took it', assign: 'reassigned it', status: 'changed its status', read: 'asked the AI to read it again',
   'pass-up': 'passed it up to a manager', holding: 'saved the holding reply', book: 'booked it into dispatch',
   'cancel-booking': 'cancelled the booking', 'dispatch-status': 'checked the dispatch status', company: 'moved it to another company',
-  save: 'saved changes', discard: 'discarded it'
+  save: 'saved changes', discard: 'discarded it', 'change-booking': 'changed the booking in dispatch'
+};
+const POSTS = {
+  '/settings': 'changed the escalation times', '/settings/prices': 'added a fixed price', '/settings/replies': 'added a standard reply',
+  '/settings/tariff': 'saved the tariff', '/complaints/log': 'logged a complaint from another channel', '/users': 'added a user'
 };
 
 // The background requests a page makes on its own. They are not a person
@@ -35,6 +41,9 @@ function describe(method, path, query = {}) {
   const p = String(path || '/').replace(/\/+$/, '') || '/';
   let m;
   if (method === 'GET') {
+    if (p === '/inbox' && query.q) return `searched for "${String(query.q).slice(0, 40)}"`;
+    if (p === '/fares' && query.miles) return 'worked out a fare';
+    if (p === '/reports/cases.csv') return 'downloaded the emails as a spreadsheet';
     if (PAGES[p]) return `opened ${PAGES[p]}${query.show ? ` (${String(query.show).slice(0, 20)})` : ''}`;
     if ((m = p.match(/^\/case\/(\d+)$/))) return `opened email ${m[1]}`;
     if ((m = p.match(/^\/write\/(\d+)$/))) return `opened draft ${m[1]}`;
@@ -43,6 +52,9 @@ function describe(method, path, query = {}) {
   if ((m = p.match(/^\/case\/(\d+)\/([a-z-]+)$/))) return `email ${m[1]}: ${ACTIONS[m[2]] || m[2]}`;
   if ((m = p.match(/^\/write\/(\d+)\/([a-z-]+)$/))) return `draft ${m[1]}: ${ACTIONS[m[2]] || m[2]}`;
   if (p === '/write') return 'asked the AI to draft an email';
+  if (POSTS[p]) return POSTS[p];
+  if (/^\/settings\/(prices|replies)\/\d+\/delete$/.test(p)) return p.includes('prices') ? 'removed a fixed price' : 'removed a standard reply';
+  if (/^\/users\/\d+$/.test(p)) return 'changed a user';
   if (p === '/inbox/sync') return 'checked the mailbox';
   if (p === '/portal') return 'switched company';
   if (p === '/account/password') return 'changed their password';

@@ -401,6 +401,9 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   act('take', async (req) => { await office.take(req.kase, req.user); });
   act('assign', async (req) => {
     const to = req.body.owner ? await store.userById(Number(req.body.owner)) : null;
+    // Only to someone active who can see the email; anyone else would hold
+    // a case they cannot open.
+    if (req.body.owner && (!to || !to.active || !canSee(to, req.kase))) { flash(req, 'warn', 'That person cannot see this email, so it was not assigned to them.'); return; }
     await office.assign(req.kase, req.user, to);
   });
   act('status', async (req) => { await office.setStatus(req.kase, req.user, String(req.body.status)); });
@@ -528,7 +531,13 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     if (target.id === req.user.id && (action === 'deactivate' || action === 'role')) { flash(req, 'warn', 'You cannot change your own account here.'); return res.redirect('/users'); }
     if (action === 'deactivate') { await store.setUserActive(target.id, false); await store.addEvent(null, { actor: req.user, kind: 'user_deactivated', detail: target.username }); }
     else if (action === 'activate') { await store.setUserActive(target.id, true); await store.addEvent(null, { actor: req.user, kind: 'user_activated', detail: target.username }); }
-    else if (action === 'role' && ROLES.includes(req.body.role)) { await store.setUserRole(target.id, req.body.role); await store.addEvent(null, { actor: req.user, kind: 'user_role', detail: `${target.username} is now ${req.body.role}` }); }
+    else if (action === 'role' && ROLES.includes(req.body.role)) {
+      await store.setUserRole(target.id, req.body.role);
+      // An owner sees every company, so a company set before is cleared
+      // rather than coming back if they are ever made a manager again.
+      if (req.body.role === 'owner' && target.brand) await store.setUserBrand(target.id, '');
+      await store.addEvent(null, { actor: req.user, kind: 'user_role', detail: `${target.username} is now ${req.body.role}` });
+    }
     else if (action === 'brand') {
       if (target.role === 'owner') { flash(req, 'warn', 'The owner always sees every company.'); return res.redirect('/users'); }
       const brand = (firm.brands || []).some((b) => b.id === String(req.body.brand || '')) ? String(req.body.brand) : '';
@@ -653,7 +662,8 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   // A draft is its writer's, and every draft is open to managers and the
   // owner, who see every company.
   // A draft to the council is for managers and owners only, whoever wrote it.
-  const mayOpenDraft = (user, c) => Boolean(c) && c.status !== 'discarded' && (!compose.isCouncilKind(c.kind) || seesCouncil(user)) && (c.created_by === user.id || atLeast(user, 'manager'));
+  // A manager set to one company opens that company's drafts only.
+  const mayOpenDraft = (user, c) => Boolean(c) && c.status !== 'discarded' && (!compose.isCouncilKind(c.kind) || seesCouncil(user)) && (c.created_by === user.id || (atLeast(user, 'manager') && (seesEveryCompany(user) || user.brand === (c.brand || ''))));
   const loadDraft = wrap(async (req, res, next) => {
     const c = await store.compositionById(Number(req.params.id));
     if (!mayOpenDraft(req.user, c)) return res.status(404).render('missing', { title: 'Not found' });

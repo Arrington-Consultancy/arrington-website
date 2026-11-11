@@ -18,10 +18,10 @@
 
 <div class="to-rstats">
   <div class="to-rstat"><span class="to-rstat-n"><%= t.emails || 0 %></span><span>emails and complaints in</span></div>
-  <div class="to-rstat"><span class="to-rstat-n"><%= t.approved || 0 %></span><span>replies approved</span></div>
+  <div class="to-rstat"><span class="to-rstat-n"><%= t.approved || 0 %></span><span><%= t.approved === 1 ? 'reply' : 'replies' %> approved</span></div>
   <div class="to-rstat"><span class="to-rstat-n"><%= hrs(t.median_hours) %></span><span>typical time to an approved reply</span></div>
-  <div class="to-rstat"><span class="to-rstat-n"><%= t.into_dispatch || 0 %></span><span>jobs put into dispatch from an email</span></div>
-  <div class="to-rstat<%= t.open_now ? ' is-warn' : '' %>"><span class="to-rstat-n"><%= t.open_now || 0 %></span><span>of them still open</span></div>
+  <div class="to-rstat"><span class="to-rstat-n"><%= t.into_dispatch || 0 %></span><span><%= t.into_dispatch === 1 ? 'job' : 'jobs' %> put into dispatch from an email</span></div>
+  <div class="to-rstat<%= t.open_now ? ' is-warn' : '' %>"><span class="to-rstat-n"><%= t.open_now || 0 %></span><span>still open</span></div>
   <div class="to-rstat<%= t.went_overdue ? ' is-bad' : '' %>"><span class="to-rstat-n"><%= t.went_overdue || 0 %></span><span>went overdue</span></div>
 </div>
 <% if (t.p90_hours !== null && t.p90_hours !== undefined) { %><p class="to-small">Nine in ten approved replies were approved within <%= hrs(t.p90_hours) %> of the email arriving.</p><% } %>
@@ -42,7 +42,7 @@
     <% var cTotal = rep.complaints.reduce(function (s, x) { return s + x.n; }, 0); %>
     <% if (cTotal) { %>
     <div class="to-table-wrap"><table class="to-table is-compact">
-      <thead><tr><th scope="col">How serious</th><th scope="col" class="to-num">Complaints</th><th scope="col" class="to-num">The firm at fault, or partly</th></tr></thead>
+      <thead><tr><th scope="col">How serious</th><th scope="col" class="to-num">Complaints</th><th scope="col" class="to-num">At fault or partly</th></tr></thead>
       <tbody><% ['safety', 'serious', 'minor', 'none'].forEach(function (k) { var row = rep.complaints.find(function (x) { return x.seriousness === k; }); if (!row) return; %><tr><td><%= sev[k] %></td><td class="to-num"><%= row.n %></td><td class="to-num"><%= row.at_fault %><% if (row.at_fault) { %> <span class="to-small">(<%= pct(row.at_fault, row.n) %>)</span><% } %></td></tr><% }) %></tbody>
     </table></div>
     <% if (rep.byChannel.length > 1 || (rep.byChannel[0] && rep.byChannel[0].channel !== 'email')) { %>

@@ -275,6 +275,10 @@ class Office {
   async approve(kase, user) {
     if (!canApprove(user, kase)) throw refuse(kase.kind === 'licensing' ? 'A reply to the council is approved by a manager or owner.' : needsManager(kase) ? (kase.passed_up_at ? 'This complaint was passed up, so a manager approves the reply.' : 'A safety matter needs a manager to approve the reply.') : 'You cannot approve this.');
     if (!String(kase.draft || '').trim()) throw refuse('There is no reply to approve.');
+    // Approving the same reply twice would put a second copy in the
+    // mailbox. Editing the draft takes the approval off, so a changed reply
+    // can be approved again.
+    if (kase.approved_at) throw refuse('This reply is already approved. Change it first if a different one should go.');
     if (isLogged(kase)) return this.approveLogged(kase, user);
     const { draftId } = await this.mailbox.saveReplyDraft(this.emailOf(kase), kase.draft);
     await this.store.updateCase(kase.id, { approved_at: this.now(), approved_by: user.id, saved_draft_id: draftId || null, status: 'waiting', owner_id: kase.owner_id || user.id });
