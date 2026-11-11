@@ -113,6 +113,9 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     res.locals.channels = CHANNELS;
     res.locals.dispatchLabel = dispatch.label;
     res.locals.dispatchLive = Boolean(dispatch.live);
+    // Whether an alert email can actually go, so no page says a manager was
+    // emailed when nothing could be sent.
+    res.locals.alertsReady = Boolean(alerts.smtpConfig(alertsEnv).ready);
     res.locals.counts = null;
     res.locals.section = '';
     next();
@@ -264,13 +267,14 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
 
   app.get('/', wrap(async (req, res) => {
     const scope = caseScope(req.user);
-    const [overdue, passedUp, mine, open, recent, stamp] = await Promise.all([
+    const [overdue, passedUp, mine, open, recent, stamp, unsent] = await Promise.all([
       store.listCases({ escalated: true, brand: scope, limit: 20 }),
       store.listCases({ passedUp: true, brand: scope, limit: 20 }),
       store.listCases({ ownerId: req.user.id, open: true, brand: scope, limit: 20 }),
       store.listCases({ open: true, brand: scope, limit: 50 }),
       store.recentEvents(12, scope),
-      store.liveStamp(scope)
+      store.liveStamp(scope),
+      store.listCases({ unsent: true, brand: scope, limit: 20 })
     ]);
     const showPassedUp = atLeast(req.user, 'manager') ? passedUp : [];
     const passedUpIds = new Set(showPassedUp.map((c) => c.id));
@@ -279,17 +283,18 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     const unassigned = open.filter((c) => !c.owner_id && c.status === 'new' && c.kind !== 'other' && !overdueIds.has(c.id));
     const hours = await store.escalationHours();
     const nudgeHours = await store.complaintNudgeHours();
-    res.render('today', { title: 'Today', section: 'today', overdue: overdueShown, passedUp: showPassedUp, mine, unassigned, recent, hours, nudgeHours, liveStamp: stamp, lastSync });
+    res.render('today', { title: 'Today', section: 'today', unsent, overdue: overdueShown, passedUp: showPassedUp, mine, unassigned, recent, hours, nudgeHours, liveStamp: stamp, lastSync });
   }));
 
   app.get('/inbox', wrap(async (req, res) => {
     const show = String(req.query.show || 'open');
     const scope = caseScope(req.user);
-    const filter = { open: { open: true }, new: { status: 'new' }, mine: { ownerId: req.user.id, open: true }, waiting: { status: 'waiting' }, done: { status: 'done' }, all: {} }[show] || { open: true };
+    const filter = { open: { open: true }, new: { status: 'new' }, mine: { ownerId: req.user.id, open: true }, unsent: { unsent: true }, waiting: { status: 'waiting' }, done: { status: 'done' }, all: {} }[show] || { open: true };
     const cases = await store.listCases({ ...filter, brand: scope, limit: 200 });
     res.render('inbox', { title: 'Inbox', section: 'inbox', cases, show, liveStamp: await store.liveStamp(scope), lastSync });
   }));
   app.post('/inbox/sync', wrap(async (req, res) => {
+    if (mailbox.none) { flash(req, 'warn', 'No mailbox is connected, so there is nothing to check.'); return res.redirect('/inbox'); }
     lastSync = 0;
     let created;
     try { created = await office.sync(); mailError = ''; } catch (e) {
@@ -379,19 +384,19 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     const r = await office.guide(fresh, req.user, req.body.guidance);
     flash(req, r.rewritten ? 'ok' : 'warn', r.rewritten ? (r.heldBack ? `Rewritten. Held back: ${r.heldBack}` : 'Rewritten to what you said.') : 'Your note is recorded. The AI is off, so edit the draft by hand.');
   });
-  act('pass-up', async (req) => {
+  act('pass-up', async (req, res) => {
     const fresh = await office.passUp(req.kase, req.user, req.body.reason);
     alerts.sendNudge({ cases: [fresh], hours: 0, baseUrl, firmName: firm.name, by: req.user.display_name || req.user.username }, alertsEnv).then((r) => { if (r.sent) store.markPassedUpNotified([fresh.id]); }).catch((e) => console.error('Abacus office: pass-up email failed', e.message));
-    flash(req, 'ok', 'Passed up to a manager. Only a manager can approve the reply now. You can send the holding reply below.');
+    flash(req, 'ok', `Passed up to a manager. Only a manager can approve the reply now.${res.locals.alertsReady ? ' The manager has been emailed.' : ' Alert emails are not set up, so tell a manager yourself.'} You can send the holding reply below.`);
   });
   act('holding', async (req) => {
     await office.sendHolding(req.kase, req.user);
-    flash(req, 'ok', (mailbox.demo || mailbox.none) ? 'Holding reply approved. With a real mailbox connected it would now be a draft in it, ready to send.' : `Holding reply saved as a draft in ${mailbox.label}. Open the mailbox to send it.`);
+    flash(req, 'ok', mailbox.none ? 'Holding reply approved. No mailbox is connected, so nothing has been sent: copy it below and send it from your own email.' : mailbox.demo ? 'Holding reply approved. This is the made-up inbox, so nothing has been sent.' : `Holding reply saved as a draft in ${mailbox.label}. Nothing has been sent: open the mailbox to send it.`);
   });
   act('book', async (req) => {
     try {
       const { ref, statusWords } = await office.book(req.kase, req.user, req.body, req.body.signed_off === 'yes');
-      flash(req, 'ok', `Booked into ${dispatch.label} as ${ref}${statusWords ? `, ${statusWords}` : ''}.`);
+      flash(req, 'ok', dispatch.live ? `Booked into ${dispatch.label} as ${ref}${statusWords ? `, ${statusWords}` : ''}.` : `Recorded on the stand-in dispatch as ${ref}. This is not a live dispatch system: no car is booked, so do not tell the customer it is booked.`);
     } catch (e) {
       if (!e.checkedOnly) throw e;
       flash(req, 'ok', e.message);
@@ -415,9 +420,20 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   act('approve', async (req) => {
     if (req.body.draft !== undefined && String(req.body.draft) !== String(req.kase.draft)) await office.saveDraft(req.kase, req.user, req.body.draft);
     const fresh = await store.caseById(req.kase.id);
-    const done = await office.approve(fresh, req.user);
-    if (done && done.copyOut) { flash(req, 'ok', `Approved. ${done.send}`); return; }
-    flash(req, 'ok', (mailbox.demo || mailbox.none) ? 'Approved. With a real mailbox connected this would now be a draft in it, ready to send.' : `Approved and saved as a draft in ${mailbox.label}. Open the mailbox to send it.`);
+    let done;
+    try { done = await office.approve(fresh, req.user, { mailboxChecked: req.body.mailbox_checked === 'yes' }); } catch (e) {
+      if (e.code !== 'REFUSED') throw e;
+      flash(req, 'warn', e.message);
+      return;
+    }
+    if (done && done.copyOut) { flash(req, 'ok', `Approved. ${done.send} When it has gone, press I have sent it.`); return; }
+    flash(req, 'ok', mailbox.none ? 'Approved. No mailbox is connected, so nothing has been sent: copy the reply, send it from your own email, then press I have sent it.' : mailbox.demo ? 'Approved. This is the made-up inbox, so nothing has been sent.' : `Approved and saved as a draft in ${mailbox.label}. Nothing has been sent: open the mailbox to send it, then press I have sent it.`);
+  });
+  act('sent', async (req) => {
+    try { await office.markSent(req.kase, req.user); flash(req, 'ok', 'Marked as sent. The case now waits on the customer.'); } catch (e) {
+      if (e.code !== 'REFUSED') throw e;
+      flash(req, 'warn', e.message);
+    }
   });
 
   app.get('/account', wrap(async (req, res) => res.render('account', { title: 'Your account', section: 'account', error: null })));
@@ -615,13 +631,22 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     if (Object.keys(f).length) await store.updateComposition(req.draft.id, f);
     const c = { ...req.draft, ...f };
     if (!String(c.subject || '').trim() || String(c.body || '').trim().length < 10) { flash(req, 'warn', 'It needs a subject and a message before it is approved.'); return; }
+    if (mailboxCanHold() && !EMAIL_RE.test(c.to_address || '')) { flash(req, 'warn', 'Add the email address it is going to, so it can wait in the mailbox for you to send.'); return; }
+    // Claimed first, so two presses make one draft in the mailbox.
+    if (!(await store.claimComposition(req.draft.id, staffName(req.user)))) { flash(req, 'warn', 'This is already approved. To change it, edit it and approve the new version.'); return; }
     let draftId = '';
     if (mailboxCanHold()) {
-      if (!EMAIL_RE.test(c.to_address || '')) { flash(req, 'warn', 'Add the email address it is going to, so it can wait in the mailbox for you to send.'); return; }
-      const r = await mailbox.saveNewDraft(c.to_address, c.subject, c.body);
-      draftId = String((r && r.draftId) || '');
+      try {
+        const r = await mailbox.saveNewDraft(c.to_address, c.subject, c.body);
+        draftId = String((r && r.draftId) || '');
+      } catch (e) {
+        if (e.code === 'MAILBOX_REFUSED') { await store.updateComposition(req.draft.id, { approved_at: null, approved_by_name: '' }); flash(req, 'warn', `${mailbox.label} refused it, so nothing was saved: ${e.message}.`); return; }
+        await store.updateComposition(req.draft.id, { status: 'approved' }).catch(() => {});
+        flash(req, 'warn', `${mailbox.label} did not answer clearly, so the draft may or may not be there. Look in the mailbox drafts. If it is not there, change the email and approve it again.`);
+        return;
+      }
     }
-    await store.updateComposition(req.draft.id, { status: 'approved', approved_at: now(), approved_by_name: staffName(req.user), mailbox_draft_id: draftId });
+    await store.updateComposition(req.draft.id, { status: 'approved', mailbox_draft_id: draftId });
     await store.addEvent(null, { actor: req.user, kind: 'write_approved', detail: `${compose.ALL_KINDS[c.kind]} approved for ${companyOf(c.brand)}${c.to_address ? ` to ${c.to_address}` : ''}${draftId ? `, saved as a draft in ${mailbox.label}` : ''}` });
     flash(req, 'ok', mailboxCanHold() ? `Approved and saved as a draft in ${mailbox.label}. Open the mailbox to send it.` : 'Approved. No mailbox is connected yet, so copy it into your email and send it from there.');
   });

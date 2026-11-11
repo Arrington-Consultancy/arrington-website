@@ -219,7 +219,7 @@ p { margin: 0 0 0.8rem; }
 .to-field input:focus, .to-field textarea:focus { border-color: var(--teal); outline: none; box-shadow: 0 0 0 3px var(--teal-pale); }
 
 /* One email */
-.to-email-grid { display: grid; gap: 1rem; grid-template-columns: 1fr; align-items: start; }
+.to-email-grid { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); align-items: start; }
 @media (min-width: 60rem) { .to-email-grid { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); } .to-email { position: sticky; top: 7.5rem; } }
 .to-email { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 1.1rem; }
 .to-email-from { font-weight: 700; margin: 0; word-break: break-word; }
@@ -397,7 +397,6 @@ p { margin: 0 0 0.8rem; }
 .to-case-row { grid-template-columns: minmax(0, 1fr) auto; }
 .to-case-row > span:first-child { min-width: 0; overflow-wrap: anywhere; }
 @media (max-width: 40rem) { .to-case-row { grid-template-columns: minmax(0, 1fr); } .to-case-side { justify-content: flex-start; } }
-.to-email-grid { grid-template-columns: minmax(0, 1fr); }
 .to-field input, .to-field select { min-width: 0; }
 .to-book .to-field-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 @media (min-width: 40rem) { .to-book .to-field-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } .to-book .to-field-row.is-two { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }

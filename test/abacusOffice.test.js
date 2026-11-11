@@ -334,7 +334,8 @@ test('the office over HTTP: login, forced password change, one case per email, r
   assert.equal(drafts[0].to, pascoe.from_address);
   const afterApprove = await byId('<demo-pascoe@example.invalid>');
   assert.ok(afterApprove.approved_at);
-  assert.equal(afterApprove.status, 'waiting');
+  assert.equal(afterApprove.status, 'in_progress', 'approving is not sending: it waits on the customer only once someone marks it sent');
+  assert.equal(afterApprove.mailbox_state, 'saved');
   r = await sam.post(`/case/${phone.id}/approve`, { draft: phone.draft }, `/case/${phone.id}`);
   assert.equal(drafts.length, 1, 'an operator cannot approve a SAFETY complaint reply');
   r = await sam.get(`/case/${phone.id}`);

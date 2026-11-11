@@ -106,7 +106,7 @@ class Store {
     );
     return r.rows[0];
   }
-  async listCases({ status, kind, ownerId, open, escalated, passedUp, brand, limit = 200 } = {}) {
+  async listCases({ status, kind, ownerId, open, escalated, passedUp, unsent, brand, limit = 200 } = {}) {
     const where = [];
     const params = [];
     const add = (sql, v) => { params.push(v); where.push(sql.replace('?', `$${params.length}`)); };
@@ -115,6 +115,7 @@ class Store {
     where.push(...scopeWhere(brand, params, 'c.'));
     if (status) add('c.status = ?', status);
     if (passedUp) where.push('c.passed_up_at IS NOT NULL AND c.approved_at IS NULL AND c.status <> \'done\'');
+    if (unsent) where.push("c.approved_at IS NOT NULL AND c.sent_at IS NULL AND c.status <> 'done'");
     if (kind) add('c.kind = ?', kind);
     if (ownerId) add('c.owner_id = ?', ownerId);
     if (open) where.push("c.status IN ('new', 'in_progress', 'waiting')");
@@ -138,7 +139,8 @@ class Store {
       count(*) FILTER (WHERE escalated_at IS NOT NULL AND approved_at IS NULL AND status IN ('new', 'in_progress'))::int AS overdue,
       count(*) FILTER (WHERE kind = 'complaints' AND status <> 'done' AND passed_up_at IS NOT NULL AND approved_at IS NULL)::int AS passed_up,
       count(*) FILTER (WHERE kind = 'licensing' AND status <> 'done')::int AS council_open,
-      count(*) FILTER (WHERE kind = 'unread')::int AS unread
+      count(*) FILTER (WHERE kind = 'unread')::int AS unread,
+      count(*) FILTER (WHERE approved_at IS NOT NULL AND sent_at IS NULL AND status <> 'done')::int AS unsent
       FROM cases${w.length ? ` WHERE ${w.join(' AND ')}` : ''}`, params);
     return r.rows[0];
   }
@@ -161,6 +163,40 @@ class Store {
     if (!keys.length) return;
     const sets = keys.map((k, i) => `${k} = $${i + 2}`);
     await this.q(`UPDATE cases SET ${sets.join(', ')}, updated_at = now() WHERE id = $1`, [id, ...keys.map((k) => (fields[k] !== null && typeof fields[k] === 'object' && !(fields[k] instanceof Date)) ? JSON.stringify(fields[k]) : fields[k])]);
+  }
+  // One approval, however many presses: the case is claimed before the
+  // mailbox is touched, and only one request can win the claim. A retry is
+  // allowed only when a person says they have checked the mailbox and the
+  // last attempt is uncertain, or was claimed and never answered.
+  async claimApproval(id, userId, { retry = false } = {}) {
+    const r = await this.q(
+      `UPDATE cases SET approved_at = now(), approved_by = $2, mailbox_state = 'saving', mailbox_state_at = now(), sent_at = NULL, sent_by = NULL, updated_at = now()
+       WHERE id = $1 AND (approved_at IS NULL OR ($3 AND (mailbox_state = 'uncertain' OR (mailbox_state = 'saving' AND mailbox_state_at < now() - interval '2 minutes'))))
+       RETURNING *`, [id, userId, Boolean(retry)]);
+    return r.rows[0] || null;
+  }
+  async releaseApproval(id) {
+    await this.q("UPDATE cases SET approved_at = NULL, approved_by = NULL, mailbox_state = '', mailbox_state_at = NULL, updated_at = now() WHERE id = $1", [id]);
+  }
+  async claimHolding(id) {
+    const r = await this.q('UPDATE cases SET holding_sent_at = now(), updated_at = now() WHERE id = $1 AND holding_sent_at IS NULL RETURNING id', [id]);
+    return Boolean(r.rows[0]);
+  }
+  async markSent(id, userId) {
+    const r = await this.q("UPDATE cases SET sent_at = now(), sent_by = $2, status = 'waiting', updated_at = now() WHERE id = $1 AND approved_at IS NOT NULL AND sent_at IS NULL RETURNING *", [id, userId]);
+    return r.rows[0] || null;
+  }
+  // An edit takes the reply back to unapproved only when the text really
+  // changed, so a form sent twice cannot clear an approval in flight.
+  async setDraftIfChanged(id, draft) {
+    const r = await this.q(
+      `UPDATE cases SET draft = $2, approved_at = NULL, approved_by = NULL, mailbox_state = '', mailbox_state_at = NULL, sent_at = NULL, sent_by = NULL, updated_at = now()
+       WHERE id = $1 AND draft IS DISTINCT FROM $2 RETURNING id`, [id, draft]);
+    return Boolean(r.rows[0]);
+  }
+  async claimComposition(id, byName) {
+    const r = await this.q("UPDATE compositions SET approved_at = now(), approved_by_name = $2, updated_at = now() WHERE id = $1 AND status = 'draft' AND approved_at IS NULL RETURNING *", [id, byName]);
+    return r.rows[0] || null;
   }
   async overdueCandidates(hours) {
     const r = await this.q(

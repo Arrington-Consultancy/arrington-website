@@ -2,9 +2,9 @@
 <section class="to-hero">
   <p class="to-eyebrow">Office, <%= todayLong %></p>
   <h1>Here's what needs doing today.</h1>
-  <p class="to-lede">The AI reads every email that comes into <%= mailboxLabel.toLowerCase() %>, sorts it and drafts a reply. Someone in the office checks the draft, changes or guides it, and approves it. Nothing goes to a customer and nothing gets booked until a person has pressed the button.</p>
+  <p class="to-lede"><% if (mailboxNone) { %>No mailbox is connected yet, so no emails come in here. Complaints typed in by staff, council work and Write all work now. Once the company's mailbox is connected, the AI reads every email, sorts it and drafts a reply.<% } else { %>The AI reads every email that comes into <%= mailboxLabel.toLowerCase() %>, sorts it and drafts a reply.<% } %> Someone in the office checks the draft, changes or guides it, and approves it. Nothing goes to a customer and nothing gets booked until a person has pressed the button.</p>
 </section>
-<p class="to-live-line to-small" data-live-url="/live.json" data-live-stamp="<%= liveStamp %>"><span id="live-status">This page checks the mailbox itself every couple of minutes and refreshes when something changes.</span></p>
+<p class="to-live-line to-small" data-live-url="/live.json" data-live-stamp="<%= liveStamp %>"><span id="live-status"><%= mailboxNone ? 'No mailbox is connected, so no emails arrive here yet. This page refreshes when someone in the office changes something.' : 'This page checks the mailbox itself every couple of minutes and refreshes when something changes.' %></span></p>
 
 <ul class="to-stats" aria-label="At a glance">
   <% var _go = '<svg class="to-stat-go" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m9 6 6 6-6 6"/></svg>';
@@ -19,9 +19,16 @@
 </section>
 <% } %>
 
+<% if (unsent.length) { %>
+<section class="to-section">
+  <div class="to-section-head"><h2>Approved, not sent yet</h2><p class="to-small"><%= mailboxNone ? 'No mailbox is connected, so these have not gone anywhere. Copy each reply into your own email, send it, then press I have sent it on the case.' : 'Approved replies are drafts in ' + mailboxLabel + ' until someone sends them. When one has gone, press I have sent it on the case.' %></p></div>
+  <ul class="to-cases"><% unsent.forEach(function (c) { %><%- include('partials/case-row', { c: c }) %><% }) %></ul>
+</section>
+<% } %>
+
 <% if (overdue.length) { %>
 <section class="to-section">
-  <div class="to-section-head"><h2>Overdue</h2><p class="to-small">No reply approved within <%= hours %> hours of the email arriving. <%= atLeast(user, 'manager') ? 'A manager was emailed, if alerts are set up.' : 'The manager has been told.' %></p></div>
+  <div class="to-section-head"><h2>Overdue</h2><p class="to-small">No reply approved within <%= hours %> hours of the email arriving. <%= alertsReady ? 'A manager has been emailed.' : 'Alert emails are not set up, so nobody has been emailed: tell a manager yourself.' %></p></div>
   <ul class="to-cases"><% overdue.forEach(function (c) { %><%- include('partials/case-row', { c: c }) %><% }) %></ul>
 </section>
 <% } %>

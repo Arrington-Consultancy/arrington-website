@@ -164,7 +164,7 @@ function readSystem(today, f) {
     '- summary: one plain sentence saying what the email wants.',
     '',
     'THE REPLY',
-    '- Assume staff will put a booking into the dispatch system before they send the reply, so the reply can confirm what the customer asked for.',
+    '- The job is not in dispatch yet: a member of staff books it after reading your reply. Never tell the customer the job is booked or confirmed, and never say a car, a vehicle type or a time is available. Say the office will confirm the booking once it is in.',
     '- If anything in the missing list is not in the email, do not confirm the booking: ask for every missing item in the one reply, in plain words, so the customer can answer in one go (for example a mobile number for the driver, how many people are travelling and whether there is much luggage, the full pickup address, the flight number). Never ask for something the email already gives.',
     '- Do not give a price, a time or a policy that the facts below do not support.',
     '- Never promise anything the email did not ask for.',

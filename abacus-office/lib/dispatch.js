@@ -132,6 +132,12 @@ function icabbiDriver(env = process.env, { store, fetch } = {}) {
       return { ref: tripId, status: String(b.status || 'NEW'), statusWords: icabbi.statusWords(b.status || 'NEW') };
     },
     async cancel({ ref }) {
+      if (!client.configured()) throw new DispatchNotConnected(`iCabbi is not connected yet. It needs API access on the firm's own iCabbi account (${client.missing().join(', ')} on this service). Nothing was cancelled.`);
+      if (!s.writes) {
+        const e = new DispatchNotConnected('Live booking is switched off on this office, so nothing was cancelled in iCabbi. Cancel it on the board.');
+        e.checkedOnly = true;
+        throw e;
+      }
       const { body } = await client.cancel(ref);
       if (store) await store.setDispatchStatus(ref, { status: 'cancelled', dispatchStatus: 'DISPATCH_CANCELLED' });
       const fee = Array.isArray(body.fee) && body.fee.length ? ' iCabbi recorded a cancellation fee on it.' : '';

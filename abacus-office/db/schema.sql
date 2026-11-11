@@ -97,6 +97,15 @@ ALTER TABLE cases ADD COLUMN IF NOT EXISTS booked_by INTEGER REFERENCES users(id
 -- where it came in, and how to reach the customer if staff have it.
 ALTER TABLE cases ADD COLUMN IF NOT EXISTS channel VARCHAR(20) NOT NULL DEFAULT 'email';
 ALTER TABLE cases ADD COLUMN IF NOT EXISTS contact VARCHAR(200) NOT NULL DEFAULT '';
+-- Approving is not sending (11 November 2026). mailbox_state records where
+-- an approved reply got to: '' (nothing), 'saving' (claimed, the mailbox not
+-- yet answered), 'saved', or 'uncertain' (the mailbox did not answer
+-- clearly, so the draft may or may not be there). sent_at is a person's
+-- word that they sent it.
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS mailbox_state VARCHAR(20) NOT NULL DEFAULT '';
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS mailbox_state_at TIMESTAMPTZ;
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS sent_at TIMESTAMPTZ;
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS sent_by INTEGER REFERENCES users(id) ON DELETE SET NULL;
 
 -- What the stand-in dispatch holds. The live connection (iCabbi, on Dan's
 -- own account) replaces this table with the vendor's API; nothing here is
