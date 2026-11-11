@@ -19,7 +19,7 @@ test('managers and owners see every company and the council emails; an operator 
   const abacus = { kind: 'bookings', brand: 'abacus' };
   const coastline = { kind: 'bookings', brand: 'coastline' };
   const council = { kind: 'licensing', brand: 'abacus' };
-  assert.equal(cases.canSee(mgr(''), coastline), true, 'a manager set to every company sees them all');
+  assert.equal(cases.canSee(mgr(''), coastline), true, 'a manager set to all companies sees them all');
   assert.equal(cases.canSee(mgr('abacus'), coastline), false, 'a manager set to one company sees that company only (Tom, 11 November 2026)');
   assert.equal(cases.canSee({ id: 3, role: 'owner', brand: 'abacus' }, coastline), true, 'the owner always sees every company, whatever is stored');
   assert.equal(cases.canSee(owner, coastline), true);
@@ -116,23 +116,71 @@ test('over HTTP: lists, counts, the live stamp, Today and the case page all foll
   // Now it is Abacus's, the operator sees it.
   assert.match((await sam.get('/inbox?show=all')).text, /Kernow hospital run/);
 
-  // A manager set to one company: that company and its council emails only,
-  // no company menu, and cannot move an email out of it.
+  // A manager set to one company (Tom, 11 November 2026: "I want managers
+  // under users to be able to be selected"): that company and its council
+  // emails only, and no moving an email out of it.
   const lou = client();
   await lou.post('/login', { username: 'lou', password: 'lou-pass-123456', next: '/' });
   r = await lou.get('/inbox?show=all');
   assert.match(r.text, /Coastline station run/);
   assert.doesNotMatch(r.text, /Abacus airport run|Kernow hospital run|plate renewal/, 'a manager set to Coastline sees Coastline only');
   assert.doesNotMatch(r.text, /portal-brand/, 'and has no company menu');
-  assert.equal((await lou.get(`/case/${council}`)).status, 404, 'nor Abacus\'s council email');
+  assert.equal((await lou.get(`/case/${council}`)).status, 404, "nor Abacus's council email");
+  assert.equal((await lou.get(`/case/${aBooking}`)).status, 404);
+  assert.match(JSON.parse((await lou.get('/live.json')).text).stamp, /^1:/, 'her counts are her company only');
+  assert.doesNotMatch((await lou.get('/council')).text, /plate renewal/, "the Council page leaves out another company's council email");
+  r = await lou.get('/activity');
+  assert.equal(r.status, 200);
+  assert.match(r.text, /Coastline email arrived/);
+  assert.doesNotMatch(r.text, /plate renewal|Moved to Abacus Taxis/, "Activity leaves out other companies' emails");
   r = await lou.get(`/case/${cBooking}`);
   assert.equal(r.status, 200);
   assert.doesNotMatch(r.text, /Move to company/);
   await lou.post(`/case/${cBooking}/company`, { brand: 'abacus' }, `/case/${cBooking}`);
   assert.equal((await store.caseById(cBooking)).brand, 'coastline', 'a manager set to one company cannot move an email out of it');
+  // Another company's Write draft is not hers to open; her own company's is.
+  const megUser = (await store.users()).find((u) => u.username === 'meg');
+  const aDraft = await store.insertComposition({ brand: 'abacus', kind: 'new', relationship: 'new', subject: 'Abacus letter', body: 'x', actor: megUser });
+  const cDraft = await store.insertComposition({ brand: 'coastline', kind: 'new', relationship: 'new', subject: 'Coastline letter', body: 'x', actor: megUser });
+  assert.equal((await lou.get(`/write/${aDraft.id}`)).status, 404);
+  assert.equal((await lou.get(`/write/${cDraft.id}`)).status, 200);
+  r = await lou.get('/write');
+  assert.match(r.text, /Coastline letter/);
+  assert.doesNotMatch(r.text, /Abacus letter/);
 
   const own = client();
   await own.post('/login', { username: 'owner', password: 'owner-pass-12345', next: '/' });
   assert.equal((await own.get(`/case/${council}`)).status, 200);
   assert.equal((await own.get(`/case/${cBooking}`)).status, 200);
+
+  // The Users page: the three companies, then All companies, for managers
+  // and operators alike. The owner has no menu and cannot be limited.
+  r = await own.get('/users');
+  const menus = r.text.match(/<select name="brand"[\s\S]*?<\/select>/g) || [];
+  assert.equal(menus.length, 4, 'meg, lou, sam and the add form; no menu on the owner');
+  for (const m of menus) {
+    const labels = [...m.matchAll(/<option[^>]*>([^<]*)<\/option>/g)].map((x) => x[1]);
+    assert.deepEqual(labels, ['Abacus Taxis', 'Coastline Taxis', 'Kernow Cabs', 'All companies'], 'three companies, then All companies');
+  }
+  const idOf = async (name) => (await store.users()).find((u) => u.username === name).id;
+  // The owner sets meg, a manager, to Kernow from the menu: she now sees
+  // Kernow only. Setting her back to All companies gives her everything.
+  await own.post(`/users/${await idOf('meg')}`, { action: 'brand', brand: 'kernow' }, '/users');
+  assert.equal((await store.userById(await idOf('meg'))).brand, 'kernow');
+  r = await meg.get('/inbox?show=all');
+  assert.doesNotMatch(r.text, /Abacus airport run|Coastline station run|plate renewal/, 'set to Kernow, the manager no longer sees the others');
+  await own.post(`/users/${await idOf('meg')}`, { action: 'brand', brand: '' }, '/users');
+  r = await meg.get('/inbox?show=all');
+  for (const s of ['Abacus airport run', 'Coastline station run', 'Council: plate renewal']) assert.match(r.text, new RegExp(s), `set back to All companies, the manager sees ${s}`);
+  // A new manager added for one company is limited from the start.
+  await own.post('/users', { username: 'max', display_name: 'Max', role: 'manager', brand: 'abacus', password: 'max-pass-123456' }, '/users');
+  assert.equal((await store.userById(await idOf('max'))).brand, 'abacus');
+  // An owner cannot be limited: not when added, not afterwards, and making
+  // a limited manager an owner clears the company.
+  await own.post('/users', { username: 'ola', display_name: 'Ola', role: 'owner', brand: 'abacus', password: 'ola-pass-123456' }, '/users');
+  assert.equal((await store.userById(await idOf('ola'))).brand, '', 'an owner added with a company set sees all companies');
+  await own.post(`/users/${await idOf('ola')}`, { action: 'brand', brand: 'coastline' }, '/users');
+  assert.equal((await store.userById(await idOf('ola'))).brand, '', 'an owner cannot be set to one company');
+  await own.post(`/users/${await idOf('lou')}`, { action: 'role', role: 'owner' }, '/users');
+  assert.equal((await store.userById(await idOf('lou'))).brand, '', 'made an owner, her company is cleared');
 });

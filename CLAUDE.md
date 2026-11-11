@@ -10680,3 +10680,22 @@ Branch office suite 64/64, the sweep probes clean, Chromium at 1440px and
 iPhone 13 as owner, manager and operator with no errors. To release it
 later it is a fast-forward of main, but only on Tom's word; a manager set
 to one company becomes limited to it at that moment (check Users first).
+**Managers can be set to one company (LIVE 11/11/2026, Tom: "I want
+managers under users to be able to be selected. Drop down, the three
+companies and fourth option see all companies").** Released on its own
+from main, not from `claude/new-session-hbgp04`. On Users, the Sees menu
+(the three companies, then "All companies") now applies to managers as
+well as operators; before, a manager's choice was stored and ignored.
+`seesEveryCompany` in `abacus-office/lib/cases.js` is the rule: the owner
+always sees all companies whatever is stored (no menu on an owner's row, a
+company cannot be set on an owner, and making someone an owner clears it),
+so the person who sets this cannot lock themselves out. A manager set to
+one company sees that company's emails, counts, complaints, council
+emails, Write and council drafts, fixed prices, Activity and staff visits
+only, gets 404 on another company's email or draft, and cannot move an
+email to another company. **This supersedes the 10/11/2026 rule that
+managers see every company.** The boot log prints `managers set to one
+company: ...` so a release shows who is limited.
+`test/abacusOfficeVisibility.test.js` (the old rule put back was watched
+red). No company menu in the bar on live; that is still on the unmerged
+branch.

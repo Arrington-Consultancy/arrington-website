@@ -63,6 +63,8 @@ async function main() {
   const moved = await pool.query('UPDATE cases SET brand = $1 WHERE NOT (brand = ANY($2::text[])) RETURNING id', [f.mailboxBrand, known]);
   const freed = await pool.query("UPDATE users SET brand = '' WHERE brand <> '' AND NOT (brand = ANY($1::text[])) RETURNING id", [known]);
   if (moved.rowCount || freed.rowCount) console.log(`Abacus office: ${moved.rowCount} case(s) moved to ${f.mailboxBrand} and ${freed.rowCount} user(s) set to every company, because their company is no longer set up`);
+  const limited = (await store.users()).filter((u) => u.active && u.role === 'manager' && u.brand);
+  console.log(`Abacus office: managers set to one company: ${limited.length ? limited.map((u) => `${u.username} (${(f.brands.find((b) => b.id === u.brand) || {}).name || u.brand})`).join(', ') : 'none'}`);
   // No mailbox (Tom, 10 November 2026: disconnect the current emails): the
   // made-up emails, and everything recorded against them, are cleared so
   // the office starts empty. Only the invented ones: their message ids are

@@ -120,8 +120,8 @@ test('over HTTP: the owner opens each company\'s portal from the bar, and an ope
 
   // The option is set when a user is created (Tom, 11 November 2026).
   r = await own.get('/users');
-  assert.match(r.text, /<option value="">Every company \(can switch\)<\/option>/);
-  assert.match(r.text, /<option value="coastline">Coastline Travel only<\/option>/);
+  assert.match(r.text, /<option value="" selected>All companies<\/option>/);
+  assert.match(r.text, /<option value="coastline">Coastline Travel<\/option>/);
   await own.post('/users', { username: 'cora', display_name: 'Cora', role: 'manager', brand: 'coastline', password: 'cora-temp-12345' }, '/users');
   await own.post('/users', { username: 'max', display_name: 'Max', role: 'manager', brand: '', password: 'max-temp-123456' }, '/users');
   await own.post('/users', { username: 'oli', display_name: 'Oli', role: 'owner', brand: 'a2b', password: 'oli-temp-123456' }, '/users');
