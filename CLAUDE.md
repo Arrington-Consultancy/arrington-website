@@ -10554,3 +10554,19 @@ the `approved_at IS NULL` guard is removed), and the office suite passes
 approval, Governance & Assurance, the written £999 scope, a backup of
 Postgres-bYAT, telling staff their visits are recorded, the holding-reply
 wording, and how iCabbi is told who built the tool.
+
+**The office database is backed up weekly to Drive (11/11/2026, Tom: "Yes").**
+Railway cron service `office-db-backup-to-drive` (id
+`fa925ac3-a2f5-4a0e-8ab0-cf27e243fe6b`, production only) runs the website's
+own `backup/backup.sh` from main (root `/backup`, watch `/backup/**`,
+restart NEVER) against `Postgres-bYAT` (postgres-ssl:18, same major as the
+image). Variables: `DATABASE_URL` references `Postgres-bYAT`; the three
+Google values reference `db-backup-to-drive`'s, so the one Drive token Tom
+minted on 19/10 serves both; `BACKUP_FOLDER_NAME="A2B office database
+backups"`, `BACKUP_FILE_PREFIX=abacus-office-db` (new on 11/11, commit
+`1a30b10`: a second database names, keeps and deletes only its own files),
+`BACKUP_KEEP=12`, `BACKUP_MIN_BYTES=4000` (the office database is small).
+Schedule `30 3 * * 1`, Mondays 03:30 UTC, half an hour after the website's.
+That folder holds Dan's firms' customer emails once a real mailbox is
+connected, so it is part of what the data processing agreement must cover
+(Tom hosts it, the backup sits in Tom's Drive) and must not be shared.
