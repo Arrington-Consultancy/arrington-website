@@ -83,7 +83,7 @@ test('over HTTP: staff draft with a prompt, guide it, approve it into the mailbo
   await store.ensureSchema();
   await store.createUser({ username: 'sam', displayName: 'Sam Rowe', password: 'sam-pass-123456', role: 'operator', brand: 'coastline' });
   await store.createUser({ username: 'ann', displayName: 'Ann', password: 'ann-pass-123456', role: 'operator', brand: 'abacus' });
-  await store.createUser({ username: 'meg', displayName: 'Meg', password: 'meg-pass-123456', role: 'manager', brand: 'abacus' });
+  await store.createUser({ username: 'meg', displayName: 'Meg', password: 'meg-pass-123456', role: 'manager', brand: '' });
 
   const calls = [];
   ai.__setClientFactoryForTests(() => ({ messages: { create: async ({ system, messages }) => {

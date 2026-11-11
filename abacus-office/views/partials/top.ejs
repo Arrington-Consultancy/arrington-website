@@ -43,7 +43,7 @@
         </form>
         <% } %>
         <span class="to-date"><%= todayLong %></span>
-        <% if (_user) { %><a class="to-user" href="/account"><%= _user.display_name || _user.username %> (<%= _user.role %><%= manyBrands && _user.role === 'operator' ? ', ' + (_user.brand ? brandName(_user.brand) : 'every company') : '' %>)</a>
+        <% if (_user) { %><a class="to-user" href="/account"><%= _user.display_name || _user.username %> (<%= _user.role %><%= manyBrands && _user.role !== 'owner' && _user.brand ? ', ' + brandName(_user.brand) + ' only' : '' %>)</a>
         <form class="to-signout" method="post" action="/logout">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <button type="submit">Sign out</button>

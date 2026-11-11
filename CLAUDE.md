@@ -10452,3 +10452,20 @@ has no menu and posting it changes nothing (`portalFor`, `caseScope(user,
 portal)` in `abacus-office/lib/cases.js`). A case of another company still
 opens by its address for those who may see it. `test/abacusOfficePortals.test.js`
 (an operator escaping their company was watched red).
+
+**Who gets the company menu is an option in Users (11/11/2026, Tom: "I
+think this needs to be an option in users when we create them"). BRANCH
+ONLY, NOT MERGED.** "Sees" on the Users page (when adding someone and on
+each row) is "Every company (can switch)" or "<company> only", and it now
+applies to managers as well as operators: a manager set to one company sees
+that company's emails and council emails only, has no menu and cannot move
+an email to another company. The owner always sees every company (the row
+shows "Every company", the option is ignored and refused), so the person
+who sets it cannot lock themselves out. `seesEveryCompany` in
+`abacus-office/lib/cases.js`. **This changes the live rule of 10/11/2026
+("owners and managers see every company") when merged:** any manager
+already set to a company on production becomes limited to it, so check the
+Users page right after the merge. Tests updated in
+`test/abacusOfficeVisibility.test.js`, `test/abacusOfficePortals.test.js`
+(managers created through the Users page; the owner rule watched red) and
+`test/abacusOfficeWrite.test.js`.

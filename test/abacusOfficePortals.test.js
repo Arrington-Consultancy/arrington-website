@@ -17,11 +17,16 @@ const BRANDS = [{ id: 'abacus', name: 'Abacus & Falmouth Taxis' }, { id: 'coastl
 
 test('who may switch portal, and a chosen portal narrows a list but never widens an operator', () => {
   const owner = { role: 'owner', brand: '' };
-  const meg = { role: 'manager', brand: 'abacus' };
+  const meg = { role: 'manager', brand: '' };
+  const lou = { role: 'manager', brand: 'coastline' };
+  const boss = { role: 'owner', brand: 'abacus' };
   const sam = { role: 'operator', brand: 'abacus' };
   const floater = { role: 'operator', brand: '' };
   assert.equal(cases.canSwitchPortal(owner), true);
-  assert.equal(cases.canSwitchPortal(meg), true, 'a manager sees every company, so has the menu');
+  assert.equal(cases.canSwitchPortal(meg), true, 'a manager set to every company has the menu');
+  assert.equal(cases.canSwitchPortal(lou), false, 'a manager set to one company does not (Tom, 11 November 2026: an option in Users)');
+  assert.equal(cases.canSwitchPortal(boss), true, 'the owner always has it, whatever is stored');
+  assert.equal(cases.portalFor(lou, 'abacus', BRANDS), 'coastline');
   assert.equal(cases.canSwitchPortal(floater), true);
   assert.equal(cases.canSwitchPortal(sam), false);
   assert.equal(cases.portalFor(owner, 'coastline', BRANDS), 'coastline');
@@ -112,6 +117,34 @@ test('over HTTP: the owner opens each company\'s portal from the bar, and an ope
   assert.match(r.text, /<strong>Cornwall Taxis<\/strong>/, 'all companies is the group again');
   assert.match(r.text, /Abacus airport run/);
   assert.match(r.text, /Coastline station run/);
+
+  // The option is set when a user is created (Tom, 11 November 2026).
+  r = await own.get('/users');
+  assert.match(r.text, /<option value="">Every company \(can switch\)<\/option>/);
+  assert.match(r.text, /<option value="coastline">Coastline Travel only<\/option>/);
+  await own.post('/users', { username: 'cora', display_name: 'Cora', role: 'manager', brand: 'coastline', password: 'cora-temp-12345' }, '/users');
+  await own.post('/users', { username: 'max', display_name: 'Max', role: 'manager', brand: '', password: 'max-temp-123456' }, '/users');
+  await own.post('/users', { username: 'oli', display_name: 'Oli', role: 'owner', brand: 'a2b', password: 'oli-temp-123456' }, '/users');
+  const byName = async (u) => (await store.users()).find((x) => x.username === u);
+  assert.equal((await byName('cora')).brand, 'coastline');
+  assert.equal((await byName('max')).brand, '');
+  assert.equal((await byName('oli')).brand, '', 'an owner is always every company');
+  for (const [u, pw] of [['cora', 'cora-temp-12345'], ['max', 'max-temp-123456']]) {
+    const id = (await byName(u)).id;
+    await store.setPassword(id, `${u}-own-pass-123456`, false);
+  }
+  const cora = client();
+  await cora.post('/login', { username: 'cora', password: 'cora-own-pass-123456', next: '/' });
+  r = await cora.get('/inbox?show=all');
+  assert.doesNotMatch(r.text, /portal-brand/, 'a manager created for Coastline only has no company menu');
+  assert.match(r.text, /Coastline station run/);
+  assert.match(r.text, /Council: Coastline plate renewal/, 'and sees Coastline\'s council emails');
+  assert.doesNotMatch(r.text, /Abacus airport run|A2B hospital run/);
+  const max = client();
+  await max.post('/login', { username: 'max', password: 'max-own-pass-123456', next: '/' });
+  r = await max.get('/inbox?show=all');
+  assert.match(r.text, /portal-brand/, 'a manager created for every company has the menu');
+  assert.match(r.text, /Abacus airport run/);
 
   const sam = client();
   await sam.post('/login', { username: 'sam', password: 'sam-pass-123456', next: '/' });

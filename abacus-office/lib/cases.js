@@ -60,25 +60,27 @@ function canApprove(user, kase) {
   if (needsManager(kase)) return atLeast(user, 'manager');
   return atLeast(user, 'operator');
 }
-// Who sees what (Tom, 10 November 2026: "three different companies that
-// owners and managers can see, also managers and owners can see council
-// worker"). Owners and managers see every company and the council emails.
-// An operator sees their own company only (every company when they have
-// none set) and never a council email.
+// Who sees what. Which companies a person sees is set on them in Users
+// (Tom, 11 November 2026: "I think this needs to be an option in users when
+// we create them"): one company, or every company with the company menu in
+// the bar. That applies to operators and managers alike; the owner always
+// sees every company, so the person who sets this can never lock
+// themselves out. Council emails are for managers and the owner only (Tom,
+// 10 November 2026), and a manager set to one company sees that company's.
 function seesCouncil(user) { return atLeast(user, 'manager'); }
+function seesEveryCompany(user) { return Boolean(user) && (user.role === 'owner' || !user.brand); }
 function canSee(user, kase) {
   if (!user || !kase) return false;
   if (kase.kind === 'licensing' && !seesCouncil(user)) return false;
-  if (atLeast(user, 'manager')) return true;
-  return !user.brand || user.brand === (kase.brand || '');
+  return seesEveryCompany(user) || user.brand === (kase.brand || '');
 }
 // Which company's cases a user is shown: undefined is every company.
-function scopeFor(user) { return user && user.brand && !atLeast(user, 'manager') ? user.brand : undefined; }
+function scopeFor(user) { return user && !seesEveryCompany(user) ? user.brand : undefined; }
 // Each company has its own portal (Tom, 11 November 2026: "the two other
 // companies portals to be there, owner having drop down access"). Anyone
-// who sees every company (managers, the owner, an operator with no company
-// set) chooses which portal to look at from the bar; '' is all companies
-// together. An operator of one company is always in that company's portal.
+// set to see every company chooses which portal to look at from the bar;
+// '' is all companies together. Someone set to one company is always in
+// that company's portal and has no menu.
 function canSwitchPortal(user) { return Boolean(user) && !scopeFor(user); }
 function portalFor(user, chosen, brands) {
   const own = scopeFor(user);
@@ -463,4 +465,4 @@ function londonStamp(d) {
   return `${g('year')}-${g('month')}-${g('day')}T${g('hour') === '24' ? '00' : g('hour')}:${g('minute')}`;
 }
 
-module.exports = { Office, kindFor, canApprove, canReassign, canSee, scopeFor, caseScope, canSwitchPortal, portalFor, seesCouncil, needsManager, atLeast, label, londonStamp, brandName, LEVEL };
+module.exports = { Office, kindFor, canApprove, canReassign, canSee, scopeFor, caseScope, canSwitchPortal, portalFor, seesEveryCompany, seesCouncil, needsManager, atLeast, label, londonStamp, brandName, LEVEL };

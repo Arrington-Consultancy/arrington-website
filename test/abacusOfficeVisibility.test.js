@@ -19,7 +19,9 @@ test('managers and owners see every company and the council emails; an operator 
   const abacus = { kind: 'bookings', brand: 'abacus' };
   const coastline = { kind: 'bookings', brand: 'coastline' };
   const council = { kind: 'licensing', brand: 'abacus' };
-  assert.equal(cases.canSee(mgr('abacus'), coastline), true, 'a manager set to one company still sees the others');
+  assert.equal(cases.canSee(mgr(''), coastline), true, 'a manager set to every company sees them all');
+  assert.equal(cases.canSee(mgr('abacus'), coastline), false, 'a manager set to one company sees that company only (Tom, 11 November 2026)');
+  assert.equal(cases.canSee({ id: 3, role: 'owner', brand: 'abacus' }, coastline), true, 'the owner always sees every company, whatever is stored');
   assert.equal(cases.canSee(owner, coastline), true);
   assert.equal(cases.canSee(mgr('abacus'), council), true);
   assert.equal(cases.canSee(owner, council), true);
@@ -28,7 +30,8 @@ test('managers and owners see every company and the council emails; an operator 
   assert.equal(cases.canSee(op(''), coastline), true, 'an operator with no company set sees every company');
   assert.equal(cases.canSee(op('abacus'), council), false, 'never a council email, even their own company\'s');
   assert.equal(cases.canSee(op(''), council), false);
-  assert.deepEqual(cases.caseScope(mgr('abacus')), { brand: undefined, hideCouncil: false });
+  assert.deepEqual(cases.caseScope(mgr('')), { brand: undefined, hideCouncil: false });
+  assert.deepEqual(cases.caseScope(mgr('abacus')), { brand: 'abacus', hideCouncil: false }, 'a manager set to one company sees its council emails too');
   assert.deepEqual(cases.caseScope(op('coastline')), { brand: 'coastline', hideCouncil: true });
   assert.deepEqual(cases.caseScope(op('')), { brand: undefined, hideCouncil: true });
 });
@@ -45,7 +48,8 @@ test('over HTTP: lists, counts, the live stamp, Today and the case page all foll
   const store = new Store(pool);
   await store.ensureSchema();
   await store.createUser({ username: 'owner', password: 'owner-pass-12345', role: 'owner' });
-  await store.createUser({ username: 'meg', password: 'meg-pass-123456', role: 'manager', brand: 'abacus' });
+  await store.createUser({ username: 'meg', password: 'meg-pass-123456', role: 'manager', brand: '' });
+  await store.createUser({ username: 'lou', password: 'lou-pass-123456', role: 'manager', brand: 'coastline' });
   await store.createUser({ username: 'sam', password: 'sam-pass-123456', role: 'operator', brand: 'abacus' });
   const mk = async (id, kind, brand, subject) => {
     const row = await store.insertCase({ id, from: `${id}@example.invalid`, subject, body: 'x', receivedAt: '2026-11-10T09:00', threadId: id, messageId: `<${id}@example.invalid>` }, brand);
@@ -111,6 +115,21 @@ test('over HTTP: lists, counts, the live stamp, Today and the case page all foll
   assert.equal((await store.caseById(kBooking)).brand, 'abacus', 'an unknown company is refused');
   // Now it is Abacus's, the operator sees it.
   assert.match((await sam.get('/inbox?show=all')).text, /Kernow hospital run/);
+
+  // A manager set to one company: that company and its council emails only,
+  // no company menu, and cannot move an email out of it.
+  const lou = client();
+  await lou.post('/login', { username: 'lou', password: 'lou-pass-123456', next: '/' });
+  r = await lou.get('/inbox?show=all');
+  assert.match(r.text, /Coastline station run/);
+  assert.doesNotMatch(r.text, /Abacus airport run|Kernow hospital run|plate renewal/, 'a manager set to Coastline sees Coastline only');
+  assert.doesNotMatch(r.text, /portal-brand/, 'and has no company menu');
+  assert.equal((await lou.get(`/case/${council}`)).status, 404, 'nor Abacus\'s council email');
+  r = await lou.get(`/case/${cBooking}`);
+  assert.equal(r.status, 200);
+  assert.doesNotMatch(r.text, /Move to company/);
+  await lou.post(`/case/${cBooking}/company`, { brand: 'abacus' }, `/case/${cBooking}`);
+  assert.equal((await store.caseById(cBooking)).brand, 'coastline', 'a manager set to one company cannot move an email out of it');
 
   const own = client();
   await own.post('/login', { username: 'owner', password: 'owner-pass-12345', next: '/' });

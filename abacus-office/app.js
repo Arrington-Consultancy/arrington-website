@@ -24,7 +24,7 @@ const morgan = require('morgan');
 const fs = require('fs');
 
 const { Store, ROLES } = require('./lib/store');
-const { Office, canApprove, canReassign, canSee, scopeFor, caseScope, canSwitchPortal, portalFor, seesCouncil, needsManager, atLeast, label, brandName } = require('./lib/cases');
+const { Office, canApprove, canReassign, canSee, scopeFor, caseScope, canSwitchPortal, portalFor, seesEveryCompany, seesCouncil, needsManager, atLeast, label, brandName } = require('./lib/cases');
 const ai = require('./lib/ai');
 const visits = require('./lib/visits');
 const { CHANNELS, isLogged } = require('./lib/channels');
@@ -378,13 +378,13 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   app.get('/case/:id', loadCase, wrap(async (req, res) => {
     const kase = req.kase.reading || req.kase.reading_source !== 'none' ? req.kase : await office.read(req.kase, { actor: req.user });
     const [events, users] = await Promise.all([store.eventsFor(kase.id), store.users()]);
-    res.render('case', { title: kase.subject || 'Email', section: kase.kind === 'complaints' ? 'complaints' : (kase.kind === 'licensing' ? 'council' : 'inbox'), kase, events, users: users.filter((u) => u.active && (atLeast(u, 'manager') || !u.brand || u.brand === (kase.brand || ''))), booking: office.bookingFrom(kase), dispatchRow: kase.dispatch_ref ? (await store.dispatchBookingsForCase(kase.id)).filter((b) => b.ref === kase.dispatch_ref).pop() || null : null, statusWords: require('./lib/icabbi').statusWords, holdingText: kase.kind === 'complaints' ? office.holdingText(kase) : '' });
+    res.render('case', { title: kase.subject || 'Email', section: kase.kind === 'complaints' ? 'complaints' : (kase.kind === 'licensing' ? 'council' : 'inbox'), kase, events, users: users.filter((u) => u.active && canSee(u, kase)), booking: office.bookingFrom(kase), dispatchRow: kase.dispatch_ref ? (await store.dispatchBookingsForCase(kase.id)).filter((b) => b.ref === kase.dispatch_ref).pop() || null : null, statusWords: require('./lib/icabbi').statusWords, holdingText: kase.kind === 'complaints' ? office.holdingText(kase) : '' });
   }));
   const act = (p, fn) => app.post(`/case/:id/${p}`, loadCase, wrap(async (req, res) => { await fn(req, res); if (!res.headersSent && !res.locals.redirected) res.redirect(`/case/${req.kase.id}`); }));
-  // Managers and owners put an email under the right company, when one
-  // mailbox serves more than one.
+  // A manager or the owner who sees every company puts an email under the
+  // right one, when one mailbox serves more than one.
   act('company', async (req) => {
-    if (!atLeast(req.user, 'manager')) { flash(req, 'warn', 'A manager or the owner moves an email to another company.'); return; }
+    if (!atLeast(req.user, 'manager') || !seesEveryCompany(req.user)) { flash(req, 'warn', 'A manager or the owner who sees every company moves an email to another company.'); return; }
     const to = String(req.body.brand || '');
     const target = (firm.brands || []).find((b) => b.id === to);
     if (!target) { flash(req, 'warn', 'That company is not set up on this office.'); return; }
@@ -469,9 +469,9 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   }));
   app.post('/users', requireRole('owner'), wrap(async (req, res) => {
     try {
-      const brand = (firm.brands || []).some((b) => b.id === String(req.body.brand || '')) ? String(req.body.brand) : '';
+      const brand = req.body.role !== 'owner' && (firm.brands || []).some((b) => b.id === String(req.body.brand || '')) ? String(req.body.brand) : '';
       await store.createUser({ username: req.body.username, displayName: req.body.display_name, password: req.body.password, role: req.body.role, brand, mustChange: true });
-      await store.addEvent(null, { actor: req.user, kind: 'user_created', detail: `${String(req.body.username).trim().toLowerCase()} added as ${req.body.role}${brand ? ` for ${brandName(firm, brand)}` : ' for every brand'}` });
+      await store.addEvent(null, { actor: req.user, kind: 'user_created', detail: `${String(req.body.username).trim().toLowerCase()} added as ${req.body.role}${brand ? `, sees ${brandName(firm, brand)} only` : ', sees every company'}` });
       flash(req, 'ok', `${String(req.body.username).trim()} added. They will be asked to choose their own password when they first sign in.`);
       res.redirect('/users');
     } catch (e) {
@@ -487,9 +487,10 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     else if (action === 'activate') { await store.setUserActive(target.id, true); await store.addEvent(null, { actor: req.user, kind: 'user_activated', detail: target.username }); }
     else if (action === 'role' && ROLES.includes(req.body.role)) { await store.setUserRole(target.id, req.body.role); await store.addEvent(null, { actor: req.user, kind: 'user_role', detail: `${target.username} is now ${req.body.role}` }); }
     else if (action === 'brand') {
+      if (target.role === 'owner') { flash(req, 'warn', 'The owner always sees every company.'); return res.redirect('/users'); }
       const brand = (firm.brands || []).some((b) => b.id === String(req.body.brand || '')) ? String(req.body.brand) : '';
       await store.setUserBrand(target.id, brand);
-      await store.addEvent(null, { actor: req.user, kind: 'user_brand', detail: `${target.username} now sees ${brand ? brandName(firm, brand) : 'every brand'}` });
+      await store.addEvent(null, { actor: req.user, kind: 'user_brand', detail: `${target.username} now sees ${brand ? `${brandName(firm, brand)} only` : 'every company'}` });
     }
     else if (action === 'reset') {
       try { await store.setPassword(target.id, String(req.body.password || ''), true); await store.addEvent(null, { actor: req.user, kind: 'user_password_reset', detail: target.username }); flash(req, 'ok', `${target.username} has a temporary password and will choose a new one at sign in.`); }

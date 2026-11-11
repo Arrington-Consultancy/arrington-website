@@ -102,7 +102,7 @@
         <form method="post" action="/case/<%= kase.id %>/status"><input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <label class="to-field"><span class="to-sr">Status</span><select name="status"><% ['new', 'in_progress', 'waiting', 'done'].forEach(function (s) { %><option value="<%= s %>"<% if (kase.status === s) { %> selected<% } %>><%= label(s) %></option><% }) %></select></label>
           <button type="submit" class="to-btn to-btn-quiet">Set status</button></form>
-        <% if (manyBrands && atLeast(user, 'manager')) { %>
+        <% if (manyBrands && atLeast(user, 'manager') && canSwitchPortal) { %>
         <form method="post" action="/case/<%= kase.id %>/company"><input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <label class="to-field"><span class="to-sr">Company</span><select name="brand"><% firm.brands.forEach(function (b) { %><option value="<%= b.id %>"<% if ((kase.brand || '') === b.id) { %> selected<% } %>><%= b.name %></option><% }) %></select></label>
           <button type="submit" class="to-btn to-btn-quiet">Move to company</button></form>
