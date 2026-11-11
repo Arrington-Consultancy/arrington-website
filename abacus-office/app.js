@@ -289,7 +289,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   app.get('/inbox', wrap(async (req, res) => {
     const show = String(req.query.show || 'open');
     const scope = caseScope(req.user);
-    const filter = { open: { open: true }, new: { status: 'new' }, mine: { ownerId: req.user.id, open: true }, unsent: { unsent: true }, waiting: { status: 'waiting' }, done: { status: 'done' }, all: {} }[show] || { open: true };
+    const filter = { open: { open: true }, new: { status: 'new' }, mine: { ownerId: req.user.id, open: true }, overdue: { escalated: true }, unsent: { unsent: true }, waiting: { status: 'waiting' }, done: { status: 'done' }, all: {} }[show] || { open: true };
     const cases = await store.listCases({ ...filter, brand: scope, limit: 200 });
     res.render('inbox', { title: 'Inbox', section: 'inbox', cases, show, liveStamp: await store.liveStamp(scope), lastSync });
   }));
@@ -313,7 +313,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     const cases = (await store.listCases({ kind: 'complaints', brand: scope, limit: 200 })).filter((c) => req.query.show === 'all' || c.status !== 'done');
     const order = { safety: 0, serious: 1, minor: 2, none: 3 };
     cases.sort((a, b) => (order[a.seriousness] - order[b.seriousness]) || (new Date(a.received_at) - new Date(b.received_at)));
-    res.render('complaints', { title: 'Complaints', section: 'complaints', cases, showAll: req.query.show === 'all', liveStamp: await store.liveStamp(scope), lastSync, nudgeHours: await store.complaintNudgeHours(), channels: CHANNELS, ownBrand: scopeFor(req.user) || '', todayYmd: office.today() });
+    res.render('complaints', { title: 'Complaints', section: 'complaints', cases, showAll: req.query.show === 'all', liveStamp: await store.liveStamp(scope), lastSync, nudgeHours: await store.complaintNudgeHours(), channels: CHANNELS, ownBrand: scopeFor(req.user) || '', todayYmd: office.today(), logId: require('crypto').randomUUID() });
   }));
   // A complaint that came in another way: a Google review, a Facebook
   // comment, a phone call (Tom, 10 November 2026). Staff type or paste it
@@ -322,7 +322,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     const own = scopeFor(req.user);
     const brand = own || ((firm.brands || []).some((x) => x.id === String(req.body.brand || '')) ? String(req.body.brand) : (firm.mailboxBrand || ''));
     try {
-      const kase = await office.logComplaint(req.user, { channel: String(req.body.channel || ''), name: req.body.name, contact: req.body.contact, date: String(req.body.date || ''), text: req.body.text, brand });
+      const kase = await office.logComplaint(req.user, { channel: String(req.body.channel || ''), name: req.body.name, contact: req.body.contact, date: String(req.body.date || ''), text: req.body.text, brand, logId: String(req.body.log_id || '') });
       if (!kase.reading) flash(req, 'warn', kase.reading_note || 'Logged. Write the reply below.');
       return res.redirect(`/case/${kase.id}`);
     } catch (e) {
@@ -352,6 +352,9 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     next();
   });
   app.get('/case/:id', loadCase, wrap(async (req, res) => {
+    const lost = req.session.lostDraft && req.session.lostDraft.caseId === req.kase.id ? req.session.lostDraft.text : '';
+    if (req.session.lostDraft) delete req.session.lostDraft;
+    res.locals.lostDraft = lost;
     const kase = req.kase.reading || req.kase.reading_source !== 'none' ? req.kase : await office.read(req.kase, { actor: req.user });
     const [events, users] = await Promise.all([store.eventsFor(kase.id), store.users()]);
     res.render('case', { title: kase.subject || 'Email', section: kase.kind === 'complaints' ? 'complaints' : (kase.kind === 'licensing' ? 'council' : 'inbox'), kase, events, users: users.filter((u) => u.active && (atLeast(u, 'manager') || !u.brand || u.brand === (kase.brand || ''))), booking: office.bookingFrom(kase), dispatchRow: kase.dispatch_ref ? (await store.dispatchBookingsForCase(kase.id)).filter((b) => b.ref === kase.dispatch_ref).pop() || null : null, statusWords: require('./lib/icabbi').statusWords, holdingText: kase.kind === 'complaints' ? office.holdingText(kase) : '' });
@@ -376,11 +379,29 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     await office.assign(req.kase, req.user, to);
   });
   act('status', async (req) => { await office.setStatus(req.kase, req.user, String(req.body.status)); });
-  act('draft', async (req) => { await office.saveDraft(req.kase, req.user, req.body.draft); flash(req, 'ok', 'Draft saved. It is not approved until you approve it.'); });
+  // The version of the reply the page was opened at. An edit is saved only
+  // against it, so a page opened before someone else changed the reply
+  // cannot save over their work; the refused text is kept to copy back.
+  const pageVersion = (req) => (/^\d+$/.test(String(req.body.draft_version || '')) ? Number(req.body.draft_version) : undefined);
+  const saveEdit = async (req) => {
+    if (req.body.draft === undefined) return;
+    const text = String(req.body.draft).replace(/\r\n/g, '\n');
+    if (text === String(req.kase.draft)) return;
+    const keep = () => { req.session.lostDraft = { caseId: req.kase.id, text: text.slice(0, 4000) }; };
+    // An edit has to say which version it was made against.
+    if (pageVersion(req) === undefined) { keep(); const e = new Error('This page was out of date, so your edit was not saved. Your version is shown above the reply to copy back in.'); e.code = 'REFUSED'; throw e; }
+    try { await office.saveDraft(req.kase, req.user, text, pageVersion(req)); } catch (e) { if (e.stale) keep(); throw e; }
+  };
+  act('draft', async (req) => { await saveEdit(req); flash(req, 'ok', 'Draft saved. It is not approved until you approve it.'); });
   act('note', async (req) => { await office.note(req.kase, req.user, req.body.note); });
   act('guide', async (req) => {
-    if (req.body.draft !== undefined && String(req.body.draft) !== String(req.kase.draft)) await office.saveDraft(req.kase, req.user, req.body.draft);
+    await saveEdit(req);
     const fresh = await store.caseById(req.kase.id);
+    // Guidance given on a page opened before the reply changed would
+    // rewrite a reply this person has not seen.
+    if (pageVersion(req) !== undefined && fresh.draft_version !== pageVersion(req) && String(req.body.draft || '').replace(/\r\n/g, '\n') === String(req.kase.draft)) {
+      const e = new Error('Someone else changed this reply while you had it open. Read the new one, then guide it again.'); e.code = 'REFUSED'; throw e;
+    }
     const r = await office.guide(fresh, req.user, req.body.guidance);
     flash(req, r.rewritten ? 'ok' : 'warn', r.rewritten ? (r.heldBack ? `Rewritten. Held back: ${r.heldBack}` : 'Rewritten to what you said.') : 'Your note is recorded. The AI is off, so edit the draft by hand.');
   });
@@ -418,10 +439,16 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     }
   });
   act('approve', async (req) => {
-    if (req.body.draft !== undefined && String(req.body.draft) !== String(req.kase.draft)) await office.saveDraft(req.kase, req.user, req.body.draft);
+    await saveEdit(req);
     const fresh = await store.caseById(req.kase.id);
+    // Approve the reply this person was looking at: their own edit just
+    // saved, or the version their page showed. Anything changed since is
+    // not what they approved.
+    const edited = req.body.draft !== undefined && String(req.body.draft).replace(/\r\n/g, '\n') !== String(req.kase.draft);
+    const version = edited ? fresh.draft_version : (pageVersion(req) !== undefined ? pageVersion(req) : fresh.draft_version);
     let done;
-    try { done = await office.approve(fresh, req.user, { mailboxChecked: req.body.mailbox_checked === 'yes' }); } catch (e) {
+    try { done = await office.approve(fresh, req.user, { mailboxChecked: req.body.mailbox_checked === 'yes', version }); } catch (e) {
+      if (e.stale && req.body.draft !== undefined) req.session.lostDraft = { caseId: req.kase.id, text: String(req.body.draft).slice(0, 4000) };
       if (e.code !== 'REFUSED') throw e;
       flash(req, 'warn', e.message);
       return;
@@ -458,7 +485,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     try {
       const brand = (firm.brands || []).some((b) => b.id === String(req.body.brand || '')) ? String(req.body.brand) : '';
       await store.createUser({ username: req.body.username, displayName: req.body.display_name, password: req.body.password, role: req.body.role, brand, mustChange: true });
-      await store.addEvent(null, { actor: req.user, kind: 'user_created', detail: `${String(req.body.username).trim().toLowerCase()} added as ${req.body.role}${brand ? ` for ${brandName(firm, brand)}` : ' for every brand'}` });
+      await store.addEvent(null, { actor: req.user, kind: 'user_created', detail: `${String(req.body.username).trim().toLowerCase()} added as ${req.body.role}${brand ? ` for ${brandName(firm, brand)}` : ' for every company'}` });
       flash(req, 'ok', `${String(req.body.username).trim()} added. They will be asked to choose their own password when they first sign in.`);
       res.redirect('/users');
     } catch (e) {
@@ -476,7 +503,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     else if (action === 'brand') {
       const brand = (firm.brands || []).some((b) => b.id === String(req.body.brand || '')) ? String(req.body.brand) : '';
       await store.setUserBrand(target.id, brand);
-      await store.addEvent(null, { actor: req.user, kind: 'user_brand', detail: `${target.username} now sees ${brand ? brandName(firm, brand) : 'every brand'}` });
+      await store.addEvent(null, { actor: req.user, kind: 'user_brand', detail: `${target.username} now sees ${brand ? brandName(firm, brand) : 'every company'}` });
     }
     else if (action === 'reset') {
       try { await store.setPassword(target.id, String(req.body.password || ''), true); await store.addEvent(null, { actor: req.user, kind: 'user_password_reset', detail: target.username }); flash(req, 'ok', `${target.username} has a temporary password and will choose a new one at sign in.`); }

@@ -16,6 +16,7 @@
   <p class="to-small">For a complaint that came in another way: a Google review, a Facebook comment or message, a phone call, someone at the office. Paste or type it in and say where it came from. The AI reads it with that in mind: a public review gets a short public reply that asks them to get in touch directly, anything else gets a full reply. You check it, guide it and approve it like any other.</p>
   <form method="post" action="/complaints/log" class="to-form">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <input type="hidden" name="log_id" value="<%= logId %>">
     <div class="to-field-row is-two">
       <label class="to-field"><span>Where it came in</span><select id="log-channel" name="channel" required><option value="">Choose...</option><% Object.keys(channels).forEach(function (k) { %><option value="<%= k %>"><%= channels[k].label %></option><% }) %></select></label>
       <label class="to-field"><span>When it came in</span><input id="log-date" name="date" type="date" max="<%= todayYmd %>" value="<%= todayYmd %>"></label>

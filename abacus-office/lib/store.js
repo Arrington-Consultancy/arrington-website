@@ -97,14 +97,18 @@ class Store {
   }
   // A complaint typed in by staff (lib/channels.js). Its message id is made
   // here and can never be a real email's, so the mailbox sync never meets it.
-  async insertLoggedComplaint({ brand, channel, name, contact, subject, text, receivedAt }) {
-    const id = `<logged-${require('crypto').randomUUID()}@office>`;
+  // logId: the form's own one-time id, so the same form sent twice is one
+  // complaint. Returns the row, with existed: true when it was already in.
+  async insertLoggedComplaint({ brand, channel, name, contact, subject, text, receivedAt, logId }) {
+    const one = /^[0-9a-f-]{36}$/.test(String(logId || '')) ? String(logId) : require('crypto').randomUUID();
+    const id = `<logged-${one}@office>`;
     const r = await this.q(
       `INSERT INTO cases (message_id, mailbox_email_id, thread_id, from_address, subject, body, received_at, brand, kind, channel, contact)
-       VALUES ($1, '', '', $2, $3, $4, $5, $6, 'complaints', $7, $8) RETURNING *`,
+       VALUES ($1, '', '', $2, $3, $4, $5, $6, 'complaints', $7, $8) ON CONFLICT (message_id) DO NOTHING RETURNING *`,
       [id, String(name || '').slice(0, 300), String(subject || '').slice(0, 500), String(text || '').slice(0, 20000), receivedAt, String(brand || '').slice(0, 40), channel, String(contact || '').slice(0, 200)]
     );
-    return r.rows[0];
+    if (r.rows[0]) return r.rows[0];
+    return { ...(await this.caseByMessageId(id)), existed: true };
   }
   async listCases({ status, kind, ownerId, open, escalated, passedUp, unsent, brand, limit = 200 } = {}) {
     const where = [];
@@ -162,19 +166,41 @@ class Store {
     const keys = Object.keys(fields);
     if (!keys.length) return;
     const sets = keys.map((k, i) => `${k} = $${i + 2}`);
+    // Any change to the reply moves its version on, whoever made it.
+    if (keys.includes('draft')) sets.push('draft_version = draft_version + 1');
     await this.q(`UPDATE cases SET ${sets.join(', ')}, updated_at = now() WHERE id = $1`, [id, ...keys.map((k) => (fields[k] !== null && typeof fields[k] === 'object' && !(fields[k] instanceof Date)) ? JSON.stringify(fields[k]) : fields[k])]);
   }
   // One approval, however many presses: the case is claimed before the
   // mailbox is touched, and only one request can win the claim. A retry is
   // allowed only when a person says they have checked the mailbox and the
   // last attempt is uncertain, or was claimed and never answered.
-  async claimApproval(id, userId, { retry = false } = {}) {
+  // version: the reply's version as the approver read it; a reply changed
+  // since then is not the one they approved, so the claim fails.
+  async claimApproval(id, userId, { retry = false, version } = {}) {
     const r = await this.q(
       `UPDATE cases SET approved_at = now(), approved_by = $2, mailbox_state = 'saving', mailbox_state_at = now(), sent_at = NULL, sent_by = NULL, updated_at = now()
-       WHERE id = $1 AND (approved_at IS NULL OR ($3 AND (mailbox_state = 'uncertain' OR (mailbox_state = 'saving' AND mailbox_state_at < now() - interval '2 minutes'))))
-       RETURNING *`, [id, userId, Boolean(retry)]);
+       WHERE id = $1 AND ($4::int IS NULL OR draft_version = $4)
+         AND (approved_at IS NULL OR ($3 AND (mailbox_state = 'uncertain' OR (mailbox_state = 'saving' AND mailbox_state_at < now() - interval '2 minutes'))))
+       RETURNING *`, [id, userId, Boolean(retry), Number.isInteger(version) ? version : null]);
     return r.rows[0] || null;
   }
+  // One pass-up, one cancellation, one booking, however many presses.
+  async claimPassUp(id, userId, reason, status, ownerId) {
+    const r = await this.q('UPDATE cases SET passed_up_at = now(), passed_up_by = $2, passed_up_reason = $3, status = $4, owner_id = $5, updated_at = now() WHERE id = $1 AND passed_up_at IS NULL RETURNING id', [id, userId, reason, status, ownerId]);
+    return Boolean(r.rows[0]);
+  }
+  async claimDispatchRef(id, ref) {
+    const r = await this.q("UPDATE cases SET dispatch_ref = '', updated_at = now() WHERE id = $1 AND dispatch_ref = $2 RETURNING id", [id, ref]);
+    return Boolean(r.rows[0]);
+  }
+  async restoreDispatchRef(id, ref) {
+    await this.q("UPDATE cases SET dispatch_ref = $2, updated_at = now() WHERE id = $1 AND dispatch_ref = ''", [id, ref]);
+  }
+  async claimBooking(id) {
+    const r = await this.q("UPDATE cases SET booking_claim_at = now() WHERE id = $1 AND dispatch_ref = '' AND (booking_claim_at IS NULL OR booking_claim_at < now() - interval '2 minutes') RETURNING id", [id]);
+    return Boolean(r.rows[0]);
+  }
+  async releaseBooking(id) { await this.q('UPDATE cases SET booking_claim_at = NULL WHERE id = $1', [id]); }
   async releaseApproval(id) {
     await this.q("UPDATE cases SET approved_at = NULL, approved_by = NULL, mailbox_state = '', mailbox_state_at = NULL, updated_at = now() WHERE id = $1", [id]);
   }
@@ -188,11 +214,16 @@ class Store {
   }
   // An edit takes the reply back to unapproved only when the text really
   // changed, so a form sent twice cannot clear an approval in flight.
-  async setDraftIfChanged(id, draft) {
+  // expected: the reply's version on the page the edit came from. Returns
+  // 'saved', 'same' (nothing changed) or 'stale' (someone changed the reply
+  // after that page was opened, so this edit was not saved).
+  async setDraftIfChanged(id, draft, expected) {
     const r = await this.q(
-      `UPDATE cases SET draft = $2, approved_at = NULL, approved_by = NULL, mailbox_state = '', mailbox_state_at = NULL, sent_at = NULL, sent_by = NULL, updated_at = now()
-       WHERE id = $1 AND draft IS DISTINCT FROM $2 RETURNING id`, [id, draft]);
-    return Boolean(r.rows[0]);
+      `UPDATE cases SET draft = $2, draft_version = draft_version + 1, approved_at = NULL, approved_by = NULL, mailbox_state = '', mailbox_state_at = NULL, sent_at = NULL, sent_by = NULL, updated_at = now()
+       WHERE id = $1 AND draft IS DISTINCT FROM $2 AND ($3::int IS NULL OR draft_version = $3) RETURNING id`, [id, draft, Number.isInteger(expected) ? expected : null]);
+    if (r.rows[0]) return 'saved';
+    const now = await this.q('SELECT draft FROM cases WHERE id = $1', [id]);
+    return now.rows[0] && now.rows[0].draft === draft ? 'same' : 'stale';
   }
   async claimComposition(id, byName) {
     const r = await this.q("UPDATE compositions SET approved_at = now(), approved_by_name = $2, updated_at = now() WHERE id = $1 AND status = 'draft' AND approved_at IS NULL RETURNING *", [id, byName]);
@@ -226,9 +257,9 @@ class Store {
   }
 
   // ---- dispatch (the stand-in) ----
-  async nextDispatchRef(prefix) {
+  async nextDispatchRef(prefix, skip = 0) {
     const r = await this.q('SELECT count(*)::int AS n FROM dispatch_bookings');
-    return `${prefix}-${String(10001 + r.rows[0].n).padStart(5, '0')}`;
+    return `${prefix}-${String(10001 + r.rows[0].n + skip).padStart(5, '0')}`;
   }
   async insertDispatchBooking({ ref, caseId, brand, job, actor, externalId = '', dispatchStatus = '' }) {
     const r = await this.q('INSERT INTO dispatch_bookings (ref, case_id, brand, job, booked_by, booked_by_name, external_id, dispatch_status, status_checked_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now()) RETURNING *',

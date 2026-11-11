@@ -195,6 +195,9 @@ test('over HTTP: no mailbox, no alerts, the screens say so, approval is not sent
 
   // The holding reply: two presses, one draft.
   const cpl = await seed('complaint-one', { kind: 'complaints', reading: { intent: 'complaint', customer_name: 'Jenna' }, draft: 'Hi Jenna' });
+  await live.post(`/case/${cpl}/holding`, {}, `/case/${cpl}`);
+  assert.equal(saved.length, n + 1, 'no holding reply before the complaint is passed up');
+  await live.post(`/case/${cpl}/pass-up`, { reason: 'refund' }, `/case/${cpl}`);
   const ht = await live.token(`/case/${cpl}`);
   const m = saved.length;
   await Promise.all([live.send(`/case/${cpl}/holding`, {}, ht), live.send(`/case/${cpl}/holding`, {}, ht)]);

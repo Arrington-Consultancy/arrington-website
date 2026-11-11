@@ -82,7 +82,7 @@
         <% if (cpl.staff_steps && cpl.staff_steps.length) { %><p class="to-small">For the office to do:</p><ol class="to-steps"><% cpl.staff_steps.forEach(function (s) { %><li><%= s %></li><% }) %></ol><% } %>
       <% } %>
       <% if (kase.kind === 'complaints' && cpl && cpl.pass_to_manager && !passedUp) { %>
-        <p class="to-passup-ai"><strong>The AI thinks this one should go to a manager.</strong> <%= cpl.pass_to_manager_why || '' %> You decide: pass it up below, or answer it yourself.</p>
+        <p class="to-passup-ai"><strong>The AI thinks this one should go to a manager.</strong> <%= cpl.pass_to_manager_why ? String(cpl.pass_to_manager_why).replace(/[.\s]+$/, '') + '.' : '' %> You decide: pass it up below, or answer it yourself.</p>
       <% } %>
       <% if (aiOn) { %>
       <form method="post" action="/case/<%= kase.id %>/read" class="to-inline-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="to-btn to-btn-quiet" data-busy="Reading...">Ask the AI to read it again</button></form>
@@ -102,7 +102,7 @@
           <button type="submit" class="to-btn to-btn-quiet">Assign</button></form>
         <% } %>
         <form method="post" action="/case/<%= kase.id %>/status"><input type="hidden" name="_csrf" value="<%= csrfToken %>">
-          <label class="to-field"><span class="to-sr">Status</span><select name="status"><% ['new', 'in_progress', 'waiting', 'done'].forEach(function (s) { %><option value="<%= s %>"<% if (kase.status === s) { %> selected<% } %>><%= label(s) %></option><% }) %></select></label>
+          <label class="to-field"><span class="to-sr">Status</span><select name="status"><% ['new', 'in_progress', 'waiting', 'done'].filter(function (s) { return s === kase.status || (s === 'waiting' ? Boolean(kase.sent_at) : (s === 'done' ? (!forManager || atLeast(user, 'manager')) : true)); }).forEach(function (s) { %><option value="<%= s %>"<% if (kase.status === s) { %> selected<% } %>><%= label(s) %></option><% }) %></select></label>
           <button type="submit" class="to-btn to-btn-quiet">Set status</button></form>
         <% if (manyBrands && atLeast(user, 'manager')) { %>
         <form method="post" action="/case/<%= kase.id %>/company"><input type="hidden" name="_csrf" value="<%= csrfToken %>">
@@ -125,12 +125,12 @@
           <button type="submit" class="to-btn" data-confirm="Pass this complaint up to a manager?">Pass up to a manager</button>
         </form>
       <% } %>
-      <% if (logged) { %>
+      <% if (logged || (!passedUp && !kase.holding_sent_at)) { %>
       <% } else if (kase.holding_sent_at) { %>
         <p class="to-note to-note-ok">Holding reply approved <%= when(kase.holding_sent_at) %>. <%= mailboxNone ? 'No mailbox is connected, so nothing has been sent: copy it and send it from your own email.' : (mailboxDemo ? 'This is the made-up inbox, so nothing has been sent.' : 'It is a draft in ' + mailboxLabel + '; nothing has been sent until someone sends it there.') %></p>
         <% if (mailboxNone) { %><button type="button" class="to-btn to-btn-quiet" data-copy="<%= holdingText %>">Copy the holding reply</button><% } %>
       <% } else { %>
-        <p class="to-small"><strong>Holding reply.</strong> One click tells the customer it has gone to a manager and thanks them for their patience, so they are not left waiting with nothing. Your click, never a timer.</p>
+        <p class="to-small"><strong>Holding reply.</strong> Now it has gone to a manager, one click tells the customer so and thanks them for their patience, so they are not left waiting with nothing. Your click, never a timer.</p>
         <div class="to-holding"><%= holdingText %></div>
         <form method="post" action="/case/<%= kase.id %>/holding" class="to-inline-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="to-btn" data-confirm="Approve the holding reply? <%= mailboxNone ? 'No mailbox is connected, so you then copy it and send it yourself.' : (mailboxDemo ? 'Nothing is sent from this made-up inbox.' : 'It is saved as a draft in ' + mailboxLabel + ' for someone to send.') %>" data-busy="Saving..."><%= mailboxNone ? 'Approve the holding reply' : 'Send the holding reply' %></button></form>
       <% } %>
@@ -210,8 +210,12 @@
         <% } else if (!mboxUnsure) { %><form method="post" action="/case/<%= kase.id %>/sent" class="to-inline-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="to-btn" data-confirm="Has this reply gone to <%= isCouncil ? 'the council' : 'the customer' %>?">I have sent it</button></form><% } %>
       <% } %>
       <% if (kase.held_back) { %><p class="to-note to-note-warn"><strong>From the AI:</strong> <%= kase.held_back %></p><% } %>
+      <% if (typeof lostDraft !== 'undefined' && lostDraft) { %>
+        <div class="to-note to-note-warn"><p><strong>Your version, not saved.</strong> Someone changed this reply while you had it open. Theirs is in the box below; yours is here to copy back in if it should win.</p><div class="to-holding"><%= lostDraft %></div><button type="button" class="to-btn to-btn-quiet" data-copy="<%= lostDraft %>">Copy my version</button></div>
+      <% } %>
       <form method="post" action="/case/<%= kase.id %>/draft" class="to-form">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="hidden" name="draft_version" value="<%= kase.draft_version || 0 %>">
         <label class="to-field"><span><%= ch && ch.public ? 'The reply, as it will be posted publicly under their ' + ch.label.toLowerCase() : 'The reply, as it will go to ' + (isCouncil ? 'the council' : 'the customer') %></span><textarea id="draft" name="draft" rows="12" maxlength="4000" placeholder="<%= r ? '' : 'Write the reply here.' %>"><%= kase.draft %></textarea></label>
         <div class="to-guide">
           <% if ((kase.guidance || []).length) { %><p class="to-worker-tag">Guided so far</p><ol class="to-guide-notes"><% kase.guidance.forEach(function (n) { %><li><%= n %></li><% }) %></ol><% } %>

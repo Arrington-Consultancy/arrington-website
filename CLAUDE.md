@@ -10473,3 +10473,47 @@ claim removed was watched red), the old test that pinned approval as
 no overflow, no errors. Branch `fix/abacus-office-live-faults`. Not
 fixed here (branch only): stale-edit versioning, Gmail sent/deleted
 detection, per-company manager addresses.
+
+**Sweep of the live office, and its fixes (11/11/2026, evening).** Tom
+asked for a critical sweep of the version serving www.a2bstaff.com
+(`e9876bd`), then approved fixing everything found ("The improvements on
+the current live site should happen now"). Access was clean throughout
+(an operator cannot reach another company's email, a council email,
+Council, Activity, Settings, Users, prices or anyone else's Write draft,
+by address or by form). Twelve faults were reproduced on a local copy and
+fixed:
+- **Old tabs.** `cases.draft_version` moves on with every change to the
+  reply; the form carries it, and a save, guide or approval from a page
+  opened before someone else changed the reply is refused, with the
+  person's own text shown back to copy ("Your version, not saved"). An
+  edit with no version at all is refused the same way.
+- **"Ask the AI to read it again"** on an approved reply now cancels the
+  approval (it swapped the text and left it approved).
+- **Council page** no longer says it checks a mailbox, or that approving
+  saves a draft in one, when none is connected.
+- **The Tidewell demo's leftover checker** in `office.js` is gone: after
+  15 minutes it told staff the page had "Stopped checking" while the real
+  checker carried on.
+- **Closing a complaint.** Only a manager marks a safety or passed-up
+  complaint done (`setStatus`).
+- **"Sent, waiting on the customer"** comes only from "I have sent it";
+  it cannot be set by hand unless the reply was marked sent.
+- **Write** hides Approve on an approved email (it offered "Approve
+  again", which is refused).
+- **Holding reply** is offered, and accepted, only once the complaint has
+  been passed up, since its text says it has gone to a manager.
+- **Once only:** pass up (`claimPassUp`), cancel (`claimDispatchRef`),
+  book (`claimBooking`, `cases.booking_claim_at`) and Log a complaint
+  (the form carries a one-time `log_id`, which becomes the case's message
+  id). Two different jobs booked in the same instant each get their own
+  stand-in reference.
+- **Assign** refuses a switched-off login or someone who cannot open the
+  email.
+- Small: "every company" not "every brand"; an Overdue filter on the
+  inbox, opened by Today's overdue box; "Nothing has happened in the
+  office yet."
+`test/abacusOfficeSweep.test.js` is the sweep kept as a test (60 checks
+over HTTP; two fixes taken out were each watched red). The probes that
+found the faults are not in the repo. Office suite 57/57; Chromium at
+1440px and iPhone 13 as owner, manager and operator, no overflow, no
+errors. Gmail and iCabbi stay disconnected.

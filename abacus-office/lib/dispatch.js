@@ -79,9 +79,17 @@ function standinDriver(store, prefix) {
     label: LABELS.standin,
     live: false,
     async book({ job, kase, brand, actor }) {
-      const ref = await store.nextDispatchRef(prefix);
-      await store.insertDispatchBooking({ ref, caseId: kase ? kase.id : null, brand, job, actor });
-      return { ref, status: 'booked', statusWords: 'recorded in this office' };
+      // Two jobs booked in the same instant would be given the same next
+      // reference; the second simply takes the one after.
+      for (let attempt = 0; ; attempt += 1) {
+        const ref = await store.nextDispatchRef(prefix, attempt);
+        try {
+          await store.insertDispatchBooking({ ref, caseId: kase ? kase.id : null, brand, job, actor });
+          return { ref, status: 'booked', statusWords: 'recorded in this office' };
+        } catch (e) {
+          if (e.code !== '23505' || attempt >= 8) throw e;
+        }
+      }
     },
     async cancel({ ref }) {
       await store.setDispatchStatus(ref, { status: 'cancelled', dispatchStatus: 'CANCELLED' });

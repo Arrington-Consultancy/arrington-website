@@ -350,7 +350,7 @@ test('the office over HTTP: login, forced password change, one case per email, r
   r = await sam.get(`/case/${fare.id}`);
   assert.match(r.text, /formaction="\/case\/\d+\/approve"/, 'an operator sees the approve button on an ordinary complaint');
   assert.match(r.text, /Pass up to a manager/, 'and the button to pass it up');
-  assert.match(r.text, /Send the holding reply/, 'and the one-click holding reply');
+  assert.doesNotMatch(r.text, /Send the holding reply/, 'the holding reply says it has gone to a manager, so it is offered only once it has');
   r = await sam.post(`/case/${fare.id}/approve`, { draft: fare.draft }, `/case/${fare.id}`);
   assert.equal(drafts.length, 2, 'the operator approved the fare complaint reply');
 
@@ -528,7 +528,7 @@ test('the office over HTTP: login, forced password change, one case per email, r
   r = await owner.get('/inbox?show=all');
   assert.match(r.text, /Taxi to the station tomorrow morning/);
   assert.match(r.text, /class="to-tag">Abacus Taxis</, 'the office view names the brand on each case');
-  assert.match(r.text, /every brand/, 'and says the owner sees every brand');
+  assert.match(r.text, /every company/, 'and says the owner sees every company');
 
   // Users: the owner adds an operator who must choose a password; nobody can
   // deactivate themselves.

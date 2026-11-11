@@ -6,7 +6,7 @@
 <% if (typeof mailError !== 'undefined' && mailError) { %><p class="to-note to-note-warn" role="status"><%= mailError %></p><% } %>
 <p class="to-live-line to-small" data-live-url="/live.json" data-live-stamp="<%= liveStamp %>"><span id="live-status"><%= mailboxNone ? 'No mailbox is connected, so no emails arrive here yet. This page refreshes when someone in the office changes something.' : 'This page checks the mailbox itself every couple of minutes and refreshes when something changes.' %></span></p>
 <ul class="to-filter-bar">
-  <% [['open', 'Open'], ['new', 'New'], ['mine', 'Mine'], ['unsent', 'Approved, not sent'], ['waiting', 'Sent, waiting on the customer'], ['done', 'Done'], ['all', 'All']].forEach(function (f) { %>
+  <% [['open', 'Open'], ['new', 'New'], ['mine', 'Mine'], ['overdue', 'Overdue'], ['unsent', 'Approved, not sent'], ['waiting', 'Sent, waiting on the customer'], ['done', 'Done'], ['all', 'All']].forEach(function (f) { %>
     <li><a href="/inbox?show=<%= f[0] %>"<% if (show === f[0]) { %> aria-current="page"<% } %>><%= f[1] %></a></li>
   <% }) %>
   <% if (!mailboxNone) { %><li><form method="post" action="/inbox/sync" class="to-inline-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="to-btn to-btn-quiet" data-busy="Checking the mailbox...">Check the mailbox now</button></form></li><% } %>
