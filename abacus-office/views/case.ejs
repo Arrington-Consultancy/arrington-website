@@ -134,50 +134,74 @@
     </section>
     <% } %>
 
-    <% if (kase.kind === 'bookings' && r && ['new_booking', 'change'].includes(r.intent) && kase.status !== 'done') { %>
+    <% if (kase.kind === 'bookings' && r && ['new_booking', 'change', 'cancel'].includes(r.intent) && kase.status !== 'done') { %>
+    <% var _dl = dispatchLabel.replace(/ \(.*\)$/, ''); %>
     <section class="to-panel to-book" id="book">
       <p class="to-worker-tag">Into dispatch</p>
       <% if (kase.dispatch_ref) { %>
-        <p class="to-booked">In <%= dispatchLabel %> as <%= kase.dispatch_ref %>, booked <%= when(kase.booked_at) %>.</p>
+        <p class="to-booked">In <%= dispatchLabel %> as <%= kase.dispatch_ref %><% if (kase.booked_at) { %>, booked <%= when(kase.booked_at) %><% } %>.</p>
+        <% if (dispatchRow && dispatchRow.job) { var _j = dispatchRow.job; %>
+        <p class="to-status-line"><%= [_j.date, _j.time, _j.pickup && ('from ' + _j.pickup), _j.destination && ('to ' + _j.destination), _j.passengers && (_j.passengers + ' passenger' + (_j.passengers === '1' ? '' : 's')), _j.vehicle].filter(Boolean).join(', ') %>.</p>
+        <% } %>
         <% if (dispatchLive && dispatchRow) { %>
         <p class="to-status-line">iCabbi status: <strong><%= dispatchRow.dispatch_status ? statusWords(dispatchRow.dispatch_status) : 'not read yet' %></strong><% if (dispatchRow.status_detail) { %>, <%= dispatchRow.status_detail %><% } %><% if (dispatchRow.status_checked_at) { %> <span class="to-small">(checked <%= when(dispatchRow.status_checked_at) %>)</span><% } %>.</p>
         <form method="post" action="/case/<%= kase.id %>/dispatch-status" class="to-inline-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="to-btn to-btn-quiet" data-busy="Asking iCabbi...">Check the status now</button></form>
         <% } %>
-        <details class="to-details">
+        <% if (dispatchRow && dispatchRow.status === 'booked') { %>
+        <details class="to-details"<% if (r.intent === 'change') { %> open<% } %>>
+          <summary>Change this job in dispatch</summary>
+          <form method="post" action="/case/<%= kase.id %>/change-booking" class="to-form">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <p class="to-small">Correct what the customer asked to change, tick the box and press the button. The history records exactly what changed.</p>
+            <%- include('partials/job-fields', { j: dispatchRow.job || {}, p: 'chg' }) %>
+            <label class="to-check-box"><input type="checkbox" name="signed_off" value="yes" required><span>I have checked this change against the customer's email and I am making it.</span></label>
+            <button type="submit" class="to-btn to-btn-primary" data-busy="Changing...">Change it in <%= _dl %></button>
+          </form>
+        </details>
+        <% } %>
+        <details class="to-details"<% if (r.intent === 'cancel') { %> open<% } %>>
           <summary>Cancel this job in dispatch</summary>
           <form method="post" action="/case/<%= kase.id %>/cancel-booking" class="to-form">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <label class="to-field"><span>Why it is being cancelled</span><input id="cancel_reason" name="reason" maxlength="200" required placeholder="Customer emailed to cancel"></label>
             <label class="to-check-box"><input type="checkbox" name="signed_off" value="yes" required><span>The customer asked for this to be cancelled and I am cancelling it.</span></label>
-            <button type="submit" class="to-btn" data-confirm="Cancel <%= kase.dispatch_ref %> in <%= dispatchLabel.replace(/ \(.*\)$/, '') %>?" data-busy="Cancelling...">Cancel it in <%= dispatchLabel.replace(/ \(.*\)$/, '') %></button>
+            <button type="submit" class="to-btn" data-confirm="Cancel <%= kase.dispatch_ref %> in <%= _dl %>?" data-busy="Cancelling...">Cancel it in <%= _dl %></button>
           </form>
         </details>
+      <% } else if (r.intent === 'change') { %>
+        <p class="to-small">The customer wants to change a job they already have. Find it on the board, put its reference here, correct the details to what they now want, tick the box and press the button.<% if (dispatchLive) { %> A job booked straight into iCabbi rather than from this office is changed in iCabbi.<% } %></p>
+        <form method="post" action="/case/<%= kase.id %>/change-booking" class="to-form">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <label class="to-field"><span>Dispatch reference of the booking</span><input id="chg-ref" name="ref" maxlength="60" required value="<%= r.reference || '' %>" placeholder="As it shows on the board"></label>
+          <%- include('partials/job-fields', { j: booking, p: 'chg' }) %>
+          <label class="to-check-box"><input type="checkbox" name="signed_off" value="yes" required><span>I have checked this change against the customer's email and I am making it.</span></label>
+          <button type="submit" class="to-btn to-btn-primary" data-busy="Changing...">Change it in <%= _dl %></button>
+        </form>
+        <details class="to-details">
+          <summary>It is not in dispatch at all: book it as a new job</summary>
+          <form method="post" action="/case/<%= kase.id %>/book" class="to-form">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <%- include('partials/job-fields', { j: booking, p: 'bk' }) %>
+            <label class="to-check-box"><input type="checkbox" name="signed_off" value="yes" required><span>I have checked this job against the customer's email and I am booking it.</span></label>
+            <button type="submit" class="to-btn" data-busy="Booking...">Book it in <%= _dl %></button>
+          </form>
+        </details>
+      <% } else if (r.intent === 'cancel') { %>
+        <p class="to-small">The customer wants to cancel a job. Find it on the board, put its reference here, tick the box and press the button.<% if (dispatchLive) { %> A job booked straight into iCabbi rather than from this office is cancelled in iCabbi.<% } %></p>
+        <form method="post" action="/case/<%= kase.id %>/cancel-booking" class="to-form">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <label class="to-field"><span>Dispatch reference of the booking</span><input id="cxl-ref" name="ref" maxlength="60" required value="<%= r.reference || '' %>" placeholder="As it shows on the board"></label>
+          <label class="to-field"><span>Why it is being cancelled</span><input id="cancel_reason" name="reason" maxlength="200" required value="Customer emailed to cancel"></label>
+          <label class="to-check-box"><input type="checkbox" name="signed_off" value="yes" required><span>The customer asked for this to be cancelled and I am cancelling it.</span></label>
+          <button type="submit" class="to-btn" data-confirm="Cancel this booking in <%= _dl %>?" data-busy="Cancelling...">Cancel it in <%= _dl %></button>
+        </form>
       <% } else { %>
         <p class="to-small">Check every line against the email, correct anything the AI got wrong or left out, tick the box and book it. Nothing goes into dispatch until you press the button.<% if (!dispatchLive) { %> This office is on the stand-in dispatch, so the booking is recorded here only until iCabbi is connected.<% } else { %> iCabbi checks the details first and the office looks on the board for the same job, before anything is added.<% } %></p>
         <form method="post" action="/case/<%= kase.id %>/book" class="to-form">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-          <div class="to-field-row is-two">
-            <label class="to-field"><span>Date</span><input name="date" type="date" value="<%= booking.date %>" required></label>
-            <label class="to-field"><span>Pickup time</span><input name="time" type="time" value="<%= booking.time %>" required></label>
-          </div>
-          <div class="to-field-row is-two">
-            <label class="to-field"><span>Pickup</span><input name="pickup" value="<%= booking.pickup %>" maxlength="160" required></label>
-            <label class="to-field"><span>Destination</span><input name="destination" value="<%= booking.destination %>" maxlength="160" required></label>
-          </div>
-          <div class="to-field-row">
-            <label class="to-field"><span>Passenger</span><input name="name" value="<%= booking.name %>" maxlength="80" required></label>
-            <label class="to-field"><span>Phone</span><input name="phone" value="<%= booking.phone %>" maxlength="30" required></label>
-            <label class="to-field"><span>Passengers</span><input name="passengers" inputmode="numeric" value="<%= booking.passengers %>" maxlength="2" required placeholder="How many"></label>
-          </div>
-          <div class="to-field-row is-two">
-            <label class="to-field"><span>Vehicle</span><select name="vehicle"><% ['Car (up to 4)', 'Estate (up to 4, more luggage)', '6 seater', '8 seater', 'Wheelchair accessible'].forEach(function (v) { %><option><%= v %></option><% }) %></select></label>
-            <label class="to-field"><span>Note for the driver (optional)</span><input name="notes" maxlength="300" placeholder="One suitcase, ring on arrival"></label>
-          </div>
-          <div class="to-field-row is-two">
-            <label class="to-field"><span>Flight number (airport pickups)</span><input name="flight" value="<%= booking.flight || '' %>" maxlength="12" placeholder="e.g. FR 1234"></label>
-          </div>
+          <%- include('partials/job-fields', { j: booking, p: 'bk' }) %>
           <label class="to-check-box"><input type="checkbox" name="signed_off" value="yes" required><span>I have checked this job against the customer's email and I am booking it.</span></label>
-          <button type="submit" class="to-btn to-btn-primary" data-busy="Booking...">Book it in <%= dispatchLabel.replace(/ \(.*\)$/, '') %></button>
+          <button type="submit" class="to-btn to-btn-primary" data-busy="Booking...">Book it in <%= _dl %></button>
         </form>
       <% } %>
     </section>
@@ -197,6 +221,12 @@
       <form method="post" action="/case/<%= kase.id %>/draft" class="to-form">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <label class="to-field"><span><%= ch && ch.public ? 'The reply, as it will be posted publicly under their ' + ch.label.toLowerCase() : 'The reply, as it will go to ' + (isCouncil ? 'the council' : 'the customer') %></span><textarea id="draft" name="draft" rows="12" maxlength="4000" placeholder="<%= r ? '' : 'Write the reply here.' %>"><%= kase.draft %></textarea></label>
+        <% if (standardReplies.length) { %>
+        <div class="to-insert">
+          <label class="to-field"><span>Use a standard reply</span><select id="std-reply"><option value="">Choose one</option><% standardReplies.forEach(function (x) { %><option value="<%= x.body %>"><%= x.title %></option><% }) %></select></label>
+          <button type="button" class="to-btn to-btn-quiet" data-insert-reply="std-reply" data-target="draft">Put it in the draft</button>
+        </div>
+        <% } %>
         <div class="to-guide">
           <% if ((kase.guidance || []).length) { %><p class="to-worker-tag">Guided so far</p><ol class="to-guide-notes"><% kase.guidance.forEach(function (n) { %><li><%= n %></li><% }) %></ol><% } %>
           <label class="to-field"><span>Guide the AI</span><textarea id="guidance" name="guidance" rows="2" maxlength="1200" placeholder="<%= isCouncil ? 'For example: both certificates were sent this morning. Or: the compliance test is booked for Thursday.' : 'For example: we are fully booked at that time, offer 7.15 instead. Or: our records show the car was on time.' %>"></textarea></label>

@@ -135,11 +135,15 @@ class Office {
     return created;
   }
 
-  // The firm as the AI may describe it for this case: the configured facts
-  // plus the fixed prices set for the case's brand.
+  // The firm as the AI may describe it for this case: the configured facts,
+  // the fixed prices and the standard replies set for the case's company.
   async firmFor(kase) {
-    const prices = await this.store.fixedPrices(kase && kase.brand ? kase.brand : undefined).catch(() => []);
-    return { ...this.firm, fixedPrices: prices };
+    const brand = kase && kase.brand ? kase.brand : '';
+    const [prices, replies] = await Promise.all([
+      this.store.fixedPrices(brand || undefined).catch(() => []),
+      this.store.standardRepliesFor(brand).catch(() => [])
+    ]);
+    return { ...this.firm, fixedPrices: prices, standardReplies: replies };
   }
 
   emailOf(kase) {
@@ -363,22 +367,70 @@ ${this.firm.signature}`;
     return { ref, job, statusWords: result.statusWords || '' };
   }
 
-  // Cancelling a job this office put into dispatch: the same sign-off tick,
-  // and a reason that goes on the record.
-  async cancelBooking(kase, user, signedOff, reason) {
-    if (!kase.dispatch_ref) throw refuse('This case has nothing in dispatch to cancel.');
+  // The booking a change or cancel email is about: the one this case put
+  // into dispatch, or one staff name by its reference (a customer writing
+  // to change a job booked from an earlier email or by phone). It must be a
+  // booking this office holds, still booked, in a company this person sees.
+  async bookingToAlter(kase, user, typedRef) {
+    const ref = kase.dispatch_ref || String(typedRef || '').replace(/\s+/g, '').slice(0, 60);
+    if (!ref) throw refuse('Give the dispatch reference of the booking, from the board or the earlier email. Nothing was changed.');
+    const row = await this.store.dispatchBookingByRef(ref);
+    const sees = row && (seesEveryCompany(user) || user.brand === (row.brand || ''));
+    if (!row || !sees) throw refuse(`This office has no booking ${ref}${this.dispatch && this.dispatch.live ? '. A job booked straight into iCabbi, not from here, is changed in iCabbi' : ''}. Nothing was changed.`);
+    if (row.status !== 'booked') throw refuse(`${ref} has already been cancelled. Nothing was changed.`);
+    return row;
+  }
+
+  // Changing a job already in dispatch: the same sign-off tick, every
+  // detail present, and a record of exactly what changed.
+  async changeBooking(kase, user, input, signedOff, typedRef) {
+    if (!this.dispatch || typeof this.dispatch.update !== 'function') throw refuse('This dispatch connection cannot change a booking. Change it on the board.');
+    if (kase.kind !== 'bookings') throw refuse('Only a booking email changes a job in dispatch.');
+    const row = await this.bookingToAlter(kase, user, typedRef);
+    if (!signedOff) throw refuse('Tick the box to confirm you have checked the change against the customer\'s email. Nothing was changed.');
+    const { job, missing } = cleanJob(input || {});
+    if (missing.length) throw refuse(`Still needed before it can be changed: ${missing.join(', ')}. Nothing was changed.`);
+    const before = row.job || {};
+    const names = { date: 'date', time: 'time', pickup: 'pickup', destination: 'destination', name: 'passenger', phone: 'phone', passengers: 'passengers', vehicle: 'vehicle', notes: 'note for the driver', flight: 'flight' };
+    const changes = Object.keys(names).filter((k) => String(before[k] || '') !== String(job[k] || '')).map((k) => `${names[k]} ${before[k] ? `from ${before[k]} ` : ''}to ${job[k] || '(none)'}`);
+    if (!changes.length) throw refuse('Nothing in the job is different from what dispatch holds. Nothing was changed.');
+    let result;
+    try { result = await this.dispatch.update({ ref: row.ref, job, kase, actor: user }); } catch (e) {
+      const kind = e.checkedOnly ? 'dispatch_checked' : e.uncertain ? 'dispatch_uncertain' : 'dispatch_refused';
+      await this.store.addEvent(kase.id, { actor: user, kind, detail: `Changing ${row.ref}: ${e.message}` }).catch(() => {});
+      throw e;
+    }
+    const detail = `${row.ref} changed in ${this.dispatch.label}: ${changes.join('; ')}. Signed off by ${user.display_name || user.username}`;
+    if (!kase.dispatch_ref) await this.store.updateCase(kase.id, { dispatch_ref: row.ref, owner_id: kase.owner_id || user.id, status: kase.status === 'new' ? 'in_progress' : kase.status });
+    await this.store.addEvent(kase.id, { actor: user, kind: 'dispatch_changed', detail });
+    if (row.case_id && row.case_id !== kase.id) await this.store.addEvent(row.case_id, { actor: user, kind: 'dispatch_changed', detail: `${detail}, from email ${kase.id}` });
+    return { ref: row.ref, changes, statusWords: result && result.statusWords };
+  }
+
+  // Cancelling a job in dispatch: the one this case booked, or one named by
+  // its reference from a cancel email. The same sign-off tick, and a reason
+  // that goes on the record.
+  async cancelBooking(kase, user, signedOff, reason, typedRef) {
+    if (!kase.dispatch_ref && !typedRef) throw refuse('This case has nothing in dispatch to cancel.');
+    const row = await this.bookingToAlter(kase, user, typedRef);
     if (!signedOff) throw refuse('Tick the box to confirm the customer asked for this to be cancelled. Nothing was cancelled.');
     const why = String(reason || '').replace(/\s+/g, ' ').trim().slice(0, 200);
     if (!why) throw refuse('Say why it is being cancelled. Nothing was cancelled.');
-    const ref = kase.dispatch_ref;
+    const ref = row.ref;
     let result;
     try { result = await this.dispatch.cancel({ ref, kase, actor: user }); } catch (e) {
       await this.store.addEvent(kase.id, { actor: user, kind: e.uncertain ? 'dispatch_uncertain' : 'dispatch_refused', detail: `Cancelling ${ref}: ${e.message}` }).catch(() => {});
       throw e;
     }
+    const detail = `${ref} ${result.statusWords || 'cancelled'} Reason: ${why}. Signed off by ${user.display_name || user.username}`;
     await this.store.updateCase(kase.id, { dispatch_ref: '' });
-    await this.store.addEvent(kase.id, { actor: user, kind: 'dispatch_cancelled', detail: `${ref} ${result.statusWords || 'cancelled'} Reason: ${why}. Signed off by ${user.display_name || user.username}` });
-    return result;
+    await this.store.addEvent(kase.id, { actor: user, kind: 'dispatch_cancelled', detail });
+    if (row.case_id && row.case_id !== kase.id) {
+      await this.store.addEvent(row.case_id, { actor: user, kind: 'dispatch_cancelled', detail: `${detail}, from email ${kase.id}` });
+      const other = await this.store.caseById(row.case_id);
+      if (other && other.dispatch_ref === ref) await this.store.updateCase(row.case_id, { dispatch_ref: '' });
+    }
+    return { ...result, ref };
   }
 
   // Read the status of every live booking still moving and note any change

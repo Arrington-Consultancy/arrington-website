@@ -57,6 +57,8 @@
       <a href="/complaints"<% if (_section === 'complaints') { %> aria-current="page"<% } %>>Complaints<% if (_counts && _counts.complaints_open) { %> <span class="to-count"><%= _counts.complaints_open %></span><% } %></a>
       <% if (atLeast(_user, 'manager')) { %><a href="/council"<% if (_section === 'council') { %> aria-current="page"<% } %>>Council<% if (_counts && _counts.council_open) { %> <span class="to-count"><%= _counts.council_open %></span><% } %></a><% } %>
       <a href="/write"<% if (_section === 'write') { %> aria-current="page"<% } %>>Write</a>
+      <a href="/fares"<% if (_section === 'fares') { %> aria-current="page"<% } %>>Fares</a>
+      <% if (atLeast(_user, 'manager')) { %><a href="/reports"<% if (_section === 'reports') { %> aria-current="page"<% } %>>Reports</a><% } %>
       <% if (atLeast(_user, 'manager')) { %><a href="/activity"<% if (_section === 'activity') { %> aria-current="page"<% } %>>Activity</a><% } %>
       <% if (atLeast(_user, 'manager')) { %><a href="/settings"<% if (_section === 'settings') { %> aria-current="page"<% } %>>Settings</a><% } %>
       <% if (atLeast(_user, 'owner')) { %><a href="/users"<% if (_section === 'users') { %> aria-current="page"<% } %>>Users</a><% } %>

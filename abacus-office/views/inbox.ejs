@@ -5,6 +5,12 @@
 </section>
 <% if (typeof mailError !== 'undefined' && mailError) { %><p class="to-note to-note-warn" role="status"><%= mailError %></p><% } %>
 <p class="to-live-line to-small" data-live-url="/live.json" data-live-stamp="<%= liveStamp %>"><span id="live-status">This page checks the mailbox itself every couple of minutes and refreshes when something changes.</span></p>
+<form method="get" action="/inbox" class="to-search" role="search">
+  <label class="to-field"><span>Search every email</span><input id="search-q" type="search" name="q" value="<%= typeof q !== 'undefined' ? q : '' %>" maxlength="100" placeholder="A name, phone number, address, subject or dispatch reference"></label>
+  <button type="submit" class="to-btn">Search</button>
+  <% if (typeof q !== 'undefined' && q) { %><a class="to-btn to-btn-quiet" href="/inbox">Clear</a><% } %>
+</form>
+<% if (typeof q !== 'undefined' && q) { %><p class="to-status-line" role="status"><%= cases.length %> <%= cases.length === 1 ? 'email matches' : 'emails match' %> <strong><%= q %></strong><%= cases.length === 100 ? ' (the latest 100 shown)' : '' %>, open or done.</p><% } %>
 <ul class="to-filter-bar">
   <% [['open', 'Open'], ['new', 'New'], ['mine', 'Mine'], ['waiting', 'Waiting on the customer'], ['done', 'Done'], ['all', 'All']].forEach(function (f) { %>
     <li><a href="/inbox?show=<%= f[0] %>"<% if (show === f[0]) { %> aria-current="page"<% } %>><%= f[1] %></a></li>
@@ -13,5 +19,5 @@
 </ul>
 <% if (cases.length) { %>
 <ul class="to-cases"><% cases.forEach(function (c) { %><%- include('partials/case-row', { c: c }) %><% }) %></ul>
-<% } else { %><p class="to-empty">Nothing here.</p><% } %>
+<% } else { %><p class="to-empty"><%= typeof q !== 'undefined' && q ? 'Nothing matches. Try part of a name, a street or the last few digits of a phone number.' : 'Nothing here.' %></p><% } %>
 <%- include('partials/bottom') %>

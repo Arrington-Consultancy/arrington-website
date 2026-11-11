@@ -144,7 +144,12 @@ function firmFacts(f) {
   } else {
     lines.push('- No fixed prices have been set, so give no price for any journey. If the customer asks for one, say the office will confirm it.');
   }
-  if (!f.phone && !f.facts.length && !prices.length) lines.push('- Nothing has been given to you about hours, vehicles or policies. Do not state any. If the customer needs one of those, say the office will confirm it.');
+  const replies = (f.standardReplies || []).slice(0, 20);
+  if (replies.length) {
+    lines.push('- STANDARD REPLIES the office uses. When the email asks about one of these, answer with that reply\'s facts and follow its wording closely, fitted to the customer. Never mix in facts from a reply that does not fit.');
+    for (const x of replies) lines.push(`  - ${x.title}: ${String(x.body).replace(/\s+/g, ' ').slice(0, 600)}`);
+  }
+  if (!f.phone && !f.facts.length && !prices.length && !replies.length) lines.push('- Nothing has been given to you about hours, vehicles or policies. Do not state any. If the customer needs one of those, say the office will confirm it.');
   return lines.join('\n');
 }
 

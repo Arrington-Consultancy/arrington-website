@@ -48,6 +48,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   const store = new Store(pool);
   if (!dispatch) dispatch = createDispatch({ store, env: dispatchEnv, fetch: fetchImpl, prefix: String(firm.short || 'AB').replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase() || 'AB' });
   const office = new Office({ store, mailbox, firm, dispatch, aiOn, now });
+  const manyBrandsNow = () => (firm.brands || []).length > 1;
   const app = express();
   app.set('trust proxy', 1);
   app.set('view engine', 'ejs');
@@ -315,8 +316,11 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     const show = String(req.query.show || 'open');
     const scope = caseScope(req.user, req.portal);
     const filter = { open: { open: true }, new: { status: 'new' }, mine: { ownerId: req.user.id, open: true }, waiting: { status: 'waiting' }, done: { status: 'done' }, all: {} }[show] || { open: true };
-    const cases = await store.listCases({ ...filter, brand: scope, limit: 200 });
-    res.render('inbox', { title: 'Inbox', section: 'inbox', cases, show, liveStamp: await store.liveStamp(scope), lastSync });
+    // A search looks through every email this person may see, whatever its
+    // status, rather than only the open ones.
+    const q = String(req.query.q || '').replace(/\s+/g, ' ').trim().slice(0, 100);
+    const cases = q ? await store.searchCases(q, scope, 100) : await store.listCases({ ...filter, brand: scope, limit: 200 });
+    res.render('inbox', { title: q ? `Search: ${q}` : 'Inbox', section: 'inbox', cases, show: q ? '' : show, q, liveStamp: await store.liveStamp(scope), lastSync });
   }));
   app.post('/inbox/sync', wrap(async (req, res) => {
     lastSync = 0;
@@ -378,7 +382,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   app.get('/case/:id', loadCase, wrap(async (req, res) => {
     const kase = req.kase.reading || req.kase.reading_source !== 'none' ? req.kase : await office.read(req.kase, { actor: req.user });
     const [events, users] = await Promise.all([store.eventsFor(kase.id), store.users()]);
-    res.render('case', { title: kase.subject || 'Email', section: kase.kind === 'complaints' ? 'complaints' : (kase.kind === 'licensing' ? 'council' : 'inbox'), kase, events, users: users.filter((u) => u.active && canSee(u, kase)), booking: office.bookingFrom(kase), dispatchRow: kase.dispatch_ref ? (await store.dispatchBookingsForCase(kase.id)).filter((b) => b.ref === kase.dispatch_ref).pop() || null : null, statusWords: require('./lib/icabbi').statusWords, holdingText: kase.kind === 'complaints' ? office.holdingText(kase) : '' });
+    res.render('case', { title: kase.subject || 'Email', section: kase.kind === 'complaints' ? 'complaints' : (kase.kind === 'licensing' ? 'council' : 'inbox'), kase, events, users: users.filter((u) => u.active && canSee(u, kase)), booking: office.bookingFrom(kase), dispatchRow: kase.dispatch_ref ? await store.dispatchBookingByRef(kase.dispatch_ref) : null, statusWords: require('./lib/icabbi').statusWords, holdingText: kase.kind === 'complaints' ? office.holdingText(kase) : '', standardReplies: await store.standardRepliesFor(kase.brand || '') });
   }));
   const act = (p, fn) => app.post(`/case/:id/${p}`, loadCase, wrap(async (req, res) => { await fn(req, res); if (!res.headersSent && !res.locals.redirected) res.redirect(`/case/${req.kase.id}`); }));
   // A manager or the owner who sees every company puts an email under the
@@ -427,8 +431,17 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     }
   });
   act('cancel-booking', async (req) => {
-    const r = await office.cancelBooking(req.kase, req.user, req.body.signed_off === 'yes', req.body.reason);
-    flash(req, 'ok', `${req.kase.dispatch_ref} ${r.statusWords || 'cancelled'}`);
+    const r = await office.cancelBooking(req.kase, req.user, req.body.signed_off === 'yes', req.body.reason, req.body.ref);
+    flash(req, 'ok', `${r.ref} ${r.statusWords || 'cancelled'}`);
+  });
+  act('change-booking', async (req) => {
+    try {
+      const r = await office.changeBooking(req.kase, req.user, req.body, req.body.signed_off === 'yes', req.body.ref);
+      flash(req, 'ok', `${r.ref} changed in ${dispatch.label.replace(/ \(.*\)$/, '')}: ${r.changes.join('; ')}.`);
+    } catch (e) {
+      if (!e.checkedOnly) throw e;
+      flash(req, 'ok', e.message);
+    }
   });
   // Ask iCabbi for this case's booking status now, rather than waiting for
   // the next round of checks.
@@ -460,8 +473,38 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     res.redirect('/');
   }));
 
+  // Activity: everything for the owner and anyone who sees every company;
+  // a manager set to one company sees that company's emails and the visits
+  // of that company's staff, not the rest of the office.
   app.get('/activity', requireRole('manager'), wrap(async (req, res) => {
-    res.render('activity', { title: 'Activity', section: 'activity', events: await store.recentEvents(200), visits: await store.recentVisits(40), visitMinutes: visits.minutes, ukTime: visits.ukTime });
+    const own = scopeFor(req.user);
+    const events = own || req.portal ? await store.recentEvents(200, caseScope(req.user, req.portal)) : await store.recentEvents(200);
+    res.render('activity', { title: 'Activity', section: 'activity', events, visits: await store.recentVisits(40, own || undefined), visitMinutes: visits.minutes, ukTime: visits.ukTime });
+  }));
+
+  // Reports: what came in and what happened to it, for managers and the
+  // owner, inside the companies they see (and the portal they are in).
+  const csvCell = (v) => {
+    let t = v === null || v === undefined ? '' : (v instanceof Date ? require('./lib/cases').londonStamp(v).replace('T', ' ') : String(v));
+    // A spreadsheet runs a cell that starts with one of these as a formula,
+    // so one typed into an email cannot run when the file is opened.
+    if (/^[=+\-@\t\r]/.test(t)) t = `'${t}`;
+    return /[",\n\r]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+  };
+  app.get('/reports', requireRole('manager'), wrap(async (req, res) => {
+    const days = [7, 30, 90].includes(Number(req.query.days)) ? Number(req.query.days) : 30;
+    res.render('reports', { title: 'Reports', section: 'reports', rep: await store.report(caseScope(req.user, req.portal), days), days, users: await store.users() });
+  }));
+  app.get('/reports/cases.csv', requireRole('manager'), wrap(async (req, res) => {
+    const days = [7, 30, 90].includes(Number(req.query.days)) ? Number(req.query.days) : 30;
+    const rows = await store.casesForExport(caseScope(req.user, req.portal), days);
+    const head = ['Email', 'Company', 'Received', 'Came in by', 'From', 'Subject', 'Worker', 'Status', 'Seriousness', 'With', 'Approved', 'Approved by', 'Passed up', 'Went overdue', 'Dispatch reference'];
+    const worker = { unread: 'Not read yet', bookings: 'Bookings', customer: 'Customer emails', complaints: 'Complaints', licensing: 'Council', other: 'Not for the office' };
+    const lines = [head.join(',')].concat(rows.map((r) => [r.id, brandName(firm, r.brand), r.received_at, r.channel, r.from_address, r.subject, worker[r.kind] || r.kind, label(r.status), r.seriousness, r.owner_name, r.approved_at, r.approved_by_name, r.passed_up_at, r.escalated_at, r.dispatch_ref].map(csvCell).join(',')));
+    await store.addEvent(null, { actor: req.user, kind: 'export', detail: `Downloaded the emails of the last ${days} days as a spreadsheet (${rows.length} row${rows.length === 1 ? '' : 's'})` });
+    res.set('Content-Type', 'text/csv; charset=utf-8');
+    res.set('Content-Disposition', `attachment; filename="office-emails-last-${days}-days.csv"`);
+    res.send(`\ufeff${lines.join('\r\n')}\r\n`);
   }));
 
   app.get('/users', requireRole('owner'), wrap(async (req, res) => {
@@ -500,7 +543,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   }));
 
   app.get('/settings', requireRole('manager'), wrap(async (req, res) => {
-    res.render('settings', { baseUrl: baseUrl || `${req.protocol}://${req.get('host')}`, title: 'Settings', section: 'settings', hours: await store.escalationHours(), nudgeHours: await store.complaintNudgeHours(), prices: await store.fixedPrices(scopeFor(req.user) || req.portal || undefined), brands: firm.brands || [], alertStatus: alerts.describeAlertStatus(alertsEnv), mailStatus: mailboxLib.describeMailStatus(mailEnv, mailbox), mailConnect: connectState(), aiStatus: ai.describeAiStatus(), dispatchStatus: require('./lib/dispatch').describeDispatchStatus() });
+    res.render('settings', { baseUrl: baseUrl || `${req.protocol}://${req.get('host')}`, title: 'Settings', section: 'settings', hours: await store.escalationHours(), nudgeHours: await store.complaintNudgeHours(), prices: await store.fixedPrices(scopeFor(req.user) || req.portal || undefined), tariffBrand: companyChoice(req, req.query.tariff), tariff: await store.tariff(companyChoice(req, req.query.tariff)), fareDefaults: require('./lib/fares').DEFAULT_TARIFF, holidaysUntil: require('./lib/fares').HOLIDAYS_KNOWN_UNTIL, replies: (scopeFor(req.user) || req.portal) ? await store.standardRepliesFor(scopeFor(req.user) || req.portal) : await store.standardReplies(), ownBrand: scopeFor(req.user) || '', brands: firm.brands || [], alertStatus: alerts.describeAlertStatus(alertsEnv), mailStatus: mailboxLib.describeMailStatus(mailEnv, mailbox), mailConnect: connectState(), aiStatus: ai.describeAiStatus(), dispatchStatus: require('./lib/dispatch').describeDispatchStatus() });
   }));
   app.post('/settings', requireRole('owner'), wrap(async (req, res) => {
     const n = Number(req.body.escalation_hours);
@@ -518,7 +561,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     const pounds = String(req.body.price || '').replace(/[£,\s]/g, '');
     const pence = /^\d+(\.\d{1,2})?$/.test(pounds) ? Math.round(Number(pounds) * 100) : NaN;
     const brand = (firm.brands || []).some((b) => b.id === String(req.body.brand || '')) ? String(req.body.brand) : (scopeFor(req.user) || firm.mailboxBrand || '');
-    if (scopeFor(req.user) && brand !== scopeFor(req.user)) { flash(req, 'warn', 'You can only set prices for your own brand.'); return res.redirect('/settings'); }
+    if (scopeFor(req.user) && brand !== scopeFor(req.user)) { flash(req, 'warn', 'You can only set prices for your own company.'); return res.redirect('/settings'); }
     try {
       const row = await store.addFixedPrice({ brand, fromPlace: req.body.from_place, toPlace: req.body.to_place, vehicle: req.body.vehicle, pricePence: pence, notes: req.body.notes, actor: req.user });
       await store.addEvent(null, { actor: req.user, kind: 'price_added', detail: `Fixed price: ${row.from_place} to ${row.to_place}, ${row.vehicle}, £${(row.price_pence / 100).toFixed(2)}` });
@@ -540,6 +583,61 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     if (row) { await store.deleteFixedPrice(id); await store.addEvent(null, { actor: req.user, kind: 'price_removed', detail: `Fixed price removed: ${row.from_place} to ${row.to_place}, ${row.vehicle}` }); }
     flash(req, 'ok', row ? 'Price removed.' : 'That price was already gone.');
     res.redirect('/settings');
+  }));
+
+  // Standard replies: a manager or the owner keeps the firm's own wording
+  // for the everyday questions. A manager set to one company keeps that
+  // company's; someone who sees every company chooses, or leaves it for all.
+  const companyChoice = (req, wanted, { allowAll = false } = {}) => {
+    const own = scopeFor(req.user);
+    if (own) return own;
+    const w = String(wanted || '');
+    if (allowAll && w === '*') return '';
+    return (firm.brands || []).some((b) => b.id === w) ? w : (req.portal || firm.mailboxBrand || '');
+  };
+  app.post('/settings/replies', requireRole('manager'), wrap(async (req, res) => {
+    const brand = companyChoice(req, req.body.brand, { allowAll: true });
+    try {
+      const row = await store.addStandardReply({ brand, title: req.body.title, body: req.body.body, actor: req.user });
+      await store.addEvent(null, { actor: req.user, kind: 'reply_added', detail: `Standard reply "${row.title}" added${manyBrandsNow() ? ` for ${brand ? brandName(firm, brand) : 'every company'}` : ''}` });
+      flash(req, 'ok', 'Standard reply added. Staff can put it into a draft, and the AI follows it when it fits.');
+    } catch (e) { if (e.code !== 'REFUSED') throw e; flash(req, 'warn', e.message); }
+    res.redirect('/settings#replies');
+  }));
+  app.post('/settings/replies/:id/delete', requireRole('manager'), wrap(async (req, res) => {
+    const row = await store.standardReplyById(Number(req.params.id));
+    const own = scopeFor(req.user);
+    if (row && (!own || row.brand === own)) {
+      await store.deleteStandardReply(row.id);
+      await store.addEvent(null, { actor: req.user, kind: 'reply_removed', detail: `Standard reply "${row.title}" removed` });
+      flash(req, 'ok', 'Standard reply removed.');
+    } else flash(req, 'warn', 'That standard reply was already gone.');
+    res.redirect('/settings#replies');
+  }));
+
+  // The fare calculator: staff give the miles, the office works the fare
+  // out from the company's tariff. A fixed price for the journey wins.
+  const fares = require('./lib/fares');
+  app.get('/fares', wrap(async (req, res) => {
+    const brand = companyChoice(req, req.query.brand);
+    const q = req.query;
+    const asked = q.miles !== undefined;
+    const tariff = await store.tariff(brand);
+    const prices = await store.fixedPrices(brand || undefined);
+    const input = { miles: String(q.miles || ''), wait: String(q.wait || ''), date: String(q.date || office.today()), time: String(q.time || ''), vehicle: String(q.vehicle || fares.VEHICLES[0]), from: String(q.from || '').slice(0, 120), to: String(q.to || '').slice(0, 120) };
+    const fixed = asked ? fares.fixedFor(prices, input.from, input.to, input.vehicle) : null;
+    const result = asked ? fares.fare(tariff, input) : null;
+    res.render('fares', { title: 'Fares', section: 'fares', brand, tariff, input, result, fixed, vehicles: fares.VEHICLES, money: fares.money, brands: firm.brands || [], ownBrand: scopeFor(req.user) || '' });
+  }));
+  app.post('/settings/tariff', requireRole('manager'), wrap(async (req, res) => {
+    const brand = companyChoice(req, req.body.brand);
+    const r = fares.readTariff(req.body);
+    if (r.error) { flash(req, 'warn', `${r.error} Nothing was saved.`); return res.redirect(`/settings?tariff=${encodeURIComponent(brand)}#tariff`); }
+    await store.setTariff(brand, r.tariff);
+    const t = r.tariff;
+    await store.addEvent(null, { actor: req.user, kind: 'tariff_set', detail: `Tariff${manyBrandsNow() ? ` for ${brandName(firm, brand)}` : ''}: hire £${fares.money(t.flagPence)}, £${fares.money(t.perMilePence)} a mile, waiting £${fares.money(t.waitPerMinutePence)} a minute, minimum £${fares.money(t.minimumPence)}, night ${t.nightFrom} to ${t.nightTo} at ${t.nightRate}, Sunday ${t.sundayRate}, bank holiday ${t.holidayRate}, Christmas and New Year ${t.festiveRate}, 6 and 8 seaters ${t.largeRate}` });
+    flash(req, 'ok', 'Tariff saved. The fare calculator uses it from now on.');
+    res.redirect(`/settings?tariff=${encodeURIComponent(brand)}#tariff`);
   }));
 
   // ---- The Write worker (Tom, 10 November 2026: "an Ai worker who can
@@ -589,7 +687,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     const row = { brand, kind, relationship, to_name: toName, to_address: toAddress, prompt, quoted, company_name: companyOf(brand) };
     let drafted = null; let note = '';
     if (aiOn()) {
-      try { drafted = await compose.draft(row, office.today(), { ...firm, fixedPrices: await store.fixedPrices(brand || undefined).catch(() => []) }, { staffName: staffName(req.user) }); } catch (e) {
+      try { drafted = await compose.draft(row, office.today(), await office.firmFor({ brand }), { staffName: staffName(req.user) }); } catch (e) {
         console.error('Abacus office: Write worker failed', e.message);
         note = 'The AI could not draft it just now, so it is here to write by hand. Try Guide the AI in a minute.';
       }
@@ -632,7 +730,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     const notes = [...(req.draft.guidance || []), text].slice(-6);
     const current = { ...req.draft, ...f, company_name: companyOf(req.draft.brand) };
     let out;
-    try { out = await compose.redraft(current, office.today(), { ...firm, fixedPrices: await store.fixedPrices(req.draft.brand || undefined).catch(() => []) }, { staffName: req.draft.created_by_name || staffName(req.user), notes }); } catch (e) {
+    try { out = await compose.redraft(current, office.today(), await office.firmFor({ brand: req.draft.brand }), { staffName: req.draft.created_by_name || staffName(req.user), notes }); } catch (e) {
       await store.updateComposition(req.draft.id, f);
       flash(req, 'warn', 'The AI could not redraft it just now. Your edits are saved; try again in a minute.');
       return;

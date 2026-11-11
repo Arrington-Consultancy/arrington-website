@@ -11,6 +11,7 @@
 //   POST /bookings/add/         adds the booking (permission BOOKINGS_CREATE)
 //   GET  /bookings/index/{id}   one booking, for its status
 //   POST /bookings/cancel/{id}  cancels an upcoming booking
+//   POST /bookings/update/{id}  changes an upcoming booking
 //   GET  /config/vehicletypes   the firm's own vehicle type keys
 // Basic auth with the account's app key and secret key, both held only on
 // the server (ABACUS_OFFICE_ICABBI_API_KEY and _SECRET). Every response is
@@ -197,6 +198,8 @@ function createClient(env = process.env, { fetch = globalThis.fetch } = {}) {
     add: (booking) => call('POST', '/bookings/add/', booking, { mayHaveActed: true }),
     get: (tripId) => call('GET', `/bookings/index/${encodeURIComponent(tripId)}`),
     cancel: (tripId) => call('POST', `/bookings/cancel/${encodeURIComponent(tripId)}`, {}, { mayHaveActed: true }),
+    // Changes an upcoming booking in place (POST /bookings/update/{id}).
+    update: (tripId, booking) => call('POST', `/bookings/update/${encodeURIComponent(tripId)}`, booking, { mayHaveActed: true }),
     async vehicleTypes() {
       const { body } = await call('GET', '/config/vehicletypes');
       const list = Array.isArray(body) ? body : (body.vehicletypes || body.vehicle_types || body.types || []);

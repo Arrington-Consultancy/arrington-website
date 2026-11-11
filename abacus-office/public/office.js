@@ -1,10 +1,8 @@
-// Abacus office: small comforts and nothing else. A button that
-// starts an AI call says what is happening and cannot be pressed twice, and
-// "Start the demo again" asks first. While the workers read the inbox, the
-// page reloads itself when they have finished. On the inbox, with a live
-// address, the page checks every few seconds and reloads when the visitor's
-// email arrives, and the Copy button copies the address. Every form works
-// without this file.
+// Abacus office: small comforts and nothing else. A button that starts an
+// AI call says what is happening and cannot be pressed twice, and a button
+// with a question asks it first. The list pages reload themselves when
+// something changes, Copy copies, and a standard reply can be put into a
+// draft. Every form works without this file.
 (function () {
   document.addEventListener('submit', function (e) {
     var form = e.target;
@@ -30,63 +28,28 @@
 })();
 
 (function () {
-  // The workers are reading the inbox (the first visitor of the day waits
-  // for the AI). Ask every few seconds, reload when they have finished, and
-  // give up after three minutes rather than ask for ever.
-  var note = document.querySelector('[data-reading-url]');
-  if (!note || !window.fetch) return;
-  var started = Date.now();
-  function later() { setTimeout(check, 3000); }
-  function check() {
-    if (Date.now() - started > 3 * 60 * 1000) {
-      note.textContent = 'The workers are taking longer than usual. Reload the page in a minute.';
-      return;
-    }
-    fetch(note.getAttribute('data-reading-url'), { credentials: 'same-origin', headers: { Accept: 'application/json' } })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (j) {
-        if (j && !j.reading) { window.location.reload(); return; }
-        later();
-      })
-      .catch(later);
-  }
-  later();
-})();
-
-(function () {
+  // Copy buttons: a reply that came in another way is copied out and
+  // posted or sent where it came in.
   document.addEventListener('click', function (e) {
     var b = e.target.closest ? e.target.closest('[data-copy]') : null;
     if (!b || !navigator.clipboard) return;
     navigator.clipboard.writeText(b.getAttribute('data-copy')).then(function () { b.textContent = 'Copied'; });
   });
 
-  // Waiting for an email to the live address. Stops after fifteen minutes,
-  // and does not ask while the tab is in the background.
-  var live = document.querySelector('[data-live-url]');
-  if (!live || !window.fetch) return;
-  var known = Number(live.getAttribute('data-live-count')) || 0;
-  var status = document.getElementById('live-status');
-  var started = Date.now();
-  function later() { setTimeout(check, 8000); }
-  function check() {
-    if (Date.now() - started > 15 * 60 * 1000) {
-      if (status) status.textContent = 'Stopped checking after 15 minutes. Reload the page to check again.';
-      return;
-    }
-    if (document.hidden) return later();
-    fetch(live.getAttribute('data-live-url'), { credentials: 'same-origin', headers: { Accept: 'application/json' } })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (j) {
-        if (j && j.count > known) {
-          if (status) status.textContent = 'Your email has arrived. The AI is reading it...';
-          window.location.reload();
-          return;
-        }
-        later();
-      })
-      .catch(later);
-  }
-  later();
+  // A standard reply put into the draft. The draft is replaced, after a
+  // question if there is already something in it; nothing is saved until
+  // staff press save or approve.
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('[data-insert-reply]') : null;
+    if (!b) return;
+    var select = document.getElementById(b.getAttribute('data-insert-reply'));
+    var target = document.getElementById(b.getAttribute('data-target'));
+    if (!select || !target || !select.value) return;
+    if (target.value.trim() && !window.confirm('Replace the draft with this standard reply?')) return;
+    target.value = select.value;
+    target.dispatchEvent(new Event('input', { bubbles: true }));
+    target.focus();
+  });
 })();
 
 (function () {
@@ -128,12 +91,13 @@
 })();
 
 (function () {
-  // The company menu opens the chosen company's portal as soon as it is
-  // picked. Without this file the Open button beside it does the same.
+  // A company menu (the bar's, and the tariff's in Settings) opens the
+  // chosen company as soon as it is picked. Without this file the button
+  // beside it does the same.
   document.documentElement.classList.add('js');
-  var select = document.querySelector('select[data-autosubmit]');
-  if (!select) return;
-  select.addEventListener('change', function () {
-    if (select.form.requestSubmit) select.form.requestSubmit(); else select.form.submit();
+  Array.prototype.forEach.call(document.querySelectorAll('select[data-autosubmit]'), function (select) {
+    select.addEventListener('change', function () {
+      if (select.form.requestSubmit) select.form.requestSubmit(); else select.form.submit();
+    });
   });
 })();

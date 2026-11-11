@@ -189,3 +189,17 @@ CREATE TABLE IF NOT EXISTS visits (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS visits_one_open ON visits (user_id) WHERE ended_at IS NULL;
 CREATE INDEX IF NOT EXISTS visits_by_start ON visits (started_at DESC);
+
+-- Standard replies (11 November 2026): the firm's own wording for the
+-- questions it gets every day, kept per company by a manager or the owner.
+-- Staff put one into a draft with a click, and the AI follows the wording
+-- of one that fits. A reply with no company is for every company.
+CREATE TABLE IF NOT EXISTS standard_replies (
+  id SERIAL PRIMARY KEY,
+  brand VARCHAR(40) NOT NULL DEFAULT '',
+  title VARCHAR(120) NOT NULL,
+  body TEXT NOT NULL,
+  updated_by VARCHAR(120) NOT NULL DEFAULT '',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS standard_replies_brand_idx ON standard_replies (brand, title);

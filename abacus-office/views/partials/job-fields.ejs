@@ -1,0 +1,24 @@
+<%# The job's details, for booking it or changing it in dispatch. `j` holds
+    the values to show; `p` keeps the ids apart when two forms are on one
+    page. %>
+<% var _vehicles = ['Car (up to 4)', 'Estate (up to 4, more luggage)', '6 seater', '8 seater', 'Wheelchair accessible']; %>
+<div class="to-field-row is-two">
+  <label class="to-field"><span>Date</span><input id="<%= p %>-date" name="date" type="date" value="<%= j.date || '' %>" required></label>
+  <label class="to-field"><span>Pickup time</span><input id="<%= p %>-time" name="time" type="time" value="<%= j.time || '' %>" required></label>
+</div>
+<div class="to-field-row is-two">
+  <label class="to-field"><span>Pickup</span><input id="<%= p %>-pickup" name="pickup" value="<%= j.pickup || '' %>" maxlength="160" required></label>
+  <label class="to-field"><span>Destination</span><input id="<%= p %>-destination" name="destination" value="<%= j.destination || '' %>" maxlength="160" required></label>
+</div>
+<div class="to-field-row">
+  <label class="to-field"><span>Passenger</span><input id="<%= p %>-name" name="name" value="<%= j.name || '' %>" maxlength="80" required></label>
+  <label class="to-field"><span>Phone</span><input id="<%= p %>-phone" name="phone" type="tel" value="<%= j.phone || '' %>" maxlength="30" required></label>
+  <label class="to-field"><span>Passengers</span><input id="<%= p %>-passengers" name="passengers" inputmode="numeric" value="<%= j.passengers || '' %>" maxlength="2" required placeholder="How many"></label>
+</div>
+<div class="to-field-row is-two">
+  <label class="to-field"><span>Vehicle</span><select id="<%= p %>-vehicle" name="vehicle"><% _vehicles.forEach(function (v) { %><option<% if ((j.vehicle || 'Car (up to 4)') === v) { %> selected<% } %>><%= v %></option><% }) %></select></label>
+  <label class="to-field"><span>Note for the driver (optional)</span><input id="<%= p %>-notes" name="notes" value="<%= j.notes || '' %>" maxlength="300" placeholder="One suitcase, ring on arrival"></label>
+</div>
+<div class="to-field-row is-two">
+  <label class="to-field"><span>Flight number (airport pickups)</span><input id="<%= p %>-flight" name="flight" value="<%= j.flight || '' %>" maxlength="12" placeholder="e.g. FR 1234"></label>
+</div>

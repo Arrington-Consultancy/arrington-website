@@ -1,0 +1,75 @@
+<%- include('partials/top', { title: 'Reports' }) %>
+<%
+  var t = rep.totals || {};
+  var hrs = function (h) { if (h === null || h === undefined) return 'none yet'; h = Number(h); if (h < 1) return Math.max(1, Math.round(h * 60)) + ' min'; if (h < 48) return (Math.round(h * 10) / 10) + ' hours'; return Math.round(h / 24) + ' days'; };
+  var worker = { unread: 'Not read yet', bookings: 'Bookings', customer: 'Customer emails', complaints: 'Complaints', licensing: 'Council', other: 'Not for the office' };
+  var channelName = function (c) { return (channels[c] && channels[c].label) || 'Email'; };
+  var sev = { safety: 'Safety', serious: 'Serious', minor: 'Minor', none: 'Not graded' };
+  var pct = function (a, b) { return b ? Math.round((a / b) * 100) + '%' : ''; };
+%>
+<section class="to-section-head">
+  <h1>Reports</h1>
+  <p class="to-small">What came in over the last <%= days %> days<%= manyBrands ? (portal ? ' for ' + brandName(portal) : ' across ' + (user.role === 'owner' || !user.brand ? 'every company' : brandName(user.brand))) : '' %>, and what happened to it. Counts only; it does not grade anyone.</p>
+</section>
+<ul class="to-filter-bar">
+  <% [7, 30, 90].forEach(function (d) { %><li><a href="/reports?days=<%= d %>"<% if (days === d) { %> aria-current="page"<% } %>>Last <%= d %> days</a></li><% }) %>
+  <li><a href="/reports/cases.csv?days=<%= days %>" download>Download as a spreadsheet</a></li>
+</ul>
+
+<div class="to-rstats">
+  <div class="to-rstat"><span class="to-rstat-n"><%= t.emails || 0 %></span><span>emails and complaints in</span></div>
+  <div class="to-rstat"><span class="to-rstat-n"><%= t.approved || 0 %></span><span>replies approved</span></div>
+  <div class="to-rstat"><span class="to-rstat-n"><%= hrs(t.median_hours) %></span><span>typical time to an approved reply</span></div>
+  <div class="to-rstat"><span class="to-rstat-n"><%= t.into_dispatch || 0 %></span><span>jobs put into dispatch from an email</span></div>
+  <div class="to-rstat<%= t.open_now ? ' is-warn' : '' %>"><span class="to-rstat-n"><%= t.open_now || 0 %></span><span>of them still open</span></div>
+  <div class="to-rstat<%= t.went_overdue ? ' is-bad' : '' %>"><span class="to-rstat-n"><%= t.went_overdue || 0 %></span><span>went overdue</span></div>
+</div>
+<% if (t.p90_hours !== null && t.p90_hours !== undefined) { %><p class="to-small">Nine in ten approved replies were approved within <%= hrs(t.p90_hours) %> of the email arriving.</p><% } %>
+
+<div class="to-report-grid">
+  <section class="to-panel">
+    <h2>By worker</h2>
+    <% if (rep.byKind.length) { %>
+    <div class="to-table-wrap"><table class="to-table is-compact">
+      <thead><tr><th scope="col">Worker</th><th scope="col" class="to-num">In</th><th scope="col" class="to-num">Approved</th></tr></thead>
+      <tbody><% rep.byKind.forEach(function (k) { %><tr><td><%= worker[k.kind] || k.kind %></td><td class="to-num"><%= k.n %></td><td class="to-num"><%= k.kind === 'other' ? '' : k.approved %></td></tr><% }) %></tbody>
+    </table></div>
+    <% } else { %><p class="to-empty">Nothing came in.</p><% } %>
+  </section>
+
+  <section class="to-panel">
+    <h2>Complaints</h2>
+    <% var cTotal = rep.complaints.reduce(function (s, x) { return s + x.n; }, 0); %>
+    <% if (cTotal) { %>
+    <div class="to-table-wrap"><table class="to-table is-compact">
+      <thead><tr><th scope="col">How serious</th><th scope="col" class="to-num">Complaints</th><th scope="col" class="to-num">The firm at fault, or partly</th></tr></thead>
+      <tbody><% ['safety', 'serious', 'minor', 'none'].forEach(function (k) { var row = rep.complaints.find(function (x) { return x.seriousness === k; }); if (!row) return; %><tr><td><%= sev[k] %></td><td class="to-num"><%= row.n %></td><td class="to-num"><%= row.at_fault %><% if (row.at_fault) { %> <span class="to-small">(<%= pct(row.at_fault, row.n) %>)</span><% } %></td></tr><% }) %></tbody>
+    </table></div>
+    <% if (rep.byChannel.length > 1 || (rep.byChannel[0] && rep.byChannel[0].channel !== 'email')) { %>
+    <p class="to-small">Came in by: <%= rep.byChannel.map(function (x) { return channelName(x.channel).toLowerCase() + ' ' + x.n; }).join(', ') %>.</p>
+    <% } %>
+    <p class="to-small">"At fault" is the AI's view on what was known when it read each complaint, not a finding.</p>
+    <% } else { %><p class="to-empty">No complaints.</p><% } %>
+  </section>
+
+  <section class="to-panel">
+    <h2>Replies approved, by person</h2>
+    <% if (rep.byPerson.length) { %>
+    <div class="to-table-wrap"><table class="to-table is-compact">
+      <thead><tr><th scope="col">Who</th><th scope="col" class="to-num">Approved</th></tr></thead>
+      <tbody><% rep.byPerson.forEach(function (p) { %><tr><td><%= p.name %></td><td class="to-num"><%= p.approved %></td></tr><% }) %></tbody>
+    </table></div>
+    <% } else { %><p class="to-empty">No replies approved yet.</p><% } %>
+  </section>
+
+  <% if (manyBrands && !portal && rep.byCompany.length) { %>
+  <section class="to-panel">
+    <h2>By company</h2>
+    <div class="to-table-wrap"><table class="to-table is-compact">
+      <thead><tr><th scope="col">Company</th><th scope="col" class="to-num">In</th><th scope="col" class="to-num">Complaints</th><th scope="col" class="to-num">Open now</th></tr></thead>
+      <tbody><% rep.byCompany.forEach(function (b) { %><tr><td><%= brandName(b.brand) %></td><td class="to-num"><%= b.n %></td><td class="to-num"><%= b.complaints %></td><td class="to-num"><%= b.open_now %></td></tr><% }) %></tbody>
+    </table></div>
+  </section>
+  <% } %>
+</div>
+<%- include('partials/bottom') %>

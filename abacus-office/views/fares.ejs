@@ -1,0 +1,66 @@
+<%- include('partials/top', { title: 'Fares' }) %>
+<%
+  var fmt = function (p) { return '£' + money(p); };
+  var ymdLong = function (d) { return new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }); };
+%>
+<section class="to-section-head">
+  <h1>Fares</h1>
+  <p class="to-small">Work out a fare from <%= manyBrands ? brandName(brand) + "'s" : "the firm's" %> tariff to answer a customer. Give the miles; the office does not guess a distance. A fixed price for the journey always comes first. It is a guide: the meter, or the fixed price, is what the customer pays.</p>
+</section>
+
+<div class="to-email-grid">
+  <section class="to-panel">
+    <form method="get" action="/fares" class="to-form">
+      <% if (manyBrands && !ownBrand) { %>
+      <label class="to-field"><span>Company</span><select id="fare-brand" name="brand"><% brands.forEach(function (b) { %><option value="<%= b.id %>"<% if (b.id === brand) { %> selected<% } %>><%= b.name %></option><% }) %></select></label>
+      <% } %>
+      <div class="to-field-row">
+        <label class="to-field"><span>From (to check fixed prices)</span><input id="fare-from" name="from" value="<%= input.from %>" maxlength="120" placeholder="Falmouth"></label>
+        <label class="to-field"><span>To</span><input id="fare-to" name="to" value="<%= input.to %>" maxlength="120" placeholder="Newquay Airport"></label>
+      </div>
+      <div class="to-field-row">
+        <label class="to-field"><span>Miles</span><input id="fare-miles" name="miles" inputmode="decimal" value="<%= input.miles %>" required placeholder="12.5"></label>
+        <label class="to-field"><span>Waiting, minutes (optional)</span><input id="fare-wait" name="wait" inputmode="numeric" value="<%= input.wait %>" placeholder="0"></label>
+      </div>
+      <div class="to-field-row">
+        <label class="to-field"><span>Date</span><input id="fare-date" name="date" type="date" value="<%= input.date %>" required></label>
+        <label class="to-field"><span>Pickup time</span><input id="fare-time" name="time" type="time" value="<%= input.time %>" required></label>
+      </div>
+      <label class="to-field"><span>Vehicle</span><select id="fare-vehicle" name="vehicle"><% vehicles.forEach(function (v) { %><option<% if (v === input.vehicle) { %> selected<% } %>><%= v %></option><% }) %></select></label>
+      <button type="submit" class="to-btn to-btn-primary">Work it out</button>
+    </form>
+  </section>
+
+  <section class="to-panel" aria-live="polite">
+    <% if (fixed) { %>
+      <p class="to-worker-tag">Fixed price</p>
+      <p class="to-fare"><%= fmt(fixed.price_pence) %></p>
+      <p><%= fixed.from_place %> to <%= fixed.to_place %>, <%= fixed.vehicle %><% if (fixed.notes) { %> (<%= fixed.notes %>)<% } %>. This is the firm's fixed price for this journey, so quote this rather than the tariff.</p>
+    <% } %>
+    <% if (result && result.error) { %>
+      <p class="to-note to-note-warn"><%= result.error %></p>
+    <% } else if (result) { %>
+      <p class="to-worker-tag"><%= fixed ? 'On the tariff it would be' : 'From the tariff' %></p>
+      <p class="to-fare<%= fixed ? ' is-secondary' : '' %>"><%= fmt(result.pence) %></p>
+      <p class="to-small"><%= ymdLong(input.date) %> at <%= input.time %>, <%= result.vehicle %>, <%= result.rateName %>.</p>
+      <div class="to-table-wrap"><table class="to-table is-compact">
+        <tbody><% result.lines.forEach(function (l) { %><tr><td><%= l[0] %></td><td class="to-num"><%= l[1] < 0 ? '−' + fmt(-l[1]) : fmt(l[1]) %></td></tr><% }) %></tbody>
+        <tfoot><tr><th scope="row">Fare</th><td class="to-num"><strong><%= fmt(result.pence) %></strong></td></tr></tfoot>
+      </table></div>
+      <% result.notes.forEach(function (n) { %><p class="to-small"><%= n %></p><% }) %>
+    <% } else if (!tariff) { %>
+      <p class="to-worker-tag">No tariff yet</p>
+      <p>No tariff has been set for <%= manyBrands ? brandName(brand) : 'the firm' %>. <%= atLeast(user, 'manager') ? 'Add it in Settings, under Tariff.' : 'A manager adds it in Settings.' %></p>
+    <% } else { %>
+      <p class="to-worker-tag">The tariff</p>
+      <ul class="to-history">
+        <li><time>Hire</time><span><%= fmt(tariff.flagPence) %></span></li>
+        <li><time>Per mile</time><span><%= fmt(tariff.perMilePence) %></span></li>
+        <li><time>Waiting</time><span><%= fmt(tariff.waitPerMinutePence) %> a minute</span></li>
+        <li><time>Minimum</time><span><%= fmt(tariff.minimumPence) %></span></li>
+        <li><time>Night</time><span><%= tariff.nightFrom %> to <%= tariff.nightTo %>, <%= tariff.nightRate %> times</span></li>
+      </ul>
+    <% } %>
+  </section>
+</div>
+<%- include('partials/bottom') %>

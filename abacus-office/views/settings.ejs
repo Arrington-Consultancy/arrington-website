@@ -19,7 +19,7 @@
   <p>Airports and the like. The AI quotes a price only when a customer's journey matches a line here, in either direction. For every other journey it gives no price and says the office will confirm it.</p>
   <% if (prices.length) { %>
   <div class="to-table-wrap"><table class="to-table to-prices">
-    <thead><tr><% if (manyBrands) { %><th scope="col">Brand</th><% } %><th scope="col">From</th><th scope="col">To</th><th scope="col">Vehicle</th><th scope="col">Price</th><th scope="col">Notes</th><th scope="col"></th></tr></thead>
+    <thead><tr><% if (manyBrands) { %><th scope="col">Company</th><% } %><th scope="col">From</th><th scope="col">To</th><th scope="col">Vehicle</th><th scope="col">Price</th><th scope="col">Notes</th><th scope="col"></th></tr></thead>
     <tbody><% prices.forEach(function (p) { %>
       <tr><% if (manyBrands) { %><td><%= brandName(p.brand) %></td><% } %><td><%= p.from_place %></td><td><%= p.to_place %></td><td><%= p.vehicle %></td><td class="to-num">£<%= (p.price_pence / 100).toFixed(2) %></td><td><%= p.notes %></td>
         <td><form method="post" action="/settings/prices/<%= p.id %>/delete"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="to-btn to-btn-quiet" data-confirm="Remove this price?">Remove</button></form></td></tr>
@@ -38,9 +38,74 @@
     </div>
     <div class="to-field-row">
       <label class="to-field"><span>Notes (optional)</span><input name="notes" maxlength="200" placeholder="Daytime, up to 2 cases each"></label>
-      <% if (manyBrands && !user.brand) { %><label class="to-field"><span>Brand</span><select name="brand"><% brands.forEach(function (b) { %><option value="<%= b.id %>"<% if (b.id === defaultBrand) { %> selected<% } %>><%= b.name %></option><% }) %></select></label><% } %>
+      <% if (manyBrands && !ownBrand) { %><label class="to-field"><span>Company</span><select name="brand"><% brands.forEach(function (b) { %><option value="<%= b.id %>"<% if (b.id === defaultBrand) { %> selected<% } %>><%= b.name %></option><% }) %></select></label><% } %>
     </div>
     <button type="submit" class="to-btn to-btn-primary">Add price</button>
+  </form>
+</section>
+<section class="to-panel" id="tariff">
+  <h2>Tariff</h2>
+  <p>The charges the fare calculator works from. Staff give the miles and the office works out the fare, with the night, Sunday, bank holiday and Christmas rates and the uplift for a 6 or 8 seater. A fixed price above always comes first. The calculator is a guide for staff; the AI never quotes from it.</p>
+  <% var _t = tariff || fareDefaults; var _p = function (n) { return (n / 100).toFixed(2); }; %>
+  <% if (manyBrands && !ownBrand) { %>
+  <form method="get" action="/settings" class="to-inline-form to-insert"><label class="to-field"><span>Company</span><select id="tariff-brand-pick" name="tariff" data-autosubmit><% brands.forEach(function (b) { %><option value="<%= b.id %>"<% if (b.id === tariffBrand) { %> selected<% } %>><%= b.name %></option><% }) %></select></label><button type="submit" class="to-btn to-btn-quiet to-js-hide">Show</button></form>
+  <% } %>
+  <% if (!tariff) { %><p class="to-note to-note-warn">No tariff set for <%= manyBrands ? brandName(tariffBrand) : 'the firm' %> yet, so the calculator cannot work out a fare.</p><% } %>
+  <form method="post" action="/settings/tariff" class="to-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <input type="hidden" name="brand" value="<%= tariffBrand %>">
+    <div class="to-field-row">
+      <label class="to-field"><span>Hire charge, £</span><input id="t-flag" name="flag" inputmode="decimal" value="<%= tariff ? _p(_t.flagPence) : '' %>" placeholder="3.60"></label>
+      <label class="to-field"><span>Per mile, £</span><input id="t-mile" name="per_mile" inputmode="decimal" value="<%= tariff ? _p(_t.perMilePence) : '' %>" required placeholder="2.20"></label>
+    </div>
+    <div class="to-field-row">
+      <label class="to-field"><span>Waiting per minute, £</span><input id="t-wait" name="wait_per_minute" inputmode="decimal" value="<%= tariff ? _p(_t.waitPerMinutePence) : '' %>" placeholder="0.40"></label>
+      <label class="to-field"><span>Minimum fare, £</span><input id="t-min" name="minimum" inputmode="decimal" value="<%= tariff ? _p(_t.minimumPence) : '' %>" placeholder="5.00"></label>
+    </div>
+    <div class="to-field-row">
+      <label class="to-field"><span>Night rate starts</span><input id="t-nf" name="night_from" type="time" value="<%= _t.nightFrom %>"></label>
+      <label class="to-field"><span>Night rate ends</span><input id="t-nt" name="night_to" type="time" value="<%= _t.nightTo %>"></label>
+    </div>
+    <div class="to-field-row">
+      <label class="to-field"><span>Night rate (1.5 is time and a half)</span><input id="t-nr" name="night_rate" inputmode="decimal" value="<%= _t.nightRate %>"></label>
+      <label class="to-field"><span>Sunday rate (1 if none)</span><input id="t-sr" name="sunday_rate" inputmode="decimal" value="<%= _t.sundayRate %>"></label>
+    </div>
+    <div class="to-field-row">
+      <label class="to-field"><span>Bank holiday rate</span><input id="t-hr" name="holiday_rate" inputmode="decimal" value="<%= _t.holidayRate %>"></label>
+      <label class="to-field"><span>Christmas Day, Boxing Day, New Year's Day rate</span><input id="t-fr" name="festive_rate" inputmode="decimal" value="<%= _t.festiveRate %>"></label>
+    </div>
+    <label class="to-field"><span>6 and 8 seaters (1.5 is half as much again)</span><input id="t-lr" name="large_rate" inputmode="decimal" value="<%= _t.largeRate %>"></label>
+    <p class="to-small">The highest rate that applies is used, never two together, except the 6 or 8 seater uplift, which goes on top. Bank holidays are known to the end of <%= holidaysUntil.slice(0, 4) %>.</p>
+    <button type="submit" class="to-btn to-btn-primary">Save the tariff</button>
+  </form>
+</section>
+<section class="to-panel" id="replies">
+  <h2>Standard replies</h2>
+  <p>The firm's own wording for the questions that come in every day: lost property, account bookings, how to pay, airport pickups. Staff put one into a draft with a click, and the AI follows the wording of one that fits the email. Nothing goes to a customer until someone approves it.</p>
+  <% if (replies.length) { %>
+  <ul class="to-replies">
+    <% replies.forEach(function (x) { %>
+    <li>
+      <details class="to-details">
+        <summary><strong><%= x.title %></strong><% if (manyBrands) { %> <span class="to-tag"><%= x.brand ? brandName(x.brand) : 'Every company' %></span><% } %></summary>
+        <div class="to-holding"><%= x.body %></div>
+        <p class="to-small">Added by <%= x.updated_by || 'the office' %>, <%= new Date(x.updated_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/London' }) %>.</p>
+        <% if (!ownBrand || x.brand === ownBrand) { %>
+        <form method="post" action="/settings/replies/<%= x.id %>/delete"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="to-btn to-btn-quiet" data-confirm="Remove this standard reply?">Remove</button></form>
+        <% } %>
+      </details>
+    </li>
+    <% }) %>
+  </ul>
+  <% } else { %><p class="to-empty">No standard replies yet. Add the answers staff give most often.</p><% } %>
+  <form method="post" action="/settings/replies" class="to-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="to-field-row">
+      <label class="to-field"><span>Name it</span><input id="reply_title" name="title" maxlength="120" required placeholder="Lost property"></label>
+      <% if (manyBrands && !ownBrand) { %><label class="to-field"><span>Company</span><select id="reply_brand" name="brand"><option value="*">Every company</option><% brands.forEach(function (b) { %><option value="<%= b.id %>"<% if (b.id === portal) { %> selected<% } %>><%= b.name %></option><% }) %></select></label><% } %>
+    </div>
+    <label class="to-field"><span>The reply</span><textarea id="reply_body" name="body" rows="6" maxlength="4000" required placeholder="Thanks for getting in touch. Anything left in one of our cars is handed in to the office..."></textarea></label>
+    <button type="submit" class="to-btn to-btn-primary">Add standard reply</button>
   </form>
 </section>
 <section class="to-panel" id="mailbox">

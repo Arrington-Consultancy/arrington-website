@@ -80,6 +80,7 @@ function firmLines(f) {
   if (f.phone) lines.push(`- The office number is ${f.phone}.`);
   for (const fact of f.facts || []) lines.push(`- ${fact}`);
   for (const x of f.fixedPrices || []) lines.push(`- Fixed price: ${x.from_place} to ${x.to_place}, ${x.vehicle}: £${(x.price_pence / 100).toFixed(2).replace(/\.00$/, '')}${x.notes ? ` (${x.notes})` : ''}`);
+  for (const x of (f.standardReplies || []).slice(0, 20)) lines.push(`- The office's standard reply on ${x.title}: ${String(x.body).replace(/\s+/g, ' ').slice(0, 600)}`);
   if (lines.length === 1) lines.push('- Nothing about hours, vehicles, prices or policies has been given to you. State none of them.');
   return lines.join('\n');
 }

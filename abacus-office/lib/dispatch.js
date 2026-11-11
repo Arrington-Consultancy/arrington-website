@@ -87,6 +87,10 @@ function standinDriver(store, prefix) {
       await store.setDispatchStatus(ref, { status: 'cancelled', dispatchStatus: 'CANCELLED' });
       return { statusWords: 'cancelled' };
     },
+    async update({ ref, job }) {
+      await store.updateDispatchJob(ref, job);
+      return { statusWords: 'changed in this office' };
+    },
     async status() { return null; }
   };
 }
@@ -136,6 +140,22 @@ function icabbiDriver(env = process.env, { store, fetch } = {}) {
       if (store) await store.setDispatchStatus(ref, { status: 'cancelled', dispatchStatus: 'DISPATCH_CANCELLED' });
       const fee = Array.isArray(body.fee) && body.fee.length ? ' iCabbi recorded a cancellation fee on it.' : '';
       return { statusWords: `cancelled in iCabbi.${fee}` };
+    },
+    // A change to a booking already in iCabbi: iCabbi's own check first,
+    // then the update, only with live writes switched on.
+    async update({ ref, job, actor }) {
+      if (!client.configured()) throw new DispatchNotConnected(`iCabbi is not connected yet (${client.missing().join(', ')}). Nothing was changed.`);
+      const actorName = actor ? (actor.display_name || actor.username) : '';
+      const booking = icabbi.toBooking(job, s, { actorName });
+      await client.check(booking);
+      if (!s.writes) {
+        const e = new DispatchNotConnected('iCabbi checked the changed details and accepted them. Live booking is switched off on this office, so nothing was changed in iCabbi.');
+        e.checkedOnly = true;
+        throw e;
+      }
+      await client.update(ref, booking);
+      if (store) await store.updateDispatchJob(ref, job);
+      return { statusWords: 'changed in iCabbi' };
     },
     // -> { status, words, final, driver } for one trip, read live.
     async status(ref) {

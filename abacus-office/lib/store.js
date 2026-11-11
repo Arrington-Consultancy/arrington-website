@@ -125,6 +125,24 @@ class Store {
        ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY c.received_at DESC LIMIT $${params.length}`, params);
     return r.rows;
   }
+  // Search the cases a person may see: subject, sender, the email itself,
+  // the dispatch reference, the contact staff typed in, and the customer's
+  // name and phone as the AI read them. "#12" or "12" also finds case 12.
+  async searchCases(text, scope, limit = 100) {
+    const q = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 100);
+    if (q.length < 2 && !/^#?\d+$/.test(q)) return [];
+    const params = [];
+    const where = scopeWhere(scope, params, 'c.');
+    params.push(`%${q.replace(/[\\%_]/g, (ch) => `\\${ch}`)}%`);
+    const p = `$${params.length}`;
+    const ors = ['c.subject', 'c.from_address', 'c.body', 'c.dispatch_ref', 'c.contact', "c.reading->>'customer_name'", "c.reading->>'phone'"].map((col) => `${col} ILIKE ${p}`);
+    const asId = q.replace(/^#/, '');
+    if (/^\d{1,9}$/.test(asId)) { params.push(Number(asId)); ors.push(`c.id = $${params.length}`); }
+    where.push(`(${ors.join(' OR ')})`);
+    params.push(limit);
+    return (await this.q(`SELECT c.*, u.display_name AS owner_display, u.username AS owner_username FROM cases c LEFT JOIN users u ON u.id = c.owner_id
+      WHERE ${where.join(' AND ')} ORDER BY c.received_at DESC LIMIT $${params.length}`, params)).rows;
+  }
   async counts(scope) {
     const params = [];
     const w = scopeWhere(scope, params);
@@ -199,6 +217,12 @@ class Store {
       [ref, caseId, brand || '', JSON.stringify(job), actor ? actor.id : null, actor ? (actor.display_name || actor.username) : '', externalId, dispatchStatus]);
     return r.rows[0];
   }
+  async dispatchBookingByRef(ref) {
+    return (await this.q('SELECT * FROM dispatch_bookings WHERE ref = $1', [String(ref || '').slice(0, 60)])).rows[0] || null;
+  }
+  async updateDispatchJob(ref, job) {
+    return (await this.q('UPDATE dispatch_bookings SET job = $2, status_checked_at = now() WHERE ref = $1 RETURNING *', [ref, JSON.stringify(job)])).rows[0] || null;
+  }
   async dispatchBookingsForCase(caseId) {
     return (await this.q('SELECT * FROM dispatch_bookings WHERE case_id = $1 ORDER BY created_at', [caseId])).rows;
   }
@@ -249,7 +273,12 @@ class Store {
     const ended = (await this.q("UPDATE visits SET ended_at = now(), ended_how = 'signed out' WHERE user_id = $1 AND ended_at IS NULL RETURNING *", [user.id])).rows;
     return [...closed, ...ended];
   }
-  async recentVisits(limit = 40) { return (await this.q('SELECT * FROM visits ORDER BY started_at DESC LIMIT $1', [limit])).rows; }
+  // Every visit, or, for a manager set to one company, only the visits of
+  // the people set to that company.
+  async recentVisits(limit = 40, brand) {
+    if (!brand) return (await this.q('SELECT * FROM visits ORDER BY started_at DESC LIMIT $1', [limit])).rows;
+    return (await this.q("SELECT v.* FROM visits v JOIN users u ON u.id = v.user_id WHERE u.brand = $2 AND u.role <> 'owner' ORDER BY v.started_at DESC LIMIT $1", [limit, brand])).rows;
+  }
   async pruneVisits() { return (await this.q("DELETE FROM visits WHERE started_at < now() - interval '90 days'")).rowCount; }
 
   // ---- compositions (the Write worker) ----
@@ -294,6 +323,75 @@ class Store {
     return r.rows[0];
   }
   async deleteFixedPrice(id) { await this.q('DELETE FROM fixed_prices WHERE id = $1', [id]); }
+
+  // ---- reports (managers and the owner) ----
+  // What came in over the last N days and what happened to it, inside a
+  // scope. Times are hours from an email arriving to its reply being
+  // approved. Pure counting: nothing here judges anyone.
+  async report(scope, days) {
+    const d = [7, 30, 90].includes(Number(days)) ? Number(days) : 30;
+    const params = [String(d)];
+    const w = ["c.received_at >= now() - ($1 || ' days')::interval", ...scopeWhere(scope, params, 'c.')];
+    const where = w.join(' AND ');
+    const one = async (sql) => (await this.q(sql, params)).rows;
+    const [totals, byKind, byCompany, complaints, byPerson, byChannel] = await Promise.all([
+      one(`SELECT count(*)::int AS emails,
+          count(*) FILTER (WHERE c.approved_at IS NOT NULL)::int AS approved,
+          count(*) FILTER (WHERE c.dispatch_ref <> '' OR c.booked_at IS NOT NULL)::int AS into_dispatch,
+          count(*) FILTER (WHERE c.status <> 'done' AND c.kind <> 'other')::int AS open_now,
+          count(*) FILTER (WHERE c.escalated_at IS NOT NULL)::int AS went_overdue,
+          count(*) FILTER (WHERE c.passed_up_at IS NOT NULL)::int AS passed_up,
+          percentile_cont(0.5) WITHIN GROUP (ORDER BY extract(epoch FROM (c.approved_at - c.received_at)) / 3600) FILTER (WHERE c.approved_at IS NOT NULL) AS median_hours,
+          percentile_cont(0.9) WITHIN GROUP (ORDER BY extract(epoch FROM (c.approved_at - c.received_at)) / 3600) FILTER (WHERE c.approved_at IS NOT NULL) AS p90_hours
+        FROM cases c WHERE ${where}`),
+      one(`SELECT c.kind, count(*)::int AS n, count(*) FILTER (WHERE c.approved_at IS NOT NULL)::int AS approved FROM cases c WHERE ${where} GROUP BY c.kind ORDER BY n DESC`),
+      one(`SELECT c.brand, count(*)::int AS n, count(*) FILTER (WHERE c.kind = 'complaints')::int AS complaints, count(*) FILTER (WHERE c.status <> 'done' AND c.kind <> 'other')::int AS open_now FROM cases c WHERE ${where} GROUP BY c.brand ORDER BY n DESC`),
+      one(`SELECT c.seriousness, count(*)::int AS n, count(*) FILTER (WHERE c.complaint->>'firm_at_fault' IN ('yes', 'partly'))::int AS at_fault FROM cases c WHERE ${where} AND c.kind = 'complaints' GROUP BY c.seriousness`),
+      one(`SELECT u.id, coalesce(nullif(u.display_name, ''), u.username) AS name, count(*)::int AS approved FROM cases c JOIN users u ON u.id = c.approved_by WHERE ${where} GROUP BY u.id, name ORDER BY approved DESC, name`),
+      one(`SELECT c.channel, count(*)::int AS n FROM cases c WHERE ${where} AND c.kind = 'complaints' GROUP BY c.channel ORDER BY n DESC`)
+    ]);
+    return { days: d, totals: totals[0], byKind, byCompany, complaints, byPerson, byChannel };
+  }
+  // The cases behind a report, for a spreadsheet.
+  async casesForExport(scope, days) {
+    const d = [7, 30, 90].includes(Number(days)) ? Number(days) : 30;
+    const params = [String(d)];
+    const w = ["c.received_at >= now() - ($1 || ' days')::interval", ...scopeWhere(scope, params, 'c.')];
+    return (await this.q(`SELECT c.id, c.brand, c.received_at, c.channel, c.from_address, c.subject, c.kind, c.status, c.seriousness, c.dispatch_ref,
+        c.approved_at, c.passed_up_at, c.escalated_at, coalesce(nullif(o.display_name, ''), o.username, '') AS owner_name, coalesce(nullif(a.display_name, ''), a.username, '') AS approved_by_name
+      FROM cases c LEFT JOIN users o ON o.id = c.owner_id LEFT JOIN users a ON a.id = c.approved_by
+      WHERE ${w.join(' AND ')} ORDER BY c.received_at DESC LIMIT 5000`, params)).rows;
+  }
+
+  // ---- standard replies ----
+  // For a case or a draft: its company's replies plus the ones for every
+  // company. For the Settings list: one company's, or every one.
+  async standardRepliesFor(brand) {
+    return (await this.q("SELECT * FROM standard_replies WHERE brand = $1 OR brand = '' ORDER BY title", [String(brand || '')])).rows;
+  }
+  async standardReplies(brand) {
+    const params = brand ? [brand] : [];
+    return (await this.q(`SELECT * FROM standard_replies${brand ? ' WHERE brand = $1' : ''} ORDER BY brand, title`, params)).rows;
+  }
+  async standardReplyById(id) { return (await this.q('SELECT * FROM standard_replies WHERE id = $1', [id])).rows[0] || null; }
+  async addStandardReply({ brand = '', title, body, actor }) {
+    const t = String(title || '').replace(/\s+/g, ' ').trim().slice(0, 120);
+    const b = String(body || '').replace(/\r\n/g, '\n').trim().slice(0, 4000);
+    if (!t) throw Object.assign(new Error('Give the standard reply a short name, such as "Lost property".'), { code: 'REFUSED' });
+    if (b.length < 10) throw Object.assign(new Error('Write the reply itself.'), { code: 'REFUSED' });
+    return (await this.q('INSERT INTO standard_replies (brand, title, body, updated_by) VALUES ($1, $2, $3, $4) RETURNING *',
+      [String(brand || '').slice(0, 40), t, b, actor ? (actor.display_name || actor.username) : ''])).rows[0];
+  }
+  async deleteStandardReply(id) { await this.q('DELETE FROM standard_replies WHERE id = $1', [id]); }
+
+  // ---- tariff (the fare calculator) ----
+  // One per company, kept as JSON in settings, so a new company has none
+  // until a manager types it in. lib/fares.js checks and uses it.
+  async tariff(brand) {
+    const raw = await this.setting(`tariff:${String(brand || '')}`);
+    try { return raw ? JSON.parse(raw) : null; } catch { return null; }
+  }
+  async setTariff(brand, tariff) { await this.setSetting(`tariff:${String(brand || '')}`, JSON.stringify(tariff)); }
 
   // ---- events ----
   async addEvent(caseId, { actor, kind, detail = '' }) {
