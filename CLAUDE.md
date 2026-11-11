@@ -10565,7 +10565,7 @@ Google values reference `db-backup-to-drive`'s, so the one Drive token Tom
 minted on 19/10 serves both; `BACKUP_FOLDER_NAME="A2B office database
 backups"`, `BACKUP_FILE_PREFIX=abacus-office-db` (new on 11/11, commit
 `1a30b10`: a second database names, keeps and deletes only its own files),
-`BACKUP_KEEP=12`, `BACKUP_MIN_BYTES=4000` (the office database is small).
+`BACKUP_KEEP=12`, `BACKUP_MIN_BYTES=4000` and `BACKUP_MIN_TABLES=8` (the office database is small and has nine tables; `BACKUP_MIN_TABLES`, default 10, is commit `432a41f`). First run 11/11/2026 10:23 UTC: 9 tables, 5,592 bytes, uploaded as `abacus-office-db-2026-11-11.sql.gz` into folder `1iQ1IWGP7r7dWaLHLtL-IBZlMJmUWeCWp`; schedule restored and redeployed (deployment `7d14f599`).
 Schedule `30 3 * * 1`, Mondays 03:30 UTC, half an hour after the website's.
 That folder holds Dan's firms' customer emails once a real mailbox is
 connected, so it is part of what the data processing agreement must cover
