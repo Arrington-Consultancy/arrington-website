@@ -106,7 +106,7 @@ class Store {
     );
     return r.rows[0];
   }
-  async listCases({ status, kind, ownerId, open, escalated, passedUp, brand, limit = 200 } = {}) {
+  async listCases({ status, kind, ownerId, open, escalated, passedUp, unsentFor, brand, limit = 200 } = {}) {
     const where = [];
     const params = [];
     const add = (sql, v) => { params.push(v); where.push(sql.replace('?', `$${params.length}`)); };
@@ -119,6 +119,8 @@ class Store {
     if (ownerId) add('c.owner_id = ?', ownerId);
     if (open) where.push("c.status IN ('new', 'in_progress', 'waiting')");
     if (escalated) where.push('c.escalated_at IS NOT NULL AND c.approved_at IS NULL AND c.status IN (\'new\', \'in_progress\')');
+    // Approved and saved in the mailbox, but still not sent after N minutes.
+    if (unsentFor) { params.push(String(unsentFor)); where.push(`c.sent_state = 'unsent' AND c.approved_at < now() - ($${params.length} || ' minutes')::interval`); }
     params.push(limit);
     const r = await this.q(
       `SELECT c.*, u.display_name AS owner_display, u.username AS owner_username FROM cases c LEFT JOIN users u ON u.id = c.owner_id
@@ -178,7 +180,42 @@ class Store {
     const keys = Object.keys(fields);
     if (!keys.length) return;
     const sets = keys.map((k, i) => `${k} = $${i + 2}`);
+    // Any change to the reply's text moves its version on, whoever made it
+    // (a person or the AI), so an older page cannot save over it.
+    if (keys.includes('draft')) sets.push('draft_version = draft_version + 1');
     await this.q(`UPDATE cases SET ${sets.join(', ')}, updated_at = now() WHERE id = $1`, [id, ...keys.map((k) => (fields[k] !== null && typeof fields[k] === 'object' && !(fields[k] instanceof Date)) ? JSON.stringify(fields[k]) : fields[k])]);
+  }
+  // Save a person's edit to the reply, only if nobody has changed it since
+  // their page was opened (expected version). Null when it has changed.
+  async saveDraftText(id, draft, expected) {
+    const params = [id, draft];
+    let guard = '';
+    if (Number.isInteger(expected)) { params.push(expected); guard = ' AND draft_version = $3'; }
+    const r = await this.q(`UPDATE cases SET draft = $2, draft_version = draft_version + 1, approved_at = NULL, approved_by = NULL, sent_state = '', updated_at = now()
+      WHERE id = $1${guard} RETURNING draft_version`, params);
+    return r.rows[0] ? r.rows[0].draft_version : null;
+  }
+  // Approval is claimed in one statement, so two people pressing Approve at
+  // once (or one person twice) make one draft in the mailbox, not two. With
+  // a version, a reply changed since the page was opened is not approved.
+  async claimApproval(id, userId, version) {
+    const params = [id, userId];
+    let guard = '';
+    if (Number.isInteger(version)) { params.push(version); guard = ' AND draft_version = $3'; }
+    const r = await this.q(`UPDATE cases SET approved_at = now(), approved_by = $2, updated_at = now() WHERE id = $1 AND approved_at IS NULL${guard} RETURNING *`, params);
+    return r.rows[0] || null;
+  }
+  async releaseApproval(id) { await this.q('UPDATE cases SET approved_at = NULL, approved_by = NULL, updated_at = now() WHERE id = $1', [id]); }
+  async claimHolding(id) {
+    const r = await this.q('UPDATE cases SET holding_sent_at = now(), updated_at = now() WHERE id = $1 AND holding_sent_at IS NULL RETURNING id', [id]);
+    return Boolean(r.rows[0]);
+  }
+  async releaseHolding(id) { await this.q('UPDATE cases SET holding_sent_at = NULL WHERE id = $1', [id]); }
+  // Approved replies saved in the mailbox whose fate is not yet known,
+  // least recently checked first.
+  async casesAwaitingSend(limit = 25) {
+    return (await this.q(`SELECT * FROM cases WHERE saved_draft_id IS NOT NULL AND saved_draft_id <> '' AND approved_at IS NOT NULL
+      AND sent_state IN ('', 'unsent') AND approved_at > now() - interval '14 days' ORDER BY sent_checked_at NULLS FIRST LIMIT $1`, [limit])).rows;
   }
   async overdueCandidates(hours) {
     const r = await this.q(

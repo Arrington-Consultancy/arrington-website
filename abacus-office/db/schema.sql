@@ -203,3 +203,14 @@ CREATE TABLE IF NOT EXISTS standard_replies (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS standard_replies_brand_idx ON standard_replies (brand, title);
+
+-- The review of 11 November 2026. What became of an approved reply in the
+-- mailbox: still a draft ('unsent'), sent ('sent'), or deleted without being
+-- sent ('discarded'), read back from Gmail. And a version on the draft, so a
+-- save made from a page someone else has since changed is refused rather
+-- than written over theirs.
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS saved_thread_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS sent_state VARCHAR(12) NOT NULL DEFAULT '';
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS sent_at TIMESTAMPTZ;
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS sent_checked_at TIMESTAMPTZ;
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS draft_version INTEGER NOT NULL DEFAULT 0;

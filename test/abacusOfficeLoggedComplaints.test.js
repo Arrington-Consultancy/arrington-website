@@ -69,7 +69,7 @@ test('over HTTP: staff log a Google review, the AI drafts a public reply with th
   const mailbox = { name: 'gmail', label: 'Gmail', demo: false, none: false, configured: () => true, missing: () => [], listInbox: async () => [], account: async () => null,
     saveReplyDraft: async () => { saved.push('reply'); return { draftId: 'x' }; }, saveNewDraft: async (to, subject, text) => { saved.push({ to, subject, text }); return { draftId: `d${saved.length}` }; } };
   const f = { ...firm, demo: false, logo: '', mailboxBrand: 'abacus', brands: [{ id: 'abacus', name: 'Abacus & Falmouth Taxis' }, { id: 'coastline', name: 'Coastline Travel' }] };
-  const { app } = createApp({ pool, mailbox, firm: f, sessionSecret: 'test-secret-for-the-abacus-office', production: false, aiOn: () => true, alertsEnv: {} });
+  const { app, office } = createApp({ pool, mailbox, firm: f, sessionSecret: 'test-secret-for-the-abacus-office', production: false, aiOn: () => true, alertsEnv: {} });
   const server = await new Promise((resolve) => { const s = app.listen(0, () => resolve(s)); });
   const base = `http://127.0.0.1:${server.address().port}`;
   t.after(async () => { server.close(); await pool.query(`DROP SCHEMA IF EXISTS ${SCHEMA} CASCADE`); await pool.end(); });
@@ -120,10 +120,19 @@ test('over HTTP: staff log a Google review, the AI drafts a public reply with th
   assert.match(r.text, /Copy the reply/);
   assert.match((await get('/complaints')).text, /<span class="to-tag">Google review<\/span>/);
 
-  // An email complaint with an address goes into the mailbox as a new draft.
+  // An email complaint for Coastline is not put in the Abacus mailbox (the
+  // review of 11 November 2026): it is approved for copying out.
+  r = await post('/complaints/log', { channel: 'email', name: 'Jo', contact: 'jo@example.invalid', text: 'You overcharged me on Saturday night.' }, '/complaints');
+  const idCoast = Number((r.location || '').split('/').pop());
+  await post(`/case/${idCoast}/approve`, {}, `/case/${idCoast}`);
+  assert.equal(saved.length, 0, 'a Coastline complaint reply never waits in the Abacus mailbox');
+  assert.ok((await store.caseById(idCoast)).approved_at);
+  // For the mailbox's own company, an email complaint with an address goes
+  // into the mailbox as a new draft.
   r = await post('/complaints/log', { channel: 'email', name: 'Jim', contact: 'jim@example.invalid', text: 'You overcharged me on Friday night.' }, '/complaints');
   const id2 = Number((r.location || '').split('/').pop());
-  await post(`/case/${id2}/approve`, {}, `/case/${id2}`);
+  await store.updateCase(id2, { brand: 'abacus' });
+  await office.approve(await store.caseById(id2), await store.userByName('sam'));
   assert.equal(saved.length, 1);
   assert.equal(saved[0].to, 'jim@example.invalid');
 });

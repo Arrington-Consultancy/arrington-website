@@ -164,12 +164,13 @@ function readSystem(today, f) {
     `- intent: new_booking (a new job), change (alter a job they already have), cancel, enquiry (a question about a journey that is not yet a booking), complaint (a customer unhappy with a journey, a driver, a car or a charge), lost_property, account (opening or asking about a business account or an invoice), council (anything from a council or its licensing team), other (anything else, including sales pitches and messages that are not for the office).`,
     '- Work out every date from the time the email was received: "tomorrow" is the day after it arrived and "yesterday" the day before. Write dates as YYYY-MM-DD and times as 24-hour HH:MM.',
     '- journey: for a booking, change, cancellation, complaint or lost property email, the journey it is about as far as the email says; passengers as a number written as text, or an empty string; flight as the flight number if one is given. Empty strings for anything the email does not say. Never guess an address, a time, a phone number or how many are travelling: "we" or "us" is not a number.',
-    `- missing: for a new booking only, what staff still need before it can be booked. A booking needs all of: ${REQUIRED.map(([, label]) => label).join(', ')}; and a flight number when the pickup is an airport. List each one the email does not give. Empty otherwise.`,
+    `- missing: for a new booking, or an enquiry about a journey, what staff still need before it can be booked. A booking needs all of: ${REQUIRED.map(([, label]) => label).join(', ')}; and a flight number when the pickup is an airport. List each one the email does not give. Empty otherwise.`,
     '- seriousness: for a complaint, minor (a small delay, a manner, a small fare query), serious (a missed job, a wrong charge, a lost item of value, a repeated problem) or safety (a phone used while driving, dangerous driving, a car that is not safe, an assault or a threat, anything about a driver\'s fitness to hold a licence). For anything that is not a complaint, none.',
     '- summary: one plain sentence saying what the email wants.',
     '',
     'THE REPLY',
-    '- Assume staff will put a booking into the dispatch system before they send the reply, so the reply can confirm what the customer asked for.',
+    '- Never confirm a booking. The job is not in the dispatch system yet: say plainly what the office has, ask for anything missing, and say the office will confirm once it is booked in. Staff ask for a confirming reply after they have booked it.',
+    '- Never say a car, a driver, a time or a vehicle of a particular kind (a wheelchair accessible car, an 8 seater, an estate) is available. Say the office will check and confirm.',
     '- If anything in the missing list is not in the email, do not confirm the booking: ask for every missing item in the one reply, in plain words, so the customer can answer in one go (for example a mobile number for the driver, how many people are travelling and whether there is much luggage, the full pickup address, the flight number). Never ask for something the email already gives.',
     '- Do not give a price, a time or a policy that the facts below do not support.',
     '- Never promise anything the email did not ask for.',
@@ -327,7 +328,10 @@ function cleanReading(d) {
   };
   // What is missing is decided by code from the fields, not by the model's
   // own list: the reply then asks for every one of them (Tom, 10/11/2026).
-  if (intent === 'new_booking') out.missing = missingFromReading(out);
+  // An enquiry about a particular journey is a booking in waiting, so it
+  // asks for the same details (the review of 11 November 2026).
+  const oj = out.journey;
+  if (intent === 'new_booking' || (intent === 'enquiry' && (oj.pickup || oj.destination || oj.date))) out.missing = missingFromReading(out);
   return out;
 }
 

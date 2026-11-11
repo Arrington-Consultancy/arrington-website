@@ -155,7 +155,16 @@ test('over HTTP: staff draft with a prompt, guide it, approve it into the mailbo
   assert.equal((await meg.get(`/write/${id}`)).status, 200);
   assert.match((await meg.get('/write')).text, /Station and airport runs on account/);
 
-  // Approving saves it as a fresh draft in the mailbox. Nothing is sent.
+  // Sam writes for Coastline, and the connected mailbox is Abacus's: a new
+  // email is not put in another company's mailbox (the review of
+  // 11 November 2026), so it is approved for copying out instead.
+  await sam.post(`/write/${id}/approve`, {}, `/write/${id}`);
+  assert.equal(saved.length, 0, 'a Coastline email never waits in the Abacus mailbox');
+  assert.equal((await store.compositionById(id)).status, 'approved');
+  assert.match((await sam.get(`/write/${id}`)).text, /does not have its own mailbox connected yet/);
+  // For the mailbox's own company, approving saves it as a fresh draft in
+  // the mailbox. Nothing is sent.
+  await store.updateComposition(id, { brand: 'abacus', status: 'draft' });
   await sam.post(`/write/${id}/approve`, {}, `/write/${id}`);
   assert.equal(saved.length, 1);
   assert.equal(saved[0].to, 'front.desk@example.invalid');
@@ -170,6 +179,7 @@ test('over HTTP: staff draft with a prompt, guide it, approve it into the mailbo
   // With no address, approving into the mailbox is refused, not guessed.
   r = await sam.post('/write', { kind: 'new', relationship: 'familiar', prompt: 'Tell Dave his lost umbrella is at the office.' }, '/write');
   const id2 = Number(r.location.split('/').pop());
+  await store.updateComposition(id2, { brand: 'abacus' });
   await sam.post(`/write/${id2}/approve`, {}, `/write/${id2}`);
   assert.equal((await store.compositionById(id2)).status, 'draft');
   assert.equal(saved.length, 1);

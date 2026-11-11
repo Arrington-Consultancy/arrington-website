@@ -162,7 +162,10 @@ function liveMailbox(name, env, { store, secretEnv = env, fetch } = {}) {
     async saveReplyDraft(email, text) { return (await checked()).saveReplyDraft(email, text); },
     // A new email, not a reply: a draft in the mailbox addressed to "to".
     async saveNewDraft(to, subject, text) { return (await checked()).saveReplyDraft({ from: to, subject, fresh: true, messageId: '', threadId: '' }, text); },
-    async account() { if (!inner) build(); return inner.account(); }
+    async account() { if (!inner) build(); return inner.account(); },
+    // Whether a saved draft was sent, for the drivers that can say.
+    get canTrackSent() { if (!inner) build(); return typeof inner.draftState === 'function'; },
+    async draftState(ref) { const d = await checked(); return typeof d.draftState === 'function' ? d.draftState(ref) : null; }
   };
   return box;
 }

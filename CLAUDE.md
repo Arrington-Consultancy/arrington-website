@@ -10518,3 +10518,39 @@ search scope, the reference check and the double approval each watched
 red). 52 office tests pass; browser pass of 27 pages at desktop and
 iPhone 13, no errors, no sideways scroll. On a phone the owner's menu is
 four rows (ten items); it is not sticky there, so it scrolls away.
+
+**Review of 11/11/2026, and the code fixes (BRANCH ONLY, NOT MERGED).** An
+independent review of the office (brief Drive
+`1K5XBbV-TviJD3MRlCGG2mUPtHVJMKmLQUfDNzRYyx94`, report
+`1tc5ivKmdr5ytgLV8Nuv_RRfIFyZbd2BuemQnxfQ2KCY`): fine to demonstrate, HOLD
+before a real pilot, 18 findings. Tom: "We are not building a demo, we are
+building the real thing here. But we are not merging a lot so he does lot
+see." Fixed on `claude/new-session-hbgp04`, not on main:
+- **One draft, however many clicks.** Approving claims the case with a
+  conditional `UPDATE ... WHERE approved_at IS NULL RETURNING` before the
+  mailbox is touched, and releases the claim if the mailbox fails; the
+  holding reply is claimed the same way. A second approval is refused in
+  words.
+- **Stale edits are refused.** `cases.draft_version` goes up on every draft
+  change; the draft form sends the version it was opened at, and a save or
+  approval from an older page is refused and the person's own text is shown
+  back with "Copy my version".
+- **Sent or not.** With Gmail, after approval the office checks whether the
+  draft was sent (`draftState` in `lib/taxiOffice/mail/gmail.js`: the draft
+  still there means unsent; a SENT message in the thread since approval
+  means sent; neither means deleted, which re-opens the case). Pills on the
+  case and inbox, and "Approved but not sent" on Today.
+- **Per-company manager address**: `ABACUS_OFFICE_MANAGER_EMAIL_<COMPANY>`
+  (for example `_COASTLINE`); a company without one uses the general
+  address. SMTP itself is still not set.
+- **No booking is confirmed in a first reply.** The prompt says the job is
+  not in dispatch yet; after staff book it, the office redrafts a confirming
+  reply. An enquiry about a journey now lists what is missing too.
+- **A new email is only put in the mailbox for that mailbox's company**;
+  another company's draft is approved for staff to copy out.
+Tests: `test/abacusOfficeReviewFixes.test.js` (gated; the race fails when
+the `approved_at IS NULL` guard is removed), and the office suite passes
+148/148. Still not code, so still open before a pilot: the DPA and Dan's
+approval, Governance & Assurance, the written £999 scope, a backup of
+Postgres-bYAT, telling staff their visits are recorded, the holding-reply
+wording, and how iCabbi is told who built the tool.

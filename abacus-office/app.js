@@ -243,6 +243,9 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
 
   const wrap = (fn) => (req, res, next) => fn(req, res, next).catch((e) => {
     if (e.code === 'REFUSED') { flash(req, 'warn', e.message); return res.redirect(req.get('referer') || '/'); }
+    // The mailbox did not answer or refused a draft: nothing was approved
+    // (the claim is let go), so say so plainly and let staff try again.
+    if (e.code === 'MAIL_ERROR' || e.code === 'MAILBOX_REFUSED') { flash(req, 'warn', `The mailbox did not take it just now (${String(e.message).slice(0, 160)}). Nothing was approved or saved there. Try again in a minute.`); return res.redirect(req.get('referer') || '/'); }
     next(e);
   });
   app.use(requireUser);
@@ -268,7 +271,11 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   async function settle() {
     if (syncing || Date.now() - lastSync < 2 * 60 * 1000) return;
     syncing = true;
-    try { await office.sync(); mailError = ''; await office.readAllUnread(); lastSync = Date.now(); } catch (e) {
+    try {
+      await office.sync(); mailError = ''; await office.readAllUnread(); lastSync = Date.now();
+      // Then whether approved replies have been sent from the mailbox.
+      await office.checkSent().catch((e) => console.error('Abacus office: sent check failed', e.message));
+    } catch (e) {
       // Shown to staff on the inbox, so a mailbox that stops answering is
       // seen rather than looking like a quiet day.
       mailError = e.code === 'MAILBOX_REFUSED' ? `The mailbox was not read: ${e.message}.` : `The mailbox could not be read just now (${String(e.message).slice(0, 160)}). The office tries again every couple of minutes.`;
@@ -294,13 +301,14 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
 
   app.get('/', wrap(async (req, res) => {
     const scope = caseScope(req.user, req.portal);
-    const [overdue, passedUp, mine, open, recent, stamp] = await Promise.all([
+    const [overdue, passedUp, mine, open, recent, stamp, unsent] = await Promise.all([
       store.listCases({ escalated: true, brand: scope, limit: 20 }),
       store.listCases({ passedUp: true, brand: scope, limit: 20 }),
       store.listCases({ ownerId: req.user.id, open: true, brand: scope, limit: 20 }),
       store.listCases({ open: true, brand: scope, limit: 50 }),
       store.recentEvents(12, scope),
-      store.liveStamp(scope)
+      store.liveStamp(scope),
+      store.listCases({ unsentFor: 60, brand: scope, limit: 20 })
     ]);
     const showPassedUp = atLeast(req.user, 'manager') ? passedUp : [];
     const passedUpIds = new Set(showPassedUp.map((c) => c.id));
@@ -309,7 +317,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     const unassigned = open.filter((c) => !c.owner_id && c.status === 'new' && c.kind !== 'other' && !overdueIds.has(c.id));
     const hours = await store.escalationHours();
     const nudgeHours = await store.complaintNudgeHours();
-    res.render('today', { title: 'Today', section: 'today', overdue: overdueShown, passedUp: showPassedUp, mine, unassigned, recent, hours, nudgeHours, liveStamp: stamp, lastSync });
+    res.render('today', { title: 'Today', section: 'today', unsent, overdue: overdueShown, passedUp: showPassedUp, mine, unassigned, recent, hours, nudgeHours, liveStamp: stamp, lastSync });
   }));
 
   app.get('/inbox', wrap(async (req, res) => {
@@ -380,6 +388,9 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     next();
   });
   app.get('/case/:id', loadCase, wrap(async (req, res) => {
+    const lost = req.session.lostDraft && req.session.lostDraft.caseId === req.kase.id ? req.session.lostDraft.text : '';
+    if (req.session.lostDraft) delete req.session.lostDraft;
+    res.locals.lostDraft = lost;
     const kase = req.kase.reading || req.kase.reading_source !== 'none' ? req.kase : await office.read(req.kase, { actor: req.user });
     const [events, users] = await Promise.all([store.eventsFor(kase.id), store.users()]);
     res.render('case', { title: kase.subject || 'Email', section: kase.kind === 'complaints' ? 'complaints' : (kase.kind === 'licensing' ? 'council' : 'inbox'), kase, events, users: users.filter((u) => u.active && canSee(u, kase)), booking: office.bookingFrom(kase), dispatchRow: kase.dispatch_ref ? await store.dispatchBookingByRef(kase.dispatch_ref) : null, statusWords: require('./lib/icabbi').statusWords, holdingText: kase.kind === 'complaints' ? office.holdingText(kase) : '', standardReplies: await store.standardRepliesFor(kase.brand || '') });
@@ -407,10 +418,27 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     await office.assign(req.kase, req.user, to);
   });
   act('status', async (req) => { await office.setStatus(req.kase, req.user, String(req.body.status)); });
-  act('draft', async (req) => { await office.saveDraft(req.kase, req.user, req.body.draft); flash(req, 'ok', 'Draft saved. It is not approved until you approve it.'); });
+  // The version of the reply the page was opened at, and a person's edit
+  // saved only against it. A refused edit is kept for them to copy back.
+  const pageVersion = (req) => (/^\d+$/.test(String(req.body.draft_version || '')) ? Number(req.body.draft_version) : undefined);
+  const editIfChanged = async (req) => {
+    if (req.body.draft === undefined || String(req.body.draft).replace(/\r\n/g, '\n') === String(req.kase.draft)) return;
+    try { await office.saveDraft(req.kase, req.user, req.body.draft, pageVersion(req)); } catch (e) {
+      if (e.stale) req.session.lostDraft = { caseId: req.kase.id, text: String(req.body.draft).slice(0, 4000) };
+      throw e;
+    }
+  };
+  act('draft', async (req) => {
+    if (req.body.draft === undefined) return;
+    try { await office.saveDraft(req.kase, req.user, req.body.draft, pageVersion(req)); } catch (e) {
+      if (e.stale) req.session.lostDraft = { caseId: req.kase.id, text: String(req.body.draft).slice(0, 4000) };
+      throw e;
+    }
+    flash(req, 'ok', 'Draft saved. It is not approved until you approve it.');
+  });
   act('note', async (req) => { await office.note(req.kase, req.user, req.body.note); });
   act('guide', async (req) => {
-    if (req.body.draft !== undefined && String(req.body.draft) !== String(req.kase.draft)) await office.saveDraft(req.kase, req.user, req.body.draft);
+    await editIfChanged(req);
     const fresh = await store.caseById(req.kase.id);
     const r = await office.guide(fresh, req.user, req.body.guidance);
     flash(req, r.rewritten ? 'ok' : 'warn', r.rewritten ? (r.heldBack ? `Rewritten. Held back: ${r.heldBack}` : 'Rewritten to what you said.') : 'Your note is recorded. The AI is off, so edit the draft by hand.');
@@ -426,8 +454,8 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   });
   act('book', async (req) => {
     try {
-      const { ref, statusWords } = await office.book(req.kase, req.user, req.body, req.body.signed_off === 'yes');
-      flash(req, 'ok', `Booked into ${dispatch.label} as ${ref}${statusWords ? `, ${statusWords}` : ''}.`);
+      const { ref, statusWords, confirmed } = await office.book(req.kase, req.user, req.body, req.body.signed_off === 'yes');
+      flash(req, 'ok', `Booked into ${dispatch.label} as ${ref}${statusWords ? `, ${statusWords}` : ''}.${confirmed ? ' The reply now confirms it; check it and approve.' : ' Change the reply to confirm it before approving.'}`);
     } catch (e) {
       if (!e.checkedOnly) throw e;
       flash(req, 'ok', e.message);
@@ -458,9 +486,11 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     }
   });
   act('approve', async (req) => {
-    if (req.body.draft !== undefined && String(req.body.draft) !== String(req.kase.draft)) await office.saveDraft(req.kase, req.user, req.body.draft);
+    await editIfChanged(req);
     const fresh = await store.caseById(req.kase.id);
-    const done = await office.approve(fresh, req.user);
+    // Approve exactly the text read here: if anyone changes it between this
+    // read and the approval, the approval is refused.
+    const done = await office.approve(fresh, req.user, { version: fresh.draft_version });
     if (done && done.copyOut) { flash(req, 'ok', `Approved. ${done.send}`); return; }
     flash(req, 'ok', (mailbox.demo || mailbox.none) ? 'Approved. With a real mailbox connected this would now be a draft in it, ready to send.' : `Approved and saved as a draft in ${mailbox.label}. Open the mailbox to send it.`);
   });
@@ -670,7 +700,10 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     req.draft = c;
     next();
   });
-  const mailboxCanHold = () => !mailbox.demo && !mailbox.none && typeof mailbox.saveNewDraft === 'function' && mailbox.configured();
+  // A new email waits in the connected mailbox only for that mailbox's own
+  // company (see office.canHoldNew); with no brand given, whether a mailbox
+  // can hold drafts at all.
+  const mailboxCanHold = (brand) => (brand === undefined ? !mailbox.demo && !mailbox.none && typeof mailbox.saveNewDraft === 'function' && mailbox.configured() : office.canHoldNew(brand));
 
   app.get('/write', wrap(async (req, res) => {
     const drafts = await store.compositions(atLeast(req.user, 'manager') ? { council: false, brand: req.portal || undefined } : { userId: req.user.id, council: false });
@@ -709,7 +742,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     res.redirect(`/write/${c.id}`);
   }));
   app.get('/write/:id', loadDraft, wrap(async (req, res) => {
-    res.render('writing', { title: req.draft.subject || 'Draft', section: compose.isCouncilKind(req.draft.kind) ? 'council' : 'write', council: compose.isCouncilKind(req.draft.kind), c: req.draft, kinds: compose.ALL_KINDS, relationships: compose.RELATIONSHIPS, mailboxCanHold: mailboxCanHold(), companyName: companyOf(req.draft.brand) });
+    res.render('writing', { title: req.draft.subject || 'Draft', section: compose.isCouncilKind(req.draft.kind) ? 'council' : 'write', council: compose.isCouncilKind(req.draft.kind), c: req.draft, kinds: compose.ALL_KINDS, relationships: compose.RELATIONSHIPS, mailboxCanHold: mailboxCanHold(req.draft.brand), companyName: companyOf(req.draft.brand) });
   }));
   const writeAct = (p, fn) => app.post(`/write/:id/${p}`, loadDraft, wrap(async (req, res) => { await fn(req, res); if (!res.headersSent && !res.locals.redirected) res.redirect(`/write/${req.draft.id}`); }));
   // Saving an edit takes an approved draft back to a draft, so what is in
@@ -754,14 +787,14 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     const c = { ...req.draft, ...f };
     if (!String(c.subject || '').trim() || String(c.body || '').trim().length < 10) { flash(req, 'warn', 'It needs a subject and a message before it is approved.'); return; }
     let draftId = '';
-    if (mailboxCanHold()) {
+    if (mailboxCanHold(c.brand)) {
       if (!EMAIL_RE.test(c.to_address || '')) { flash(req, 'warn', 'Add the email address it is going to, so it can wait in the mailbox for you to send.'); return; }
       const r = await mailbox.saveNewDraft(c.to_address, c.subject, c.body);
       draftId = String((r && r.draftId) || '');
     }
     await store.updateComposition(req.draft.id, { status: 'approved', approved_at: now(), approved_by_name: staffName(req.user), mailbox_draft_id: draftId });
     await store.addEvent(null, { actor: req.user, kind: 'write_approved', detail: `${compose.ALL_KINDS[c.kind]} approved for ${companyOf(c.brand)}${c.to_address ? ` to ${c.to_address}` : ''}${draftId ? `, saved as a draft in ${mailbox.label}` : ''}` });
-    flash(req, 'ok', mailboxCanHold() ? `Approved and saved as a draft in ${mailbox.label}. Open the mailbox to send it.` : 'Approved. No mailbox is connected yet, so copy it into your email and send it from there.');
+    flash(req, 'ok', draftId ? `Approved and saved as a draft in ${mailbox.label}. Open the mailbox to send it.` : (mailboxCanHold() ? `Approved. ${companyOf(c.brand)} does not have its own mailbox connected yet, so copy it into that company's email and send it from there.` : 'Approved. No mailbox is connected yet, so copy it into your email and send it from there.'));
   });
   writeAct('discard', async (req, res) => {
     await store.updateComposition(req.draft.id, { status: 'discarded' });

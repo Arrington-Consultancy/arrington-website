@@ -211,15 +211,23 @@
     <section class="to-panel to-draft<%= kase.approved_at ? ' to-approved' : '' %>" id="reply">
       <div class="to-panel-head">
         <p class="to-worker-tag"><%= kase.approved_at ? 'Approved reply' : 'Draft reply' %></p>
-        <% if (kase.approved_at) { %><span class="to-pill to-pill-ok">Approved <%= when(kase.approved_at) %></span><% } %>
+        <% if (kase.sent_state === 'sent') { %><span class="to-pill to-pill-ok">Sent <%= when(kase.sent_at) %></span><% } else if (kase.approved_at) { %><span class="to-pill <%= kase.sent_state === 'unsent' ? 'to-pill-warn' : 'to-pill-ok' %>">Approved <%= when(kase.approved_at) %><%= kase.sent_state === 'unsent' ? ', not sent yet' : '' %></span><% } %>
       </div>
-      <% if (kase.approved_at) { %>
+      <% if (kase.sent_state === 'sent') { %>
+        <p class="to-note to-note-ok">Sent from <%= mailboxLabel %> <%= when(kase.sent_at) %>. The customer has it.</p>
+      <% } else if (kase.sent_state === 'unsent' && kase.approved_at) { %>
+        <p class="to-note to-note-warn">Approved and waiting as a draft in <%= mailboxLabel %>, <strong>not sent yet</strong><% if (kase.sent_checked_at) { %> (checked <%= when(kase.sent_checked_at) %>)<% } %>. Open the mailbox and send it. The office checks every couple of minutes and marks it sent when it goes.</p>
+      <% } else if (kase.approved_at) { %>
         <p class="to-note to-note-ok"><%= logged && !savedToMailbox ? 'Approved. It came in as a ' + ch.label.toLowerCase() + ': ' + ch.send + ' Nothing has been posted or sent from here.' : (mailboxDemo ? 'Approved. With a real mailbox connected this would be a draft in it now, waiting for someone to press send.' : 'Saved as a draft in ' + mailboxLabel + '. Open the mailbox to send it. Editing it here makes a new draft that needs approving again.') %></p>
         <% if (logged && !savedToMailbox) { %><button type="button" class="to-btn to-btn-quiet" data-copy="<%= kase.draft %>">Copy the reply</button><% } %>
       <% } %>
       <% if (kase.held_back) { %><p class="to-note to-note-warn"><strong>From the AI:</strong> <%= kase.held_back %></p><% } %>
+      <% if (typeof lostDraft !== 'undefined' && lostDraft) { %>
+        <div class="to-note to-note-warn"><p><strong>Your version, not saved.</strong> Someone changed this reply while you had it open. Theirs is in the box below; yours is here to copy back in if it should win.</p><div class="to-holding"><%= lostDraft %></div><button type="button" class="to-btn to-btn-quiet" data-copy="<%= lostDraft %>">Copy my version</button></div>
+      <% } %>
       <form method="post" action="/case/<%= kase.id %>/draft" class="to-form">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="hidden" name="draft_version" value="<%= kase.draft_version || 0 %>">
         <label class="to-field"><span><%= ch && ch.public ? 'The reply, as it will be posted publicly under their ' + ch.label.toLowerCase() : 'The reply, as it will go to ' + (isCouncil ? 'the council' : 'the customer') %></span><textarea id="draft" name="draft" rows="12" maxlength="4000" placeholder="<%= r ? '' : 'Write the reply here.' %>"><%= kase.draft %></textarea></label>
         <% if (standardReplies.length) { %>
         <div class="to-insert">

@@ -202,14 +202,14 @@ test('over HTTP: a manager pastes a council email, the AI drafts the reply, it i
   assert.match(r.text, /paste the council(&#39;|')s email/);
   r = await meg.post('/write', { kind: 'council_reply', prompt: 'Insurance certificate is attached.' }, '/council');
   assert.equal(r.location, '/council#write-to-council', 'a reply with nothing pasted goes back to the Council page');
-  r = await meg.post('/write', { kind: 'council_reply', relationship: 'familiar', brand: 'coastline', to_address: 'licensing@example.invalid', prompt: 'Insurance certificate for licence 14 is attached.', quoted: 'Ref LIC/2026/0414. Please send the current insurance certificate for licence 14 by 16 November.' }, '/council');
+  r = await meg.post('/write', { kind: 'council_reply', relationship: 'familiar', brand: 'abacus', to_address: 'licensing@example.invalid', prompt: 'Insurance certificate for licence 14 is attached.', quoted: 'Ref LIC/2026/0414. Please send the current insurance certificate for licence 14 by 16 November.' }, '/council');
   const id = Number((r.location || '').split('/').pop());
   assert.ok(id, 'redirected to the draft');
   const c = await store.compositionById(id);
   assert.equal(c.kind, 'council_reply');
   assert.equal(c.relationship, 'formal', 'a council email is always formal');
-  assert.equal(c.brand, 'coastline');
-  assert.match(c.body, /Kind regards,\nMeg\nCoastline Travel$/, 'the office sign-off, not the model\'s');
+  assert.equal(c.brand, 'abacus');
+  assert.match(c.body, /Kind regards,\nMeg\nAbacus & Falmouth Taxis$/, 'the office sign-off, not the model\'s');
   assert.match(calls[0].user, /THE COUNCIL'S EMAIL BEING ANSWERED/);
   assert.match(calls[0].user, /LIC\/2026\/0414/);
   assert.ok(calls[0].system.includes(compose.COUNCIL_REPLY));

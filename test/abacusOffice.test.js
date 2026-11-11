@@ -96,7 +96,8 @@ test('no file in the office can send to a customer: the only transport goes to t
   assert.deepEqual(senders.map((f) => path.relative(ROOT, f)), ['abacus-office/lib/alerts.js']);
   const src = read('abacus-office/lib/alerts.js');
   assert.match(src, /env\.ABACUS_OFFICE_MANAGER_EMAIL/);
-  assert.match(src, /to: c\.to,/, 'the recipient is the configured manager address');
+  assert.match(src, /sendMail\(\{ from: c\.from, to, subject, text \}\)/, 'the recipient is a configured manager address');
+  assert.match(src, /function recipientFor\(c, brand\) \{ return c\.perBrand\[[^\]]+\] \|\| c\.to; \}/, 'which comes from the variables only');
   assert.doesNotMatch(src, /to: [^,]*from_address/, 'the recipient never comes from a case');
   // A read of the Arrington inbox's own variables, in any spelling: env.GMAIL_X, env['GMAIL_X'].
   for (const f of files) assert.doesNotMatch(fs.readFileSync(f, 'utf8'), /env(?:\.|\[['"])GMAIL_/, `${path.relative(ROOT, f)} never reads the Arrington inbox variables`);
@@ -135,7 +136,14 @@ test('an escalation email names the manager address from the variables only, and
   assert.equal(sent.to, 'manager@example.invalid');
   assert.match(sent.text, /Nothing has been sent to the customer/);
   assert.match(sent.text, /case\/4/);
-  assert.deepEqual(await alerts.sendEscalation({ cases: [], hours: 24, firmName: 'x' }, {}), { sent: false, reason: 'not configured' });
+  assert.deepEqual(await alerts.sendEscalation({ cases: [], hours: 24, firmName: 'x' }, {}), { sent: false, reason: 'not configured', sentIds: [] });
+  // Each company's manager hears about its own (the review of 11 November
+  // 2026); a company without its own address uses the general one.
+  const out = [];
+  alerts.__setTransportFactoryForTests(() => ({ sendMail: async (m) => { out.push(m); return { messageId: 'y' }; } }));
+  const r2 = await alerts.sendEscalation({ cases: [{ id: 5, brand: 'coastline', subject: 'a', from_address: 'x', received_at: new Date() }, { id: 6, brand: 'abacus', subject: 'b', from_address: 'y', received_at: new Date() }], hours: 24, firmName: 'Cornwall Taxis' }, { ...env, ABACUS_OFFICE_MANAGER_EMAIL_COASTLINE: 'coast.manager@example.invalid' });
+  assert.deepEqual(out.map((m) => m.to).sort(), ['coast.manager@example.invalid', 'manager@example.invalid']);
+  assert.deepEqual(r2.sentIds.sort(), [5, 6]);
 });
 
 test('the office writes in the Tidewell voice: Tom\'s writing rules, word for word, in every prompt, and the same cleanup on every reply', () => {

@@ -19,6 +19,13 @@
 </section>
 <% } %>
 
+<% if (typeof unsent !== 'undefined' && unsent.length) { %>
+<section class="to-section">
+  <div class="to-section-head"><h2>Approved but not sent</h2><p class="to-small">Replies approved more than an hour ago that are still waiting as drafts in <%= mailboxLabel %>. Nobody has pressed send. Open the mailbox and send them, or change them here.</p></div>
+  <ul class="to-cases"><% unsent.forEach(function (c) { %><%- include('partials/case-row', { c: c }) %><% }) %></ul>
+</section>
+<% } %>
+
 <% if (overdue.length) { %>
 <section class="to-section">
   <div class="to-section-head"><h2>Overdue</h2><p class="to-small">No reply approved within <%= hours %> hours of the email arriving. <%= atLeast(user, 'manager') ? 'A manager was emailed, if alerts are set up.' : 'The manager has been told.' %></p></div>

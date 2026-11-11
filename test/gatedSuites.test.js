@@ -37,6 +37,7 @@ const GATED = [
   { file: 'abacusOffice.test.js', name: 'the Abacus office over HTTP, model and mailbox stubbed', arms: 'ABACUS_OFFICE_TEST_DATABASE_URL (a throwaway database; the suite drops and recreates its tables)' },
   { file: 'abacusOfficeWrite.test.js', name: 'the Write worker over HTTP, model and mailbox stubbed', arms: 'ABACUS_OFFICE_TEST_DATABASE_URL (works in a schema of its own)' },
   { file: 'abacusOfficeVisibility.test.js', name: 'who sees which company and the council emails, over HTTP', arms: 'ABACUS_OFFICE_TEST_DATABASE_URL (works in a schema of its own)' },
+  { file: 'abacusOfficeReviewFixes.test.js', name: 'office review fixes: one approval, sent tracking, stale edits, over HTTP', arms: 'ABACUS_OFFICE_TEST_DATABASE_URL (works in a schema of its own)' },
   { file: 'abacusOfficeTools.test.js', name: 'office search, standard replies, fares, changing a booking, reports, over HTTP', arms: 'ABACUS_OFFICE_TEST_DATABASE_URL (works in a schema of its own)' },
   { file: 'abacusOfficePortals.test.js', name: 'one portal per company with the owner\'s company menu, over HTTP', arms: 'ABACUS_OFFICE_TEST_DATABASE_URL (works in a schema of its own)' },
   { file: 'abacusOfficeCouncil.test.js', name: 'the council page and its reply, over HTTP', arms: 'ABACUS_OFFICE_TEST_DATABASE_URL (works in a schema of its own)' },
