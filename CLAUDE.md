@@ -10434,3 +10434,42 @@ mailbox; anything else is approved for staff to copy and post or send where
 it came in (the case says where, with a Copy button). No mailbox holding
 reply on a typed-in complaint. Nothing is posted to Google or Facebook from
 the office. `test/abacusOfficeLoggedComplaints.test.js`.
+
+**Live faults fixed before the demo (11/11/2026, commit `e9876bd` on
+main).** Tom: "Use the version currently deployed at a2bstaff.com as the
+baseline ... Release only the verified fixes. Keep the other work on its
+existing branches, unmerged." Released straight from main (`cf9aea2` plus
+backups), with nothing from `claude/new-session-hbgp04`; Gmail and iCabbi
+stay disconnected (driver `none`, stand-in dispatch). Fixed:
+- **Wording.** No page says a reply was "saved as a draft in No mailbox
+  connected", that a manager was emailed when alert email is unset
+  (`res.locals.alertsReady` from `alerts.smtpConfig`), or that a page
+  checks a mailbox that is not connected. Under `none` the Check the
+  mailbox button is gone, the sync route refuses, and Settings shows no
+  connect form or Google steps.
+- **Approving is not sending.** Approval sets `in_progress`, not
+  `waiting`. New `cases.mailbox_state` ('', saving, saved, uncertain,
+  none), `sent_at`, `sent_by`; "I have sent it" (`POST /case/:id/sent`)
+  records who and only then sets waiting. Today has "Approved, not sent
+  yet"; the inbox has "Approved, not sent" and "Sent, waiting on the
+  customer". With no mailbox the case offers Copy the reply.
+- **One draft per approval.** `store.claimApproval` claims the case
+  (`approved_at IS NULL`) before the mailbox is touched. A definite
+  refusal (`MAILBOX_REFUSED`) releases it; an unclear answer marks it
+  `uncertain`, and a retry needs the "I have looked in the mailbox drafts"
+  tick. If the draft saved but recording failed, the claim stays. The
+  holding reply (`claimHolding`) and Write approvals (`claimComposition`)
+  are claimed the same way; `setDraftIfChanged` clears an approval only
+  when the text really changed.
+- **Desktop case page** two columns again (an unscoped phone rule at the
+  end of `office.css` collapsed it).
+- **Bookings.** The reading prompt no longer lets the first reply confirm
+  a job; a stand-in booking says it is not a live dispatch system and no
+  car is booked (flash, case panel, history). iCabbi cancel obeys
+  check-only like booking.
+Tests: `test/abacusOfficeLiveFaults.test.js` (red on `432a41f`; the
+claim removed was watched red), the old test that pinned approval as
+`waiting` corrected; office suite 55/55; Chromium at 1440px and iPhone 13,
+no overflow, no errors. Branch `fix/abacus-office-live-faults`. Not
+fixed here (branch only): stale-edit versioning, Gmail sent/deleted
+detection, per-company manager addresses.
