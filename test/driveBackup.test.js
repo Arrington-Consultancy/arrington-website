@@ -347,3 +347,24 @@ test('a second database uses its own folder and file name, and never touches the
       await google.close();
     }
   });
+
+test('the table floor is a setting, and a dump below it is refused before upload',
+  { skip: !DB && 'set BACKUP_TEST_DATABASE_URL to a seeded database (the suite only reads it)' },
+  async () => {
+    const google = mockGoogle({ refreshToken: 'rt' });
+    const port = await google.listen();
+    try {
+      const r = await runScript({
+        DATABASE_URL: DB,
+        GOOGLE_DRIVE_CLIENT_ID: 'cid', GOOGLE_DRIVE_CLIENT_SECRET: 's', GOOGLE_DRIVE_REFRESH_TOKEN: 'rt',
+        GOOGLE_OAUTH_TOKEN_URL: `http://127.0.0.1:${port}/token`,
+        GOOGLE_DRIVE_API_BASE: `http://127.0.0.1:${port}`,
+        BACKUP_MIN_TABLES: '9999'
+      });
+      assert.notEqual(r.status, 0);
+      assert.match(r.stderr, /below BACKUP_MIN_TABLES=9999/);
+      assert.equal([...google.store.values()].filter((f) => f.mimeType === 'application/gzip').length, 0, 'nothing uploaded');
+    } finally {
+      await google.close();
+    }
+  });
