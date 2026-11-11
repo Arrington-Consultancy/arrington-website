@@ -4,7 +4,7 @@
   <p class="to-small"><% if (typeof mailboxNone !== 'undefined' && mailboxNone) { %>No mailbox is connected yet, so nothing arrives here. Once the company's mailbox is connected, every email is read and sorted by the AI and lands here. To write an email now, use <a href="/write">Write</a>.<% } else { %>Every email from <%= mailboxLabel.toLowerCase() %>, read and sorted by the AI. Open one to see the draft and approve it.<% } %></p>
 </section>
 <% if (typeof mailError !== 'undefined' && mailError) { %><p class="to-note to-note-warn" role="status"><%= mailError %></p><% } %>
-<p class="to-live-line to-small" data-live-url="/live.json" data-live-stamp="<%= liveStamp %>"><span id="live-status">This page checks the mailbox itself every couple of minutes and refreshes when something changes.</span></p>
+<p class="to-live-line to-small" data-live-url="/live.json" data-live-stamp="<%= liveStamp %>"><span id="live-status"><%= mailboxNone ? 'No mailbox is connected, so no emails arrive here yet. This page refreshes when someone in the office changes something.' : 'This page checks the mailbox itself every couple of minutes and refreshes when something changes.' %></span></p>
 <form method="get" action="/inbox" class="to-search" role="search">
   <label class="to-field"><span>Search every email</span><input id="search-q" type="search" name="q" value="<%= typeof q !== 'undefined' ? q : '' %>" maxlength="100" placeholder="A name, phone number, address, subject or dispatch reference"></label>
   <button type="submit" class="to-btn">Search</button>
@@ -12,10 +12,10 @@
 </form>
 <% if (typeof q !== 'undefined' && q) { %><p class="to-status-line" role="status"><%= cases.length %> <%= cases.length === 1 ? 'email matches' : 'emails match' %> <strong><%= q %></strong><%= cases.length === 100 ? ' (the latest 100 shown)' : '' %>, open or done.</p><% } %>
 <ul class="to-filter-bar">
-  <% [['open', 'Open'], ['new', 'New'], ['mine', 'Mine'], ['waiting', 'Waiting on the customer'], ['done', 'Done'], ['all', 'All']].forEach(function (f) { %>
+  <% [['open', 'Open'], ['new', 'New'], ['mine', 'Mine'], ['overdue', 'Overdue'], ['unsent', 'Approved, not sent'], ['waiting', 'Sent, waiting on the customer'], ['done', 'Done'], ['all', 'All']].forEach(function (f) { %>
     <li><a href="/inbox?show=<%= f[0] %>"<% if (show === f[0]) { %> aria-current="page"<% } %>><%= f[1] %></a></li>
   <% }) %>
-  <li><form method="post" action="/inbox/sync" class="to-inline-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="to-btn to-btn-quiet" data-busy="Checking the mailbox...">Check the mailbox now</button></form></li>
+  <% if (!mailboxNone) { %><li><form method="post" action="/inbox/sync" class="to-inline-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="to-btn to-btn-quiet" data-busy="Checking the mailbox...">Check the mailbox now</button></form></li><% } %>
 </ul>
 <% if (cases.length) { %>
 <ul class="to-cases"><% cases.forEach(function (c) { %><%- include('partials/case-row', { c: c }) %><% }) %></ul>

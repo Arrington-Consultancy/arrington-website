@@ -164,7 +164,7 @@ test('over HTTP: staff draft with a prompt, guide it, approve it into the mailbo
   assert.match((await sam.get(`/write/${id}`)).text, /does not have its own mailbox connected yet/);
   // For the mailbox's own company, approving saves it as a fresh draft in
   // the mailbox. Nothing is sent.
-  await store.updateComposition(id, { brand: 'abacus', status: 'draft' });
+  await store.updateComposition(id, { brand: 'abacus', status: 'draft', approved_at: null, approved_by_name: '' });
   await sam.post(`/write/${id}/approve`, {}, `/write/${id}`);
   assert.equal(saved.length, 1);
   assert.equal(saved[0].to, 'front.desk@example.invalid');

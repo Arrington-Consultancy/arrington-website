@@ -342,7 +342,8 @@ test('the office over HTTP: login, forced password change, one case per email, r
   assert.equal(drafts[0].to, pascoe.from_address);
   const afterApprove = await byId('<demo-pascoe@example.invalid>');
   assert.ok(afterApprove.approved_at);
-  assert.equal(afterApprove.status, 'waiting');
+  assert.equal(afterApprove.status, 'in_progress', 'approving is not sending: it waits on the customer only once someone marks it sent');
+  assert.equal(afterApprove.mailbox_state, 'saved');
   r = await sam.post(`/case/${phone.id}/approve`, { draft: phone.draft }, `/case/${phone.id}`);
   assert.equal(drafts.length, 1, 'an operator cannot approve a SAFETY complaint reply');
   r = await sam.get(`/case/${phone.id}`);
@@ -357,7 +358,7 @@ test('the office over HTTP: login, forced password change, one case per email, r
   r = await sam.get(`/case/${fare.id}`);
   assert.match(r.text, /formaction="\/case\/\d+\/approve"/, 'an operator sees the approve button on an ordinary complaint');
   assert.match(r.text, /Pass up to a manager/, 'and the button to pass it up');
-  assert.match(r.text, /Send the holding reply/, 'and the one-click holding reply');
+  assert.doesNotMatch(r.text, /Send the holding reply/, 'the holding reply says it has gone to a manager, so it is offered only once it has');
   r = await sam.post(`/case/${fare.id}/approve`, { draft: fare.draft }, `/case/${fare.id}`);
   assert.equal(drafts.length, 2, 'the operator approved the fare complaint reply');
 

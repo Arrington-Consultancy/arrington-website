@@ -20,8 +20,9 @@ const DB = process.env.ABACUS_OFFICE_TEST_DATABASE_URL;
 test('the reading prompt never lets a booking reply confirm the job, and an enquiry asks for what a booking needs', () => {
   const src = fs.readFileSync(path.join(ROOT, 'abacus-office/lib/ai.js'), 'utf8');
   assert.doesNotMatch(src, /so the reply can confirm what the customer asked for/);
-  assert.match(src, /Never confirm a booking\. The job is not in the dispatch system yet/);
-  assert.match(src, /Never say a car, a driver, a time or a vehicle of a particular kind/);
+  assert.match(src, /The job is not in dispatch yet/);
+  assert.match(src, /Never tell the customer the job is booked or confirmed/);
+  assert.match(src, /never say a car, a vehicle type or a time is available/);
   const ai = require('../abacus-office/lib/ai');
   const missing = (intent, journey) => ai.cleanReading({ intent, customer_name: 'Pat', phone: '', journey: { date: '', time: '', pickup: '', destination: '', passengers: '', flight: '', ...journey }, summary: 's', reply: 'r' }).missing;
   assert.ok(missing('enquiry', { pickup: 'Newquay Airport', destination: 'Truro' }).some((m) => /mobile number/.test(m)), 'a journey enquiry asks for a phone number');
@@ -115,17 +116,29 @@ test('over HTTP: one approval, one draft; a stale page cannot save over a newer 
   const results = await Promise.allSettled([office.approve(loaded, opa, { version: loaded.draft_version }), office.approve(loaded, opb, { version: loaded.draft_version })]);
   assert.equal(saves - before0, 1, 'one draft when two approvals race');
   assert.equal(results.filter((x) => x.status === 'rejected').length, 1);
-  assert.match(results.find((x) => x.status === 'rejected').reason.message, /just approved this reply/);
+  assert.match(results.find((x) => x.status === 'rejected').reason.message, /already approved|may already be in/);
 
-  // A mailbox that refuses lets the claim go, so it can be tried again.
+  // A mailbox that does not answer clearly (a 503) may or may not hold the
+  // draft, so the claim is kept and marked uncertain; trying again needs a
+  // person to say they have looked in the mailbox (the live rule of
+  // 11 November 2026). An outright refusal lets the claim go.
   const two = await mk('two');
   const keep = mailbox.saveReplyDraft;
   mailbox.saveReplyDraft = async () => { throw Object.assign(new Error('Gmail could not save the draft (503)'), { code: 'MAIL_ERROR' }); };
   await a.post(`/case/${two}/approve`, {}, `/case/${two}`);
-  assert.equal((await store.caseById(two)).approved_at, null, 'not left approved when nothing reached the mailbox');
+  assert.equal((await store.caseById(two)).mailbox_state, 'uncertain', 'an unclear answer is recorded as uncertain');
   mailbox.saveReplyDraft = keep;
+  const unsure0 = saves;
   await a.post(`/case/${two}/approve`, {}, `/case/${two}`);
-  assert.ok((await store.caseById(two)).approved_at);
+  assert.equal(saves, unsure0, 'no second attempt without the tick');
+  await a.post(`/case/${two}/approve`, { mailbox_checked: 'yes' }, `/case/${two}`);
+  assert.equal(saves, unsure0 + 1, 'with the tick, one draft');
+  assert.equal((await store.caseById(two)).mailbox_state, 'saved');
+  const refusedCase = await mk('refused');
+  mailbox.saveReplyDraft = async () => { throw Object.assign(new Error('not connected'), { code: 'MAILBOX_REFUSED' }); };
+  await a.post(`/case/${refusedCase}/approve`, {}, `/case/${refusedCase}`);
+  assert.equal((await store.caseById(refusedCase)).approved_at, null, 'not left approved when the mailbox refused it outright');
+  mailbox.saveReplyDraft = keep;
 
   // A stale page: B opened the reply, A changed it, B's save is refused and
   // B's text is kept on the page for them.
@@ -166,11 +179,13 @@ test('over HTTP: one approval, one draft; a stale page cannot save over a newer 
   await a.post(`/case/${four}/approve`, {}, `/case/${four}`);
   await pool.query("UPDATE cases SET approved_at = now() - interval '2 hours' WHERE id = $1", [four]);
   const today = (await a.get('/')).text;
-  assert.match(today, /Approved but not sent/);
+  assert.match(today, /Approved, not sent yet/);
   assert.match(today, /Approved, not sent/);
 
   // The holding reply, pressed twice at once, makes one draft.
   const five = await mk('five', { kind: 'complaints', reading: { intent: 'complaint', summary: 'x', customer_name: 'Pat' } });
+  // The holding reply says it has gone to a manager, so it needs passing up first.
+  await pool.query('UPDATE cases SET passed_up_at = now() WHERE id = $1', [five]);
   const before = saves;
   const [h1, h2] = [await a.token(`/case/${five}`), await b.token(`/case/${five}`)];
   await Promise.all([a.post(`/case/${five}/holding`, {}, '', h1), b.post(`/case/${five}/holding`, {}, '', h2)]);

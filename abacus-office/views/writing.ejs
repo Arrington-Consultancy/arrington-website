@@ -40,12 +40,13 @@
         <label class="to-field"><span>Message</span><textarea id="body" name="body" rows="14" maxlength="8000"><%= c.body %></textarea></label>
         <div class="to-actions">
           <button type="submit" class="to-btn" data-busy="Saving...">Save changes</button>
-          <button type="submit" class="to-btn to-btn-primary" formaction="/write/<%= c.id %>/approve" data-confirm="Approve this email? <%= mailboxCanHold ? 'It will wait as a draft in the mailbox for you to send.' : 'No mailbox is connected, so you copy it into your email to send it.' %>" data-busy="Approving..."><%= c.status === 'approved' ? 'Approve again' : 'Approve' %></button>
+          <% if (c.status !== 'approved') { %><button type="submit" class="to-btn to-btn-primary" formaction="/write/<%= c.id %>/approve" data-confirm="Approve this email? <%= mailboxCanHold ? 'It will wait as a draft in the mailbox for you to send.' : 'No mailbox is connected, so you copy it into your email to send it.' %>" data-busy="Approving...">Approve</button><% } %>
           <button type="button" class="to-btn to-btn-quiet" data-copy="<%= 'Subject: ' + c.subject + '\n\n' + c.body %>">Copy</button>
         </div>
         <label class="to-field"><span>Guide the AI</span><textarea id="guidance" name="guidance" rows="2" maxlength="1200" placeholder="<%= council ? 'For example: say the certificate is attached, and ask them to confirm the licence is back in date. Or: give the reference in the first line.' : 'For example: shorter, and mention we do school runs too. Or: they are a regular, keep it friendly.' %>"></textarea></label>
         <button type="submit" class="to-btn to-btn-quiet" formaction="/write/<%= c.id %>/guide" data-busy="Redrafting...">Redraft with this</button>
       </form>
+      <% if (c.status === 'approved') { %><p class="to-small">Approved. To change it, edit it and save, then approve the new version.</p><% } %>
       <p class="to-small">Nothing is sent from the office. <%= mailboxCanHold ? 'Approving saves it as a draft in the company mailbox; a person sends it.' : 'Copy an approved email into your own email and send it from there.' %></p>
       <form method="post" action="/write/<%= c.id %>/discard" class="to-inline-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="to-btn to-btn-quiet" data-confirm="Discard this draft?">Discard</button></form>
     </section>

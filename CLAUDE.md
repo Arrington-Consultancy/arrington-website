@@ -10570,3 +10570,113 @@ Schedule `30 3 * * 1`, Mondays 03:30 UTC, half an hour after the website's.
 That folder holds Dan's firms' customer emails once a real mailbox is
 connected, so it is part of what the data processing agreement must cover
 (Tom hosts it, the backup sits in Tom's Drive) and must not be shared.
+**Live faults fixed before the demo (11/11/2026, commit `e9876bd` on
+main).** Tom: "Use the version currently deployed at a2bstaff.com as the
+baseline ... Release only the verified fixes. Keep the other work on its
+existing branches, unmerged." Released straight from main (`cf9aea2` plus
+backups), with nothing from `claude/new-session-hbgp04`; Gmail and iCabbi
+stay disconnected (driver `none`, stand-in dispatch). Fixed:
+- **Wording.** No page says a reply was "saved as a draft in No mailbox
+  connected", that a manager was emailed when alert email is unset
+  (`res.locals.alertsReady` from `alerts.smtpConfig`), or that a page
+  checks a mailbox that is not connected. Under `none` the Check the
+  mailbox button is gone, the sync route refuses, and Settings shows no
+  connect form or Google steps.
+- **Approving is not sending.** Approval sets `in_progress`, not
+  `waiting`. New `cases.mailbox_state` ('', saving, saved, uncertain,
+  none), `sent_at`, `sent_by`; "I have sent it" (`POST /case/:id/sent`)
+  records who and only then sets waiting. Today has "Approved, not sent
+  yet"; the inbox has "Approved, not sent" and "Sent, waiting on the
+  customer". With no mailbox the case offers Copy the reply.
+- **One draft per approval.** `store.claimApproval` claims the case
+  (`approved_at IS NULL`) before the mailbox is touched. A definite
+  refusal (`MAILBOX_REFUSED`) releases it; an unclear answer marks it
+  `uncertain`, and a retry needs the "I have looked in the mailbox drafts"
+  tick. If the draft saved but recording failed, the claim stays. The
+  holding reply (`claimHolding`) and Write approvals (`claimComposition`)
+  are claimed the same way; `setDraftIfChanged` clears an approval only
+  when the text really changed.
+- **Desktop case page** two columns again (an unscoped phone rule at the
+  end of `office.css` collapsed it).
+- **Bookings.** The reading prompt no longer lets the first reply confirm
+  a job; a stand-in booking says it is not a live dispatch system and no
+  car is booked (flash, case panel, history). iCabbi cancel obeys
+  check-only like booking.
+Tests: `test/abacusOfficeLiveFaults.test.js` (red on `432a41f`; the
+claim removed was watched red), the old test that pinned approval as
+`waiting` corrected; office suite 55/55; Chromium at 1440px and iPhone 13,
+no overflow, no errors. Branch `fix/abacus-office-live-faults`. Not
+fixed here (branch only): stale-edit versioning, Gmail sent/deleted
+detection, per-company manager addresses.
+
+**Sweep of the live office, and its fixes (11/11/2026, evening).** Tom
+asked for a critical sweep of the version serving www.a2bstaff.com
+(`e9876bd`), then approved fixing everything found ("The improvements on
+the current live site should happen now"). Access was clean throughout
+(an operator cannot reach another company's email, a council email,
+Council, Activity, Settings, Users, prices or anyone else's Write draft,
+by address or by form). Twelve faults were reproduced on a local copy and
+fixed:
+- **Old tabs.** `cases.draft_version` moves on with every change to the
+  reply; the form carries it, and a save, guide or approval from a page
+  opened before someone else changed the reply is refused, with the
+  person's own text shown back to copy ("Your version, not saved"). An
+  edit with no version at all is refused the same way.
+- **"Ask the AI to read it again"** on an approved reply now cancels the
+  approval (it swapped the text and left it approved).
+- **Council page** no longer says it checks a mailbox, or that approving
+  saves a draft in one, when none is connected.
+- **The Tidewell demo's leftover checker** in `office.js` is gone: after
+  15 minutes it told staff the page had "Stopped checking" while the real
+  checker carried on.
+- **Closing a complaint.** Only a manager marks a safety or passed-up
+  complaint done (`setStatus`).
+- **"Sent, waiting on the customer"** comes only from "I have sent it";
+  it cannot be set by hand unless the reply was marked sent.
+- **Write** hides Approve on an approved email (it offered "Approve
+  again", which is refused).
+- **Holding reply** is offered, and accepted, only once the complaint has
+  been passed up, since its text says it has gone to a manager.
+- **Once only:** pass up (`claimPassUp`), cancel (`claimDispatchRef`),
+  book (`claimBooking`, `cases.booking_claim_at`) and Log a complaint
+  (the form carries a one-time `log_id`, which becomes the case's message
+  id). Two different jobs booked in the same instant each get their own
+  stand-in reference.
+- **Assign** refuses a switched-off login or someone who cannot open the
+  email.
+- Small: "every company" not "every brand"; an Overdue filter on the
+  inbox, opened by Today's overdue box; "Nothing has happened in the
+  office yet."
+`test/abacusOfficeSweep.test.js` is the sweep kept as a test (60 checks
+over HTTP; two fixes taken out were each watched red). The probes that
+found the faults are not in the repo. Office suite 57/57; Chromium at
+1440px and iPhone 13 as owner, manager and operator, no overflow, no
+errors. Gmail and iCabbi stay disconnected.
+
+**The unmerged branch rebuilt on live (11/11/2026, evening). STILL NOT
+MERGED.** Tom: "anything not merged should change as well but not be
+merged." `claude/new-session-hbgp04` now contains main (`ed8948c`, both
+rounds of live fixes) with its own features on top; main does not contain
+the branch. The sweep of the branch before this found the features sound
+on access (a manager set to one company sees nothing of another on Today,
+Inbox, Council, Activity, Reports, the spreadsheet, search, Write or
+Settings; search treats `%` and `_` as characters; the spreadsheet cannot
+run a formula) but that it clashed with live in eleven files and lacked
+the live fixes. How the two were joined:
+- **Live's rules win where both fixed the same thing:** the approval claim
+  with `mailbox_state`, "I have sent it", the page version check, the
+  wording with no mailbox connected.
+- **The branch's Gmail check feeds the same record:** `checkSent` marks a
+  reply sent (`sent_at`, waiting on the customer) when Gmail shows it went,
+  exactly as a person pressing "I have sent it" does; a draft deleted
+  unsent takes the approval off. One "Approved, not sent yet" list.
+- **A stand-in booking never drafts a confirmation;** the AI's confirming
+  redraft after booking happens only with a live dispatch system.
+- **Branch-only faults fixed:** Write could save two drafts and offered
+  "Approve again"; a booking change pressed twice was recorded twice
+  (`claimWork`); a cancellation by reference is claimed on the booking row
+  (`claimDispatchCancel`).
+Branch office suite 64/64, the sweep probes clean, Chromium at 1440px and
+iPhone 13 as owner, manager and operator with no errors. To release it
+later it is a fast-forward of main, but only on Tom's word; a manager set
+to one company becomes limited to it at that moment (check Users first).

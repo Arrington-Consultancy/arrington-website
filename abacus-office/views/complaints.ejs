@@ -3,7 +3,7 @@
   <h1><%- include('partials/worker-icon', { id: 'complaints', tile: true }) %> Complaints</h1>
   <p class="to-small">Every complaint, most serious first. The AI drafts the reply from what the office knows, never offers money and never names a driver. An operator answers most of them, and passes one up to a manager when it needs to go higher; the AI says when it thinks it should. A safety matter always goes to a manager, and so does any complaint with no approved reply after <%= nudgeHours %> hours.</p>
 </section>
-<p class="to-live-line to-small" data-live-url="/live.json" data-live-stamp="<%= liveStamp %>"><span id="live-status">This page checks the mailbox itself every couple of minutes and refreshes when something changes.</span></p>
+<p class="to-live-line to-small" data-live-url="/live.json" data-live-stamp="<%= liveStamp %>"><span id="live-status"><%= mailboxNone ? 'No mailbox is connected, so no emails arrive here yet. This page refreshes when someone in the office changes something.' : 'This page checks the mailbox itself every couple of minutes and refreshes when something changes.' %></span></p>
 <ul class="to-filter-bar">
   <li><a href="/complaints"<% if (!showAll) { %> aria-current="page"<% } %>>Open</a></li>
   <li><a href="/complaints?show=all"<% if (showAll) { %> aria-current="page"<% } %>>All</a></li>
@@ -16,6 +16,7 @@
   <p class="to-small">For a complaint that came in another way: a Google review, a Facebook comment or message, a phone call, someone at the office. Paste or type it in and say where it came from. The AI reads it with that in mind: a public review gets a short public reply that asks them to get in touch directly, anything else gets a full reply. You check it, guide it and approve it like any other.</p>
   <form method="post" action="/complaints/log" class="to-form">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <input type="hidden" name="log_id" value="<%= logId %>">
     <div class="to-field-row is-two">
       <label class="to-field"><span>Where it came in</span><select id="log-channel" name="channel" required><option value="">Choose...</option><% Object.keys(channels).forEach(function (k) { %><option value="<%= k %>"><%= channels[k].label %></option><% }) %></select></label>
       <label class="to-field"><span>When it came in</span><input id="log-date" name="date" type="date" max="<%= todayYmd %>" value="<%= todayYmd %>"></label>

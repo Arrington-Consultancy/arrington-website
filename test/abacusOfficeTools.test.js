@@ -90,6 +90,9 @@ test('over HTTP: search, standard replies, fares, changing a booking, reports an
     const post = async (p, fields, from = '/login') => {
       const page = await get(from);
       const token = (page.text.match(/name="_csrf" value="([^"]+)"/) || [])[1];
+      // An edit carries the version of the reply its page showed, as a real page does.
+      const version = (page.text.match(/name="draft_version" value="(\d+)"/) || [])[1];
+      if (fields && fields.draft !== undefined && fields.draft_version === undefined && version !== undefined) fields = { ...fields, draft_version: version };
       const res = await fetch(base + p, { method: 'POST', headers: { cookie: cookie(), 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ _csrf: token, ...fields }), redirect: 'manual' });
       absorb(res);
       return { status: res.status, location: res.headers.get('location'), text: await res.text() };

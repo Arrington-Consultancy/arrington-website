@@ -1,3 +1,4 @@
+
 // Abacus office: small comforts and nothing else. A button that starts an
 // AI call says what is happening and cannot be pressed twice, and a button
 // with a question asks it first. The list pages reload themselves when

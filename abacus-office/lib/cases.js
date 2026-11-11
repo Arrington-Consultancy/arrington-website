@@ -164,7 +164,10 @@ class Office {
     const when = /^\d{4}-\d{2}-\d{2}$/.test(String(input.date || '')) ? new Date(`${input.date}T12:00:00Z`) : this.now();
     if (when > this.now()) throw refuse('The date it came in cannot be in the future.');
     const label = CHANNELS[channel].label;
-    const row = await this.store.insertLoggedComplaint({ brand: input.brand || '', channel, name: name || `Someone (${label.toLowerCase()})`, contact, subject: `${label}: ${text.split('\n')[0].slice(0, 80)}`, text, receivedAt: when });
+    const row = await this.store.insertLoggedComplaint({ brand: input.brand || '', channel, name: name || `Someone (${label.toLowerCase()})`, contact, subject: `${label}: ${text.split('\n')[0].slice(0, 80)}`, text, receivedAt: when, logId: input.logId });
+    // The same form sent twice: the complaint is already in, so nothing is
+    // logged or read a second time.
+    if (row.existed) return this.store.caseById(row.id);
     await this.store.addEvent(row.id, { actor: user, kind: 'logged', detail: `Typed in from a ${label.toLowerCase()} by ${user.display_name || user.username}` });
     return this.read(row, { actor: user });
   }
@@ -207,10 +210,13 @@ class Office {
         fields.complaint = complaint;
         fields.council = council;
         if (kase.status === 'new' && fields.kind === 'other') fields.status = 'done';
+        // A new reading is a new reply: an approval of the old one no
+        // longer stands, and it has not been sent.
+        if (kase.approved_at) Object.assign(fields, { approved_at: null, approved_by: null, mailbox_state: '', mailbox_state_at: null, sent_at: null, sent_by: null, sent_state: '', status: kase.status === 'waiting' ? 'in_progress' : (fields.status || kase.status) });
       }
       if (isLogged(kase)) fields.kind = 'complaints';
       await this.store.updateCase(kase.id, fields);
-      await this.store.addEvent(kase.id, { actor, kind: 'read', detail: reading ? `Read by ${source === 'ai' ? 'the AI' : 'the prepared answer'}: ${reading.summary}` : `Not read: ${note.trim()}` });
+      await this.store.addEvent(kase.id, { actor, kind: 'read', detail: reading ? `Read by ${source === 'ai' ? 'the AI' : 'the prepared answer'}: ${reading.summary}${kase.approved_at ? '. The reply was approved before; the new one needs approving again' : ''}` : `Not read: ${note.trim()}` });
       return this.store.caseById(kase.id);
     } finally {
       this.reading.delete(kase.id);
@@ -230,25 +236,26 @@ class Office {
 
   async assign(kase, user, toUser) {
     if (!canReassign(user, kase)) throw refuse('Only a manager can reassign a case someone else holds.');
+    if (toUser && (!toUser.active || !canSee(toUser, kase))) throw refuse('That person cannot open this email, so it was not assigned to them.');
     await this.store.updateCase(kase.id, { owner_id: toUser ? toUser.id : null, status: kase.status === 'new' && toUser ? 'in_progress' : kase.status });
     await this.store.addEvent(kase.id, { actor: user, kind: 'assigned', detail: toUser ? `Assigned to ${toUser.display_name || toUser.username}` : 'Left unassigned' });
   }
 
   async setStatus(kase, user, status) {
     if (!['new', 'in_progress', 'waiting', 'done'].includes(status)) throw refuse('Not a status.');
+    if (status === kase.status) return;
+    if (status === 'waiting' && !kase.sent_at) throw refuse('A case waits on the customer once its reply has gone. Approve the reply, send it, then press I have sent it.');
+    if (status === 'done' && needsManager(kase) && !atLeast(user, 'manager')) throw refuse(kase.seriousness === 'safety' ? 'A safety complaint is closed by a manager.' : 'This complaint was passed up, so a manager closes it.');
     await this.store.updateCase(kase.id, { status });
     await this.store.addEvent(kase.id, { actor: user, kind: 'status', detail: `Marked ${label(status)}` });
   }
 
-  // A person's edit to the reply. With the version their page was opened
-  // at, an edit is refused if anyone (a person or the AI) has changed the
-  // reply since, so nobody saves over somebody else's work.
   async saveDraft(kase, user, text, expected) {
     const draft = String(text || '').replace(/\r\n/g, '\n').slice(0, 4000);
-    const v = await this.store.saveDraftText(kase.id, draft, Number.isInteger(expected) ? expected : undefined);
-    if (v === null) throw stale();
+    const r = await this.store.setDraftIfChanged(kase.id, draft, expected);
+    if (r === 'stale') throw stale();
+    if (r !== 'saved') return;
     await this.store.addEvent(kase.id, { actor: user, kind: 'draft_edited', detail: 'Draft edited by hand' });
-    return v;
   }
 
   async note(kase, user, text) {
@@ -270,37 +277,78 @@ class Office {
       return { rewritten: false };
     }
     const out = await ai.redraft({ email: this.emailOf(kase), draft: kase.draft, notes, council: kase.kind === 'licensing' }, this.today(), await this.firmFor(kase));
-    await this.store.updateCase(kase.id, { guidance: notes, draft: out.reply, held_back: out.held_back, approved_at: null, approved_by: null });
+    await this.store.updateCase(kase.id, { guidance: notes, draft: out.reply, held_back: out.held_back, approved_at: null, approved_by: null, mailbox_state: '', mailbox_state_at: null, sent_at: null, sent_by: null, sent_state: '' });
     await this.store.addEvent(kase.id, { actor: user, kind: 'guided', detail: t + (out.held_back ? ` (held back: ${out.held_back})` : '') });
     return { rewritten: true, heldBack: out.held_back };
   }
 
+  // Where an approved reply goes, in words for the case history.
+  savedWhere(draftId) {
+    if (this.mailbox.demo) return 'This is the made-up inbox, so it was saved nowhere and nothing was sent.';
+    if (this.mailbox.none) return 'No mailbox is connected, so it was saved nowhere and nothing was sent. Copy it into your own email and send it from there.';
+    return `Saved as a draft in ${this.mailbox.label} for someone to send${draftId ? ` (draft ${draftId})` : ''}. Nothing has been sent.`;
+  }
+
   // Approve the reply: saved as a draft in the firm's mailbox for a person
-  // to send. Nothing goes to the customer from here. The approval is claimed
-  // in the database before anything is saved in the mailbox, so two people
-  // pressing Approve at once, or one person twice, make one draft; if the
-  // mailbox refuses, the claim is let go so it can be tried again.
-  async approve(kase, user, { version } = {}) {
+  // to send. Nothing goes to the customer from here, and approving is not
+  // sending: the case stays open until someone says they sent it.
+  //
+  // One draft, however many presses (11 November 2026): the case is claimed
+  // in the database before the mailbox is touched. If the mailbox refuses
+  // outright the claim is released; if it does not answer clearly the case
+  // is marked uncertain, and a second attempt needs a person to say they
+  // have looked in the mailbox and the draft is not there.
+  async approve(kase, user, { mailboxChecked = false, version } = {}) {
     if (!canApprove(user, kase)) throw refuse(kase.kind === 'licensing' ? 'A reply to the council is approved by a manager or owner.' : needsManager(kase) ? (kase.passed_up_at ? 'This complaint was passed up, so a manager approves the reply.' : 'A safety matter needs a manager to approve the reply.') : 'You cannot approve this.');
     if (!String(kase.draft || '').trim()) throw refuse('There is no reply to approve.');
-    if (kase.approved_at) throw refuse('This reply is already approved. Change it first if a different one should go.');
-    const claimed = await this.store.claimApproval(kase.id, user.id, Number.isInteger(version) ? version : undefined);
-    if (!claimed) {
+    if (isLogged(kase)) return this.approveLogged(kase, user, version);
+    const claim = await this.store.claimApproval(kase.id, user.id, { retry: mailboxChecked, version });
+    if (!claim) {
       const now = await this.store.caseById(kase.id);
-      if (now && now.approved_at) throw refuse(`${now.approved_by === user.id ? 'You have' : 'Someone has'} just approved this reply, so it was not approved twice.`);
-      throw stale();
+      if (now && Number.isInteger(version) && now.draft_version !== version) throw stale();
+      if (now && (now.mailbox_state === 'uncertain' || now.mailbox_state === 'saving')) throw refuse(`This reply may already be in ${this.mailbox.label} as a draft. Look in the mailbox drafts first. If it is not there, tick the box to say you have checked and approve it again.`);
+      throw refuse('This reply is already approved. To change it, edit the reply and approve the new version.');
     }
+    let draftId = null; let threadId = null;
     try {
-      if (isLogged(kase)) return await this.approveLogged(claimed, user);
-      const { draftId, threadId } = await this.mailbox.saveReplyDraft(this.emailOf(claimed), claimed.draft);
-      const tracked = Boolean(draftId) && Boolean(this.mailbox.canTrackSent);
-      await this.store.updateCase(kase.id, { saved_draft_id: draftId || null, saved_thread_id: threadId || claimed.thread_id || '', sent_state: tracked ? 'unsent' : '', sent_at: null, status: 'waiting', owner_id: kase.owner_id || user.id });
-      await this.store.addEvent(kase.id, { actor: user, kind: 'approved', detail: this.mailbox.demo ? 'Reply approved. This is the made-up inbox, so the draft was saved nowhere.' : `Reply approved and saved as a draft in ${this.mailbox.label} for someone to send${draftId ? ` (draft ${draftId})` : ''}.` });
-      return { draftId: draftId || null };
+      ({ draftId = null, threadId = null } = await this.mailbox.saveReplyDraft(this.emailOf(kase), kase.draft));
     } catch (e) {
-      await this.store.releaseApproval(kase.id).catch(() => {});
-      throw e;
+      if (e.code === 'MAILBOX_REFUSED') {
+        await this.store.releaseApproval(kase.id);
+        throw refuse(`${this.mailbox.label} refused it, so nothing was saved: ${e.message}.`);
+      }
+      await this.store.updateCase(kase.id, { mailbox_state: 'uncertain', mailbox_state_at: this.now() }).catch(() => {});
+      await this.store.addEvent(kase.id, { actor: user, kind: 'approve_uncertain', detail: `Approved, but ${this.mailbox.label} did not answer clearly (${String(e.message).slice(0, 160)}). The draft may or may not be there.` }).catch(() => {});
+      throw refuse(`${this.mailbox.label} did not answer clearly, so the draft may or may not be there. Look in the mailbox drafts. If it is not there, tick the box to say you have checked and approve it again.`);
     }
+    const status = kase.status === 'new' ? 'in_progress' : (kase.status === 'waiting' ? 'in_progress' : kase.status);
+    // 'none': approved with no mailbox to save to (staff copy it out).
+    const state = (this.mailbox.none || this.mailbox.demo) ? 'none' : 'saved';
+    // Where the mailbox can say whether a draft was sent (Gmail), the office
+    // watches it and marks the reply sent itself (checkSent).
+    const tracked = Boolean(draftId) && Boolean(this.mailbox.canTrackSent);
+    try {
+      await this.store.updateCase(kase.id, { saved_draft_id: draftId || null, saved_thread_id: threadId || kase.thread_id || '', sent_state: tracked ? 'unsent' : '', mailbox_state: state, mailbox_state_at: this.now(), status, owner_id: kase.owner_id || user.id });
+    } catch (e) {
+      // The draft is in the mailbox. Record that, and keep the claim, so a
+      // retry cannot put a second one there.
+      await this.store.updateCase(kase.id, { mailbox_state: state, mailbox_state_at: this.now() }).catch(() => {});
+      throw refuse(`The reply was saved in ${this.mailbox.label}, but the office could not finish recording it. Do not approve it again; reload the page in a moment.`);
+    }
+    await this.store.addEvent(kase.id, { actor: user, kind: 'approved', detail: `Reply approved. ${this.savedWhere(draftId)}` }).catch((e) => console.error('Abacus office: approval event not written', e.message));
+    return { draftId: draftId || null };
+  }
+
+  // Someone sent the approved reply from the mailbox (or their own email):
+  // their word, recorded with their name. Only now is the case waiting on
+  // the customer.
+  async markSent(kase, user) {
+    if (!kase.approved_at) throw refuse('Approve the reply before marking it sent.');
+    if (kase.sent_at) throw refuse('This reply is already marked as sent.');
+    const row = await this.store.markSent(kase.id, user.id);
+    if (!row) throw refuse('This reply is already marked as sent.');
+    await this.store.addEvent(kase.id, { actor: user, kind: 'sent', detail: `Marked as sent by ${user.display_name || user.username}` });
+    return row;
   }
 
   // An operator passes a complaint up to a manager (Tom's email to Dan: an
@@ -311,7 +359,8 @@ class Office {
     if (kase.kind !== 'complaints') throw refuse('Only a complaint is passed up to a manager.');
     if (kase.passed_up_at) throw refuse('This complaint has already been passed up.');
     const why = String(reason || '').trim().slice(0, 600) || (kase.complaint && kase.complaint.pass_to_manager_why) || 'Passed up by the operator';
-    await this.store.updateCase(kase.id, { passed_up_at: this.now(), passed_up_by: user ? user.id : null, passed_up_reason: why, status: kase.status === 'new' ? 'in_progress' : kase.status, owner_id: kase.owner_id || (user ? user.id : null) });
+    const won = await this.store.claimPassUp(kase.id, user ? user.id : null, why, kase.status === 'new' ? 'in_progress' : kase.status, kase.owner_id || (user ? user.id : null));
+    if (!won) throw refuse('This complaint has already been passed up.');
     await this.store.addEvent(kase.id, { actor: user, kind: 'passed_up', detail: `Passed up to a manager: ${why}` });
     return this.store.caseById(kase.id);
   }
@@ -334,16 +383,25 @@ ${this.firm.signature}`;
   // address goes into the mailbox as a new draft, like any other reply;
   // anything else is approved for staff to copy and post or send where it
   // came in, and the case says where.
-  // Called with the approval already claimed (see approve).
-  async approveLogged(kase, user) {
+  async approveLogged(kase, user, version) {
     const ch = CHANNELS[kase.channel] || CHANNELS.other;
+    // Only the company the mailbox belongs to has its drafts put there.
     const canHold = this.canHoldNew(kase.brand);
+    const claim = await this.store.claimApproval(kase.id, user.id, { version });
+    if (!claim) {
+      const now = await this.store.caseById(kase.id);
+      if (now && Number.isInteger(version) && now.draft_version !== version) throw stale();
+      throw refuse('This reply is already approved. To change it, edit the reply and approve the new version.');
+    }
     let draftId = null; let threadId = null;
     if (kase.channel === 'email' && EMAIL_RE.test(kase.contact || '') && canHold) {
-      ({ draftId = null, threadId = null } = await this.mailbox.saveNewDraft(kase.contact, 'Your complaint', kase.draft));
+      try { ({ draftId = null, threadId = null } = await this.mailbox.saveNewDraft(kase.contact, 'Your complaint', kase.draft)); } catch (e) {
+        if (e.code === 'MAILBOX_REFUSED') { await this.store.releaseApproval(kase.id); throw refuse(`${this.mailbox.label} refused it, so nothing was saved: ${e.message}.`); }
+        await this.store.updateCase(kase.id, { mailbox_state: 'uncertain', mailbox_state_at: this.now() }).catch(() => {});
+        throw refuse(`${this.mailbox.label} did not answer clearly, so the draft may or may not be there. Look in the mailbox drafts before doing anything else.`);
+      }
     }
-    const tracked = Boolean(draftId) && Boolean(this.mailbox.canTrackSent);
-    await this.store.updateCase(kase.id, { saved_draft_id: draftId, saved_thread_id: threadId || '', sent_state: tracked ? 'unsent' : '', status: 'waiting', owner_id: kase.owner_id || user.id });
+    await this.store.updateCase(kase.id, { saved_draft_id: draftId, saved_thread_id: threadId || '', sent_state: draftId && this.mailbox.canTrackSent ? 'unsent' : '', mailbox_state: draftId ? 'saved' : '', mailbox_state_at: this.now(), status: kase.status === 'new' ? 'in_progress' : kase.status, owner_id: kase.owner_id || user.id });
     await this.store.addEvent(kase.id, { actor: user, kind: 'approved', detail: draftId ? `Reply approved and saved as a draft in ${this.mailbox.label} to ${kase.contact} for someone to send.` : `Reply approved. It came in as a ${ch.label.toLowerCase()}: ${ch.send}` });
     return { draftId, copyOut: !draftId, send: ch.send };
   }
@@ -361,11 +419,16 @@ ${this.firm.signature}`;
   async sendHolding(kase, user) {
     if (kase.kind !== 'complaints') throw refuse('A holding reply is for a complaint.');
     if (isLogged(kase)) throw refuse('This complaint came in another way, so answer it with the reply below.');
-    if (kase.holding_sent_at || !(await this.store.claimHolding(kase.id))) throw refuse('The holding reply has already gone.');
+    if (!kase.passed_up_at) throw refuse('The holding reply tells the customer it has gone to a manager, so pass the complaint up first.');
+    if (kase.holding_sent_at || !(await this.store.claimHolding(kase.id))) throw refuse('The holding reply has already been approved.');
     const text = this.holdingText(kase);
-    let draftId;
-    try { ({ draftId } = await this.mailbox.saveReplyDraft(this.emailOf(kase), text)); } catch (e) { await this.store.releaseHolding(kase.id).catch(() => {}); throw e; }
-    await this.store.addEvent(kase.id, { actor: user, kind: 'holding_reply', detail: this.mailbox.demo ? 'Holding reply approved. This is the made-up inbox, so it was saved nowhere.' : `Holding reply saved as a draft in ${this.mailbox.label} for someone to send${draftId ? ` (draft ${draftId})` : ''}.` });
+    let draftId = null;
+    try { ({ draftId } = await this.mailbox.saveReplyDraft(this.emailOf(kase), text)); } catch (e) {
+      if (e.code === 'MAILBOX_REFUSED') { await this.store.updateCase(kase.id, { holding_sent_at: null }); throw refuse(`${this.mailbox.label} refused it, so nothing was saved: ${e.message}.`); }
+      await this.store.addEvent(kase.id, { actor: user, kind: 'holding_uncertain', detail: `Holding reply: ${this.mailbox.label} did not answer clearly (${String(e.message).slice(0, 160)}). It may or may not be in the drafts.` }).catch(() => {});
+      throw refuse(`${this.mailbox.label} did not answer clearly, so the holding reply may or may not be in the drafts. Look there before doing anything else.`);
+    }
+    await this.store.addEvent(kase.id, { actor: user, kind: 'holding_reply', detail: `Holding reply approved. ${this.savedWhere(draftId)}` });
     return { text, draftId: draftId || null };
   }
 
@@ -384,11 +447,11 @@ ${this.firm.signature}`;
       if (!st) continue;
       if (st.state === 'sent') {
         changed += 1;
-        await this.store.updateCase(c.id, { sent_state: 'sent', sent_at: st.at || this.now(), sent_checked_at: this.now() });
+        await this.store.updateCase(c.id, { sent_state: 'sent', sent_at: st.at || this.now(), sent_checked_at: this.now(), status: c.status === 'done' ? 'done' : 'waiting' });
         await this.store.addEvent(c.id, { kind: 'sent', detail: `The approved reply was sent from ${this.mailbox.label}` });
       } else if (st.state === 'discarded') {
         changed += 1;
-        await this.store.updateCase(c.id, { sent_state: 'discarded', sent_checked_at: this.now(), approved_at: null, approved_by: null, saved_draft_id: null, status: 'in_progress' });
+        await this.store.updateCase(c.id, { sent_state: 'discarded', sent_checked_at: this.now(), approved_at: null, approved_by: null, saved_draft_id: null, mailbox_state: '', mailbox_state_at: null, status: 'in_progress' });
         await this.store.addEvent(c.id, { kind: 'discarded', detail: `The draft was deleted in ${this.mailbox.label} without being sent, so the reply needs approving again` });
       } else {
         await this.store.updateCase(c.id, { sent_checked_at: this.now() });
@@ -412,10 +475,13 @@ ${this.firm.signature}`;
     const { job, missing } = cleanJob(input || {});
     if (missing.length) throw refuse(`Still needed before it can be booked: ${missing.join(', ')}. Nothing was booked.`);
     const summary = `${job.date} ${job.time}, ${job.pickup} to ${job.destination}, ${job.passengers} passenger${job.passengers === '1' ? '' : 's'}`;
+    // One booking however many presses: the case is claimed first.
+    if (!(await this.store.claimBooking(kase.id))) throw refuse('This job is being booked, or was booked a moment ago. Reload the page before trying again. Nothing was booked twice.');
     let result;
     try {
       result = await this.dispatch.book({ job, kase, brand: kase.brand || '', actor: user });
     } catch (e) {
+      await this.store.releaseBooking(kase.id).catch(() => {});
       // What happened is recorded on the case whatever it was, so the next
       // person can see that someone tried and what iCabbi said.
       const kind = e.checkedOnly ? 'dispatch_checked' : e.uncertain ? 'dispatch_uncertain' : 'dispatch_refused';
@@ -423,13 +489,15 @@ ${this.firm.signature}`;
       throw e;
     }
     const { ref } = result;
-    await this.store.updateCase(kase.id, { dispatch_ref: ref, booked_at: this.now(), booked_by: user.id, status: kase.status === 'new' ? 'in_progress' : kase.status, owner_id: kase.owner_id || user.id });
-    await this.store.addEvent(kase.id, { actor: user, kind: 'booked', detail: `Booked into ${this.dispatch.label} as ${ref}: ${summary}, signed off by ${user.display_name || user.username}${result.statusWords ? ` (${result.statusWords})` : ''}` });
-    // Only now may the reply confirm it: the AI rewrites the draft to
-    // confirm what is in dispatch. It is still a draft for staff to approve.
+    await this.store.updateCase(kase.id, { dispatch_ref: ref, booking_claim_at: null, booked_at: this.now(), booked_by: user.id, status: kase.status === 'new' ? 'in_progress' : kase.status, owner_id: kase.owner_id || user.id });
+    await this.store.addEvent(kase.id, { actor: user, kind: 'booked', detail: `${this.dispatch.live ? 'Booked into' : 'Recorded on the stand-in dispatch, not a live system, as'} ${this.dispatch.live ? `${this.dispatch.label} as ` : ''}${ref}: ${summary}, signed off by ${user.display_name || user.username}${result.statusWords ? ` (${result.statusWords})` : ''}${this.dispatch.live ? '' : '. No car is booked.'}` });
+    // Only a job in a live dispatch system may be confirmed to the customer:
+    // then the AI rewrites the draft to confirm what is in dispatch, still as
+    // a draft for staff to approve. A stand-in booking books no car, so it
+    // never produces a confirmation.
     let confirmed = false;
     const fresh = await this.store.caseById(kase.id);
-    if (this.aiOn() && fresh && !fresh.approved_at) {
+    if (this.dispatch.live && this.aiOn() && fresh && !fresh.approved_at) {
       try {
         await this.guide(fresh, user, `This job is now booked in dispatch as ${ref}: ${summary}${job.vehicle ? `, ${job.vehicle}` : ''}. Confirm the booking to the customer with these details, and nothing more.`);
         confirmed = true;
@@ -465,12 +533,15 @@ ${this.firm.signature}`;
     const names = { date: 'date', time: 'time', pickup: 'pickup', destination: 'destination', name: 'passenger', phone: 'phone', passengers: 'passengers', vehicle: 'vehicle', notes: 'note for the driver', flight: 'flight' };
     const changes = Object.keys(names).filter((k) => String(before[k] || '') !== String(job[k] || '')).map((k) => `${names[k]} ${before[k] ? `from ${before[k]} ` : ''}to ${job[k] || '(none)'}`);
     if (!changes.length) throw refuse('Nothing in the job is different from what dispatch holds. Nothing was changed.');
+    if (!(await this.store.claimWork(kase.id))) throw refuse('This change is being made, or was made a moment ago. Reload the page before trying again. Nothing was changed twice.');
     let result;
     try { result = await this.dispatch.update({ ref: row.ref, job, kase, actor: user }); } catch (e) {
+      await this.store.releaseBooking(kase.id).catch(() => {});
       const kind = e.checkedOnly ? 'dispatch_checked' : e.uncertain ? 'dispatch_uncertain' : 'dispatch_refused';
       await this.store.addEvent(kase.id, { actor: user, kind, detail: `Changing ${row.ref}: ${e.message}` }).catch(() => {});
       throw e;
     }
+    await this.store.releaseBooking(kase.id).catch(() => {});
     const detail = `${row.ref} changed in ${this.dispatch.label}: ${changes.join('; ')}. Signed off by ${user.display_name || user.username}`;
     if (!kase.dispatch_ref) await this.store.updateCase(kase.id, { dispatch_ref: row.ref, owner_id: kase.owner_id || user.id, status: kase.status === 'new' ? 'in_progress' : kase.status });
     await this.store.addEvent(kase.id, { actor: user, kind: 'dispatch_changed', detail });
@@ -488,9 +559,12 @@ ${this.firm.signature}`;
     const why = String(reason || '').replace(/\s+/g, ' ').trim().slice(0, 200);
     if (!why) throw refuse('Say why it is being cancelled. Nothing was cancelled.');
     const ref = row.ref;
+    // One cancellation however many presses: the booking is claimed first.
+    if (!(await this.store.claimDispatchCancel(ref))) throw refuse(`${ref} has already been cancelled. Nothing was changed.`);
     let result;
     try { result = await this.dispatch.cancel({ ref, kase, actor: user }); } catch (e) {
-      await this.store.addEvent(kase.id, { actor: user, kind: e.uncertain ? 'dispatch_uncertain' : 'dispatch_refused', detail: `Cancelling ${ref}: ${e.message}` }).catch(() => {});
+      await this.store.restoreDispatchCancel(ref).catch(() => {});
+      await this.store.addEvent(kase.id, { actor: user, kind: e.checkedOnly ? 'dispatch_checked' : e.uncertain ? 'dispatch_uncertain' : 'dispatch_refused', detail: `Cancelling ${ref}: ${e.message}` }).catch(() => {});
       throw e;
     }
     const detail = `${ref} ${result.statusWords || 'cancelled'} Reason: ${why}. Signed off by ${user.display_name || user.username}`;
@@ -577,14 +651,15 @@ ${this.firm.signature}`;
 }
 
 function refuse(message) { const e = new Error(message); e.code = 'REFUSED'; return e; }
+// Someone changed the reply after this person's page was opened.
 function stale() {
-  const e = refuse('Someone else changed this reply while you had it open, so yours was not saved or approved. Your version is shown below the reply.');
+  const e = refuse('Someone else changed this reply while you had it open, so yours was not saved or approved. Your version is shown above the reply to copy back in.');
   e.stale = true;
   return e;
 }
 
 function label(status) {
-  return { new: 'new', in_progress: 'in progress', waiting: 'waiting on the customer', done: 'done' }[status] || status;
+  return { new: 'new', in_progress: 'in progress', waiting: 'sent, waiting on the customer', done: 'done' }[status] || status;
 }
 
 function londonStamp(d) {

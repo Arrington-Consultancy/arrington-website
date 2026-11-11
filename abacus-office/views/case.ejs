@@ -14,7 +14,9 @@
   var passedUp = Boolean(kase.passed_up_at);
   var logged = /^<logged-/.test(String(kase.message_id || ''));
   var ch = logged ? (channels[kase.channel] || channels.other) : null;
-  var savedToMailbox = Boolean(kase.saved_draft_id);
+  var savedToMailbox = Boolean(kase.saved_draft_id) || kase.mailbox_state === 'saved';
+  var mboxUnsure = kase.approved_at && (kase.mailbox_state === 'uncertain' || (kase.mailbox_state === 'saving' && Date.now() - new Date(kase.mailbox_state_at || kase.approved_at).getTime() > 2 * 60 * 1000));
+  var copyOut = kase.approved_at && !mboxUnsure && !savedToMailbox;
   var forManager = needsManager(kase);
 %>
 <p class="to-back"><a href="<%= kase.kind === 'complaints' ? '/complaints' : (isCouncil ? '/council' : '/inbox') %>"><%= kase.kind === 'complaints' ? 'Complaints' : (isCouncil ? 'Council' : 'Inbox') %></a></p>
@@ -80,7 +82,7 @@
         <% if (cpl.staff_steps && cpl.staff_steps.length) { %><p class="to-small">For the office to do:</p><ol class="to-steps"><% cpl.staff_steps.forEach(function (s) { %><li><%= s %></li><% }) %></ol><% } %>
       <% } %>
       <% if (kase.kind === 'complaints' && cpl && cpl.pass_to_manager && !passedUp) { %>
-        <p class="to-passup-ai"><strong>The AI thinks this one should go to a manager.</strong> <%= cpl.pass_to_manager_why || '' %> You decide: pass it up below, or answer it yourself.</p>
+        <p class="to-passup-ai"><strong>The AI thinks this one should go to a manager.</strong> <%= cpl.pass_to_manager_why ? String(cpl.pass_to_manager_why).replace(/[.\s]+$/, '') + '.' : '' %> You decide: pass it up below, or answer it yourself.</p>
       <% } %>
       <% if (aiOn) { %>
       <form method="post" action="/case/<%= kase.id %>/read" class="to-inline-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="to-btn to-btn-quiet" data-busy="Reading...">Ask the AI to read it again</button></form>
@@ -100,7 +102,7 @@
           <button type="submit" class="to-btn to-btn-quiet">Assign</button></form>
         <% } %>
         <form method="post" action="/case/<%= kase.id %>/status"><input type="hidden" name="_csrf" value="<%= csrfToken %>">
-          <label class="to-field"><span class="to-sr">Status</span><select name="status"><% ['new', 'in_progress', 'waiting', 'done'].forEach(function (s) { %><option value="<%= s %>"<% if (kase.status === s) { %> selected<% } %>><%= label(s) %></option><% }) %></select></label>
+          <label class="to-field"><span class="to-sr">Status</span><select name="status"><% ['new', 'in_progress', 'waiting', 'done'].filter(function (s) { return s === kase.status || (s === 'waiting' ? Boolean(kase.sent_at) : (s === 'done' ? (!forManager || atLeast(user, 'manager')) : true)); }).forEach(function (s) { %><option value="<%= s %>"<% if (kase.status === s) { %> selected<% } %>><%= label(s) %></option><% }) %></select></label>
           <button type="submit" class="to-btn to-btn-quiet">Set status</button></form>
         <% if (manyBrands && atLeast(user, 'manager') && canSwitchPortal) { %>
         <form method="post" action="/case/<%= kase.id %>/company"><input type="hidden" name="_csrf" value="<%= csrfToken %>">
@@ -123,13 +125,14 @@
           <button type="submit" class="to-btn" data-confirm="Pass this complaint up to a manager?">Pass up to a manager</button>
         </form>
       <% } %>
-      <% if (logged) { %>
+      <% if (logged || (!passedUp && !kase.holding_sent_at)) { %>
       <% } else if (kase.holding_sent_at) { %>
-        <p class="to-note to-note-ok">Holding reply <%= mailboxDemo ? 'approved' : 'saved as a draft in ' + mailboxLabel %> <%= when(kase.holding_sent_at) %>.</p>
+        <p class="to-note to-note-ok">Holding reply approved <%= when(kase.holding_sent_at) %>. <%= mailboxNone ? 'No mailbox is connected, so nothing has been sent: copy it and send it from your own email.' : (mailboxDemo ? 'This is the made-up inbox, so nothing has been sent.' : 'It is a draft in ' + mailboxLabel + '; nothing has been sent until someone sends it there.') %></p>
+        <% if (mailboxNone) { %><button type="button" class="to-btn to-btn-quiet" data-copy="<%= holdingText %>">Copy the holding reply</button><% } %>
       <% } else { %>
-        <p class="to-small"><strong>Holding reply.</strong> One click tells the customer it has gone to a manager and thanks them for their patience, so they are not left waiting with nothing. Your click, never a timer.</p>
+        <p class="to-small"><strong>Holding reply.</strong> Now it has gone to a manager, one click tells the customer so and thanks them for their patience, so they are not left waiting with nothing. Your click, never a timer.</p>
         <div class="to-holding"><%= holdingText %></div>
-        <form method="post" action="/case/<%= kase.id %>/holding" class="to-inline-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="to-btn" data-confirm="Send the holding reply? <%= mailboxDemo ? 'Nothing is sent from this made-up inbox.' : 'It is saved as a draft in ' + mailboxLabel + ' for someone to send.' %>" data-busy="Saving...">Send the holding reply</button></form>
+        <form method="post" action="/case/<%= kase.id %>/holding" class="to-inline-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="to-btn" data-confirm="Approve the holding reply? <%= mailboxNone ? 'No mailbox is connected, so you then copy it and send it yourself.' : (mailboxDemo ? 'Nothing is sent from this made-up inbox.' : 'It is saved as a draft in ' + mailboxLabel + ' for someone to send.') %>" data-busy="Saving..."><%= mailboxNone ? 'Approve the holding reply' : 'Send the holding reply' %></button></form>
       <% } %>
     </section>
     <% } %>
@@ -139,7 +142,8 @@
     <section class="to-panel to-book" id="book">
       <p class="to-worker-tag">Into dispatch</p>
       <% if (kase.dispatch_ref) { %>
-        <p class="to-booked">In <%= dispatchLabel %> as <%= kase.dispatch_ref %><% if (kase.booked_at) { %>, booked <%= when(kase.booked_at) %><% } %>.</p>
+        <% if (dispatchLive) { %><p class="to-booked">In <%= dispatchLabel %> as <%= kase.dispatch_ref %><% if (kase.booked_at) { %>, booked <%= when(kase.booked_at) %><% } %>.</p>
+        <% } else { %><p class="to-note to-note-warn">Recorded on the stand-in dispatch as <%= kase.dispatch_ref %><% if (kase.booked_at) { %>, <%= when(kase.booked_at) %><% } %>. This is not a live dispatch system: no car is booked, so do not tell the customer it is booked.</p><% } %>
         <% if (dispatchRow && dispatchRow.job) { var _j = dispatchRow.job; %>
         <p class="to-status-line"><%= [_j.date, _j.time, _j.pickup && ('from ' + _j.pickup), _j.destination && ('to ' + _j.destination), _j.passengers && (_j.passengers + ' passenger' + (_j.passengers === '1' ? '' : 's')), _j.vehicle].filter(Boolean).join(', ') %>.</p>
         <% } %>
@@ -211,15 +215,23 @@
     <section class="to-panel to-draft<%= kase.approved_at ? ' to-approved' : '' %>" id="reply">
       <div class="to-panel-head">
         <p class="to-worker-tag"><%= kase.approved_at ? 'Approved reply' : 'Draft reply' %></p>
-        <% if (kase.sent_state === 'sent') { %><span class="to-pill to-pill-ok">Sent <%= when(kase.sent_at) %></span><% } else if (kase.approved_at) { %><span class="to-pill <%= kase.sent_state === 'unsent' ? 'to-pill-warn' : 'to-pill-ok' %>">Approved <%= when(kase.approved_at) %><%= kase.sent_state === 'unsent' ? ', not sent yet' : '' %></span><% } %>
+        <% if (kase.sent_at) { %><span class="to-pill to-pill-ok">Sent <%= when(kase.sent_at) %></span><% } else if (kase.approved_at) { %><span class="to-pill to-pill-warn">Approved <%= when(kase.approved_at) %>, not sent yet</span><% } %>
       </div>
-      <% if (kase.sent_state === 'sent') { %>
-        <p class="to-note to-note-ok">Sent from <%= mailboxLabel %> <%= when(kase.sent_at) %>. The customer has it.</p>
-      <% } else if (kase.sent_state === 'unsent' && kase.approved_at) { %>
-        <p class="to-note to-note-warn">Approved and waiting as a draft in <%= mailboxLabel %>, <strong>not sent yet</strong><% if (kase.sent_checked_at) { %> (checked <%= when(kase.sent_checked_at) %>)<% } %>. Open the mailbox and send it. The office checks every couple of minutes and marks it sent when it goes.</p>
-      <% } else if (kase.approved_at) { %>
-        <p class="to-note to-note-ok"><%= logged && !savedToMailbox ? 'Approved. It came in as a ' + ch.label.toLowerCase() + ': ' + ch.send + ' Nothing has been posted or sent from here.' : (mailboxDemo ? 'Approved. With a real mailbox connected this would be a draft in it now, waiting for someone to press send.' : 'Saved as a draft in ' + mailboxLabel + '. Open the mailbox to send it. Editing it here makes a new draft that needs approving again.') %></p>
-        <% if (logged && !savedToMailbox) { %><button type="button" class="to-btn to-btn-quiet" data-copy="<%= kase.draft %>">Copy the reply</button><% } %>
+      <% if (kase.approved_at) { %>
+        <% if (mboxUnsure) { %>
+        <p class="to-note to-note-warn">This reply may already be in <%= mailboxLabel %> as a draft: the mailbox did not answer clearly when it was approved. Look in the mailbox drafts before doing anything else. If it is not there, tick the box below and approve it again.</p>
+        <% } else if (logged && !savedToMailbox) { %>
+        <p class="to-note to-note-ok">Approved. It came in as a <%= ch.label.toLowerCase() %>: <%= ch.send %> Nothing has been posted or sent from here.</p>
+        <% } else if (mailboxNone) { %>
+        <p class="to-note to-note-ok">Approved. No mailbox is connected, so it was not saved anywhere and nothing has been sent. Copy the reply into your own email, send it, then press I have sent it.</p>
+        <% } else if (mailboxDemo) { %>
+        <p class="to-note to-note-ok">Approved. This is the made-up inbox, so it was saved nowhere. Nothing has been sent.</p>
+        <% } else { %>
+        <p class="to-note to-note-ok">It is in <%= mailboxLabel %> as a draft. Nothing has been sent: someone opens the mailbox and presses send there, then presses I have sent it here. Editing it here makes a new version that needs approving again.</p>
+        <% } %>
+        <% if (copyOut) { %><button type="button" class="to-btn to-btn-quiet" data-copy="<%= kase.draft %>">Copy the reply</button><% } %>
+        <% if (kase.sent_at) { %><p class="to-note to-note-ok"><%= kase.sent_state === 'sent' && !kase.sent_by ? 'Sent from ' + mailboxLabel + ' ' + when(kase.sent_at) + '. The customer has it.' : 'Marked as sent ' + when(kase.sent_at) + '.' %></p>
+        <% } else if (!mboxUnsure) { %><form method="post" action="/case/<%= kase.id %>/sent" class="to-inline-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="to-btn" data-confirm="Has this reply gone to <%= isCouncil ? 'the council' : 'the customer' %>?">I have sent it</button></form><% } %>
       <% } %>
       <% if (kase.held_back) { %><p class="to-note to-note-warn"><strong>From the AI:</strong> <%= kase.held_back %></p><% } %>
       <% if (typeof lostDraft !== 'undefined' && lostDraft) { %>
@@ -244,11 +256,12 @@
             <button type="submit" class="to-btn to-btn-quiet">Save my edits</button>
           </div>
         </div>
-        <% if (mayApprove && kase.approved_at) { %>
-          <p class="to-small">Approved. To send something different, change the reply above and save it, then approve it again.</p>
+        <% if (mayApprove && kase.approved_at && !mboxUnsure) { %>
+          <p class="to-small">Approved. To change it, edit the reply and approve the new version.</p>
         <% } else if (mayApprove) { %>
-          <button type="submit" class="to-btn to-btn-primary" formaction="/case/<%= kase.id %>/approve" data-confirm="Approve this reply? <%= logged ? 'You then copy it and send or post it where it came in.' : (mailboxDemo ? 'Nothing is sent from this made-up inbox.' : 'It will be saved as a draft in ' + mailboxLabel + ' for someone to send.') %>" data-busy="Approving...">Approve this reply</button>
-          <p class="to-small"><%= forManager ? 'This one is approved by a manager; you are one.' : (logged ? 'It came in as a ' + ch.label.toLowerCase() + '. Once approved: ' + ch.send + ' Nothing is posted or sent from here.' : 'Approving saves it as a draft in the firm\'s mailbox for a person to send. Nothing is sent from here.') %></p>
+          <% if (mboxUnsure) { %><label class="to-check-box"><input type="checkbox" name="mailbox_checked" value="yes"><span>I have looked in the mailbox drafts and this reply is not there.</span></label><% } %>
+          <button type="submit" class="to-btn to-btn-primary" formaction="/case/<%= kase.id %>/approve" data-confirm="Approve this reply? <%= logged ? 'You then copy it and send or post it where it came in.' : (mailboxNone ? 'No mailbox is connected, so nothing is sent: you copy it and send it yourself.' : (mailboxDemo ? 'Nothing is sent from this made-up inbox.' : 'It will be saved as a draft in ' + mailboxLabel + ' for someone to send.')) %>" data-busy="Approving...">Approve this reply</button>
+          <p class="to-small"><%= forManager ? 'This one is approved by a manager; you are one.' : (logged ? 'It came in as a ' + ch.label.toLowerCase() + '. Once approved: ' + ch.send + ' Nothing is posted or sent from here.' : (mailboxNone ? 'No mailbox is connected, so approving saves nothing anywhere: you copy the reply and send it from your own email. Nothing is sent from here.' : 'Approving saves it as a draft in the firm\'s mailbox for a person to send. Nothing is sent from here.')) %></p>
         <% } else { %>
           <p class="to-note to-note-warn"><%= isCouncil ? 'A reply to the council is approved by a manager or owner.' : (passedUp ? 'This complaint was passed up, so a manager approves the reply.' : 'A safety matter needs a manager to approve the reply.') %> Get the draft right, add a note, and a manager will approve it from here.</p>
         <% } %>

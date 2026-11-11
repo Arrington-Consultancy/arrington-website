@@ -79,9 +79,17 @@ function standinDriver(store, prefix) {
     label: LABELS.standin,
     live: false,
     async book({ job, kase, brand, actor }) {
-      const ref = await store.nextDispatchRef(prefix);
-      await store.insertDispatchBooking({ ref, caseId: kase ? kase.id : null, brand, job, actor });
-      return { ref, status: 'booked', statusWords: 'recorded in this office' };
+      // Two jobs booked in the same instant would be given the same next
+      // reference; the second simply takes the one after.
+      for (let attempt = 0; ; attempt += 1) {
+        const ref = await store.nextDispatchRef(prefix, attempt);
+        try {
+          await store.insertDispatchBooking({ ref, caseId: kase ? kase.id : null, brand, job, actor });
+          return { ref, status: 'booked', statusWords: 'recorded in this office' };
+        } catch (e) {
+          if (e.code !== '23505' || attempt >= 8) throw e;
+        }
+      }
     },
     async cancel({ ref }) {
       await store.setDispatchStatus(ref, { status: 'cancelled', dispatchStatus: 'CANCELLED' });
@@ -136,6 +144,12 @@ function icabbiDriver(env = process.env, { store, fetch } = {}) {
       return { ref: tripId, status: String(b.status || 'NEW'), statusWords: icabbi.statusWords(b.status || 'NEW') };
     },
     async cancel({ ref }) {
+      if (!client.configured()) throw new DispatchNotConnected(`iCabbi is not connected yet. It needs API access on the firm's own iCabbi account (${client.missing().join(', ')} on this service). Nothing was cancelled.`);
+      if (!s.writes) {
+        const e = new DispatchNotConnected('Live booking is switched off on this office, so nothing was cancelled in iCabbi. Cancel it on the board.');
+        e.checkedOnly = true;
+        throw e;
+      }
       const { body } = await client.cancel(ref);
       if (store) await store.setDispatchStatus(ref, { status: 'cancelled', dispatchStatus: 'DISPATCH_CANCELLED' });
       const fee = Array.isArray(body.fee) && body.fee.length ? ' iCabbi recorded a cancellation fee on it.' : '';
