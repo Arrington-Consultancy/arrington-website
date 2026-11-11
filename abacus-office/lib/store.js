@@ -316,7 +316,11 @@ class Store {
     const ended = (await this.q("UPDATE visits SET ended_at = now(), ended_how = 'signed out' WHERE user_id = $1 AND ended_at IS NULL RETURNING *", [user.id])).rows;
     return [...closed, ...ended];
   }
-  async recentVisits(limit = 40) { return (await this.q('SELECT * FROM visits ORDER BY started_at DESC LIMIT $1', [limit])).rows; }
+  // A manager set to one company sees the visits of that company's staff.
+  async recentVisits(limit = 40, brand) {
+    if (!brand) return (await this.q('SELECT * FROM visits ORDER BY started_at DESC LIMIT $1', [limit])).rows;
+    return (await this.q("SELECT v.* FROM visits v JOIN users u ON u.id = v.user_id WHERE u.brand = $2 AND u.role <> 'owner' ORDER BY v.started_at DESC LIMIT $1", [limit, brand])).rows;
+  }
   async pruneVisits() { return (await this.q("DELETE FROM visits WHERE started_at < now() - interval '90 days'")).rowCount; }
 
   // ---- compositions (the Write worker) ----

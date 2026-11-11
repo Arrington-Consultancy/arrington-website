@@ -60,20 +60,23 @@ function canApprove(user, kase) {
   if (needsManager(kase)) return atLeast(user, 'manager');
   return atLeast(user, 'operator');
 }
-// Who sees what (Tom, 10 November 2026: "three different companies that
-// owners and managers can see, also managers and owners can see council
-// worker"). Owners and managers see every company and the council emails.
-// An operator sees their own company only (every company when they have
-// none set) and never a council email.
+// Who sees what. Which companies a person sees is chosen for them in Users
+// (Tom, 11 November 2026: "I want managers under users to be able to be
+// selected. Drop down, the three companies and fourth option see all
+// companies"): one company, or all of them. That goes for managers as well
+// as operators. The owner always sees every company, whatever is stored, so
+// the person who sets this can never lock themselves out. Council emails
+// are for managers and the owner only (Tom, 10 November 2026), and a
+// manager set to one company sees that company's.
 function seesCouncil(user) { return atLeast(user, 'manager'); }
+function seesEveryCompany(user) { return Boolean(user) && (user.role === 'owner' || !user.brand); }
 function canSee(user, kase) {
   if (!user || !kase) return false;
   if (kase.kind === 'licensing' && !seesCouncil(user)) return false;
-  if (atLeast(user, 'manager')) return true;
-  return !user.brand || user.brand === (kase.brand || '');
+  return seesEveryCompany(user) || user.brand === (kase.brand || '');
 }
 // Which company's cases a user is shown: undefined is every company.
-function scopeFor(user) { return user && user.brand && !atLeast(user, 'manager') ? user.brand : undefined; }
+function scopeFor(user) { return user && !seesEveryCompany(user) ? user.brand : undefined; }
 // The full scope for a list, count or live stamp: the company, and whether
 // council emails are left out.
 function caseScope(user) { return { brand: scopeFor(user), hideCouncil: !seesCouncil(user) }; }
@@ -542,4 +545,4 @@ function londonStamp(d) {
   return `${g('year')}-${g('month')}-${g('day')}T${g('hour') === '24' ? '00' : g('hour')}:${g('minute')}`;
 }
 
-module.exports = { Office, kindFor, canApprove, canReassign, canSee, scopeFor, caseScope, seesCouncil, needsManager, atLeast, label, londonStamp, brandName, LEVEL };
+module.exports = { Office, kindFor, canApprove, canReassign, canSee, scopeFor, caseScope, seesEveryCompany, seesCouncil, needsManager, atLeast, label, londonStamp, brandName, LEVEL };

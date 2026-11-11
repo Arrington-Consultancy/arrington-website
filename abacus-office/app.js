@@ -24,7 +24,7 @@ const morgan = require('morgan');
 const fs = require('fs');
 
 const { Store, ROLES } = require('./lib/store');
-const { Office, canApprove, canReassign, canSee, scopeFor, caseScope, seesCouncil, needsManager, atLeast, label, brandName } = require('./lib/cases');
+const { Office, canApprove, canReassign, canSee, scopeFor, caseScope, seesEveryCompany, seesCouncil, needsManager, atLeast, label, brandName } = require('./lib/cases');
 const ai = require('./lib/ai');
 const visits = require('./lib/visits');
 const { CHANNELS, isLogged } = require('./lib/channels');
@@ -340,7 +340,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     const cases = (await store.listCases({ kind: 'licensing', brand: scope, limit: 200 })).filter((c) => showAll || c.status !== 'done');
     const due = (c) => (c.council && c.council.deadline) || '9999-12-31';
     cases.sort((a, b) => due(a).localeCompare(due(b)) || (new Date(a.received_at) - new Date(b.received_at)));
-    const drafts = await store.compositions({ council: true });
+    const drafts = await store.compositions({ council: true, brand: scopeFor(req.user) });
     res.render('council', { title: 'Council', section: 'council', cases, showAll, liveStamp: await store.liveStamp(scope), lastSync, drafts, councilKinds: require('./lib/compose').COUNCIL_KINDS, mailboxCanHold: mailboxCanHold() });
   }));
 
@@ -357,13 +357,13 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     res.locals.lostDraft = lost;
     const kase = req.kase.reading || req.kase.reading_source !== 'none' ? req.kase : await office.read(req.kase, { actor: req.user });
     const [events, users] = await Promise.all([store.eventsFor(kase.id), store.users()]);
-    res.render('case', { title: kase.subject || 'Email', section: kase.kind === 'complaints' ? 'complaints' : (kase.kind === 'licensing' ? 'council' : 'inbox'), kase, events, users: users.filter((u) => u.active && (atLeast(u, 'manager') || !u.brand || u.brand === (kase.brand || ''))), booking: office.bookingFrom(kase), dispatchRow: kase.dispatch_ref ? (await store.dispatchBookingsForCase(kase.id)).filter((b) => b.ref === kase.dispatch_ref).pop() || null : null, statusWords: require('./lib/icabbi').statusWords, holdingText: kase.kind === 'complaints' ? office.holdingText(kase) : '' });
+    res.render('case', { title: kase.subject || 'Email', section: kase.kind === 'complaints' ? 'complaints' : (kase.kind === 'licensing' ? 'council' : 'inbox'), kase, events, users: users.filter((u) => u.active && canSee(u, kase)), booking: office.bookingFrom(kase), dispatchRow: kase.dispatch_ref ? (await store.dispatchBookingsForCase(kase.id)).filter((b) => b.ref === kase.dispatch_ref).pop() || null : null, statusWords: require('./lib/icabbi').statusWords, holdingText: kase.kind === 'complaints' ? office.holdingText(kase) : '' });
   }));
   const act = (p, fn) => app.post(`/case/:id/${p}`, loadCase, wrap(async (req, res) => { await fn(req, res); if (!res.headersSent && !res.locals.redirected) res.redirect(`/case/${req.kase.id}`); }));
   // Managers and owners put an email under the right company, when one
   // mailbox serves more than one.
   act('company', async (req) => {
-    if (!atLeast(req.user, 'manager')) { flash(req, 'warn', 'A manager or the owner moves an email to another company.'); return; }
+    if (!atLeast(req.user, 'manager') || !seesEveryCompany(req.user)) { flash(req, 'warn', 'A manager or the owner who sees all companies moves an email to another company.'); return; }
     const to = String(req.body.brand || '');
     const target = (firm.brands || []).find((b) => b.id === to);
     if (!target) { flash(req, 'warn', 'That company is not set up on this office.'); return; }
@@ -475,7 +475,10 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   }));
 
   app.get('/activity', requireRole('manager'), wrap(async (req, res) => {
-    res.render('activity', { title: 'Activity', section: 'activity', events: await store.recentEvents(200), visits: await store.recentVisits(40), visitMinutes: visits.minutes, ukTime: visits.ukTime });
+    // A manager set to one company sees that company's activity and staff.
+    const own = scopeFor(req.user);
+    const events = own ? await store.recentEvents(200, caseScope(req.user)) : await store.recentEvents(200);
+    res.render('activity', { title: 'Activity', section: 'activity', events, visits: await store.recentVisits(40, own), visitMinutes: visits.minutes, ukTime: visits.ukTime });
   }));
 
   app.get('/users', requireRole('owner'), wrap(async (req, res) => {
@@ -483,9 +486,9 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   }));
   app.post('/users', requireRole('owner'), wrap(async (req, res) => {
     try {
-      const brand = (firm.brands || []).some((b) => b.id === String(req.body.brand || '')) ? String(req.body.brand) : '';
+      const brand = req.body.role !== 'owner' && (firm.brands || []).some((b) => b.id === String(req.body.brand || '')) ? String(req.body.brand) : '';
       await store.createUser({ username: req.body.username, displayName: req.body.display_name, password: req.body.password, role: req.body.role, brand, mustChange: true });
-      await store.addEvent(null, { actor: req.user, kind: 'user_created', detail: `${String(req.body.username).trim().toLowerCase()} added as ${req.body.role}${brand ? ` for ${brandName(firm, brand)}` : ' for every company'}` });
+      await store.addEvent(null, { actor: req.user, kind: 'user_created', detail: `${String(req.body.username).trim().toLowerCase()} added as ${req.body.role}${brand ? ` for ${brandName(firm, brand)} only` : ' for all companies'}` });
       flash(req, 'ok', `${String(req.body.username).trim()} added. They will be asked to choose their own password when they first sign in.`);
       res.redirect('/users');
     } catch (e) {
@@ -499,11 +502,19 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     if (target.id === req.user.id && (action === 'deactivate' || action === 'role')) { flash(req, 'warn', 'You cannot change your own account here.'); return res.redirect('/users'); }
     if (action === 'deactivate') { await store.setUserActive(target.id, false); await store.addEvent(null, { actor: req.user, kind: 'user_deactivated', detail: target.username }); }
     else if (action === 'activate') { await store.setUserActive(target.id, true); await store.addEvent(null, { actor: req.user, kind: 'user_activated', detail: target.username }); }
-    else if (action === 'role' && ROLES.includes(req.body.role)) { await store.setUserRole(target.id, req.body.role); await store.addEvent(null, { actor: req.user, kind: 'user_role', detail: `${target.username} is now ${req.body.role}` }); }
+    else if (action === 'role' && ROLES.includes(req.body.role)) {
+      await store.setUserRole(target.id, req.body.role);
+      // An owner sees every company, so a company set before is cleared
+      // rather than coming back if they are ever made a manager again.
+      if (req.body.role === 'owner' && target.brand) await store.setUserBrand(target.id, '');
+      await store.addEvent(null, { actor: req.user, kind: 'user_role', detail: `${target.username} is now ${req.body.role}` });
+    }
     else if (action === 'brand') {
+      if (target.role === 'owner') { flash(req, 'warn', 'The owner always sees all companies.'); return res.redirect('/users'); }
       const brand = (firm.brands || []).some((b) => b.id === String(req.body.brand || '')) ? String(req.body.brand) : '';
       await store.setUserBrand(target.id, brand);
-      await store.addEvent(null, { actor: req.user, kind: 'user_brand', detail: `${target.username} now sees ${brand ? brandName(firm, brand) : 'every company'}` });
+      await store.addEvent(null, { actor: req.user, kind: 'user_brand', detail: `${target.username} now sees ${brand ? `${brandName(firm, brand)} only` : 'all companies'}` });
+      flash(req, 'ok', `${target.username} now sees ${brand ? `${brandName(firm, brand)} only` : 'all companies'}.`);
     }
     else if (action === 'reset') {
       try { await store.setPassword(target.id, String(req.body.password || ''), true); await store.addEvent(null, { actor: req.user, kind: 'user_password_reset', detail: target.username }); flash(req, 'ok', `${target.username} has a temporary password and will choose a new one at sign in.`); }
@@ -565,10 +576,10 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   const EMAIL_RE = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/;
   const staffName = (u) => u.display_name || u.username;
   const companyOf = (brand) => brandName(firm, brand);
-  // A draft is its writer's, and every draft is open to managers and the
-  // owner, who see every company.
+  // A draft is its writer's. Managers and the owner open other people's:
+  // every company's, or their own company's when set to one.
   // A draft to the council is for managers and owners only, whoever wrote it.
-  const mayOpenDraft = (user, c) => Boolean(c) && c.status !== 'discarded' && (!compose.isCouncilKind(c.kind) || seesCouncil(user)) && (c.created_by === user.id || atLeast(user, 'manager'));
+  const mayOpenDraft = (user, c) => Boolean(c) && c.status !== 'discarded' && (!compose.isCouncilKind(c.kind) || seesCouncil(user)) && (c.created_by === user.id || (atLeast(user, 'manager') && (seesEveryCompany(user) || user.brand === (c.brand || ''))));
   const loadDraft = wrap(async (req, res, next) => {
     const c = await store.compositionById(Number(req.params.id));
     if (!mayOpenDraft(req.user, c)) return res.status(404).render('missing', { title: 'Not found' });
@@ -578,7 +589,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   const mailboxCanHold = () => !mailbox.demo && !mailbox.none && typeof mailbox.saveNewDraft === 'function' && mailbox.configured();
 
   app.get('/write', wrap(async (req, res) => {
-    const drafts = await store.compositions(atLeast(req.user, 'manager') ? { council: false } : { userId: req.user.id, council: false });
+    const drafts = await store.compositions(atLeast(req.user, 'manager') ? { council: false, brand: scopeFor(req.user) } : { userId: req.user.id, council: false });
     res.render('write', { title: 'Write', section: 'write', drafts, kinds: compose.KINDS, relationships: compose.RELATIONSHIPS, ownBrand: scopeFor(req.user) || '', mailboxCanHold: mailboxCanHold() });
   }));
   app.post('/write', wrap(async (req, res) => {

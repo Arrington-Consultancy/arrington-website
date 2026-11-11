@@ -1,5 +1,5 @@
 <%- include('partials/top', { title: 'Users' }) %>
-<section class="to-section-head"><h1>Users</h1><p class="to-small">Three levels. An <strong>operator</strong> reads, drafts, guides the AI, approves replies, passes a complaint up and books jobs after signing them off. A <strong>manager</strong> also approves a complaint that was passed up or is a safety matter, reassigns cases and sees the activity log. The <strong>owner</strong> also manages users, prices and settings. Council emails go to managers and the owner only.<% if (manyBrands) { %> Managers and the owner see every company. An operator sees the company set here, or every company.<% } %></p></section>
+<section class="to-section-head"><h1>Users</h1><p class="to-small">Three levels. An <strong>operator</strong> reads, drafts, guides the AI, approves replies, passes a complaint up and books jobs after signing them off. A <strong>manager</strong> also approves a complaint that was passed up or is a safety matter, reassigns cases and sees the activity log. The <strong>owner</strong> also manages users, prices and settings. Council emails go to managers and the owner only.<% if (manyBrands) { %> Under Sees, choose what each operator and manager sees: one company, or all companies. The owner always sees all companies.<% } %></p></section>
 <% if (error) { %><p class="to-note to-note-bad" role="alert"><%= error %></p><% } %>
 <div class="to-table-wrap"><table class="to-table to-users">
   <thead><tr><th scope="col">Username</th><th scope="col">Name</th><th scope="col">Level</th><% if (manyBrands) { %><th scope="col">Sees</th><% } %><th scope="col">Last sign in</th><th scope="col">Actions</th></tr></thead>
@@ -8,7 +8,7 @@
     <tr<%= u.active ? '' : ' class="is-cancelled"' %>>
       <td><%= u.username %></td><td><%= u.display_name %></td>
       <td><% if (u.id === user.id) { %><%= u.role %><% } else { %><form method="post" action="/users/<%= u.id %>"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="action" value="role"><select name="role"><% roles.forEach(function (r) { %><option value="<%= r %>"<% if (u.role === r) { %> selected<% } %>><%= r %></option><% }) %></select><button type="submit" class="to-btn to-btn-quiet">Set</button></form><% } %></td>
-      <% if (manyBrands) { %><td><form method="post" action="/users/<%= u.id %>"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="action" value="brand"><select name="brand"><option value=""<% if (!u.brand) { %> selected<% } %>>Every brand</option><% brands.forEach(function (b) { %><option value="<%= b.id %>"<% if (u.brand === b.id) { %> selected<% } %>><%= b.name %></option><% }) %></select><button type="submit" class="to-btn to-btn-quiet">Set</button></form></td><% } %>
+      <% if (manyBrands) { %><td><% if (u.role === 'owner') { %>All companies<% } else { %><form method="post" action="/users/<%= u.id %>"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="action" value="brand"><select name="brand" aria-label="What <%= u.username %> sees"><% brands.forEach(function (b) { %><option value="<%= b.id %>"<% if (u.brand === b.id) { %> selected<% } %>><%= b.name %></option><% }) %><option value=""<% if (!u.brand) { %> selected<% } %>>All companies</option></select><button type="submit" class="to-btn to-btn-quiet">Set</button></form><% } %></td><% } %>
       <td><%= u.last_login_at ? new Date(u.last_login_at).toLocaleString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Never' %></td>
       <td>
         <% if (u.id !== user.id) { %>
@@ -30,10 +30,11 @@
     </div>
     <div class="to-field-row">
       <label class="to-field"><span>Level</span><select name="role"><% roles.forEach(function (r) { %><option value="<%= r %>"><%= r %></option><% }) %></select></label>
-      <% if (manyBrands) { %><label class="to-field"><span>Sees</span><select name="brand"><option value="">Every brand</option><% brands.forEach(function (b) { %><option value="<%= b.id %>"><%= b.name %></option><% }) %></select></label><% } %>
+      <% if (manyBrands) { %><label class="to-field"><span>Sees</span><select name="brand"><% brands.forEach(function (b) { %><option value="<%= b.id %>"><%= b.name %></option><% }) %><option value="" selected>All companies</option></select></label><% } %>
       <label class="to-field"><span>Temporary password (10 characters or more)</span><input name="password" type="password" minlength="10" required autocomplete="new-password"></label>
     </div>
     <button type="submit" class="to-btn to-btn-primary">Add</button>
+    <% if (manyBrands) { %><p class="to-small">Sees applies to operators and managers. An owner always sees all companies.</p><% } %>
     <p class="to-small">Tell them the temporary password in person. They choose their own the first time they sign in.</p>
   </form>
 </section>
