@@ -27,6 +27,7 @@
 #   BACKUP_FOLDER_NAME           optional, default "Arrington website database backups"
 #   BACKUP_KEEP                  optional, default 12 (weekly runs, about three months)
 #   BACKUP_MIN_BYTES             optional, default 20000; a smaller dump is treated as a failure
+#   BACKUP_MIN_TABLES            optional, default 10; a dump defining fewer tables is a failure
 #   BACKUP_FILE_PREFIX           optional, default "arrington-website-db"; lower case letters,
 #                                digits and hyphens. A second database (the Abacus office) uses
 #                                its own prefix and folder, so neither run touches the other's files.
@@ -49,6 +50,7 @@ REFRESH_TOKEN="$(trim "${GOOGLE_DRIVE_REFRESH_TOKEN:-}")"
 FOLDER_NAME="$(trim "${BACKUP_FOLDER_NAME:-Arrington website database backups}")"
 KEEP="$(trim "${BACKUP_KEEP:-12}")"
 MIN_BYTES="$(trim "${BACKUP_MIN_BYTES:-20000}")"
+MIN_TABLES="$(trim "${BACKUP_MIN_TABLES:-10}")"
 PREFIX="$(trim "${BACKUP_FILE_PREFIX:-arrington-website-db}")"
 TOKEN_URL="${GOOGLE_OAUTH_TOKEN_URL:-https://oauth2.googleapis.com/token}"
 API="${GOOGLE_DRIVE_API_BASE:-https://www.googleapis.com}"
@@ -63,6 +65,8 @@ done
 case "$KEEP" in ''|*[!0-9]*) fail "BACKUP_KEEP must be a whole number, got '$KEEP'";; esac
 [ "$KEEP" -ge 1 ] || fail "BACKUP_KEEP must be at least 1"
 case "$MIN_BYTES" in ''|*[!0-9]*) fail "BACKUP_MIN_BYTES must be a whole number";; esac
+case "$MIN_TABLES" in ''|*[!0-9]*) fail "BACKUP_MIN_TABLES must be a whole number";; esac
+[ "$MIN_TABLES" -ge 1 ] || fail "BACKUP_MIN_TABLES must be at least 1"
 printf '%s' "$PREFIX" | grep -Eq '^[a-z0-9]+(-[a-z0-9]+)*$' || fail "BACKUP_FILE_PREFIX must be lower case letters, digits and hyphens"
 command -v pg_dump >/dev/null || fail "pg_dump is not installed in this image"
 
@@ -123,7 +127,7 @@ SIZE="$(stat -c %s "$OUT")"
 [ "$SIZE" -ge "$MIN_BYTES" ] || fail "dump is only $SIZE bytes, below BACKUP_MIN_BYTES=$MIN_BYTES"
 gunzip -c "$OUT" | tail -n 5 | grep -q 'PostgreSQL database dump complete' || fail "dump does not end with pg_dump's completion line"
 TABLES="$(gunzip -c "$OUT" | grep -c '^CREATE TABLE ' || true)"
-[ "$TABLES" -ge 10 ] || fail "dump defines only $TABLES tables"
+[ "$TABLES" -ge "$MIN_TABLES" ] || fail "dump defines only $TABLES tables, below BACKUP_MIN_TABLES=$MIN_TABLES"
 log "dumped $TABLES tables, $SIZE bytes gzipped, session rows excluded"
 
 # 5. Upload (resumable, so size is no concern), then read the stored size back.
