@@ -10434,3 +10434,21 @@ mailbox; anything else is approved for staff to copy and post or send where
 it came in (the case says where, with a Copy button). No mailbox holding
 reply on a typed-in complaint. Nothing is posted to Google or Facebook from
 the office. `test/abacusOfficeLoggedComplaints.test.js`.
+
+**One portal per company, ON THE BRANCH ONLY, NOT MERGED (11/11/2026, Tom:
+"design the rest of the site but it can't be merged until I say so... the
+two other companies portals to be there, owner having drop down access.
+Must not merge yet").** Work for the next office release lives on
+`claude/new-session-hbgp04` and is NOT pushed to main (main is what deploys).
+Do not merge or push it to main until Tom says so; an urgent live fix
+meanwhile goes on its own branch from main. What is there: anyone who sees
+every company (owner, managers, an operator with no company set) has a
+Company menu in the bar ("All companies" or one company, `POST /portal`,
+kept in the session); choosing one makes the office that company's: its
+name and logo in the bar and tab title, and only its emails, counts, live
+stamp, council emails, Write and council drafts and fixed prices, with new
+complaints, emails and prices defaulting to it. An operator of one company
+has no menu and posting it changes nothing (`portalFor`, `caseScope(user,
+portal)` in `abacus-office/lib/cases.js`). A case of another company still
+opens by its address for those who may see it. `test/abacusOfficePortals.test.js`
+(an operator escaping their company was watched red).
