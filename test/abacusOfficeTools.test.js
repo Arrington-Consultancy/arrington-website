@@ -307,3 +307,14 @@ test('over HTTP: search, standard replies, fares, changing a booking, reports an
   assert.equal(r.status, 200);
   assert.doesNotMatch(r.text, /Airport run for the Penroses|signed off by sam/i, 'a Coastline manager does not see Abacus\'s activity');
 });
+
+test('the made-up emails are cleared at start-up on every mailbox but the made-up inbox itself', () => {
+  // 12 November 2026: clearing them only under the "none" driver left them
+  // in the preview, put back by the outgoing container during a changeover.
+  const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'abacus-office', 'server.js'), 'utf8');
+  const at = src.indexOf("DELETE FROM cases WHERE message_id LIKE '<demo-%@example.invalid>'");
+  assert.ok(at > 0, 'the start-up cleanup is still there');
+  const guard = src.slice(Math.max(0, at - 400), at);
+  assert.match(guard, /if \(mailDriver !== 'demo'\)/, 'the cleanup runs for any driver that is not the made-up inbox');
+  assert.doesNotMatch(guard, /=== 'none'/, 'the cleanup is not tied to the "none" driver alone');
+});

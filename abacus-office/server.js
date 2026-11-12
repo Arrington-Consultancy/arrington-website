@@ -69,9 +69,15 @@ async function main() {
   // made-up emails, and everything recorded against them, are cleared so
   // the office starts empty. Only the invented ones: their message ids are
   // all <demo-...@example.invalid>, which no real email can carry.
-  if (String(process.env.ABACUS_OFFICE_MAIL_DRIVER || '').trim().toLowerCase() === 'none') {
+  // The same goes for any driver but the made-up inbox itself (12 November
+  // 2026): invented emails never sit beside a real mailbox, connected or
+  // waiting to be. Clearing only under "none" left a gap: a container still
+  // running the made-up inbox during a changeover put them straight back,
+  // and the next boot, on a real driver, left them there.
+  const mailDriver = String(process.env.ABACUS_OFFICE_MAIL_DRIVER || 'demo').trim().toLowerCase() || 'demo';
+  if (mailDriver !== 'demo') {
     const cleared = await pool.query("DELETE FROM cases WHERE message_id LIKE '<demo-%@example.invalid>' RETURNING id");
-    if (cleared.rowCount) console.log(`Abacus office: ${cleared.rowCount} made-up email(s) cleared, because no mailbox is connected`);
+    if (cleared.rowCount) console.log(`Abacus office: ${cleared.rowCount} made-up email(s) cleared, because the made-up inbox is not in use`);
   }
   // A council fare card for every company that has no tariff yet, when the
   // server is told which one (ABACUS_OFFICE_FARE_CARD, for example

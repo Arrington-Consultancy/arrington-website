@@ -10747,7 +10747,9 @@ available on the cornwall site please take and input".
   the Google client ID and secret form, empty. The preview runs this way:
   `ABACUS_OFFICE_MAIL_DRIVER=gmail`, `ABACUS_OFFICE_TOKEN_KEY` built from
   the preview database's password, no client, no address, the made-up
-  emails cleared by one deploy with the driver at `none`, and
+  emails cleared at every start on any driver but `demo` (a one-off deploy at
+  `none` was not enough: the outgoing demo container put them back during
+  the changeover, and Tom still saw them), and
   `ABACUS_OFFICE_FARE_CARD=carrick-2024-04-01`.
 - Tests in `test/abacusOfficeTools.test.js`. One existing test
   (`abacusOfficeLiveFaults`, "Cannot set headers after they are sent") failed
