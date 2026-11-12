@@ -10699,3 +10699,19 @@ company: ...` so a release shows who is limited.
 `test/abacusOfficeVisibility.test.js` (the old rule put back was watched
 red). No company menu in the bar on live; that is still on the unmerged
 branch.
+
+**Preview of the unmerged office (12/11/2026, Tom: "can i view the non merged
+a2bstaff site?").** Railway service `abacus-office-preview` (id
+`bff75c94-4494-4aad-9572-d53e9a01c784`, production environment) with its own
+database `Postgres-qoUL` (id `bc1a534c-b0c7-402d-8749-0e41ead58c20`), at
+`https://abacus-office-preview-production.up.railway.app`. It is connected to
+GitHub branch `claude/new-session-hbgp04`, so a push to that branch redeploys
+it (same watch patterns as the live office); main and www.a2bstaff.com are
+untouched. Made-up inbox (`ABACUS_OFFICE_MAIL_DRIVER=demo`), stand-in
+dispatch, the three companies, AI on with `ANTHROPIC_API_KEY` as a reference
+to the live office's key, `SESSION_SECRET` built from the new database's
+generated password, nobody watched. Nothing of Dan's is in it. Sign in as
+`owner`: Tom sets `ABACUS_OFFICE_OWNER_PASSWORD` (10+ characters) on the
+preview service, waits for the redeploy, signs in, changes the password when
+asked, then deletes the variable. Delete both services when the branch is
+merged or no longer needed.
