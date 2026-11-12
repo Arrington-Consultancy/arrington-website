@@ -100,6 +100,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     res.locals.mailboxLabel = mailbox.label;
     res.locals.mailboxDemo = Boolean(mailbox.demo);
     res.locals.mailboxNone = Boolean(mailbox.none);
+    res.locals.mailboxOff = Boolean(mailbox.off);
     res.locals.todayLong = longDate(office.today());
     res.locals.flash = null;
     res.locals.label = label;
@@ -602,7 +603,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   }));
 
   app.get('/settings', requireRole('manager'), wrap(async (req, res) => {
-    res.render('settings', { baseUrl: baseUrl || `${req.protocol}://${req.get('host')}`, title: 'Settings', section: 'settings', hours: await store.escalationHours(), nudgeHours: await store.complaintNudgeHours(), prices: await store.fixedPrices(scopeFor(req.user) || req.portal || undefined), tariffBrand: companyChoice(req, req.query.tariff), tariff: await store.tariff(companyChoice(req, req.query.tariff)), fareDefaults: require('./lib/fares').DEFAULT_TARIFF, holidaysUntil: require('./lib/fares').HOLIDAYS_KNOWN_UNTIL, replies: (scopeFor(req.user) || req.portal) ? await store.standardRepliesFor(scopeFor(req.user) || req.portal) : await store.standardReplies(), ownBrand: scopeFor(req.user) || '', brands: firm.brands || [], alertStatus: alerts.describeAlertStatus(alertsEnv), mailStatus: mailboxLib.describeMailStatus(mailEnv, mailbox), mailConnect: connectState(), aiStatus: ai.describeAiStatus(), dispatchStatus: require('./lib/dispatch').describeDispatchStatus() });
+    res.render('settings', { baseUrl: baseUrl || `${req.protocol}://${req.get('host')}`, title: 'Settings', section: 'settings', hours: await store.escalationHours(), nudgeHours: await store.complaintNudgeHours(), prices: await store.fixedPrices(scopeFor(req.user) || req.portal || undefined), tariffBrand: companyChoice(req, req.query.tariff), tariff: await store.tariff(companyChoice(req, req.query.tariff)), fareDefaults: require('./lib/fares').DEFAULT_TARIFF, fareCards: Object.values(require('./lib/fares').FARE_CARDS), fareCard: require('./lib/fares').cardFor(await store.tariff(companyChoice(req, req.query.tariff))), fareLib: require('./lib/fares'), holidaysUntil: require('./lib/fares').HOLIDAYS_KNOWN_UNTIL, replies: (scopeFor(req.user) || req.portal) ? await store.standardRepliesFor(scopeFor(req.user) || req.portal) : await store.standardReplies(), ownBrand: scopeFor(req.user) || '', brands: firm.brands || [], alertStatus: alerts.describeAlertStatus(alertsEnv), mailStatus: mailboxLib.describeMailStatus(mailEnv, mailbox), mailConnect: connectState(), aiStatus: ai.describeAiStatus(), dispatchStatus: require('./lib/dispatch').describeDispatchStatus() });
   }));
   app.post('/settings', requireRole('owner'), wrap(async (req, res) => {
     const n = Number(req.body.escalation_hours);
@@ -683,10 +684,22 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     const asked = q.miles !== undefined;
     const tariff = await store.tariff(brand);
     const prices = await store.fixedPrices(brand || undefined);
-    const input = { miles: String(q.miles || ''), wait: String(q.wait || ''), date: String(q.date || office.today()), time: String(q.time || ''), vehicle: String(q.vehicle || fares.VEHICLES[0]), from: String(q.from || '').slice(0, 120), to: String(q.to || '').slice(0, 120) };
+    const input = { miles: String(q.miles || ''), wait: String(q.wait || ''), date: String(q.date || office.today()), time: String(q.time || ''), vehicle: String(q.vehicle || fares.VEHICLES[0]), passengers: String(q.passengers || '').slice(0, 3), from: String(q.from || '').slice(0, 120), to: String(q.to || '').slice(0, 120) };
     const fixed = asked ? fares.fixedFor(prices, input.from, input.to, input.vehicle) : null;
     const result = asked ? fares.fare(tariff, input) : null;
-    res.render('fares', { title: 'Fares', section: 'fares', brand, tariff, input, result, fixed, vehicles: fares.VEHICLES, money: fares.money, brands: firm.brands || [], ownBrand: scopeFor(req.user) || '' });
+    res.render('fares', { title: 'Fares', section: 'fares', brand, tariff, card: fares.cardFor(tariff), fares, input, result, fixed, vehicles: fares.VEHICLES, money: fares.money, brands: firm.brands || [], ownBrand: scopeFor(req.user) || '' });
+  }));
+  // A council fare card for a company, in place of a simple tariff. Only a
+  // card the office holds can be chosen: the figures are never typed in.
+  app.post('/settings/tariff/card', requireRole('manager'), wrap(async (req, res) => {
+    const brand = companyChoice(req, req.body.brand);
+    const t = fares.cardTariff(req.body.card);
+    if (!t) { flash(req, 'warn', 'The office does not hold that fare card. Nothing was saved.'); return res.redirect(`/settings?tariff=${encodeURIComponent(brand)}#tariff`); }
+    await store.setTariff(brand, t);
+    const card = fares.cardFor(t);
+    await store.addEvent(null, { actor: req.user, kind: 'tariff_set', detail: `Tariff${manyBrandsNow() ? ` for ${brandName(firm, brand)}` : ''}: ${card.name}, from ${fares.longDate(card.effective)}` });
+    flash(req, 'ok', `${manyBrandsNow() ? `${brandName(firm, brand)} now uses` : 'The fare calculator now uses'} the ${card.zone} zone fare card.`);
+    res.redirect(`/settings?tariff=${encodeURIComponent(brand)}#tariff`);
   }));
   app.post('/settings/tariff', requireRole('manager'), wrap(async (req, res) => {
     const brand = companyChoice(req, req.body.brand);

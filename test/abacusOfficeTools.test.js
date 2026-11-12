@@ -49,6 +49,68 @@ test('the fare calculator works from the tariff and never guesses', () => {
   assert.equal(fares.fixedFor(prices, 'Truro', 'Newquay Airport', 'Car (up to 4)'), null);
 });
 
+// Tom, 12 November 2026: "the carrick taxi fare is available on the cornwall
+// site please take and input". The council's card, in yards and pence, and
+// the fare built the way the meter builds it.
+test('the Carrick zone fare card works a fare out the way the meter does', () => {
+  const t = fares.cardTariff('carrick-2024-04-01');
+  assert.deepEqual(t, { type: 'card', card: 'carrick-2024-04-01' }, 'a company stores only which card it uses');
+  assert.equal(fares.cardTariff('made-up-card'), null);
+  assert.equal(fares.cardTariff('__proto__'), null);
+  const card = fares.cardFor(t);
+  assert.equal(card.effective, '2024-04-01');
+  // The council's own figures.
+  const [day, night] = card.periods;
+  assert.deepEqual(day.upTo4, { firstYards: 1100, firstPence: 380, steps: [{ yards: 90, pence: 20, untilYards: 4970 }, { yards: 108, pence: 20 }] });
+  assert.deepEqual(day.over4, { firstYards: 1100, firstPence: 470, steps: [{ yards: 165, pence: 40 }] });
+  assert.deepEqual(night.upTo4, { firstYards: 1100, firstPence: 480, steps: [{ yards: 180, pence: 40, untilYards: 4880 }, { yards: 155, pence: 40 }] });
+  assert.deepEqual(night.over4, { firstYards: 1050, firstPence: 590, steps: [{ yards: 120, pence: 40, untilYards: 2970 }, { yards: 140, pence: 40 }] });
+  assert.deepEqual([day.waitSeconds, day.waitPence, day.foulingPence, night.waitSeconds, night.waitPence, night.foulingPence], [25, 20, 7500, 27, 40, 10000]);
+  // Every banded stretch divides exactly into its steps, as a real card does.
+  for (const p of card.periods) for (const b of [p.upTo4, p.over4]) for (const s of b.steps) if (s.untilYards) assert.equal((s.untilYards - b.firstYards) % s.yards, 0);
+
+  const at = (miles, time, extra = {}) => fares.fare(t, { miles: String(miles), date: '2026-11-12', time, ...extra });
+  assert.equal(at(0.5, '12:00').pence, 380, 'inside the first 1,100 yards');
+  assert.equal(at(1100 / 1760, '12:00').pence, 380, 'exactly the first distance is still the first charge');
+  assert.equal(at(1101 / 1760, '12:00').pence, 400, 'one yard past it starts the next step');
+  assert.equal(at(1, '12:00').pence, 540, '660 further yards is 8 steps of 90');
+  assert.equal(at(4970 / 1760, '12:00').pence, 1240, '43 steps of 90 to the end of the first band');
+  assert.equal(at(5, '12:00').pence, 1960, 'then 36 steps of 108');
+  assert.equal(at(5, '23:00').pence, 2360, '11pm is the night card');
+  assert.equal(at(5, '06:59').pence, 2360);
+  assert.equal(at(5, '07:00').pence, 1960, '7am is the day card');
+  assert.equal(at(5, '12:00', { passengers: '5' }).pence, 2350, 'more than 4 passengers: 4.70 then 47 steps of 165 at 40p');
+  assert.equal(at(5, '12:00', { passengers: '4', vehicle: '8 seater' }).pence, 1960, 'the card charges by passengers, not by the vehicle');
+  assert.equal(at(5, '02:00', { passengers: '6', wait: '3' }).pence, 3190, 'night, more than 4, with 3 minutes waiting at 40p for each 27 seconds');
+  assert.equal(at(5, '12:00', { wait: '1' }).pence, 1960 + 60, '60 seconds is 3 started periods of 25 seconds');
+  // Sunday and bank holidays carry no extra on this card.
+  assert.equal(fares.fare(t, { miles: '5', date: '2026-12-25', time: '12:00' }).pence, 1960);
+  const r = at(5, '12:00');
+  assert.match(r.rateName, /7am to 11pm, up to 4 passengers/);
+  assert.match(r.notes.join(' '), /most a hackney carriage may charge/);
+  assert.match(r.notes.join(' '), /Give the number of passengers/);
+  assert.match(at('', '12:00').error, /miles/);
+  assert.match(at(5, '12:00', { passengers: 'lots' }).error, /whole number/);
+  assert.match(fares.fare({ type: 'card', card: 'gone' }, { miles: '5', date: '2026-11-12', time: '12:00' }).error, /no longer holds/);
+});
+
+// Tom, 12 November 2026: "I want it blank with API options for email sign in
+// blank". A real mailbox chosen on the server but not connected yet reads
+// as no mailbox: nothing arrives, and an approved reply is copied out.
+test('a mailbox that is chosen but not connected behaves as no mailbox', async () => {
+  const { createMailbox } = require('../abacus-office/lib/mailbox');
+  const none = createMailbox({ ABACUS_OFFICE_MAIL_DRIVER: 'none' }, {});
+  assert.equal(none.none, true);
+  assert.equal(none.off, true, 'switched off on the server');
+  const box = createMailbox({ ABACUS_OFFICE_MAIL_DRIVER: 'gmail', ABACUS_OFFICE_TOKEN_KEY: 'k'.repeat(40) }, { store: { setting: async () => '' } });
+  assert.equal(box.off, false, 'chosen, so Settings offers the sign-in');
+  assert.equal(box.none, true, 'but not connected, so the office treats it as no mailbox');
+  assert.deepEqual(await box.saveReplyDraft({ from: 'a@example.invalid', subject: 'x' }, 'hello'), { draftId: null }, 'nothing is saved anywhere');
+  assert.deepEqual(await box.saveNewDraft('a@example.invalid', 'x', 'hello'), { draftId: null });
+  const demo = createMailbox({ ABACUS_OFFICE_MAIL_DRIVER: 'demo' }, {});
+  assert.ok(!demo.none && !demo.off);
+});
+
 test('over HTTP: search, standard replies, fares, changing a booking, reports and the spreadsheet', { skip: DB ? false : 'set ABACUS_OFFICE_TEST_DATABASE_URL to a throwaway database' }, async (t) => {
   const { Pool } = require('pg');
   const SCHEMA = 'office_tools_test';
@@ -150,6 +212,28 @@ test('over HTTP: search, standard replies, fares, changing a booking, reports an
   assert.match(r.text, /Fixed price<\/p>\s*<p class="to-fare">£65\.00/, 'a fixed price comes first');
   assert.match((await sam.get('/fares?brand=coastline&miles=10&date=2026-11-10&time=14:00')).text, /£25\.60/, 'an Abacus operator asking for Coastline\'s tariff gets Abacus\'s');
   assert.match((await own.get('/fares?brand=coastline&miles=10&date=2026-11-10&time=14:00')).text, /No tariff has been set for this company/, 'Coastline has none of its own');
+  // The council's fare card for a company, chosen by a manager, never typed.
+  assert.equal((await sam.post('/settings/tariff/card', { brand: 'coastline', card: 'carrick-2024-04-01' }, '/')).status, 404, 'an operator cannot choose the fare card');
+  r = await own.get('/settings?tariff=coastline');
+  assert.match(r.text, /Use the Carrick zone fare card \(Cornwall Council, 1 April 2024\)/);
+  await own.post('/settings/tariff/card', { brand: 'coastline', card: 'not-a-card' }, '/settings');
+  assert.equal(await store.tariff('coastline'), null, 'a card the office does not hold is refused');
+  await own.post('/settings/tariff/card', { brand: 'coastline', card: 'carrick-2024-04-01' }, '/settings');
+  assert.deepEqual(await store.tariff('coastline'), { type: 'card', card: 'carrick-2024-04-01' });
+  r = await own.get('/settings?tariff=coastline');
+  assert.match(r.text, /uses the Carrick zone fare card/);
+  assert.match(r.text, /£3\.80 for the first 1,100 yards, then 20p for each 90 yards up to 4,970 yards in total, then 20p for each 108 yards after 4,970 yards/);
+  assert.match(r.text, /£5\.90 for the first 1,050 yards/);
+  r = await own.get('/fares?brand=coastline&miles=5&date=2026-11-10&time=12:00');
+  assert.match(r.text, /From the Carrick zone fare card<\/p>\s*<p class="to-fare">£19\.60/);
+  assert.match(r.text, /name="passengers"/, 'the calculator asks for passengers when the company is on a card');
+  assert.match((await own.get('/fares?brand=coastline&miles=5&date=2026-11-10&time=23:30&passengers=6')).text, /<p class="to-fare">£29\.10/, '5.90, 16 steps of 120 and 42 of 140 at 40p');
+  assert.doesNotMatch((await sam.get('/fares')).text, /name="passengers"/, 'a company on a simple tariff is not asked');
+  assert.match((await sam.get('/fares?miles=10&wait=5&date=2026-11-10&time=14:00&vehicle=Car+(up+to+4)')).text, /£27\.60/, 'and its own tariff is untouched');
+  // A simple tariff saved over the card replaces it.
+  await own.post('/settings/tariff', { brand: 'coastline', per_mile: '2.50' }, '/settings');
+  assert.equal((await store.tariff('coastline')).perMilePence, 250);
+  await own.post('/settings/tariff/card', { brand: 'coastline', card: 'carrick-2024-04-01' }, '/settings');
 
   // ---- Booking, then changing and cancelling it by reference.
   await sam.post(`/case/${newBooking}/book`, { ...journey, name: 'Ann Penrose', phone: '07700 900123', vehicle: 'Car (up to 4)', signed_off: 'yes' }, `/case/${newBooking}`);

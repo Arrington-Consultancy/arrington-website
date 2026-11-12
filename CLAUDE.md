@@ -10715,3 +10715,41 @@ generated password, nobody watched. Nothing of Dan's is in it. Sign in as
 preview service, waits for the redeploy, signs in, changes the password when
 asked, then deletes the variable. Delete both services when the branch is
 merged or no longer needed.
+
+**Carrick fare card and the blank preview (12/11/2026, BRANCH ONLY, NOT
+MERGED).** Tom: "it has the old emails attached from tidecars. I want it
+blank with API options for email sign in blank" and "the carrick taxi fare is
+available on the cornwall site please take and input".
+- **Fare card.** `FARE_CARDS` in `abacus-office/lib/fares.js` holds Cornwall
+  Council's Hackney Carriage Table of Fares (Carrick Zone), with effect from
+  1 April 2024, exactly as printed, in yards and pence (source:
+  `cornwall.gov.uk/media/wgmcstgk/fare-card-carrick-zone-1-april-2024.docx`,
+  read 12/11/2026 through a browser tool's transcription, since the sandbox
+  cannot reach cornwall.gov.uk; every banded distance divides exactly into
+  its steps, which is the check on the reading, but Tom or Dan should still
+  compare it with the card in a cab). Day 7am to 11pm, night 11pm to 7am,
+  each with an up-to-4 and a more-than-4 passengers rate, waiting per 25 or
+  27 seconds, fouling £75 or £100; no Sunday, bank holiday or vehicle
+  uplift. A company's tariff is `{ type: 'card', card: 'carrick-2024-04-01' }`
+  (the id only, so a correction reaches every company) or the old simple
+  tariff. The calculator builds the fare as the meter does (first distance,
+  then one step per stretch started) and asks for passengers when the
+  company is on a card. Settings, Tariff: "Use the Carrick zone fare card"
+  (managers; `POST /settings/tariff/card`), with the simple tariff under
+  it; saving either replaces the other. `ABACUS_OFFICE_FARE_CARD=<id>` on
+  the server loads the card at boot for every company with no tariff and
+  never replaces one. A new council card is added beside the old one with
+  its own id, never edited in place.
+- **Blank office.** A real mailbox driver that is chosen but not connected
+  (`mailbox.none` true, `mailbox.off` false) now behaves as no mailbox:
+  pages say none is connected, nothing is checked, an approved reply is
+  copied out. Only Settings tells the two apart (`mailboxOff`), so it shows
+  the Google client ID and secret form, empty. The preview runs this way:
+  `ABACUS_OFFICE_MAIL_DRIVER=gmail`, `ABACUS_OFFICE_TOKEN_KEY` built from
+  the preview database's password, no client, no address, the made-up
+  emails cleared by one deploy with the driver at `none`, and
+  `ABACUS_OFFICE_FARE_CARD=carrick-2024-04-01`.
+- Tests in `test/abacusOfficeTools.test.js`. One existing test
+  (`abacusOfficeLiveFaults`, "Cannot set headers after they are sent") failed
+  twice when the whole office suite ran together and passed alone and on
+  later full runs; not traced.

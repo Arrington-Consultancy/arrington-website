@@ -5,7 +5,7 @@
 %>
 <section class="to-section-head">
   <h1>Fares</h1>
-  <p class="to-small">Work out a fare from the tariff<%= manyBrands ? ' for ' + brandName(brand) : '' %> to answer a customer. Give the miles; the office does not guess a distance. A fixed price for the journey always comes first. It is a guide: the meter, or the fixed price, is what the customer pays.</p>
+  <p class="to-small">Work out a fare from <%= card ? 'the ' + card.zone + ' zone fare card' : 'the tariff' %><%= manyBrands ? ' for ' + brandName(brand) : '' %> to answer a customer. Give the miles; the office does not guess a distance. A fixed price for the journey always comes first. It is a guide: the meter, or the fixed price, is what the customer pays.</p>
 </section>
 
 <div class="to-email-grid">
@@ -26,7 +26,14 @@
         <label class="to-field"><span>Date</span><input id="fare-date" name="date" type="date" value="<%= input.date %>" required></label>
         <label class="to-field"><span>Pickup time</span><input id="fare-time" name="time" type="time" value="<%= input.time %>" required></label>
       </div>
+      <% if (card) { %>
+      <div class="to-field-row">
+        <label class="to-field"><span>Passengers (the card has a higher rate for more than 4)</span><input id="fare-pax" name="passengers" inputmode="numeric" value="<%= input.passengers %>" maxlength="2" placeholder="1 to 4"></label>
+        <label class="to-field"><span>Vehicle</span><select id="fare-vehicle" name="vehicle"><% vehicles.forEach(function (v) { %><option<% if (v === input.vehicle) { %> selected<% } %>><%= v %></option><% }) %></select></label>
+      </div>
+      <% } else { %>
       <label class="to-field"><span>Vehicle</span><select id="fare-vehicle" name="vehicle"><% vehicles.forEach(function (v) { %><option<% if (v === input.vehicle) { %> selected<% } %>><%= v %></option><% }) %></select></label>
+      <% } %>
       <button type="submit" class="to-btn to-btn-primary">Work it out</button>
     </form>
   </section>
@@ -40,9 +47,9 @@
     <% if (result && result.error) { %>
       <p class="to-note to-note-warn"><%= result.error %></p>
     <% } else if (result) { %>
-      <p class="to-worker-tag"><%= fixed ? 'On the tariff it would be' : 'From the tariff' %></p>
+      <p class="to-worker-tag"><%= card ? (fixed ? 'On the meter it would be about' : 'From the ' + card.zone + ' zone fare card') : (fixed ? 'On the tariff it would be' : 'From the tariff') %></p>
       <p class="to-fare<%= fixed ? ' is-secondary' : '' %>"><%= fmt(result.pence) %></p>
-      <p class="to-small"><%= ymdLong(input.date) %> at <%= input.time %>, <%= result.vehicle %>, <%= result.rateName %>.</p>
+      <p class="to-small"><%= ymdLong(input.date) %> at <%= input.time %>, <%= card ? result.miles + (result.miles === 1 ? ' mile' : ' miles') + ' (' + fares.yardsText(result.yards) + ')' : result.vehicle %>, <%= result.rateName %>.</p>
       <div class="to-table-wrap"><table class="to-table is-compact">
         <tbody><% result.lines.forEach(function (l) { %><tr><td><%= l[0] %></td><td class="to-num"><%= l[1] < 0 ? 'less ' + fmt(-l[1]) : fmt(l[1]) %></td></tr><% }) %></tbody>
         <tfoot><tr><th scope="row">Fare</th><td class="to-num"><strong><%= fmt(result.pence) %></strong></td></tr></tfoot>
@@ -51,6 +58,9 @@
     <% } else if (!tariff) { %>
       <p class="to-worker-tag">No tariff yet</p>
       <p>No tariff has been set for <%= manyBrands ? brandName(brand) : 'the firm' %>. <%= atLeast(user, 'manager') ? 'Add it in Settings, under Tariff.' : 'A manager adds it in Settings.' %></p>
+    <% } else if (card) { %>
+      <p class="to-worker-tag">The fare card</p>
+      <%- include('partials/fare-card', { card: card, fareLib: fares }) %>
     <% } else { %>
       <p class="to-worker-tag">The tariff</p>
       <ul class="to-history">

@@ -73,6 +73,26 @@ async function main() {
     const cleared = await pool.query("DELETE FROM cases WHERE message_id LIKE '<demo-%@example.invalid>' RETURNING id");
     if (cleared.rowCount) console.log(`Abacus office: ${cleared.rowCount} made-up email(s) cleared, because no mailbox is connected`);
   }
+  // A council fare card for every company that has no tariff yet, when the
+  // server is told which one (ABACUS_OFFICE_FARE_CARD, for example
+  // carrick-2024-04-01). It never replaces a tariff a manager has set, and
+  // without the variable nothing is loaded.
+  const wantedCard = String(process.env.ABACUS_OFFICE_FARE_CARD || '').trim();
+  if (wantedCard) {
+    const fares = require('./lib/fares');
+    const t = fares.cardTariff(wantedCard);
+    if (!t) console.log(`Abacus office: ABACUS_OFFICE_FARE_CARD names a fare card the office does not hold ("${wantedCard.slice(0, 40)}"); nothing loaded`);
+    else {
+      const loaded = [];
+      for (const b of f.brands) {
+        if (await store.tariff(b.id)) continue;
+        await store.setTariff(b.id, t);
+        await store.addEvent(null, { actor: null, kind: 'tariff_set', detail: `Tariff for ${b.name}: ${fares.cardFor(t).name}, from ${fares.longDate(fares.cardFor(t).effective)}, loaded by the server` });
+        loaded.push(b.name);
+      }
+      console.log(`Abacus office: fare card ${wantedCard}: ${loaded.length ? `loaded for ${loaded.join(', ')}` : 'every company already has a tariff, nothing changed'}`);
+    }
+  }
   const prunedVisits = await store.pruneVisits();
   if (prunedVisits) console.log(`Abacus office: ${prunedVisits} visit(s) older than 90 days deleted`);
   const mailbox = createMailbox(process.env, { store });

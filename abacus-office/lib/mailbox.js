@@ -61,6 +61,8 @@ function noneDriver() {
     label: 'No mailbox connected',
     demo: false,
     none: true,
+    // Switched off on the server, as opposed to chosen but not connected yet.
+    off: true,
     configured: () => false,
     missing: () => [],
     listInbox: async () => [],
@@ -151,6 +153,14 @@ function liveMailbox(name, env, { store, secretEnv = env, fetch } = {}) {
     name,
     get label() { return (inner || (build(), inner)).label; },
     demo: false,
+    off: false,
+    // A real mailbox that is chosen but not connected yet behaves like no
+    // mailbox (Tom, 12 November 2026: "I want it blank with API options for
+    // email sign in blank"): nothing arrives, the pages say so, and an
+    // approved reply is copied out by hand. It stops being true the moment
+    // the mailbox is connected from Settings. A refused setup is not this:
+    // that stays an error, so a wrong account is never quietly ignored.
+    get none() { if (!inner) build(); return !inner.configured() && !(inner.refusal && inner.refusal()); },
     configured: () => { if (!inner) build(); return inner.configured() && !(inner.refusal && inner.refusal()); },
     missing: () => { if (!inner) build(); return inner.missing(); },
     refusal: () => { if (!inner) build(); return inner.refusal ? inner.refusal() : ''; },
@@ -159,9 +169,9 @@ function liveMailbox(name, env, { store, secretEnv = env, fetch } = {}) {
     expected: () => expectedAddress(env),
     reload,
     async listInbox(opts) { return (await checked()).listInbox(opts); },
-    async saveReplyDraft(email, text) { return (await checked()).saveReplyDraft(email, text); },
+    async saveReplyDraft(email, text) { if (box.none) return { draftId: null }; return (await checked()).saveReplyDraft(email, text); },
     // A new email, not a reply: a draft in the mailbox addressed to "to".
-    async saveNewDraft(to, subject, text) { return (await checked()).saveReplyDraft({ from: to, subject, fresh: true, messageId: '', threadId: '' }, text); },
+    async saveNewDraft(to, subject, text) { if (box.none) return { draftId: null }; return (await checked()).saveReplyDraft({ from: to, subject, fresh: true, messageId: '', threadId: '' }, text); },
     async account() { if (!inner) build(); return inner.account(); },
     // Whether a saved draft was sent, for the drivers that can say.
     get canTrackSent() { if (!inner) build(); return typeof inner.draftState === 'function'; },

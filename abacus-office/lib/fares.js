@@ -31,6 +31,106 @@ const DEFAULT_TARIFF = {
   sundayRate: 1, holidayRate: 1.5, festiveRate: 2, largeRate: 1.5
 };
 
+// A council fare card (Tom, 12 November 2026: "the carrick taxi fare is
+// available on the cornwall site please take and input"). A hackney carriage
+// meter does not charge by the mile: it charges a first distance, then a
+// step for every further so many yards, and the steps change with the time
+// of day and with more than four passengers. The simple tariff above cannot
+// hold that, so a card is kept here exactly as the council prints it, in
+// yards and pence, and a company's tariff can point at it by its id.
+//
+// Carrick zone (Falmouth, Truro, Penryn), with effect from 1 April 2024.
+// Source: Cornwall Council, "Hackney Carriage Table of Fares (Carrick
+// Zone)", https://www.cornwall.gov.uk/media/wgmcstgk/fare-card-carrick-zone-1-april-2024.docx
+// read on 12 November 2026. It is the MOST a hackney carriage may charge on
+// the meter in the zone. Every banded distance divides exactly into its
+// steps (3870 / 90, 3780 / 180, 1920 / 120), which is the check that the
+// figures were read correctly. When the council changes the card, add the
+// new one beside it with its own id and date; never edit this one in place,
+// so a fare worked out last year can still be explained.
+const FARE_CARDS = {
+  'carrick-2024-04-01': {
+    id: 'carrick-2024-04-01',
+    name: 'Cornwall Council table of fares, Carrick zone',
+    zone: 'Carrick',
+    effective: '2024-04-01',
+    source: 'https://www.cornwall.gov.uk/media/wgmcstgk/fare-card-carrick-zone-1-april-2024.docx',
+    periods: [
+      {
+        id: 'day', label: '7am to 11pm', from: '07:00', to: '23:00',
+        upTo4: { firstYards: 1100, firstPence: 380, steps: [{ yards: 90, pence: 20, untilYards: 4970 }, { yards: 108, pence: 20 }] },
+        over4: { firstYards: 1100, firstPence: 470, steps: [{ yards: 165, pence: 40 }] },
+        waitSeconds: 25, waitPence: 20, foulingPence: 7500
+      },
+      {
+        id: 'night', label: '11pm to 7am', from: '23:00', to: '07:00',
+        upTo4: { firstYards: 1100, firstPence: 480, steps: [{ yards: 180, pence: 40, untilYards: 4880 }, { yards: 155, pence: 40 }] },
+        over4: { firstYards: 1050, firstPence: 590, steps: [{ yards: 120, pence: 40, untilYards: 2970 }, { yards: 140, pence: 40 }] },
+        waitSeconds: 27, waitPence: 40, foulingPence: 10000
+      }
+    ]
+  }
+};
+const YARDS_A_MILE = 1760;
+// The card a stored tariff points at, or null for a simple tariff.
+function cardFor(tariff) {
+  return tariff && tariff.type === 'card' && Object.prototype.hasOwnProperty.call(FARE_CARDS, tariff.card) ? FARE_CARDS[tariff.card] : null;
+}
+// What is stored for a company that uses a card: only its id, so a
+// correction to the card here reaches every company that uses it.
+function cardTariff(id) {
+  return Object.prototype.hasOwnProperty.call(FARE_CARDS, String(id)) ? { type: 'card', card: String(id) } : null;
+}
+const yardsText = (n) => `${Number(n).toLocaleString('en-GB')} yards`;
+const penceText = (p) => (p % 100 === 0 ? `£${p / 100}` : p < 100 ? `${p}p` : `£${(p / 100).toFixed(2)}`);
+
+// A fare from a card, the way the meter builds it: the first distance, then
+// one step for every further stretch started. The card gives no Sunday or
+// bank holiday rate and no uplift for the vehicle; what changes the fare is
+// the time of day and whether more than four passengers are carried.
+function cardFare(card, input) {
+  const miles = Number(String(input.miles ?? '').trim());
+  if (!Number.isFinite(miles) || miles <= 0 || miles > 1000) return { error: 'Give the miles, for example 12.5.' };
+  const waitText = String(input.wait ?? '').trim();
+  const wait = waitText === '' ? 0 : Number(waitText);
+  if (!Number.isFinite(wait) || wait < 0 || wait > 600) return { error: 'Waiting is in minutes, for example 10, or leave it blank.' };
+  const date = String(input.date || '');
+  const time = String(input.time || '');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !HHMM.test(time)) return { error: 'Give the date and the pickup time.' };
+  const vehicle = VEHICLES.includes(input.vehicle) ? input.vehicle : VEHICLES[0];
+  const paxText = String(input.passengers ?? '').trim();
+  const pax = paxText === '' ? 0 : Number(paxText);
+  if (!Number.isInteger(pax) || pax < 0 || pax > 16) return { error: 'Passengers is a whole number, for example 3, or leave it blank.' };
+
+  const at = minutes(time);
+  const period = card.periods.find((p) => { const f = minutes(p.from); const t = minutes(p.to); return f < t ? at >= f && at < t : at >= f || at < t; }) || card.periods[0];
+  const over = pax > 4;
+  const band = over ? period.over4 : period.upTo4;
+  const yards = Math.round(miles * YARDS_A_MILE);
+  const lines = [[`First ${yardsText(band.firstYards)} or part of it`, band.firstPence]];
+  let start = band.firstYards;
+  for (const step of band.steps) {
+    if (yards <= start) break;
+    const end = step.untilYards || Infinity;
+    const span = Math.min(yards, end) - start;
+    const units = Math.ceil(span / step.yards - 1e-9);
+    lines.push([`${units} more of ${step.yards} yards at ${penceText(step.pence)}${step.untilYards ? `, up to ${yardsText(step.untilYards)}` : start > band.firstYards ? `, after ${yardsText(start)}` : ''}`, units * step.pence]);
+    start = end;
+  }
+  if (wait) {
+    const units = Math.ceil((wait * 60) / period.waitSeconds - 1e-9);
+    lines.push([`${trim(wait)} minute${wait === 1 ? '' : 's'} waiting: ${units} of ${period.waitSeconds} seconds at ${penceText(period.waitPence)}`, units * period.waitPence]);
+  }
+  const total = lines.reduce((s, [, p]) => s + p, 0);
+  const notes = [
+    `${card.name}, from ${longDate(card.effective)}. It is the most a hackney carriage may charge on the meter in the zone, and the meter decides: it also counts time when the car is slow or stopped.`
+  ];
+  if (!paxText) notes.push('Worked out for up to 4 passengers. Give the number of passengers if there are more: the card has a higher rate for more than 4.');
+  if (!over && LARGE.has(vehicle)) notes.push(`The card charges by the number of passengers, not the vehicle, so a ${vehicle} carrying 4 or fewer is on the ordinary rate.`);
+  return { pence: total, lines, rateName: `${period.label}, ${over ? 'more than 4 passengers' : 'up to 4 passengers'}`, vehicle, notes, card: card.id, miles, yards };
+}
+function longDate(ymd) { return new Date(`${ymd}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }); }
+
 const pence = (pounds) => {
   const t = String(pounds ?? '').replace(/[£,\s]/g, '');
   if (t === '') return 0;
@@ -86,6 +186,9 @@ function timeRate(ymd, time, t) {
 // Work out a fare. -> { pence, lines: [[label, pence]], rateName, notes } or
 // { error }.
 function fare(tariff, input) {
+  const card = cardFor(tariff);
+  if (card) return cardFare(card, input);
+  if (tariff && tariff.type === 'card') return { error: 'This company is set to a fare card the office no longer holds. A manager chooses the tariff again in Settings.' };
   const t = { ...DEFAULT_TARIFF, ...(tariff || {}) };
   if (!t.perMilePence) return { error: 'No tariff has been set for this company yet. A manager adds it in Settings.' };
   const miles = Number(String(input.miles ?? '').trim());
@@ -131,4 +234,4 @@ function money(p) { return (p / 100).toFixed(2); }
 function trim(n) { return String(Math.round(n * 100) / 100); }
 function capital(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
-module.exports = { fare, readTariff, fixedFor, timeRate, isNight, money, VEHICLES, BANK_HOLIDAYS, HOLIDAYS_KNOWN_UNTIL, DEFAULT_TARIFF };
+module.exports = { fare, readTariff, fixedFor, timeRate, isNight, money, VEHICLES, BANK_HOLIDAYS, HOLIDAYS_KNOWN_UNTIL, DEFAULT_TARIFF, FARE_CARDS, cardFor, cardTariff, yardsText, penceText, longDate };

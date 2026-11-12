@@ -1,0 +1,25 @@
+<%# A council fare card, set out as the council prints it. Needs card and fareLib. %>
+<%
+  var _steps = function (band) {
+    return band.steps.map(function (s, i) {
+      var after = i === 0 ? band.firstYards : band.steps[i - 1].untilYards;
+      return 'then ' + fareLib.penceText(s.pence) + ' for each ' + s.yards + ' yards' + (s.untilYards ? ' up to ' + fareLib.yardsText(s.untilYards) + ' in total' : (i > 0 ? ' after ' + fareLib.yardsText(after) : ''));
+    }).join(', ');
+  };
+  var _band = function (band) { return fareLib.penceText(band.firstPence) + ' for the first ' + fareLib.yardsText(band.firstYards) + ', ' + _steps(band); };
+%>
+<div class="to-table-wrap"><table class="to-table is-compact">
+  <caption class="to-small"><%= card.name %>, with effect from <%= fareLib.longDate(card.effective) %>. The most a hackney carriage may charge on the meter.</caption>
+  <thead><tr><th scope="col">When</th><th scope="col">Up to 4 passengers</th><th scope="col">More than 4 passengers</th><th scope="col">Waiting</th><th scope="col">Fouling</th></tr></thead>
+  <tbody>
+    <% card.periods.forEach(function (p) { %>
+    <tr>
+      <th scope="row"><%= p.label %></th>
+      <td><%= _band(p.upTo4) %></td>
+      <td><%= _band(p.over4) %></td>
+      <td><%= fareLib.penceText(p.waitPence) %> for each <%= p.waitSeconds %> seconds</td>
+      <td><%= fareLib.penceText(p.foulingPence) %></td>
+    </tr>
+    <% }) %>
+  </tbody>
+</table></div>

@@ -28,7 +28,7 @@ const ACTIONS = {
 };
 const POSTS = {
   '/settings': 'changed the escalation times', '/settings/prices': 'added a fixed price', '/settings/replies': 'added a standard reply',
-  '/settings/tariff': 'saved the tariff', '/complaints/log': 'logged a complaint from another channel', '/users': 'added a user'
+  '/settings/tariff': 'saved the tariff', '/settings/tariff/card': 'chose a council fare card', '/complaints/log': 'logged a complaint from another channel', '/users': 'added a user'
 };
 
 // The background requests a page makes on its own. They are not a person
