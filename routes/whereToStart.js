@@ -27,12 +27,22 @@ const themes = require('../db/themes');
 const { getStripeClient, getStripeKeyStatus } = require('../lib/stripeClient');
 const { OFFERS, FULL_REVIEW_PURCHASE_MODE, getOffer, buildCheckoutSessionParams } = require('../lib/whereToStartOffers');
 const { getSiteShellData } = require('../lib/navShell');
+const { getGoogleReviews } = require('../lib/googleReviews');
 const { parseAttribution, describeAttribution } = require('../lib/leadAttribution');
 
 // The enquiry form's wording on the Website Build page (21/10/2026, Tom's
 // three offer decision: each offer page's one main action is the enquiry
 // form). The site-wide wording talks about a commercial review, which is the
 // wrong offer here. The heading is the page's own button text.
+// The Commercial Review page's buttons say "Book a 30 minute conversation"
+// and land on the shared form, which until 14/11/2026 carried the site's
+// general heading, so the button and the place it led to did not match. Only
+// the heading changes: the text under it stays the site's own (Tom's lines in
+// the CMS).
+const COMMERCIAL_REVIEW_CONTACT = Object.freeze({
+  heading: 'Book a 30 minute conversation'
+});
+
 const WEBSITE_BUILD_CONTACT = Object.freeze({
   heading: 'Tell us what you want to build',
   body: 'Tell us what the business does and what the website needs to do. Tom will be in touch to talk it through.'
@@ -127,8 +137,11 @@ function mountPageRoute(app, generateCsrfToken) {
         csrfToken: generateCsrfToken(req, res),
         navPages,
         content,
-        pageContact,
-        offer: OFFERS.commercial_review
+        pageContact: { ...pageContact, ...COMMERCIAL_REVIEW_CONTACT },
+        offer: OFFERS.commercial_review,
+        // Cached for a day and never throws; null when Google gave nothing,
+        // and the page then shows no rating at all.
+        googleReviews: await getGoogleReviews()
       });
     } catch (err) {
       next(err);
@@ -155,7 +168,7 @@ function mountPageRoute(app, generateCsrfToken) {
 
   app.get('/where-to-start/website-build', async (req, res, next) => {
     try {
-      const { theme, navPages, content, pageContact, websiteBuildProofHref } = await loadThemeAndShell();
+      const { theme, navPages, content, pageContact, websiteBuildProofHref, builtProofHref } = await loadThemeAndShell();
       res.render('where-to-start-website-build', {
         theme,
         ga4Id: process.env.GA4_MEASUREMENT_ID || '',
@@ -164,7 +177,8 @@ function mountPageRoute(app, generateCsrfToken) {
         content,
         pageContact: { ...pageContact, ...WEBSITE_BUILD_CONTACT },
         offer: OFFERS.website_build,
-        websiteBuildProofHref
+        websiteBuildProofHref,
+        builtProofHref
       });
     } catch (err) {
       next(err);
@@ -516,4 +530,4 @@ function mountWebhook(app) {
   });
 }
 
-module.exports = { WEBSITE_BUILD_CONTACT, router, mountPageRoute, mountWebhook };
+module.exports = { COMMERCIAL_REVIEW_CONTACT, WEBSITE_BUILD_CONTACT, router, mountPageRoute, mountWebhook };

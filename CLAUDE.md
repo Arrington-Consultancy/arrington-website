@@ -10537,3 +10537,58 @@ company: ...` so a release shows who is limited.
 `test/abacusOfficeVisibility.test.js` (the old rule put back was watched
 red). No company menu in the bar on live; that is still on the unmerged
 branch.
+
+## Proof pass: Commercial Review, Website Build, thank-you, booking buttons (14/11/2026)
+
+Tom asked for an outside judgement of the site on a stronger model (a fresh,
+read-only chat; live inspection run `20261113T092301Z-outsider-judgement`).
+Its finding: the site's weak point is proof, and the page selling the main
+offer had none. Tom: "Let's make the improvements you think are right and ask
+me questions, we have plenty of website builds WSA, Scott's armchairs,
+tidewell cars and staff portals to show". Brand OS read first (last reviewed
+22 October 2026). Built on `fix/site-proof-pass` from main, never from the
+office branch.
+
+- **Commercial Review page** (`views/where-to-start-commercial-review.ejs`):
+  a "Book a 30 minute conversation" button under the price (before this the
+  first tap was below the whole description), with the form's own sentence
+  under it; the live Google rating line the home page already shows
+  (`getGoogleReviews`, cached a day; nothing renders if Google gave none, and
+  no figure is typed into the page); and "See the standard" with ONE document,
+  the Half-Time Team Talk, in the wording the £2,500 page already carries. The
+  90-Day Action Plan is deliberately not shown: it belongs to the
+  implementation offer. The form on this page is headed "Book a 30 minute
+  conversation" (`COMMERCIAL_REVIEW_CONTACT` in `routes/whereToStart.js`,
+  heading only; the text under it stays Tom's CMS lines).
+- **Thank-you page:** "We will get back to you shortly." is now the form's
+  own promise, "Tom reads every enquiry himself and replies personally,
+  usually within one working day."
+- **Website Build page:** the two text links under the button became "What
+  we have built", four picture cards (`public/img/built/`, cut from
+  screenshots already on the site): World Student Advisors ("Live website",
+  the Evidence caption plus "Built for £999."), Tidewell Cars ("Demo
+  website", Tom's 19/10 line word for word), the Tidewell staff office ("Demo
+  staff portal", to the public `/taxi-demo/staff-portal`, never the login,
+  "Not part of the £999 website."), and Scott ("Demonstration", "It is not a
+  real client.", to the built section on Evidence, whose id is read from the
+  page: `builtProofHref` in `lib/navShell.js`). WSA is not called a client on
+  the card. `test/websiteBuildProof.test.js` pins all four.
+- **Booking buttons** (`lib/bookingButtonsToForm.js`, marker
+  `site.booking_buttons_to_form_2026-11-14`, run once): an intervention or
+  filter button on any page but the booking page whose link is exactly
+  `book-a-30-minute-conversation` now has an empty link, which both templates
+  read as the form on the same page with the gold button. The same move as
+  the Ready to Sell (11/10) and Commercial Review (21/10) buttons. The 30
+  Minute Conversation page is untouched. The boot log names each button moved.
+- Tests: `test/siteProofPass.test.js` (7), `test/websiteBuildProof.test.js`;
+  the 67 test files that read these pages, the seed or the shared page parts
+  pass (579). Checked in Chromium at 1440px and iPhone 13: no overflow, no
+  errors.
+- **Not changed, questions for Tom, one at a time:** a client quote on the
+  Commercial Review page (Reece is the obvious ask); the reviews heading that
+  says "owners" (one review is from a former colleague); "It connects to
+  iCabbi, Autocab, Cordic" before a live connection exists; whether "Dan,
+  Spaniel Taxis" is right; whether Evidence cases 03 and 04 are the same
+  client; the full WSA story, which waits on Tim's consent in a controlled
+  record and real figures (Tom's 22/10 decision; no consent record found in
+  Drive on 14/11).

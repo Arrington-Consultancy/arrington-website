@@ -112,11 +112,29 @@
             color: var(--text-bright);
             font-size: 1.12rem;
         }
-        .wts-hero-action { margin: 0 0 1.6rem; }
-        .wts-direct-proof { margin-bottom: 0; color: var(--text-muted); }
-        .wts-direct-proof + .wts-direct-proof { margin-top: 0.6rem; }
-        .wts-direct-proof a { color: var(--accent); font-weight: 700; }
-        .wts-direct-proof a:hover { color: var(--accent-hover); }
+        .wts-hero-action { margin: 0 0 2.2rem; }
+
+        /* What we have built (14/11/2026, Tom: "we have plenty of website
+           builds WSA, Scott's armchairs, tidewell cars and staff portals to
+           show"). Four pictures in place of the two text links that sat here:
+           an outside review found the page's one example was an unnamed link.
+           Each card is one link. A demo is labelled a demo on the card itself,
+           so nothing here can be read as a client that is not one. */
+        .wts-built h2 { margin-bottom: 1.1rem; color: var(--accent); font-size: 1.05rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+        .wts-built-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+        .wts-built-card { display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border); border-radius: 6px; text-decoration: none; }
+        .wts-built-card:hover, .wts-built-card:focus-visible { border-color: var(--accent); }
+        .wts-built-card picture { display: block; }
+        .wts-built-card img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; object-position: top; border-bottom: 1px solid var(--border); }
+        .wts-built-text { padding: 1rem 1.1rem 1.15rem; }
+        .wts-built-kind { margin: 0 0 0.35rem; color: var(--text-muted); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+        .wts-built-title { margin: 0 0 0.4rem; color: var(--text-bright); font-family: 'Poppins', 'DM Sans', sans-serif; font-size: 1.05rem; line-height: 1.25; }
+        .wts-built-card:hover .wts-built-title, .wts-built-card:focus-visible .wts-built-title { color: var(--accent); }
+        .wts-built-caption { margin: 0; color: var(--text); font-size: 0.9rem; }
+        @media (max-width: 520px) {
+            .wts-built-grid { grid-template-columns: 1fr; }
+            .wts-built-card img { aspect-ratio: 16 / 9; }
+        }
 
         /* Main-site continuity fix (22/08/2026) — same device as Owner
            Check's bordered .check-card panels, replacing the plain
@@ -214,12 +232,50 @@
             pay section below is unchanged, so anyone arriving ready to buy
             loses nothing. %>
         <p class="wts-hero-action" data-hero-enquiry><a href="#conversation" class="btn btn-primary">Tell us what you want to build</a></p>
-        <p class="wts-direct-proof"><a href="<%= websiteBuildProofHref || '/websites-and-ai' %>">Look at our latest example of what we have built</a> before you pay.</p>
-        <%# Second example (Tom, 19/10/2026, for the website design ads): the
-            Tidewell Cars taxi demo. Said in words to be a demo we built for a
-            made up firm, so it never reads as a client. The public demo only,
-            never /taxi-demo/office/ (test/websiteBuildProof.test.js). %>
-        <p class="wts-direct-proof" data-taxi-demo-proof>Or see <a href="/taxi-demo/">Tidewell Cars</a>, a taxi firm website we built as a demo, where bookings go straight into dispatch. The firm is made up.</p>
+        <%# What we have built (14/11/2026). Replaces the two text links that
+            sat here. Wording: the WSA caption is the Evidence page's own line
+            plus the price that page states; the Tidewell caption is the line
+            Tom approved on 19/10/2026, word for word; Scott's is the Evidence
+            page's own description. The staff office goes to the PUBLIC staff
+            portal page, never the login (test/websiteBuildProof.test.js), and
+            says it is not part of the £999 website. %>
+        <section class="wts-built" data-built-work aria-labelledby="wtsBuiltHeading">
+            <h2 id="wtsBuiltHeading">What we have built</h2>
+            <div class="wts-built-grid">
+                <a class="wts-built-card" data-built="wsa" href="<%= websiteBuildProofHref || '/websites-and-ai' %>">
+                    <picture><source srcset="/img/built/wsa.webp" type="image/webp"><img src="/img/built/wsa.jpg" alt="The World Student Advisors home page" width="720" height="450"></picture>
+                    <div class="wts-built-text">
+                        <p class="wts-built-kind">Live website</p>
+                        <p class="wts-built-title">World Student Advisors</p>
+                        <p class="wts-built-caption">A site built around the enquiry rather than around the brochure. Built for £999.</p>
+                    </div>
+                </a>
+                <a class="wts-built-card" data-built="tidewell" data-taxi-demo-proof href="/taxi-demo/">
+                    <picture><source srcset="/img/built/tidewell.webp" type="image/webp"><img src="/img/built/tidewell.jpg" alt="The Tidewell Cars demo website on a phone, with a booking on its way" width="720" height="450" loading="lazy"></picture>
+                    <div class="wts-built-text">
+                        <p class="wts-built-kind">Demo website</p>
+                        <p class="wts-built-title">Tidewell Cars</p>
+                        <p class="wts-built-caption">A taxi firm website we built as a demo, where bookings go straight into dispatch. The firm is made up.</p>
+                    </div>
+                </a>
+                <a class="wts-built-card" data-built="office" href="/taxi-demo/staff-portal">
+                    <picture><source srcset="/img/built/office.webp" type="image/webp"><img src="/img/built/office.jpg" alt="The Tidewell Cars staff office, showing today's emails, complaints and licensing items" width="720" height="450" loading="lazy"></picture>
+                    <div class="wts-built-text">
+                        <p class="wts-built-kind">Demo staff portal</p>
+                        <p class="wts-built-title">The office behind the website</p>
+                        <p class="wts-built-caption">The staff office for the same made up firm. AI workers read the inbox and draft the replies, and someone in the office signs off before anything goes. Not part of the £999 website.</p>
+                    </div>
+                </a>
+                <a class="wts-built-card" data-built="scott" href="<%= (typeof builtProofHref !== 'undefined' && builtProofHref) || '/evidence' %>">
+                    <picture><source srcset="/img/built/scott.webp" type="image/webp"><img src="/img/built/scott.jpg" alt="A screen from the Scott's Armchair and Knitting Service demonstration" width="720" height="450" loading="lazy"></picture>
+                    <div class="wts-built-text">
+                        <p class="wts-built-kind">Demonstration</p>
+                        <p class="wts-built-title">Scott&rsquo;s Armchair and Knitting Service</p>
+                        <p class="wts-built-caption">A fictional company we built to show how controlled AI works in a business. It is not a real client.</p>
+                    </div>
+                </a>
+            </div>
+        </section>
 
         <div class="wts-card">
             <div class="wts-card-item">

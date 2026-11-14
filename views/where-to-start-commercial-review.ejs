@@ -124,6 +124,32 @@
         .wts-pay-cta { border-color: var(--accent); color: var(--accent); }
         .wts-pay-cta:hover, .wts-pay-cta:focus-visible { background: var(--accent); color: var(--black); }
         .wts-buy-direct { margin-top: 3rem; }
+
+        /* Proof pass, 14/11/2026 (Tom: "make the improvements you think are
+           right"). An outside review found the page that sells the main offer
+           had nothing to tap on the first screen and no proof on it at all.
+           The button is the same action as the one lower down; the rating is
+           the live Google figure the home page already shows; the document is
+           one of the four on Evidence, with its approved caption. */
+        .wts-hero-action { margin: 1.6rem 0 0.7rem; }
+        .wts-hero-note { font-size: 0.95rem; color: var(--text-muted); margin: 0; }
+        .wts-google-rating { display: inline-flex; align-items: center; gap: 0.6rem; margin-top: 1.1rem; font-size: 0.9rem; color: var(--text-muted); text-decoration: none; }
+        .wts-google-rating:hover, .wts-google-rating:focus-visible { color: var(--text-bright); }
+        .wts-google-rating-stars { color: var(--accent); font-size: 0.85rem; letter-spacing: 0.05em; }
+
+        .wts-evidence-section { margin-top: 3rem; padding-top: 2.5rem; border-top: 1px solid var(--border); }
+        .wts-evidence-section h2 { font-size: 1.05rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: 0.6rem; font-weight: 700; }
+        .wts-evidence-note { font-size: 0.95rem; color: var(--text-muted); margin-bottom: 1.4rem; }
+        .wts-evidence-card { display: grid; grid-template-columns: 170px 1fr; gap: 1.75rem; align-items: center; text-decoration: none; padding: 1.5rem; border: 1px solid var(--border); border-radius: 6px; }
+        .wts-evidence-card:hover, .wts-evidence-card:focus-visible { border-color: var(--accent); }
+        .wts-evidence-thumb { width: 100%; height: auto; border-radius: 2px; border: 1px solid var(--border); box-shadow: 0 10px 26px rgba(0,0,0,0.45); }
+        .wts-evidence-title { font-family: 'Poppins', 'DM Sans', sans-serif; font-size: 1.15rem; color: var(--text-bright); margin-bottom: 0.4rem; }
+        .wts-evidence-card p { font-size: 0.95rem; color: var(--text-muted); margin: 0 0 0.6rem; }
+        .wts-evidence-card .wts-evidence-more { color: var(--accent); font-weight: 700; margin: 0; }
+        @media (max-width: 520px) {
+            .wts-evidence-card { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+            .wts-evidence-thumb { max-width: 200px; }
+        }
     </style>
 </head>
 <body>
@@ -138,6 +164,20 @@
             <p class="wts-price">£<%= (offer.pricePence / 100).toLocaleString('en-GB') %></p>
         </div>
         <p class="wts-lede">The Commercial Review stands on its own. You are paying for our judgement and a written direction you can act on.</p>
+        <%# The same action as the button lower down, on the first screen
+            (14/11/2026): before this a visitor had to scroll past the whole
+            description to find anything to tap. The line under it is the
+            enquiry form's own sentence. %>
+        <p class="wts-hero-action" data-hero-enquiry><a href="#conversation" class="btn btn-primary">Book a 30 minute conversation</a></p>
+        <p class="wts-hero-note">The first conversation is free and there's no obligation.</p>
+        <%# The live Google figure, the same line the home page shows. Nothing
+            renders if Google gave no rating, so a figure is never made up. %>
+        <% if (typeof googleReviews !== 'undefined' && googleReviews && typeof googleReviews.rating === 'number' && googleReviews.userRatingCount > 0) { %>
+        <a href="/evidence#googlereviews" class="wts-google-rating" data-google-rating>
+            <span class="wts-google-rating-stars" aria-hidden="true">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
+            <span><%= googleReviews.rating.toFixed(1) %> from <%= googleReviews.userRatingCount %> <%= googleReviews.userRatingCount === 1 ? 'review' : 'reviews' %> on Google</span>
+        </a>
+        <% } %>
 
         <div class="wts-card">
             <div class="wts-card-item">
@@ -154,6 +194,24 @@
                 <h2>Six months on</h2>
                 <p>Six months later we check in to see what actually changed. It is a phone call, included with the work, not another stage to book.</p>
             </div>
+        </div>
+
+        <%# One real document (14/11/2026). Heading, note, caption and picture are
+            the ones the Commercial Review and Implementation page already
+            carries. Only the assessment is shown here: the 90-Day Action Plan
+            belongs to the implementation offer, and showing it would suggest
+            the £500 buys it. %>
+        <div class="wts-evidence-section" data-review-evidence>
+            <h2>See the standard</h2>
+            <p class="wts-evidence-note">Real work, not a description of work.</p>
+            <a class="wts-evidence-card" href="/evidence#documents">
+                <img class="wts-evidence-thumb" src="/img/docs/half-time-team-talk.jpg" alt="Preview of the Half-Time Team Talk document" loading="lazy" width="910" height="1287">
+                <div>
+                    <p class="wts-evidence-title">Half-Time Team Talk</p>
+                    <p>The commercial assessment that comes from following the evidence.</p>
+                    <p class="wts-evidence-more">See the documents on Evidence</p>
+                </div>
+            </a>
         </div>
 
         <%# "The credit" card sat here until 21/10/2026: it advertised the two

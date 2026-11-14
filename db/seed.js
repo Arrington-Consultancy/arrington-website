@@ -8286,6 +8286,19 @@ async function seed() {
     console.error('Home page proof strip migration failed (boot continues):', err.message);
   }
 
+  // SECTION BUTTONS OPEN THE FORM ON THEIR OWN PAGE (14/11/2026, Tom: "make
+  // the improvements you think are right"). A button that led to the separate
+  // 30 Minute Conversation page now opens the enquiry form already at the foot
+  // of the page it is on, as the Ready to Sell and Commercial Review buttons
+  // have since October. Only a link that is exactly the booking page's slug
+  // is changed. Run once, never fatal.
+  try {
+    const note = await require('../lib/bookingButtonsToForm').applyBookingButtonsToForm(db);
+    if (note) console.log(`Booking buttons: ${note}.`);
+  } catch (err) {
+    console.error('Booking buttons migration failed (boot continues):', err.message);
+  }
+
 
   // Arrington AI Workspace: ingest the encrypted snapshot into
   // workspace_records. A no-op when WORKSPACE_SNAPSHOT_KEY is unset, and
