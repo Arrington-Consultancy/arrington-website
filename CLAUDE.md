@@ -10584,6 +10584,22 @@ office branch.
   the 67 test files that read these pages, the seed or the shared page parts
   pass (579). Checked in Chromium at 1440px and iPhone 13: no overflow, no
   errors.
+- **Live:** commit `7e2147e`, serving deployment `296bed41` (twin `3f0025a5`
+  REMOVED). Production log: "Booking buttons: 1 button(s) now open the form
+  on their own page (evidence: intervention__13)." Inspection run
+  `20261114T160448Z-proof-pass-live`: the Commercial Review, Website Build,
+  thank-you and Evidence pages 200 at desktop and phone, no page errors, no
+  overflow, no dashes; the rating reads "5.0 from 5 reviews on Google".
+  Written back to the Handoff Log (entry of 14 November 2026, 16:10).
+- **World Student Advisors (Tom, 14/11/2026, in chat):** "Tim gives consent.
+  I have transformed his business. I've taken him getting one cold lead a
+  month to 30 to 40 a day. He's revenue has increased 159%". NOT published.
+  Before a case study is drafted Tom was asked for the period of each figure
+  and what did the work (website alone, or with Google Ads and the staff
+  portal), and advised to get a one line email from Tim agreeing to those two
+  figures being public (his 22/10 decision wants consent in a controlled
+  record; the Handoff Log holds Tom's statement, not Tim's own words). The
+  case study goes to Tom as a draft first.
 - **Not changed, questions for Tom, one at a time:** a client quote on the
   Commercial Review page (Reece is the obvious ask); the reviews heading that
   says "owners" (one review is from a former colleague); "It connects to
