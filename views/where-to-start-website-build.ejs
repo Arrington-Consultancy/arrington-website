@@ -131,6 +131,8 @@
         .wts-built-title { margin: 0 0 0.4rem; color: var(--text-bright); font-family: 'Poppins', 'DM Sans', sans-serif; font-size: 1.05rem; line-height: 1.25; }
         .wts-built-card:hover .wts-built-title, .wts-built-card:focus-visible .wts-built-title { color: var(--accent); }
         .wts-built-caption { margin: 0; color: var(--text); font-size: 0.9rem; }
+        .wts-built-more { margin: 1.1rem 0 0; font-size: 0.95rem; }
+        .wts-built-more a { color: var(--accent); font-weight: 700; }
         @media (max-width: 520px) {
             .wts-built-grid { grid-template-columns: 1fr; }
             .wts-built-card img { aspect-ratio: 16 / 9; }
@@ -275,6 +277,11 @@
                     </div>
                 </a>
             </div>
+            <%# The figures stay off the cards: the World Student Advisors result
+                came from more than the £999 website (case study, 14/11/2026). %>
+            <% if (typeof wsaCaseStudy !== 'undefined' && wsaCaseStudy && wsaCaseStudy.href) { %>
+            <p class="wts-built-more" data-built-case-study><a href="<%= wsaCaseStudy.href %>">Read the World Student Advisors case study</a></p>
+            <% } %>
         </section>
 
         <div class="wts-card">

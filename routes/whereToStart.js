@@ -28,6 +28,7 @@ const { getStripeClient, getStripeKeyStatus } = require('../lib/stripeClient');
 const { OFFERS, FULL_REVIEW_PURCHASE_MODE, getOffer, buildCheckoutSessionParams } = require('../lib/whereToStartOffers');
 const { getSiteShellData } = require('../lib/navShell');
 const { getGoogleReviews } = require('../lib/googleReviews');
+const { readWsaCaseStudy, REVIEW_LINE: WSA_REVIEW_LINE } = require('../lib/wsaCaseStudy');
 const { parseAttribution, describeAttribution } = require('../lib/leadAttribution');
 
 // The enquiry form's wording on the Website Build page (21/10/2026, Tom's
@@ -97,6 +98,17 @@ const checkoutLimiter = rateLimit({
   message: { error: 'Too many requests. Please try again later.' }
 });
 
+// The World Student Advisors case study as it stands on Evidence, or null.
+// A failure here must never take an offer page down with it.
+async function loadWsaCaseStudy() {
+  try {
+    return await readWsaCaseStudy(db);
+  } catch (err) {
+    console.error('World Student Advisors case study read failed:', err.message);
+    return null;
+  }
+}
+
 async function loadThemeAndShell() {
   const { rows: themeRows } = await db.query("SELECT content FROM content WHERE section_key = 'site.theme'");
   const activeTheme = (themeRows[0] && themeRows[0].content) || 'dark';
@@ -141,7 +153,11 @@ function mountPageRoute(app, generateCsrfToken) {
         offer: OFFERS.commercial_review,
         // Cached for a day and never throws; null when Google gave nothing,
         // and the page then shows no rating at all.
-        googleReviews: await getGoogleReviews()
+        googleReviews: await getGoogleReviews(),
+        // The client result under "See the standard": read from Evidence, so
+        // the figures have one home. Null shows nothing.
+        wsaCaseStudy: await loadWsaCaseStudy(),
+        wsaReviewLine: WSA_REVIEW_LINE
       });
     } catch (err) {
       next(err);
@@ -178,7 +194,8 @@ function mountPageRoute(app, generateCsrfToken) {
         pageContact: { ...pageContact, ...WEBSITE_BUILD_CONTACT },
         offer: OFFERS.website_build,
         websiteBuildProofHref,
-        builtProofHref
+        builtProofHref,
+        wsaCaseStudy: await loadWsaCaseStudy()
       });
     } catch (err) {
       next(err);

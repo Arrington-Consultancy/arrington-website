@@ -8299,6 +8299,16 @@ async function seed() {
     console.error('Booking buttons migration failed (boot continues):', err.message);
   }
 
+  // WORLD STUDENT ADVISORS CASE STUDY ON EVIDENCE (14/11/2026, Tom's figures
+  // and period, in chat). Adds one case study after the existing ones; edits
+  // nothing already on the page. Run once, never fatal.
+  try {
+    const note = await require('../lib/wsaCaseStudy').applyWsaCaseStudy(db);
+    if (note) console.log(`World Student Advisors case study: ${note}.`);
+  } catch (err) {
+    console.error('World Student Advisors case study migration failed (boot continues):', err.message);
+  }
+
 
   // Arrington AI Workspace: ingest the encrypted snapshot into
   // workspace_records. A no-op when WORKSPACE_SNAPSHOT_KEY is unset, and
