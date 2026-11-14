@@ -213,3 +213,59 @@ test('the seed runs the migration, never fatally, and the routes survive a faile
   assert.match(routes, /async function loadWsaCaseStudy\(\) \{\s*try \{[\s\S]*?\} catch \(err\) \{[\s\S]*?return null;/);
   assert.strictEqual((routes.match(/wsaCaseStudy: await loadWsaCaseStudy\(\)/g) || []).length, 2);
 });
+
+// ---- The client's quote (14/11/2026) ----
+const { QUOTE_MARKER, QUOTE, applyWsaQuote } = require('../lib/wsaCaseStudy');
+
+// Exactly as Tom pasted it. A testimonial is speech: it is never reworded.
+const TIM_QUOTE = 'We struggled to reach customers beyond our direct connections, the website was a mess and the team had no clear plan. I brought Tom in to tackle owner dependency, but he blew me away with his use of technology, revolutionising the website and integrating the CRM and AI. The communication between the team is now amazing, we’re all singing from the same hymn sheet, and I’d recommend him to any business owner who needs fresh eyes.';
+
+test('the quote is stored word for word, with no quote marks of its own', () => {
+  assert.strictEqual(QUOTE.quote, TIM_QUOTE);
+  assert.doesNotMatch(QUOTE.quote, /^["“]|["”]$/);
+  assert.strictEqual(QUOTE.quote_name, 'Tim Hunt, World Student Advisors');
+});
+
+test('the quote goes onto the case study, once, and never over a quote already there', async () => {
+  const db = fakeDb({ pages: livePages(), content: liveContent() });
+  assert.match(await applyWsaQuote(db), /not on this database yet/);
+  assert.ok(!db.store.has(QUOTE_MARKER), 'stamped before the case study existed');
+
+  await applyWsaCaseStudy(db);
+  const before = new Map(db.store);
+  assert.match(await applyWsaQuote(db), /quote added to casestudy2__7 \(quote, quote_name\)/);
+  assert.strictEqual(db.store.get('casestudy2__7.quote'), TIM_QUOTE);
+  assert.strictEqual(db.store.get('casestudy2__7.quote_name'), QUOTE.quote_name);
+  for (const [k, v] of before) assert.strictEqual(db.store.get(k), v, `${k} was changed`);
+
+  // Run once: a quote Tom then clears in the CMS stays cleared.
+  db.store.set('casestudy2__7.quote', '');
+  assert.strictEqual(await applyWsaQuote(db), null);
+  assert.strictEqual(db.store.get('casestudy2__7.quote'), '');
+
+  const edited = fakeDb({ pages: livePages(), content: liveContent() });
+  await applyWsaCaseStudy(edited);
+  edited.store.set('casestudy2__7.quote', 'A different quote, typed in the CMS.');
+  assert.match(await applyWsaQuote(edited), /quote_name/);
+  assert.strictEqual(edited.store.get('casestudy2__7.quote'), 'A different quote, typed in the CMS.');
+});
+
+test('the case study template shows a quote only when there is one, in quote marks, with no dash before the name', () => {
+  const view = read('views/index.ejs');
+  const block = view.match(/const _cs2Quote = [\s\S]*?<\/blockquote>\s*<% } %>/);
+  assert.ok(block, 'the quote block is missing from the case study template');
+  assert.match(block[0], /if \(_cs2Quote\.replace\(\/<\[\^>\]\+>\/g, ''\)\.trim\(\)\)/, 'an empty quote would render');
+  assert.match(block[0], /<p>&ldquo;<%- _cs2Quote %>&rdquo;<\/p>/);
+  // A <cite>, never a <footer>: the site styles every footer element as the
+  // page footer (a rule above it and its own spacing).
+  assert.match(block[0], /<cite><%= _cs2QuoteName %><\/cite>/, 'the name must be escaped plain text');
+  assert.doesNotMatch(block[0], /<footer/);
+  assert.doesNotMatch(block[0], /&mdash;|&ndash;|[–—]/);
+  // After the result, before the button.
+  assert.ok(view.indexOf('class="casestudy2-outcome"') < view.indexOf('class="casestudy2-quote"'));
+  assert.ok(view.indexOf('class="casestudy2-quote"') < view.indexOf('const _cs2BtnText'));
+  const admin = read('public/js/admin.js');
+  assert.match(admin, /'casestudy2\.quote':/);
+  assert.match(admin, /'casestudy2\.quote_name':/);
+  assert.match(read('db/seed.js'), /applyWsaQuote\(db\)/);
+});

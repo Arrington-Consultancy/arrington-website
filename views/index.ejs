@@ -2366,6 +2366,36 @@
             color: var(--text-bright);
         }
 
+        .casestudy2-quote {
+            margin: 2rem 0 0;
+            padding: 0;
+            border: 0;
+        }
+
+        .casestudy2-quote p {
+            margin: 0;
+            font-family: 'Poppins', 'DM Sans', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 500;
+            line-height: 1.6;
+            color: var(--text-bright);
+        }
+
+        .casestudy2-quote cite {
+            display: block;
+            font-style: normal;
+            margin-top: 0.9rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--accent);
+        }
+
+        .casestudy2-quote + .btn {
+            margin-top: 2rem;
+        }
+
         .casestudy2-included-heading {
             font-family: 'Poppins', 'DM Sans', sans-serif;
             font-size: 1.2rem;
@@ -4476,6 +4506,19 @@
             <div class="casestudy2-outcome">
                 <p><%- content[_k + '.outcome'] %></p>
             </div>
+            <% } %>
+            <%
+              // A client's own words (14/11/2026). Speech, so it is shown as
+              // given and never edited. Renders only when there is a quote;
+              // the name line is plain text and optional.
+              const _cs2Quote = (content[_k + '.quote'] || '').trim();
+              const _cs2QuoteName = (content[_k + '.quote_name'] || '').replace(/<[^>]+>/g, '').trim();
+            %>
+            <% if (_cs2Quote.replace(/<[^>]+>/g, '').trim()) { %>
+            <blockquote class="casestudy2-quote">
+                <p>&ldquo;<%- _cs2Quote %>&rdquo;</p>
+                <% if (_cs2QuoteName) { %><cite><%= _cs2QuoteName %></cite><% } %>
+            </blockquote>
             <% } %>
             <%
               const _cs2BtnText = (content[_k + '.button_text'] || '').replace(/<[^>]+>/g, '').trim();

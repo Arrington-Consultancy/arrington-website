@@ -8309,6 +8309,15 @@ async function seed() {
     console.error('World Student Advisors case study migration failed (boot continues):', err.message);
   }
 
+  // THE CLIENT'S QUOTE ON THAT CASE STUDY (14/11/2026). His own words, stored
+  // as given. Run once, never fatal.
+  try {
+    const note = await require('../lib/wsaCaseStudy').applyWsaQuote(db);
+    if (note) console.log(`World Student Advisors quote: ${note}.`);
+  } catch (err) {
+    console.error('World Student Advisors quote migration failed (boot continues):', err.message);
+  }
+
 
   // Arrington AI Workspace: ingest the encrypted snapshot into
   // workspace_records. A no-op when WORKSPACE_SNAPSHOT_KEY is unset, and
