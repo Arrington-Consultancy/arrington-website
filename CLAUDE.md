@@ -10817,7 +10817,18 @@ office branch.
   portal), and advised to get a one line email from Tim agreeing to those two
   figures being public (his 22/10 decision wants consent in a controlled
   record; the Handoff Log holds Tom's statement, not Tim's own words). The
-  case study goes to Tom as a draft first.
+  case study goes to Tom as a draft first. Tom's answer the same day: "June
+  till now, everything I have done for the including commercial review".
+  **Draft filed in Drive, NOT live:** "WEBSITE AND HOSTING PROPOSAL - World
+  Student Advisors case study, 14 November 2026 (FOR TOM'S APPROVAL, NOT
+  LIVE)", id `1ni_xnkTmCu8NHIBJe-dTuwe1mKOV6hCd2offOXQ1ymI`: a full case
+  study on Evidence (Evidence 05), a short version on the Commercial Review
+  page, a link from the Website Build card, and the two figures kept off the
+  £999 card (the result came from more than the website). Open before it can
+  go live: the master CV of 8 September says cold leads went "from none to
+  around 50 a week", which is not Tom's figure of 14/11, so he confirms the
+  figure that is true now; what the 159% compares; and Tim's own email. What
+  the Commercial Review found is not in the draft, because no record says.
 - **Not changed, questions for Tom, one at a time:** a client quote on the
   Commercial Review page (Reece is the obvious ask); the reviews heading that
   says "owners" (one review is from a former colleague); "It connects to
@@ -10826,3 +10837,48 @@ office branch.
   client; the full WSA story, which waits on Tim's consent in a controlled
   record and real figures (Tom's 22/10 decision; no consent record found in
   Drive on 14/11).
+
+## World Student Advisors case study (LIVE 14/11/2026)
+
+Tom's figures, in chat on 14/11/2026: cold enquiries from about one a month
+to around 30 a day ("30 a day is better"), revenue up 159% ("Revenue is
+estimated to rise by 250% but timings of payments meant the moment I can only
+claim 159%"), since June 2026, from everything done for World Student
+Advisors including the Commercial Review. **The 250% is an estimate and is
+never published**; raise the figure only when Tom says a higher one has
+happened. Draft and sources: Drive id
+`1ni_xnkTmCu8NHIBJe-dTuwe1mKOV6hCd2offOXQ1ymI`.
+
+- **Evidence:** `lib/wsaCaseStudy.js` (marker
+  `evidence.wsa_case_study_2026-11-14`, run once) adds a `casestudy2`
+  instance after the last case study, labelled as the next in the page's
+  EVIDENCE series, and edits nothing else. The marker row holds the
+  allocated id.
+- **Commercial Review page:** a result block under "See the standard",
+  before the document. Its sentence is the case study's own outcome row up
+  to the first line break, read live (`readWsaCaseStudy`), so a figure
+  changed in the CMS changes there too; the views hold no figure. Nothing
+  shows if the case study is missing or hidden on Evidence.
+- **Website Build page:** one text link under the four cards. The figures
+  stay off that page: the result came from more than the £999 website.
+- Not in it: Tim's name or a quote, any price, what the review found (no
+  record says), the word "transformed".
+- **Consent (14/11/2026):** Tom pasted Tim's line into chat, in Tim's first
+  person: "I'm happy for Arrington Consultancy to name World Student Advisors
+  on its website and publish the following results since June 2026: cold
+  enquiries have increased from about one a month to around 30 a day, and
+  revenue is up 159%." Recorded in the Handoff Log. No email carrying it was
+  in the tom@ inbox that evening, so Tom keeps the original wherever it
+  reached him. The outcome ends "Published with the agreement of World
+  Student Advisors." Released on that consent; to take it down, hide the
+  section on Evidence (the eye button) and the other two pages stop quoting
+  it on the next page load.
+- `test/wsaCaseStudy.test.js` (10).
+- **Live 14/11/2026:** commit `d5c64ac`, serving deployment `a931a17b`
+  (twin `7ad995fa` REMOVED). Production log: "case study added to Evidence
+  as casestudy2__7 (EVIDENCE: 05) at position 6". Inspection run
+  `20261114T205726Z-wsa-case-study-live`: Evidence, the Commercial Review
+  page and the Website Build page 200 at desktop and phone, no page errors,
+  no overflow, no dashes; captures read (the case study after the VAT
+  Intervention, the result block above the Half-Time Team Talk, the link
+  under the four cards).
