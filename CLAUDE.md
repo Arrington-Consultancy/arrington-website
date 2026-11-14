@@ -10645,6 +10645,14 @@ happened. Draft and sources: Drive id
   stay off that page: the result came from more than the £999 website.
 - Not in it: Tim's name or a quote, any price, what the review found (no
   record says), the word "transformed".
-- **Open when built:** Tim's agreement in his own words by email. The
-  outcome ends "Published with the agreement of World Student Advisors."
+- **Consent (14/11/2026):** Tom pasted Tim's line into chat, in Tim's first
+  person: "I'm happy for Arrington Consultancy to name World Student Advisors
+  on its website and publish the following results since June 2026: cold
+  enquiries have increased from about one a month to around 30 a day, and
+  revenue is up 159%." Recorded in the Handoff Log. No email carrying it was
+  in the tom@ inbox that evening, so Tom keeps the original wherever it
+  reached him. The outcome ends "Published with the agreement of World
+  Student Advisors." Released on that consent; to take it down, hide the
+  section on Evidence (the eye button) and the other two pages stop quoting
+  it on the next page load.
 - `test/wsaCaseStudy.test.js` (10).
