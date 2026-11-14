@@ -10599,7 +10599,18 @@ office branch.
   portal), and advised to get a one line email from Tim agreeing to those two
   figures being public (his 22/10 decision wants consent in a controlled
   record; the Handoff Log holds Tom's statement, not Tim's own words). The
-  case study goes to Tom as a draft first.
+  case study goes to Tom as a draft first. Tom's answer the same day: "June
+  till now, everything I have done for the including commercial review".
+  **Draft filed in Drive, NOT live:** "WEBSITE AND HOSTING PROPOSAL - World
+  Student Advisors case study, 14 November 2026 (FOR TOM'S APPROVAL, NOT
+  LIVE)", id `1ni_xnkTmCu8NHIBJe-dTuwe1mKOV6hCd2offOXQ1ymI`: a full case
+  study on Evidence (Evidence 05), a short version on the Commercial Review
+  page, a link from the Website Build card, and the two figures kept off the
+  £999 card (the result came from more than the website). Open before it can
+  go live: the master CV of 8 September says cold leads went "from none to
+  around 50 a week", which is not Tom's figure of 14/11, so he confirms the
+  figure that is true now; what the 159% compares; and Tim's own email. What
+  the Commercial Review found is not in the draft, because no record says.
 - **Not changed, questions for Tom, one at a time:** a client quote on the
   Commercial Review page (Reece is the obvious ask); the reviews heading that
   says "owners" (one review is from a former colleague); "It connects to
