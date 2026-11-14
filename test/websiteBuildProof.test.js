@@ -1,7 +1,7 @@
 // The Website Build page's examples (Tom, 19/10/2026, ahead of paid local
-// search for website design). The Tidewell Cars taxi demo is a second
-// example beside the existing one. It must read as a demo we built, never as
-// a client, and it links to the public demo only, never the staff office.
+// search for website design; four picture cards since 14/11/2026). A demo
+// must read as a demo we built, never as a client, and the staff office is
+// shown through its public page only, never the login behind it.
 // The price, the scope, the £300 a day rate and the Stripe flow are not
 // touched by this change and are pinned here so they stay that way.
 
@@ -20,22 +20,56 @@ function renderBody() {
   const src = emitted().replace(/<%-\s*include\([^)]*\)\s*%>/g, '');
   const html = ejs.render(src, {
     theme: { vars: {} }, nonce: 'n', csrfToken: 't', navPages: [], content: {}, pageContact: {},
-    offer: OFFERS.website_build, websiteBuildProofHref: '/websites-and-ai#casestudy2__4'
+    offer: OFFERS.website_build, websiteBuildProofHref: '/websites-and-ai#casestudy2__4', builtProofHref: '/evidence#builtproof'
   });
   return html.slice(html.indexOf('<body>'));
 }
 const visibleText = (html) => html.replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ').replace(/\s+([,.])/g, '$1');
 
-test('the taxi demo is a second example, said to be a demo we built for a made up firm', () => {
+test('what we have built: four picture cards, each labelled for what it is', () => {
+  // 14/11/2026 (Tom: "we have plenty of website builds WSA, Scott's armchairs,
+  // tidewell cars and staff portals to show"). The cards replace the two text
+  // links that sat under the button.
   const body = renderBody();
-  const proofs = body.match(/<p class="wts-direct-proof"[\s\S]*?<\/p>/g) || [];
-  assert.strictEqual(proofs.length, 2, 'there should be two examples');
-  assert.ok(proofs[0].includes('href="/websites-and-ai#casestudy2__4"'), 'the first example moved or changed');
-  const demo = proofs[1];
+  const cards = body.match(/<a class="wts-built-card"[\s\S]*?<\/a>/g) || [];
+  assert.deepStrictEqual(cards.map((c) => c.match(/data-built="([a-z]+)"/)[1]), ['wsa', 'tidewell', 'office', 'scott']);
+  const [wsa, demo, office, scott] = cards;
+  const caption = (c) => visibleText(c.match(/<p class="wts-built-caption">[\s\S]*?<\/p>/)[0]).trim();
+  const kind = (c) => visibleText(c.match(/<p class="wts-built-kind">[\s\S]*?<\/p>/)[0]).trim();
+
+  // World Student Advisors, named, to the case study on Websites and AI.
+  assert.ok(wsa.includes('href="/websites-and-ai#casestudy2__4"'), 'the first example moved or changed');
+  assert.ok(visibleText(wsa).includes('World Student Advisors'));
+  assert.strictEqual(caption(wsa), 'A site built around the enquiry rather than around the brochure. Built for £999.');
+
+  // Tidewell Cars: Tom's line of 19/10/2026, word for word, the public demo.
   assert.ok(demo.includes('data-taxi-demo-proof'));
-  assert.strictEqual(visibleText(demo).trim(), 'Or see Tidewell Cars, a taxi firm website we built as a demo, where bookings go straight into dispatch. The firm is made up.');
+  assert.strictEqual(kind(demo), 'Demo website');
+  assert.strictEqual(caption(demo), 'A taxi firm website we built as a demo, where bookings go straight into dispatch. The firm is made up.');
   assert.ok(demo.includes(`href="${TAXI_DEMO_URL}"`), 'not the public demo address');
-  assert.ok(!/client|customer of ours|worked with/i.test(visibleText(demo)), 'the demo reads as a client');
+
+  // The staff office: the public page about it, said to be a demo for a made
+  // up firm and not part of the £999.
+  assert.ok(office.includes('href="/taxi-demo/staff-portal"'));
+  assert.strictEqual(kind(office), 'Demo staff portal');
+  assert.ok(/made up firm/.test(caption(office)) && /Not part of the £999 website\./.test(caption(office)));
+  assert.ok(/signs off before anything goes/.test(caption(office)), 'the staff sign-off left the caption');
+
+  // Scott: a demonstration, never a client.
+  assert.strictEqual(kind(scott), 'Demonstration');
+  assert.ok(/fictional company/.test(caption(scott)) && /It is not a real client\./.test(caption(scott)));
+  assert.ok(scott.includes('href="/evidence#builtproof"'), 'Scott does not go to the built section on Evidence');
+
+  // Nothing that is a demo reads as a client, and every picture exists.
+  for (const c of [demo, office, scott]) assert.ok(!/customer of ours|worked with|our client/i.test(visibleText(c)), 'a demo reads as a client');
+  for (const c of cards) {
+    for (const src of c.match(/\/img\/built\/[a-z]+\.(?:jpg|webp)/g)) {
+      assert.ok(fs.existsSync(path.join(__dirname, '..', 'public', src)), `${src} is missing`);
+    }
+    assert.ok(/<img [^>]*alt="[^"]{10,}"/.test(c), 'a picture has no description');
+    // House rule on new lines: no dashes or hyphens.
+    assert.ok(!/[–—-]/.test(caption(c)), `a dash or hyphen in: ${caption(c)}`);
+  }
 });
 
 test('an enquiry button at the top goes to the form; the pay section stays as it was', () => {
@@ -44,7 +78,7 @@ test('an enquiry button at the top goes to the form; the pay section stays as it
   const hero = body.match(/<p class="wts-hero-action" data-hero-enquiry>[\s\S]*?<\/p>/);
   assert.ok(hero, 'the enquiry button at the top is gone');
   assert.ok(/<a href="#conversation" class="btn btn-primary">Tell us what you want to build<\/a>/.test(hero[0]));
-  assert.ok(body.indexOf('data-hero-enquiry') < body.indexOf('wts-direct-proof'), 'the button is no longer at the top');
+  assert.ok(body.indexOf('data-hero-enquiry') < body.indexOf('data-built-work'), 'the button is no longer at the top');
   assert.ok(body.indexOf('data-hero-enquiry') < body.indexOf('id="wtsCheckoutSubmit"'));
   assert.strictEqual((body.match(/id="wtsCheckoutSubmit"/g) || []).length, 1, 'a second pay button appeared');
 });
@@ -61,9 +95,6 @@ test('never the staff office, and nothing else on the page moved', () => {
   assert.ok(body.includes('<button type="submit" class="btn btn-outline" id="wtsCheckoutSubmit">Pay £999 securely</button>'), 'the payment button changed');
   assert.ok(body.includes("fetch('/api/checkout/' + form.dataset.offer"), 'the Stripe checkout call changed');
   assert.ok(body.includes('Not ready to pay? Tell us what you want to build instead'), 'the enquiry route changed');
-  // House rules on the new line: no dashes or hyphens.
-  const demo = visibleText(body.match(/<p class="wts-direct-proof" data-taxi-demo-proof>[\s\S]*?<\/p>/)[0]);
-  assert.ok(!/[–—-]/.test(demo), 'a dash or hyphen in the new line');
 });
 
 test('payment comes after we agree to take the project on (Tom, 26/10/2026)', () => {
