@@ -10656,6 +10656,15 @@ happened. Draft and sources: Drive id
   section on Evidence (the eye button) and the other two pages stop quoting
   it on the next page load.
 - `test/wsaCaseStudy.test.js` (10).
+- **Tim's quote (same evening, Tom's "Yes" to the name line "Tim Hunt, World
+  Student Advisors"):** the `casestudy2` template has two optional rows,
+  `quote` and `quote_name`, shown after the result and before the button
+  (a `<cite>` for the name, never a `<footer>`: the site styles every footer
+  element as the page footer). `applyWsaQuote` (marker
+  `evidence.wsa_case_study_quote_2026-11-14`, run once) stores Tim's words
+  exactly as given and never over a quote already there. A client quote is
+  speech: do not edit it to the voice rules ("revolutionising", "blew me
+  away" stay). Both rows are ordinary CMS fields on any casestudy2 section.
 - **Live 14/11/2026:** commit `d5c64ac`, serving deployment `a931a17b`
   (twin `7ad995fa` REMOVED). Production log: "case study added to Evidence
   as casestudy2__7 (EVIDENCE: 05) at position 6". Inspection run
