@@ -10620,7 +10620,7 @@ office branch.
   record and real figures (Tom's 22/10 decision; no consent record found in
   Drive on 14/11).
 
-## World Student Advisors case study (built 14/11/2026 on `feat/wsa-case-study`)
+## World Student Advisors case study (LIVE 14/11/2026)
 
 Tom's figures, in chat on 14/11/2026: cold enquiries from about one a month
 to around 30 a day ("30 a day is better"), revenue up 159% ("Revenue is
@@ -10656,3 +10656,11 @@ happened. Draft and sources: Drive id
   section on Evidence (the eye button) and the other two pages stop quoting
   it on the next page load.
 - `test/wsaCaseStudy.test.js` (10).
+- **Live 14/11/2026:** commit `d5c64ac`, serving deployment `a931a17b`
+  (twin `7ad995fa` REMOVED). Production log: "case study added to Evidence
+  as casestudy2__7 (EVIDENCE: 05) at position 6". Inspection run
+  `20261114T205726Z-wsa-case-study-live`: Evidence, the Commercial Review
+  page and the Website Build page 200 at desktop and phone, no page errors,
+  no overflow, no dashes; captures read (the case study after the VAT
+  Intervention, the result block above the Half-Time Team Talk, the link
+  under the four cards).
