@@ -10673,3 +10673,36 @@ happened. Draft and sources: Drive id
   no overflow, no dashes; captures read (the case study after the VAT
   Intervention, the result block above the Half-Time Team Talk, the link
   under the four cards).
+
+## Drift check of the live site (14/11/2026)
+
+Tom, after the proof pass, the World Student Advisors case study and Tim's
+quote: "Let's do a drift check as well. As we were changing lots on the site".
+Brand OS (last reviewed 22 October 2026), 01 and 02 read that evening. Full
+note in Drive, id `18f3byuWSIULphEFZooOkfifLRnATMyeUtJDrWJEVj3o`.
+
+- **How:** the live inspection takes `sitemap` as a path and saves each
+  page's visible text (`<slug>.txt` in the run folder), so live CMS copy can
+  be compared word for word. Run `20261114T211248Z-drift-check-14nov`
+  (`sitemap,/thank-you,/start-up-idea-review,/taxi-demo/,/taxi-demo/staff-portal`):
+  44 pages, 88 checks, all 200, no page errors, overflow, dashes or serif.
+- **Live text against the authorities: clean.** Same menu on every page; no
+  banned word or fire language in our own copy ("tailored" is in a client's
+  Google review, "journey" is a taxi trip); first person only in client
+  quotes, visitor questions and Useful Thinking; prices £500, £999, £999 and
+  the parked £2,500 and £3,400 on their own pages; no reduction wording;
+  tenure, Oxford and rating wording consistent; no link to a parked page
+  from the three offer pages, header or footer.
+- **Code:** full suite on a fresh database 1,949 pass, 2 fail (the two
+  documented stale-date test failures); live serves main; the office branch
+  contains main.
+- **Out of step, reported, not changed:** the workspace price (£999 and
+  £1,998 on the workspace page and the home box, "ask us" on the taxi
+  websites page); 01 still lists Owner Check as a priority and calls the
+  Market Ready Test AI-based; 02 lacks the workspace price, the three offer
+  decision, the travel terms and payment after acceptance; the master CV
+  still says World Student Advisors went "from none to around 50 a week".
+- **Trap:** the clone is shallow, so ahead and behind counts against old
+  branches mean nothing; `git merge-base --is-ancestor` on recent branches
+  is the check that works. The worktree's local `main` is stale; use
+  `origin/main`.
