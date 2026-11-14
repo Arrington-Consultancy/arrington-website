@@ -163,6 +163,8 @@
         'casestudy2.item_7': 'Included item 7',
         'casestudy2.item_8': 'Included item 8',
         'casestudy2.outcome': 'Outcome',
+        'casestudy2.quote': 'Client quote (their own words, no quote marks; leave empty to hide)',
+        'casestudy2.quote_name': 'Client quote: name and business',
         'casestudy2.link_text': 'Link text (to the full case study)',
         'casestudy2.link_href': 'Link URL (root relative, e.g. /evidence#casestudy2__5)',
         'casestudy2.button_text': 'Button text (leave empty to hide)',
