@@ -1,0 +1,1131 @@
+{
+  "ranAt": "2026-11-14T16:04:48.145Z",
+  "base": "https://www.arringtonconsultancy.com",
+  "results": [
+    {
+      "path": "/where-to-start/commercial-review",
+      "size": "desktop",
+      "url": "https://www.arringtonconsultancy.com/where-to-start/commercial-review",
+      "status": 200,
+      "finalUrl": "https://www.arringtonconsultancy.com/where-to-start/commercial-review",
+      "title": "Commercial Review | Arrington Consultancy",
+      "h1": "Commercial Review",
+      "canonical": "https://www.arringtonconsultancy.com/where-to-start/commercial-review",
+      "robotsMeta": null,
+      "xRobotsTag": null,
+      "selfLinks": 2,
+      "inSitemap": true,
+      "overflow": false,
+      "height": 3595,
+      "dashes": [],
+      "consoleErrors": [
+        "Permissions policy violation: picture-in-picture is not allowed in this document.",
+        "%c%d font-size:0;color:transparent NaN",
+        "%c%d font-size:0;color:transparent NaN",
+        "%c%o font-size:0;color:transparent {}",
+        "%c%o font-size:0;color:transparent {}",
+        "Refused to connect to 'data:,' because it violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c",
+        "Refused to connect to 'data:,' because it violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c",
+        "Refused to connect to 'data:,' because it violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c",
+        "Refused to connect to 'data:,' because it violates the document's Content Security Policy."
+      ],
+      "pageErrors": [],
+      "clarityCollect": [
+        204,
+        204
+      ],
+      "uetRequests": [],
+      "droppedHits": [
+        "connect.facebook.net",
+        "googleads.g.doubleclick.net",
+        "googleads.g.doubleclick.net",
+        "www.google-analytics.com"
+      ],
+      "screenshot": "where-to-start-commercial-review-desktop.png",
+      "topScreenshot": "where-to-start-commercial-review-desktop-top.png",
+      "error": null,
+      "form": {
+        "top": 2544,
+        "screens": 2.5,
+        "viewport": 1000,
+        "heard": [
+          "How did you hear about us?",
+          "Google search",
+          "Google advert",
+          "Facebook or Instagram advert",
+          "Microsoft or Bing advert",
+          "Recommended by someone",
+          "Social media",
+          "AI assistant, such as ChatGPT",
+          "Other"
+        ]
+      },
+      "heroCta": {
+        "text": "Book a 30 minute conversation",
+        "href": "#conversation"
+      },
+      "docModalOpen": null,
+      "docRequestButtons": 0,
+      "uet": {
+        "state": "not loaded",
+        "loader": null,
+        "bar": null
+      },
+      "clarity": "ywiy9r672t",
+      "seo": {
+        "lang": "en-GB",
+        "description": "A £500 Commercial Review for owner run businesses: a day in the business with you, then a written assessment, recommendations and next steps within 4 business days.",
+        "ogTitle": "Commercial Review | Arrington Consultancy",
+        "ogImage": "https://www.arringtonconsultancy.com/img/logo",
+        "jsonLd": [
+          "Organization/ProfessionalService, WebSite",
+          "BreadcrumbList, Service"
+        ],
+        "h1s": [
+          "Commercial Review"
+        ],
+        "h2s": [
+          "What happens",
+          "Timeline",
+          "Six months on",
+          "See the standard",
+          "Not sure this is the right thing for you?",
+          "Already know the review is what you want?",
+          "Book a 30 minute conversation"
+        ],
+        "words": 473,
+        "images": 2,
+        "imagesNoAlt": [],
+        "imagesEmptyAlt": 0,
+        "internal": [
+          "/",
+          "/where-to-start/commercial-review",
+          "/where-to-start/website-build",
+          "/taxi-and-private-hire-operators/office-workspace",
+          "/about-us",
+          "/evidence",
+          "/privacy",
+          "/business-consultant-devon",
+          "/business-consultant-cornwall",
+          "/business-consultant-plymouth",
+          "/business-consultant-exeter",
+          "/useful-thinking",
+          "/staff"
+        ],
+        "pageKb": 199,
+        "heaviest": [
+          "/img/docs/half-time-team-talk.jpg 168KB"
+        ],
+        "loadMs": 675
+      },
+      "digitFonts": {
+        "elements": 9,
+        "glyphs": {
+          "Poppins Medium": 33,
+          "DM Sans 9pt": 290
+        },
+        "serif": []
+      },
+      "raw": {
+        "titles": [
+          "Commercial Review | Arrington Consultancy"
+        ],
+        "descriptions": [
+          "A £500 Commercial Review for owner run businesses: a day in the business with you, then a written assessment, recommendations and next steps within 4 business days."
+        ],
+        "canonicals": [
+          "https://www.arringtonconsultancy.com/where-to-start/commercial-review"
+        ],
+        "ogTitles": [
+          "Commercial Review | Arrington Consultancy"
+        ],
+        "ldBlocks": 2,
+        "googleTagLoaders": 1,
+        "adsConfigs": 1
+      }
+    },
+    {
+      "path": "/where-to-start/commercial-review",
+      "size": "mobile",
+      "url": "https://www.arringtonconsultancy.com/where-to-start/commercial-review",
+      "status": 200,
+      "finalUrl": "https://www.arringtonconsultancy.com/where-to-start/commercial-review",
+      "title": "Commercial Review | Arrington Consultancy",
+      "h1": "Commercial Review",
+      "canonical": "https://www.arringtonconsultancy.com/where-to-start/commercial-review",
+      "robotsMeta": null,
+      "xRobotsTag": null,
+      "selfLinks": 2,
+      "inSitemap": true,
+      "overflow": false,
+      "height": 4534,
+      "dashes": [],
+      "consoleErrors": [
+        "Permissions policy violation: picture-in-picture is not allowed in this document.",
+        "Refused to connect to 'data:,' because it violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c",
+        "Refused to connect to 'data:,' because it violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c",
+        "Refused to connect to 'data:,' because it violates the document's Content Security Policy.",
+        "%c%d font-size:0;color:transparent NaN",
+        "%c%d font-size:0;color:transparent NaN",
+        "%c%o font-size:0;color:transparent {}",
+        "%c%o font-size:0;color:transparent {}"
+      ],
+      "pageErrors": [],
+      "clarityCollect": [
+        204,
+        204
+      ],
+      "uetRequests": [],
+      "droppedHits": [
+        "connect.facebook.net",
+        "googleads.g.doubleclick.net",
+        "googleads.g.doubleclick.net",
+        "www.google-analytics.com"
+      ],
+      "screenshot": "where-to-start-commercial-review-mobile.png",
+      "topScreenshot": "where-to-start-commercial-review-mobile-top.png",
+      "error": null,
+      "form": {
+        "top": 3213,
+        "screens": 4.8,
+        "viewport": 664,
+        "heard": [
+          "How did you hear about us?",
+          "Google search",
+          "Google advert",
+          "Facebook or Instagram advert",
+          "Microsoft or Bing advert",
+          "Recommended by someone",
+          "Social media",
+          "AI assistant, such as ChatGPT",
+          "Other"
+        ]
+      },
+      "heroCta": {
+        "text": "Book a 30 minute conversation",
+        "href": "#conversation"
+      },
+      "docModalOpen": null,
+      "docRequestButtons": 0,
+      "uet": {
+        "state": "not loaded",
+        "loader": null,
+        "bar": null
+      },
+      "clarity": "ywiy9r672t",
+      "seo": {
+        "lang": "en-GB",
+        "description": "A £500 Commercial Review for owner run businesses: a day in the business with you, then a written assessment, recommendations and next steps within 4 business days.",
+        "ogTitle": "Commercial Review | Arrington Consultancy",
+        "ogImage": "https://www.arringtonconsultancy.com/img/logo",
+        "jsonLd": [
+          "Organization/ProfessionalService, WebSite",
+          "BreadcrumbList, Service"
+        ],
+        "h1s": [
+          "Commercial Review"
+        ],
+        "h2s": [
+          "What happens",
+          "Timeline",
+          "Six months on",
+          "See the standard",
+          "Not sure this is the right thing for you?",
+          "Already know the review is what you want?",
+          "Book a 30 minute conversation"
+        ],
+        "words": 459,
+        "images": 2,
+        "imagesNoAlt": [],
+        "imagesEmptyAlt": 0,
+        "internal": [
+          "/",
+          "/where-to-start/commercial-review",
+          "/where-to-start/website-build",
+          "/taxi-and-private-hire-operators/office-workspace",
+          "/about-us",
+          "/evidence",
+          "/privacy",
+          "/business-consultant-devon",
+          "/business-consultant-cornwall",
+          "/business-consultant-plymouth",
+          "/business-consultant-exeter",
+          "/useful-thinking",
+          "/staff"
+        ],
+        "pageKb": 199,
+        "heaviest": [
+          "/img/docs/half-time-team-talk.jpg 168KB"
+        ],
+        "loadMs": 703
+      },
+      "digitFonts": {
+        "elements": 9,
+        "glyphs": {
+          "Poppins Medium": 32,
+          "DM Sans 9pt": 287
+        },
+        "serif": []
+      },
+      "raw": {
+        "titles": [
+          "Commercial Review | Arrington Consultancy"
+        ],
+        "descriptions": [
+          "A £500 Commercial Review for owner run businesses: a day in the business with you, then a written assessment, recommendations and next steps within 4 business days."
+        ],
+        "canonicals": [
+          "https://www.arringtonconsultancy.com/where-to-start/commercial-review"
+        ],
+        "ogTitles": [
+          "Commercial Review | Arrington Consultancy"
+        ],
+        "ldBlocks": 2,
+        "googleTagLoaders": 1,
+        "adsConfigs": 1
+      }
+    },
+    {
+      "path": "/where-to-start/website-build",
+      "size": "desktop",
+      "url": "https://www.arringtonconsultancy.com/where-to-start/website-build",
+      "status": 200,
+      "finalUrl": "https://www.arringtonconsultancy.com/where-to-start/website-build",
+      "title": "Website Build | Arrington Consultancy",
+      "h1": "Website Build",
+      "canonical": "https://www.arringtonconsultancy.com/where-to-start/website-build",
+      "robotsMeta": null,
+      "xRobotsTag": null,
+      "selfLinks": 2,
+      "inSitemap": true,
+      "overflow": false,
+      "height": 3847,
+      "dashes": [],
+      "consoleErrors": [
+        "Permissions policy violation: picture-in-picture is not allowed in this document.",
+        "Refused to connect to 'data:,' because it violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c",
+        "Refused to connect to 'data:,' because it violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c",
+        "Refused to connect to 'data:,' because it violates the document's Content Security Policy.",
+        "%c%d font-size:0;color:transparent NaN",
+        "%c%d font-size:0;color:transparent NaN",
+        "%c%o font-size:0;color:transparent {}",
+        "%c%o font-size:0;color:transparent {}"
+      ],
+      "pageErrors": [],
+      "clarityCollect": [
+        204,
+        204
+      ],
+      "uetRequests": [],
+      "droppedHits": [
+        "connect.facebook.net",
+        "googleads.g.doubleclick.net",
+        "googleads.g.doubleclick.net",
+        "www.google-analytics.com"
+      ],
+      "screenshot": "where-to-start-website-build-desktop.png",
+      "topScreenshot": "where-to-start-website-build-desktop-top.png",
+      "error": null,
+      "form": {
+        "top": 2796,
+        "screens": 2.8,
+        "viewport": 1000,
+        "heard": [
+          "How did you hear about us?",
+          "Google search",
+          "Google advert",
+          "Facebook or Instagram advert",
+          "Microsoft or Bing advert",
+          "Recommended by someone",
+          "Social media",
+          "AI assistant, such as ChatGPT",
+          "Other"
+        ]
+      },
+      "heroCta": {
+        "text": "Tell us what you want to build",
+        "href": "#conversation"
+      },
+      "docModalOpen": null,
+      "docRequestButtons": 0,
+      "uet": {
+        "state": "not loaded",
+        "loader": null,
+        "bar": null
+      },
+      "clarity": "ywiy9r672t",
+      "seo": {
+        "lang": "en-GB",
+        "description": "A fixed £999 Website Build for owner run businesses: planning, build, mobile-ready pages, agreed functionality and one structured round of changes.",
+        "ogTitle": "Website Build | Arrington Consultancy",
+        "ogImage": "https://www.arringtonconsultancy.com/img/logo",
+        "jsonLd": [
+          "Organization/ProfessionalService, WebSite",
+          "BreadcrumbList, Service"
+        ],
+        "h1s": [
+          "Website Build"
+        ],
+        "h2s": [
+          "What we have built",
+          "What you get",
+          "How it works",
+          "Price and scope",
+          "Start your Website Build",
+          "Tell us what you want to build"
+        ],
+        "words": 506,
+        "images": 5,
+        "imagesNoAlt": [],
+        "imagesEmptyAlt": 0,
+        "internal": [
+          "/",
+          "/where-to-start/commercial-review",
+          "/where-to-start/website-build",
+          "/taxi-and-private-hire-operators/office-workspace",
+          "/about-us",
+          "/websites-and-ai",
+          "/taxi-demo/",
+          "/taxi-demo/staff-portal",
+          "/evidence",
+          "/privacy",
+          "/business-consultant-devon",
+          "/business-consultant-cornwall",
+          "/business-consultant-plymouth",
+          "/business-consultant-exeter",
+          "/useful-thinking",
+          "/staff"
+        ],
+        "pageKb": 152,
+        "heaviest": [],
+        "loadMs": 706
+      },
+      "digitFonts": {
+        "elements": 8,
+        "glyphs": {
+          "Poppins Medium": 4,
+          "DM Sans 9pt": 824
+        },
+        "serif": []
+      },
+      "raw": {
+        "titles": [
+          "Website Build | Arrington Consultancy"
+        ],
+        "descriptions": [
+          "A fixed £999 Website Build for owner run businesses: planning, build, mobile-ready pages, agreed functionality and one structured round of changes."
+        ],
+        "canonicals": [
+          "https://www.arringtonconsultancy.com/where-to-start/website-build"
+        ],
+        "ogTitles": [
+          "Website Build | Arrington Consultancy"
+        ],
+        "ldBlocks": 2,
+        "googleTagLoaders": 1,
+        "adsConfigs": 1
+      }
+    },
+    {
+      "path": "/where-to-start/website-build",
+      "size": "mobile",
+      "url": "https://www.arringtonconsultancy.com/where-to-start/website-build",
+      "status": 200,
+      "finalUrl": "https://www.arringtonconsultancy.com/where-to-start/website-build",
+      "title": "Website Build | Arrington Consultancy",
+      "h1": "Website Build",
+      "canonical": "https://www.arringtonconsultancy.com/where-to-start/website-build",
+      "robotsMeta": null,
+      "xRobotsTag": null,
+      "selfLinks": 2,
+      "inSitemap": true,
+      "overflow": false,
+      "height": 5148,
+      "dashes": [],
+      "consoleErrors": [
+        "Permissions policy violation: picture-in-picture is not allowed in this document.",
+        "%c%d font-size:0;color:transparent NaN",
+        "%c%d font-size:0;color:transparent NaN",
+        "%c%o font-size:0;color:transparent {}",
+        "%c%o font-size:0;color:transparent {}",
+        "Refused to connect to 'data:,' because it violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c",
+        "Refused to connect to 'data:,' because it violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c",
+        "Refused to connect to 'data:,' because it violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c",
+        "Refused to connect to 'data:,' because it violates the document's Content Security Policy."
+      ],
+      "pageErrors": [],
+      "clarityCollect": [
+        204,
+        204,
+        204
+      ],
+      "uetRequests": [],
+      "droppedHits": [
+        "connect.facebook.net",
+        "googleads.g.doubleclick.net",
+        "googleads.g.doubleclick.net",
+        "www.google-analytics.com"
+      ],
+      "screenshot": "where-to-start-website-build-mobile.png",
+      "topScreenshot": "where-to-start-website-build-mobile-top.png",
+      "error": null,
+      "form": {
+        "top": 3827,
+        "screens": 5.8,
+        "viewport": 664,
+        "heard": [
+          "How did you hear about us?",
+          "Google search",
+          "Google advert",
+          "Facebook or Instagram advert",
+          "Microsoft or Bing advert",
+          "Recommended by someone",
+          "Social media",
+          "AI assistant, such as ChatGPT",
+          "Other"
+        ]
+      },
+      "heroCta": {
+        "text": "Tell us what you want to build",
+        "href": "#conversation"
+      },
+      "docModalOpen": null,
+      "docRequestButtons": 0,
+      "uet": {
+        "state": "not loaded",
+        "loader": null,
+        "bar": null
+      },
+      "clarity": "ywiy9r672t",
+      "seo": {
+        "lang": "en-GB",
+        "description": "A fixed £999 Website Build for owner run businesses: planning, build, mobile-ready pages, agreed functionality and one structured round of changes.",
+        "ogTitle": "Website Build | Arrington Consultancy",
+        "ogImage": "https://www.arringtonconsultancy.com/img/logo",
+        "jsonLd": [
+          "Organization/ProfessionalService, WebSite",
+          "BreadcrumbList, Service"
+        ],
+        "h1s": [
+          "Website Build"
+        ],
+        "h2s": [
+          "What we have built",
+          "What you get",
+          "How it works",
+          "Price and scope",
+          "Start your Website Build",
+          "Tell us what you want to build"
+        ],
+        "words": 492,
+        "images": 5,
+        "imagesNoAlt": [],
+        "imagesEmptyAlt": 0,
+        "internal": [
+          "/",
+          "/where-to-start/commercial-review",
+          "/where-to-start/website-build",
+          "/taxi-and-private-hire-operators/office-workspace",
+          "/about-us",
+          "/websites-and-ai",
+          "/taxi-demo/",
+          "/taxi-demo/staff-portal",
+          "/evidence",
+          "/privacy",
+          "/business-consultant-devon",
+          "/business-consultant-cornwall",
+          "/business-consultant-plymouth",
+          "/business-consultant-exeter",
+          "/useful-thinking",
+          "/staff"
+        ],
+        "pageKb": 152,
+        "heaviest": [],
+        "loadMs": 666
+      },
+      "digitFonts": {
+        "elements": 8,
+        "glyphs": {
+          "Poppins Medium": 4,
+          "DM Sans 9pt": 817
+        },
+        "serif": []
+      },
+      "raw": {
+        "titles": [
+          "Website Build | Arrington Consultancy"
+        ],
+        "descriptions": [
+          "A fixed £999 Website Build for owner run businesses: planning, build, mobile-ready pages, agreed functionality and one structured round of changes."
+        ],
+        "canonicals": [
+          "https://www.arringtonconsultancy.com/where-to-start/website-build"
+        ],
+        "ogTitles": [
+          "Website Build | Arrington Consultancy"
+        ],
+        "ldBlocks": 2,
+        "googleTagLoaders": 1,
+        "adsConfigs": 1
+      }
+    },
+    {
+      "path": "/thank-you",
+      "size": "desktop",
+      "url": "https://www.arringtonconsultancy.com/thank-you",
+      "status": 200,
+      "finalUrl": "https://www.arringtonconsultancy.com/thank-you",
+      "title": "Thank you | Arrington Consultancy",
+      "h1": "Thank you",
+      "canonical": null,
+      "robotsMeta": "noindex, nofollow",
+      "xRobotsTag": "noindex, nofollow",
+      "selfLinks": 0,
+      "inSitemap": false,
+      "overflow": false,
+      "height": 1743,
+      "dashes": [],
+      "consoleErrors": [
+        "Permissions policy violation: picture-in-picture is not allowed in this document.",
+        "%c%d font-size:0;color:transparent NaN",
+        "%c%d font-size:0;color:transparent NaN",
+        "%c%o font-size:0;color:transparent {}",
+        "%c%o font-size:0;color:transparent {}",
+        "Refused to connect to 'data:,' because it violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c",
+        "Refused to connect to 'data:,' because it violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c",
+        "Refused to connect to 'data:,' because it violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c",
+        "Refused to connect to 'data:,' because it violates the document's Content Security Policy."
+      ],
+      "pageErrors": [],
+      "clarityCollect": [
+        204,
+        204
+      ],
+      "uetRequests": [],
+      "droppedHits": [
+        "connect.facebook.net",
+        "googleads.g.doubleclick.net",
+        "googleads.g.doubleclick.net",
+        "www.google-analytics.com"
+      ],
+      "screenshot": "thank-you-desktop.png",
+      "topScreenshot": "thank-you-desktop-top.png",
+      "error": null,
+      "form": {
+        "top": 692,
+        "screens": 0.7,
+        "viewport": 1000,
+        "heard": [
+          "How did you hear about us?",
+          "Google search",
+          "Google advert",
+          "Facebook or Instagram advert",
+          "Microsoft or Bing advert",
+          "Recommended by someone",
+          "Social media",
+          "AI assistant, such as ChatGPT",
+          "Other"
+        ]
+      },
+      "heroCta": null,
+      "docModalOpen": null,
+      "docRequestButtons": 0,
+      "uet": {
+        "state": "not loaded",
+        "loader": null,
+        "bar": null
+      },
+      "clarity": "ywiy9r672t",
+      "seo": {
+        "lang": "en-GB",
+        "description": null,
+        "ogTitle": null,
+        "ogImage": null,
+        "jsonLd": [
+          "Organization/ProfessionalService, WebSite"
+        ],
+        "h1s": [
+          "Thank you"
+        ],
+        "h2s": [
+          "Tell us where the pressure is showing."
+        ],
+        "words": 201,
+        "images": 1,
+        "imagesNoAlt": [],
+        "imagesEmptyAlt": 0,
+        "internal": [
+          "/",
+          "/where-to-start/commercial-review",
+          "/where-to-start/website-build",
+          "/taxi-and-private-hire-operators/office-workspace",
+          "/about-us",
+          "/privacy",
+          "/business-consultant-devon",
+          "/business-consultant-cornwall",
+          "/business-consultant-plymouth",
+          "/business-consultant-exeter",
+          "/useful-thinking",
+          "/staff"
+        ],
+        "pageKb": 27,
+        "heaviest": [],
+        "loadMs": 576
+      },
+      "digitFonts": {
+        "elements": 2,
+        "glyphs": {
+          "DM Sans 9pt": 140
+        },
+        "serif": []
+      },
+      "raw": {
+        "titles": [
+          "Thank you | Arrington Consultancy"
+        ],
+        "descriptions": [],
+        "canonicals": [],
+        "ogTitles": [],
+        "ldBlocks": 1,
+        "googleTagLoaders": 1,
+        "adsConfigs": 1
+      }
+    },
+    {
+      "path": "/thank-you",
+      "size": "mobile",
+      "url": "https://www.arringtonconsultancy.com/thank-you",
+      "status": 200,
+      "finalUrl": "https://www.arringtonconsultancy.com/thank-you",
+      "title": "Thank you | Arrington Consultancy",
+      "h1": "Thank you",
+      "canonical": null,
+      "robotsMeta": "noindex, nofollow",
+      "xRobotsTag": "noindex, nofollow",
+      "selfLinks": 0,
+      "inSitemap": false,
+      "overflow": false,
+      "height": 2055,
+      "dashes": [],
+      "consoleErrors": [
+        "Permissions policy violation: picture-in-picture is not allowed in this document.",
+        "Refused to connect to 'data:,' because it violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c",
+        "Refused to connect to 'data:,' because it violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c",
+        "Refused to connect to 'data:,' because it violates the document's Content Security Policy.",
+        "%c%d font-size:0;color:transparent NaN",
+        "%c%d font-size:0;color:transparent NaN",
+        "%c%o font-size:0;color:transparent {}",
+        "%c%o font-size:0;color:transparent {}"
+      ],
+      "pageErrors": [],
+      "clarityCollect": [
+        204,
+        204
+      ],
+      "uetRequests": [],
+      "droppedHits": [
+        "connect.facebook.net",
+        "googleads.g.doubleclick.net",
+        "googleads.g.doubleclick.net",
+        "www.google-analytics.com"
+      ],
+      "screenshot": "thank-you-mobile.png",
+      "topScreenshot": "thank-you-mobile-top.png",
+      "error": null,
+      "form": {
+        "top": 734,
+        "screens": 1.1,
+        "viewport": 664,
+        "heard": [
+          "How did you hear about us?",
+          "Google search",
+          "Google advert",
+          "Facebook or Instagram advert",
+          "Microsoft or Bing advert",
+          "Recommended by someone",
+          "Social media",
+          "AI assistant, such as ChatGPT",
+          "Other"
+        ]
+      },
+      "heroCta": null,
+      "docModalOpen": null,
+      "docRequestButtons": 0,
+      "uet": {
+        "state": "not loaded",
+        "loader": null,
+        "bar": null
+      },
+      "clarity": "ywiy9r672t",
+      "seo": {
+        "lang": "en-GB",
+        "description": null,
+        "ogTitle": null,
+        "ogImage": null,
+        "jsonLd": [
+          "Organization/ProfessionalService, WebSite"
+        ],
+        "h1s": [
+          "Thank you"
+        ],
+        "h2s": [
+          "Tell us where the pressure is showing."
+        ],
+        "words": 187,
+        "images": 1,
+        "imagesNoAlt": [],
+        "imagesEmptyAlt": 0,
+        "internal": [
+          "/",
+          "/where-to-start/commercial-review",
+          "/where-to-start/website-build",
+          "/taxi-and-private-hire-operators/office-workspace",
+          "/about-us",
+          "/privacy",
+          "/business-consultant-devon",
+          "/business-consultant-cornwall",
+          "/business-consultant-plymouth",
+          "/business-consultant-exeter",
+          "/useful-thinking",
+          "/staff"
+        ],
+        "pageKb": 27,
+        "heaviest": [],
+        "loadMs": 654
+      },
+      "digitFonts": {
+        "elements": 2,
+        "glyphs": {
+          "DM Sans 9pt": 138
+        },
+        "serif": []
+      },
+      "raw": {
+        "titles": [
+          "Thank you | Arrington Consultancy"
+        ],
+        "descriptions": [],
+        "canonicals": [],
+        "ogTitles": [],
+        "ldBlocks": 1,
+        "googleTagLoaders": 1,
+        "adsConfigs": 1
+      }
+    },
+    {
+      "path": "/evidence",
+      "size": "desktop",
+      "url": "https://www.arringtonconsultancy.com/evidence",
+      "status": 200,
+      "finalUrl": "https://www.arringtonconsultancy.com/evidence",
+      "title": "Business Consultancy Case Studies | Arrington Consultancy",
+      "h1": "Abacus and Falmouth TaxisBuilt, very nearly lost, then rebuilt properly",
+      "canonical": "https://www.arringtonconsultancy.com/evidence",
+      "robotsMeta": null,
+      "xRobotsTag": null,
+      "selfLinks": 0,
+      "inSitemap": true,
+      "overflow": false,
+      "height": 13622,
+      "dashes": [],
+      "consoleErrors": [
+        "Permissions policy violation: picture-in-picture is not allowed in this document.",
+        "%c%d font-size:0;color:transparent NaN",
+        "%c%d font-size:0;color:transparent NaN",
+        "%c%o font-size:0;color:transparent {}",
+        "%c%o font-size:0;color:transparent {}",
+        "Refused to connect to 'data:,' because it violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c",
+        "Refused to connect to 'data:,' because it violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c",
+        "Refused to connect to 'data:,' because it violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c",
+        "Refused to connect to 'data:,' because it violates the document's Content Security Policy."
+      ],
+      "pageErrors": [],
+      "clarityCollect": [
+        204,
+        204,
+        204
+      ],
+      "uetRequests": [],
+      "droppedHits": [
+        "connect.facebook.net",
+        "googleads.g.doubleclick.net",
+        "googleads.g.doubleclick.net",
+        "www.google-analytics.com",
+        "googleads.g.doubleclick.net",
+        "googleads.g.doubleclick.net",
+        "googleads.g.doubleclick.net",
+        "googleads.g.doubleclick.net",
+        "googleads.g.doubleclick.net",
+        "googleads.g.doubleclick.net",
+        "googleads.g.doubleclick.net",
+        "googleads.g.doubleclick.net"
+      ],
+      "screenshot": "evidence-desktop.png",
+      "topScreenshot": "evidence-desktop-top.png",
+      "error": null,
+      "form": {
+        "top": 12552,
+        "screens": 12.6,
+        "viewport": 1000,
+        "heard": [
+          "How did you hear about us?",
+          "Google search",
+          "Google advert",
+          "Facebook or Instagram advert",
+          "Microsoft or Bing advert",
+          "Recommended by someone",
+          "Social media",
+          "AI assistant, such as ChatGPT",
+          "Other"
+        ]
+      },
+      "heroCta": {
+        "text": "Book a 30 minute conversation",
+        "href": "#conversation"
+      },
+      "docModalOpen": false,
+      "docRequestButtons": 4,
+      "uet": {
+        "state": "not loaded",
+        "loader": null,
+        "bar": null
+      },
+      "clarity": "ywiy9r672t",
+      "seo": {
+        "lang": "en-GB",
+        "description": "Real Arrington Consultancy evidence from owner run businesses: turnaround work, margin recovery and Google reviews from business owners.",
+        "ogTitle": "Business Consultancy Case Studies | Arrington Consultancy",
+        "ogImage": "https://www.arringtonconsultancy.com/img/logo",
+        "jsonLd": [
+          "Organization/ProfessionalService, WebSite",
+          "BreadcrumbList"
+        ],
+        "h1s": [
+          "Abacus and Falmouth TaxisBuilt, very nearly lost, then rebuilt properly"
+        ],
+        "h2s": [
+          "Run a taxi or private hire firm yourself?",
+          "The Insolvent Turnaround",
+          "More Margin From the Work Already There",
+          "The VAT Intervention",
+          "What the work looks like",
+          "From the thinking to the thing that runs it",
+          "Real feedback from owners who have seen the work up close.",
+          "Ready to talk?",
+          "Tell us where the pressure is showing."
+        ],
+        "words": 1705,
+        "images": 20,
+        "imagesNoAlt": [],
+        "imagesEmptyAlt": 9,
+        "internal": [
+          "/",
+          "/where-to-start/commercial-review",
+          "/where-to-start/website-build",
+          "/taxi-and-private-hire-operators/office-workspace",
+          "/about-us",
+          "/evidence",
+          "/taxi-and-private-hire-operators",
+          "/privacy",
+          "/business-consultant-devon",
+          "/business-consultant-cornwall",
+          "/business-consultant-plymouth",
+          "/business-consultant-exeter",
+          "/useful-thinking",
+          "/staff"
+        ],
+        "pageKb": 1344,
+        "heaviest": [
+          "/img/docs/half-time-team-talk.jpg 168KB",
+          "/img/casestudy_marine.webp 164KB",
+          "/img/wsa/wsa-homepage.jpg 157KB"
+        ],
+        "loadMs": 618
+      },
+      "digitFonts": {
+        "elements": 25,
+        "glyphs": {
+          "DM Sans 9pt": 552,
+          "Poppins Medium": 11,
+          "Poppins SemiBold": 18
+        },
+        "serif": []
+      },
+      "raw": {
+        "titles": [
+          "Business Consultancy Case Studies | Arrington Consultancy"
+        ],
+        "descriptions": [
+          "Real Arrington Consultancy evidence from owner run businesses: turnaround work, margin recovery and Google reviews from business owners."
+        ],
+        "canonicals": [
+          "https://www.arringtonconsultancy.com/evidence"
+        ],
+        "ogTitles": [
+          "Business Consultancy Case Studies | Arrington Consultancy"
+        ],
+        "ldBlocks": 2,
+        "googleTagLoaders": 1,
+        "adsConfigs": 1
+      }
+    },
+    {
+      "path": "/evidence",
+      "size": "mobile",
+      "url": "https://www.arringtonconsultancy.com/evidence",
+      "status": 200,
+      "finalUrl": "https://www.arringtonconsultancy.com/evidence",
+      "title": "Business Consultancy Case Studies | Arrington Consultancy",
+      "h1": "Abacus and Falmouth TaxisBuilt, very nearly lost, then rebuilt properly",
+      "canonical": "https://www.arringtonconsultancy.com/evidence",
+      "robotsMeta": null,
+      "xRobotsTag": null,
+      "selfLinks": 0,
+      "inSitemap": true,
+      "overflow": false,
+      "height": 16190,
+      "dashes": [],
+      "consoleErrors": [
+        "Permissions policy violation: picture-in-picture is not allowed in this document.",
+        "%c%d font-size:0;color:transparent NaN",
+        "%c%d font-size:0;color:transparent NaN",
+        "%c%o font-size:0;color:transparent {}",
+        "%c%o font-size:0;color:transparent {}",
+        "Refused to connect to 'data:,' because it violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c",
+        "Refused to connect to 'data:,' because it violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c",
+        "Refused to connect to 'data:,' because it violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c",
+        "Refused to connect to 'data:,' because it violates the document's Content Security Policy."
+      ],
+      "pageErrors": [],
+      "clarityCollect": [
+        204,
+        204,
+        204
+      ],
+      "uetRequests": [],
+      "droppedHits": [
+        "connect.facebook.net",
+        "googleads.g.doubleclick.net",
+        "googleads.g.doubleclick.net",
+        "www.google-analytics.com",
+        "googleads.g.doubleclick.net",
+        "googleads.g.doubleclick.net",
+        "googleads.g.doubleclick.net",
+        "googleads.g.doubleclick.net",
+        "googleads.g.doubleclick.net",
+        "googleads.g.doubleclick.net",
+        "googleads.g.doubleclick.net",
+        "googleads.g.doubleclick.net",
+        "www.google-analytics.com"
+      ],
+      "screenshot": "evidence-mobile.png",
+      "topScreenshot": "evidence-mobile-top.png",
+      "error": null,
+      "form": {
+        "top": 14827,
+        "screens": 22.3,
+        "viewport": 664,
+        "heard": [
+          "How did you hear about us?",
+          "Google search",
+          "Google advert",
+          "Facebook or Instagram advert",
+          "Microsoft or Bing advert",
+          "Recommended by someone",
+          "Social media",
+          "AI assistant, such as ChatGPT",
+          "Other"
+        ]
+      },
+      "heroCta": {
+        "text": "Book a 30 minute conversation",
+        "href": "#conversation"
+      },
+      "docModalOpen": false,
+      "docRequestButtons": 4,
+      "uet": {
+        "state": "not loaded",
+        "loader": null,
+        "bar": null
+      },
+      "clarity": "ywiy9r672t",
+      "seo": {
+        "lang": "en-GB",
+        "description": "Real Arrington Consultancy evidence from owner run businesses: turnaround work, margin recovery and Google reviews from business owners.",
+        "ogTitle": "Business Consultancy Case Studies | Arrington Consultancy",
+        "ogImage": "https://www.arringtonconsultancy.com/img/logo",
+        "jsonLd": [
+          "Organization/ProfessionalService, WebSite",
+          "BreadcrumbList"
+        ],
+        "h1s": [
+          "Abacus and Falmouth TaxisBuilt, very nearly lost, then rebuilt properly"
+        ],
+        "h2s": [
+          "Run a taxi or private hire firm yourself?",
+          "The Insolvent Turnaround",
+          "More Margin From the Work Already There",
+          "The VAT Intervention",
+          "What the work looks like",
+          "From the thinking to the thing that runs it",
+          "Real feedback from owners who have seen the work up close.",
+          "Ready to talk?",
+          "Tell us where the pressure is showing."
+        ],
+        "words": 1691,
+        "images": 20,
+        "imagesNoAlt": [],
+        "imagesEmptyAlt": 9,
+        "internal": [
+          "/",
+          "/where-to-start/commercial-review",
+          "/where-to-start/website-build",
+          "/taxi-and-private-hire-operators/office-workspace",
+          "/about-us",
+          "/evidence",
+          "/taxi-and-private-hire-operators",
+          "/privacy",
+          "/business-consultant-devon",
+          "/business-consultant-cornwall",
+          "/business-consultant-plymouth",
+          "/business-consultant-exeter",
+          "/useful-thinking",
+          "/staff"
+        ],
+        "pageKb": 1155,
+        "heaviest": [
+          "/img/docs/half-time-team-talk.jpg 168KB",
+          "/img/casestudy_marine.webp 164KB",
+          "/img/wsa/wsa-homepage.jpg 157KB"
+        ],
+        "loadMs": 652
+      },
+      "digitFonts": {
+        "elements": 25,
+        "glyphs": {
+          "DM Sans 9pt": 548,
+          "Poppins Medium": 11,
+          "Poppins SemiBold": 18
+        },
+        "serif": []
+      },
+      "raw": {
+        "titles": [
+          "Business Consultancy Case Studies | Arrington Consultancy"
+        ],
+        "descriptions": [
+          "Real Arrington Consultancy evidence from owner run businesses: turnaround work, margin recovery and Google reviews from business owners."
+        ],
+        "canonicals": [
+          "https://www.arringtonconsultancy.com/evidence"
+        ],
+        "ogTitles": [
+          "Business Consultancy Case Studies | Arrington Consultancy"
+        ],
+        "ldBlocks": 2,
+        "googleTagLoaders": 1,
+        "adsConfigs": 1
+      }
+    }
+  ]
+}
