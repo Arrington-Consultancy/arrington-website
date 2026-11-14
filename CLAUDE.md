@@ -10619,3 +10619,32 @@ office branch.
   client; the full WSA story, which waits on Tim's consent in a controlled
   record and real figures (Tom's 22/10 decision; no consent record found in
   Drive on 14/11).
+
+## World Student Advisors case study (built 14/11/2026 on `feat/wsa-case-study`)
+
+Tom's figures, in chat on 14/11/2026: cold enquiries from about one a month
+to around 30 a day ("30 a day is better"), revenue up 159% ("Revenue is
+estimated to rise by 250% but timings of payments meant the moment I can only
+claim 159%"), since June 2026, from everything done for World Student
+Advisors including the Commercial Review. **The 250% is an estimate and is
+never published**; raise the figure only when Tom says a higher one has
+happened. Draft and sources: Drive id
+`1ni_xnkTmCu8NHIBJe-dTuwe1mKOV6hCd2offOXQ1ymI`.
+
+- **Evidence:** `lib/wsaCaseStudy.js` (marker
+  `evidence.wsa_case_study_2026-11-14`, run once) adds a `casestudy2`
+  instance after the last case study, labelled as the next in the page's
+  EVIDENCE series, and edits nothing else. The marker row holds the
+  allocated id.
+- **Commercial Review page:** a result block under "See the standard",
+  before the document. Its sentence is the case study's own outcome row up
+  to the first line break, read live (`readWsaCaseStudy`), so a figure
+  changed in the CMS changes there too; the views hold no figure. Nothing
+  shows if the case study is missing or hidden on Evidence.
+- **Website Build page:** one text link under the four cards. The figures
+  stay off that page: the result came from more than the £999 website.
+- Not in it: Tim's name or a quote, any price, what the review found (no
+  record says), the word "transformed".
+- **Open when built:** Tim's agreement in his own words by email. The
+  outcome ends "Published with the agreement of World Student Advisors."
+- `test/wsaCaseStudy.test.js` (10).
