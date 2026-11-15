@@ -209,11 +209,12 @@
             got its own page (/taxi-and-private-hire-operators/office-workspace,
             released on Tom's "approve"); the detail lives there, so the two
             pages cannot drift. The first paragraph is the wording Tom approved
-            on 17/10/2026 ("yes"). The price line ("The workspace is £999,
-            separate from the website, or £1,998 for both") came off on Tom's
-            decision of 26/10/2026: no workspace price on this page until a data
-            processing agreement exists, so it reads "Ask us about it when we
-            talk." instead. The list of examples
+            on 17/10/2026 ("yes"), and so is the price line ("The workspace is
+            £999, separate from the website, or £1,998 for both"). That line
+            came off on 26/10/2026 (no workspace price here until a data
+            processing agreement exists) and went back on Tom's "Yes" of
+            15/11/2026, so this page, the workspace page and the home page
+            agree. The list of examples
             (licensing dates, the email check, quotes, rotas, social) gave way
             to the workers and the checker the new page shows, and quotes and
             rotas went with it because the new page does not claim them. After
@@ -226,7 +227,7 @@
             <h2>An office workspace for your firm</h2>
             <p>Alongside the website, we can set up an office workspace: AI workers built for your firm, who know your business, your customers and how you talk to them. They draft the work and flag what needs attention, and someone in your office checks it and decides what goes out.</p>
             <p data-workspace-summary>Five workers take the booking emails, customer emails, complaints, licensing and social media off your controllers. Every booking that arrives by email is checked against the job in your dispatch system, and when something does not match, your controllers see it before the car is sent.</p>
-            <p data-workspace-ask>Ask us about it when we talk.</p>
+            <p data-workspace-price>The workspace is <%= '£' + (workspacePricePence / 100).toLocaleString('en-GB') %>, separate from the website, or <%= '£' + ((websiteOffer.pricePence + workspacePricePence) / 100).toLocaleString('en-GB') %> for both. Which workers you get, and what each one does, is agreed in a recorded planning conversation, the same way the website is, so you know exactly what the <%= '£' + (workspacePricePence / 100).toLocaleString('en-GB') %> buys before any work starts.</p>
             <p data-office-link><a class="tw-link" href="<%= workspacePath %>">See the office workspace</a>, or look round an example in the <a class="tw-link" href="/taxi-demo/staff-portal">Tidewell Cars staff office</a>, where the workers run on a made up firm.</p>
         </div>
         </div>

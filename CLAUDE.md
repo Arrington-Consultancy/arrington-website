@@ -10936,3 +10936,36 @@ note in Drive, id `18f3byuWSIULphEFZooOkfifLRnATMyeUtJDrWJEVj3o`.
   branches mean nothing; `git merge-base --is-ancestor` on recent branches
   is the check that works. The worktree's local `main` is stale; use
   `origin/main`.
+
+## Prices show what we usually build; the rest is quoted (LIVE 15/11/2026)
+
+Tom, 15/11/2026, in chat: "Website is £999, workspace is £999, multiple
+companies are chargeable, commercial review is on top ... the work price can
+depend on the work you may need a quote", then "We don't need to quote every
+former or future price, we quote. We can give an idea of what we build for
+these prices but companies and builds can be different for each business. We
+tailor our products to what the customer needs and price accoringly". His
+"Yes" the same day to the exact wording below.
+
+- **The rule:** the published prices (Commercial Review £500, Website £999,
+  Taxi office workspace £999) stay and show what is usually built for them.
+  Anything beyond that, a second company included, is quoted for that
+  business. Do not publish per company prices, combined totals other than the
+  existing £1,998, or a past client's deal price.
+- **Workspace page** (`views/taxi-workspace.ejs`, `data-quote`, under "Both
+  together are £1,998."): "Every business is different. These prices show
+  what we usually build for them. Tell us what yours needs and we'll quote
+  for it." No "tailored": it is a Brand OS banned word.
+- **Taxi websites page** (`views/taxi-websites.ejs`, `data-workspace-price`):
+  the 17/10/2026 price line is back in place of "Ask us about it when we
+  talk.", so this page, the workspace page and the home page agree. **This
+  reverses Tom's 26/10/2026 decision** to hold the price off that page until
+  a data processing agreement exists. The agreement is still needed before a
+  real operator's mailbox is connected.
+- "Fixed £999 price" on the website pages and in the ads is unchanged: it is
+  fixed for the stated scope, and further work is charged separately.
+- Tests: `test/taxiWebsitesPage.test.js` (£999, and £1,998 once, only in the
+  workspace section; no "ask us" line), `test/taxiWorkspacePage.test.js` (the
+  line word for word, its place, no banned word or per company line).
+- 02 Commercial Position does not hold this rule yet; that record is Tom's
+  or the Brain Keeper's.

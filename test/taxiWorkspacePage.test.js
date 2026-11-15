@@ -68,6 +68,12 @@ test('two products at £999 each, £1,998 for both, support optional with no mon
   assert.ok(price.includes('Buy one or both'));
   assert.ok(/The office workspace £999/.test(price) && /A website for your firm £999/.test(price));
   assert.ok(price.includes('Both together are £1,998.'));
+  // Tom, 15/11/2026: the prices show what is usually built; anything else
+  // is quoted. No per company or combined price list, and not "tailored"
+  // (a Brand OS banned word).
+  assert.ok(price.includes("Every business is different. These prices show what we usually build for them. Tell us what yours needs and we'll quote for it."), 'the "we quote" line changed');
+  assert.ok(price.indexOf('Both together are') < price.indexOf('Every business is different') && price.indexOf('Every business is different') < price.indexOf('Support after setup'), 'the "we quote" line moved');
+  assert.ok(!/tailor|bespoke|per company|each company|on top/i.test(visibleText(body)), 'a banned word or a per company price line appeared');
   assert.ok(price.includes('Support after setup is optional.') && price.includes("It's your choice."));
   assert.ok(body.includes(`href="${TAXI_WEBSITES_PATH}"`), 'the website card no longer links to the websites page');
   const text = visibleText(body);
