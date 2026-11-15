@@ -12,7 +12,7 @@
         <div class="nav-actions">
             <a href="#conversation" class="nav-cta"><%= pageContact.headerCtaText %></a>
             <% const _navWa = (content['contact.whatsapp'] || '').trim(); %>
-            <% if (/^https:\/\/(wa\.me|api\.whatsapp\.com)\//.test(_navWa)) { %>
+            <% if (!pageContact.hideNavWhatsapp && /^https:\/\/(wa\.me|api\.whatsapp\.com)\//.test(_navWa)) { %>
             <a href="<%= _navWa %>" class="nav-cta nav-cta-whatsapp" target="_blank" rel="noopener nofollow">WhatsApp us</a>
             <% } %>
         </div>

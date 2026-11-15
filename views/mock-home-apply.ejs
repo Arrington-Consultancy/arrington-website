@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOCK-UP: home page, apply to work with us</title>
+    <%# MOCK-UP ONLY (Tom, 15/11/2026). Not live, not linked, noindex. Every
+        line of new wording here is a proposal for Tom, marked NEW in the
+        note sent with it. See routes/mockHomeApply.js. %>
+    <meta name="robots" content="noindex">
+    <meta name="csrf-token" content="<%= csrfToken %>">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Poppins:wght@500;600&display=swap" rel="stylesheet">
+    <style nonce="<%= nonce %>">
+        :root {
+            <% for (const [prop, val] of Object.entries(theme.vars)) { %>
+            <%= prop %>: <%= val %>;
+            <% } %>
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: 'DM Sans', sans-serif; background: var(--black); color: var(--text); line-height: 1.6; }
+        <%- include('partials/site-chrome-styles') %>
+
+        h1, h2, h3 { font-family: 'Poppins', 'DM Sans', sans-serif; font-weight: 600; color: var(--text-bright); line-height: 1.15; margin: 0; }
+        p { margin: 0; }
+        .btn { display: inline-block; font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 700; letter-spacing: 0.02em; padding: 0.95rem 2rem; border-radius: 3px; text-decoration: none; cursor: pointer; border: 1px solid transparent; }
+        .btn-primary { background: var(--accent); color: var(--black); border-color: var(--accent); }
+        .btn-primary:hover, .btn-primary:focus-visible { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+        .mk-wrap { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; }
+        .mk-label { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); margin: 0 0 1.1rem; }
+        .mk-section { padding: 5.5rem 0; border-top: 1px solid var(--border); }
+        .mk-section h2 { font-size: clamp(1.7rem, 3.2vw, 2.4rem); max-width: 20ch; text-wrap: balance; }
+        .mk-more { color: var(--accent); text-decoration: none; font-weight: 500; font-size: 0.95rem; }
+        .mk-more:hover, .mk-more:focus-visible { text-decoration: underline; }
+
+        /* HERO: the live home page photo and headline, one button, no
+           reassurance line under it. */
+        .mk-hero { position: relative; overflow: hidden; min-height: 100vh; display: flex; align-items: flex-end; padding: calc(var(--site-chrome) + 4rem) 0 4.5rem; background: var(--black); }
+        .mk-hero-photo { position: absolute; inset: 0; margin: 0; }
+        .mk-hero-photo img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 55% 40%; }
+        .mk-hero-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, color-mix(in srgb, var(--black) 88%, transparent) 0%, color-mix(in srgb, var(--black) 62%, transparent) 55%, color-mix(in srgb, var(--black) 30%, transparent) 100%), linear-gradient(0deg, var(--black) 0%, transparent 30%); }
+        .mk-hero-inner { position: relative; z-index: 1; width: 100%; }
+        .mk-hero h1 { font-size: clamp(2.3rem, 5.4vw, 4.2rem); max-width: 17ch; }
+        .mk-hero-sub { font-size: clamp(1.05rem, 1.6vw, 1.25rem); color: var(--text-bright); max-width: 34ch; margin: 1.6rem 0 2.4rem; }
+        .mk-proof { display: flex; flex-wrap: wrap; gap: 0.6rem 2.2rem; margin: 3.2rem 0 0; padding: 1.4rem 0 0; border-top: 1px solid color-mix(in srgb, var(--text-bright) 22%, transparent); font-size: 0.92rem; color: var(--text); letter-spacing: 0.02em; }
+
+        /* WHAT WE HAVE DONE: three results, the figure first. */
+        .mk-results { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3rem; margin-top: 3rem; }
+        .mk-result-figure { font-family: 'Poppins', sans-serif; font-weight: 600; font-size: clamp(2.6rem, 5vw, 3.8rem); line-height: 1; color: var(--text-bright); font-variant-numeric: tabular-nums; }
+        .mk-result-figure small { font-size: 0.42em; font-weight: 500; color: var(--accent); letter-spacing: 0.04em; margin-left: 0.35em; }
+        .mk-result p { margin: 1.1rem 0 1rem; max-width: 32ch; }
+
+        /* WHO WE WORK WITH */
+        .mk-fit-intro { max-width: 56ch; margin: 1.4rem 0 0; font-size: 1.08rem; color: var(--text-bright); }
+        .mk-fit { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3rem; margin-top: 3rem; }
+        .mk-fit h3 { font-size: 1.05rem; font-weight: 600; margin: 0 0 1rem; }
+        .mk-fit ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+        .mk-fit li { padding: 0.9rem 0; border-top: 1px solid var(--border); color: var(--text); }
+        .mk-fit-no li { color: var(--text-muted); }
+
+        /* HOW IT WORKS: a real sequence, so it is numbered. */
+        .mk-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3rem; margin-top: 3rem; counter-reset: step; }
+        .mk-step { counter-increment: step; }
+        .mk-step::before { content: counter(step); display: block; font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 1rem; color: var(--accent); margin-bottom: 0.9rem; }
+        .mk-step h3 { font-size: 1.25rem; margin: 0 0 0.7rem; }
+        .mk-step p { max-width: 34ch; }
+
+        /* WHAT WE DO: quiet rows, no prices. */
+        .mk-offers { margin-top: 2.2rem; border-bottom: 1px solid var(--border); }
+        .mk-offer { display: flex; align-items: baseline; justify-content: space-between; gap: 1.5rem; padding: 1.3rem 0; border-top: 1px solid var(--border); text-decoration: none; color: var(--text); }
+        .mk-offer strong { font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 1.2rem; color: var(--text-bright); }
+        .mk-offer span { color: var(--text-muted); }
+        .mk-offer i { font-style: normal; color: var(--accent); }
+        .mk-offer:hover strong, .mk-offer:focus-visible strong { color: var(--accent); }
+
+        /* TOM'S OWN WORDS */
+        .mk-quote { padding: 6rem 0; border-top: 1px solid var(--border); background: var(--near-black); }
+        .mk-quote blockquote { margin: 0; font-family: 'Poppins', sans-serif; font-weight: 500; font-size: clamp(1.6rem, 3.6vw, 2.6rem); line-height: 1.25; color: var(--text-bright); max-width: 24ch; text-wrap: balance; }
+        .mk-quote cite { display: block; font-style: normal; margin: 1.8rem 0 0.6rem; color: var(--text-muted); }
+
+        .mk-rating { padding: 2.2rem 0; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; align-items: baseline; }
+        .mk-rating b { color: var(--accent); letter-spacing: 0.12em; }
+
+        @media (max-width: 900px) {
+            .mk-section { padding: 3.6rem 0; }
+            .mk-hero { min-height: 92vh; padding-bottom: 3rem; }
+            .mk-hero-photo img { object-position: 62% 40%; }
+            .mk-hero-photo::after { background: linear-gradient(0deg, var(--black) 0%, color-mix(in srgb, var(--black) 78%, transparent) 45%, color-mix(in srgb, var(--black) 35%, transparent) 100%); }
+            .mk-hero .btn { display: block; text-align: center; }
+            .mk-proof { flex-direction: column; margin-top: 2.2rem; }
+            .mk-results, .mk-fit, .mk-steps { grid-template-columns: minmax(0, 1fr); gap: 2.4rem; }
+            .mk-offer { flex-direction: column; gap: 0.2rem; }
+            .mk-offer i { display: none; }
+            .mk-quote { padding: 4rem 0; }
+        }
+    </style>
+</head>
+<body>
+    <%- include('partials/site-header', { currentPage: { slug: 'mock-home-apply' }, navPages, canEdit: false, content, pageContact }) %>
+
+    <header class="mk-hero">
+        <picture class="mk-hero-photo"><img src="/img/headshot" alt=""></picture>
+        <div class="mk-hero-inner"><div class="mk-wrap">
+            <h1>You&rsquo;ve built something you&rsquo;re proud of.<br>So why does everything still run through you?</h1>
+            <p class="mk-hero-sub">We work with a small number of established owner run businesses across Devon and Cornwall.</p>
+            <a class="btn btn-primary" href="#conversation">Apply to work with us</a>
+            <p class="mk-proof"><span>Two decades building, buying and selling businesses</span><span>Oxford Sa&iuml;d, Distinction</span><span>5.0 on Google reviews</span></p>
+        </div></div>
+    </header>
+
+    <main>
+        <section class="mk-section"><div class="mk-wrap">
+            <p class="mk-label">What we have done</p>
+            <div class="mk-results">
+                <div class="mk-result">
+                    <div class="mk-result-figure">30<small>a day</small></div>
+                    <p>Cold enquiries at World Student Advisors are now around 30 a day, up from about one a month in June 2026. Revenue is up 159%.</p>
+                    <a class="mk-more" href="/evidence">Read the case study &rarr;</a>
+                </div>
+                <div class="mk-result">
+                    <div class="mk-result-figure">24<small>months</small></div>
+                    <p>A Devon marine firm, from insolvency risk to a marketable asset, start to sale.</p>
+                    <a class="mk-more" href="/evidence">Read the case study &rarr;</a>
+                </div>
+                <div class="mk-result">
+                    <div class="mk-result-figure">18<small>years</small></div>
+                    <p>Tom spent more than 18 years building and running Abacus and Falmouth Taxis, grew it to thousands of bookings each week, and sold it.</p>
+                    <a class="mk-more" href="/evidence">Read the case study &rarr;</a>
+                </div>
+            </div>
+        </div></section>
+
+        <section class="mk-section"><div class="mk-wrap">
+            <p class="mk-label">Who we work with</p>
+            <h2>We would rather say no early.</h2>
+            <p class="mk-fit-intro">Tom does the work himself, in the business, so we only take on a few at a time. That means choosing carefully, and you should too.</p>
+            <div class="mk-fit">
+                <div>
+                    <h3>We are probably a fit if</h3>
+                    <ul>
+                        <li>You have built something that already works.</li>
+                        <li>Too much of it still runs through you.</li>
+                        <li>There are people, sites or information that could come off your plate.</li>
+                        <li>You want a straight answer, even when it is not the comfortable one.</li>
+                    </ul>
+                </div>
+                <div class="mk-fit-no">
+                    <h3>We are probably not if</h3>
+                    <ul>
+                        <li>The business needs rescuing.</li>
+                        <li>You are looking for coaching, a programme or a monthly retainer.</li>
+                        <li>You want someone to agree with you.</li>
+                    </ul>
+                </div>
+            </div>
+        </div></section>
+
+        <section class="mk-section"><div class="mk-wrap">
+            <p class="mk-label">How it works</p>
+            <div class="mk-steps">
+                <div class="mk-step">
+                    <h3>You apply</h3>
+                    <p>Tell us about the business and what you want to change. A few lines is plenty.</p>
+                </div>
+                <div class="mk-step">
+                    <h3>We talk</h3>
+                    <p>If it looks like a fit, Tom arranges a 30 minute conversation, free. If it does not, we will tell you.</p>
+                </div>
+                <div class="mk-step">
+                    <h3>We start in the business</h3>
+                    <p>Most work begins with a Commercial Review: a day in the business with you, then a written assessment, recommendations and next steps.</p>
+                </div>
+            </div>
+        </div></section>
+
+        <section class="mk-section"><div class="mk-wrap">
+            <p class="mk-label">What we do</p>
+            <div class="mk-offers">
+                <a class="mk-offer" href="/where-to-start/commercial-review"><strong>Commercial Review</strong><span>For owner run businesses <i>&rarr;</i></span></a>
+                <a class="mk-offer" href="/where-to-start/website-build"><strong>Website Build</strong><span>Built from scratch, around what the business needs to do <i>&rarr;</i></span></a>
+                <a class="mk-offer" href="/taxi-and-private-hire-operators/office-workspace"><strong>Taxi office workspace</strong><span>For taxi and private hire operators <i>&rarr;</i></span></a>
+            </div>
+        </div></section>
+
+        <section class="mk-quote"><div class="mk-wrap">
+            <blockquote>&ldquo;It turns out being indispensable isn&rsquo;t necessarily something to be proud of.&rdquo;</blockquote>
+            <cite>Tom Arrington, in Useful Thinking</cite>
+            <a class="mk-more" href="/useful-thinking/the-most-expensive-person-doing-the-job-might-be-you">Read the piece &rarr;</a>
+        </div></section>
+
+        <div class="mk-wrap"><p class="mk-rating"><b>&#9733;&#9733;&#9733;&#9733;&#9733;</b><span>5.0 from 5 reviews on Google</span><a class="mk-more" href="/evidence">See what business owners say &rarr;</a></p></div>
+    </main>
+
+    <%- include('partials/site-footer', { canEdit: false, pageContact, content }) %>
+    <script nonce="<%= nonce %>">
+        <%- include('partials/site-chrome-script') %>
+    </script>
+</body>
+</html>

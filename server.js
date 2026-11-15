@@ -946,6 +946,8 @@ saleReadiness.mountPageRoute(app, generateCsrfToken);
 // link to it anywhere without a new decision; test/startUpReviewPage.test.js
 // fails if any appears.
 startUpReview.mountPageRoute(app, generateCsrfToken);
+// MOCK-UP ONLY (branch mockup/home-apply): off unless MOCK_HOME_APPLY=1.
+require('./routes/mockHomeApply').mountPageRoute(app, generateCsrfToken);
 
 // Taxi and private hire operators: an INDEXABLE trade page (see
 // routes/taxiOperators.js). Unlike the start-up page it is in sitemap.xml and
