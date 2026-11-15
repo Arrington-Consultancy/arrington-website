@@ -10800,18 +10800,29 @@ amendments the same day. **The build stays unreleased until Tom says.**
   business). The client's sentence names him too; that is speech.
 - **World Student Advisors on the home page** (`readWsaHomeProof` in
   `lib/wsaCaseStudy.js`): the result is the case study's own sentence read
-  from Evidence, as the Commercial Review page reads it; "We rebuilt the
-  website around the enquiry and connected it to the CRM." is a sentence of
-  the published case study; and one whole sentence of Tim's quote sits
-  beside it with his name line ("I brought Tom in to tackle owner
-  dependency, but he blew me away with his use of technology,
-  revolutionising the website and integrating the CRM and AI."). Each shows
-  only while Evidence still carries it, so a figure or quote changed or
-  hidden there leaves the home page too. The large figure reads "around 30
-  a day", as Tim's consent words it. **The quote on the home page is
-  recorded as Tom's approval of 15/11/2026; Tim's consent of 14/11 covers
-  the firm's name and the two figures, and whether Tim was asked about the
-  home page is Tom's to confirm.**
+  from Evidence, as the Commercial Review page reads it, and the large
+  figure reads "around 30 a day", as Tim's consent words it. One whole
+  sentence of Tim's quote sits beside it with his name line ("I brought Tom
+  in to tackle owner dependency, but he blew me away with his use of
+  technology, revolutionising the website and integrating the CRM and
+  AI."). **Tim Hunt approved the named result and that exact excerpt for the
+  home page** (Tom, 15/11/2026: "He approved", recorded in the Handoff Log).
+  Use only that result and that excerpt; neither is reworded or extended.
+- **The result came from the whole engagement, not the £999 website alone**
+  (Tom, 15/11/2026). Under the result, in the published case study's own
+  words: "The work included a Commercial Review, and then the building. We
+  rebuilt the website around the enquiry and connected it to the CRM. We
+  also built a staff workspace." The result is **never shown without that
+  context**: if Evidence no longer carries all three sentences, the result
+  leaves the home page. The result, the context and the quote each show
+  only while Evidence still carries them (checked against the live Evidence
+  page on 15/11/2026: all present).
+- **Accessible names on the shared enquiry form** (15/11/2026, the fix
+  Codex tested and could not push): name, email, phone, preferred time,
+  message and the "Other" source box each carry an `aria-label` with the
+  same words as their placeholder. Nothing visible, required or sent
+  changes. `test/enquiryFormAccessibility.test.js`. This is in the shared
+  footer, so it reaches every page with the form.
 - **Home page only.** The top bar ("Apply to work with us", no WhatsApp
   button) and the form wording are per-page overrides in `server.js`
   (`HOME_APPLY_CONTACT`); every other page keeps "Start a conversation",
@@ -10830,12 +10841,77 @@ amendments the same day. **The build stays unreleased until Tom says.**
 - **Google Ads:** a note is in the Google Ads Worker Handoff Log
   (15/11/2026): the general ads say "Speak To Tom Arrington" while the page
   will say "Apply to work with us", so ad copy is checked on release day.
-- **Tests:** `test/homeApply.test.js` (11; a quote shown without checking
-  Evidence and the quote block hidden were each watched red),
-  `test/threeOffers.test.js` updated. Checked in Chromium at 1440px and
-  iPhone 13 against a local copy carrying the live hero wording, a
-  live-shaped quote block and the case study. Not on the live site.
+- **Tests and checks (15/11/2026, head as pushed):** `test/homeApply.test.js`
+  (11), `test/enquiryFormAccessibility.test.js` (3), `test/threeOffers.test.js`
+  updated. Full suite on a disposable database: 1,982 tests, 1,960 pass, 20
+  skipped, 2 fail, both the known date-sensitive ones (receivables retrieval
+  and the Zoho invoice fixture); nothing new. Seeded twice on a brand new
+  database and twice on a live-shaped one: the second run is a silent no-op
+  each time. Chromium at 1440px and 320, 375, 390 and 430px on the
+  live-shaped copy: no sideways scroll, no page errors, one h1, the menu
+  opens and closes, the hero button reaches the form. One local enquiry
+  from the home page form: stored with its source and landing page, sent to
+  `/thank-you`, one Contact conversion snippet, none on a replay or a bare
+  visit. **Not checked:** a real phone, Facebook's in-app browser, and
+  anything on the live site (it is not live).
+- **Known, not changed:** at 320px wide by 568px tall the hero button's
+  lower edge sits 19px below the first screen, as it does on the live page
+  today. `/thank-you` is shared and still says "Tom reads every enquiry
+  himself and replies personally", after a form that now says "application"
+  and "we"; Tom's to decide.
+- **Microsoft ads landing on the home page** (82876131218481 and
+  82601253677855, Leads-Search-1, both Active, final URL the home page; 7
+  clicks between them in 30 days): the Google Ads handoff holds a request to
+  check them, not a verdict. Windsor returns no headline or description
+  text for Microsoft responsive ads, so their copy could not be read from
+  here. Their Google twins (827758459099 and 827631011247, campaign paused)
+  carry "Speak To Tom Arrington", "Talk it through with Tom" and "Start with
+  a free 30 minute conversation". Nothing in those becomes untrue (the
+  conversation still happens and is not charged for), but the page will ask
+  the visitor to apply and no longer says "free". Left with ARRINGTON GOOGLE
+  ADS; no account change made.
+
+### Rolling the home page back
+
+**Reverting the code does not undo the migration**: the hero button text and
+the hidden sections are stored values. Read from the live site on 15/11/2026
+at 18:10 UTC, before release (inspection run
+`20261115T180959Z-home-before-apply-rollback-record`):
+
+- Hero button (`hero.cta`): "Tell us what is going on".
+- Home page sections served, in order: `hero`, `casestudy__7` (The Insolvent
+  Turnaround), `casestudy2__6` (Abacus and Falmouth Taxis), `filter__2`
+  (Built from running real businesses for over 20 years.), `intervention__18`
+  (Hear it from the owners, the client quote block).
+- The release will change `hero.cta` to "Apply to work with us", hide
+  `casestudy__7`, `casestudy2__6` and `filter__2`, and keep
+  `intervention__18`. Sections already hidden stay as they are. The exact
+  before values are also written by the migration into the deploy log
+  ("Home page apply theme: ... before this ran: ...") and the marker row
+  `homepage.apply_theme_2026-11-15`; read that line at release, because it
+  is the record of the hidden list, which a public page cannot show.
+
+To roll back: (1) revert the merge commit on main and deploy; (2) put the
+stored values back, either signed in on the home page (edit the hero and set
+the button to "Tell us what is going on"; press the eye on the three dimmed
+sections), or with this, proven on a local copy:
+
+```sql
+UPDATE content SET content = 'Tell us what is going on'
+ WHERE section_key = 'hero.cta' AND content = 'Apply to work with us';
+UPDATE pages SET hidden_sections = (
+  SELECT COALESCE(jsonb_agg(x), '[]'::jsonb)
+    FROM jsonb_array_elements_text(hidden_sections) AS x
+   WHERE x NOT IN ('casestudy__7', 'casestudy2__6', 'filter__2'))
+ WHERE slug = 'main';
+```
+
+Do step 2 straight after step 1: between them the old page shows its boxes
+with only the quote block under them and the button still reading "Apply to
+work with us". Leave the marker row in place.
+
 - **On release:** merge to main, read the production seed line ("Home page
-  apply theme: ..."), run the live inspection on `/` and `/evidence`, write
-  back to both Handoff Logs.
+  apply theme: ..."), run the live inspection on `/` and `/evidence`, send
+  one labelled test enquiry from the live home page, write back to both
+  Handoff Logs.
 - The first mock-up Tom saw is on branch `mockup/home-apply` (not for main).

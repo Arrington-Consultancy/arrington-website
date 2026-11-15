@@ -687,7 +687,8 @@
         .ha-section h2 { font-size: clamp(1.7rem, 3.2vw, 2.4rem); font-weight: 600; line-height: 1.15; max-width: 24ch; text-wrap: balance; }
         .ha-section p { margin: 0; }
         .ha-section .ha-label { margin: 0 0 1.1rem; }
-        .ha-more { color: var(--accent); text-decoration: none; font-weight: 500; font-size: 0.95rem; }
+        /* A link on its own line, so it is given a tap target of its own. */
+        .ha-more { display: inline-block; padding: 0.35rem 0; color: var(--accent); text-decoration: none; font-weight: 500; font-size: 0.95rem; }
         .ha-more:hover, .ha-more:focus-visible { text-decoration: underline; }
 
         /* The client result leads, on its own row, with one sentence of the
