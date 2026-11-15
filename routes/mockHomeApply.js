@@ -14,7 +14,7 @@ const MOCK_CONTACT = {
   messagePlaceholder: 'The business, what is working, and what you want to change',
   submitText: 'Send your application',
   headerCtaText: 'Apply to work with us',
-  nextText: 'Tom reads every application himself and replies personally, usually within one working day.',
+  nextText: 'We read every application and reply, usually within one working day.',
   hideNavWhatsapp: true
 };
 
