@@ -1,0 +1,65 @@
+<%# THE HOME PAGE UNDER THE HERO, on the "apply to work with us" theme (Tom,
+    15/11/2026). Rendered by views/index.ejs after the home page's opening
+    hero only. Every word comes from lib/homeApply.js; this file holds no
+    copy. Styles are in views/index.ejs (.ha-*). Expects: homeApply,
+    googleReviews (may be null). %>
+<section class="ha-section" data-home-results><div class="ha-wrap">
+    <p class="ha-label"><%= homeApply.results.label %></p>
+    <h2><%= homeApply.results.heading %></h2>
+    <div class="ha-results">
+        <% homeApply.results.tiles.forEach(function (t) { %>
+        <div class="ha-result">
+            <div class="ha-result-figure"><%= t.figure %><small><%= t.unit %></small></div>
+            <p><% if (t.name) { %><strong><%= t.name %></strong> <% } %><%= t.text %></p>
+            <a class="ha-more" href="<%= t.href %>"><%= homeApply.results.more %> &rarr;</a>
+        </div>
+        <% }); %>
+    </div>
+</div></section>
+
+<section class="ha-section" data-home-fit><div class="ha-wrap">
+    <p class="ha-label"><%= homeApply.fit.label %></p>
+    <h2><%= homeApply.fit.heading %></h2>
+    <p class="ha-fit-intro"><%= homeApply.fit.intro %></p>
+    <div class="ha-fit">
+        <div>
+            <h3><%= homeApply.fit.yesHeading %></h3>
+            <ul><% homeApply.fit.yes.forEach(function (line) { %><li><%= line %></li><% }); %></ul>
+        </div>
+        <div class="ha-fit-no">
+            <h3><%= homeApply.fit.noHeading %></h3>
+            <ul><% homeApply.fit.no.forEach(function (line) { %><li><%= line %></li><% }); %></ul>
+        </div>
+    </div>
+</div></section>
+
+<section class="ha-section" data-home-steps><div class="ha-wrap">
+    <p class="ha-label"><%= homeApply.steps.label %></p>
+    <div class="ha-steps">
+        <% homeApply.steps.items.forEach(function (s) { %>
+        <div class="ha-step">
+            <h3><%= s.title %></h3>
+            <p><%= s.text %></p>
+        </div>
+        <% }); %>
+    </div>
+</div></section>
+
+<section class="ha-section" data-home-what-we-do><div class="ha-wrap">
+    <p class="ha-label"><%= homeApply.offers.label %></p>
+    <div class="ha-offers">
+        <% homeApply.offers.items.forEach(function (o) { %>
+        <a class="ha-offer" href="<%= o.href %>"><strong><%= o.name %></strong><span><%= o.line %> <i aria-hidden="true">&rarr;</i></span></a>
+        <% }); %>
+    </div>
+</div></section>
+
+<section class="ha-quote" data-home-quote><div class="ha-wrap">
+    <blockquote>&ldquo;<%= homeApply.quote.text %>&rdquo;</blockquote>
+    <cite><%= homeApply.quote.by %></cite>
+    <a class="ha-more" href="<%= homeApply.quote.href %>"><%= homeApply.quote.more %> &rarr;</a>
+</div></section>
+
+<% if (googleReviews) { %>
+<div class="ha-wrap" data-home-rating><p class="ha-rating"><b aria-hidden="true">&#9733;&#9733;&#9733;&#9733;&#9733;</b><span><%= googleReviews.rating.toFixed(1) %> from <%= googleReviews.userRatingCount %> <%= googleReviews.userRatingCount === 1 ? 'review' : 'reviews' %> on Google</span><a class="ha-more" href="<%= homeApply.rating.href %>"><%= homeApply.rating.more %> &rarr;</a></p></div>
+<% } %>

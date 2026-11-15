@@ -10757,3 +10757,61 @@ tailor our products to what the customer needs and price accoringly". His
   and phone, no page errors, no overflow, no dashes; both lines read from
   the live text and "Ask us about it" is gone. The look was checked on a
   local copy before release. Written back to the Handoff Log.
+
+## Home page: "apply to work with us" (BUILT 15/11/2026, on branch `feature/home-apply`, NOT RELEASED)
+
+Tom, in chat, 15/11/2026: the site "over explains without hooking", "lacks
+humanity and looks desperate"; "Good sites say without saying, we are in
+demand"; "the theme is, apply to work with us". Then: "Our time to dedicate
+to your business is the limiting factor. We are also selective about whom we
+work with, we also won't charge a sunk ship"; a way of saying free "that
+doesn't seem cheap"; "Tom does the work himself sounds small time"; "let's
+not over mention Tom, in the right place and for good reason yes". He
+approved "made stronger" in place of "turned around" ("Yes"): the Brand OS
+says the reader's business is not broken and Arrington is not a rescue
+service, so "turnaround" stays only on the marine firm case study.
+
+- **What the home page becomes** (`lib/homeApply.js` holds every word;
+  `views/partials/home-apply.ejs` holds none; styles `.ha-*` in
+  `views/index.ejs`): the approved headline; one button, "Apply to work with
+  us"; nothing under it but the credential line; then results ("Different
+  businesses, made stronger in different ways.": World Student Advisors
+  around 30 a day, the marine firm in 24 months, Abacus 18 years), "We are
+  selective about who we work with." with a fit and a not-a-fit list taken
+  from the Brand OS, three steps (you apply, we talk, we start in the
+  business), the three offers as quiet links with **no prices** (prices stay
+  on the offer pages), one sentence of Tom's from Useful Thinking, the live
+  Google rating line, and the form headed "Apply to work with us" ("Send
+  your application"; "We read every application and reply, usually within
+  one working day."). About 400 words against 577.
+- **The first conversation is still not charged for** (Tom's 21/10 rule),
+  said once, in step two: "We don't charge for it, and it is how we both
+  decide whether to go further." The word "free" is not on the home page.
+- **Tom is named twice only:** the Abacus result (his own business) and
+  under his own quoted sentence. Pinned by test.
+- **Home page only.** The top bar ("Apply to work with us", no WhatsApp
+  button) and the form wording are per-page overrides in `server.js`
+  (`HOME_APPLY_CONTACT`); every other page keeps "Start a conversation",
+  WhatsApp and the shared form line. Phone, email and WhatsApp stay under
+  the home page form.
+- **The World Student Advisors tile** uses the case study's own result
+  sentence read from Evidence (`readWsaCaseStudy`) and shows only while that
+  sentence still says "around 30 a day"; hidden or changed there, the tile
+  goes and the other two stand.
+- **Migration** (`applyHomeApplyTheme`, marker
+  `homepage.apply_theme_2026-11-15`, run once): the hero's line and button
+  move to the new wording only while they hold the wording they replace (a
+  CMS edit wins and is logged), and the home page's other sections are
+  **hidden, not deleted** (the marker row lists them; each comes back with
+  its eye button).
+- **What it reverses:** the three priced boxes on the home page (Tom,
+  21/10/2026; `home-offers.ejs` and `homeOffers` are deleted) and the "free,
+  no obligation" lines by the home page's buttons (Tom, 11/10/2026). The
+  general Google Ads land on the home page, so the Google Ads worker needs
+  telling at release.
+- **Tests:** `test/homeApply.test.js` (11; a third mention of Tom and the
+  CMS guard removed were each watched red), `test/threeOffers.test.js`
+  updated. Full suite on the local database: 1,979 tests, the two documented
+  stale-date failures only. Checked in Chromium at 1440px and iPhone 13
+  against a local copy carrying the live hero wording.
+- The mock-up Tom saw is on branch `mockup/home-apply` (not for main).

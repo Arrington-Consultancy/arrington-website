@@ -8318,6 +8318,18 @@ async function seed() {
     console.error('World Student Advisors quote migration failed (boot continues):', err.message);
   }
 
+  // THE HOME PAGE ON THE "APPLY TO WORK WITH US" THEME (15/11/2026, Tom, in
+  // chat). The hero's line and button move to the new wording only while
+  // they still hold the wording they replace, and the home page's other
+  // sections are hidden (not deleted): the new page in lib/homeApply.js
+  // replaces them. Run once, never fatal.
+  try {
+    const note = await require('../lib/homeApply').applyHomeApplyTheme(db);
+    if (note) console.log(`Home page apply theme: ${note}.`);
+  } catch (err) {
+    console.error('Home page apply theme migration failed (boot continues):', err.message);
+  }
+
 
   // Arrington AI Workspace: ingest the encrypted snapshot into
   // workspace_records. A no-op when WORKSPACE_SNAPSHOT_KEY is unset, and
