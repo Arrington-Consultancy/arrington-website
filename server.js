@@ -31,7 +31,7 @@ const taxiWorkspace = require('./routes/taxiWorkspace');
 const { legacyRedirect } = require('./lib/legacyRedirect');
 const { buildNavPages } = require('./lib/mainNav');
 const { homeApplyData, HOME_APPLY_CONTACT } = require('./lib/homeApply');
-const { readWsaCaseStudy } = require('./lib/wsaCaseStudy');
+const { readWsaHomeProof } = require('./lib/wsaCaseStudy');
 const thankYou = require('./routes/thankYou');
 const scott = require('./routes/scott');
 const guestVisits = require('./lib/guestVisits');
@@ -1306,12 +1306,13 @@ async function renderPage(req, res, next, pageSlug) {
     // The home page on the "apply to work with us" theme (Tom, 15/11/2026;
     // lib/homeApply.js). Its form and top bar carry that wording on the home
     // page only; the contact.* rows and every other page are untouched. The
-    // World Student Advisors result is read from its case study on Evidence,
-    // so the home page never quotes a figure that page no longer carries.
+    // World Student Advisors result, what we did and the client's sentence are
+    // read from the case study on Evidence, so the home page never quotes a
+    // figure or a quote that page no longer carries.
     let homeApply = null;
     if (currentPage.slug === 'main') {
       let wsa = null;
-      try { wsa = await readWsaCaseStudy(db); } catch (err) { console.error('Home page: could not read the World Student Advisors case study:', err.message); }
+      try { wsa = await readWsaHomeProof(db); } catch (err) { console.error('Home page: could not read the World Student Advisors case study:', err.message); }
       homeApply = homeApplyData({ wsa });
       Object.assign(pageContact, HOME_APPLY_CONTACT);
     }

@@ -74,7 +74,7 @@ test('the parked pages are off the home page and out of the shared chrome, but s
   // Useful Thinking article's next step (data-article-next), which is content,
   // the route the decision leaves open for parked ideas; nothing else may.
   const index = emitted('views/index.ejs').split('\n').filter((l) => !l.includes('data-article-next')).join('\n');
-  const homeLinks = [...HOME_APPLY.offers.items.map((o) => o.href), HOME_APPLY.quote.href, HOME_APPLY.rating.href,
+  const homeLinks = [...HOME_APPLY.offers.items.map((o) => o.href),
     HOME_APPLY.results.marine.href, HOME_APPLY.results.abacus.href].map((h) => `href="${h}"`).join(' ');
   const home = index + emitted('views/partials/home-apply.ejs') + homeLinks + emitted('views/partials/site-footer.ejs') + emitted('views/partials/site-header.ejs');
   for (const p of PARKED) assert.ok(!home.includes(`href="/${p}"`), `/${p} is linked from the home page or the shared chrome`);

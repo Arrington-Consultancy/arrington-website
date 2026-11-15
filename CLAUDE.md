@@ -10763,55 +10763,79 @@ tailor our products to what the customer needs and price accoringly". His
 Tom, in chat, 15/11/2026: the site "over explains without hooking", "lacks
 humanity and looks desperate"; "Good sites say without saying, we are in
 demand"; "the theme is, apply to work with us". Then: "Our time to dedicate
-to your business is the limiting factor. We are also selective about whom we
-work with, we also won't charge a sunk ship"; a way of saying free "that
-doesn't seem cheap"; "Tom does the work himself sounds small time"; "let's
-not over mention Tom, in the right place and for good reason yes". He
-approved "made stronger" in place of "turned around" ("Yes"): the Brand OS
-says the reader's business is not broken and Arrington is not a rescue
-service, so "turnaround" stays only on the marine firm case study.
+to your business is the limiting factor", "we also won't charge a sunk
+ship"; a way of saying free "that doesn't seem cheap"; "Tom does the work
+himself sounds small time"; "let's not over mention Tom, in the right place
+and for good reason yes". He approved "made stronger" in place of "turned
+around" ("Yes"): the Brand OS says the reader's business is not broken and
+Arrington is not a rescue service, so "turnaround" stays only on the marine
+firm case study. An outside judge (another Claude chat, from Tom's brief)
+then read the build; Tom approved this worker's five changes and two
+amendments the same day. **The build stays unreleased until Tom says.**
 
 - **What the home page becomes** (`lib/homeApply.js` holds every word;
   `views/partials/home-apply.ejs` holds none; styles `.ha-*` in
-  `views/index.ejs`): the approved headline; one button, "Apply to work with
-  us"; nothing under it but the credential line; then results ("Different
-  businesses, made stronger in different ways.": World Student Advisors
-  around 30 a day, the marine firm in 24 months, Abacus 18 years), "We are
-  selective about who we work with." with a fit and a not-a-fit list taken
-  from the Brand OS, three steps (you apply, we talk, we start in the
-  business), the three offers as quiet links with **no prices** (prices stay
-  on the offer pages), one sentence of Tom's from Useful Thinking, the live
-  Google rating line, and the form headed "Apply to work with us" ("Send
-  your application"; "We read every application and reply, usually within
-  one working day."). About 400 words against 577.
+  `views/index.ejs`): the approved headline and the live hero line,
+  unchanged ("Business consultant for established owner run businesses
+  across Devon and Cornwall.", which carries the search words); one button,
+  "Apply to work with us"; nothing under it but the credential line. Then
+  results under "Different businesses, made stronger in different ways.",
+  with the client result leading (World Student Advisors, "around 30 a
+  day") and the marine firm (24 months) and Abacus (18 years) under it;
+  "The limit is our time, so we take on a few businesses at a time." with
+  one fit list and one promise standing alone ("If the business is past the
+  point where we can help, we will say so, and we won't take your money.");
+  three steps (you apply, we talk, we start in the business); the three
+  offers as quiet links with **no prices** (prices stay on the offer
+  pages); the home page's live client quote block with the Google rating;
+  and the form headed "Apply to work with us" ("Send your application";
+  "We read every application and reply, usually within one working day.").
+- **Selectiveness is said once, never announced.** No "selective", no "small
+  number", and **no list of who we are not for** (Tom, 06/10/2026: "we don't
+  tell them what we won't do, that's the brand"). Pinned by test.
 - **The first conversation is still not charged for** (Tom's 21/10 rule),
   said once, in step two: "We don't charge for it, and it is how we both
   decide whether to go further." The word "free" is not on the home page.
-- **Tom is named twice only:** the Abacus result (his own business) and
-  under his own quoted sentence. Pinned by test.
+- **Tom is named once in our own wording:** the Abacus result (his own
+  business). The client's sentence names him too; that is speech.
+- **World Student Advisors on the home page** (`readWsaHomeProof` in
+  `lib/wsaCaseStudy.js`): the result is the case study's own sentence read
+  from Evidence, as the Commercial Review page reads it; "We rebuilt the
+  website around the enquiry and connected it to the CRM." is a sentence of
+  the published case study; and one whole sentence of Tim's quote sits
+  beside it with his name line ("I brought Tom in to tackle owner
+  dependency, but he blew me away with his use of technology,
+  revolutionising the website and integrating the CRM and AI."). Each shows
+  only while Evidence still carries it, so a figure or quote changed or
+  hidden there leaves the home page too. The large figure reads "around 30
+  a day", as Tim's consent words it. **The quote on the home page is
+  recorded as Tom's approval of 15/11/2026; Tim's consent of 14/11 covers
+  the firm's name and the two figures, and whether Tim was asked about the
+  home page is Tom's to confirm.**
 - **Home page only.** The top bar ("Apply to work with us", no WhatsApp
   button) and the form wording are per-page overrides in `server.js`
   (`HOME_APPLY_CONTACT`); every other page keeps "Start a conversation",
   WhatsApp and the shared form line. Phone, email and WhatsApp stay under
   the home page form.
-- **The World Student Advisors tile** uses the case study's own result
-  sentence read from Evidence (`readWsaCaseStudy`) and shows only while that
-  sentence still says "around 30 a day"; hidden or changed there, the tile
-  goes and the other two stand.
 - **Migration** (`applyHomeApplyTheme`, marker
-  `homepage.apply_theme_2026-11-15`, run once): the hero's line and button
-  move to the new wording only while they hold the wording they replace (a
-  CMS edit wins and is logged), and the home page's other sections are
-  **hidden, not deleted** (the marker row lists them; each comes back with
-  its eye button).
+  `homepage.apply_theme_2026-11-15`, run once): the hero button moves from
+  "Tell us what is going on" to "Apply to work with us" only while it holds
+  the old wording (a CMS edit wins and is logged); the hero line is not
+  touched; a client quote block (an `intervention` section with a quote
+  attribution) stays; the page's other sections are **hidden, not deleted**
+  (the marker row lists them; each comes back with its eye button).
 - **What it reverses:** the three priced boxes on the home page (Tom,
   21/10/2026; `home-offers.ejs` and `homeOffers` are deleted) and the "free,
-  no obligation" lines by the home page's buttons (Tom, 11/10/2026). The
-  general Google Ads land on the home page, so the Google Ads worker needs
-  telling at release.
-- **Tests:** `test/homeApply.test.js` (11; a third mention of Tom and the
-  CMS guard removed were each watched red), `test/threeOffers.test.js`
-  updated. Full suite on the local database: 1,979 tests, the two documented
-  stale-date failures only. Checked in Chromium at 1440px and iPhone 13
-  against a local copy carrying the live hero wording.
-- The mock-up Tom saw is on branch `mockup/home-apply` (not for main).
+  no obligation" lines by the home page's buttons (Tom, 11/10/2026).
+- **Google Ads:** a note is in the Google Ads Worker Handoff Log
+  (15/11/2026): the general ads say "Speak To Tom Arrington" while the page
+  will say "Apply to work with us", so ad copy is checked on release day.
+- **Tests:** `test/homeApply.test.js` (11; a quote shown without checking
+  Evidence and the quote block hidden were each watched red),
+  `test/threeOffers.test.js` updated. Checked in Chromium at 1440px and
+  iPhone 13 against a local copy carrying the live hero wording, a
+  live-shaped quote block and the case study. Not on the live site.
+- **On release:** merge to main, read the production seed line ("Home page
+  apply theme: ..."), run the live inspection on `/` and `/evidence`, write
+  back to both Handoff Logs.
+- The first mock-up Tom saw is on branch `mockup/home-apply` (not for main).
