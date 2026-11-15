@@ -10758,7 +10758,7 @@ tailor our products to what the customer needs and price accoringly". His
   the live text and "Ask us about it" is gone. The look was checked on a
   local copy before release. Written back to the Handoff Log.
 
-## Home page: "apply to work with us" (BUILT 15/11/2026, on branch `feature/home-apply`, NOT RELEASED)
+## Home page: "apply to work with us" (LIVE 15/11/2026)
 
 Tom, in chat, 15/11/2026: the site "over explains without hooking", "lacks
 humanity and looks desperate"; "Good sites say without saying, we are in
@@ -10771,7 +10771,8 @@ around" ("Yes"): the Brand OS says the reader's business is not broken and
 Arrington is not a rescue service, so "turnaround" stays only on the marine
 firm case study. An outside judge (another Claude chat, from Tom's brief)
 then read the build; Tom approved this worker's five changes and two
-amendments the same day. **The build stays unreleased until Tom says.**
+amendments the same day. Released on Tom's "Merge and give me ad worker
+handoff" (15/11/2026); see "Live" at the end of this section.
 
 - **What the home page becomes** (`lib/homeApply.js` holds every word;
   `views/partials/home-apply.ejs` holds none; styles `.ha-*` in
@@ -10910,8 +10911,29 @@ Do step 2 straight after step 1: between them the old page shows its boxes
 with only the quote block under them and the button still reading "Apply to
 work with us". Leave the marker row in place.
 
-- **On release:** merge to main, read the production seed line ("Home page
-  apply theme: ..."), run the live inspection on `/` and `/evidence`, send
-  one labelled test enquiry from the live home page, write back to both
-  Handoff Logs.
+- **Live 15/11/2026.** Merge commit `d0c8f9e` on main (one merge commit, so
+  the code goes back with a single revert; branch head `66b4531`). Serving
+  deployment `00e482fa` (twin `c422a1a5` ran the seed and is REMOVED).
+  Production seed line: "hero.cta now "Apply to work with us"; hidden, not
+  deleted: casestudy__7, casestudy2__6, filter__2; client quote block kept:
+  intervention__18; before this ran: hero.cta = "Tell us what is going on",
+  hidden sections = ["filter","casestudy2"]". **So a full rollback leaves
+  `filter` and `casestudy2` hidden, as they were.** Inspection run
+  `20261115T182703Z-home-apply-live`: home, Evidence, the Commercial Review
+  page and the Cornwall page 200 at desktop and phone, no page errors, no
+  overflow, no dashes; the home page serves `hero` and `intervention__18`,
+  its first button is "Apply to work with us" to the form, and the client
+  result, its context and Tim's sentence are in the live text; captures
+  read. Tag audit `20261115T183018Z-home-apply-live-enquiry`: one TEST
+  TRACKING enquiry from the live home page (Ads and Meta requests blocked,
+  so nothing was recorded in Ads) reached `/thank-you`, pushed one Contact
+  conversion and one `generate_lead`, and its link replayed in a new
+  browser counted nothing. That run stored one TEST TRACKING lead and
+  emailed Tom. The console messages in the inspection ("Refused to connect
+  to 'data:,'") are Cloudflare Turnstile's and appear on unchanged pages
+  too. The form starts 4.3 screens down on desktop and 7.3 on an iPhone 13.
+- **Still open after release:** the ads worker's verdict on Microsoft ads
+  82876131218481 and 82601253677855 (brief in Drive, id
+  `15GYPhHKkyjfptbnkoR4HRbqNNqNSpxamYHyWD0Hz6xY`); a check on a real phone;
+  the `/thank-you` wording.
 - The first mock-up Tom saw is on branch `mockup/home-apply` (not for main).
