@@ -12,7 +12,7 @@ const fs = require('fs');
 const path = require('path');
 const ejs = require('ejs');
 const {
-  MARKER, HOME_APPLY, HOME_APPLY_CONTACT, WSA_FIGURE_PHRASE, WSA_DID, WSA_QUOTE_SENTENCE,
+  MARKER, HOME_APPLY, HOME_APPLY_CONTACT, WSA_FIGURE_PHRASE, WSA_CONTEXT, WSA_QUOTE_SENTENCE,
   HERO_CTA_FROM, HERO_CTA_TO, homeApplyData, applyHomeApplyTheme
 } = require('../lib/homeApply');
 const { OFFER_LINKS } = require('../lib/mainNav');
@@ -98,9 +98,13 @@ test('World Student Advisors leads the results, and every part of it is read fro
   // Tim's consent says "around 30 a day": the large figure says "around" too.
   assert.strictEqual(`${r.lead.pre} ${r.lead.figure} ${r.lead.unit}`, WSA_FIGURE_PHRASE);
   assert.ok(WSA.result.includes(WSA_FIGURE_PHRASE));
-  // What we did is a sentence of the published case study.
-  assert.strictEqual(r.lead.did, 'We rebuilt the website around the enquiry and connected it to the CRM.');
-  assert.ok(WSA_COPY.body.includes(WSA_DID.replace(/\.$/, '')), 'the "what we did" sentence is not in the published case study');
+  // The result came from the whole engagement, not the £999 website alone
+  // (Tom, 15/11/2026): the Commercial Review, the CRM and the staff
+  // workspace are named beside it, each in the published case study's words.
+  assert.strictEqual(r.lead.context, 'The work included a Commercial Review, and then the building. We rebuilt the website around the enquiry and connected it to the CRM. We also built a staff workspace.');
+  for (const line of WSA_CONTEXT) assert.ok(WSA_COPY.body.includes(line.replace(/\.$/, '')), `not in the published case study: ${line}`);
+  for (const must of ['Commercial Review', 'CRM', 'staff workspace']) assert.ok(r.lead.context.includes(must), `${must} is not named beside the result`);
+  assert.ok(!/£\s?\d/.test(r.lead.context + r.lead.text), 'a price sits beside the client result');
   // One whole sentence of the client's quote, unedited, with his name line.
   assert.strictEqual(r.lead.quote, 'I brought Tom in to tackle owner dependency, but he blew me away with his use of technology, revolutionising the website and integrating the CRM and AI.');
   assert.ok(WSA_QUOTE.quote.includes(`. ${WSA_QUOTE_SENTENCE} `), 'the sentence is not a whole sentence of the published quote');
@@ -123,8 +127,12 @@ test('World Student Advisors leads the results, and every part of it is read fro
     assert.ok(lead && lead.quote === '' && lead.quoteName === '', 'a quote Evidence no longer carries is on the home page');
   }
   assert.strictEqual(homeApplyData({ wsa: { ...WSA, quoteName: '' } }).results.lead.quote, '', 'a quote with no name is shown');
-  // The same for what we did.
-  assert.strictEqual(homeApplyData({ wsa: { ...WSA, body: 'We did other things.' } }).results.lead.did, '');
+  // The result is never shown without that context: if Evidence no longer
+  // names the Commercial Review, the CRM or the staff workspace, the result
+  // leaves the home page rather than reading as the website's alone.
+  for (const body of ['', 'We did other things.', WSA_COPY.body.replace('We also built a staff workspace', 'We also helped'), WSA_COPY.body.replace('The work included a Commercial Review, and then the building. ', '')]) {
+    assert.strictEqual(homeApplyData({ wsa: { ...WSA, body } }).results.lead, null, 'the result is shown without its context');
+  }
 });
 
 test('readWsaHomeProof reads the body and quote from the case study, or nothing', async () => {
@@ -161,6 +169,9 @@ test('the partial holds no wording of its own and renders every line', async () 
   for (const line of allCopy(data)) {
     assert.ok(text.includes(line.replace(/\s+/g, ' ')), `not rendered: ${line}`);
   }
+  // The context sits with the result, in the same block, before the link.
+  const leadBlock = html.slice(html.indexOf('data-home-lead'), html.indexOf('class="ha-results"'));
+  assert.ok(leadBlock.indexOf('data-home-lead-context') > 0 && leadBlock.indexOf('data-home-lead-context') < leadBlock.indexOf('class="ha-more"'));
   // The client result comes before the other two.
   assert.ok(html.indexOf('data-home-lead') > 0 && html.indexOf('data-home-lead') < html.indexOf('class="ha-results"'));
   assert.strictEqual((html.match(/class="ha-result"/g) || []).length, 3);
@@ -278,7 +289,14 @@ test('the migration: the button moves, the hero line stays, the client quote sta
   assert.ok(!db.page.hidden_sections.includes('intervention__5'), 'the client quote block was hidden');
   assert.match(note, /hidden, not deleted: casestudy__7, casestudy2__9, filter__2, intervention__6; client quote block kept: intervention__5/);
   // The marker records what this hid, so it can be put back from the record.
-  assert.deepStrictEqual(JSON.parse(db.store.get(MARKER)), { hidden: ['casestudy__7', 'casestudy2__9', 'filter__2', 'intervention__6'], kept: ['intervention__5'] });
+  // It also records what the button and the hidden list held before it ran:
+  // reverting the code does not put stored values back.
+  assert.deepStrictEqual(JSON.parse(db.store.get(MARKER)), {
+    hidden: ['casestudy__7', 'casestudy2__9', 'filter__2', 'intervention__6'],
+    kept: ['intervention__5'],
+    before: { cta: HERO_CTA_FROM, hidden_sections: ['filter', 'casestudy2'] }
+  });
+  assert.match(note, /before this ran: hero\.cta = "Tell us what is going on", hidden sections = \["filter","casestudy2"\]/);
   // Run once: a section Tom brings back with its eye button stays back.
   db.page.hidden_sections = ['filter', 'casestudy2'];
   assert.strictEqual(await applyHomeApplyTheme(db), null);

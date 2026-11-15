@@ -12,7 +12,8 @@
     <div class="ha-lead<%= _lead.quote ? '' : ' ha-lead--plain' %>" data-home-lead>
         <div class="ha-result">
             <div class="ha-result-figure"><span class="ha-result-pre"><%= _lead.pre %></span><%= _lead.figure %><small><%= _lead.unit %></small></div>
-            <p><strong><%= _lead.name %></strong> <% if (_lead.did) { %><%= _lead.did %> <% } %><%= _lead.text %></p>
+            <p><strong><%= _lead.name %></strong> <%= _lead.text %></p>
+            <p class="ha-result-context" data-home-lead-context><%= _lead.context %></p>
             <a class="ha-more" href="<%= _lead.href %>"><%= homeApply.results.more %> &rarr;</a>
         </div>
         <% if (_lead.quote) { %>
