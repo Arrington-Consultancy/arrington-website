@@ -273,6 +273,11 @@
                 </div>
             </div>
             <p class="ow-both" data-both>Both together are <%= '£' + ((websiteOffer.pricePence + workspacePricePence) / 100).toLocaleString('en-GB') %>.</p>
+            <%# Tom, 15/11/2026 ("Yes"): the prices show what is usually built
+                for them; anything else is quoted for the business. No list of
+                per company or combined prices. "Tailored" is a Brand OS banned
+                word, so the line does not use it. %>
+            <p data-quote>Every business is different. These prices show what we usually build for them. Tell us what yours needs and we'll quote for it.</p>
             <p data-support>Support after setup is optional. If you would like it, we agree a monthly price with you on the call. It's your choice.</p>
             <div class="ow-actions">
                 <a href="#conversation" class="btn btn-primary">Book a 15 minute walk through</a>
