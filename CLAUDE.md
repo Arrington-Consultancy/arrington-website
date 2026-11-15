@@ -10874,6 +10874,18 @@ happened. Draft and sources: Drive id
   section on Evidence (the eye button) and the other two pages stop quoting
   it on the next page load.
 - `test/wsaCaseStudy.test.js` (10).
+- **What the £999 covered (Tom, 15/11/2026).** The whole World Student
+  Advisors deal was £3,000. The website was £999 of it, and the Pipedrive CRM
+  link, the Microsoft 365 link and the two AI tools (AI interview practice,
+  AI visa interview preparation) were all part of that £999 website. The
+  staff portal and workspace were not: they were the rest of the deal, with
+  the Commercial Review. Checked against the live text the same day: the
+  three "built for £999" places (Websites and AI top line, its "Included in
+  the build" list, the Website Build card) name only the website and those
+  items, so nothing was changed. Rules: never add the staff portal or
+  workspace to a £999 list for World Student Advisors; the result figures
+  stay off the £999 pages (they came from the whole £3,000 of work); the
+  £3,000 is Tim's deal and is not published.
 - **Tim's quote (same evening, Tom's "Yes" to the name line "Tim Hunt, World
   Student Advisors"):** the `casestudy2` template has two optional rows,
   `quote` and `quote_name`, shown after the result and before the button
