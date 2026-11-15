@@ -10751,3 +10751,9 @@ tailor our products to what the customer needs and price accoringly". His
   line word for word, its place, no banned word or per company line).
 - 02 Commercial Position does not hold this rule yet; that record is Tom's
   or the Brain Keeper's.
+- **Live:** commit `f7067a3`, serving deployment `8d97b71d` (twin `db1b341a`
+  REMOVED). Inspection run `20261115T021808Z-workspace-price-quote-live`: the
+  taxi websites page, the workspace page and the home page 200 at desktop
+  and phone, no page errors, no overflow, no dashes; both lines read from
+  the live text and "Ask us about it" is gone. The look was checked on a
+  local copy before release. Written back to the Handoff Log.
