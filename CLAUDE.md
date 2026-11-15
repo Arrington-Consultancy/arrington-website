@@ -10757,3 +10757,161 @@ tailor our products to what the customer needs and price accoringly". His
   and phone, no page errors, no overflow, no dashes; both lines read from
   the live text and "Ask us about it" is gone. The look was checked on a
   local copy before release. Written back to the Handoff Log.
+
+## Home page: "apply to work with us" (BUILT 15/11/2026, on branch `feature/home-apply`, NOT RELEASED)
+
+Tom, in chat, 15/11/2026: the site "over explains without hooking", "lacks
+humanity and looks desperate"; "Good sites say without saying, we are in
+demand"; "the theme is, apply to work with us". Then: "Our time to dedicate
+to your business is the limiting factor", "we also won't charge a sunk
+ship"; a way of saying free "that doesn't seem cheap"; "Tom does the work
+himself sounds small time"; "let's not over mention Tom, in the right place
+and for good reason yes". He approved "made stronger" in place of "turned
+around" ("Yes"): the Brand OS says the reader's business is not broken and
+Arrington is not a rescue service, so "turnaround" stays only on the marine
+firm case study. An outside judge (another Claude chat, from Tom's brief)
+then read the build; Tom approved this worker's five changes and two
+amendments the same day. **The build stays unreleased until Tom says.**
+
+- **What the home page becomes** (`lib/homeApply.js` holds every word;
+  `views/partials/home-apply.ejs` holds none; styles `.ha-*` in
+  `views/index.ejs`): the approved headline and the live hero line,
+  unchanged ("Business consultant for established owner run businesses
+  across Devon and Cornwall.", which carries the search words); one button,
+  "Apply to work with us"; nothing under it but the credential line. Then
+  results under "Different businesses, made stronger in different ways.",
+  with the client result leading (World Student Advisors, "around 30 a
+  day") and the marine firm (24 months) and Abacus (18 years) under it;
+  "The limit is our time, so we take on a few businesses at a time." with
+  one fit list and one promise standing alone ("If the business is past the
+  point where we can help, we will say so, and we won't take your money.");
+  three steps (you apply, we talk, we start in the business); the three
+  offers as quiet links with **no prices** (prices stay on the offer
+  pages); the home page's live client quote block with the Google rating;
+  and the form headed "Apply to work with us" ("Send your application";
+  "We read every application and reply, usually within one working day.").
+- **Selectiveness is said once, never announced.** No "selective", no "small
+  number", and **no list of who we are not for** (Tom, 06/10/2026: "we don't
+  tell them what we won't do, that's the brand"). Pinned by test.
+- **The first conversation is still not charged for** (Tom's 21/10 rule),
+  said once, in step two: "We don't charge for it, and it is how we both
+  decide whether to go further." The word "free" is not on the home page.
+- **Tom is named once in our own wording:** the Abacus result (his own
+  business). The client's sentence names him too; that is speech.
+- **World Student Advisors on the home page** (`readWsaHomeProof` in
+  `lib/wsaCaseStudy.js`): the result is the case study's own sentence read
+  from Evidence, as the Commercial Review page reads it, and the large
+  figure reads "around 30 a day", as Tim's consent words it. One whole
+  sentence of Tim's quote sits beside it with his name line ("I brought Tom
+  in to tackle owner dependency, but he blew me away with his use of
+  technology, revolutionising the website and integrating the CRM and
+  AI."). **Tim Hunt approved the named result and that exact excerpt for the
+  home page** (Tom, 15/11/2026: "He approved", recorded in the Handoff Log).
+  Use only that result and that excerpt; neither is reworded or extended.
+- **The result came from the whole engagement, not the £999 website alone**
+  (Tom, 15/11/2026). Under the result, in the published case study's own
+  words: "The work included a Commercial Review, and then the building. We
+  rebuilt the website around the enquiry and connected it to the CRM. We
+  also built a staff workspace." The result is **never shown without that
+  context**: if Evidence no longer carries all three sentences, the result
+  leaves the home page. The result, the context and the quote each show
+  only while Evidence still carries them (checked against the live Evidence
+  page on 15/11/2026: all present).
+- **Accessible names on the shared enquiry form** (15/11/2026, the fix
+  Codex tested and could not push): name, email, phone, preferred time,
+  message and the "Other" source box each carry an `aria-label` with the
+  same words as their placeholder. Nothing visible, required or sent
+  changes. `test/enquiryFormAccessibility.test.js`. This is in the shared
+  footer, so it reaches every page with the form.
+- **Home page only.** The top bar ("Apply to work with us", no WhatsApp
+  button) and the form wording are per-page overrides in `server.js`
+  (`HOME_APPLY_CONTACT`); every other page keeps "Start a conversation",
+  WhatsApp and the shared form line. Phone, email and WhatsApp stay under
+  the home page form.
+- **Migration** (`applyHomeApplyTheme`, marker
+  `homepage.apply_theme_2026-11-15`, run once): the hero button moves from
+  "Tell us what is going on" to "Apply to work with us" only while it holds
+  the old wording (a CMS edit wins and is logged); the hero line is not
+  touched; a client quote block (an `intervention` section with a quote
+  attribution) stays; the page's other sections are **hidden, not deleted**
+  (the marker row lists them; each comes back with its eye button).
+- **What it reverses:** the three priced boxes on the home page (Tom,
+  21/10/2026; `home-offers.ejs` and `homeOffers` are deleted) and the "free,
+  no obligation" lines by the home page's buttons (Tom, 11/10/2026).
+- **Google Ads:** a note is in the Google Ads Worker Handoff Log
+  (15/11/2026): the general ads say "Speak To Tom Arrington" while the page
+  will say "Apply to work with us", so ad copy is checked on release day.
+- **Tests and checks (15/11/2026, head as pushed):** `test/homeApply.test.js`
+  (11), `test/enquiryFormAccessibility.test.js` (3), `test/threeOffers.test.js`
+  updated. Full suite on a disposable database: 1,982 tests, 1,960 pass, 20
+  skipped, 2 fail, both the known date-sensitive ones (receivables retrieval
+  and the Zoho invoice fixture); nothing new. Seeded twice on a brand new
+  database and twice on a live-shaped one: the second run is a silent no-op
+  each time. Chromium at 1440px and 320, 375, 390 and 430px on the
+  live-shaped copy: no sideways scroll, no page errors, one h1, the menu
+  opens and closes, the hero button reaches the form. One local enquiry
+  from the home page form: stored with its source and landing page, sent to
+  `/thank-you`, one Contact conversion snippet, none on a replay or a bare
+  visit. **Not checked:** a real phone, Facebook's in-app browser, and
+  anything on the live site (it is not live).
+- **Known, not changed:** at 320px wide by 568px tall the hero button's
+  lower edge sits 19px below the first screen, as it does on the live page
+  today. `/thank-you` is shared and still says "Tom reads every enquiry
+  himself and replies personally", after a form that now says "application"
+  and "we"; Tom's to decide.
+- **Microsoft ads landing on the home page** (82876131218481 and
+  82601253677855, Leads-Search-1, both Active, final URL the home page; 7
+  clicks between them in 30 days): the Google Ads handoff holds a request to
+  check them, not a verdict. Windsor returns no headline or description
+  text for Microsoft responsive ads, so their copy could not be read from
+  here. Their Google twins (827758459099 and 827631011247, campaign paused)
+  carry "Speak To Tom Arrington", "Talk it through with Tom" and "Start with
+  a free 30 minute conversation". Nothing in those becomes untrue (the
+  conversation still happens and is not charged for), but the page will ask
+  the visitor to apply and no longer says "free". Left with ARRINGTON GOOGLE
+  ADS; no account change made.
+
+### Rolling the home page back
+
+**Reverting the code does not undo the migration**: the hero button text and
+the hidden sections are stored values. Read from the live site on 15/11/2026
+at 18:10 UTC, before release (inspection run
+`20261115T180959Z-home-before-apply-rollback-record`):
+
+- Hero button (`hero.cta`): "Tell us what is going on".
+- Home page sections served, in order: `hero`, `casestudy__7` (The Insolvent
+  Turnaround), `casestudy2__6` (Abacus and Falmouth Taxis), `filter__2`
+  (Built from running real businesses for over 20 years.), `intervention__18`
+  (Hear it from the owners, the client quote block).
+- The release will change `hero.cta` to "Apply to work with us", hide
+  `casestudy__7`, `casestudy2__6` and `filter__2`, and keep
+  `intervention__18`. Sections already hidden stay as they are. The exact
+  before values are also written by the migration into the deploy log
+  ("Home page apply theme: ... before this ran: ...") and the marker row
+  `homepage.apply_theme_2026-11-15`; read that line at release, because it
+  is the record of the hidden list, which a public page cannot show.
+
+To roll back: (1) revert the merge commit on main and deploy; (2) put the
+stored values back, either signed in on the home page (edit the hero and set
+the button to "Tell us what is going on"; press the eye on the three dimmed
+sections), or with this, proven on a local copy:
+
+```sql
+UPDATE content SET content = 'Tell us what is going on'
+ WHERE section_key = 'hero.cta' AND content = 'Apply to work with us';
+UPDATE pages SET hidden_sections = (
+  SELECT COALESCE(jsonb_agg(x), '[]'::jsonb)
+    FROM jsonb_array_elements_text(hidden_sections) AS x
+   WHERE x NOT IN ('casestudy__7', 'casestudy2__6', 'filter__2'))
+ WHERE slug = 'main';
+```
+
+Do step 2 straight after step 1: between them the old page shows its boxes
+with only the quote block under them and the button still reading "Apply to
+work with us". Leave the marker row in place.
+
+- **On release:** merge to main, read the production seed line ("Home page
+  apply theme: ..."), run the live inspection on `/` and `/evidence`, send
+  one labelled test enquiry from the live home page, write back to both
+  Handoff Logs.
+- The first mock-up Tom saw is on branch `mockup/home-apply` (not for main).

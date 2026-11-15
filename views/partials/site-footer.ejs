@@ -37,15 +37,21 @@
             <div class="lead-hp" aria-hidden="true">
                 <label>Leave this field blank<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
             </div>
+            <%# ACCESSIBLE NAMES (15/11/2026). These fields have no visible
+                label, and a placeholder is not a reliable name for a screen
+                reader or voice control: it is not announced consistently and
+                it is gone once the field holds text. Each field carries an
+                aria-label with the same words as its placeholder, so what is
+                announced is exactly what is shown. Nothing visible changes. %>
             <div class="lead-row">
-                <input type="text" name="name" placeholder="Your name" maxlength="200" required>
-                <input type="email" name="email" placeholder="Your email" maxlength="255" required>
+                <input type="text" name="name" placeholder="Your name" aria-label="Your name" maxlength="200" required>
+                <input type="email" name="email" placeholder="Your email" aria-label="Your email" maxlength="255" required>
             </div>
             <div class="lead-row">
-                <input type="tel" name="phone" placeholder="Phone (optional)" maxlength="50">
-                <input type="text" name="preferred_time" placeholder="<%= pageContact.timePlaceholder || 'Best day/time for a 30 min call (optional)' %>" maxlength="255">
+                <input type="tel" name="phone" placeholder="Phone (optional)" aria-label="Phone (optional)" maxlength="50">
+                <input type="text" name="preferred_time" placeholder="<%= pageContact.timePlaceholder || 'Best day/time for a 30 min call (optional)' %>" aria-label="<%= pageContact.timePlaceholder || 'Best day/time for a 30 min call (optional)' %>" maxlength="255">
             </div>
-            <textarea name="message" placeholder="<%= pageContact.messagePlaceholder %>" maxlength="2000" rows="4"></textarea>
+            <textarea name="message" placeholder="<%= pageContact.messagePlaceholder %>" aria-label="<%= pageContact.messagePlaceholder %>" maxlength="2000" rows="4"></textarea>
             <%# "How did you hear about us?" (19/09/2026). The first option is
                 the prompt and submits as an empty value, matching the
                 placeholder-only style of the fields above, which carry no
@@ -78,7 +84,7 @@
                 </select>
             </div>
             <div class="lead-row lead-row-single lead-row-hidden" id="leadHeardAboutOtherRow">
-                <input type="text" name="heard_about_other" id="leadHeardAboutOther" placeholder="Where did you hear about us?" maxlength="200">
+                <input type="text" name="heard_about_other" id="leadHeardAboutOther" placeholder="Where did you hear about us?" aria-label="Where did you hear about us?" maxlength="200">
             </div>
             <p class="lead-privacy-note">We use your details to respond to your enquiry. Read our <a href="/privacy">Privacy</a> page.</p>
             <%# Cloudflare Turnstile (01/10/2026). Implicit render: the api.js
@@ -97,8 +103,9 @@
             <button type="submit" class="btn btn-primary"><%= pageContact.submitText %></button>
             <%# What happens next, right by the button (Tom, 11/10/2026: approved
                 wording and the reply time he can promise). Shared by every
-                page that uses this footer. %>
-            <p class="lead-form-next">Tom reads every enquiry himself and replies personally, usually within one working day. The first conversation is free and there's no obligation.</p>
+                page that uses this footer; the home page passes its own line
+                (pageContact.nextText, 15/11/2026). %>
+            <p class="lead-form-next"><%= pageContact.nextText || "Tom reads every enquiry himself and replies personally, usually within one working day. The first conversation is free and there's no obligation." %></p>
             <p class="lead-form-status" id="leadFormStatus" aria-live="polite"></p>
         </form>
         <p class="lead-form-alt">Prefer to call, email or WhatsApp instead?</p>

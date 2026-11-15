@@ -12,7 +12,7 @@
         <div class="nav-actions">
             <a href="#conversation" class="nav-cta"><%= pageContact.headerCtaText %></a>
             <% const _navWa = (content['contact.whatsapp'] || '').trim(); %>
-            <% if (/^https:\/\/(wa\.me|api\.whatsapp\.com)\//.test(_navWa)) { %>
+            <% if (!pageContact.hideNavWhatsapp && /^https:\/\/(wa\.me|api\.whatsapp\.com)\//.test(_navWa)) { %>
             <a href="<%= _navWa %>" class="nav-cta nav-cta-whatsapp" target="_blank" rel="noopener nofollow">WhatsApp us</a>
             <% } %>
         </div>
@@ -54,7 +54,7 @@
     <% } %>
     <a href="#conversation" class="mobile-menu-cta"><%= pageContact.headerCtaText %></a>
     <% const _mWa = (content['contact.whatsapp'] || '').trim(); %>
-    <% if (/^https:\/\/(wa\.me|api\.whatsapp\.com)\//.test(_mWa)) { %>
+    <% if (!pageContact.hideNavWhatsapp && /^https:\/\/(wa\.me|api\.whatsapp\.com)\//.test(_mWa)) { %>
     <a href="<%= _mWa %>" class="mobile-menu-cta mobile-menu-whatsapp" target="_blank" rel="noopener nofollow">WhatsApp us</a>
     <% } %>
 </div>
