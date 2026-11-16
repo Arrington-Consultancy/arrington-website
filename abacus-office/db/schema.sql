@@ -236,3 +236,19 @@ ALTER TABLE cases ADD COLUMN IF NOT EXISTS draft_version INTEGER NOT NULL DEFAUL
 -- false when they approved it as written.
 ALTER TABLE cases ADD COLUMN IF NOT EXISTS ai_draft TEXT NOT NULL DEFAULT '';
 ALTER TABLE cases ADD COLUMN IF NOT EXISTS approved_edited BOOLEAN;
+
+-- Complaint escalation times (Tom, 16 November 2026): a safety matter tells
+-- a manager straight away, a serious complaint after 2 hours with no
+-- approved reply, any other after 12. Telling a manager does NOT take the
+-- complaint away from the operators (Tom: "i dont want complaints to bypass
+-- operators, they need to go there as well"): the operators keep it and can
+-- still answer it. Only an operator's own "Pass up to a manager" hands
+-- approval to a manager.
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS manager_alerted_at TIMESTAMPTZ;
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS manager_alert_reason TEXT NOT NULL DEFAULT '';
+-- Complaints the old 12-hour nudge passed up by itself (no person, no
+-- holding reply sent) go back to the operators, with the manager still told.
+UPDATE cases SET manager_alerted_at = passed_up_at, manager_alert_reason = passed_up_reason,
+       passed_up_at = NULL, passed_up_reason = ''
+ WHERE passed_up_at IS NOT NULL AND passed_up_by IS NULL AND holding_sent_at IS NULL
+   AND passed_up_reason LIKE 'No approved reply within %';

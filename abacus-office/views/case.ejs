@@ -49,7 +49,7 @@
         <span><span class="to-chip"><% if (iconId) { %><%- include('partials/worker-icon', { id: iconId }) %><% } %><%= kindName %></span>
           <% if (manyBrands) { %><% if (brandLogo(kase.brand)) { %><span class="to-tag to-tag-logo"><img src="<%= brandLogo(kase.brand) %>" alt="<%= brandName(kase.brand) %>" height="18"></span><% } else { %><span class="to-tag"><%= brandName(kase.brand) %></span><% } %><% } %>
           <% if (overdue) { %><span class="to-pill to-pill-bad">Overdue</span><% } %>
-          <% if (passedUp && !kase.approved_at && kase.status !== 'done') { %><span class="to-pill to-pill-warn">For a manager</span><% } %>
+          <% if ((passedUp || kase.manager_alerted_at) && !kase.approved_at && kase.status !== 'done') { %><span class="to-pill to-pill-warn"><%= passedUp ? 'For a manager' : 'Manager told' %></span><% } %>
           <% if (kase.dispatch_ref) { %><span class="to-pill to-pill-ok">In dispatch <%= kase.dispatch_ref %></span><% } %>
           <% if (kase.seriousness !== 'none') { %><span class="to-pill <%= kase.seriousness === 'minor' ? 'to-pill-neutral' : 'to-pill-bad' %>"><%= kase.seriousness %></span><% } %>
           <span class="to-pill to-pill-<%= { new: 'soon', in_progress: 'warn', waiting: 'neutral', done: 'ok' }[kase.status] %>"><%= label(kase.status) %></span></span>
@@ -115,6 +115,9 @@
     <% if (kase.kind === 'complaints' && kase.status !== 'done') { %>
     <section class="to-panel to-passup" id="pass-up">
       <p class="to-worker-tag">Passing it up</p>
+      <% if (kase.manager_alerted_at && !passedUp) { %>
+        <p class="to-status-line">A manager was told <%= when(kase.manager_alerted_at) %>: <%= String(kase.manager_alert_reason || '').replace(/\.+$/, '') %>. It is still yours to answer.</p>
+      <% } %>
       <% if (passedUp) { %>
         <p class="to-status-line">Passed up to a manager <%= when(kase.passed_up_at) %>: <%= kase.passed_up_reason.replace(/\.+$/, '') %>. <%= atLeast(user, 'manager') ? 'You can approve the reply.' : 'Only a manager can approve the reply now.' %></p>
       <% } else { %>

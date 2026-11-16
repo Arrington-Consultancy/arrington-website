@@ -631,22 +631,27 @@ ${this.firm.signature}`;
     return { escalated: due.length, emailed };
   }
 
-  // The complaint nudge (Tom's email to Dan: a complaint unanswered for 12
-  // hours goes to a manager). Past the nudge time with no approved reply,
-  // the complaint is passed up by the office itself and a manager is
-  // emailed once. Nothing goes to the customer.
+  // Telling a manager about a complaint (Tom, 16 November 2026): a safety
+  // matter straight away, a serious complaint after 2 hours with no approved
+  // reply, any other after 12. The manager is told and it shows in their
+  // "For a manager" list, but the complaint STAYS WITH THE OPERATORS, who can
+  // still answer it (Tom: "i dont want complaints to bypass operators").
+  // Only an operator's own "Pass up to a manager" hands approval over.
+  // Nothing goes to the customer.
   async nudge(alerts, baseUrl) {
-    const hours = await this.store.complaintNudgeHours();
-    const due = await this.store.complaintNudgeCandidates(hours);
+    const [minorHours, seriousHours] = await Promise.all([this.store.complaintNudgeHours(), this.store.complaintSeriousHours()]);
+    const due = await this.store.complaintNudgeCandidates({ seriousHours, minorHours });
     if (!due.length) return { nudged: 0, emailed: false };
     for (const c of due) {
-      await this.store.updateCase(c.id, { passed_up_at: this.now(), passed_up_by: null, passed_up_reason: `No approved reply within ${hours} hours` });
-      await this.store.addEvent(c.id, { kind: 'passed_up', detail: `Passed up to a manager by the office: no approved reply within ${hours} hours` });
+      const reason = alertReason(c.seriousness, { seriousHours, minorHours });
+      await this.store.updateCase(c.id, { manager_alerted_at: this.now(), manager_alert_reason: reason });
+      c.manager_alert_reason = reason;
+      await this.store.addEvent(c.id, { kind: 'manager_alerted', detail: `A manager was told: ${reason}. It stays with the operators, who can still answer it` });
     }
     let emailed = false;
     if (alerts && alerts.sendNudge) {
       try {
-        const r = await alerts.sendNudge({ cases: due, hours, baseUrl, firmName: this.firm.name });
+        const r = await alerts.sendNudge({ cases: due, seriousHours, minorHours, baseUrl, firmName: this.firm.name });
         emailed = r.sent;
         if (r.sent) await this.store.markPassedUpNotified(r.sentIds || due.map((c) => c.id));
       } catch (e) {
@@ -655,6 +660,12 @@ ${this.firm.signature}`;
     }
     return { nudged: due.length, emailed };
   }
+}
+
+function alertReason(seriousness, { seriousHours, minorHours }) {
+  if (seriousness === 'safety') return 'a safety matter';
+  const h = seriousness === 'serious' ? seriousHours : minorHours;
+  return `${seriousness === 'serious' ? 'a serious complaint' : 'a complaint'} with no approved reply within ${h} ${h === 1 ? 'hour' : 'hours'}`;
 }
 
 function refuse(message) { const e = new Error(message); e.code = 'REFUSED'; return e; }

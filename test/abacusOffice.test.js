@@ -498,23 +498,28 @@ test('the office over HTTP: login, forced password change, one case per email, r
   r = await owner.get('/');
   assert.match(r.text, /Overdue/);
 
-  // The complaint nudge: a complaint with no approved reply past the nudge
-  // time is passed up by the office and the manager emailed once; the one
-  // already passed up by sam, and the approved ones, are left alone.
+  // Telling a manager (Tom, 16 November 2026): a minor complaint with no
+  // approved reply after 12 hours tells a manager, emailed once, and the
+  // complaint STAYS WITH THE OPERATORS; the one sam passed up, and the
+  // approved ones, are left alone.
   await store.setSetting('complaint_nudge_hours', '12');
   await pool.query("INSERT INTO cases (message_id, from_address, subject, body, received_at, kind, seriousness, brand, status, draft) VALUES ('<nudge-me@example.invalid>', 'Old Complaint <old@example.invalid>', 'Still waiting', 'Nobody has answered me.', now() - interval '13 hours', 'complaints', 'minor', 'abacus', 'in_progress', 'Hi,\n\nSorry.\n\nThanks,\nAbacus Taxis')");
   passUpMails = [];
   alerts.__setTransportFactoryForTests(() => ({ sendMail: async (m) => { passUpMails.push(m); return { messageId: 'n' }; } }));
   const nudgeAlerts = { sendNudge: (args) => alerts.sendNudge(args, env) };
   const n1 = await office.nudge(nudgeAlerts, base);
-  assert.deepEqual(n1, { nudged: 1, emailed: true });
-  assert.equal(passUpMails.length, 1);
-  assert.match(passUpMails[0].text, /sat more than 12 hours/);
+  assert.ok(n1.nudged >= 1 && n1.emailed, 'a manager is told and emailed');
+  assert.equal(passUpMails.length, 1, 'one email for the sweep');
+  assert.match(passUpMails[0].text, /no approved reply within 12 hours/);
+  assert.match(passUpMails[0].text, /operators still have/);
   const nudged = await byId('<nudge-me@example.invalid>');
-  assert.ok(nudged.passed_up_at);
-  assert.equal(nudged.passed_up_reason, 'No approved reply within 12 hours');
-  assert.equal(nudged.passed_up_by, null, 'passed up by the office, not a person');
+  assert.ok(nudged.manager_alerted_at, 'a manager was told');
+  assert.equal(nudged.manager_alert_reason, 'a complaint with no approved reply within 12 hours');
+  assert.equal(nudged.passed_up_at, null, 'the office does not take it off the operators');
+  assert.ok(cases.canApprove(await store.userByName('sam'), nudged), 'an operator can still approve it');
   assert.deepEqual(await office.nudge(nudgeAlerts, base), { nudged: 0, emailed: false }, 'a second sweep nudges nothing more');
+  r = await sam.get('/complaints');
+  assert.match(r.text, /Still waiting/, 'the operator still has it in Complaints');
   r = await meg.get('/');
   assert.match(r.text, /For a manager/, 'Today shows a manager what was passed up');
   r = await sam.get('/');

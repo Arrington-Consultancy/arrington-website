@@ -2,18 +2,18 @@
 <section class="to-section-head"><h1>Settings</h1></section>
 <section class="to-panel">
   <h2>Escalation and the complaint nudge</h2>
-  <% if (alertsReady) { %><p>A reply with nobody approving it within the first time goes red on Today, and a manager is emailed once. A complaint with no approved reply within the second time is passed up to a manager, who is emailed once. Nothing is ever sent to the customer automatically.</p>
-  <% } else { %><p>A reply with nobody approving it within the first time goes red on Today. A complaint with no approved reply within the second time is passed up to a manager and shows on Today. Alert emails are not set up yet, so nobody is emailed: Today is the only warning. Nothing is ever sent to the customer automatically.</p><% } %>
+  <p>A reply with nobody approving it within the first time goes red on Today. A manager is told about a complaint straight away if it is a safety matter, after the second time if it is serious, and after the third time for any other complaint, each time only if no reply has been approved. The complaint stays with the operators, who can still answer it; a manager also sees it under "For a manager" on Today. <%= alertsReady ? 'The manager is emailed once each time.' : 'Alert emails are not set up yet, so nobody is emailed: Today is the only warning.' %> Nothing is ever sent to the customer automatically.</p>
   <% if (atLeast(user, 'owner')) { %>
   <form method="post" action="/settings" class="to-form">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <div class="to-field-row">
       <label class="to-field"><span>Hours before any reply is overdue</span><input name="escalation_hours" type="number" min="1" max="168" value="<%= hours %>" required></label>
-      <label class="to-field"><span>Hours before a complaint goes to a manager</span><input name="complaint_nudge_hours" type="number" min="1" max="168" value="<%= nudgeHours %>" required></label>
+      <label class="to-field"><span>Hours before a manager is told about a serious complaint</span><input name="complaint_serious_hours" type="number" min="1" max="168" value="<%= seriousHours %>" required></label>
+      <label class="to-field"><span>Hours before a manager is told about any other complaint</span><input name="complaint_nudge_hours" type="number" min="1" max="168" value="<%= nudgeHours %>" required></label>
     </div>
     <button type="submit" class="to-btn to-btn-primary">Save</button>
   </form>
-  <% } else { %><p class="to-status-line">Currently <strong><%= hours %> hours</strong> for any reply and <strong><%= nudgeHours %> hours</strong> for a complaint. The owner changes these.</p><% } %>
+  <% } else { %><p class="to-status-line">Currently <strong><%= hours %> hours</strong> for any reply; for complaints, straight away for a safety matter, <strong><%= seriousHours %> hours</strong> for a serious one and <strong><%= nudgeHours %> hours</strong> for any other. The owner changes these.</p><% } %>
 </section>
 <section class="to-panel" id="prices">
   <h2>Fixed prices</h2>

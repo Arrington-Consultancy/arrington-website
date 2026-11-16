@@ -321,7 +321,8 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     const unassigned = open.filter((c) => !c.owner_id && c.status === 'new' && c.kind !== 'other' && !overdueIds.has(c.id));
     const hours = await store.escalationHours();
     const nudgeHours = await store.complaintNudgeHours();
-    res.render('today', { title: 'Today', section: 'today', unsent, overdue: overdueShown, passedUp: showPassedUp, mine, unassigned, recent, hours, nudgeHours, liveStamp: stamp, lastSync });
+    const seriousHours = await store.complaintSeriousHours();
+    res.render('today', { seriousHours, title: 'Today', section: 'today', unsent, overdue: overdueShown, passedUp: showPassedUp, mine, unassigned, recent, hours, nudgeHours, liveStamp: stamp, lastSync });
   }));
 
   app.get('/inbox', wrap(async (req, res) => {
@@ -354,7 +355,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     const cases = (await store.listCases({ kind: 'complaints', brand: scope, limit: 200 })).filter((c) => req.query.show === 'all' || c.status !== 'done');
     const order = { safety: 0, serious: 1, minor: 2, none: 3 };
     cases.sort((a, b) => (order[a.seriousness] - order[b.seriousness]) || (new Date(a.received_at) - new Date(b.received_at)));
-    res.render('complaints', { title: 'Complaints', section: 'complaints', cases, showAll: req.query.show === 'all', liveStamp: await store.liveStamp(scope), lastSync, nudgeHours: await store.complaintNudgeHours(), channels: CHANNELS, ownBrand: scopeFor(req.user) || '', todayYmd: office.today(), logId: require('crypto').randomUUID() });
+    res.render('complaints', { title: 'Complaints', section: 'complaints', cases, showAll: req.query.show === 'all', liveStamp: await store.liveStamp(scope), lastSync, nudgeHours: await store.complaintNudgeHours(), seriousHours: await store.complaintSeriousHours(), channels: CHANNELS, ownBrand: scopeFor(req.user) || '', todayYmd: office.today(), logId: require('crypto').randomUUID() });
   }));
   // A complaint that came in another way: a Google review, a Facebook
   // comment, a phone call (Tom, 10 November 2026). Staff type or paste it
@@ -603,15 +604,20 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   }));
 
   app.get('/settings', requireRole('manager'), wrap(async (req, res) => {
-    res.render('settings', { baseUrl: baseUrl || `${req.protocol}://${req.get('host')}`, title: 'Settings', section: 'settings', hours: await store.escalationHours(), nudgeHours: await store.complaintNudgeHours(), prices: await store.fixedPrices(scopeFor(req.user) || req.portal || undefined), tariffBrand: companyChoice(req, req.query.tariff), tariff: await store.tariff(companyChoice(req, req.query.tariff)), fareDefaults: require('./lib/fares').DEFAULT_TARIFF, fareCards: Object.values(require('./lib/fares').FARE_CARDS), fareCard: require('./lib/fares').cardFor(await store.tariff(companyChoice(req, req.query.tariff))), fareLib: require('./lib/fares'), holidaysUntil: require('./lib/fares').HOLIDAYS_KNOWN_UNTIL, replies: (scopeFor(req.user) || req.portal) ? await store.standardRepliesFor(scopeFor(req.user) || req.portal) : await store.standardReplies(), ownBrand: scopeFor(req.user) || '', brands: firm.brands || [], alertStatus: alerts.describeAlertStatus(alertsEnv), mailStatus: mailboxLib.describeMailStatus(mailEnv, mailbox), mailConnect: connectState(), aiStatus: ai.describeAiStatus(), dispatchStatus: require('./lib/dispatch').describeDispatchStatus() });
+    res.render('settings', { baseUrl: baseUrl || `${req.protocol}://${req.get('host')}`, title: 'Settings', section: 'settings', hours: await store.escalationHours(), nudgeHours: await store.complaintNudgeHours(), seriousHours: await store.complaintSeriousHours(), prices: await store.fixedPrices(scopeFor(req.user) || req.portal || undefined), tariffBrand: companyChoice(req, req.query.tariff), tariff: await store.tariff(companyChoice(req, req.query.tariff)), fareDefaults: require('./lib/fares').DEFAULT_TARIFF, fareCards: Object.values(require('./lib/fares').FARE_CARDS), fareCard: require('./lib/fares').cardFor(await store.tariff(companyChoice(req, req.query.tariff))), fareLib: require('./lib/fares'), holidaysUntil: require('./lib/fares').HOLIDAYS_KNOWN_UNTIL, replies: (scopeFor(req.user) || req.portal) ? await store.standardRepliesFor(scopeFor(req.user) || req.portal) : await store.standardReplies(), ownBrand: scopeFor(req.user) || '', brands: firm.brands || [], alertStatus: alerts.describeAlertStatus(alertsEnv), mailStatus: mailboxLib.describeMailStatus(mailEnv, mailbox), mailConnect: connectState(), aiStatus: ai.describeAiStatus(), dispatchStatus: require('./lib/dispatch').describeDispatchStatus() });
   }));
   app.post('/settings', requireRole('owner'), wrap(async (req, res) => {
     const n = Number(req.body.escalation_hours);
     const k = Number(req.body.complaint_nudge_hours);
-    if (!Number.isFinite(n) || n < 1 || n > 168 || !Number.isFinite(k) || k < 1 || k > 168) { flash(req, 'warn', 'Each time is between 1 and 168 hours.'); return res.redirect('/settings'); }
+    // A form from before the serious-complaint time existed keeps the
+    // current value rather than failing.
+    const sv = req.body.complaint_serious_hours === undefined ? await store.complaintSeriousHours() : Number(req.body.complaint_serious_hours);
+    const ok = (x) => Number.isFinite(x) && x >= 1 && x <= 168;
+    if (!ok(n) || !ok(k) || !ok(sv)) { flash(req, 'warn', 'Each time is between 1 and 168 hours.'); return res.redirect('/settings'); }
     await store.setSetting('escalation_hours', String(Math.round(n)));
+    await store.setSetting('complaint_serious_hours', String(Math.round(sv)));
     await store.setSetting('complaint_nudge_hours', String(Math.round(k)));
-    await store.addEvent(null, { actor: req.user, kind: 'setting', detail: `Escalation time set to ${Math.round(n)} hours; complaint nudge set to ${Math.round(k)} hours` });
+    await store.addEvent(null, { actor: req.user, kind: 'setting', detail: `Escalation time set to ${Math.round(n)} hours; a manager is told about a serious complaint after ${Math.round(sv)} hours and any other after ${Math.round(k)} hours` });
     flash(req, 'ok', 'Saved.');
     res.redirect('/settings');
   }));

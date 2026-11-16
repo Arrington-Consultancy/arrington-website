@@ -11,7 +11,7 @@ const SCHEMA = fs.readFileSync(path.join(__dirname, '..', 'db', 'schema.sql'), '
 const ROLES = ['operator', 'manager', 'owner'];
 const STATUSES = ['new', 'in_progress', 'waiting', 'done'];
 const KINDS = ['unread', 'bookings', 'customer', 'complaints', 'licensing', 'other'];
-const DEFAULT_SETTINGS = { escalation_hours: '24', complaint_nudge_hours: '12' };
+const DEFAULT_SETTINGS = { escalation_hours: '24', complaint_nudge_hours: '12', complaint_serious_hours: '2' };
 
 // A list's scope: a company id (string) or { brand, hideCouncil }. An
 // undefined company is every company; hideCouncil leaves out the council
@@ -51,6 +51,12 @@ class Store {
   async complaintNudgeHours() {
     const n = Number(await this.setting('complaint_nudge_hours'));
     return Number.isFinite(n) && n >= 1 && n <= 168 ? n : 12;
+  }
+  // A serious complaint tells a manager sooner (Tom, 16 November 2026: 2
+  // hours). A safety matter tells a manager straight away, not a setting.
+  async complaintSeriousHours() {
+    const n = Number(await this.setting('complaint_serious_hours'));
+    return Number.isFinite(n) && n >= 1 && n <= 168 ? n : 2;
   }
 
   // ---- users ----
@@ -118,7 +124,7 @@ class Store {
     // that brand only, which is what a brand's own staff get.
     where.push(...scopeWhere(brand, params, 'c.'));
     if (status) add('c.status = ?', status);
-    if (passedUp) where.push('c.passed_up_at IS NOT NULL AND c.approved_at IS NULL AND c.status <> \'done\'');
+    if (passedUp) where.push('(c.passed_up_at IS NOT NULL OR c.manager_alerted_at IS NOT NULL) AND c.approved_at IS NULL AND c.status <> \'done\'');
     if (unsent) where.push("c.approved_at IS NOT NULL AND c.sent_at IS NULL AND c.status <> 'done'");
     if (kind) add('c.kind = ?', kind);
     if (ownerId) add('c.owner_id = ?', ownerId);
@@ -160,7 +166,7 @@ class Store {
       count(*) FILTER (WHERE kind = 'complaints' AND status <> 'done')::int AS complaints_open,
       count(*) FILTER (WHERE kind = 'complaints' AND status <> 'done' AND seriousness = 'safety')::int AS safety_open,
       count(*) FILTER (WHERE escalated_at IS NOT NULL AND approved_at IS NULL AND status IN ('new', 'in_progress'))::int AS overdue,
-      count(*) FILTER (WHERE kind = 'complaints' AND status <> 'done' AND passed_up_at IS NOT NULL AND approved_at IS NULL)::int AS passed_up,
+      count(*) FILTER (WHERE kind = 'complaints' AND status <> 'done' AND (passed_up_at IS NOT NULL OR manager_alerted_at IS NOT NULL) AND approved_at IS NULL)::int AS passed_up,
       count(*) FILTER (WHERE kind = 'licensing' AND status <> 'done')::int AS council_open,
       count(*) FILTER (WHERE kind = 'unread')::int AS unread,
       count(*) FILTER (WHERE approved_at IS NOT NULL AND sent_at IS NULL AND status <> 'done')::int AS unsent
@@ -281,12 +287,17 @@ class Store {
     if (!ids.length) return;
     await this.q('UPDATE cases SET escalation_notified_at = now() WHERE id = ANY($1::int[])', [ids]);
   }
-  // Complaints that have sat past the nudge time with no approved reply and
-  // have not yet been passed up to a manager.
-  async complaintNudgeCandidates(hours) {
+  // Complaints a manager should now be told about, and has not been: a
+  // safety matter at once, a serious one after seriousHours, any other after
+  // minorHours, each with no approved reply and not passed up already.
+  async complaintNudgeCandidates({ seriousHours, minorHours }) {
     const r = await this.q(
-      `SELECT * FROM cases WHERE kind = 'complaints' AND status <> 'done' AND approved_at IS NULL AND passed_up_at IS NULL
-         AND received_at < now() - ($1 || ' hours')::interval ORDER BY received_at`, [String(hours)]);
+      `SELECT * FROM cases WHERE kind = 'complaints' AND status <> 'done' AND approved_at IS NULL
+         AND passed_up_at IS NULL AND manager_alerted_at IS NULL
+         AND (seriousness = 'safety'
+           OR (seriousness = 'serious' AND received_at < now() - ($1 || ' hours')::interval)
+           OR (seriousness NOT IN ('safety', 'serious') AND received_at < now() - ($2 || ' hours')::interval))
+       ORDER BY received_at`, [String(seriousHours), String(minorHours)]);
     return r.rows;
   }
   async markPassedUpNotified(ids) {

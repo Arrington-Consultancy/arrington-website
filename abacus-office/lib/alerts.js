@@ -90,18 +90,20 @@ async function sendEscalation({ cases, hours, baseUrl, firmName }, env = process
   }));
 }
 
-// A complaint past the nudge time, or one an operator has passed up, told
-// to that company's manager address. Same transport.
-async function sendNudge({ cases, hours, baseUrl, firmName, by = '' }, env = process.env) {
+// A complaint a manager should know about (a safety matter at once, a
+// serious one after 2 hours, any other after 12), or one an operator has
+// passed up, told to that company's manager address. Same transport.
+async function sendNudge({ cases, baseUrl, firmName, by = '' }, env = process.env) {
   const c = smtpConfig(env);
   if (!c.ready) return { sent: false, reason: 'not configured', sentIds: [] };
   return sendGrouped(c, cases, (group) => {
+    const one = group.length === 1;
     const opening = by
-      ? `${by} has passed ${group.length === 1 ? 'a complaint' : `${group.length} complaints`} up to a manager in the ${firmName} office.`
-      : `${group.length === 1 ? 'One complaint has' : `${group.length} complaints have`} sat more than ${hours} hours in the ${firmName} office with no approved reply, so ${group.length === 1 ? 'it has' : 'they have'} been passed up to a manager.`;
+      ? `${by} has passed ${one ? 'a complaint' : `${group.length} complaints`} up to a manager in the ${firmName} office.`
+      : `${one ? 'A complaint' : `${group.length} complaints`} in the ${firmName} office ${one ? 'needs' : 'need'} a manager to know about ${one ? 'it' : 'them'}: ${one ? (group[0].manager_alert_reason || 'past the time set for complaints') : 'a safety matter, or past the time set for complaints'}. The operators still have ${one ? 'it' : 'them'} and can answer.`;
     return {
-      subject: `${firmName} office: ${group.length} ${group.length === 1 ? 'complaint' : 'complaints'} for a manager`,
-      text: [opening, '', ...group.map((k) => lineFor(k, baseUrl)), '', 'Nothing has been sent to the customer beyond any holding reply the operator chose to send. A manager needs to open the case, check the draft and approve it.'].join('\n')
+      subject: `${firmName} office: ${group.length} ${one ? 'complaint' : 'complaints'} for a manager`,
+      text: [opening, '', ...group.map((k) => lineFor(k, baseUrl)), '', by ? 'Nothing has been sent to the customer beyond any holding reply the operator chose to send. A manager needs to open the case, check the draft and approve it.' : 'Nothing has been sent to the customer. Open the case to see where it has got to; an operator or a manager can check the draft and approve it.'].join('\n')
     };
   });
 }

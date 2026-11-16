@@ -120,7 +120,7 @@ async function main() {
     const r = await office.sweep(alerts, baseUrl);
     if (r.escalated) console.log(`Abacus office: ${r.escalated} case(s) escalated${r.emailed ? ', manager emailed' : ', no email configured'}`);
     const n = await office.nudge(alerts, baseUrl);
-    if (n.nudged) console.log(`Abacus office: ${n.nudged} complaint(s) passed up to a manager by the nudge${n.emailed ? ', manager emailed' : ', no email configured'}`);
+    if (n.nudged) console.log(`Abacus office: ${n.nudged} complaint(s): a manager told (the operators keep them)${n.emailed ? ', manager emailed' : ', no email configured'}`);
     // A visit with 20 quiet minutes is closed and written to the log.
     notify.closed(await store.closeVisits({ idleOnly: true, how: 'idle' }));
   });

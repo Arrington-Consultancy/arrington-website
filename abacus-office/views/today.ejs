@@ -14,7 +14,7 @@
 
 <% if (passedUp.length) { %>
 <section class="to-section">
-  <div class="to-section-head"><h2>For a manager</h2><p class="to-small">Complaints passed up by an operator, or left <%= nudgeHours %> hours with no approved reply. A manager approves these replies.</p></div>
+  <div class="to-section-head"><h2>For a manager</h2><p class="to-small">Complaints passed up by an operator, and complaints a manager has been told about: a safety matter straight away, a serious one after <%= seriousHours %> hours and any other after <%= nudgeHours %> hours with no approved reply. Ones passed up are approved by a manager; the rest the operators can still answer.</p></div>
   <ul class="to-cases"><% passedUp.forEach(function (c) { %><%- include('partials/case-row', { c: c }) %><% }) %></ul>
 </section>
 <% } %>
