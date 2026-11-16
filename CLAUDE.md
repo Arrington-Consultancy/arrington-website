@@ -10834,6 +10834,14 @@ back watched red). The pilot-measures suite, missing from
 `test/gatedSuites.test.js` since `bfd19d6` (so that check failed on main),
 is now declared.
 
+**Bulk adding users: agreed, not built (Tom, 16/11/2026: "Yes when we are
+ready").** The design he agreed: on Users, the owner pastes one person per
+line (name, level, company); the office makes a first.last username and a
+temporary password for each, shows the passwords once to print or hand out
+(never emailed, never shown again), each person changes theirs at first
+sign-in, and one bad line adds nobody. Build it when Tom says the staff are
+ready to be set up, test it on a copy, and never commit Dan's staff list.
+
 ## Proof pass: Commercial Review, Website Build, thank-you, booking buttons (14/11/2026)
 
 Tom asked for an outside judgement of the site on a stronger model (a fresh,
