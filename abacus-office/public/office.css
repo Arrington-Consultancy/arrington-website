@@ -447,3 +447,15 @@ p { margin: 0 0 0.8rem; }
 @media (min-width: 52rem) { .to-report-grid { grid-template-columns: 1fr 1fr; } }
 .to-table.is-compact { min-width: 0; }
 .to-table .to-num { text-align: right; font-variant-numeric: tabular-nums lining-nums; white-space: nowrap; }
+
+/* Each company's own colours, from the brand boards Dan Perryman sent on
+   16 November 2026 (A2B Taxis Cornwall, Coastline Travel, Abacus &
+   Falmouth Taxis). Shown as a stripe under the bar when a company's portal
+   is open, so whoever is working can see at a glance whose office it is.
+   The office's own colours are unchanged: a brand's red is not a warning. */
+.to-bar::after { content: ''; display: block; height: 0; }
+.to-co-abacus .to-bar::after { height: 4px; background: linear-gradient(90deg, #FF0000 0 60%, #001CBE 60% 100%); }
+.to-co-a2b .to-bar::after { height: 4px; background: linear-gradient(90deg, #009EE3 0 60%, #A6CE00 60% 100%); }
+.to-co-coastline .to-bar::after { height: 4px; background: linear-gradient(90deg, #00B4F0 0 60%, #9EDCF9 60% 100%); }
+/* Coastline's logo is white on charcoal, so its tile is charcoal too. */
+.to-co-coastline .to-logo, .to-tag-co-coastline { background: #231F20; border-color: #231F20; }

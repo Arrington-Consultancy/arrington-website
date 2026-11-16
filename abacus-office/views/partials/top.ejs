@@ -16,7 +16,7 @@
   <link rel="preload" href="/assets/fonts/schibsted-grotesk.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/office.css?v=<%= ASSET_V.css %>">
 </head>
-<body class="to">
+<body class="to<%= typeof portal !== 'undefined' && /^[a-z0-9_-]+$/.test(portal || '') ? ' to-co-' + portal : '' %>">
   <a class="to-skip" href="#main">Skip to content</a>
   <% if (_demo) { %>
   <div class="to-ribbon to-demo-ribbon" role="note">
