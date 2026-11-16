@@ -10815,6 +10815,25 @@ from the review: complaint times by seriousness (Tom's decision), alert
 email not set, and the holding reply is a draft for staff to send, not a
 one-click send as the 9/11 email to Dan words it.
 
+**Complaint times, and operators keep every complaint (LIVE 16/11/2026,
+Tom: "i agree with the complaints proceedure" and "i dont want complaints to
+bypass operators, they need to go there as well").** Commit `7eb5b23`,
+office deployment `1067dd98`. A manager is told about a complaint with no
+approved reply: a safety matter straight away (the 5-minute sweep), a
+serious one after `complaint_serious_hours` (default 2) and any other after
+`complaint_nudge_hours` (default 12); both in Settings, owner only. Telling
+a manager sets `cases.manager_alerted_at` / `manager_alert_reason`, shows
+"Manager told" and puts it in "For a manager" on Today, emails the manager
+once when SMTP is set, and **does not pass it up**: the operators keep it
+and can still approve. Only an operator's own "Pass up to a manager" hands
+approval to a manager; a safety reply is still approved by a manager, as
+before. At boot, complaints the old 12-hour rule passed up by itself (no
+person, no holding reply) go back to the operators with the manager still
+told. `test/abacusOfficeComplaintTimes.test.js` (the old pass-up planted
+back watched red). The pilot-measures suite, missing from
+`test/gatedSuites.test.js` since `bfd19d6` (so that check failed on main),
+is now declared.
+
 ## Proof pass: Commercial Review, Website Build, thank-you, booking buttons (14/11/2026)
 
 Tom asked for an outside judgement of the site on a stronger model (a fresh,
