@@ -38,10 +38,12 @@ test('Gmail says what became of a saved draft: still a draft, sent, or deleted',
     if (/token/.test(url)) return { ok: true, status: 200, json: async () => ({ access_token: 'a', expires_in: 3600 }) };
     if (/\/drafts\//.test(url)) return draftThere ? { ok: true, status: 200, json: async () => ({ id: 'd1' }) } : { ok: false, status: 404, json: async () => ({}) };
     if (/\/threads\//.test(url)) return { ok: true, status: 200, json: async () => ({ messages: threadMessages }) };
+    if (/\/messages\//.test(url)) { const id = url.match(/messages\/([^?]+)/)[1]; const m = threadMessages.find((x) => x.id === id); return { ok: true, status: 200, json: async () => ({ payload: { mimeType: 'text/plain', body: { data: Buffer.from((m && m.text) || '').toString('base64url') } } }) }; }
     throw new Error(`unexpected ${url}`);
   } });
   assert.equal((await make(true, []).draftState({ draftId: 'd1', threadId: 't1', since })).state, 'unsent');
-  const sent = await make(false, [{ labelIds: ['INBOX'], internalDate: String(Date.parse('2026-11-11T08:00:00Z')) }, { labelIds: ['SENT'], internalDate: String(Date.parse('2026-11-11T10:20:00Z')) }]).draftState({ draftId: 'd1', threadId: 't1', since });
+  const text = 'Hi Pat,\n\nYes, we can do that.\n\nThanks,\nCornwall Taxis';
+  const sent = await make(false, [{ id: 'm0', labelIds: ['INBOX'], internalDate: String(Date.parse('2026-11-11T08:00:00Z')) }, { id: 'm1', labelIds: ['SENT'], internalDate: String(Date.parse('2026-11-11T10:20:00Z')), text }]).draftState({ draftId: 'd1', threadId: 't1', since, text });
   assert.equal(sent.state, 'sent');
   assert.equal(sent.at.toISOString(), '2026-11-11T10:20:00.000Z');
   assert.equal((await make(false, [{ labelIds: ['SENT'], internalDate: String(Date.parse('2026-11-10T09:00:00Z')) }]).draftState({ draftId: 'd1', threadId: 't1', since })).state, 'discarded', 'an older sent message in the thread is not this reply');

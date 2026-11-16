@@ -230,6 +230,7 @@
         <p class="to-note to-note-ok">It is in <%= mailboxLabel %> as a draft. Nothing has been sent: someone opens the mailbox and presses send there, then presses I have sent it here. Editing it here makes a new version that needs approving again.</p>
         <% } %>
         <% if (copyOut) { %><button type="button" class="to-btn to-btn-quiet" data-copy="<%= kase.draft %>">Copy the reply</button><% } %>
+        <% if (!kase.sent_at && kase.sent_state === 'other') { %><p class="to-note to-note-warn">A different email went out in this conversation, not the approved reply as written. Check what was sent in <%= mailboxLabel %>, and press I have sent it if it answered the customer.</p><% } %>
         <% if (kase.sent_at) { %><p class="to-note to-note-ok"><%= kase.sent_state === 'sent' && !kase.sent_by ? 'Sent from ' + mailboxLabel + ' ' + when(kase.sent_at) + '. The customer has it.' : 'Marked as sent ' + when(kase.sent_at) + '.' %></p>
         <% } else if (!mboxUnsure) { %><form method="post" action="/case/<%= kase.id %>/sent" class="to-inline-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="to-btn" data-confirm="Has this reply gone to <%= isCouncil ? 'the council' : 'the customer' %>?">I have sent it</button></form><% } %>
       <% } %>

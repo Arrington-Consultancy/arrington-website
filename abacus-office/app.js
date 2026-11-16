@@ -552,9 +552,9 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   app.get('/reports/cases.csv', requireRole('manager'), wrap(async (req, res) => {
     const days = [7, 30, 90].includes(Number(req.query.days)) ? Number(req.query.days) : 30;
     const rows = await store.casesForExport(caseScope(req.user, req.portal), days);
-    const head = ['Email', 'Company', 'Received', 'Came in by', 'From', 'Subject', 'Worker', 'Status', 'Seriousness', 'With', 'Approved', 'Approved by', 'Passed up', 'Went overdue', 'Dispatch reference'];
+    const head = ['Email', 'Company', 'Received', 'Came in by', 'From', 'Subject', 'Worker', 'Status', 'Seriousness', 'With', 'Approved', 'Approved by', 'Reply as approved', 'Sent', 'Passed up', 'Went overdue', 'Dispatch reference'];
     const worker = { unread: 'Not read yet', bookings: 'Bookings', customer: 'Customer emails', complaints: 'Complaints', licensing: 'Council', other: 'Not for the office' };
-    const lines = [head.join(',')].concat(rows.map((r) => [r.id, brandName(firm, r.brand), r.received_at, r.channel, r.from_address, r.subject, worker[r.kind] || r.kind, label(r.status), r.seriousness, r.owner_name, r.approved_at, r.approved_by_name, r.passed_up_at, r.escalated_at, r.dispatch_ref].map(csvCell).join(',')));
+    const lines = [head.join(',')].concat(rows.map((r) => [r.id, brandName(firm, r.brand), r.received_at, r.channel, r.from_address, r.subject, worker[r.kind] || r.kind, label(r.status), r.seriousness, r.owner_name, r.approved_at, r.approved_by_name, !r.approved_at ? '' : (r.approved_edited === true ? 'AI draft edited' : r.approved_edited === false ? 'AI draft as written' : 'Written by staff'), r.sent_at, r.passed_up_at, r.escalated_at, r.dispatch_ref].map(csvCell).join(',')));
     await store.addEvent(null, { actor: req.user, kind: 'export', detail: `Downloaded the emails of the last ${days} days as a spreadsheet (${rows.length} row${rows.length === 1 ? '' : 's'})` });
     res.set('Content-Type', 'text/csv; charset=utf-8');
     res.set('Content-Disposition', `attachment; filename="office-emails-last-${days}-days.csv"`);

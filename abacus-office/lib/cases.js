@@ -207,6 +207,7 @@ class Office {
         fields.kind = kindFor(reading.intent);
         fields.seriousness = reading.intent === 'complaint' ? (complaint ? complaint.seriousness : reading.seriousness) : 'none';
         fields.draft = complaint ? complaint.reply : (council ? council.reply : reading.reply);
+        fields.ai_draft = fields.draft || '';
         fields.complaint = complaint;
         fields.council = council;
         if (kase.status === 'new' && fields.kind === 'other') fields.status = 'done';
@@ -277,7 +278,7 @@ class Office {
       return { rewritten: false };
     }
     const out = await ai.redraft({ email: this.emailOf(kase), draft: kase.draft, notes, council: kase.kind === 'licensing' }, this.today(), await this.firmFor(kase));
-    await this.store.updateCase(kase.id, { guidance: notes, draft: out.reply, held_back: out.held_back, approved_at: null, approved_by: null, mailbox_state: '', mailbox_state_at: null, sent_at: null, sent_by: null, sent_state: '' });
+    await this.store.updateCase(kase.id, { guidance: notes, draft: out.reply, ai_draft: out.reply || '', held_back: out.held_back, approved_at: null, approved_by: null, mailbox_state: '', mailbox_state_at: null, sent_at: null, sent_by: null, sent_state: '' });
     await this.store.addEvent(kase.id, { actor: user, kind: 'guided', detail: t + (out.held_back ? ` (held back: ${out.held_back})` : '') });
     return { rewritten: true, heldBack: out.held_back };
   }
@@ -443,12 +444,18 @@ ${this.firm.signature}`;
     let changed = 0;
     for (const c of rows) {
       let st;
-      try { st = await this.mailbox.draftState({ draftId: c.saved_draft_id, threadId: c.saved_thread_id || c.thread_id, since: c.approved_at }); } catch (e) { continue; }
+      try { st = await this.mailbox.draftState({ draftId: c.saved_draft_id, threadId: c.saved_thread_id || c.thread_id, since: c.approved_at, text: c.draft }); } catch (e) { continue; }
       if (!st) continue;
       if (st.state === 'sent') {
         changed += 1;
         await this.store.updateCase(c.id, { sent_state: 'sent', sent_at: st.at || this.now(), sent_checked_at: this.now(), status: c.status === 'done' ? 'done' : 'waiting' });
         await this.store.addEvent(c.id, { kind: 'sent', detail: `The approved reply was sent from ${this.mailbox.label}` });
+      } else if (st.state === 'other') {
+        // Something went out in the conversation, but not the approved reply
+        // as written. Not marked sent: a person looks and says.
+        changed += 1;
+        await this.store.updateCase(c.id, { sent_state: 'other', sent_checked_at: this.now() });
+        await this.store.addEvent(c.id, { kind: 'sent_other', detail: `A different email went out in this conversation from ${this.mailbox.label}, not the approved reply as written. Check what was sent, and press I have sent it if it answered the customer` });
       } else if (st.state === 'discarded') {
         changed += 1;
         await this.store.updateCase(c.id, { sent_state: 'discarded', sent_checked_at: this.now(), approved_at: null, approved_by: null, saved_draft_id: null, mailbox_state: '', mailbox_state_at: null, status: 'in_progress' });

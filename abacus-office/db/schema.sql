@@ -228,3 +228,11 @@ ALTER TABLE cases ADD COLUMN IF NOT EXISTS sent_state VARCHAR(12) NOT NULL DEFAU
 ALTER TABLE cases ADD COLUMN IF NOT EXISTS sent_at TIMESTAMPTZ;
 ALTER TABLE cases ADD COLUMN IF NOT EXISTS sent_checked_at TIMESTAMPTZ;
 ALTER TABLE cases ADD COLUMN IF NOT EXISTS draft_version INTEGER NOT NULL DEFAULT 0;
+
+-- What the pilot measures (Codex's review, 16 November 2026). ai_draft: the
+-- reply as the AI (or the prepared answer) last wrote it, so an approval
+-- can record whether staff changed it first. approved_edited: NULL when
+-- staff wrote the reply themselves, true when they changed the AI's,
+-- false when they approved it as written.
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS ai_draft TEXT NOT NULL DEFAULT '';
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS approved_edited BOOLEAN;

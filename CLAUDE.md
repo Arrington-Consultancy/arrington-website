@@ -10786,6 +10786,33 @@ the Fares page has no tariff until one is chosen in Settings). Dan's
 `abacus-office-preview` and its database `Postgres-qoUL` are now
 redundant; deleting them is Tom's call.
 
+**Codex judgement of 16/11/2026, and two fixes (Tom: "yes"). On branch
+`claude/new-session-hbgp04`; NOT live until Tom says.** Brief Drive
+`13LQFT65-2ptBplSYMU4TL_ouywkb__cUVuRadDjyRa0`, review
+`1dA98g300Kmcg-PKRFtLQm7fwUIheCUKtc6g8SH0lQDQ`: office day GO with
+invented emails, Abacus-only email pilot HOLD. Checked against the code;
+all three findings hold. Fixed: (1) the made-up inbox's prepared replies
+for Jenna (booking), Claire (change) and Sam (cancel) said it was done
+before anything was in dispatch; they now say the office will confirm
+once it is in the system. (2) Gmail `draftState` called a reply sent if
+ANY email went out in the conversation after approval. It now reads each
+sent message and calls it sent only when its text starts with the
+approved reply (`sameReply` in `lib/taxiOffice/mail/gmail.js`, spacing
+and case aside, a quoted original underneath allowed); anything else is
+`other`: not marked sent, a warning on the case, a `sent_other` event, and
+it stays in "Approved, not sent" for a person to press I have sent it.
+Reports now show the typical and 90th-percentile time until the customer
+had the reply (received to `sent_at`), and how many approved replies went
+as the AI wrote them, were changed by staff first, or were written by
+staff: new columns `cases.ai_draft` (set whenever the AI or a prepared
+answer writes the reply) and `cases.approved_edited` (set in
+`claimApproval`; NULL when there was no AI draft). The spreadsheet gains
+"Reply as approved" and "Sent". `test/abacusOfficePilotMeasures.test.js`
+(both fixes watched red); office suite 60/60, Tidewell 95/95. Still open
+from the review: complaint times by seriousness (Tom's decision), alert
+email not set, and the holding reply is a draft for staff to send, not a
+one-click send as the 9/11 email to Dan words it.
+
 ## Proof pass: Commercial Review, Website Build, thank-you, booking buttons (14/11/2026)
 
 Tom asked for an outside judgement of the site on a stronger model (a fresh,

@@ -41,7 +41,7 @@ function seedInbox(today = todayLondon()) {
       id: 'demo-pascoe', messageId: '<demo-pascoe@example.invalid>', from: 'Jenna Pascoe <jenna.pascoe@example.invalid>', subject: 'Taxi to the station tomorrow morning',
       receivedAt: at(today, '08:12'),
       body: `Hi,\n\nCould I book a taxi for tomorrow morning please? Pickup from 14 Trelawney Road at 6.40am, going to Truro station for the 7.30 train. Just me and one suitcase.\n\nMy mobile is 07700 900123.\n\nThanks,\nJenna`,
-      prepared: { intent: 'new_booking', customer_name: 'Jenna Pascoe', phone: '07700 900123', reference: '', journey: journey(tomorrow, '06:40', '14 Trelawney Road', 'Truro station', '1'), missing: [], seriousness: 'none', summary: 'A taxi for one person at 6.40am tomorrow from Trelawney Road to Truro station.', reply: `Hi Jenna,\n\nThat's booked for you: 6.40am tomorrow from 14 Trelawney Road to Truro station, one passenger and a suitcase. The driver will have your mobile if they need it.\n\nThanks,\n${sig}` }
+      prepared: { intent: 'new_booking', customer_name: 'Jenna Pascoe', phone: '07700 900123', reference: '', journey: journey(tomorrow, '06:40', '14 Trelawney Road', 'Truro station', '1'), missing: [], seriousness: 'none', summary: 'A taxi for one person at 6.40am tomorrow from Trelawney Road to Truro station.', reply: `Hi Jenna,\n\nThanks for that. 6.40am tomorrow from 14 Trelawney Road to Truro station, one passenger and a suitcase. We'll put it into the system now and confirm as soon as it's booked.\n\nThanks,\n${sig}` }
     },
     {
       id: 'demo-hocking', messageId: '<demo-hocking@example.invalid>', from: 'Mark Hocking <m.hocking@example.invalid>', subject: 'Airport run Saturday',
@@ -53,13 +53,13 @@ function seedInbox(today = todayLondon()) {
       id: 'demo-rowe', messageId: '<demo-rowe@example.invalid>', from: 'Claire Rowe <claire.rowe@example.invalid>', subject: 'Change to booking on Friday',
       receivedAt: at(yesterday, '17:20'),
       body: `Hello,\n\nI have a booking on Friday at 7pm from The Moor to Penryn, under Rowe. Could we make it 7.30pm instead please? Same pickup.\n\nThank you,\nClaire Rowe`,
-      prepared: { intent: 'change', customer_name: 'Claire Rowe', phone: '', reference: '', journey: journey('', '19:30', 'The Moor', 'Penryn', ''), missing: [], seriousness: 'none', summary: 'Move the Friday 7pm booking from The Moor to Penryn to 7.30pm.', reply: `Hi Claire,\n\nNo problem, I've moved your Friday booking to 7.30pm, same pickup at The Moor going to Penryn.\n\nThanks,\n${sig}` }
+      prepared: { intent: 'change', customer_name: 'Claire Rowe', phone: '', reference: '', journey: journey('', '19:30', 'The Moor', 'Penryn', ''), missing: [], seriousness: 'none', summary: 'Move the Friday 7pm booking from The Moor to Penryn to 7.30pm.', reply: `Hi Claire,\n\nNo problem. We'll move your Friday booking to 7.30pm, same pickup at The Moor going to Penryn, and confirm once it's changed in the system.\n\nThanks,\n${sig}` }
     },
     {
       id: 'demo-trevithick', messageId: '<demo-trevithick@example.invalid>', from: 'Sam Trevithick <sam.t@example.invalid>', subject: 'Cancel tonight',
       receivedAt: at(today, '09:02'),
       body: `Hi, please cancel the taxi booked for tonight at 11.15pm from the Chain Locker, name Trevithick. Plans changed. Cheers, Sam`,
-      prepared: { intent: 'cancel', customer_name: 'Sam Trevithick', phone: '', reference: '', journey: journey(today, '23:15', 'Chain Locker', '', ''), missing: [], seriousness: 'none', summary: "Cancel tonight's 11.15pm booking from the Chain Locker.", reply: `Hi Sam,\n\nThat's cancelled, no problem. Give us a shout when you next need a car.\n\nCheers,\n${sig}` }
+      prepared: { intent: 'cancel', customer_name: 'Sam Trevithick', phone: '', reference: '', journey: journey(today, '23:15', 'Chain Locker', '', ''), missing: [], seriousness: 'none', summary: "Cancel tonight's 11.15pm booking from the Chain Locker.", reply: `Hi Sam,\n\nNo problem, we'll cancel tonight's 11.15pm from the Chain Locker and confirm once it's done. Give us a shout when you next need a car.\n\nCheers,\n${sig}` }
     },
     {
       id: 'demo-umbrella', messageId: '<demo-umbrella@example.invalid>', from: 'Priya Nair <priya.nair@example.invalid>', subject: 'Left my glasses in the taxi',

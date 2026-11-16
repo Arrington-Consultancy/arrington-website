@@ -197,7 +197,8 @@ class Store {
   // since then is not the one they approved, so the claim fails.
   async claimApproval(id, userId, { retry = false, version } = {}) {
     const r = await this.q(
-      `UPDATE cases SET approved_at = now(), approved_by = $2, mailbox_state = 'saving', mailbox_state_at = now(), sent_at = NULL, sent_by = NULL, updated_at = now()
+      `UPDATE cases SET approved_at = now(), approved_by = $2, mailbox_state = 'saving', mailbox_state_at = now(), sent_at = NULL, sent_by = NULL, updated_at = now(),
+         approved_edited = CASE WHEN ai_draft = '' THEN NULL ELSE regexp_replace(btrim(draft), '\\s+', ' ', 'g') <> regexp_replace(btrim(ai_draft), '\\s+', ' ', 'g') END
        WHERE id = $1 AND ($4::int IS NULL OR draft_version = $4)
          AND (approved_at IS NULL OR ($3 AND (mailbox_state = 'uncertain' OR (mailbox_state = 'saving' AND mailbox_state_at < now() - interval '2 minutes'))))
        RETURNING *`, [id, userId, Boolean(retry), Number.isInteger(version) ? version : null]);
@@ -428,7 +429,13 @@ class Store {
           count(*) FILTER (WHERE c.escalated_at IS NOT NULL)::int AS went_overdue,
           count(*) FILTER (WHERE c.passed_up_at IS NOT NULL)::int AS passed_up,
           percentile_cont(0.5) WITHIN GROUP (ORDER BY extract(epoch FROM (c.approved_at - c.received_at)) / 3600) FILTER (WHERE c.approved_at IS NOT NULL) AS median_hours,
-          percentile_cont(0.9) WITHIN GROUP (ORDER BY extract(epoch FROM (c.approved_at - c.received_at)) / 3600) FILTER (WHERE c.approved_at IS NOT NULL) AS p90_hours
+          percentile_cont(0.9) WITHIN GROUP (ORDER BY extract(epoch FROM (c.approved_at - c.received_at)) / 3600) FILTER (WHERE c.approved_at IS NOT NULL) AS p90_hours,
+          count(*) FILTER (WHERE c.sent_at IS NOT NULL)::int AS sent,
+          percentile_cont(0.5) WITHIN GROUP (ORDER BY extract(epoch FROM (c.sent_at - c.received_at)) / 3600) FILTER (WHERE c.sent_at IS NOT NULL) AS median_sent_hours,
+          percentile_cont(0.9) WITHIN GROUP (ORDER BY extract(epoch FROM (c.sent_at - c.received_at)) / 3600) FILTER (WHERE c.sent_at IS NOT NULL) AS p90_sent_hours,
+          count(*) FILTER (WHERE c.approved_at IS NOT NULL AND c.approved_edited = false)::int AS as_written,
+          count(*) FILTER (WHERE c.approved_at IS NOT NULL AND c.approved_edited = true)::int AS edited,
+          count(*) FILTER (WHERE c.approved_at IS NOT NULL AND c.approved_edited IS NULL)::int AS by_staff
         FROM cases c WHERE ${where}`),
       one(`SELECT c.kind, count(*)::int AS n, count(*) FILTER (WHERE c.approved_at IS NOT NULL)::int AS approved FROM cases c WHERE ${where} GROUP BY c.kind ORDER BY n DESC`),
       one(`SELECT c.brand, count(*)::int AS n, count(*) FILTER (WHERE c.kind = 'complaints')::int AS complaints, count(*) FILTER (WHERE c.status <> 'done' AND c.kind <> 'other')::int AS open_now FROM cases c WHERE ${where} GROUP BY c.brand ORDER BY n DESC`),
@@ -444,7 +451,7 @@ class Store {
     const params = [String(d)];
     const w = ["c.received_at >= now() - ($1 || ' days')::interval", ...scopeWhere(scope, params, 'c.')];
     return (await this.q(`SELECT c.id, c.brand, c.received_at, c.channel, c.from_address, c.subject, c.kind, c.status, c.seriousness, c.dispatch_ref,
-        c.approved_at, c.passed_up_at, c.escalated_at, coalesce(nullif(o.display_name, ''), o.username, '') AS owner_name, coalesce(nullif(a.display_name, ''), a.username, '') AS approved_by_name
+        c.approved_at, c.approved_edited, c.sent_at, c.passed_up_at, c.escalated_at, coalesce(nullif(o.display_name, ''), o.username, '') AS owner_name, coalesce(nullif(a.display_name, ''), a.username, '') AS approved_by_name
       FROM cases c LEFT JOIN users o ON o.id = c.owner_id LEFT JOIN users a ON a.id = c.approved_by
       WHERE ${w.join(' AND ')} ORDER BY c.received_at DESC LIMIT 5000`, params)).rows;
   }
