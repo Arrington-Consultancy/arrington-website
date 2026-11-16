@@ -10786,8 +10786,10 @@ the Fares page has no tariff until one is chosen in Settings). Dan's
 `abacus-office-preview` and its database `Postgres-qoUL` are now
 redundant; deleting them is Tom's call.
 
-**Codex judgement of 16/11/2026, and two fixes (Tom: "yes"). On branch
-`claude/new-session-hbgp04`; NOT live until Tom says.** Brief Drive
+**Codex judgement of 16/11/2026, and two fixes (Tom: "yes"). LIVE
+16/11/2026 on Tom's "yes": commit `bfd19d6`, office deployment `99f6d5ad`,
+boot lines unchanged (no mailbox, stand-in dispatch, AI on, alerts on
+screen only).** Brief Drive
 `13LQFT65-2ptBplSYMU4TL_ouywkb__cUVuRadDjyRa0`, review
 `1dA98g300Kmcg-PKRFtLQm7fwUIheCUKtc6g8SH0lQDQ`: office day GO with
 invented emails, Abacus-only email pilot HOLD. Checked against the code;
