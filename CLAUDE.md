@@ -10756,6 +10756,36 @@ available on the cornwall site please take and input".
   twice when the whole office suite ran together and passed alone and on
   later full runs; not traced.
 
+**Each company's logo and colours (16/11/2026).** Dan Perryman sent the
+three logos and brand boards on 16 November 2026. `public/brand/abacus.webp`
+and `coastline.webp` are new and `a2b.webp` is replaced with the A2B Taxis
+Cornwall logo, each trimmed to the bar's size. When a company's portal is
+open the bar has a stripe in its colours (`.to-co-<id>` on the body,
+`office.css`): Abacus #FF0000 and #001CBE, A2B #009EE3 and #A6CE00,
+Coastline #00B4F0 and #9EDCF9. Coastline's white-on-charcoal logo sits on a
+charcoal tile. The office's own colours and font are unchanged; the boards'
+suggested Montserrat was not used.
+
+**THE BRANCH IS RELEASED (16/11/2026, Tom: "lets merge all of the new bits
+as well so i can have a look at what we have done").** Everything above
+marked BRANCH ONLY or NOT MERGED is now on main and live at
+www.a2bstaff.com: the company menu and one portal per company, who sees
+which company as a Users option, search, standard replies, the tariff and
+the Carrick fare card, changing or cancelling a booking by reference,
+reports and the spreadsheet download, the 11 November review fixes, the
+Gmail sent check, and the logos and colours. Main was merged into the
+branch first (clean), then the branch into main. Proven before release: the
+office, Tidewell office and home page tests, 177 of 177; and the live
+database's shape built from main's code and then upgraded with the
+branch's twice, which adds three columns to `cases` and the
+`standard_replies` table and keeps every case and user. The live office's
+variables are unchanged: no mailbox (`ABACUS_OFFICE_MAIL_DRIVER=none`),
+stand-in dispatch, no fare card set (`ABACUS_OFFICE_FARE_CARD` unset, so
+the Fares page has no tariff until one is chosen in Settings). Dan's
+`dan` login, if he signs in, now sees all of it. The preview service
+`abacus-office-preview` and its database `Postgres-qoUL` are now
+redundant; deleting them is Tom's call.
+
 ## Proof pass: Commercial Review, Website Build, thank-you, booking buttons (14/11/2026)
 
 Tom asked for an outside judgement of the site on a stronger model (a fresh,
