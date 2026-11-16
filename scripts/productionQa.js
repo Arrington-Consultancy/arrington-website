@@ -169,6 +169,14 @@ function slug(p) {
             const a = document.querySelector('main a.btn-primary, section a.btn-primary, a.btn-primary');
             return a ? { text: a.textContent.replace(/\s+/g, ' ').trim(), href: a.getAttribute('href') } : null;
           })(),
+          // The CMS sections a visitor is served, in order, each with its
+          // heading (15/11/2026). A release that hides or shows sections
+          // through a seed migration cannot be undone by reverting code
+          // alone, so the state before it is read from the live page.
+          sections: [...document.querySelectorAll('[data-section-id]')].map((e) => {
+            const h = e.querySelector('h1, h2, h3');
+            return { id: e.getAttribute('data-section-id'), heading: h ? h.textContent.replace(/\s+/g, ' ').trim().slice(0, 60) : '' };
+          }),
           // Whether the gated-PDF email box is showing without a click.
           docModalOpen: (() => {
             const o = document.querySelector('#docModalOverlay');
@@ -277,6 +285,7 @@ function slug(p) {
     lines.push(`- Enquiry form starts: ${r.form ? `${r.form.top}px, ${r.form.screens} screen heights down (viewport ${r.form.viewport}px)` : 'no form found'}`);
     if (r.form && r.form.heard && r.form.heard.length) lines.push(`- How did you hear options: ${r.form.heard.join(' | ')}`);
     lines.push(`- First primary button: ${r.heroCta ? `"${r.heroCta.text}" -> ${r.heroCta.href}` : 'none'}`);
+    if (r.sections && r.sections.length) lines.push(`- CMS sections served, in order: ${r.sections.map((x) => `${x.id}${x.heading ? ` ("${x.heading}")` : ''}`).join(' | ')}`);
     lines.push(`- PDF email box open without a click: ${r.docModalOpen === null ? 'no box on the page' : r.docModalOpen ? 'YES' : 'no'}; PDF request buttons on the page: ${r.docRequestButtons}`);
     lines.push(`- Own-visit analytics hits dropped: ${r.droppedHits.length}${r.droppedHits.length ? ' (' + [...new Set(r.droppedHits)].join(', ') + ')' : ''}`);
     lines.push(`- Microsoft Clarity: ${r.clarity || 'not loaded'}; data sent to Clarity: ${r.clarityCollect.length} request(s)${r.clarityCollect.length ? ' (' + r.clarityCollect.join(', ') + ')' : ''}`);
