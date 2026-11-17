@@ -107,6 +107,14 @@ async function main() {
   const { app, office } = createApp({ pool, mailbox, firm: f, sessionSecret: secret, production });
   app.listen(PORT, () => console.log(`Abacus office running on port ${PORT}`));
 
+  // The AI check (see lib/aiCheck.js): only when ABACUS_OFFICE_AI_CHECK names
+  // a run, after the server is up, and never in the way of a request.
+  const checkLabel = String(process.env.ABACUS_OFFICE_AI_CHECK || '').trim().slice(0, 40);
+  if (checkLabel) {
+    const { runAiCheck, effortsFrom } = require('./lib/aiCheck');
+    setTimeout(() => runAiCheck({ label: checkLabel, efforts: effortsFrom(process.env.ABACUS_OFFICE_AI_CHECK_EFFORTS) }).catch((e) => console.log(`AI check ${checkLabel}: stopped, ${String(e.message || e).slice(0, 200)}`)), 5000);
+  }
+
   if (ai.aiEnabled()) ai.probe().then((r) => console.log(`Abacus office AI probe: ${r.ok ? 'ok, ' : 'FAILED, '}${r.message}`)).catch(() => {});
 
   const baseUrl = String(process.env.ABACUS_OFFICE_PUBLIC_URL || '').replace(/\/$/, '');

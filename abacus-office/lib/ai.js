@@ -29,14 +29,21 @@ function aiEnabled(env = process.env) {
 function describeAiStatus(env = process.env) {
   const key = (env.ANTHROPIC_API_KEY || '').trim();
   const flag = env.ENABLE_ABACUS_OFFICE_AI;
-  return `Abacus office AI: ${aiEnabled(env) ? 'on' : 'off'} (ENABLE_ABACUS_OFFICE_AI=${flag === undefined ? 'unset' : JSON.stringify(flag)}, ANTHROPIC_API_KEY ${key ? `present (${key.length} chars)` : 'absent'}, model ${MODEL})`;
+  return `Abacus office AI: ${aiEnabled(env) ? 'on' : 'off'} (ENABLE_ABACUS_OFFICE_AI=${flag === undefined ? 'unset' : JSON.stringify(flag)}, ANTHROPIC_API_KEY ${key ? `present (${key.length} chars)` : 'absent'}, model ${MODEL}, effort ${effort(env)}, up to ${MAX_TOKENS} tokens)`;
 }
 
 let clientFactory = () => {
   const Anthropic = require('@anthropic-ai/sdk');
-  return new Anthropic({ apiKey: (process.env.ANTHROPIC_API_KEY || '').trim(), timeout: 90 * 1000, maxRetries: 1 });
+  // Three minutes: at high effort the model thinks before it answers, and
+  // a reply that takes longer than the old 90 seconds was being cut off and
+  // left for a person.
+  return new Anthropic({ apiKey: (process.env.ANTHROPIC_API_KEY || '').trim(), timeout: 180 * 1000, maxRetries: 1 });
 };
 function __setClientFactoryForTests(fn) { clientFactory = fn; }
+// Lets the AI check (lib/aiCheck.js) count tokens and time without a second
+// copy of the call. Nothing else sets it.
+let observer = null;
+function __observe(fn) { observer = typeof fn === 'function' ? fn : null; }
 
 const MAX_CONCURRENT = 3;
 let running = 0;
@@ -51,7 +58,21 @@ async function withSlot(fn) {
   }
 }
 
-async function callJson({ system, user, schema, maxTokens = 4000 }) {
+// How hard the model thinks before it answers (Tom, 17 November 2026:
+// high, for showing Dan; it was low). ABACUS_OFFICE_AI_EFFORT changes it
+// without a deploy; anything not on the list means high.
+const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
+function effort(env = process.env) {
+  const v = String(env.ABACUS_OFFICE_AI_EFFORT || '').trim().toLowerCase();
+  return EFFORTS.includes(v) ? v : 'high';
+}
+
+// Thinking counts against max_tokens, so at high effort 4,000 could run out
+// before the reply was written, and a cut-off reply goes to a person.
+// 16,000 leaves room and stays inside what the SDK allows without streaming.
+const MAX_TOKENS = 16000;
+
+async function callJson({ system, user, schema, maxTokens = MAX_TOKENS }) {
   return withSlot(async () => {
     const client = clientFactory();
     const res = await client.messages.create({
@@ -59,8 +80,9 @@ async function callJson({ system, user, schema, maxTokens = 4000 }) {
       max_tokens: maxTokens,
       system,
       messages: [{ role: 'user', content: user }],
-      output_config: { effort: 'low', format: { type: 'json_schema', schema } }
+      output_config: { effort: effort(), format: { type: 'json_schema', schema } }
     });
+    if (observer) { try { observer(res); } catch (e) { /* a check's tally never fails a reply */ } }
     if (res.stop_reason === 'refusal') { const e = new Error('the model declined this request'); e.code = 'REFUSAL'; throw e; }
     if (res.stop_reason === 'max_tokens') { const e = new Error(`the reply was cut off at ${maxTokens} tokens`); e.code = 'TRUNCATED'; throw e; }
     const text = (res.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('');
@@ -392,7 +414,7 @@ async function redraft({ email, draft, notes, council = false }, today, f = firm
 async function probe() {
   if (!aiEnabled()) return { ok: false, message: 'off' };
   try {
-    const data = await callJson({ system: 'Reply with the JSON asked for.', user: 'Say ok.', schema: obj({ ok: { type: 'boolean' } }), maxTokens: 1000 });
+    const data = await callJson({ system: 'Reply with the JSON asked for.', user: 'Say ok.', schema: obj({ ok: { type: 'boolean' } }), maxTokens: 4000 });
     return { ok: data.ok === true, message: `${MODEL} answered` };
   } catch (e) {
     return { ok: false, message: `${MODEL} failed: ${e.status || e.code || ''} ${String(e.message || e).slice(0, 160)}` };
@@ -400,6 +422,6 @@ async function probe() {
 }
 
 module.exports = {
-  MODEL, INTENTS, aiEnabled, describeAiStatus, callJson, readEmail, draftComplaint, draftCouncil, redraft, probe,
+  MODEL, MAX_TOKENS, INTENTS, effort, aiEnabled, describeAiStatus, callJson, readEmail, draftComplaint, draftCouncil, redraft, probe, __observe,
   readSystem, complaintSystem, councilSystem, councilRedraftSystem, redraftSystem, cleanReading, cleanComplaint, cleanCouncil, cleanRedraft, longDate, emailText, __setClientFactoryForTests
 };
