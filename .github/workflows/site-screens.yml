@@ -52,7 +52,8 @@ jobs:
           LIGHTHOUSE: ${{ github.event.inputs.lighthouse }}
           DEMO_BOOKING: ${{ github.event.inputs.demo_booking }}
           OUT_DIR: ${{ github.workspace }}/screens-out
-        run: node scripts/siteScreens.js
+          EMBED_URL: ${{ github.event.inputs.urls }}
+        run: node scripts/holoProbe.js
 
       - name: Publish results to the site-screens branch
         env:
