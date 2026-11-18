@@ -10842,7 +10842,7 @@ temporary password for each, shows the passwords once to print or hand out
 sign-in, and one bad line adds nobody. Build it when Tom says the staff are
 ready to be set up, test it on a copy, and never commit Dan's staff list.
 
-## Blog, fed from Holo (built 18/11/2026)
+## Blog, fed from Holo (LIVE 18/11/2026)
 
 Tom signed up to Holo (an AI blog writer) and pasted its embed code
 (`<div id="holo-blog">` plus a script from `prod-api-holo-ai.fly.dev`). This
@@ -10899,6 +10899,16 @@ then", then "we need a spot for it to publish blogs on").
   and iPhone 13 in Chromium with no overflow or errors.
 - **Not known:** whether Holo's dashboard checks that its script tag is on
   the site before it lets Tom publish. If it complains, tell this worker.
+- **Live:** released on Tom's "yes" (18/11/2026) after he asked for the
+  address ("i need url": `https://www.arringtonconsultancy.com/blog`).
+  Commit `3411f30`, `HOLO_BLOG_EMBED_ID` set on `arrington-prototype` by this
+  worker, serving deployment `c59b8b0a` (twin `3fa85260` REMOVED), boot line
+  "Holo blog: on". Inspection run `20261118T164439Z-holo-blog-live`: `/blog`
+  200 at desktop and phone, "No published articles yet.", noindex both ways,
+  not in the sitemap, no page errors, no overflow; home and Useful Thinking
+  unchanged. Nothing was published in Holo at release, so an article has not
+  yet been seen on the live page: check the first one when Tom publishes it.
+  Rollback: unset `HOLO_BLOG_EMBED_ID` (the page becomes a 404).
 
 ## Proof pass: Commercial Review, Website Build, thank-you, booking buttons (14/11/2026)
 
