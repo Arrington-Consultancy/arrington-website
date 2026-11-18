@@ -1,0 +1,507 @@
+{
+  "ranAt": "2026-11-18T18:16:27.620Z",
+  "base": "https://www.arringtonconsultancy.com",
+  "results": [
+    {
+      "path": "/blog/how-to-stop-being-the-bottleneck-in-your-owner-run-business",
+      "size": "desktop",
+      "url": "https://www.arringtonconsultancy.com/blog/how-to-stop-being-the-bottleneck-in-your-owner-run-business",
+      "status": 200,
+      "finalUrl": "https://www.arringtonconsultancy.com/blog/how-to-stop-being-the-bottleneck-in-your-owner-run-business",
+      "title": "How to Stop Being the Bottleneck in Your Owner Run Business | Arrington Consultancy",
+      "h1": "How to Stop Being the Bottleneck in Your Owner Run Business",
+      "canonical": "https://www.arringtonconsultancy.com/blog/how-to-stop-being-the-bottleneck-in-your-owner-run-business",
+      "robotsMeta": null,
+      "xRobotsTag": null,
+      "selfLinks": 0,
+      "inSitemap": true,
+      "overflow": false,
+      "height": 4224,
+      "dashes": [],
+      "consoleErrors": [
+        "Permissions policy violation: picture-in-picture is not allowed in this document.",
+        "Refused to connect to 'data:,' because it violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c",
+        "Refused to connect to 'data:,' because it violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c",
+        "Refused to connect to 'data:,' because it violates the document's Content Security Policy.",
+        "%c%d font-size:0;color:transparent NaN",
+        "%c%d font-size:0;color:transparent NaN",
+        "%c%o font-size:0;color:transparent {}",
+        "%c%o font-size:0;color:transparent {}"
+      ],
+      "pageErrors": [],
+      "clarityCollect": [
+        204,
+        204,
+        204
+      ],
+      "uetRequests": [],
+      "droppedHits": [
+        "connect.facebook.net",
+        "googleads.g.doubleclick.net",
+        "googleads.g.doubleclick.net",
+        "www.google-analytics.com"
+      ],
+      "screenshot": "blog-how-to-stop-being-the-bottleneck-in-your-owner-run-business-desktop.png",
+      "topScreenshot": "blog-how-to-stop-being-the-bottleneck-in-your-owner-run-business-desktop-top.png",
+      "error": null,
+      "form": {
+        "top": 3238,
+        "screens": 3.2,
+        "viewport": 1000,
+        "heard": [
+          "How did you hear about us?",
+          "Google search",
+          "Google advert",
+          "Facebook or Instagram advert",
+          "Microsoft or Bing advert",
+          "Recommended by someone",
+          "Social media",
+          "AI assistant, such as ChatGPT",
+          "Other"
+        ]
+      },
+      "heroCta": null,
+      "sections": [],
+      "docModalOpen": null,
+      "docRequestButtons": 0,
+      "uet": {
+        "state": "not loaded",
+        "loader": null,
+        "bar": null
+      },
+      "clarity": "ywiy9r672t",
+      "seo": {
+        "lang": "en-GB",
+        "description": "I spent years being the busiest person in the building and calling it hard work. The business was growing. Customers were looked after. Wages were paid. And I was across almost everything. That...",
+        "ogTitle": "How to Stop Being the Bottleneck in Your Owner Run Business | Arrington Consultancy",
+        "ogImage": "https://www.arringtonconsultancy.com/img/logo",
+        "jsonLd": [
+          "Organization/ProfessionalService, WebSite",
+          "BreadcrumbList",
+          "BlogPosting"
+        ],
+        "h1s": [
+          "How to Stop Being the Bottleneck in Your Owner Run Business"
+        ],
+        "h2s": [
+          "Why it happens",
+          "Where the time actually goes",
+          "Rules and fixes that backfire",
+          "Where to start this month",
+          "If this sounds familiar",
+          "Tell us where the pressure is showing."
+        ],
+        "words": 930,
+        "images": 1,
+        "imagesNoAlt": [],
+        "imagesEmptyAlt": 0,
+        "internal": [
+          "/",
+          "/where-to-start/commercial-review",
+          "/where-to-start/website-build",
+          "/taxi-and-private-hire-operators/office-workspace",
+          "/about-us",
+          "/blog",
+          "/privacy",
+          "/business-consultant-devon",
+          "/business-consultant-cornwall",
+          "/business-consultant-plymouth",
+          "/business-consultant-exeter",
+          "/useful-thinking",
+          "/staff"
+        ],
+        "pageKb": 30,
+        "heaviest": [],
+        "loadMs": 701
+      },
+      "digitFonts": {
+        "elements": 5,
+        "glyphs": {
+          "DM Sans 9pt": 618
+        },
+        "serif": []
+      },
+      "raw": {
+        "titles": [
+          "How to Stop Being the Bottleneck in Your Owner Run Business | Arrington Consultancy"
+        ],
+        "descriptions": [
+          "I spent years being the busiest person in the building and calling it hard work. The business was growing. Customers were looked after. Wages were paid. And I was across almost everything. That..."
+        ],
+        "canonicals": [
+          "https://www.arringtonconsultancy.com/blog/how-to-stop-being-the-bottleneck-in-your-owner-run-business"
+        ],
+        "ogTitles": [
+          "How to Stop Being the Bottleneck in Your Owner Run Business | Arrington Consultancy"
+        ],
+        "ldBlocks": 3,
+        "googleTagLoaders": 1,
+        "adsConfigs": 1
+      }
+    },
+    {
+      "path": "/blog/how-to-stop-being-the-bottleneck-in-your-owner-run-business",
+      "size": "mobile",
+      "url": "https://www.arringtonconsultancy.com/blog/how-to-stop-being-the-bottleneck-in-your-owner-run-business",
+      "status": 200,
+      "finalUrl": "https://www.arringtonconsultancy.com/blog/how-to-stop-being-the-bottleneck-in-your-owner-run-business",
+      "title": "How to Stop Being the Bottleneck in Your Owner Run Business | Arrington Consultancy",
+      "h1": "How to Stop Being the Bottleneck in Your Owner Run Business",
+      "canonical": "https://www.arringtonconsultancy.com/blog/how-to-stop-being-the-bottleneck-in-your-owner-run-business",
+      "robotsMeta": null,
+      "xRobotsTag": null,
+      "selfLinks": 0,
+      "inSitemap": true,
+      "overflow": false,
+      "height": 5668,
+      "dashes": [],
+      "consoleErrors": [
+        "Permissions policy violation: picture-in-picture is not allowed in this document.",
+        "%c%d font-size:0;color:transparent NaN",
+        "%c%d font-size:0;color:transparent NaN",
+        "%c%o font-size:0;color:transparent {}",
+        "%c%o font-size:0;color:transparent {}",
+        "Refused to connect to 'data:,' because it violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c",
+        "Refused to connect to 'data:,' because it violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c",
+        "Refused to connect to 'data:,' because it violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.c",
+        "Refused to connect to 'data:,' because it violates the document's Content Security Policy."
+      ],
+      "pageErrors": [],
+      "clarityCollect": [
+        204,
+        204,
+        204
+      ],
+      "uetRequests": [],
+      "droppedHits": [
+        "connect.facebook.net",
+        "googleads.g.doubleclick.net",
+        "googleads.g.doubleclick.net",
+        "www.google-analytics.com"
+      ],
+      "screenshot": "blog-how-to-stop-being-the-bottleneck-in-your-owner-run-business-mobile.png",
+      "topScreenshot": "blog-how-to-stop-being-the-bottleneck-in-your-owner-run-business-mobile-top.png",
+      "error": null,
+      "form": {
+        "top": 4348,
+        "screens": 6.5,
+        "viewport": 664,
+        "heard": [
+          "How did you hear about us?",
+          "Google search",
+          "Google advert",
+          "Facebook or Instagram advert",
+          "Microsoft or Bing advert",
+          "Recommended by someone",
+          "Social media",
+          "AI assistant, such as ChatGPT",
+          "Other"
+        ]
+      },
+      "heroCta": null,
+      "sections": [],
+      "docModalOpen": null,
+      "docRequestButtons": 0,
+      "uet": {
+        "state": "not loaded",
+        "loader": null,
+        "bar": null
+      },
+      "clarity": "ywiy9r672t",
+      "seo": {
+        "lang": "en-GB",
+        "description": "I spent years being the busiest person in the building and calling it hard work. The business was growing. Customers were looked after. Wages were paid. And I was across almost everything. That...",
+        "ogTitle": "How to Stop Being the Bottleneck in Your Owner Run Business | Arrington Consultancy",
+        "ogImage": "https://www.arringtonconsultancy.com/img/logo",
+        "jsonLd": [
+          "Organization/ProfessionalService, WebSite",
+          "BreadcrumbList",
+          "BlogPosting"
+        ],
+        "h1s": [
+          "How to Stop Being the Bottleneck in Your Owner Run Business"
+        ],
+        "h2s": [
+          "Why it happens",
+          "Where the time actually goes",
+          "Rules and fixes that backfire",
+          "Where to start this month",
+          "If this sounds familiar",
+          "Tell us where the pressure is showing."
+        ],
+        "words": 916,
+        "images": 1,
+        "imagesNoAlt": [],
+        "imagesEmptyAlt": 0,
+        "internal": [
+          "/",
+          "/where-to-start/commercial-review",
+          "/where-to-start/website-build",
+          "/taxi-and-private-hire-operators/office-workspace",
+          "/about-us",
+          "/blog",
+          "/privacy",
+          "/business-consultant-devon",
+          "/business-consultant-cornwall",
+          "/business-consultant-plymouth",
+          "/business-consultant-exeter",
+          "/useful-thinking",
+          "/staff"
+        ],
+        "pageKb": 30,
+        "heaviest": [],
+        "loadMs": 811
+      },
+      "digitFonts": {
+        "elements": 5,
+        "glyphs": {
+          "DM Sans 9pt": 610
+        },
+        "serif": []
+      },
+      "raw": {
+        "titles": [
+          "How to Stop Being the Bottleneck in Your Owner Run Business | Arrington Consultancy"
+        ],
+        "descriptions": [
+          "I spent years being the busiest person in the building and calling it hard work. The business was growing. Customers were looked after. Wages were paid. And I was across almost everything. That..."
+        ],
+        "canonicals": [
+          "https://www.arringtonconsultancy.com/blog/how-to-stop-being-the-bottleneck-in-your-owner-run-business"
+        ],
+        "ogTitles": [
+          "How to Stop Being the Bottleneck in Your Owner Run Business | Arrington Consultancy"
+        ],
+        "ldBlocks": 3,
+        "googleTagLoaders": 1,
+        "adsConfigs": 1
+      }
+    },
+    {
+      "path": "/sitemap.xml",
+      "size": "desktop",
+      "url": "https://www.arringtonconsultancy.com/sitemap.xml",
+      "status": 200,
+      "finalUrl": "https://www.arringtonconsultancy.com/sitemap.xml",
+      "title": "",
+      "h1": null,
+      "canonical": null,
+      "robotsMeta": null,
+      "xRobotsTag": null,
+      "selfLinks": 0,
+      "inSitemap": false,
+      "overflow": false,
+      "height": 4176,
+      "dashes": [],
+      "consoleErrors": [
+        "Refused to apply inline style because it violates the following Content Security Policy directive: \"style-src 'self' 'nonce-4IbZmKndNN6PJQkY96MhXA==' https://fonts.googleapis.com https://accounts.goog",
+        "Refused to apply inline style because it violates the following Content Security Policy directive: \"style-src 'self' 'nonce-4IbZmKndNN6PJQkY96MhXA==' https://fonts.googleapis.com https://accounts.goog"
+      ],
+      "pageErrors": [],
+      "clarityCollect": [],
+      "uetRequests": [],
+      "droppedHits": [],
+      "screenshot": "sitemap-xml-desktop.png",
+      "topScreenshot": "sitemap-xml-desktop-top.png",
+      "error": null,
+      "form": null,
+      "heroCta": null,
+      "sections": [],
+      "docModalOpen": null,
+      "docRequestButtons": 0,
+      "uet": {
+        "state": "not loaded",
+        "loader": null,
+        "bar": null
+      },
+      "clarity": null,
+      "seo": {
+        "lang": null,
+        "description": null,
+        "ogTitle": null,
+        "ogImage": null,
+        "jsonLd": [],
+        "h1s": [],
+        "h2s": [],
+        "words": 1308,
+        "images": 0,
+        "imagesNoAlt": [],
+        "imagesEmptyAlt": 0,
+        "internal": [],
+        "pageKb": 1,
+        "heaviest": [],
+        "loadMs": 171
+      },
+      "digitFonts": {
+        "elements": 89,
+        "glyphs": {
+          "Liberation Serif": 1191
+        },
+        "serif": [
+          {
+            "family": "Liberation Serif",
+            "text": "2026-08-17"
+          },
+          {
+            "family": "Liberation Serif",
+            "text": "2026-08-17"
+          },
+          {
+            "family": "Liberation Serif",
+            "text": "2026-08-17"
+          },
+          {
+            "family": "Liberation Serif",
+            "text": "2026-11-14"
+          },
+          {
+            "family": "Liberation Serif",
+            "text": "2026-10-07"
+          },
+          {
+            "family": "Liberation Serif",
+            "text": "https://www.arringtonconsultancy.com/book-a-30-minute-conver"
+          },
+          {
+            "family": "Liberation Serif",
+            "text": "2026-10-07"
+          },
+          {
+            "family": "Liberation Serif",
+            "text": "2026-10-07"
+          },
+          {
+            "family": "Liberation Serif",
+            "text": "2026-08-17"
+          },
+          {
+            "family": "Liberation Serif",
+            "text": "2026-10-11"
+          }
+        ]
+      },
+      "raw": {
+        "titles": [],
+        "descriptions": [],
+        "canonicals": [],
+        "ogTitles": [],
+        "ldBlocks": 0,
+        "googleTagLoaders": 0,
+        "adsConfigs": 0
+      }
+    },
+    {
+      "path": "/sitemap.xml",
+      "size": "mobile",
+      "url": "https://www.arringtonconsultancy.com/sitemap.xml",
+      "status": 200,
+      "finalUrl": "https://www.arringtonconsultancy.com/sitemap.xml",
+      "title": "",
+      "h1": null,
+      "canonical": null,
+      "robotsMeta": null,
+      "xRobotsTag": null,
+      "selfLinks": 0,
+      "inSitemap": false,
+      "overflow": false,
+      "height": 17550,
+      "dashes": [],
+      "consoleErrors": [
+        "Refused to apply inline style because it violates the following Content Security Policy directive: \"style-src 'self' 'nonce-yIMfQE85QUzsc0t2pbzAWQ==' https://fonts.googleapis.com https://accounts.goog",
+        "Refused to apply inline style because it violates the following Content Security Policy directive: \"style-src 'self' 'nonce-yIMfQE85QUzsc0t2pbzAWQ==' https://fonts.googleapis.com https://accounts.goog"
+      ],
+      "pageErrors": [],
+      "clarityCollect": [],
+      "uetRequests": [],
+      "droppedHits": [],
+      "screenshot": "sitemap-xml-mobile.png",
+      "topScreenshot": "sitemap-xml-mobile-top.png",
+      "error": null,
+      "form": null,
+      "heroCta": null,
+      "sections": [],
+      "docModalOpen": null,
+      "docRequestButtons": 0,
+      "uet": {
+        "state": "not loaded",
+        "loader": null,
+        "bar": null
+      },
+      "clarity": null,
+      "seo": {
+        "lang": null,
+        "description": null,
+        "ogTitle": null,
+        "ogImage": null,
+        "jsonLd": [],
+        "h1s": [],
+        "h2s": [],
+        "words": 1308,
+        "images": 0,
+        "imagesNoAlt": [],
+        "imagesEmptyAlt": 0,
+        "internal": [],
+        "pageKb": 1,
+        "heaviest": [],
+        "loadMs": 147
+      },
+      "digitFonts": {
+        "elements": 89,
+        "glyphs": {
+          "Liberation Serif": 1191
+        },
+        "serif": [
+          {
+            "family": "Liberation Serif",
+            "text": "2026-08-17"
+          },
+          {
+            "family": "Liberation Serif",
+            "text": "2026-08-17"
+          },
+          {
+            "family": "Liberation Serif",
+            "text": "2026-08-17"
+          },
+          {
+            "family": "Liberation Serif",
+            "text": "2026-11-14"
+          },
+          {
+            "family": "Liberation Serif",
+            "text": "2026-10-07"
+          },
+          {
+            "family": "Liberation Serif",
+            "text": "https://www.arringtonconsultancy.com/book-a-30-minute-conver"
+          },
+          {
+            "family": "Liberation Serif",
+            "text": "2026-10-07"
+          },
+          {
+            "family": "Liberation Serif",
+            "text": "2026-10-07"
+          },
+          {
+            "family": "Liberation Serif",
+            "text": "2026-08-17"
+          },
+          {
+            "family": "Liberation Serif",
+            "text": "2026-10-11"
+          }
+        ]
+      },
+      "raw": {
+        "titles": [],
+        "descriptions": [],
+        "canonicals": [],
+        "ogTitles": [],
+        "ldBlocks": 0,
+        "googleTagLoaders": 0,
+        "adsConfigs": 0
+      }
+    }
+  ]
+}
