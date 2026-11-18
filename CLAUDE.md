@@ -10909,6 +10909,29 @@ then", then "we need a spot for it to publish blogs on").
   unchanged. Nothing was published in Holo at release, so an article has not
   yet been seen on the live page: check the first one when Tom publishes it.
   Rollback: unset `HOLO_BLOG_EMBED_ID` (the page becomes a 404).
+- **First article live, 18/11/2026.** Tom published "How to Stop Being the
+  Bottleneck in Your Owner Run Business" in Holo; production log 17:23 UTC
+  "Holo blog: 1 published article(s) read from Holo". Inspection runs
+  `20261118T181331Z-holo-first-article` and
+  `20261118T181627Z-holo-first-article-page`: `/blog` lists it with its date
+  and is no longer noindex; the article page is 200 at desktop and phone
+  with its own title, canonical, breadcrumb and BlogPosting data, no dashes,
+  no overflow, no page errors; both addresses are in `sitemap.xml` and the
+  footer shows "Blog" after Useful Thinking. So Holo does not need its script
+  on the site to publish. Tom had corrected the phone contract fact before
+  publishing (the bill jumped to about £1,200 and having time let him fight
+  it). Still in the published text, his call: first person, "The question is
+  not whether...", "We do not start with a sales pitch".
+- **Holo drafts checked 18/11/2026, not yet published when checked:** "Why
+  Your Owner Run Business Needs a Review Once a Year" and "Pricing Work So
+  Your Owner Run Business Keeps More of It". Both end with Tom's phone and
+  email in the clear, which the rest of the site hides from scrapers (an
+  article's mailto link and plain number pass `cleanContent`); Tom was told
+  to link the form instead (`https://www.arringtonconsultancy.com/#contact`,
+  which the site turns into `#conversation`). Other notes given: "In many
+  reviews" (a claim of many reviews), the "not X, it is Y" construction,
+  "quietest levers", no mention of the Commercial Review, and both read as
+  generic. Scheduled in Holo: 20, 24, 26 November and 1 December.
 
 ## Proof pass: Commercial Review, Website Build, thank-you, booking buttons (14/11/2026)
 
