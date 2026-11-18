@@ -28,6 +28,8 @@ const startUpReview = require('./routes/startUpReview');
 const taxiOperators = require('./routes/taxiOperators');
 const taxiWebsites = require('./routes/taxiWebsites');
 const taxiWorkspace = require('./routes/taxiWorkspace');
+const blogRoutes = require('./routes/blog');
+const holoBlog = require('./lib/holoBlog');
 const { legacyRedirect } = require('./lib/legacyRedirect');
 const { buildNavPages } = require('./lib/mainNav');
 const { homeApplyData, HOME_APPLY_CONTACT } = require('./lib/homeApply');
@@ -63,6 +65,15 @@ app.locals.googleSigninClientId = googleSigninClientId;
 // with nothing request-specific in it. The route validates against the
 // same module rather than trusting whatever the form posts back.
 app.locals.heardAboutOptions = require('./lib/heardAbout').OPTIONS;
+
+// The blog, fed from Holo (lib/holoBlog.js). The footer on every page asks
+// blogHasArticles() whether to show its Blog link, so it reaches the views
+// the same way as the options above. It answers from the copy held, without
+// waiting on Holo.
+const blog = holoBlog.createBlog({ db });
+app.locals.blogHasArticles = () => blog.held().length > 0;
+console.log(holoBlog.describeStatus());
+if (blog.enabled()) blog.list().catch(() => {});
 
 // Cloudflare Turnstile public site key for the footer enquiry form. On
 // app.locals for the same reason as the options above: the footer partial
@@ -778,6 +789,15 @@ app.get('/sitemap.xml', async (req, res, next) => {
     // where-to-start/confirmation is deliberately excluded — private,
     // per-visitor payment status, noindex/nofollow on the page itself,
     // same treatment as the quiz/review result pages.
+    // The blog and its articles, when Holo has any published (lib/holoBlog.js).
+    const blogArticles = await blog.list();
+    if (blogArticles.length) {
+      const newest = blogArticles.map((a) => a.isoDate).filter(Boolean).sort().pop();
+      urlEntries.push(`  <url><loc>${escapeXml(`${base}/blog`)}</loc>${newest ? `<lastmod>${newest.slice(0, 10)}</lastmod>` : ''}</url>`);
+      for (const a of blogArticles) {
+        urlEntries.push(`  <url><loc>${escapeXml(`${base}/blog/${a.slug}`)}</loc>${a.isoDate ? `<lastmod>${a.isoDate.slice(0, 10)}</lastmod>` : ''}</url>`);
+      }
+    }
     for (const slug of ['owner-check', 'owner-dependency-quiz', 'commercial-gaps-review', 'market-ready-test', 'where-to-start', 'where-to-start/commercial-review', 'where-to-start/full-commercial-review', 'where-to-start/website-build', 'where-to-start/full-review-website-build', 'product-guide', 'taxi-and-private-hire-operators', 'taxi-and-private-hire-operators/websites', 'taxi-and-private-hire-operators/office-workspace', 'get-your-business-ready-to-sell']) {
       urlEntries.push(`  <url><loc>${escapeXml(`${base}/${slug}`)}</loc><lastmod>${ASSESSMENT_ROUTE_LASTMOD[slug]}</lastmod></url>`);
     }
@@ -965,6 +985,11 @@ taxiWebsites.mountPageRoute(app, generateCsrfToken);
 // noindex, not in the navigation or sitemap.xml, linked from nowhere. See
 // routes/taxiWorkspace.js and test/taxiWorkspacePage.test.js.
 taxiWorkspace.mountPageRoute(app, generateCsrfToken);
+
+// The blog, fed from Holo: /blog and /blog/<slug> (routes/blog.js,
+// lib/holoBlog.js). Ahead of the /:slug catch-all. With HOLO_BLOG_EMBED_ID
+// unset, or nothing published in Holo, these fall through to the ordinary 404.
+blogRoutes.mountPageRoute(app, generateCsrfToken, blog);
 
 // /thank-you: where the footer contact form lands after a stored enquiry, and
 // the only place the Google Ads Contact conversion fires (routes/thankYou.js).

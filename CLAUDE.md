@@ -10842,6 +10842,74 @@ temporary password for each, shows the passwords once to print or hand out
 sign-in, and one bad line adds nobody. Build it when Tom says the staff are
 ready to be set up, test it on a copy, and never commit Dan's staff list.
 
+## Blog, fed from Holo (LIVE 18/11/2026)
+
+Tom signed up to Holo (an AI blog writer) and pasted its embed code
+(`<div id="holo-blog">` plus a script from `prod-api-holo-ai.fly.dev`). This
+worker advised against it (Useful Thinking is the blog; guides written from
+Tom's knowledge would do more for search); Tom chose Holo ("holo", "go on
+then", then "we need a spot for it to publish blogs on").
+
+- **The embed script is not on the site.** Probed on a GitHub runner against
+  a stand-in page (branch `review/holo-embed-probe`, run
+  `20261118T162319Z-holo-embed-probe`): it carries the published articles
+  inside itself (`var HOLO_ARTICLES = [...]`), makes no other request, sets no
+  cookie, but draws dark text for a white page, adds the articles only after
+  the page loads, and would need Holo's server allowed to run script on our
+  pages.
+- **What was built instead:** `lib/holoBlog.js` fetches that same script on
+  the server, reads the article list out of it as JSON (nothing is run),
+  cleans each article, and `routes/blog.js` + `views/blog.ejs` show them as
+  the site's own pages: `/blog` (list) and `/blog/<slug>`, in the Useful
+  Thinking article column and type, with title, description, canonical,
+  breadcrumb and BlogPosting data, the shared header and enquiry form. No
+  outside script reaches a visitor and the CSP is unchanged. Holo's own
+  `?post=<slug>` form 301s to the article's address.
+- **Switch:** `HOLO_BLOG_EMBED_ID` (the id in the script's address, public).
+  Unset, `/blog` is the ordinary 404. Set with nothing published, `/blog`
+  exists (Tom needed an address to give Holo), says "No published articles
+  yet." and is noindex. Either way there is no footer link ("Blog", after
+  Useful Thinking, via `app.locals.blogHasArticles`) and no sitemap entry
+  until an article is published. Boot line `Holo blog:`.
+- **Approval is Tom pressing Publish in Holo.** The agreed way of working: he
+  pastes each Holo draft to this worker, which checks facts and links against
+  his records; he corrects it in Holo and publishes. Nothing is published
+  from this repository. Unpublishing in Holo takes it off the site at the
+  next check.
+- **What the site changes in an article:** dashes out (`dashesOut`), HTML cut
+  to plain article markup (p, h2 to h4, lists, strong, em, links, blockquote,
+  tables; an h1 becomes h2), pictures left out (none seen yet; say so if Tom
+  wants them), a link to `#contact` sent to the form at `#conversation`,
+  links to other sites opened apart with nofollow. It does not fix wording:
+  "owner-run", the "not X, it is Y" construction and first person all come
+  through as Holo wrote them.
+- **Holding:** checked every 15 minutes and always on the first request
+  after a restart; the last good copy is kept in memory and in
+  `holo_blog_cache`, so a fault at Holo (down, 500, a page that is not the
+  script) never empties the blog. A healthy empty list is believed.
+- **First person:** Holo writes as "I" with Tom's own stories (its first
+  draft retold the phone contract and first in, first out articles). That is
+  a second place for first person beside Useful Thinking; Tom was told and
+  went ahead. The Brand OS master does not record it.
+- **Tests:** `test/holoBlog.test.js` (13), fixtures in `test/fixtures/`
+  (Holo's real script, empty and with articles), `test/helpers/
+  holoStubPreload.js` stands in for Holo when running the server locally
+  (`node -r`). Local run on a fresh database: off, on with nothing
+  published, two published, Holo down after a restart, unpublished; desktop
+  and iPhone 13 in Chromium with no overflow or errors.
+- **Not known:** whether Holo's dashboard checks that its script tag is on
+  the site before it lets Tom publish. If it complains, tell this worker.
+- **Live:** released on Tom's "yes" (18/11/2026) after he asked for the
+  address ("i need url": `https://www.arringtonconsultancy.com/blog`).
+  Commit `3411f30`, `HOLO_BLOG_EMBED_ID` set on `arrington-prototype` by this
+  worker, serving deployment `c59b8b0a` (twin `3fa85260` REMOVED), boot line
+  "Holo blog: on". Inspection run `20261118T164439Z-holo-blog-live`: `/blog`
+  200 at desktop and phone, "No published articles yet.", noindex both ways,
+  not in the sitemap, no page errors, no overflow; home and Useful Thinking
+  unchanged. Nothing was published in Holo at release, so an article has not
+  yet been seen on the live page: check the first one when Tom publishes it.
+  Rollback: unset `HOLO_BLOG_EMBED_ID` (the page becomes a 404).
+
 ## Proof pass: Commercial Review, Website Build, thank-you, booking buttons (14/11/2026)
 
 Tom asked for an outside judgement of the site on a stronger model (a fresh,

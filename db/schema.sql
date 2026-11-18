@@ -1224,3 +1224,11 @@ CREATE TABLE IF NOT EXISTS contact_conversion_claims (
     claimed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_contact_conversion_claims_at ON contact_conversion_claims (claimed_at);
+
+-- The blog's last good copy of what is published in Holo (lib/holoBlog.js),
+-- so a deploy while Holo cannot be reached still serves the articles.
+CREATE TABLE IF NOT EXISTS holo_blog_cache (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    articles JSONB NOT NULL DEFAULT '[]'::jsonb,
+    fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <%- include('partials/google-tag') %>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <%# The blog (routes/blog.js): the list at /blog and one article at
+        /blog/<slug>, both from this view. The articles come from Holo and
+        are cleaned in lib/holoBlog.js before they reach here, which is why
+        article.content is written out as HTML. %>
+    <%
+      const _base = 'https://www.arringtonconsultancy.com';
+      const _path = article ? '/blog/' + article.slug : '/blog';
+      const _title = article ? article.title + ' | Arrington Consultancy' : blogTitle + ' | Arrington Consultancy';
+      const _desc = article ? article.excerpt : blogDescription;
+    %>
+    <title><%= _title %></title>
+    <meta name="description" content="<%= _desc %>">
+    <% if (typeof empty !== 'undefined' && empty) { %><meta name="robots" content="noindex"><% } %>
+    <link rel="canonical" href="<%= _base + _path %>">
+    <meta property="og:type" content="<%= article ? 'article' : 'website' %>">
+    <meta property="og:title" content="<%= _title %>">
+    <meta property="og:description" content="<%= _desc %>">
+    <meta property="og:url" content="<%= _base + _path %>">
+    <meta property="og:image" content="<%= _base %>/img/logo">
+    <% if (article) { %>
+    <%- include('partials/page-schema', { schemaName: article.title, schemaPath: _path, schemaParent: { name: blogTitle, path: '/blog' } }) %>
+    <script type="application/ld+json" nonce="<%= nonce %>"><%- JSON.stringify(Object.assign({
+      '@context': 'https://schema.org',
+      '@type': 'BlogPosting',
+      headline: article.title,
+      description: article.excerpt,
+      url: _base + _path,
+      mainEntityOfPage: _base + _path,
+      publisher: { '@id': _base + '/#organization' }
+    }, article.isoDate ? { datePublished: article.isoDate } : {})).replace(/</g, '\\u003c') %></script>
+    <% } else { %>
+    <%- include('partials/page-schema', { schemaName: blogTitle, schemaPath: '/blog' }) %>
+    <% } %>
+    <meta name="csrf-token" content="<%= csrfToken %>">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Poppins:wght@500;600&display=swap" rel="stylesheet">
+    <style nonce="<%= nonce %>">
+        :root {
+            <% for (const [prop, val] of Object.entries(theme.vars)) { %>
+            <%= prop %>: <%= val %>;
+            <% } %>
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: 'DM Sans', sans-serif; background: var(--black); color: var(--text); line-height: 1.6; }
+        <%- include('partials/site-chrome-styles') %>
+
+        h1, h2, h3, h4 { font-family: 'Poppins', 'DM Sans', sans-serif; font-weight: 600; color: var(--text-bright); line-height: 1.25; margin: 0; }
+
+        /* The same column and type as a Useful Thinking article, so an
+           article reads the same wherever on the site it sits. */
+        main { padding: calc(var(--site-chrome) + 3.5rem) 1.5rem 5rem; }
+        .bl-wrap { max-width: 640px; margin: 0 auto; }
+        .bl-label { display: block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; color: var(--accent); margin-bottom: 1rem; text-decoration: none; }
+        a.bl-label:hover, a.bl-label:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
+        h1 { font-size: clamp(1.7rem, 4.8vw, 2.4rem); text-wrap: balance; }
+        .bl-date { display: block; font-size: 0.9rem; color: var(--text-muted); margin-top: 0.9rem; }
+
+        .bl-list { list-style: none; margin: 2.5rem 0 0; padding: 0; }
+        .bl-list li { padding: 1.75rem 0; border-top: 1px solid var(--border); }
+        .bl-list li:last-child { border-bottom: 1px solid var(--border); }
+        .bl-list h2 { font-size: 1.3rem; text-wrap: balance; }
+        .bl-list h2 a { color: inherit; text-decoration: none; }
+        .bl-list h2 a:hover, .bl-list h2 a:focus-visible { color: var(--accent); }
+        .bl-list p { margin: 0.6rem 0 0; color: var(--text); }
+        .bl-list .bl-date { margin-top: 0.6rem; }
+
+        .bl-empty { margin: 2rem 0 0; color: var(--text-muted); }
+        .bl-body { font-size: 1.05rem; line-height: 1.75; margin-top: 2rem; overflow-wrap: break-word; }
+        .bl-body p { margin: 0 0 1.25rem; }
+        .bl-body h2 { font-size: 1.4rem; margin: 2.4rem 0 0.9rem; }
+        .bl-body h3 { font-size: 1.15rem; margin: 2rem 0 0.7rem; }
+        .bl-body h4 { font-size: 1.02rem; margin: 1.6rem 0 0.6rem; }
+        .bl-body ul, .bl-body ol { margin: 0 0 1.25rem; padding-left: 1.35rem; }
+        .bl-body li { margin-bottom: 0.5rem; }
+        .bl-body strong { color: var(--text-bright); }
+        .bl-body a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+        .bl-body blockquote { margin: 0 0 1.25rem; padding-left: 1.1rem; border-left: 2px solid var(--accent); color: var(--text-bright); }
+        .bl-table { overflow-x: auto; margin: 0 0 1.25rem; }
+        .bl-body table { border-collapse: collapse; width: 100%; font-size: 0.95rem; }
+        .bl-body th, .bl-body td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+
+        .bl-more { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 0.75rem 2rem; justify-content: space-between; font-size: 0.95rem; }
+        .bl-more a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+        .bl-more span { color: var(--text-muted); display: block; font-size: 0.8rem; }
+
+        @media (max-width: 900px) {
+            main { padding: calc(var(--site-chrome) + 2rem) 1.25rem 3.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <%- include('partials/site-header', { currentPage: { slug: 'blog' }, navPages, canEdit: false, content, pageContact }) %>
+
+    <main>
+        <div class="bl-wrap">
+        <% if (article) { %>
+            <article data-blog-article="<%= article.slug %>">
+                <a class="bl-label" href="/blog"><%= blogTitle %></a>
+                <h1><%= article.title %></h1>
+                <% if (article.date) { %><time class="bl-date" datetime="<%= article.isoDate %>"><%= article.date %></time><% } %>
+                <div class="bl-body"><%- article.content.replace(/<table>/g, '<div class="bl-table"><table>').replace(/<\/table>/g, '</table></div>') %></div>
+            </article>
+            <div class="bl-more" role="navigation" aria-label="More articles">
+                <% if (older) { %><a href="/blog/<%= older.slug %>"><span>Earlier</span><%= older.title %></a><% } %>
+                <% if (newer) { %><a href="/blog/<%= newer.slug %>"><span>Later</span><%= newer.title %></a><% } %>
+                <% if (!older && !newer) { %><a href="/blog">All articles</a><% } %>
+            </div>
+        <% } else { %>
+            <h1><%= blogTitle %></h1>
+            <% if (!articles.length) { %><p class="bl-empty" data-blog-empty>No published articles yet.</p><% } %>
+            <ul class="bl-list" data-blog-list>
+                <% articles.forEach(function (a) { %>
+                <li>
+                    <h2><a href="/blog/<%= a.slug %>"><%= a.title %></a></h2>
+                    <% if (a.excerpt) { %><p><%= a.excerpt %></p><% } %>
+                    <% if (a.date) { %><time class="bl-date" datetime="<%= a.isoDate %>"><%= a.date %></time><% } %>
+                </li>
+                <% }); %>
+            </ul>
+        <% } %>
+        </div>
+    </main>
+
+    <%- include('partials/site-footer', { canEdit: false, pageContact, content }) %>
+    <script nonce="<%= nonce %>">
+        <%- include('partials/site-chrome-script') %>
+    </script>
+</body>
+</html>
