@@ -8,9 +8,11 @@
 //
 // The articles are the site's own pages: served in the page (so a search
 // engine reads them), in the site's look, in sitemap.xml, each with its own
-// title, description and canonical address. With HOLO_BLOG_EMBED_ID unset, or
-// nothing published, /blog does not exist (the request falls through to the
-// site's ordinary 404), and there is no footer link or sitemap entry.
+// title, description and canonical address. With HOLO_BLOG_EMBED_ID unset
+// /blog does not exist (the request falls through to the site's ordinary
+// 404). Switched on with nothing published, /blog says so and is noindex;
+// either way there is no footer link or sitemap entry until an article is
+// published.
 //
 // Holo's own widget shows an article at ?post=<slug> on the page it sits on.
 // A link in that form is sent to the article's own address here.
@@ -32,10 +34,18 @@ function mountPageRoute(app, generateCsrfToken, blog) {
   app.get(BLOG_PATH, async (req, res, next) => {
     try {
       const articles = await blog.list();
-      if (!articles.length) return next();
+      // Switched on but nothing published yet: the page exists, so Holo (and
+      // Tom) have an address to point at, says so, and asks not to be indexed.
+      // It is not linked from the footer or listed in the sitemap until there
+      // is an article. Switched off, there is no page at all.
+      if (!articles.length) {
+        if (!blog.enabled()) return next();
+        res.set('X-Robots-Tag', 'noindex');
+        return res.render('blog', { ...(await shell(req, res)), articles, article: null, empty: true });
+      }
       const post = String(req.query.post || '').toLowerCase();
       if (post && SLUG_RE.test(post) && articles.some((a) => a.slug === post)) return res.redirect(301, `${BLOG_PATH}/${post}`);
-      res.render('blog', { ...(await shell(req, res)), articles, article: null });
+      res.render('blog', { ...(await shell(req, res)), articles, article: null, empty: false });
     } catch (err) {
       next(err);
     }
@@ -47,7 +57,7 @@ function mountPageRoute(app, generateCsrfToken, blog) {
       if (!article) return next();
       const articles = await blog.list();
       const i = articles.findIndex((a) => a.slug === article.slug);
-      res.render('blog', { ...(await shell(req, res)), articles, article, newer: i > 0 ? articles[i - 1] : null, older: i >= 0 && i < articles.length - 1 ? articles[i + 1] : null });
+      res.render('blog', { ...(await shell(req, res)), articles, article, empty: false, newer: i > 0 ? articles[i - 1] : null, older: i >= 0 && i < articles.length - 1 ? articles[i + 1] : null });
     } catch (err) {
       next(err);
     }

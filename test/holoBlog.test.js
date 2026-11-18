@@ -143,9 +143,16 @@ test('after a restart Holo is asked straight away, however fresh the saved copy'
   assert.strictEqual(calls, 1);
 });
 
+test('switched on with nothing published, the page says so and is noindex', () => {
+  const html = render({ articles: [], article: null, empty: true });
+  assert.match(html, /<meta name="robots" content="noindex">/);
+  assert.match(html, /No published articles yet\./);
+  assert.doesNotMatch(render({ articles: holo.cleanArticles(holo.parseEmbed(PUBLISHED)), article: null, empty: false }), /noindex|No published articles yet/);
+});
+
 function render(locals) {
   const src = read('views/blog.ejs').replace(/<%#[\s\S]*?%>/g, '').replace(/<%-\s*include\([^)]*\)\s*%>/g, '');
-  return ejs.render(src, { theme: { vars: {} }, nonce: 'n', csrfToken: 't', navPages: [], content: {}, pageContact: {}, blogTitle: BLOG_TITLE, blogDescription: BLOG_DESCRIPTION, newer: null, older: null, ...locals });
+  return ejs.render(src, { theme: { vars: {} }, nonce: 'n', csrfToken: 't', navPages: [], content: {}, pageContact: {}, blogTitle: BLOG_TITLE, blogDescription: BLOG_DESCRIPTION, newer: null, older: null, empty: false, ...locals });
 }
 
 test('the list and an article are the site\'s own pages, each with its own title, description and address', () => {
@@ -185,7 +192,8 @@ test('the page, the footer link and the sitemap all follow the same list', () =>
   const footer = read('views/partials/site-footer.ejs');
   assert.match(footer, /if \(typeof blogHasArticles === 'function' && blogHasArticles\(\)\) \{ %><a href="\/blog">Blog<\/a>/);
   const route = read('routes/blog.js');
-  assert.match(route, /if \(!articles\.length\) return next\(\);/, 'no articles, no page');
+  assert.match(route, /if \(!blog\.enabled\(\)\) return next\(\);/, 'switched off, no page');
+  assert.match(route, /res\.set\('X-Robots-Tag', 'noindex'\);/, 'an empty blog asks not to be indexed');
   assert.match(route, /if \(!article\) return next\(\);/);
   assert.match(read('db/schema.sql'), /CREATE TABLE IF NOT EXISTS holo_blog_cache/);
 });

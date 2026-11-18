@@ -16,6 +16,7 @@
     %>
     <title><%= _title %></title>
     <meta name="description" content="<%= _desc %>">
+    <% if (typeof empty !== 'undefined' && empty) { %><meta name="robots" content="noindex"><% } %>
     <link rel="canonical" href="<%= _base + _path %>">
     <meta property="og:type" content="<%= article ? 'article' : 'website' %>">
     <meta property="og:title" content="<%= _title %>">
@@ -71,6 +72,7 @@
         .bl-list p { margin: 0.6rem 0 0; color: var(--text); }
         .bl-list .bl-date { margin-top: 0.6rem; }
 
+        .bl-empty { margin: 2rem 0 0; color: var(--text-muted); }
         .bl-body { font-size: 1.05rem; line-height: 1.75; margin-top: 2rem; overflow-wrap: break-word; }
         .bl-body p { margin: 0 0 1.25rem; }
         .bl-body h2 { font-size: 1.4rem; margin: 2.4rem 0 0.9rem; }
@@ -113,6 +115,7 @@
             </div>
         <% } else { %>
             <h1><%= blogTitle %></h1>
+            <% if (!articles.length) { %><p class="bl-empty" data-blog-empty>No published articles yet.</p><% } %>
             <ul class="bl-list" data-blog-list>
                 <% articles.forEach(function (a) { %>
                 <li>

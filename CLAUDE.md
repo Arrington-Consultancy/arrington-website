@@ -10866,9 +10866,11 @@ then", then "we need a spot for it to publish blogs on").
   outside script reaches a visitor and the CSP is unchanged. Holo's own
   `?post=<slug>` form 301s to the article's address.
 - **Switch:** `HOLO_BLOG_EMBED_ID` (the id in the script's address, public).
-  Unset, or with nothing published in Holo, `/blog` is the ordinary 404 and
-  there is no footer link ("Blog", after Useful Thinking, via
-  `app.locals.blogHasArticles`) and no sitemap entry. Boot line `Holo blog:`.
+  Unset, `/blog` is the ordinary 404. Set with nothing published, `/blog`
+  exists (Tom needed an address to give Holo), says "No published articles
+  yet." and is noindex. Either way there is no footer link ("Blog", after
+  Useful Thinking, via `app.locals.blogHasArticles`) and no sitemap entry
+  until an article is published. Boot line `Holo blog:`.
 - **Approval is Tom pressing Publish in Holo.** The agreed way of working: he
   pastes each Holo draft to this worker, which checks facts and links against
   his records; he corrects it in Holo and publishes. Nothing is published
