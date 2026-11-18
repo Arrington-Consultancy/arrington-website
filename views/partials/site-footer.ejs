@@ -134,6 +134,8 @@
     </div>
     <div class="footer-links">
         <a href="/useful-thinking">For more on how we think, see Useful Thinking</a>
+        <%# The blog (routes/blog.js): only once Holo has an article published. %>
+        <% if (typeof blogHasArticles === 'function' && blogHasArticles()) { %><a href="/blog">Blog</a><% } %>
         <a href="/privacy">Privacy</a>
         <a href="/staff" class="footer-link-staff">Staff Login</a>
     </div>
