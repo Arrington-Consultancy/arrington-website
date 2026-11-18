@@ -1,0 +1,338 @@
+(function () {
+  'use strict';
+
+  var HOLO_BLOG_TITLE = "Arrington Consultancy";
+  var HOLO_T = {"allArticles":"All articles","backToAll":"Back to all articles","empty":"No published articles yet.","blogArticles":"Blog articles"};
+  var HOLO_ARTICLES = [];
+
+  var container = document.getElementById('holo-blog');
+  if (!container) {
+    console.error('Holo Blog: No element with id="holo-blog" found');
+    return;
+  }
+
+  var originalTitle = document.title;
+  var descMeta = document.querySelector('meta[name="description"]');
+  var hadOriginalDescription = Boolean(descMeta);
+  var originalDescription = descMeta ? descMeta.getAttribute('content') || '' : '';
+
+  var getRequestedSlug = function () {
+    try {
+      return new URLSearchParams(window.location.search).get('post') || null;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  var getArticleUrl = function (slug) {
+    try {
+      var url = new URL(window.location.href);
+      url.searchParams.set('post', slug);
+      return url.pathname + url.search;
+    } catch (e) {
+      return '?post=' + encodeURIComponent(slug);
+    }
+  };
+
+  var getListUrl = function () {
+    try {
+      var url = new URL(window.location.href);
+      url.searchParams.delete('post');
+      return url.pathname + (url.search || '');
+    } catch (e) {
+      return window.location.pathname;
+    }
+  };
+
+  var safePushState = function (state, title, url) {
+    try {
+      history.pushState(state, title, url);
+    } catch (e) {}
+  };
+
+  var safeReplaceState = function (state, title, url) {
+    try {
+      history.replaceState(state, title, url);
+    } catch (e) {}
+  };
+
+  var injectJsonLd = function (data) {
+    var jsonLdId = 'holo-blog-jsonld';
+    var existing = document.getElementById(jsonLdId);
+    if (existing) existing.remove();
+    var script = document.createElement('script');
+    script.id = jsonLdId;
+    script.type = 'application/ld+json';
+    script.textContent = JSON.stringify(data);
+    document.head.appendChild(script);
+  };
+
+  var updatePageMeta = function (article) {
+    if (article) {
+      document.title = article.title + ' | ' + HOLO_BLOG_TITLE;
+      var desc = document.querySelector('meta[name="description"]');
+      if (!desc) {
+        desc = document.createElement('meta');
+        desc.setAttribute('name', 'description');
+        document.head.appendChild(desc);
+      }
+      desc.setAttribute('content', article.excerpt);
+
+      var canonical = document.querySelector('link[rel="canonical"][data-holo]');
+      if (!canonical) {
+        canonical = document.createElement('link');
+        canonical.setAttribute('rel', 'canonical');
+        canonical.setAttribute('data-holo', 'true');
+        document.head.appendChild(canonical);
+      }
+      canonical.setAttribute('href', window.location.href);
+
+      var articleJsonLd = {
+        '@context': 'https://schema.org',
+        '@type': 'BlogPosting',
+        headline: article.title,
+        description: article.excerpt,
+        datePublished: article.isoDate,
+        url: window.location.href,
+      };
+      if (article.imageUrl) articleJsonLd.image = article.imageUrl;
+      injectJsonLd(articleJsonLd);
+      return;
+    }
+
+    document.title = originalTitle;
+    var listDesc = document.querySelector('meta[name="description"]');
+    if (hadOriginalDescription) {
+      if (listDesc) listDesc.setAttribute('content', originalDescription);
+    } else if (listDesc) {
+      listDesc.remove();
+    }
+    var listCanonical = document.querySelector('link[rel="canonical"][data-holo]');
+    if (listCanonical) listCanonical.remove();
+
+    injectJsonLd({
+      '@context': 'https://schema.org',
+      '@type': 'Blog',
+      name: HOLO_BLOG_TITLE,
+      blogPost: HOLO_ARTICLES.map(function (a) {
+        var post = {
+          '@type': 'BlogPosting',
+          headline: a.title,
+          description: a.excerpt,
+          datePublished: a.isoDate,
+          url: window.location.origin + getArticleUrl(a.slug),
+        };
+        if (a.imageUrl) post.image = a.imageUrl;
+        return post;
+      }),
+    });
+  };
+
+  var styleId = 'holo-blog-styles';
+  if (!document.getElementById(styleId)) {
+    var style = document.createElement('style');
+    style.id = styleId;
+    style.textContent =
+      '.holo-blog{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,sans-serif;max-width:800px;margin:0 auto;color:#1a1a1a;background:transparent}' +
+      '.holo-blog *{box-sizing:border-box}' +
+      '.holo-blog a{text-decoration:none;color:inherit}' +
+      '.holo-blog-header{display:none;align-items:center;margin-bottom:16px}' +
+      '.holo-blog-back{display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid #e5e5e5;color:#666;cursor:pointer;font-size:14px;padding:8px 16px;border-radius:6px;transition:background .2s,border-color .2s;text-decoration:none}' +
+      '.holo-blog-back:hover{background:#f5f5f5;border-color:#d0d0d0}' +
+      '.holo-blog-list{display:flex;flex-direction:column;gap:24px}' +
+      '.holo-blog-card{display:flex;gap:20px;padding:20px;background:transparent;border:1px solid #e5e5e5;border-radius:12px;cursor:pointer;transition:box-shadow .2s,border-color .2s;text-decoration:none;color:inherit}' +
+      '.holo-blog-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.08);border-color:#d0d0d0}' +
+      '.holo-blog-card-thumb{width:140px;height:100px;object-fit:cover;border-radius:8px;flex-shrink:0;background:#f0f0f0}' +
+      '.holo-blog-card-content{flex:1;min-width:0}' +
+      '.holo-blog-card-title{margin:0 0 8px;font-size:18px;line-height:1.3;font-weight:600}' +
+      '.holo-blog-card-excerpt{margin:0 0 10px;color:#555;font-size:14px;line-height:1.45}' +
+      '.holo-blog-card-date{font-size:13px;color:#888}' +
+      '.holo-blog-article{padding:4px 0 24px}' +
+      '.holo-blog-article-hero{display:block;width:100%;max-height:360px;object-fit:cover;border-radius:12px;margin:0 0 20px;background:#f0f0f0}' +
+      '.holo-blog-article-title{margin:0 0 8px;font-size:28px;line-height:1.2;letter-spacing:-.02em}' +
+      '.holo-blog-article-date{display:block;margin-bottom:20px;font-size:14px;color:#888}' +
+      '.holo-blog-article-content{font-size:16px;line-height:1.65;color:#222}' +
+      '.holo-blog-article-content p{margin:0 0 1em}' +
+      '.holo-blog-empty{padding:32px 16px;text-align:center;color:#666;border:1px dashed #ddd;border-radius:12px}' +
+      '@media (max-width:640px){.holo-blog-card{flex-direction:column}.holo-blog-card-thumb{width:100%;height:160px}.holo-blog-article-title{font-size:24px}}';
+    document.head.appendChild(style);
+  }
+
+  var escapeHtml = function (str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  };
+
+  var findArticle = function (slug) {
+    for (var i = 0; i < HOLO_ARTICLES.length; i++) {
+      if (HOLO_ARTICLES[i].slug === slug) return HOLO_ARTICLES[i];
+    }
+    return null;
+  };
+
+  var renderList = function () {
+    if (HOLO_ARTICLES.length === 0) {
+      return '<div class="holo-blog-empty"><p>' + HOLO_T.empty + '</p></div>';
+    }
+    var html =
+      '<section class="holo-blog-list" role="feed" aria-label="' +
+      HOLO_T.blogArticles +
+      '">';
+    HOLO_ARTICLES.forEach(function (article) {
+      html +=
+        '<a href="' +
+        escapeHtml(getArticleUrl(article.slug)) +
+        '" class="holo-blog-card" data-slug="' +
+        escapeHtml(article.slug) +
+        '" itemscope itemtype="https://schema.org/BlogPosting">';
+      if (article.imageUrl) {
+        html +=
+          '<img class="holo-blog-card-thumb" src="' +
+          escapeHtml(article.imageUrl) +
+          '" alt="' +
+          escapeHtml(article.title) +
+          '" loading="lazy" decoding="async" itemprop="image" />';
+      }
+      html += '<div class="holo-blog-card-content">';
+      html +=
+        '<h2 class="holo-blog-card-title" itemprop="headline">' +
+        escapeHtml(article.title) +
+        '</h2>';
+      html +=
+        '<p class="holo-blog-card-excerpt" itemprop="description">' +
+        escapeHtml(article.excerpt) +
+        '</p>';
+      html +=
+        '<time class="holo-blog-card-date" datetime="' +
+        escapeHtml(article.isoDate) +
+        '" itemprop="datePublished">' +
+        escapeHtml(article.date) +
+        '</time>';
+      html += '</div></a>';
+    });
+    html += '</section>';
+    return html;
+  };
+
+  var renderArticle = function (article) {
+    var html =
+      '<article class="holo-blog-article" itemscope itemtype="https://schema.org/BlogPosting">';
+    if (article.imageUrl) {
+      html +=
+        '<img class="holo-blog-article-hero" src="' +
+        escapeHtml(article.imageUrl) +
+        '" alt="' +
+        escapeHtml(article.title) +
+        '" loading="lazy" decoding="async" itemprop="image" />';
+    }
+    html += '<header>';
+    html +=
+      '<h1 class="holo-blog-article-title" itemprop="headline">' +
+      escapeHtml(article.title) +
+      '</h1>';
+    html +=
+      '<time class="holo-blog-article-date" datetime="' +
+      escapeHtml(article.isoDate) +
+      '" itemprop="datePublished">' +
+      escapeHtml(article.date) +
+      '</time>';
+    html += '</header>';
+    html +=
+      '<div class="holo-blog-article-content" itemprop="articleBody">' +
+      article.content +
+      '</div>';
+    html += '</article>';
+    return html;
+  };
+
+  var processContentLinks = function (parentEl) {
+    var links = parentEl.querySelectorAll('.holo-blog-article-content a');
+    for (var i = 0; i < links.length; i++) {
+      links[i].setAttribute('target', '_blank');
+      links[i].setAttribute('rel', 'noopener noreferrer');
+    }
+  };
+
+  var showArticle = function (slug) {
+    var article = findArticle(slug);
+    if (!article) {
+      showList({ shouldReplaceUrl: true });
+      return;
+    }
+
+    var articleUrl = getArticleUrl(slug);
+    if (window.location.pathname + window.location.search !== articleUrl) {
+      safePushState({ post: slug }, '', articleUrl);
+    }
+
+    updatePageMeta(article);
+
+    var header = container.querySelector('.holo-blog-header');
+    var content = container.querySelector('.holo-blog-content');
+    header.style.display = 'flex';
+    content.innerHTML = renderArticle(article);
+    processContentLinks(content);
+    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  var showList = function (options) {
+    var shouldReplaceUrl = Boolean(options && options.shouldReplaceUrl);
+    var listUrl = getListUrl();
+    if (window.location.pathname + window.location.search !== listUrl) {
+      var writeHistory = shouldReplaceUrl ? safeReplaceState : safePushState;
+      writeHistory({ post: null }, '', listUrl);
+    }
+
+    updatePageMeta(null);
+
+    var header = container.querySelector('.holo-blog-header');
+    var content = container.querySelector('.holo-blog-content');
+    header.style.display = 'none';
+    content.innerHTML = renderList();
+
+    var cards = content.querySelectorAll('.holo-blog-card');
+    cards.forEach(function (card) {
+      card.addEventListener('click', function (e) {
+        e.preventDefault();
+        showArticle(card.getAttribute('data-slug'));
+      });
+    });
+  };
+
+  window.addEventListener('popstate', function () {
+    var slug = getRequestedSlug();
+    if (slug) showArticle(slug);
+    else showList();
+  });
+
+  var backArrow =
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>';
+  container.innerHTML =
+    '<div class="holo-blog">' +
+    '<div class="holo-blog-header" style="display: none;">' +
+    '<a href="' +
+    getListUrl() +
+    '" class="holo-blog-back" aria-label="' +
+    HOLO_T.backToAll +
+    '">' +
+    backArrow +
+    HOLO_T.allArticles +
+    '</a>' +
+    '</div>' +
+    '<div class="holo-blog-content"></div>' +
+    '</div>';
+
+  container.querySelector('.holo-blog-back').addEventListener('click', function (e) {
+    e.preventDefault();
+    showList();
+  });
+
+  var initialSlug = getRequestedSlug();
+  if (initialSlug) showArticle(initialSlug);
+  else showList();
+
+})();
