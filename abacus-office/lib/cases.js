@@ -161,8 +161,17 @@ class Office {
     if (text.length < 10) throw refuse('Paste or type the complaint itself.');
     const name = String(input.name || '').replace(/\s+/g, ' ').trim().slice(0, 160);
     const contact = String(input.contact || '').replace(/\s+/g, ' ').trim().slice(0, 200);
-    const when = /^\d{4}-\d{2}-\d{2}$/.test(String(input.date || '')) ? new Date(`${input.date}T12:00:00Z`) : this.now();
-    if (when > this.now()) throw refuse('The date it came in cannot be in the future.');
+    // The day is compared as a day, in London. Today's date used to be
+    // read as midday, so every complaint logged in the morning with the
+    // form's own default date was refused as "in the future" (Tom, 26
+    // November 2026). Today means now; an earlier day is kept at midday.
+    const today = this.today();
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(String(input.date || '')) ? String(input.date) : today;
+    const midday = new Date(`${date}T12:00:00Z`);
+    // 31 February rolls over to March without complaint, so the day is read back.
+    if (Number.isNaN(midday.getTime()) || midday.toISOString().slice(0, 10) !== date) throw refuse('That date is not a real date. Choose the day it came in.');
+    if (date > today) throw refuse('The date it came in cannot be in the future.');
+    const when = date === today ? this.now() : midday;
     const label = CHANNELS[channel].label;
     const row = await this.store.insertLoggedComplaint({ brand: input.brand || '', channel, name: name || `Someone (${label.toLowerCase()})`, contact, subject: `${label}: ${text.split('\n')[0].slice(0, 80)}`, text, receivedAt: when, logId: input.logId });
     // The same form sent twice: the complaint is already in, so nothing is

@@ -40,6 +40,39 @@ test('a public review gets the public-reply rules and no email sign-off; an emai
   assert.doesNotMatch(ai.emailText({ from: 'a@b.c', receivedAt: '2026-11-10T12:00', subject: 'x', body: 'y', channel: 'email', logged: false }), /Came in by/);
 });
 
+// Tom, 26 November 2026: "entered a complaint and it disappeared". He logged
+// it at 11:50 on the day, with the form's own default date (today). Today's
+// date was read as midday, so before midday it counted as the future and was
+// refused. The day is compared as a day now.
+test('a complaint dated today is taken at any time of day; tomorrow is refused; an earlier day is kept at midday', async () => {
+  const { Office } = require('../abacus-office/lib/cases');
+  const run = async (nowIso, date) => {
+    const rows = [];
+    const store = { insertLoggedComplaint: async (r) => { rows.push(r); return { existed: true, id: 1 }; }, caseById: async () => ({ id: 1 }) };
+    const office = new Office({ store, mailbox: {}, firm, dispatch: {}, aiOn: () => false, now: () => new Date(nowIso) });
+    await office.logComplaint({ id: 1, username: 'sam' }, { channel: 'phone', text: 'The driver was twenty minutes late.', date, logId: 'x' });
+    return rows[0];
+  };
+  // 11:50 in the morning, today's date: this is the one that was refused.
+  let row = await run('2026-11-26T11:50:44Z', '2026-11-26');
+  assert.equal(row.receivedAt.toISOString(), '2026-11-26T11:50:44.000Z', 'today means now');
+  // First thing in the morning as well.
+  row = await run('2026-11-26T06:05:00Z', '2026-11-26');
+  assert.equal(row.receivedAt.toISOString(), '2026-11-26T06:05:00.000Z');
+  // Summer time: half past midnight in London is still yesterday in UTC.
+  row = await run('2026-06-30T23:30:00Z', '2026-07-01');
+  assert.equal(row.receivedAt.toISOString(), '2026-06-30T23:30:00.000Z');
+  // No date sent at all: now.
+  row = await run('2026-11-26T09:00:00Z', '');
+  assert.equal(row.receivedAt.toISOString(), '2026-11-26T09:00:00.000Z');
+  // An earlier day.
+  row = await run('2026-11-26T09:00:00Z', '2026-11-24');
+  assert.equal(row.receivedAt.toISOString(), '2026-11-24T12:00:00.000Z');
+  // Tomorrow, and a date that does not exist.
+  await assert.rejects(run('2026-11-26T23:30:00Z', '2026-11-27'), (e) => e.code === 'REFUSED' && /future/.test(e.message));
+  await assert.rejects(run('2026-11-26T09:00:00Z', '2026-02-31'), (e) => e.code === 'REFUSED');
+});
+
 test('over HTTP: staff log a Google review, the AI drafts a public reply with the channel, approving says to post it, and nothing goes to the mailbox', { skip: DB ? false : 'set ABACUS_OFFICE_TEST_DATABASE_URL to a throwaway database' }, async (t) => {
   const { Pool } = require('pg');
   const SCHEMA = 'office_logged_test';
@@ -92,6 +125,24 @@ test('over HTTP: staff log a Google review, the AI drafts a public reply with th
   r = await post('/complaints/log', { channel: '', text: 'The driver was late.' }, '/complaints');
   assert.equal(r.location, '/complaints#log-a-complaint', 'no channel, nothing logged');
   assert.equal((await store.listCases({})).length, 0);
+
+  // A refused complaint comes back in the form with the reason, once.
+  r = await post('/complaints/log', { channel: 'phone', name: 'Mrs <b>Kemp</b>', contact: '01632 960000', date: '2099-01-01', text: 'She waited forty minutes outside the surgery & nobody rang her.' }, '/complaints');
+  assert.equal(r.location, '/complaints#log-a-complaint');
+  assert.equal((await store.listCases({})).length, 0);
+  r = await get('/complaints');
+  assert.match(r.text, /cannot be in the future\. Nothing was logged\. What you typed is still in the form below\./);
+  assert.match(r.text, /She waited forty minutes outside the surgery &amp; nobody rang her\.<\/textarea>/, 'the complaint is still in the box');
+  assert.match(r.text, /<option value="phone" selected>/);
+  assert.match(r.text, /value="Mrs &lt;b&gt;Kemp&lt;\/b&gt;"/, 'escaped, never markup');
+  assert.match(r.text, /value="01632 960000"/);
+  r = await get('/complaints');
+  assert.doesNotMatch(r.text, /She waited forty minutes/, 'kept for one page only');
+  // Sent again with the form's own default date, today, it goes in.
+  r = await post('/complaints/log', { channel: 'phone', name: 'Mrs Kemp', date: office.today(), text: 'She waited forty minutes outside the surgery & nobody rang her.' }, '/complaints');
+  assert.match(r.location || '', /^\/case\/\d+$/, 'logged with today\'s date');
+  await pool.query('DELETE FROM case_events; DELETE FROM cases');
+  calls.length = 0;
 
   r = await post('/complaints/log', { channel: 'google_review', name: 'Sarah P.', date: '2026-11-09', text: 'One star. Driver turned up 20 minutes late and was rude when I asked why.', brand: 'abacus' }, '/complaints');
   const id = Number((r.location || '').split('/').pop());

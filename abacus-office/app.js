@@ -355,7 +355,9 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     const cases = (await store.listCases({ kind: 'complaints', brand: scope, limit: 200 })).filter((c) => req.query.show === 'all' || c.status !== 'done');
     const order = { safety: 0, serious: 1, minor: 2, none: 3 };
     cases.sort((a, b) => (order[a.seriousness] - order[b.seriousness]) || (new Date(a.received_at) - new Date(b.received_at)));
-    res.render('complaints', { title: 'Complaints', section: 'complaints', cases, showAll: req.query.show === 'all', liveStamp: await store.liveStamp(scope), lastSync, nudgeHours: await store.complaintNudgeHours(), seriousHours: await store.complaintSeriousHours(), channels: CHANNELS, ownBrand: scopeFor(req.user) || '', todayYmd: office.today(), logId: require('crypto').randomUUID() });
+    const logDraft = req.session.logDraft || null;
+    if (logDraft) delete req.session.logDraft;
+    res.render('complaints', { title: 'Complaints', section: 'complaints', logDraft, cases, showAll: req.query.show === 'all', liveStamp: await store.liveStamp(scope), lastSync, nudgeHours: await store.complaintNudgeHours(), seriousHours: await store.complaintSeriousHours(), channels: CHANNELS, ownBrand: scopeFor(req.user) || '', todayYmd: office.today(), logId: require('crypto').randomUUID() });
   }));
   // A complaint that came in another way: a Google review, a Facebook
   // comment, a phone call (Tom, 10 November 2026). Staff type or paste it
@@ -369,7 +371,12 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
       return res.redirect(`/case/${kase.id}`);
     } catch (e) {
       if (e.code !== 'REFUSED') throw e;
-      flash(req, 'warn', e.message);
+      // What they typed goes back into the form with the reason, so a
+      // refused complaint is never lost (Tom, 26 November 2026: "entered a
+      // complaint and it disappeared").
+      const keep = (v, n) => String(v || '').slice(0, n);
+      req.session.logDraft = { channel: keep(req.body.channel, 40), date: keep(req.body.date, 10), name: keep(req.body.name, 160), contact: keep(req.body.contact, 200), brand: keep(req.body.brand, 60), text: keep(req.body.text, 8000) };
+      flash(req, 'warn', `${e.message} Nothing was logged. What you typed is still in the form below.`);
       return res.redirect('/complaints#log-a-complaint');
     }
   }));
