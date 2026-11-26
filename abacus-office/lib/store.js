@@ -11,6 +11,21 @@ const SCHEMA = fs.readFileSync(path.join(__dirname, '..', 'db', 'schema.sql'), '
 const ROLES = ['operator', 'manager', 'owner'];
 const STATUSES = ['new', 'in_progress', 'waiting', 'done'];
 const KINDS = ['unread', 'bookings', 'customer', 'complaints', 'licensing', 'other'];
+// An email's time arrives as London clock time with no zone on it
+// ("2026-07-01T11:00"). Read as written it is taken as the server's own time,
+// which is UTC, so every email all summer would be an hour out: shown an hour
+// late, and its overdue clock an hour slow. Anything with a zone is left alone.
+function londonInstant(stamp) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(String(stamp || ''));
+  if (!m) return new Date(stamp);
+  const asUtc = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0));
+  const p = {};
+  new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    .formatToParts(new Date(asUtc)).forEach((x) => { p[x.type] = Number(x.value); });
+  const shown = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+  return new Date(asUtc - (shown - asUtc));
+}
+
 const DEFAULT_SETTINGS = { escalation_hours: '24', complaint_nudge_hours: '12', complaint_serious_hours: '2' };
 
 // A list's scope: a company id (string) or { brand, hideCouncil }. An
@@ -97,7 +112,7 @@ class Store {
     const r = await this.q(
       `INSERT INTO cases (message_id, mailbox_email_id, thread_id, from_address, subject, body, received_at, brand)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (message_id) DO NOTHING RETURNING *`,
-      [email.messageId || email.id, String(email.id), email.threadId || '', String(email.from || '').slice(0, 300), String(email.subject || '').slice(0, 500), String(email.body || '').slice(0, 20000), new Date(email.receivedAt), String(brand || '').slice(0, 40)]
+      [email.messageId || email.id, String(email.id), email.threadId || '', String(email.from || '').slice(0, 300), String(email.subject || '').slice(0, 500), String(email.body || '').slice(0, 20000), londonInstant(email.receivedAt), String(brand || '').slice(0, 40)]
     );
     return r.rows[0] || null;
   }
@@ -517,4 +532,4 @@ class Store {
   }
 }
 
-module.exports = { Store, ROLES, STATUSES, KINDS, DEFAULT_SETTINGS };
+module.exports = { Store, ROLES, STATUSES, KINDS, DEFAULT_SETTINGS, londonInstant };

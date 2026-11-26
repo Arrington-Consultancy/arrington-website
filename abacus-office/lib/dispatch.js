@@ -68,7 +68,12 @@ function cleanJob(input) {
   };
   const missing = REQUIRED.filter(([k]) => !job[k]).map(([, label]) => label);
   if (job.date && !/^\d{4}-\d{2}-\d{2}$/.test(job.date)) missing.push('a date as YYYY-MM-DD');
-  if (job.time && !/^\d{2}:\d{2}$/.test(job.time)) missing.push('a time as HH:MM');
+  if (job.time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(job.time)) missing.push('a time as HH:MM');
+  if (/^\d{4}-\d{2}-\d{2}$/.test(job.date)) {
+    // 31 February rolls over to March without complaint, so the day is read back.
+    const d = new Date(`${job.date}T12:00:00Z`);
+    if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== job.date) missing.push('a date that exists');
+  }
   if (job.passengers && !/^\d{1,2}$/.test(job.passengers)) missing.push('passengers as a number');
   return { job, missing };
 }

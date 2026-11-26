@@ -483,6 +483,20 @@ ${this.firm.signature}`;
     const r = kase.reading || {}; const j = r.journey || {};
     return { date: j.date || '', time: j.time || '', pickup: j.pickup || '', destination: j.destination || '', passengers: j.passengers || '', name: r.customer_name || '', phone: r.phone || '', vehicle: '', notes: '', flight: j.flight || '' };
   }
+  // A pickup already in the past is a slip (yesterday's date, or 00:10 typed
+  // with today's date for a job just after midnight), so it is said in words
+  // before anything reaches dispatch. A quarter of an hour's grace for a job
+  // taken down as it happens.
+  pickupGone(job) {
+    const stamp = londonStamp(this.now());
+    const today = stamp.slice(0, 10);
+    if (job.date < today) return `The pickup date ${job.date} has already gone. Check the date.`;
+    if (job.date === today) {
+      const mins = (t) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+      if (mins(job.time) < mins(stamp.slice(11, 16)) - 15) return `The pickup time ${job.time} today has already gone. If the job is for tomorrow, change the date.`;
+    }
+    return '';
+  }
   async book(kase, user, input, signedOff) {
     if (!this.dispatch) throw refuse('No dispatch connection is set up on this office.');
     if (!['bookings'].includes(kase.kind)) throw refuse('Only a booking email is booked into dispatch.');
@@ -490,6 +504,8 @@ ${this.firm.signature}`;
     if (!signedOff) throw refuse('Tick the sign-off box to confirm you have checked the job against the email. Nothing was booked.');
     const { job, missing } = cleanJob(input || {});
     if (missing.length) throw refuse(`Still needed before it can be booked: ${missing.join(', ')}. Nothing was booked.`);
+    const gone = this.pickupGone(job);
+    if (gone) throw refuse(`${gone} Nothing was booked.`);
     const summary = `${job.date} ${job.time}, ${job.pickup} to ${job.destination}, ${job.passengers} passenger${job.passengers === '1' ? '' : 's'}`;
     // One booking however many presses: the case is claimed first.
     if (!(await this.store.claimBooking(kase.id))) throw refuse('This job is being booked, or was booked a moment ago. Reload the page before trying again. Nothing was booked twice.');
@@ -549,6 +565,10 @@ ${this.firm.signature}`;
     const names = { date: 'date', time: 'time', pickup: 'pickup', destination: 'destination', name: 'passenger', phone: 'phone', passengers: 'passengers', vehicle: 'vehicle', notes: 'note for the driver', flight: 'flight' };
     const changes = Object.keys(names).filter((k) => String(before[k] || '') !== String(job[k] || '')).map((k) => `${names[k]} ${before[k] ? `from ${before[k]} ` : ''}to ${job[k] || '(none)'}`);
     if (!changes.length) throw refuse('Nothing in the job is different from what dispatch holds. Nothing was changed.');
+    if (String(before.date || '') !== job.date || String(before.time || '') !== job.time) {
+      const gone = this.pickupGone(job);
+      if (gone) throw refuse(`${gone} Nothing was changed.`);
+    }
     if (!(await this.store.claimWork(kase.id))) throw refuse('This change is being made, or was made a moment ago. Reload the page before trying again. Nothing was changed twice.');
     let result;
     try { result = await this.dispatch.update({ ref: row.ref, job, kase, actor: user }); } catch (e) {

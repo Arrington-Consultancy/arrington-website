@@ -102,3 +102,95 @@
     });
   });
 })();
+
+(function () {
+  // A form is sent once. A phone's password filler and a tap, or two quick
+  // presses, used to send it twice, and the second copy came back as an
+  // expired page. Coming back to the page from the browser's history frees
+  // it again.
+  document.addEventListener('submit', function (e) {
+    var form = e.target;
+    if (e.defaultPrevented || !form || !form.setAttribute) return;
+    if (form.getAttribute('data-sent')) { e.preventDefault(); return; }
+    form.setAttribute('data-sent', '1');
+  });
+  window.addEventListener('pageshow', function () {
+    Array.prototype.forEach.call(document.forms, function (f) { f.removeAttribute('data-sent'); });
+  });
+})();
+
+(function () {
+  // Nothing typed is lost (Tom, 26 November 2026: "entered a complaint and
+  // it disappeared"). What was typed into a form is kept in this tab while
+  // it is sent. If the office refuses it, or the page had been open too
+  // long, it is put back when the person is on that page again. Passwords
+  // and tick boxes are never kept, a field someone else has changed since
+  // is left alone, and it is thrown away as soon as the form goes through.
+  var KEY = 'office.typed';
+  var box;
+  try { box = window.sessionStorage; box.getItem(KEY); } catch (e) { return; }
+  var SKIP = /^\/(login|logout|portal|account)(\/|$)/;
+  function kept(el) {
+    if (!el.name || el.name === '_csrf' || el.disabled) return false;
+    var type = String(el.type || '').toLowerCase();
+    return el.tagName !== 'BUTTON' && ['hidden', 'password', 'file', 'submit', 'button', 'checkbox', 'radio'].indexOf(type) === -1;
+  }
+  function shown(el) {
+    if (el.tagName !== 'SELECT') return el.defaultValue;
+    var o = Array.prototype.filter.call(el.options, function (x) { return x.defaultSelected; })[0] || el.options[0];
+    return o ? o.value : '';
+  }
+  function forget() { try { box.removeItem(KEY); } catch (e) { /* nothing to do */ } }
+
+  document.addEventListener('submit', function (e) {
+    var form = e.target;
+    if (e.defaultPrevented || !form || String(form.method).toLowerCase() !== 'post') return;
+    var action = form.getAttribute('action') || '';
+    if (SKIP.test(action)) { if (/^\/logout/.test(action)) forget(); return; }
+    var fields = [];
+    Array.prototype.forEach.call(form.elements, function (el) {
+      if (!kept(el) || String(el.value).length > 20000) return;
+      fields.push({ n: el.name, v: el.value, was: shown(el) });
+    });
+    if (!fields.some(function (f) { return f.v !== f.was; })) return;
+    try { box.setItem(KEY, JSON.stringify({ path: window.location.pathname, action: action, at: Date.now(), failed: false, fields: fields })); } catch (err) { /* full or blocked */ }
+  });
+
+  var entry;
+  try { entry = JSON.parse(box.getItem(KEY) || 'null'); } catch (e) { entry = null; }
+  if (!entry) return;
+  if (!entry.fields || Date.now() - entry.at > 30 * 60 * 1000) return forget();
+  var save = function () { try { box.setItem(KEY, JSON.stringify(entry)); } catch (e) { /* nothing to do */ } };
+  // The page that says it had been open too long, or that something went
+  // wrong: keep it for when they are back where they were.
+  if (document.querySelector('[data-keep-typed]')) { entry.failed = true; return save(); }
+  // Signing in again on the way back.
+  if (window.location.pathname === '/login' || window.location.pathname === '/account') return;
+  var here = window.location.pathname === entry.path;
+  if (here && document.querySelector('.to-flash-warn, .to-note-bad[role="alert"]')) entry.failed = true;
+  // It went through, or the office took them somewhere else: done with.
+  if (!entry.failed) return forget();
+  if (!here) return save();
+  var form = Array.prototype.filter.call(document.forms, function (f) {
+    return (f.getAttribute('action') || '') === entry.action && f.elements[entry.fields[0].n];
+  })[0];
+  forget();
+  if (!form) return;
+  var put = 0;
+  entry.fields.forEach(function (f) {
+    var el = form.elements[f.n];
+    if (!el || el.length !== undefined && el.tagName !== 'SELECT') return;
+    // Only where the page still shows what they started from.
+    if (!kept(el) || shown(el) !== f.was || el.value === f.v) return;
+    el.value = f.v;
+    if (el.value === f.v) put += 1;
+  });
+  if (!put) return;
+  var note = document.createElement('p');
+  note.className = 'to-note to-note-ok';
+  note.setAttribute('role', 'status');
+  note.textContent = 'What you typed has been put back. Check it, then send it again.';
+  form.insertBefore(note, form.firstChild);
+  // Typed text is on the page again, so the page does not refresh itself.
+  form.dispatchEvent(new Event('input', { bubbles: true }));
+})();

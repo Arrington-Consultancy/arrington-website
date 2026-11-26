@@ -131,6 +131,9 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   app.use('/brand', express.static(path.join(__dirname, 'public', 'brand'), { maxAge: '7d' }));
   app.use('/assets', (req, res) => res.status(404).type('text/plain').send('Not found'));
   app.get('/robots.txt', (req, res) => res.type('text/plain').send('User-agent: *\nDisallow: /\n'));
+  // A phone asks for these by itself. Answered here, before any session, so
+  // they are never a redirect to sign in and never a step on someone's visit.
+  app.get(['/favicon.ico', '/apple-touch-icon.png', '/apple-touch-icon-precomposed.png'], (req, res) => res.status(404).type('text/plain').send('Not found'));
 
   app.use(express.urlencoded({ extended: false, limit: '64kb' }));
   app.use(cookieParser());
@@ -142,6 +145,9 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     // The CSRF token is tied to the session id, so the sign-in page's
     // session has to exist before the form is posted.
     saveUninitialized: true,
+    // Ten hours from the last page, not from signing in: someone working a
+    // long shift is not signed out in the middle of a reply.
+    rolling: true,
     cookie: { httpOnly: true, secure: production, sameSite: 'lax', maxAge: 10 * 60 * 60 * 1000 }
   }));
   const { doubleCsrfProtection, generateCsrfToken } = doubleCsrf({
@@ -201,13 +207,24 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     res.redirect = (...args) => { res.locals.redirected = true; return req.session ? req.session.save(() => redirect(...args)) : redirect(...args); };
     next();
   });
-  const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 8, standardHeaders: true, legacyHeaders: false });
+  // Sign-in limits. Staff in one office share one address, so the limit is
+  // on wrong tries for one username from one address, and a sign-in that
+  // works is not counted. Counting everyone together, eight sign-ins on a
+  // Monday morning locked the ninth person out for a quarter of an hour.
+  const ipOf = (req) => (typeof rateLimit.ipKeyGenerator === 'function' ? rateLimit.ipKeyGenerator(req.ip || '') : String(req.ip || ''));
+  const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false, skipSuccessfulRequests: true,
+    keyGenerator: (req) => `${ipOf(req)}|${String((req.body && req.body.username) || '').trim().toLowerCase().slice(0, 80)}`,
+    handler: (req, res) => res.status(429).render('login', { title: 'Sign in', section: 'login', error: 'Too many wrong tries for that username. Wait 15 minutes, or ask the owner to reset the password.', next: safeNext(req.body && req.body.next) })
+  });
+  // A wide ceiling on one address, against a machine trying many names.
+  const loginFlood = rateLimit({ windowMs: 15 * 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false, skipSuccessfulRequests: true, keyGenerator: (req) => ipOf(req) });
 
   app.get('/login', (req, res) => {
     if (req.user) return res.redirect('/');
     res.render('login', { title: 'Sign in', section: 'login', error: null, next: safeNext(req.query.next) });
   });
-  app.post('/login', loginLimiter, async (req, res, next) => {
+  app.post('/login', loginFlood, loginLimiter, async (req, res, next) => {
     try {
       const username = String(req.body.username || '').trim();
       const password = String(req.body.password || '');
@@ -245,11 +262,24 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   };
   const requireRole = (role) => (req, res, next) => (atLeast(req.user, role) ? next() : res.status(404).render('missing', { title: 'Not found' }));
 
+  // Where a refused action goes back to: the page the form was on. The
+  // office tells browsers to send no referrer, so there is none to read;
+  // reading it sent every refusal to Today, away from the email and whatever
+  // had been typed (found in the sweep of 26 November 2026). The page is
+  // worked out from the address the form was sent to.
+  const backFor = (req) => {
+    let m = /^\/case\/(\d+)\//.exec(req.path);
+    if (m) return `/case/${m[1]}`;
+    m = /^\/write\/(\d+)\//.exec(req.path);
+    if (m) return `/write/${m[1]}`;
+    m = /^\/(settings|users|complaints|write|council|inbox|account|fares)(\/|$)/.exec(req.path);
+    return m ? `/${m[1]}` : '/';
+  };
   const wrap = (fn) => (req, res, next) => fn(req, res, next).catch((e) => {
-    if (e.code === 'REFUSED') { flash(req, 'warn', e.message); return res.redirect(req.get('referer') || '/'); }
+    if (e.code === 'REFUSED') { flash(req, 'warn', e.message); return res.redirect(backFor(req)); }
     // The mailbox did not answer or refused a draft: nothing was approved
     // (the claim is let go), so say so plainly and let staff try again.
-    if (e.code === 'MAIL_ERROR' || e.code === 'MAILBOX_REFUSED') { flash(req, 'warn', `The mailbox did not take it just now (${String(e.message).slice(0, 160)}). Nothing was approved or saved there. Try again in a minute.`); return res.redirect(req.get('referer') || '/'); }
+    if (e.code === 'MAIL_ERROR' || e.code === 'MAILBOX_REFUSED') { flash(req, 'warn', `The mailbox did not take it just now (${String(e.message).slice(0, 160)}). Nothing was approved or saved there. Try again in a minute.`); return res.redirect(backFor(req)); }
     next(e);
   });
   app.use(requireUser);
@@ -287,7 +317,10 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     } finally { syncing = false; }
   }
   app.use((req, res, next) => { res.locals.mailError = mailError; next(); });
-  app.use(wrap(async (req, res, next) => { await settle(); next(); }));
+  // A page waits a moment for that, never for long: with a real mailbox the
+  // pull and the AI's reading can take minutes, and they carry on behind the
+  // page, which refreshes itself when they are done.
+  app.use(wrap(async (req, res, next) => { await Promise.race([settle(), new Promise((r) => { const t = setTimeout(r, 2500); if (t.unref) t.unref(); })]); next(); }));
   // The same pull on a timer, so an open page sees a new email within a
   // couple of minutes whether or not anyone touches it.
   const poll = setInterval(() => { settle().catch(() => {}); }, 2 * 60 * 1000);
@@ -940,9 +973,15 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   app.use((req, res) => res.status(404).render('missing', { title: 'Not found' }));
   // eslint-disable-next-line no-unused-vars
   app.use((err, req, res, next) => {
-    if (err && err.code === 'EBADCSRFTOKEN') return res.status(403).render('missing', { title: 'Expired', message: 'This page had expired. Go back and try again.' });
+    if (err && err.code === 'EBADCSRFTOKEN') {
+      // The sign-in form sent twice (a phone's password filler and a tap, as
+      // on Tom's own sign-ins): the first one signed them in, so go on to
+      // the office. Anyone not signed in lands on a fresh sign-in page.
+      if (req.method === 'POST' && req.path === '/login') return res.redirect('/');
+      return res.status(403).render('missing', { title: 'This page had been open too long', keepTyped: true, message: 'The office did not take that, and nothing was changed. Go back to the page you were on and try again. Anything you typed there is put back for you.' });
+    }
     console.error('Abacus office error:', err);
-    res.status(500).render('missing', { title: 'Something went wrong', message: 'Something went wrong on our side. Try again in a moment.' });
+    res.status(500).render('missing', { title: 'Something went wrong', keepTyped: true, message: 'Something went wrong on our side, and what you sent may not have been saved. Go back to the page you were on and check. Anything you typed there is put back for you.' });
   });
 
   return { app, store, office };

@@ -130,7 +130,7 @@ test('over HTTP: search, standard replies, fares, changing a booking, reports an
     await store.updateCase(row.id, { kind, reading, reading_source: reading ? 'prepared' : 'none', reading_note: 'test' });
     return row.id;
   };
-  const journey = { date: '2026-12-01', time: '09:30', pickup: '1 Arwenack Street, Falmouth', destination: 'Newquay Airport', passengers: '2', flight: 'FR 1234' };
+  const journey = { date: '2031-12-01', time: '09:30', pickup: '1 Arwenack Street, Falmouth', destination: 'Newquay Airport', passengers: '2', flight: 'FR 1234' };
   const newBooking = await mk('nb1', { subject: 'Airport run for the Penroses', body: 'Please book 2 of us to Newquay Airport, mobile 07700 900123', reading: { intent: 'new_booking', summary: 'A booking', customer_name: 'Ann Penrose', phone: '07700 900123', journey, missing: [] } });
   const changeEmail = await mk('ch1', { subject: 'Change of time', reading: { intent: 'change', summary: 'Move the airport run', customer_name: 'Ann Penrose', phone: '07700 900123', journey: { ...journey, time: '10:15' }, missing: [] } });
   const cancelEmail = await mk('cx1', { subject: 'Please cancel', reading: { intent: 'cancel', summary: 'Cancel it', customer_name: 'Ann Penrose', phone: '07700 900123', journey, missing: [] } });
