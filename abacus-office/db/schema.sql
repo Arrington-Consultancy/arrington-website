@@ -252,3 +252,32 @@ UPDATE cases SET manager_alerted_at = passed_up_at, manager_alert_reason = passe
        passed_up_at = NULL, passed_up_reason = ''
  WHERE passed_up_at IS NOT NULL AND passed_up_by IS NULL AND holding_sent_at IS NULL
    AND passed_up_reason LIKE 'No approved reply within %';
+
+-- One mailbox per company, and more later (Tom, 27 November 2026: "each
+-- company might have multiple inboxes"; ".com .co.uk .net etc can all go
+-- into one company email box. We can create more down the line"). The owner
+-- adds a mailbox in Settings, ties it to a company and connects it by
+-- signing in to Google as that address. token is the sealed refresh token
+-- (lib/secretBox.js); it is never shown. start_at is the moment it was
+-- first connected: nothing received before then is taken in, so staff
+-- start with a clean inbox and no backlog marked overdue.
+CREATE TABLE IF NOT EXISTS mailboxes (
+  id SERIAL PRIMARY KEY,
+  brand VARCHAR(40) NOT NULL DEFAULT '',
+  address VARCHAR(200) NOT NULL UNIQUE,
+  token TEXT NOT NULL DEFAULT '',
+  connected_by VARCHAR(200) NOT NULL DEFAULT '',
+  connected_at TIMESTAMPTZ,
+  start_at TIMESTAMPTZ,
+  created_by VARCHAR(200) NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+-- Which mailbox an email came into (NULL or 0: the one set on the server),
+-- its address as it was then, so the case still says so after the mailbox
+-- is removed, and the addresses the customer wrote to, so staff can see
+-- whether it was the .com, the .co.uk or another one.
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS mailbox_id INTEGER;
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS mailbox_address VARCHAR(200) NOT NULL DEFAULT '';
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS sent_to TEXT NOT NULL DEFAULT '';
+-- Which mailbox an approved Write email was saved in.
+ALTER TABLE compositions ADD COLUMN IF NOT EXISTS mailbox_id INTEGER;

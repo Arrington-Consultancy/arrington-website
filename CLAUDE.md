@@ -10904,6 +10904,91 @@ and the additions to `test/abacusOfficeLoggedComplaints.test.js`.
 - **A typed-in complaint's overdue clock** runs from the date staff give it,
   so one logged for two days ago is overdue at once. Left as it is.
 
+### A mailbox per company (built 27/11/2026, NOT RELEASED)
+
+Tom, 27 November 2026: "each company might have multiple inboxes and
+managers will have their own email addresses", then "Lets put the managers
+emails aside for a minute and make sure the rest is sorted. Ie .com co.uk
+.net etc can all go into one company email box. We can create more down the
+line if we want them". Built on branch `feature/office-company-mailboxes`
+and merged into the working branch `claude/new-session-hbgp04`, so it is on
+the preview office only. **Not on main and not on www.a2bstaff.com until
+Tom says so.** Managers' own addresses are not built: Tom set them aside.
+
+- **What it is.** Until now the office read one mailbox, set on the server,
+  feeding one company. Now the owner adds mailboxes in Settings
+  ("Mailboxes"): the mailbox's own address and its company, then Connect,
+  signing in to Google as that address. Any number, so one per company now
+  and more later. A company's other addresses (.co.uk, .net) are forwarded
+  or aliased into its mailbox by whoever runs its email (Dan or Tim); the
+  office reads the one mailbox, and each case shows "Sent to", so staff see
+  which address the customer used.
+- **Code.** `abacus-office/lib/mailroom.js` holds every mailbox: the
+  server's own (`lib/mailbox.js`, unchanged, entry 0) and the rows of the
+  new `mailboxes` table (`rowMailbox` in `lib/mailbox.js`). `Office` takes
+  it as `mailroom`; `office.boxFor(kase)` is the mailbox an email came into
+  (`cases.mailbox_id`, with `mailbox_address` kept on the case), and
+  `room.entryForBrand(brand)` is where a new email for a company waits.
+- **Rules it keeps.**
+  - An email belongs to the company its mailbox is tied to.
+  - A reply is saved as a draft in the mailbox its email came into, and the
+    sent check asks that mailbox.
+  - A new email (Write, a typed-in complaint) is saved only in a mailbox of
+    its own company; a company with none has it copied out, as before.
+  - An added mailbox is read with its own token only. Google is asked which
+    address the token opens before the first read, and any other is
+    refused; at Connect a wrong account's token is cancelled on the spot.
+    The token set on the server is never passed to an added mailbox.
+  - Tokens are sealed under `ABACUS_OFFICE_TOKEN_KEY` and never shown.
+  - Nothing sends. Owner only; a manager gets 404.
+- **Each mailbox starts from the moment it is first connected**
+  (`mailboxes.start_at`, kept when it is connected again): emails received
+  before then are never brought in, so there is no backlog marked overdue.
+  This answers the open question from the sweep. An email's time is kept to
+  the minute, so the start is rounded down to the minute. The server's own
+  mailbox does the same when connected from Settings.
+- **The server's switch still rules.** Mailboxes from Settings are read only
+  when `ABACUS_OFFICE_MAIL_DRIVER=gmail` (and never beside the made-up
+  inbox). Live is `none`, so on release nothing is read and Settings says
+  what it says today. To go live with mailboxes: the DPA signed and Dan's
+  approval, Governance & Assurance told, then `ABACUS_OFFICE_MAIL_DRIVER=gmail`
+  and `ABACUS_OFFICE_TOKEN_KEY` on the service, the firm's Google client ID
+  and secret typed into Settings, and each mailbox added and connected.
+  `ABACUS_OFFICE_MAILBOX_ADDRESS` is not needed.
+- **One Google client covers the mailboxes of one Google Workspace**
+  (Internal consent screen), with one redirect address however many
+  mailboxes: `/settings/mailbox/callback`. If the three companies' email
+  sits in different Google Workspaces, or is not Google at all, that needs
+  more work (a client per mailbox, or the IMAP or Outlook drivers, which
+  are still one mailbox set on the server). **Ask Dan or Tim where each
+  company's email is hosted before promising a date.**
+- **One mailbox failing does not stop the others** (`sync` throws after
+  reading the rest, `partial: true`; the inbox says "One mailbox was not
+  read").
+- **Disconnect** cancels the token at Google and stops the reading;
+  **Remove** also takes it off the list. Either way its emails stay, and a
+  reply to one is then copied out by hand. **Change company** moves where
+  its next emails go; emails already in stay where they are.
+- **Known limits.** The same email sent to two companies' mailboxes makes
+  one case (cases are unique on the email's own message id), in whichever
+  mailbox is read first. A reply draft goes from the mailbox's main address,
+  not the .co.uk the customer wrote to, unless that is set up as a send-as
+  address in Gmail. General pages say "the company mailboxes", not an
+  address, because a long address pushed phone pages sideways.
+- **Schema:** table `mailboxes`; `cases.mailbox_id`, `mailbox_address`,
+  `sent_to`; `compositions.mailbox_id`. All added in place; proven on a
+  database made by the released code (cases kept, boot lines unchanged
+  with the driver at `none`).
+- **Tests:** `test/abacusOfficeMailboxes.test.js` (3; the HTTP one works in
+  its own schema of `ABACUS_OFFICE_TEST_DATABASE_URL` against a fake Google
+  with two mailboxes). Five planted faults each failed it: the start check
+  removed, a new email taken by another company's mailbox, a reply saved in
+  the wrong mailbox, the server's token reaching an added mailbox, and the
+  address check removed. 169 office and Tidewell tests pass. Chromium at
+  1440px and iPhone 13: Settings, a case, the inbox and Today, no sideways
+  scroll, no errors. Not tested: real Google. The visits test failed once
+  in a full run and passed alone and on the next full run; not traced.
+
 ## Blog, fed from Holo (LIVE 18/11/2026)
 
 Tom signed up to Holo (an AI blog writer) and pasted its embed code

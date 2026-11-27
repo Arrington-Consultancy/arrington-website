@@ -104,7 +104,10 @@ async function main() {
   const mailbox = createMailbox(process.env, { store });
   if (mailbox.reload) await mailbox.reload();
   console.log(describeMailStatus(process.env, mailbox));
-  const { app, office } = createApp({ pool, mailbox, firm: f, sessionSecret: secret, production });
+  const { app, office, room } = createApp({ pool, mailbox, firm: f, sessionSecret: secret, production });
+  // The mailboxes the owner added in Settings, one per company.
+  await room.reload();
+  if (room.describe()) console.log(room.describe());
   app.listen(PORT, () => console.log(`Abacus office running on port ${PORT}`));
 
   if (ai.aiEnabled()) ai.probe().then((r) => console.log(`Abacus office AI probe: ${r.ok ? 'ok, ' : 'FAILED, '}${r.message}`)).catch(() => {});

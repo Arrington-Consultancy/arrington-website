@@ -108,14 +108,35 @@ class Store {
     const r = await this.q('SELECT c.*, u.display_name AS owner_display, u.username AS owner_username FROM cases c LEFT JOIN users u ON u.id = c.owner_id WHERE c.id = $1', [id]);
     return r.rows[0] || null;
   }
-  async insertCase(email, brand = '') {
+  // from: which mailbox it came into ({ id, address }); nothing for the
+  // mailbox set on the server.
+  async insertCase(email, brand = '', from = null) {
+    const sentTo = Array.isArray(email.to) ? [...new Set(email.to.map((a) => String(a).trim().toLowerCase()).filter(Boolean))].join(', ').slice(0, 600) : '';
     const r = await this.q(
-      `INSERT INTO cases (message_id, mailbox_email_id, thread_id, from_address, subject, body, received_at, brand)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (message_id) DO NOTHING RETURNING *`,
-      [email.messageId || email.id, String(email.id), email.threadId || '', String(email.from || '').slice(0, 300), String(email.subject || '').slice(0, 500), String(email.body || '').slice(0, 20000), londonInstant(email.receivedAt), String(brand || '').slice(0, 40)]
+      `INSERT INTO cases (message_id, mailbox_email_id, thread_id, from_address, subject, body, received_at, brand, mailbox_id, mailbox_address, sent_to)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) ON CONFLICT (message_id) DO NOTHING RETURNING *`,
+      [email.messageId || email.id, String(email.id), email.threadId || '', String(email.from || '').slice(0, 300), String(email.subject || '').slice(0, 500), String(email.body || '').slice(0, 20000), londonInstant(email.receivedAt), String(brand || '').slice(0, 40), from && from.id ? from.id : null, String((from && from.address) || '').slice(0, 200), sentTo]
     );
     return r.rows[0] || null;
   }
+
+  // ---- mailboxes added in Settings (one per company, more later) ----
+  async mailboxes() { return (await this.q('SELECT * FROM mailboxes ORDER BY id')).rows; }
+  async mailboxById(id) { return (await this.q('SELECT * FROM mailboxes WHERE id = $1', [id])).rows[0] || null; }
+  // Returns the new row, or null when that address is already there.
+  async addMailbox({ brand, address, by }) {
+    const r = await this.q('INSERT INTO mailboxes (brand, address, created_by) VALUES ($1, $2, $3) ON CONFLICT (address) DO NOTHING RETURNING *', [String(brand || '').slice(0, 40), String(address).trim().toLowerCase().slice(0, 200), String(by || '').slice(0, 200)]);
+    return r.rows[0] || null;
+  }
+  // The start is set the first time only: a mailbox connected again after a
+  // break still takes in what arrived since it first joined the office.
+  async connectMailbox(id, { token, by, at }) {
+    const r = await this.q('UPDATE mailboxes SET token = $2, connected_by = $3, connected_at = $4, start_at = COALESCE(start_at, $4) WHERE id = $1 RETURNING *', [id, token, String(by || '').slice(0, 200), at]);
+    return r.rows[0] || null;
+  }
+  async disconnectMailbox(id) { await this.q("UPDATE mailboxes SET token = '', connected_by = '', connected_at = NULL WHERE id = $1", [id]); }
+  async setMailboxBrand(id, brand) { await this.q('UPDATE mailboxes SET brand = $2 WHERE id = $1', [id, String(brand || '').slice(0, 40)]); }
+  async removeMailbox(id) { await this.q('DELETE FROM mailboxes WHERE id = $1', [id]); }
   // A complaint typed in by staff (lib/channels.js). Its message id is made
   // here and can never be a real email's, so the mailbox sync never meets it.
   // logId: the form's own one-time id, so the same form sent twice is one

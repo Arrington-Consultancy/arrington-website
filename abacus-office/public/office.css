@@ -459,3 +459,14 @@ p { margin: 0 0 0.8rem; }
 .to-co-coastline .to-bar::after { height: 4px; background: linear-gradient(90deg, #00B4F0 0 60%, #9EDCF9 60% 100%); }
 /* Coastline's logo is white on charcoal, so its tile is charcoal too. */
 .to-co-coastline .to-logo, .to-tag-co-coastline { background: #231F20; border-color: #231F20; }
+
+/* Mailboxes in Settings: one row per mailbox, its company and its buttons. */
+.to-mailboxes { list-style: none; margin: 0.8rem 0; padding: 0; display: grid; gap: 0.8rem; }
+.to-mailbox { border: 1px solid var(--line); border-radius: var(--radius); padding: 0.8rem 1rem; background: var(--paper); }
+.to-mailbox .to-status-line { margin: 0; overflow-wrap: anywhere; }
+.to-mailbox .to-actions { margin-top: 0.6rem; }
+.to-mailbox .to-inline-form { margin: 0; }
+.to-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* An email address is one long word: let it wrap on a phone. */
+.to-note, .to-flash, .to-small, .to-lede, .to-email-when, .to-email-from, .to-history span { overflow-wrap: anywhere; }
+.to-mailbox select { font: inherit; padding: 0.45rem 0.6rem; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; color: inherit; max-width: 100%; }
