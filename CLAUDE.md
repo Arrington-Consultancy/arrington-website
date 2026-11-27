@@ -10994,6 +10994,38 @@ Tom says so.** Managers' own addresses are not built: Tom set them aside.
   1440px and iPhone 13: Settings, a case, the inbox and Today, no sideways
   scroll, no errors. Not tested: real Google. The visits test failed once
   in a full run and passed alone and on the next full run; not traced.
+- **The firm's email is Microsoft 365, not Gmail (found 27/11/2026).** Tom
+  asked for Dan's emails to be checked for the provider. Nothing in them
+  names it, but public DNS does: `a2btransportcornwall.com` and
+  `a2btaxistruro.com` both deliver to `*.mail.protection.outlook.com`, with
+  SPF `spf.protection.outlook.com` and autodiscover at `outlook.com` (read
+  through dns.google, 27/11/2026). Their links are also rewritten by Sophos
+  email protection, so somebody runs their IT. The Abacus and Coastline
+  domains were not checked (names not known here); Daniel Crossland signs
+  for all three companies from one `a2btransportcornwall.com` address.
+  **So the mailboxes added in Settings must connect to Microsoft 365, and
+  what is built above connects Gmail only.** Still to build: a provider on
+  each mailbox row, a Microsoft sign-in (tenant ID, client ID and secret
+  from an app registration in their tenant; delegated Mail.ReadWrite, plus
+  Mail.ReadWrite.Shared if the bookings addresses are shared mailboxes,
+  which is common in Microsoft 365 and means signing in as a person with
+  access, not as the mailbox), the rotated refresh token saved back sealed,
+  a sent check, and `providerId` passed to the Outlook driver (the office's
+  `emailOf` does not pass it today, so a reply draft would fail). Tom's own
+  email of 16/11 says Tim "doesn't have the emails sat with him", so Tim is
+  not the route to the mailboxes; whoever runs their Microsoft 365 is.
+- **From Daniel Crossland (manager, A2B; forwarded by Dan 16/11/2026):**
+  fixed prices cannot be kept by hand ("far too many different rates"),
+  they must come from iCabbi through the API; iCabbi are "already looking
+  into getting us API access for the Transport Hub"; a shorter escalation
+  for serious complaints (done 16/11). Dan, 17/11: "chasing for the API
+  keys this week".
+- **Tom, 27/11/2026, later the same morning (not built, direction only):**
+  iCabbi is the long-run aim; until then staff key bookings into iCabbi by
+  hand, so the office should set out what the AI read from a booking email
+  with each item copyable. Each company may have several mailboxes (built).
+  Managers have their own addresses, which staff do not see; anything sent
+  to a main address is open to the company.
 - **On the preview office, 27/11/2026:** working branch `764d83b`, preview
   deployment `7c58ed6d` (SUCCESS; the sign-in page answers and the new
   stylesheet is served). Written to the Handoff Log (entry of 27 November
