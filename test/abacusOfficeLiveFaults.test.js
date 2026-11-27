@@ -80,7 +80,7 @@ test('over HTTP: no mailbox, no alerts, the screens say so, approval is not sent
   };
   const seed = async (subject, fields) => {
     const row = await store.insertCase({ id: `m-${subject}`, messageId: `<${subject}@mail.example.invalid>`, from: 'Jenna <jenna@example.invalid>', subject, body: 'Can I have a taxi on Friday at 6am from 12 Arwenack Street to Newquay Airport, two of us. 07700 900123.', receivedAt: new Date() });
-    await store.updateCase(row.id, { kind: 'bookings', status: 'new', draft: 'Hi Jenna,\n\nThanks for getting in touch. We will confirm Friday at 6am shortly.\n\nThanks,\nCornwall Taxis', reading: { intent: 'new_booking', customer_name: 'Jenna', phone: '07700 900123', journey: { date: '2026-11-13', time: '06:00', pickup: '12 Arwenack Street, Falmouth', destination: 'Newquay Airport', passengers: '2', flight: '' }, missing: [], summary: 'A taxi to the airport.' }, ...fields });
+    await store.updateCase(row.id, { kind: 'bookings', status: 'new', draft: 'Hi Jenna,\n\nThanks for getting in touch. We will confirm Friday at 6am shortly.\n\nThanks,\nCornwall Taxis', reading: { intent: 'new_booking', customer_name: 'Jenna', phone: '07700 900123', journey: { date: '2031-11-13', time: '06:00', pickup: '12 Arwenack Street, Falmouth', destination: 'Newquay Airport', passengers: '2', flight: '' }, missing: [], summary: 'A taxi to the airport.' }, ...fields });
     return row.id;
   };
 
@@ -136,7 +136,7 @@ test('over HTTP: no mailbox, no alerts, the screens say so, approval is not sent
   // A stand-in booking says plainly it is practice and drafts no confirmation.
   const bid = await seed('booking-two', {});
   const before = (await store.caseById(bid)).draft;
-  r = await none.post(`/case/${bid}/book`, { date: '2026-11-13', time: '06:00', pickup: '12 Arwenack Street, Falmouth', destination: 'Newquay Airport', name: 'Jenna', phone: '07700 900123', passengers: '2', vehicle: 'Car (up to 4)', signed_off: 'yes' }, `/case/${bid}`);
+  r = await none.post(`/case/${bid}/book`, { date: '2031-11-13', time: '06:00', pickup: '12 Arwenack Street, Falmouth', destination: 'Newquay Airport', name: 'Jenna', phone: '07700 900123', passengers: '2', vehicle: 'Car (up to 4)', signed_off: 'yes' }, `/case/${bid}`);
   kase = await store.caseById(bid);
   assert.ok(kase.dispatch_ref, 'recorded on the stand-in');
   assert.equal(kase.draft, before, 'no confirmation drafted from a stand-in booking');

@@ -16,7 +16,7 @@ const DB = process.env.ABACUS_OFFICE_TEST_DATABASE_URL;
 const BASE = 'https://api.example-icabbi.invalid/v2';
 const ENV = { ABACUS_OFFICE_DISPATCH_DRIVER: 'icabbi', ABACUS_OFFICE_ICABBI_BASE_URL: BASE, ABACUS_OFFICE_ICABBI_API_KEY: 'app-key', ABACUS_OFFICE_ICABBI_SECRET: 'secret-key', ABACUS_OFFICE_ICABBI_VEHICLE_TYPES: 'Car (up to 4)=R4; 8 seater=MPV8' };
 const LIVE = { ...ENV, ABACUS_OFFICE_ICABBI_LIVE_WRITES: 'true' };
-const JOB = { date: '2026-12-02', time: '05:40', pickup: '12 Arwenack Street, Falmouth', destination: 'Newquay Airport', name: 'Jenna Pascoe', phone: '07700 900123', passengers: '2', vehicle: 'Car (up to 4)', notes: 'Two suitcases', flight: 'fr 1234' };
+const JOB = { date: '2031-12-02', time: '05:40', pickup: '12 Arwenack Street, Falmouth', destination: 'Newquay Airport', name: 'Jenna Pascoe', phone: '07700 900123', passengers: '2', vehicle: 'Car (up to 4)', notes: 'Two suitcases', flight: 'fr 1234' };
 
 // A fake iCabbi, in the envelope the spec documents: { version, code, body,
 // warnings } on success and { error: true, code, message } on failure.
@@ -65,14 +65,14 @@ test('a phone becomes E.164, a London time carries its own offset, and the vehic
   assert.equal(icabbi.toE164('call me'), null);
   assert.equal(icabbi.toE164('0800 123'), null, 'too short is refused, not guessed');
   assert.equal(icabbi.londonIso('2026-07-01', '10:15'), '2026-07-01T10:15:00+01:00', 'summer is BST');
-  assert.equal(icabbi.londonIso('2026-12-02', '05:40'), '2026-12-02T05:40:00+00:00', 'winter is GMT');
+  assert.equal(icabbi.londonIso('2031-12-02', '05:40'), '2031-12-02T05:40:00+00:00', 'winter is GMT');
   assert.deepEqual(icabbi.parseVehicleMap('Car (up to 4)=R4; 8 seater=MPV8; junk; bad=has space'), { 'car (up to 4)': 'R4', '8 seater': 'MPV8' });
 });
 
 test('the booking sent to iCabbi is built from the checked job, and anything it cannot be sure of is refused, never guessed', () => {
   const s = icabbi.settings(ENV);
   const b = icabbi.toBooking(JOB, s, { ref: 'abacus-7-1', idempotencyKey: 'office-abacus-7-1', actorName: 'Sam' });
-  assert.equal(b.date, '2026-12-02T05:40:00+00:00');
+  assert.equal(b.date, '2031-12-02T05:40:00+00:00');
   assert.equal(b.phone, '+447700900123');
   assert.deepEqual(b.address, { formatted: '12 Arwenack Street, Falmouth' });
   assert.deepEqual(b.destination, { formatted: 'Newquay Airport' });
@@ -104,7 +104,7 @@ test('with live writes on: check, then the board, then add, with the keys as Bas
   assert.equal(r.ref, '991A');
   assert.equal(r.statusWords, 'in dispatch, no driver yet');
   assert.equal(g.calls[1].query.phone, '+447700900123');
-  assert.equal(g.calls[1].query.from, '2026-12-02 00:00:00');
+  assert.equal(g.calls[1].query.from, '2031-12-02 00:00:00');
   assert.equal(g.calls[2].body.idempotency_key, 'office-abacus-7-1');
   assert.equal(store.rows[0].externalId, '991A');
   assert.match(describeDispatchStatus(LIVE), /LIVE: signed-off bookings go into iCabbi; 2 vehicle types mapped/);
@@ -114,12 +114,12 @@ test('with live writes on: check, then the board, then add, with the keys as Bas
 });
 
 test('the same job already on the board is refused before anything is added', async () => {
-  const g = fakeIcabbi({ board: [{ trip_id: '880A', date: '2026-12-02T06:10:00+00:00', status: 'NEW', address: { formatted: '12 Arwenack St' } }, { trip_id: '870A', date: '2026-12-02T05:45:00+00:00', status: 'CUSTOMER_CANCELLED' }] });
+  const g = fakeIcabbi({ board: [{ trip_id: '880A', date: '2031-12-02T06:10:00+00:00', status: 'NEW', address: { formatted: '12 Arwenack St' } }, { trip_id: '870A', date: '2031-12-02T05:45:00+00:00', status: 'CUSTOMER_CANCELLED' }] });
   const d = createDispatch({ store: fakeStore(), env: LIVE, fetch: g.fetch });
   await assert.rejects(d.book({ job: JOB, kase: { id: 7 }, brand: 'abacus' }), /already has a booking for \+447700900123 at 06:10 \(trip 880A\) from 12 Arwenack St\. It looks like the same job, so nothing was booked/);
   assert.equal(g.paths().includes('POST /bookings/add/'), false);
   // Three hours apart is a different job, and a cancelled one never counts.
-  const far = fakeIcabbi({ board: [{ trip_id: '880A', date: '2026-12-02T09:00:00+00:00', status: 'NEW' }] });
+  const far = fakeIcabbi({ board: [{ trip_id: '880A', date: '2031-12-02T09:00:00+00:00', status: 'NEW' }] });
   await createDispatch({ store: fakeStore(), env: LIVE, fetch: far.fetch }).book({ job: JOB, kase: { id: 8 }, brand: 'abacus' });
   assert.equal(far.paths().at(-1), 'POST /bookings/add/');
 });
@@ -191,7 +191,7 @@ test('through the office: the sign-off tick, the record on the case, the status 
   assert.deepEqual(await swept.refreshStatuses(), { checked: 1, changed: 0 }, 'an unchanged status is not noted twice');
   let events = (await store.eventsFor(kase.id)).map((e) => `${e.kind}: ${e.detail}`);
   assert.ok(events.some((e) => /^dispatch_status: iCabbi: 991A driver assigned \(driver Steve, car 14\)$/.test(e)), events.join('\n'));
-  assert.ok(events.some((e) => /^booked: Booked into iCabbi as 991A: 2026-12-02 05:40, .* signed off by Sam \(in dispatch, no driver yet\)$/.test(e)), events.join('\n'));
+  assert.ok(events.some((e) => /^booked: Booked into iCabbi as 991A: 2031-12-02 05:40, .* signed off by Sam \(in dispatch, no driver yet\)$/.test(e)), events.join('\n'));
 
   // Cancelling needs the tick and a reason, and is recorded.
   await assert.rejects(office.cancelBooking(k, user, false, 'Customer cancelled'), /Tick the box/);

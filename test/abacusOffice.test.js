@@ -185,7 +185,7 @@ test('the AI recommends passing a complaint up, a safety matter always goes up, 
   assert.match(ai.complaintSystem('2026-11-09', { name: 'X', town: 'T', county: 'C', phone: '', signature: 'X', facts: [] }), /pass_to_manager: whether this one should be passed up/);
 
   const dispatch = require('../abacus-office/lib/dispatch');
-  const full = { date: '2026-11-13', time: '19:30', pickup: 'The Moor', destination: 'Penryn', name: 'Claire Rowe', phone: '07700 900999', passengers: '2' };
+  const full = { date: '2031-11-13', time: '19:30', pickup: 'The Moor', destination: 'Penryn', name: 'Claire Rowe', phone: '07700 900999', passengers: '2' };
   assert.deepEqual(dispatch.cleanJob(full).missing, []);
   assert.deepEqual(dispatch.cleanJob({ ...full, phone: '' }).missing, ['a phone number']);
   assert.deepEqual(dispatch.cleanJob({ ...full, time: '7.30pm' }).missing, ['a time as HH:MM']);
@@ -395,7 +395,7 @@ test('the office over HTTP: login, forced password change, one case per email, r
   // Booking into dispatch: refused without the sign-off tick, refused with a
   // detail missing, booked with both, and never twice.
   const rowe = await byId('<demo-rowe@example.invalid>');
-  const bookingFields = { date: '2026-11-13', time: '19:30', pickup: 'The Moor', destination: 'Penryn', name: 'Claire Rowe', phone: '07700 900999', passengers: '2', vehicle: 'Car (up to 4)', notes: '' };
+  const bookingFields = { date: '2031-11-13', time: '19:30', pickup: 'The Moor', destination: 'Penryn', name: 'Claire Rowe', phone: '07700 900999', passengers: '2', vehicle: 'Car (up to 4)', notes: '' };
   r = await sam.post(`/case/${rowe.id}/book`, bookingFields, `/case/${rowe.id}`);
   assert.equal((await byId('<demo-rowe@example.invalid>')).dispatch_ref, '', 'no tick, nothing booked');
   r = await sam.post(`/case/${rowe.id}/book`, { ...bookingFields, phone: '', signed_off: 'yes' }, `/case/${rowe.id}`);

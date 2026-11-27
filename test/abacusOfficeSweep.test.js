@@ -44,7 +44,7 @@ test('the sweep, over HTTP: access, double presses, old tabs, and wording with n
     aiN += 1;
     const isComplaint = /JUDGING IT/.test(system);
     const o = isComplaint ? { seriousness: 'minor', summary: 's', firm_at_fault: 'unclear', for_licensing: false, pass_to_manager: false, pass_to_manager_why: '', staff_steps: ['x'], reply: `Hi,\n\nComplaint reply v${aiN}.\n\nThanks,\nCornwall Taxis` }
-      : { intent: 'new_booking', customer_name: 'Jenna', phone: '07700 900123', reference: '', journey: { date: '2026-11-13', time: '06:00', pickup: 'A', destination: 'B', passengers: '2', flight: '' }, missing: [], seriousness: 'none', summary: 'A taxi.', reply: `Hi Jenna,\n\nAI reply v${aiN}.\n\nThanks,\nCornwall Taxis`, held_back: '', subject: 'Account work for your guests', body: 'Hello,\n\nWe run account work for hotels in Falmouth and would like to help.\n\nThanks,\nSam' };
+      : { intent: 'new_booking', customer_name: 'Jenna', phone: '07700 900123', reference: '', journey: { date: '2031-11-13', time: '06:00', pickup: 'A', destination: 'B', passengers: '2', flight: '' }, missing: [], seriousness: 'none', summary: 'A taxi.', reply: `Hi Jenna,\n\nAI reply v${aiN}.\n\nThanks,\nCornwall Taxis`, held_back: '', subject: 'Account work for your guests', body: 'Hello,\n\nWe run account work for hotels in Falmouth and would like to help.\n\nThanks,\nSam' };
     return { stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify(o) }] };
   } } }));
   const firm = { name: 'Cornwall Taxis', short: 'Cornwall', town: 'Falmouth', county: 'Cornwall', phone: '', signature: 'Cornwall Taxis', facts: [], fixedPrices: [], demo: false, logo: '', mailboxBrand: 'abacus', brands: [{ id: 'abacus', name: 'Abacus & Falmouth Taxis' }, { id: 'coastline', name: 'Coastline Travel' }] };
@@ -55,7 +55,7 @@ test('the sweep, over HTTP: access, double presses, old tabs, and wording with n
   const seed = async (subject, brand, fields) => {
     seq += 1;
     const row = await store.insertCase({ id: `m${seq}`, messageId: `<m${seq}@x.invalid>`, from: 'Jenna <jenna@example.invalid>', subject, body: 'Body of the email, long enough.', receivedAt: new Date() }, brand);
-    await store.updateCase(row.id, { kind: 'bookings', status: 'new', reading_source: 'ai', draft: `Hi Jenna,\n\nOriginal ${subject}.\n\nThanks,\nCornwall Taxis`, reading: { intent: 'new_booking', customer_name: 'Jenna', phone: '07700 900123', journey: { date: '2026-11-13', time: '06:00', pickup: '12 Arwenack Street', destination: 'Newquay Airport', passengers: '2', flight: '' }, missing: [], summary: 'A taxi.' }, ...fields });
+    await store.updateCase(row.id, { kind: 'bookings', status: 'new', reading_source: 'ai', draft: `Hi Jenna,\n\nOriginal ${subject}.\n\nThanks,\nCornwall Taxis`, reading: { intent: 'new_booking', customer_name: 'Jenna', phone: '07700 900123', journey: { date: '2031-11-13', time: '06:00', pickup: '12 Arwenack Street', destination: 'Newquay Airport', passengers: '2', flight: '' }, missing: [], summary: 'A taxi.' }, ...fields });
     return row.id;
   };
   const start = async (mailbox, aiOn) => {
@@ -137,7 +137,7 @@ test('the sweep, over HTTP: access, double presses, old tabs, and wording with n
   // ---------- B. DOUBLE PRESSES AND STALE PAGES ----------
   // book twice at once
   const bk = await seed('book-twice', 'abacus', {});
-  const job = { date: '2026-11-13', time: '06:00', pickup: '12 Arwenack Street', destination: 'Newquay Airport', name: 'Jenna', phone: '07700 900123', passengers: '2', vehicle: 'Car (up to 4)', signed_off: 'yes' };
+  const job = { date: '2031-11-13', time: '06:00', pickup: '12 Arwenack Street', destination: 'Newquay Airport', name: 'Jenna', phone: '07700 900123', passengers: '2', vehicle: 'Car (up to 4)', signed_off: 'yes' };
   let tok = await sam.token(`/case/${bk}`);
   await Promise.all([sam.send(`/case/${bk}/book`, job, tok), sam.send(`/case/${bk}/book`, job, tok), sam.send(`/case/${bk}/book`, job, tok)]);
   let n = (await pool.query('SELECT count(*)::int AS n FROM dispatch_bookings WHERE case_id = $1', [bk])).rows[0].n;
