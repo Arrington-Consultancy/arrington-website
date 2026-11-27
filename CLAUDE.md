@@ -10994,6 +10994,13 @@ Tom says so.** Managers' own addresses are not built: Tom set them aside.
   1440px and iPhone 13: Settings, a case, the inbox and Today, no sideways
   scroll, no errors. Not tested: real Google. The visits test failed once
   in a full run and passed alone and on the next full run; not traced.
+- **On the preview office, 27/11/2026:** working branch `764d83b`, preview
+  deployment `7c58ed6d` (SUCCESS; the sign-in page answers and the new
+  stylesheet is served). Written to the Handoff Log (entry of 27 November
+  2026, about 07:15 UTC). To release: fast-forward or merge
+  `feature/office-company-mailboxes` (commit `48b6743`, the second parent
+  of `764d83b`) into main, on Tom's word only. It must go without the
+  unapproved AI effort commit `2836569`, which is on the working branch.
 
 ## Blog, fed from Holo (LIVE 18/11/2026)
 
