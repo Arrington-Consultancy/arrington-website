@@ -122,6 +122,9 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     res.locals.channels = CHANNELS;
     res.locals.dispatchLabel = dispatch.label;
     res.locals.dispatchLive = Boolean(dispatch.live);
+    // Jobs are keyed into the dispatch system by hand and recorded here.
+    res.locals.dispatchManual = Boolean(dispatch.manual);
+    res.locals.dispatchSystem = dispatch.system || 'iCabbi';
     // Whether an alert email can actually go, so no page says a manager was
     // emailed when nothing could be sent.
     res.locals.alertsReady = Boolean(alerts.smtpConfig(alertsEnv).ready);
@@ -532,8 +535,11 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   });
   act('book', async (req) => {
     try {
-      const { ref, statusWords, confirmed } = await office.book(req.kase, req.user, req.body, req.body.signed_off === 'yes');
-      flash(req, 'ok', dispatch.live ? `Booked into ${dispatch.label} as ${ref}${statusWords ? `, ${statusWords}` : ''}.${confirmed ? ' The reply now confirms it; check it and approve.' : ' Change the reply to confirm it before approving.'}` : `Recorded on the stand-in dispatch as ${ref}. This is not a live dispatch system: no car is booked, so do not tell the customer it is booked.`);
+      const { ref, statusWords, confirmed, manual, numbered, system } = await office.book(req.kase, req.user, req.body, req.body.signed_off === 'yes');
+      const next = confirmed ? ' The reply now confirms it; check it and approve.' : ' Change the reply to confirm it before approving.';
+      flash(req, 'ok', manual
+        ? (numbered ? `Recorded: keyed into ${system} by hand as job ${ref}.${next}` : `Recorded as keyed into ${system} by hand. No ${system} job number was given, so the office calls it ${ref}.${next}`)
+        : `Booked into ${dispatch.label} as ${ref}${statusWords ? `, ${statusWords}` : ''}.${next}`);
     } catch (e) {
       if (!e.checkedOnly) throw e;
       flash(req, 'ok', e.message);
@@ -546,7 +552,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   act('change-booking', async (req) => {
     try {
       const r = await office.changeBooking(req.kase, req.user, req.body, req.body.signed_off === 'yes', req.body.ref);
-      flash(req, 'ok', `${r.ref} changed in ${dispatch.label.replace(/ \(.*\)$/, '')}: ${r.changes.join('; ')}.`);
+      flash(req, 'ok', dispatch.manual ? `${r.ref}: change recorded (${r.changes.join('; ')}). Make sure ${dispatch.system} shows the same.` : `${r.ref} changed in ${dispatch.label.replace(/ \(.*\)$/, '')}: ${r.changes.join('; ')}.`);
     } catch (e) {
       if (!e.checkedOnly) throw e;
       flash(req, 'ok', e.message);

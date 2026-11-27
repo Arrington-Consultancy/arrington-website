@@ -470,3 +470,10 @@ p { margin: 0 0 0.8rem; }
 /* An email address is one long word: let it wrap on a phone. */
 .to-note, .to-flash, .to-small, .to-lede, .to-email-when, .to-email-from, .to-history span { overflow-wrap: anywhere; }
 .to-mailbox select { font: inherit; padding: 0.45rem 0.6rem; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; color: inherit; max-width: 100%; }
+/* Keying a job in by hand: a Copy button beside each line. */
+.to-field > label { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 0.25rem; }
+.to-copyable { display: flex; gap: 0.4rem; align-items: stretch; min-width: 0; }
+.to-copyable input, .to-copyable select { flex: 1 1 auto; min-width: 0; }
+.to-copy { flex: none; font: inherit; font-size: 0.82rem; font-weight: 700; min-width: 4.2rem; padding: 0 0.6rem; border: 1.5px solid var(--teal); border-radius: 8px; background: var(--teal-pale); color: var(--teal); cursor: pointer; }
+.to-copy:hover { background: var(--teal); color: #fff; }
+.to-copy:focus-visible { outline: 3px solid var(--red); outline-offset: 2px; }

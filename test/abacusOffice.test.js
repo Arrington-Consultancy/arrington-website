@@ -212,7 +212,7 @@ test('the AI recommends passing a complaint up, a safety matter always goes up, 
     assert.match(e.message, /iCabbi is not connected yet/);
     assert.match(e.message, /Nothing was booked/);
     assert.match(dispatch.describeDispatchStatus({ ABACUS_OFFICE_DISPATCH_DRIVER: 'icabbi' }), /NOT connected/);
-    assert.match(dispatch.describeDispatchStatus({}), /stand-in/);
+    assert.match(dispatch.describeDispatchStatus({}), /by hand \(staff key each job into iCabbi themselves/);
     // No AI path reaches a booking: the only caller of office.book is the route behind the tick.
     const appSrc = read('abacus-office/app.js');
     assert.match(appSrc, /office\.book\(req\.kase, req\.user, req\.body, req\.body\.signed_off === 'yes'\)/);
@@ -411,7 +411,7 @@ test('the office over HTTP: login, forced password change, one case per email, r
   assert.equal((await pool.query('SELECT count(*)::int AS n FROM dispatch_bookings')).rows[0].n, 1, 'never booked twice');
   const bookedEvent = (await pool.query("SELECT detail FROM case_events WHERE case_id = $1 AND kind = 'booked'", [rowe.id])).rows;
   assert.equal(bookedEvent.length, 1);
-  assert.match(bookedEvent[0].detail, /signed off by sam/);
+  assert.match(bookedEvent[0].detail, /Keyed into iCabbi by hand, no iCabbi job number given .*Recorded by sam/);
 
   // The list pages carry the live stamp and live.json changes with the data.
   r = await sam.get('/live.json');

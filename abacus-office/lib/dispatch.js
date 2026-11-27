@@ -6,10 +6,15 @@
 // nothing gets booked without one of your staff pressing the button").
 //
 // Drivers, chosen by ABACUS_OFFICE_DISPATCH_DRIVER:
-//   standin   the default. Books into this office's own dispatch_bookings
-//             table and hands back a reference, so the whole flow (read,
-//             check, sign off, book, confirm) can be used before the live
-//             connection exists. Nothing leaves this service.
+//   standin   the default: BY HAND (Tom, 27 November 2026: until iCabbi is
+//             plugged in, "we need to find the easiest way for staff to
+//             transport the information manually... each bit can be copied
+//             to a clipboard and pasted into icabbi"). The office sets out
+//             what the AI read with a Copy button on each line; staff key
+//             the job into iCabbi themselves, then record here that they
+//             did, with iCabbi's own job number. The record goes into this
+//             office's dispatch_bookings table. Nothing leaves this service
+//             and the office books nothing in iCabbi.
 //   icabbi    the live connection, written against iCabbi's booking API
 //             once Dan's account has API access (requested by Dan, for his
 //             own office system). Until then it refuses every booking with
@@ -18,7 +23,13 @@
 // Whatever the driver, book() is only ever called from the route behind the
 // staff sign-off tick. No AI path reaches it.
 
-const LABELS = { standin: 'Stand-in dispatch (this office only)', icabbi: 'iCabbi' };
+// What the firm's dispatch system is called on screen while jobs are keyed
+// in by hand.
+const systemName = (env = process.env) => String(env.ABACUS_OFFICE_DISPATCH_NAME || 'iCabbi').replace(/[^A-Za-z0-9 &.-]/g, '').trim().slice(0, 30) || 'iCabbi';
+const LABELS = { standin: 'iCabbi (keyed in by hand)', icabbi: 'iCabbi' };
+// The job number staff copy back from the dispatch system: letters, digits
+// and the few marks a reference carries.
+const cleanRef = (v) => String(v || '').replace(/\s+/g, ' ').trim().replace(/[^A-Za-z0-9 #/_.-]/g, '').slice(0, 40);
 
 class DispatchNotConnected extends Error {
   constructor(message) { super(message); this.code = 'REFUSED'; }
@@ -78,19 +89,35 @@ function cleanJob(input) {
   return { job, missing };
 }
 
-function standinDriver(store, prefix) {
+function standinDriver(store, prefix, system = 'iCabbi') {
   return {
     name: 'standin',
-    label: LABELS.standin,
+    label: `${system} (keyed in by hand)`,
     live: false,
-    async book({ job, kase, brand, actor }) {
-      // Two jobs booked in the same instant would be given the same next
-      // reference; the second simply takes the one after.
+    // Staff key the job into the dispatch system themselves; this records it.
+    manual: true,
+    system,
+    async book({ job, kase, brand, actor, manualRef }) {
+      const given = cleanRef(manualRef);
+      if (given) {
+        // The dispatch system's own job number is the reference, so a later
+        // change or cancel email that quotes it finds this record.
+        try {
+          await store.insertDispatchBooking({ ref: given, caseId: kase ? kase.id : null, brand, job, actor, externalId: given });
+        } catch (e) {
+          if (e.code !== '23505') throw e;
+          throw new DispatchNotConnected(`${system} job ${given} is already recorded in this office against another email. Check the number. Nothing was recorded.`);
+        }
+        return { ref: given, status: 'booked', statusWords: `keyed into ${system} by hand`, manual: true, numbered: true };
+      }
+      // No job number given: the office keeps its own reference. Two jobs
+      // recorded in the same instant would be given the same next one; the
+      // second simply takes the one after.
       for (let attempt = 0; ; attempt += 1) {
         const ref = await store.nextDispatchRef(prefix, attempt);
         try {
           await store.insertDispatchBooking({ ref, caseId: kase ? kase.id : null, brand, job, actor });
-          return { ref, status: 'booked', statusWords: 'recorded in this office' };
+          return { ref, status: 'booked', statusWords: `keyed into ${system} by hand, no ${system} job number given`, manual: true, numbered: false };
         } catch (e) {
           if (e.code !== '23505' || attempt >= 8) throw e;
         }
@@ -98,11 +125,11 @@ function standinDriver(store, prefix) {
     },
     async cancel({ ref }) {
       await store.setDispatchStatus(ref, { status: 'cancelled', dispatchStatus: 'CANCELLED' });
-      return { statusWords: 'cancelled' };
+      return { statusWords: `recorded as cancelled (cancelled in ${system} by hand).` };
     },
     async update({ ref, job }) {
       await store.updateDispatchJob(ref, job);
-      return { statusWords: 'changed in this office' };
+      return { statusWords: `recorded (changed in ${system} by hand)` };
     },
     async status() { return null; }
   };
@@ -190,12 +217,12 @@ function icabbiDriver(env = process.env, { store, fetch } = {}) {
 
 function createDispatch({ store, env = process.env, prefix = 'AB', fetch } = {}) {
   const name = driverName(env);
-  return name === 'icabbi' ? icabbiDriver(env, { store, fetch }) : standinDriver(store, prefix);
+  return name === 'icabbi' ? icabbiDriver(env, { store, fetch }) : standinDriver(store, prefix, systemName(env));
 }
 
 function describeDispatchStatus(env = process.env) {
   const name = driverName(env);
-  if (name === 'standin') return 'Abacus office dispatch: stand-in (bookings are recorded in this office only; no live dispatch system is connected)';
+  if (name === 'standin') return `Abacus office dispatch: by hand (staff key each job into ${systemName(env)} themselves and record it here; the office books nothing in ${systemName(env)}; no live dispatch system is connected)`;
   const icabbi = require('./icabbi');
   const s = icabbi.settings(env);
   if (!icabbi.configured(s)) return `Abacus office dispatch: iCabbi, NOT connected (needs ${icabbi.missing(s).join(', ')})`;
@@ -203,4 +230,4 @@ function describeDispatchStatus(env = process.env) {
   return `Abacus office dispatch: iCabbi at ${s.base}, keys present; ${s.writes ? 'LIVE: signed-off bookings go into iCabbi' : 'check only: iCabbi checks each booking and nothing is written (ABACUS_OFFICE_ICABBI_LIVE_WRITES is not true)'}; ${types ? `${types} vehicle type${types === 1 ? '' : 's'} mapped` : 'no vehicle types mapped, so only ordinary cars can be booked'}`;
 }
 
-module.exports = { createDispatch, describeDispatchStatus, driverName, cleanJob, missingFromReading, LABELS, DispatchNotConnected, REQUIRED };
+module.exports = { createDispatch, describeDispatchStatus, driverName, cleanJob, cleanRef, systemName, missingFromReading, LABELS, DispatchNotConnected, REQUIRED };
