@@ -10842,6 +10842,68 @@ temporary password for each, shows the passwords once to print or hand out
 sign-in, and one bad line adds nobody. Build it when Tom says the staff are
 ready to be set up, test it on a copy, and never commit Dan's staff list.
 
+### Sweep before staff go live (26/11/2026, released 27/11/2026)
+
+Tom logged a complaint at 11:50 on 26 November and it disappeared ("entered a
+complaint and it disappeared"), then: "Let's do a sweep and make sure there
+are no thunder fuck ups like that. We're going live Monday", and on the
+result: "Put them all live we are building the finished article". Branch
+`fix/office-complaint-morning-date`, tests `test/abacusOfficeGoLive.test.js`
+and the additions to `test/abacusOfficeLoggedComplaints.test.js`.
+
+- **The complaint.** The Log a complaint form's date defaults to today, and
+  today's date was read as midday, so before midday it counted as the future
+  and was refused. The day is now compared as a day in London; today means
+  now, an earlier day is kept at midday, a date that does not exist is
+  refused. A refused complaint comes back in the form (`req.session.logDraft`).
+- **Sign-in limit.** It was 8 tries per address per 15 minutes with successes
+  counted, so the ninth member of staff from one office address was locked out
+  (reproduced on the live code). Now 10 wrong tries per username per address
+  (`skipSuccessfulRequests`), with a ceiling of 300 per address.
+- **Sign-in sent twice.** A phone's password filler and a tap sent the form
+  twice and the second copy showed an expired page (in the log on every one of
+  Tom's iPhone sign-ins). `office.js` sends a form once (`data-sent`), and a
+  CSRF failure on `POST /login` redirects to `/`.
+- **A refused action goes back to its own page** (`backFor` in `app.js`).
+  helmet sets `Referrer-Policy: no-referrer`, so `req.get('referer')` was
+  always empty and every refusal thrown from an office method (a booking with
+  no sign-off, a stale edit, a status that is not allowed) landed on Today.
+  **Never read the referrer in this app.**
+- **Nothing typed is lost** (`office.js`, key `office.typed` in the tab's
+  sessionStorage). What is typed into a POST form is kept while it is sent,
+  and put back when the person is on that page again after a refusal, the
+  "open too long" page (CSRF) or the error page (`data-keep-typed`). Never a
+  password, a tick box or a hidden field; never over a field whose
+  server-rendered value has changed since (so a colleague's newer reply is
+  not overwritten; the server's own "Your version, not saved" still handles
+  that); thrown away when the form goes through; 30 minutes at most.
+- **Sessions** are `rolling`: ten hours from the last page, not from sign-in.
+- **A page waits 2.5 seconds at most** for the mailbox pull and the AI's
+  reading (`settle`), which carry on behind it. Only matters with a mailbox.
+- **Email times are London times** (`londonInstant` in `store.js`). The
+  mailbox drivers hand over "YYYY-MM-DDTHH:MM" with no zone; `new Date()` read
+  that as UTC, an hour out in summer time.
+- **Bookings:** a date or time that does not exist is refused (`cleanJob`),
+  and a pickup already gone is refused in words (`pickupGone`: a date before
+  today, or a time more than 15 minutes past today; on a change, only when the
+  date or time is what changed).
+- `/favicon.ico` and the two apple-touch-icon addresses answer 404 before any
+  session, so they are no longer sign-in redirects or steps on a visit.
+- **Test dates:** office tests that book a job use 2031 dates. A test that
+  books on a fixed near date starts failing the day after it.
+- **Proof:** 162 office and Tidewell tests pass on a local Postgres, the
+  mailbox suite included; the go-live HTTP test fails on the code that was
+  live (staff9 gets 429). Chromium at 1440px and iPhone 13 against a local
+  copy with the office clock at 09:10: the morning complaint goes in, refused
+  forms come back filled, the old-page note is put back once, every page fits
+  with no errors. Not tested: a real iPhone, a real mailbox, iCabbi.
+- **Not changed, Tom's decision when the mailbox is connected:** the first
+  pull takes up to 50 emails from the last 14 days, the AI reads them all, and
+  old ones show as overdue at once. Recommended: start from the moment of
+  connection.
+- **A typed-in complaint's overdue clock** runs from the date staff give it,
+  so one logged for two days ago is overdue at once. Left as it is.
+
 ## Blog, fed from Holo (LIVE 18/11/2026)
 
 Tom signed up to Holo (an AI blog writer) and pasted its embed code
