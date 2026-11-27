@@ -11047,6 +11047,23 @@ AI on, alerts on screen only. The sign-in page answers and the live
 released (working branch only, Tom's decision pending). Written back to the
 Handoff Log (entry of 27 November 2026, about 07:45 UTC).
 
+**Abacus's email is not Microsoft 365 (Tom, 27/11/2026: info@ and
+bookings@falmouthtaxis.com).** Public DNS the same day: `falmouthtaxis.com`
+mail goes to `iomartmail.com` (iomart hosted email, name servers at
+namecity.com), no Microsoft or Google record. So the Microsoft connection
+reaches A2B's domains only. The office's IMAP driver could read it, but only
+as the one mailbox set on the server; an IMAP mailbox type in Settings
+(address and mailbox password, sealed) is not built and waits on Tom's
+decision. An IMAP password can also send, which the OAuth routes cannot, and
+there is no sent check over IMAP. Coastline's address is not known.
+
+**TinyFish signing in to iCabbi to key jobs (raised by Tom, 27/11/2026,
+"not saying Dan would say yes or it's worth it over the API"):** advised
+against. Another third party would hold Dan's iCabbi login and see
+customers' details, a robot on a booking screen can key a job wrongly or
+twice unseen, it breaks when the screens change, and it is likely outside
+iCabbi's terms. The copy panel covers the gap; the API is the route.
+
 ## Blog, fed from Holo (LIVE 18/11/2026)
 
 Tom signed up to Holo (an AI blog writer) and pasted its embed code
