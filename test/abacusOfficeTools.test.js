@@ -241,7 +241,8 @@ test('over HTTP: search, standard replies, fares, changing a booking, reports an
   assert.match(booked.dispatch_ref, /^[A-Z]+-\d{5}$/);
   const ref = booked.dispatch_ref;
   r = await sam.get(`/case/${changeEmail}`);
-  assert.match(r.text, /Dispatch reference of the booking/);
+  // No dispatch system is connected, so staff give the job number as iCabbi shows it.
+  assert.match(r.text, /iCabbi job number of the booking/);
   // Without the tick, nothing changes.
   await sam.post(`/case/${changeEmail}/change-booking`, { ref, ...journey, time: '10:15', name: 'Ann Penrose', phone: '07700 900123', passengers: '2' }, `/case/${changeEmail}`);
   assert.equal((await store.dispatchBookingByRef(ref)).job.time, '09:30');
@@ -257,7 +258,7 @@ test('over HTTP: search, standard replies, fares, changing a booking, reports an
   assert.equal((await store.dispatchBookingByRef(ref)).job.time, '10:15');
   assert.equal((await store.caseById(changeEmail)).dispatch_ref, ref, 'the change email is linked to the booking');
   const evOrig = (await store.eventsFor(newBooking)).map((e) => e.detail).join('\n');
-  assert.match(evOrig, new RegExp(`${ref} changed in .*time from 09:30 to 10:15.*Signed off by sam, from email ${changeEmail}`), 'the original email\'s history says what changed and where from');
+  assert.match(evOrig, new RegExp(`${ref}: change recorded, made in iCabbi by hand: .*time from 09:30 to 10:15.*Recorded by sam, from email ${changeEmail}`), 'the original email\'s history says what changed and where from');
   // Changing it to what it already is changes nothing.
   r = await sam.post(`/case/${changeEmail}/change-booking`, { ...journey, time: '10:15', name: 'Ann Penrose', phone: '07700 900123', signed_off: 'yes' }, `/case/${changeEmail}`);
   assert.match(await sam.flashAfter(`/case/${changeEmail}`), /Nothing in the job is different/);
@@ -305,7 +306,7 @@ test('over HTTP: search, standard replies, fares, changing a booking, reports an
   // ---- Activity for a manager set to one company.
   r = await cora.get('/activity');
   assert.equal(r.status, 200);
-  assert.doesNotMatch(r.text, /Airport run for the Penroses|signed off by sam/i, 'a Coastline manager does not see Abacus\'s activity');
+  assert.doesNotMatch(r.text, /Airport run for the Penroses|signed off by sam|recorded by sam/i, 'a Coastline manager does not see Abacus\'s activity');
 });
 
 test('the made-up emails are cleared at start-up on every mailbox but the made-up inbox itself', () => {

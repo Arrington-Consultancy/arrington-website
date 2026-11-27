@@ -133,16 +133,19 @@ test('over HTTP: no mailbox, no alerts, the screens say so, approval is not sent
   assert.ok(kase.sent_at);
   assert.match((await store.eventsFor(id)).map((e) => e.detail).join('\n'), /Marked as sent by Olive/);
 
-  // A stand-in booking says plainly it is practice and drafts no confirmation.
+  // With no dispatch system connected a job is keyed into iCabbi by hand
+  // and recorded here (Tom, 27 November 2026). The record says so, and with
+  // the AI off the reply is left for staff to change.
   const bid = await seed('booking-two', {});
   const before = (await store.caseById(bid)).draft;
   r = await none.post(`/case/${bid}/book`, { date: '2031-11-13', time: '06:00', pickup: '12 Arwenack Street, Falmouth', destination: 'Newquay Airport', name: 'Jenna', phone: '07700 900123', passengers: '2', vehicle: 'Car (up to 4)', signed_off: 'yes' }, `/case/${bid}`);
   kase = await store.caseById(bid);
-  assert.ok(kase.dispatch_ref, 'recorded on the stand-in');
-  assert.equal(kase.draft, before, 'no confirmation drafted from a stand-in booking');
+  assert.ok(kase.dispatch_ref, 'recorded as keyed in by hand');
+  assert.equal(kase.draft, before, 'the AI is off, so the reply is not rewritten');
   r = await none.get(`/case/${bid}`);
-  assert.match(r.text, /not a live dispatch system/);
-  assert.match(r.text, /do not tell the customer it is booked/i);
+  assert.match(r.text, /Recorded as keyed into iCabbi by hand/);
+  assert.match(r.text, /No iCabbi job number was given/);
+  assert.doesNotMatch(r.text, /stand-in/i);
 
   // 2. A real mailbox (stubbed): retries and two presses make one draft.
   const saved = [];

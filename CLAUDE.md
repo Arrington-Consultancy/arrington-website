@@ -10910,129 +10910,135 @@ and the additions to `test/abacusOfficeLoggedComplaints.test.js`.
   and put-it-back code. Written back to the Handoff Log (entry of 27 November
   2026, about 07:00 UTC).
 
-### A mailbox per company (built 27/11/2026, NOT RELEASED)
+### Company mailboxes, Microsoft 365 and bookings by hand (RELEASED 27/11/2026)
 
-Tom, 27 November 2026: "each company might have multiple inboxes and
-managers will have their own email addresses", then "Lets put the managers
-emails aside for a minute and make sure the rest is sorted. Ie .com co.uk
-.net etc can all go into one company email box. We can create more down the
-line if we want them". Built on branch `feature/office-company-mailboxes`
-and merged into the working branch `claude/new-session-hbgp04`, so it is on
-the preview office only. **Not on main and not on www.a2bstaff.com until
-Tom says so.** Managers' own addresses are not built: Tom set them aside.
+Tom, 27 November 2026: "each company might have multiple inboxes"; ".com
+co.uk .net etc can all go into one company email box. We can create more
+down the line"; managers' own addresses set aside ("anyone emailing managers
+directly the staff wouldn't see. Anything to main email addresses is open
+for the company to see"); and, until iCabbi is plugged in, "the easiest way
+for staff to transport the information manually... each bit can be copied to
+a clip board and pasted into icabbi". This worker's proposals (by hand is
+automatic, not a per-user setting; managers' mailboxes stay out; Microsoft
+365 built because that is where the firm's email is) were approved with "I
+agree with all of the last few messages build and merge". Released to main
+the same day. **No mailbox is connected and nothing was run against real
+Microsoft, Google or iCabbi.**
 
-- **What it is.** Until now the office read one mailbox, set on the server,
-  feeding one company. Now the owner adds mailboxes in Settings
-  ("Mailboxes"): the mailbox's own address and its company, then Connect,
-  signing in to Google as that address. Any number, so one per company now
-  and more later. A company's other addresses (.co.uk, .net) are forwarded
-  or aliased into its mailbox by whoever runs its email (Dan or Tim); the
-  office reads the one mailbox, and each case shows "Sent to", so staff see
-  which address the customer used.
+**Mailboxes, one or more per company**
+
+- The owner adds a mailbox in Settings ("Mailboxes"): its own address, who
+  its email is with (Microsoft 365 or Google) and its company, then Connect.
+  Any number. A company's other addresses (.co.uk, .net) are aliases of, or
+  forwarded into, that mailbox by whoever runs its email; each case shows
+  "Sent to". Managers' own mailboxes are never added, so staff never see
+  them.
 - **Code.** `abacus-office/lib/mailroom.js` holds every mailbox: the
-  server's own (`lib/mailbox.js`, unchanged, entry 0) and the rows of the
-  new `mailboxes` table (`rowMailbox` in `lib/mailbox.js`). `Office` takes
-  it as `mailroom`; `office.boxFor(kase)` is the mailbox an email came into
-  (`cases.mailbox_id`, with `mailbox_address` kept on the case), and
+  server's own (`lib/mailbox.js`, entry 0) and the rows of the `mailboxes`
+  table (`provider` `outlook` or `gmail`). `office.boxFor(kase)` is the
+  mailbox an email came into (`cases.mailbox_id`, `mailbox_address`);
   `room.entryForBrand(brand)` is where a new email for a company waits.
 - **Rules it keeps.**
   - An email belongs to the company its mailbox is tied to.
-  - A reply is saved as a draft in the mailbox its email came into, and the
-    sent check asks that mailbox.
-  - A new email (Write, a typed-in complaint) is saved only in a mailbox of
-    its own company; a company with none has it copied out, as before.
-  - An added mailbox is read with its own token only. Google is asked which
-    address the token opens before the first read, and any other is
-    refused; at Connect a wrong account's token is cancelled on the spot.
-    The token set on the server is never passed to an added mailbox.
-  - Tokens are sealed under `ABACUS_OFFICE_TOKEN_KEY` and never shown.
-  - Nothing sends. Owner only; a manager gets 404.
-- **Each mailbox starts from the moment it is first connected**
-  (`mailboxes.start_at`, kept when it is connected again): emails received
-  before then are never brought in, so there is no backlog marked overdue.
-  This answers the open question from the sweep. An email's time is kept to
-  the minute, so the start is rounded down to the minute. The server's own
-  mailbox does the same when connected from Settings.
+  - A reply is a draft in the mailbox its email came into, and the sent
+    check asks that mailbox. A new email (Write, a typed-in complaint) goes
+    only into a mailbox of its own company; a company with none has it
+    copied out.
+  - Each mailbox starts from the minute it is first connected
+    (`mailboxes.start_at`, kept when connected again): nothing older is
+    brought in, so there is no backlog marked overdue.
+  - One mailbox failing does not stop the others (`partial: true`; the
+    inbox says "One mailbox was not read").
+  - Sign-ins are sealed under `ABACUS_OFFICE_TOKEN_KEY` and never shown.
+    Nothing sends. Owner only; a manager gets 404.
 - **The server's switch still rules.** Mailboxes from Settings are read only
-  when `ABACUS_OFFICE_MAIL_DRIVER=gmail` (and never beside the made-up
-  inbox). Live is `none`, so on release nothing is read and Settings says
-  what it says today. To go live with mailboxes: the DPA signed and Dan's
-  approval, Governance & Assurance told, then `ABACUS_OFFICE_MAIL_DRIVER=gmail`
-  and `ABACUS_OFFICE_TOKEN_KEY` on the service, the firm's Google client ID
-  and secret typed into Settings, and each mailbox added and connected.
-  `ABACUS_OFFICE_MAILBOX_ADDRESS` is not needed.
-- **One Google client covers the mailboxes of one Google Workspace**
-  (Internal consent screen), with one redirect address however many
-  mailboxes: `/settings/mailbox/callback`. If the three companies' email
-  sits in different Google Workspaces, or is not Google at all, that needs
-  more work (a client per mailbox, or the IMAP or Outlook drivers, which
-  are still one mailbox set on the server). **Ask Dan or Tim where each
-  company's email is hosted before promising a date.**
-- **One mailbox failing does not stop the others** (`sync` throws after
-  reading the rest, `partial: true`; the inbox says "One mailbox was not
-  read").
-- **Disconnect** cancels the token at Google and stops the reading;
-  **Remove** also takes it off the list. Either way its emails stay, and a
-  reply to one is then copied out by hand. **Change company** moves where
-  its next emails go; emails already in stay where they are.
-- **Known limits.** The same email sent to two companies' mailboxes makes
-  one case (cases are unique on the email's own message id), in whichever
-  mailbox is read first. A reply draft goes from the mailbox's main address,
-  not the .co.uk the customer wrote to, unless that is set up as a send-as
-  address in Gmail. General pages say "the company mailboxes", not an
-  address, because a long address pushed phone pages sideways.
-- **Schema:** table `mailboxes`; `cases.mailbox_id`, `mailbox_address`,
-  `sent_to`; `compositions.mailbox_id`. All added in place; proven on a
-  database made by the released code (cases kept, boot lines unchanged
-  with the driver at `none`).
-- **Tests:** `test/abacusOfficeMailboxes.test.js` (3; the HTTP one works in
-  its own schema of `ABACUS_OFFICE_TEST_DATABASE_URL` against a fake Google
-  with two mailboxes). Five planted faults each failed it: the start check
-  removed, a new email taken by another company's mailbox, a reply saved in
-  the wrong mailbox, the server's token reaching an added mailbox, and the
-  address check removed. 169 office and Tidewell tests pass. Chromium at
-  1440px and iPhone 13: Settings, a case, the inbox and Today, no sideways
-  scroll, no errors. Not tested: real Google. The visits test failed once
-  in a full run and passed alone and on the next full run; not traced.
-- **The firm's email is Microsoft 365, not Gmail (found 27/11/2026).** Tom
-  asked for Dan's emails to be checked for the provider. Nothing in them
-  names it, but public DNS does: `a2btransportcornwall.com` and
-  `a2btaxistruro.com` both deliver to `*.mail.protection.outlook.com`, with
-  SPF `spf.protection.outlook.com` and autodiscover at `outlook.com` (read
-  through dns.google, 27/11/2026). Their links are also rewritten by Sophos
-  email protection, so somebody runs their IT. The Abacus and Coastline
-  domains were not checked (names not known here); Daniel Crossland signs
-  for all three companies from one `a2btransportcornwall.com` address.
-  **So the mailboxes added in Settings must connect to Microsoft 365, and
-  what is built above connects Gmail only.** Still to build: a provider on
-  each mailbox row, a Microsoft sign-in (tenant ID, client ID and secret
-  from an app registration in their tenant; delegated Mail.ReadWrite, plus
-  Mail.ReadWrite.Shared if the bookings addresses are shared mailboxes,
-  which is common in Microsoft 365 and means signing in as a person with
-  access, not as the mailbox), the rotated refresh token saved back sealed,
-  a sent check, and `providerId` passed to the Outlook driver (the office's
-  `emailOf` does not pass it today, so a reply draft would fail). Tom's own
-  email of 16/11 says Tim "doesn't have the emails sat with him", so Tim is
-  not the route to the mailboxes; whoever runs their Microsoft 365 is.
-- **From Daniel Crossland (manager, A2B; forwarded by Dan 16/11/2026):**
-  fixed prices cannot be kept by hand ("far too many different rates"),
-  they must come from iCabbi through the API; iCabbi are "already looking
-  into getting us API access for the Transport Hub"; a shorter escalation
-  for serious complaints (done 16/11). Dan, 17/11: "chasing for the API
-  keys this week".
-- **Tom, 27/11/2026, later the same morning (not built, direction only):**
-  iCabbi is the long-run aim; until then staff key bookings into iCabbi by
-  hand, so the office should set out what the AI read from a booking email
-  with each item copyable. Each company may have several mailboxes (built).
-  Managers have their own addresses, which staff do not see; anything sent
-  to a main address is open to the company.
-- **On the preview office, 27/11/2026:** working branch `764d83b`, preview
-  deployment `7c58ed6d` (SUCCESS; the sign-in page answers and the new
-  stylesheet is served). Written to the Handoff Log (entry of 27 November
-  2026, about 07:15 UTC). To release: fast-forward or merge
-  `feature/office-company-mailboxes` (commit `48b6743`, the second parent
-  of `764d83b`) into main, on Tom's word only. It must go without the
-  unapproved AI effort commit `2836569`, which is on the working branch.
+  when `ABACUS_OFFICE_MAIL_DRIVER` is `outlook` or `gmail` (never beside the
+  made-up inbox). Live is `none`, so nothing is read and Settings says what
+  it said before.
+
+**Microsoft 365 (`abacus-office/lib/graphMailbox.js`)**
+
+- **Why.** Public DNS, read 27/11/2026: `a2btransportcornwall.com` and
+  `a2btaxistruro.com` deliver to `*.mail.protection.outlook.com`, SPF
+  `spf.protection.outlook.com`. The Abacus and Coastline domains were not
+  checked (names not known here). Their links are rewritten by Sophos, so
+  somebody runs their IT; Tim (web designer) does not hold the email.
+- **How it connects.** The firm registers an app in its own Microsoft Entra
+  (single tenant, redirect URI `<office address>/settings/mailbox/callback`,
+  delegated Mail.ReadWrite, Mail.ReadWrite.Shared, offline_access,
+  User.Read; **no Mail.Send**). The owner types the tenant ID, client ID
+  and secret into Settings (secret sealed; `ABACUS_OFFICE_OUTLOOK_*` on the
+  server wins if set), presses Connect and signs in to Microsoft.
+- **A shared mailbox** (usual for bookings@ and info@) has no sign-in of its
+  own: a person with full access signs in as themselves, and the row shows
+  "signed in as". Microsoft is asked to open the named mailbox before
+  anything is kept; a person who cannot open it is refused and their
+  sign-in is not saved.
+- **Every request names the mailbox** (`/users/{address}/...`), so a sign-in
+  reads only the mailbox on its row. Requests ask for lasting ids
+  (`Prefer: IdType="ImmutableId"`) and plain text.
+- **Microsoft changes the sign-in token as it is used.** The newest is
+  saved back sealed (`store.rotateMailboxToken`); a mailbox object is kept
+  across reloads so it is not lost. A sign-in Microsoft no longer accepts
+  reads as "needs connecting again in Settings".
+- **Sent check.** The saved draft is asked for again by the same id: still a
+  draft is unsent; in Deleted Items is thrown away; no longer a draft is
+  sent (or "other" if changed first); not found is left for a person to
+  mark, never called thrown away (a reply sent from a shared mailbox can be
+  filed in the sender's own Sent Items).
+- **Disconnect** deletes the saved sign-in from the office; Microsoft has no
+  cancel call for it, so the firm's administrator withdraws the app's access
+  to finish the job. Google rows are still cancelled at Google.
+- **To connect the real mailboxes:** the DPA signed and Dan's approval,
+  Governance & Assurance told, then `ABACUS_OFFICE_MAIL_DRIVER=outlook` and
+  `ABACUS_OFFICE_TOKEN_KEY` on the service, the app registered by whoever
+  runs the firm's Microsoft 365, its details typed into Settings, and each
+  mailbox added and connected. One app covers the mailboxes of one
+  Microsoft 365 tenant; a company in a different tenant needs its own app,
+  which is not built.
+
+**Bookings keyed into iCabbi by hand**
+
+- With no dispatch system connected (the default driver, `manual: true` in
+  `abacus-office/lib/dispatch.js`; name from `ABACUS_OFFICE_DISPATCH_NAME`,
+  default iCabbi), every booking email sets out what the AI read in the
+  order iCabbi asks for it, each line with a Copy button and "Copy the
+  whole job" (dates copy as dd/mm/yyyy). What is missing is flagged and the
+  reply asks the customer for it.
+- Staff key the job into iCabbi themselves, type the iCabbi job number
+  back, tick "I have keyed this job into iCabbi and checked it against the
+  customer's email" and press "Record it as booked in iCabbi". The job
+  number becomes the reference, so a later change or cancel email that
+  quotes it finds the booking; the same number against two emails is
+  refused. With no number the office keeps its own `AB-10001` style one.
+- The AI then redrafts the reply to confirm. History reads "Keyed into
+  iCabbi by hand as job X ... Recorded by <name>". Changes and
+  cancellations are recorded the same way ("made in iCabbi by hand").
+- **This replaces the stand-in wording** ("not a live dispatch system and
+  no car is booked"). When iCabbi's keys arrive and
+  `ABACUS_OFFICE_DISPATCH_DRIVER=icabbi` is set, the same panel becomes the
+  Book button. The office still books nothing by itself.
+
+**From Daniel Crossland (manager, A2B; forwarded by Dan 16/11/2026):** fixed
+prices cannot be kept by hand ("far too many different rates") and must come
+from iCabbi through the API; iCabbi are "already looking into getting us API
+access for the Transport Hub". Dan, 17/11: "chasing for the API keys this
+week".
+
+**Schema:** table `mailboxes` (with `provider`, `signed_in_as`);
+`cases.mailbox_id`, `mailbox_address`, `sent_to`; `compositions.mailbox_id`.
+Added in place; proven on a database built from the previous release (case,
+user and booking kept, boot lines right with the driver at `none`).
+
+**Tests:** `test/abacusOfficeMailboxes.test.js` (Google stand-in),
+`test/abacusOfficeMicrosoft.test.js` (Microsoft stand-in: app details,
+own and shared mailbox, a person without access, drafts, sent check, token
+rotation, nothing sent), `test/abacusOfficeByHand.test.js`. Twelve planted
+faults each turned a test red (six Microsoft, five mailbox, one by hand).
+177 office and Tidewell tests pass. Chromium at 1440px and iPhone 13:
+Settings and a booking email, no sideways scroll, no errors; on a phone each
+copy line is full width. **Not tested:** real Microsoft, real Google, real
+iCabbi, a real phone. The first real connection is the test.
 
 ## Blog, fed from Holo (LIVE 18/11/2026)
 

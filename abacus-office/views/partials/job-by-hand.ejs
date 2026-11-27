@@ -1,0 +1,8 @@
+<%# The end of a booking keyed in by hand: copy the whole job at once, then
+    record that it is in the dispatch system, with its job number. %>
+<div class="to-actions">
+  <button type="button" class="to-btn to-btn-quiet" data-copy-job="<%= p %>">Copy the whole job</button>
+</div>
+<label class="to-field"><span><%= sys %> job number (so the email and the job can be matched later)</span><input id="<%= p %>-manual-ref" name="manual_ref" maxlength="40" autocomplete="off" spellcheck="false" placeholder="As <%= sys %> shows it"></label>
+<label class="to-check-box"><input type="checkbox" name="signed_off" value="yes" required><span>I have keyed this job into <%= sys %> and checked it against the customer's email.</span></label>
+<button type="submit" class="to-btn to-btn-primary" data-busy="Recording...">Record it as booked in <%= sys %></button>

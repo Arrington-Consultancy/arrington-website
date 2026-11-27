@@ -272,6 +272,12 @@ CREATE TABLE IF NOT EXISTS mailboxes (
   created_by VARCHAR(200) NOT NULL DEFAULT '',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+-- The firm's email is Microsoft 365 (found 27 November 2026), so a mailbox
+-- says which provider it is on: 'outlook' (Microsoft 365, through Graph) or
+-- 'gmail'. signed_in_as is who connected a Microsoft mailbox, which for a
+-- shared mailbox is a person with access to it, not the mailbox itself.
+ALTER TABLE mailboxes ADD COLUMN IF NOT EXISTS provider VARCHAR(20) NOT NULL DEFAULT 'gmail';
+ALTER TABLE mailboxes ADD COLUMN IF NOT EXISTS signed_in_as VARCHAR(200) NOT NULL DEFAULT '';
 -- Which mailbox an email came into (NULL or 0: the one set on the server),
 -- its address as it was then, so the case still says so after the mailbox
 -- is removed, and the addresses the customer wrote to, so staff can see

@@ -194,3 +194,41 @@
   // Typed text is on the page again, so the page does not refresh itself.
   form.dispatchEvent(new Event('input', { bubbles: true }));
 })();
+(function () {
+// Keying a job into the dispatch system by hand (Tom, 27 November 2026:
+// "each bit can be copied to a clipboard and pasted into icabbi"). Copy
+// beside a line copies that line as it stands now, corrections included; a
+// date goes as day/month/year, the way a UK booking screen takes it. "Copy
+// the whole job" copies every line that has something in it, labelled.
+function ukDate(v) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v); return m ? m[3] + '/' + m[2] + '/' + m[1] : v; }
+function valueOf(el, as) {
+if (!el) return '';
+var v = el.tagName === 'SELECT' ? (el.options[el.selectedIndex] ? el.options[el.selectedIndex].text : '') : el.value;
+v = String(v || '').trim();
+return as === 'ukdate' ? ukDate(v) : v;
+}
+function say(button, words) {
+var was = button.getAttribute('data-was') || button.textContent;
+button.setAttribute('data-was', was);
+button.textContent = words;
+setTimeout(function () { button.textContent = was; }, 1500);
+}
+function put(button, text) {
+if (!text) return say(button, 'Empty');
+if (!navigator.clipboard || !navigator.clipboard.writeText) return say(button, 'Select it');
+navigator.clipboard.writeText(text).then(function () { say(button, 'Copied'); }, function () { say(button, 'Select it'); });
+}
+var LINES = [['name', 'Passenger'], ['phone', 'Phone'], ['date', 'Date', 'ukdate'], ['time', 'Pickup time'], ['pickup', 'Pickup'], ['destination', 'Destination'], ['passengers', 'Passengers'], ['vehicle', 'Vehicle'], ['flight', 'Flight'], ['notes', 'Note for the driver']];
+document.addEventListener('click', function (e) {
+var b = e.target.closest ? e.target.closest('[data-copy-from], [data-copy-job]') : null;
+if (!b) return;
+if (b.hasAttribute('data-copy-from')) return put(b, valueOf(document.getElementById(b.getAttribute('data-copy-from')), b.getAttribute('data-copy-as')));
+var p = b.getAttribute('data-copy-job');
+var out = [];
+LINES.forEach(function (l) {
+var v = valueOf(document.getElementById(p + '-' + l[0]), l[2]);
+if (v) out.push(l[1] + ': ' + v);
+});
+put(b, out.join('\n'));
+});
+})();

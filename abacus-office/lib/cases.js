@@ -181,7 +181,9 @@ class Office {
   }
 
   emailOf(kase) {
-    return { id: kase.mailbox_email_id, from: kase.from_address, subject: kase.subject, body: kase.body, receivedAt: londonStamp(kase.received_at), threadId: kase.thread_id, messageId: kase.message_id, channel: kase.channel || 'email', logged: isLogged(kase) };
+    // providerId: the mailbox's own id for the email, which Microsoft needs
+    // to put a reply on the right conversation.
+    return { id: kase.mailbox_email_id, providerId: String(kase.mailbox_email_id || '').replace(/^(ol|gm)-/, ''), from: kase.from_address, subject: kase.subject, body: kase.body, receivedAt: londonStamp(kase.received_at), threadId: kase.thread_id, messageId: kase.message_id, channel: kase.channel || 'email', logged: isLogged(kase) };
   }
 
   // A complaint that came in another way (a Google review, a Facebook
@@ -519,7 +521,9 @@ ${this.firm.signature}`;
 
   // A member of staff books the job from an email into dispatch. Only with
   // the sign-off tick, only with every detail present, and only through the
-  // dispatch connection, which is the stand-in until iCabbi is connected.
+  // dispatch connection. Until iCabbi is connected that is BY HAND: staff
+  // copy each detail into iCabbi themselves, then record here that they did
+  // (input.manual_ref is iCabbi's own job number).
   bookingFrom(kase) {
     const r = kase.reading || {}; const j = r.journey || {};
     return { date: j.date || '', time: j.time || '', pickup: j.pickup || '', destination: j.destination || '', passengers: j.passengers || '', name: r.customer_name || '', phone: r.phone || '', vehicle: '', notes: '', flight: j.flight || '' };
@@ -542,17 +546,21 @@ ${this.firm.signature}`;
     if (!this.dispatch) throw refuse('No dispatch connection is set up on this office.');
     if (!['bookings'].includes(kase.kind)) throw refuse('Only a booking email is booked into dispatch.');
     if (kase.dispatch_ref) throw refuse(`This job is already in dispatch as ${kase.dispatch_ref}.`);
-    if (!signedOff) throw refuse('Tick the sign-off box to confirm you have checked the job against the email. Nothing was booked.');
+    const manual = Boolean(this.dispatch.manual);
+    const system = this.dispatch.system || 'dispatch';
+    if (!signedOff) throw refuse(manual ? `Tick the box to say you have keyed this job into ${system} and checked it against the email. Nothing was recorded.` : 'Tick the sign-off box to confirm you have checked the job against the email. Nothing was booked.');
     const { job, missing } = cleanJob(input || {});
-    if (missing.length) throw refuse(`Still needed before it can be booked: ${missing.join(', ')}. Nothing was booked.`);
-    const gone = this.pickupGone(job);
+    if (missing.length) throw refuse(manual ? `Still needed before it is recorded as booked: ${missing.join(', ')}. Nothing was recorded.` : `Still needed before it can be booked: ${missing.join(', ')}. Nothing was booked.`);
+    // By hand the job is already in the dispatch system, so its time is
+    // that system's business; this check is for a job the office books.
+    const gone = manual ? '' : this.pickupGone(job);
     if (gone) throw refuse(`${gone} Nothing was booked.`);
     const summary = `${job.date} ${job.time}, ${job.pickup} to ${job.destination}, ${job.passengers} passenger${job.passengers === '1' ? '' : 's'}`;
     // One booking however many presses: the case is claimed first.
     if (!(await this.store.claimBooking(kase.id))) throw refuse('This job is being booked, or was booked a moment ago. Reload the page before trying again. Nothing was booked twice.');
     let result;
     try {
-      result = await this.dispatch.book({ job, kase, brand: kase.brand || '', actor: user });
+      result = await this.dispatch.book({ job, kase, brand: kase.brand || '', actor: user, manualRef: manual ? (input || {}).manual_ref : undefined });
     } catch (e) {
       await this.store.releaseBooking(kase.id).catch(() => {});
       // What happened is recorded on the case whatever it was, so the next
@@ -563,20 +571,25 @@ ${this.firm.signature}`;
     }
     const { ref } = result;
     await this.store.updateCase(kase.id, { dispatch_ref: ref, booking_claim_at: null, booked_at: this.now(), booked_by: user.id, status: kase.status === 'new' ? 'in_progress' : kase.status, owner_id: kase.owner_id || user.id });
-    await this.store.addEvent(kase.id, { actor: user, kind: 'booked', detail: `${this.dispatch.live ? 'Booked into' : 'Recorded on the stand-in dispatch, not a live system, as'} ${this.dispatch.live ? `${this.dispatch.label} as ` : ''}${ref}: ${summary}, signed off by ${user.display_name || user.username}${result.statusWords ? ` (${result.statusWords})` : ''}${this.dispatch.live ? '' : '. No car is booked.'}` });
-    // Only a job in a live dispatch system may be confirmed to the customer:
-    // then the AI rewrites the draft to confirm what is in dispatch, still as
-    // a draft for staff to approve. A stand-in booking books no car, so it
-    // never produces a confirmation.
+    const who = user.display_name || user.username;
+    const detail = manual
+      ? (result.numbered ? `Keyed into ${system} by hand as job ${ref}: ${summary}. Recorded by ${who}` : `Keyed into ${system} by hand, no ${system} job number given (the office calls it ${ref}): ${summary}. Recorded by ${who}`)
+      : `Booked into ${this.dispatch.label} as ${ref}: ${summary}, signed off by ${who}${result.statusWords ? ` (${result.statusWords})` : ''}`;
+    await this.store.addEvent(kase.id, { actor: user, kind: 'booked', detail });
+    // Once the job is in the dispatch system (booked there by the office,
+    // or keyed in by hand and recorded by a named person), the AI rewrites
+    // the draft to confirm exactly what was booked, still as a draft for
+    // staff to approve.
     let confirmed = false;
     const fresh = await this.store.caseById(kase.id);
-    if (this.dispatch.live && this.aiOn() && fresh && !fresh.approved_at) {
+    if ((this.dispatch.live || manual) && this.aiOn() && fresh && !fresh.approved_at) {
       try {
-        await this.guide(fresh, user, `This job is now booked in dispatch as ${ref}: ${summary}${job.vehicle ? `, ${job.vehicle}` : ''}. Confirm the booking to the customer with these details, and nothing more.`);
+        const where = manual ? (result.numbered ? `booked in ${system} as job ${ref}` : 'booked') : `booked in dispatch as ${ref}`;
+        await this.guide(fresh, user, `This job is now ${where}: ${summary}${job.vehicle ? `, ${job.vehicle}` : ''}. Confirm the booking to the customer with these details, and nothing more.`);
         confirmed = true;
       } catch (e) { /* the booking stands; staff guide the reply by hand */ }
     }
-    return { ref, job, statusWords: result.statusWords || '', confirmed };
+    return { ref, job, statusWords: result.statusWords || '', confirmed, manual, numbered: Boolean(result.numbered), system };
   }
 
   // The booking a change or cancel email is about: the one this case put
@@ -606,7 +619,7 @@ ${this.firm.signature}`;
     const names = { date: 'date', time: 'time', pickup: 'pickup', destination: 'destination', name: 'passenger', phone: 'phone', passengers: 'passengers', vehicle: 'vehicle', notes: 'note for the driver', flight: 'flight' };
     const changes = Object.keys(names).filter((k) => String(before[k] || '') !== String(job[k] || '')).map((k) => `${names[k]} ${before[k] ? `from ${before[k]} ` : ''}to ${job[k] || '(none)'}`);
     if (!changes.length) throw refuse('Nothing in the job is different from what dispatch holds. Nothing was changed.');
-    if (String(before.date || '') !== job.date || String(before.time || '') !== job.time) {
+    if (!this.dispatch.manual && (String(before.date || '') !== job.date || String(before.time || '') !== job.time)) {
       const gone = this.pickupGone(job);
       if (gone) throw refuse(`${gone} Nothing was changed.`);
     }
@@ -619,7 +632,9 @@ ${this.firm.signature}`;
       throw e;
     }
     await this.store.releaseBooking(kase.id).catch(() => {});
-    const detail = `${row.ref} changed in ${this.dispatch.label}: ${changes.join('; ')}. Signed off by ${user.display_name || user.username}`;
+    const detail = this.dispatch.manual
+      ? `${row.ref}: change recorded, made in ${this.dispatch.system} by hand: ${changes.join('; ')}. Recorded by ${user.display_name || user.username}`
+      : `${row.ref} changed in ${this.dispatch.label}: ${changes.join('; ')}. Signed off by ${user.display_name || user.username}`;
     if (!kase.dispatch_ref) await this.store.updateCase(kase.id, { dispatch_ref: row.ref, owner_id: kase.owner_id || user.id, status: kase.status === 'new' ? 'in_progress' : kase.status });
     await this.store.addEvent(kase.id, { actor: user, kind: 'dispatch_changed', detail });
     if (row.case_id && row.case_id !== kase.id) await this.store.addEvent(row.case_id, { actor: user, kind: 'dispatch_changed', detail: `${detail}, from email ${kase.id}` });

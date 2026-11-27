@@ -124,17 +124,20 @@ class Store {
   async mailboxes() { return (await this.q('SELECT * FROM mailboxes ORDER BY id')).rows; }
   async mailboxById(id) { return (await this.q('SELECT * FROM mailboxes WHERE id = $1', [id])).rows[0] || null; }
   // Returns the new row, or null when that address is already there.
-  async addMailbox({ brand, address, by }) {
-    const r = await this.q('INSERT INTO mailboxes (brand, address, created_by) VALUES ($1, $2, $3) ON CONFLICT (address) DO NOTHING RETURNING *', [String(brand || '').slice(0, 40), String(address).trim().toLowerCase().slice(0, 200), String(by || '').slice(0, 200)]);
+  async addMailbox({ brand, address, by, provider = 'gmail' }) {
+    const r = await this.q('INSERT INTO mailboxes (brand, address, created_by, provider) VALUES ($1, $2, $3, $4) ON CONFLICT (address) DO NOTHING RETURNING *', [String(brand || '').slice(0, 40), String(address).trim().toLowerCase().slice(0, 200), String(by || '').slice(0, 200), provider === 'outlook' ? 'outlook' : 'gmail']);
     return r.rows[0] || null;
   }
   // The start is set the first time only: a mailbox connected again after a
   // break still takes in what arrived since it first joined the office.
-  async connectMailbox(id, { token, by, at }) {
-    const r = await this.q('UPDATE mailboxes SET token = $2, connected_by = $3, connected_at = $4, start_at = COALESCE(start_at, $4) WHERE id = $1 RETURNING *', [id, token, String(by || '').slice(0, 200), at]);
+  async connectMailbox(id, { token, by, at, signedInAs = '' }) {
+    const r = await this.q('UPDATE mailboxes SET token = $2, connected_by = $3, connected_at = $4, start_at = COALESCE(start_at, $4), signed_in_as = $5 WHERE id = $1 RETURNING *', [id, token, String(by || '').slice(0, 200), at, String(signedInAs || '').slice(0, 200)]);
     return r.rows[0] || null;
   }
-  async disconnectMailbox(id) { await this.q("UPDATE mailboxes SET token = '', connected_by = '', connected_at = NULL WHERE id = $1", [id]); }
+  // Microsoft hands out a new sign-in token as the old one is used. Saved
+  // only while the mailbox is still connected, so a disconnect is not undone.
+  async rotateMailboxToken(id, token) { await this.q("UPDATE mailboxes SET token = $2 WHERE id = $1 AND token <> ''", [id, token]); }
+  async disconnectMailbox(id) { await this.q("UPDATE mailboxes SET token = '', connected_by = '', connected_at = NULL, signed_in_as = '' WHERE id = $1", [id]); }
   async setMailboxBrand(id, brand) { await this.q('UPDATE mailboxes SET brand = $2 WHERE id = $1', [id, String(brand || '').slice(0, 40)]); }
   async removeMailbox(id) { await this.q('DELETE FROM mailboxes WHERE id = $1', [id]); }
   // A complaint typed in by staff (lib/channels.js). Its message id is made

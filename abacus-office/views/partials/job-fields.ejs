@@ -1,24 +1,28 @@
 <%# The job's details, for booking it or changing it in dispatch. `j` holds
     the values to show; `p` keeps the ids apart when two forms are on one
-    page. %>
+    page. With `copy` each line has a Copy button, for keying the job into
+    the dispatch system by hand (Tom, 27 November 2026): Copy puts that one
+    line on the clipboard as it stands now, corrections included. %>
 <% var _vehicles = ['Car (up to 4)', 'Estate (up to 4, more luggage)', '6 seater', '8 seater', 'Wheelchair accessible']; %>
-<div class="to-field-row is-two">
-  <label class="to-field"><span>Date</span><input id="<%= p %>-date" name="date" type="date" value="<%= j.date || '' %>" required></label>
-  <label class="to-field"><span>Pickup time</span><input id="<%= p %>-time" name="time" type="time" value="<%= j.time || '' %>" required></label>
+<% var _copy = typeof copy !== 'undefined' && copy; %>
+<% function _btn(id, what, as) { return _copy ? '<button type="button" class="to-copy" data-copy-from="' + p + '-' + id + '"' + (as ? ' data-copy-as="' + as + '"' : '') + ' aria-label="Copy the ' + what + '">Copy</button>' : ''; } %>
+<div class="to-field-row is-two<%= _copy ? " has-copy" : "" %>">
+  <div class="to-field"><label for="<%= p %>-date">Date</label><div class="to-copyable"><input id="<%= p %>-date" name="date" type="date" value="<%= j.date || '' %>" required><%- _btn('date', 'date', 'ukdate') %></div></div>
+  <div class="to-field"><label for="<%= p %>-time">Pickup time</label><div class="to-copyable"><input id="<%= p %>-time" name="time" type="time" value="<%= j.time || '' %>" required><%- _btn('time', 'pickup time') %></div></div>
 </div>
-<div class="to-field-row is-two">
-  <label class="to-field"><span>Pickup</span><input id="<%= p %>-pickup" name="pickup" value="<%= j.pickup || '' %>" maxlength="160" required></label>
-  <label class="to-field"><span>Destination</span><input id="<%= p %>-destination" name="destination" value="<%= j.destination || '' %>" maxlength="160" required></label>
+<div class="to-field-row is-two<%= _copy ? " has-copy" : "" %>">
+  <div class="to-field"><label for="<%= p %>-pickup">Pickup</label><div class="to-copyable"><input id="<%= p %>-pickup" name="pickup" value="<%= j.pickup || '' %>" maxlength="160" required><%- _btn('pickup', 'pickup address') %></div></div>
+  <div class="to-field"><label for="<%= p %>-destination">Destination</label><div class="to-copyable"><input id="<%= p %>-destination" name="destination" value="<%= j.destination || '' %>" maxlength="160" required><%- _btn('destination', 'destination') %></div></div>
 </div>
-<div class="to-field-row">
-  <label class="to-field"><span>Passenger</span><input id="<%= p %>-name" name="name" value="<%= j.name || '' %>" maxlength="80" required></label>
-  <label class="to-field"><span>Phone</span><input id="<%= p %>-phone" name="phone" type="tel" value="<%= j.phone || '' %>" maxlength="30" required></label>
-  <label class="to-field"><span>Passengers</span><input id="<%= p %>-passengers" name="passengers" inputmode="numeric" value="<%= j.passengers || '' %>" maxlength="2" required placeholder="How many"></label>
+<div class="to-field-row<%= _copy ? " has-copy" : "" %>">
+  <div class="to-field"><label for="<%= p %>-name">Passenger</label><div class="to-copyable"><input id="<%= p %>-name" name="name" value="<%= j.name || '' %>" maxlength="80" required><%- _btn('name', 'passenger\'s name') %></div></div>
+  <div class="to-field"><label for="<%= p %>-phone">Phone</label><div class="to-copyable"><input id="<%= p %>-phone" name="phone" type="tel" value="<%= j.phone || '' %>" maxlength="30" required><%- _btn('phone', 'phone number') %></div></div>
+  <div class="to-field"><label for="<%= p %>-passengers">Passengers</label><div class="to-copyable"><input id="<%= p %>-passengers" name="passengers" inputmode="numeric" value="<%= j.passengers || '' %>" maxlength="2" required placeholder="How many"><%- _btn('passengers', 'number of passengers') %></div></div>
 </div>
-<div class="to-field-row is-two">
-  <label class="to-field"><span>Vehicle</span><select id="<%= p %>-vehicle" name="vehicle"><% _vehicles.forEach(function (v) { %><option<% if ((j.vehicle || 'Car (up to 4)') === v) { %> selected<% } %>><%= v %></option><% }) %></select></label>
-  <label class="to-field"><span>Note for the driver (optional)</span><input id="<%= p %>-notes" name="notes" value="<%= j.notes || '' %>" maxlength="300" placeholder="One suitcase, ring on arrival"></label>
+<div class="to-field-row is-two<%= _copy ? " has-copy" : "" %>">
+  <div class="to-field"><label for="<%= p %>-vehicle">Vehicle</label><div class="to-copyable"><select id="<%= p %>-vehicle" name="vehicle"><% _vehicles.forEach(function (v) { %><option<% if ((j.vehicle || 'Car (up to 4)') === v) { %> selected<% } %>><%= v %></option><% }) %></select><%- _btn('vehicle', 'vehicle') %></div></div>
+  <div class="to-field"><label for="<%= p %>-notes">Note for the driver (optional)</label><div class="to-copyable"><input id="<%= p %>-notes" name="notes" value="<%= j.notes || '' %>" maxlength="300" placeholder="One suitcase, ring on arrival"><%- _btn('notes', 'note for the driver') %></div></div>
 </div>
-<div class="to-field-row is-two">
-  <label class="to-field"><span>Flight number (airport pickups)</span><input id="<%= p %>-flight" name="flight" value="<%= j.flight || '' %>" maxlength="12" placeholder="e.g. FR 1234"></label>
+<div class="to-field-row is-two<%= _copy ? " has-copy" : "" %>">
+  <div class="to-field"><label for="<%= p %>-flight">Flight number (airport pickups)</label><div class="to-copyable"><input id="<%= p %>-flight" name="flight" value="<%= j.flight || '' %>" maxlength="12" placeholder="e.g. FR 1234"><%- _btn('flight', 'flight number') %></div></div>
 </div>

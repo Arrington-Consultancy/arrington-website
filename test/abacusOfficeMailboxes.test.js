@@ -117,7 +117,7 @@ test('the mailboxes from Settings are read only when the server is set to gmail,
   assert.deepEqual(room.added().map((m) => [m.id, m.brand, m.connected]), [[4, 'abacus', true], [7, 'coastline', false]]);
   assert.deepEqual(room.reading().map((m) => m.address), [ABACUS], 'only the connected one is read');
   assert.equal(room.none, false);
-  assert.match(room.describe(), /bookings@abacus\.example\.invalid for abacus \(connected\); info@coastline\.example\.invalid for coastline \(not connected\)/);
+  assert.match(room.describe(), /bookings@abacus\.example\.invalid on Google for abacus \(connected\); info@coastline\.example\.invalid on Google for coastline \(not connected\)/);
   assert.doesNotMatch(room.describe(), /rt-abacus/);
 
   // An email's reply goes to the mailbox it came into; one whose mailbox has gone is copied out.
@@ -236,7 +236,7 @@ test('over HTTP: the owner adds a mailbox per company, each starts from its conn
 
   // No Connect until the Google client is saved; then it is there.
   r = await owner.get('/settings');
-  assert.match(r.text, /bookings@abacus\.example\.invalid<\/strong> for Abacus &amp; Falmouth Taxis:\s+not connected yet/);
+  assert.match(r.text, /bookings@abacus\.example\.invalid<\/strong> \(Google\) for Abacus &amp; Falmouth Taxis:\s+not connected yet/);
   assert.doesNotMatch(r.text, new RegExp(`/settings/mailboxes/${abacusId}/connect`), 'no Connect before the client is saved');
   r = await owner.get(`/settings/mailboxes/${abacusId}/connect`);
   assert.equal(r.location, '/settings#mailbox');

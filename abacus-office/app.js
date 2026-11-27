@@ -33,7 +33,8 @@ const alerts = require('./lib/alerts');
 const { createDispatch } = require('./lib/dispatch');
 const { longDate } = require('./lib/demoInbox');
 const mailboxLib = require('./lib/mailbox');
-const { createMailRoom } = require('./lib/mailroom');
+const { createMailRoom, microsoftClient, MS_CLIENT, PROVIDERS } = require('./lib/mailroom');
+const graphMailbox = require('./lib/graphMailbox');
 const secretBox = require('./lib/secretBox');
 const gmailConnect = require('../lib/taxiOffice/mail/gmailConnect');
 
@@ -122,6 +123,9 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     res.locals.channels = CHANNELS;
     res.locals.dispatchLabel = dispatch.label;
     res.locals.dispatchLive = Boolean(dispatch.live);
+    // Jobs are keyed into the dispatch system by hand and recorded here.
+    res.locals.dispatchManual = Boolean(dispatch.manual);
+    res.locals.dispatchSystem = dispatch.system || 'iCabbi';
     // Whether an alert email can actually go, so no page says a manager was
     // emailed when nothing could be sent.
     res.locals.alertsReady = Boolean(alerts.smtpConfig(alertsEnv).ready);
@@ -532,8 +536,11 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   });
   act('book', async (req) => {
     try {
-      const { ref, statusWords, confirmed } = await office.book(req.kase, req.user, req.body, req.body.signed_off === 'yes');
-      flash(req, 'ok', dispatch.live ? `Booked into ${dispatch.label} as ${ref}${statusWords ? `, ${statusWords}` : ''}.${confirmed ? ' The reply now confirms it; check it and approve.' : ' Change the reply to confirm it before approving.'}` : `Recorded on the stand-in dispatch as ${ref}. This is not a live dispatch system: no car is booked, so do not tell the customer it is booked.`);
+      const { ref, statusWords, confirmed, manual, numbered, system } = await office.book(req.kase, req.user, req.body, req.body.signed_off === 'yes');
+      const next = confirmed ? ' The reply now confirms it; check it and approve.' : ' Change the reply to confirm it before approving.';
+      flash(req, 'ok', manual
+        ? (numbered ? `Recorded: keyed into ${system} by hand as job ${ref}.${next}` : `Recorded as keyed into ${system} by hand. No ${system} job number was given, so the office calls it ${ref}.${next}`)
+        : `Booked into ${dispatch.label} as ${ref}${statusWords ? `, ${statusWords}` : ''}.${next}`);
     } catch (e) {
       if (!e.checkedOnly) throw e;
       flash(req, 'ok', e.message);
@@ -546,7 +553,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   act('change-booking', async (req) => {
     try {
       const r = await office.changeBooking(req.kase, req.user, req.body, req.body.signed_off === 'yes', req.body.ref);
-      flash(req, 'ok', `${r.ref} changed in ${dispatch.label.replace(/ \(.*\)$/, '')}: ${r.changes.join('; ')}.`);
+      flash(req, 'ok', dispatch.manual ? `${r.ref}: change recorded (${r.changes.join('; ')}). Make sure ${dispatch.system} shows the same.` : `${r.ref} changed in ${dispatch.label.replace(/ \(.*\)$/, '')}: ${r.changes.join('; ')}.`);
     } catch (e) {
       if (!e.checkedOnly) throw e;
       flash(req, 'ok', e.message);
@@ -676,7 +683,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   }));
 
   app.get('/settings', requireRole('manager'), wrap(async (req, res) => {
-    res.render('settings', { baseUrl: baseUrl || `${req.protocol}://${req.get('host')}`, title: 'Settings', section: 'settings', hours: await store.escalationHours(), nudgeHours: await store.complaintNudgeHours(), seriousHours: await store.complaintSeriousHours(), prices: await store.fixedPrices(scopeFor(req.user) || req.portal || undefined), tariffBrand: companyChoice(req, req.query.tariff), tariff: await store.tariff(companyChoice(req, req.query.tariff)), fareDefaults: require('./lib/fares').DEFAULT_TARIFF, fareCards: Object.values(require('./lib/fares').FARE_CARDS), fareCard: require('./lib/fares').cardFor(await store.tariff(companyChoice(req, req.query.tariff))), fareLib: require('./lib/fares'), holidaysUntil: require('./lib/fares').HOLIDAYS_KNOWN_UNTIL, replies: (scopeFor(req.user) || req.portal) ? await store.standardRepliesFor(scopeFor(req.user) || req.portal) : await store.standardReplies(), ownBrand: scopeFor(req.user) || '', brands: firm.brands || [], alertStatus: alerts.describeAlertStatus(alertsEnv), mailStatus: mailboxLib.describeMailStatus(mailEnv, mailbox), mailConnect: connectState(), mailAdded: addedState(), aiStatus: ai.describeAiStatus(), dispatchStatus: require('./lib/dispatch').describeDispatchStatus() });
+    res.render('settings', { baseUrl: baseUrl || `${req.protocol}://${req.get('host')}`, title: 'Settings', section: 'settings', hours: await store.escalationHours(), nudgeHours: await store.complaintNudgeHours(), seriousHours: await store.complaintSeriousHours(), prices: await store.fixedPrices(scopeFor(req.user) || req.portal || undefined), tariffBrand: companyChoice(req, req.query.tariff), tariff: await store.tariff(companyChoice(req, req.query.tariff)), fareDefaults: require('./lib/fares').DEFAULT_TARIFF, fareCards: Object.values(require('./lib/fares').FARE_CARDS), fareCard: require('./lib/fares').cardFor(await store.tariff(companyChoice(req, req.query.tariff))), fareLib: require('./lib/fares'), holidaysUntil: require('./lib/fares').HOLIDAYS_KNOWN_UNTIL, replies: (scopeFor(req.user) || req.portal) ? await store.standardRepliesFor(scopeFor(req.user) || req.portal) : await store.standardReplies(), ownBrand: scopeFor(req.user) || '', brands: firm.brands || [], alertStatus: alerts.describeAlertStatus(alertsEnv), mailStatus: mailboxLib.describeMailStatus(mailEnv, mailbox), mailConnect: connectState(), mailAdded: await addedState(), aiStatus: ai.describeAiStatus(), dispatchStatus: require('./lib/dispatch').describeDispatchStatus() });
   }));
   app.post('/settings', requireRole('owner'), wrap(async (req, res) => {
     const n = Number(req.body.escalation_hours);
@@ -1020,13 +1027,51 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   // and nothing received before it is taken in. Only with the server's
   // driver set to gmail, which is Tom's to do once the data processing
   // agreement is signed.
-  function addedState() {
-    const blockers = [];
-    if (mailboxLib.driverName(mailEnv) !== 'gmail') blockers.push('ABACUS_OFFICE_MAIL_DRIVER is not gmail (set it only once the data processing agreement is signed)');
-    gmailConnect.missing(effEnv()).forEach((v) => blockers.push(`the Google client ${/SECRET/.test(v) ? 'secret' : 'ID'} (in the form above)`));
-    if (!secretBox.available(mailEnv)) blockers.push(`ABACUS_OFFICE_TOKEN_KEY (${secretBox.MIN_KEY} characters or more), which seals the token`);
-    return { open: room.open, ready: room.open && blockers.length === 0, blockers, list: room.added() };
+  // The Google client for a mailbox added in Settings: Railway's first, then
+  // what the owner saved, whatever the server's own driver is.
+  async function googleEnv() {
+    const e = mailboxLib.driverEnv(mailEnv);
+    const fill = (k, v) => { if (!String(e[k] || '').trim() && v) e[k] = v; };
+    const sealed = await store.setting(mailboxLib.CLIENT.secret).catch(() => '');
+    fill('TAXI_OFFICE_GMAIL_CLIENT_ID', await store.setting(mailboxLib.CLIENT.id).catch(() => ''));
+    fill('TAXI_OFFICE_GMAIL_CLIENT_SECRET', sealed ? (secretBox.open(sealed, mailEnv) || '') : '');
+    return e;
   }
+  // What stands between each provider and a Connect button.
+  async function addedState() {
+    const server = mailboxLib.driverName(mailEnv);
+    const common = [];
+    if (!room.open) common.push('the server is not set to read real mailboxes (ABACUS_OFFICE_MAIL_DRIVER is not outlook or gmail; it is set only once the data processing agreement is signed)');
+    if (!secretBox.available(mailEnv)) common.push(`ABACUS_OFFICE_TOKEN_KEY (${secretBox.MIN_KEY} characters or more), which seals the sign-in`);
+    const ms = await microsoftClient(store, mailEnv);
+    const g = await googleEnv();
+    const outlookBlockers = [...common, ...graphMailbox.missing(ms).map((m) => `${m} of the firm's Microsoft app (in the form above)`)];
+    const gmailBlockers = [...common, ...gmailConnect.missing(g).map((v) => `the Google client ${/SECRET/.test(v) ? 'secret' : 'ID'} (in the form above)`)];
+    return {
+      open: room.open, keyReady: secretBox.available(mailEnv), list: room.added(), defaultProvider: server === 'gmail' ? 'gmail' : 'outlook', providers: PROVIDERS,
+      outlook: { ready: outlookBlockers.length === 0, blockers: outlookBlockers, saved: ms.fromSettings, inRailway: ms.inRailway, tenant: ms.tenant, clientId: ms.clientId },
+      gmail: { ready: gmailBlockers.length === 0, blockers: gmailBlockers, saved: Boolean(String(g.TAXI_OFFICE_GMAIL_CLIENT_ID || '').trim() && String(g.TAXI_OFFICE_GMAIL_CLIENT_SECRET || '').trim()), inRailway: Boolean(String(mailboxLib.driverEnv(mailEnv).TAXI_OFFICE_GMAIL_CLIENT_SECRET || '').trim()) },
+      ms, googleEnv: g
+    };
+  }
+  // The firm's Microsoft app registration, typed in by the owner so its
+  // secret never travels by email or chat. The secret is sealed.
+  app.post('/settings/mailbox/microsoft', requireRole('owner'), wrap(async (req, res) => {
+    const back = (tone, message) => { flash(req, tone, message); res.redirect('/settings#mailbox'); };
+    const tenant = String(req.body.tenant_id || '').trim();
+    const id = String(req.body.client_id || '').trim();
+    const secret = String(req.body.client_secret || '').trim();
+    if (!secretBox.available(mailEnv)) return back('warn', 'The server is not ready to keep a secret yet (ABACUS_OFFICE_TOKEN_KEY). Nothing was saved.');
+    if (!graphMailbox.validTenant(tenant)) return back('warn', 'That does not look like a tenant ID. It is on the app\'s Overview page in Microsoft Entra, as Directory (tenant) ID. Nothing was saved.');
+    if (!graphMailbox.validClientId(id)) return back('warn', 'That does not look like a client ID. It is on the app\'s Overview page in Microsoft Entra, as Application (client) ID. Nothing was saved.');
+    if (!graphMailbox.validSecret(secret)) return back('warn', 'That does not look like a client secret. Copy its Value, not its Secret ID, when Microsoft first shows it. Nothing was saved.');
+    await store.setSetting(MS_CLIENT.tenant, tenant);
+    await store.setSetting(MS_CLIENT.id, id);
+    await store.setSetting(MS_CLIENT.secret, secretBox.seal(secret, mailEnv));
+    await store.addEvent(null, { actor: req.user, kind: 'mailbox_client_saved', detail: 'Microsoft app details saved for the mailbox connection' });
+    await room.reload();
+    back('ok', 'Saved. The secret is sealed and is not shown again. Now add a mailbox, or press Connect beside one.');
+  }));
   const revokeAtGoogle = async (sealed) => {
     const token = sealed ? secretBox.open(sealed, mailEnv) : null;
     if (!token) return;
@@ -1042,55 +1087,74 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     const back = (tone, message) => { flash(req, tone, message); res.redirect('/settings#mailbox'); };
     if (!room.open) return back('warn', 'Mailboxes cannot be added yet. The server is not set to read real mailboxes.');
     const address = String(req.body.address || '').trim().toLowerCase();
+    const st = await addedState();
+    const provider = Object.prototype.hasOwnProperty.call(PROVIDERS, String(req.body.provider || '')) ? String(req.body.provider) : st.defaultProvider;
     const brands = firm.brands || [];
     const brand = brands.some((b) => b.id === String(req.body.brand || '')) ? String(req.body.brand) : (brands.length === 1 ? brands[0].id : '');
     if (!EMAIL_RE.test(address) || address.length > 200) return back('warn', 'That email address does not look right. Nothing was added.');
     if (brands.length > 1 && !brand) return back('warn', 'Choose which company this mailbox is for. Nothing was added.');
     if (address === mailboxLib.expectedAddress(mailEnv)) return back('warn', `${address} is already the mailbox set on the server. Nothing was added.`);
-    const row = await store.addMailbox({ brand, address, by: staffName(req.user) });
+    const row = await store.addMailbox({ brand, address, by: staffName(req.user), provider });
     if (!row) return back('warn', `${address} is already in the list. Nothing was added.`);
-    await store.addEvent(null, { actor: req.user, kind: 'mailbox_added', detail: `Mailbox ${address} added for ${brandName(firm, brand) || 'the firm'}` });
+    await store.addEvent(null, { actor: req.user, kind: 'mailbox_added', detail: `${PROVIDERS[provider]} mailbox ${address} added for ${brandName(firm, brand) || 'the firm'}` });
     await room.reload();
-    back('ok', `${address} added for ${brandName(firm, brand) || 'the firm'}. Now press Connect beside it and sign in to Google as that address.`);
+    back('ok', `${address} added for ${brandName(firm, brand) || 'the firm'}. Now press Connect beside it and sign in to ${provider === 'outlook' ? 'Microsoft as that address, or as someone who has access to it' : 'Google as that address'}.`);
   }));
   app.get('/settings/mailboxes/:id/connect', requireRole('owner'), loadAdded, wrap(async (req, res) => {
-    const st = addedState();
-    if (!st.ready) { flash(req, 'warn', `The mailbox cannot be connected yet. Still needed: ${st.blockers.join('; ')}.`); return res.redirect('/settings#mailbox'); }
+    const st = await addedState();
+    const outlook = req.added.provider === 'outlook';
+    const mine = outlook ? st.outlook : st.gmail;
+    if (!mine.ready) { flash(req, 'warn', `The mailbox cannot be connected yet. Still needed: ${mine.blockers.join('; ')}.`); return res.redirect('/settings#mailbox'); }
     const state = crypto.randomBytes(24).toString('hex');
     req.session.mailboxConnectState = state;
     req.session.mailboxConnectId = req.added.id;
-    res.redirect(gmailConnect.authorizeUrl({ env: effEnv(), redirectUri: callbackUrl(req), state, loginHint: req.added.address }));
+    res.redirect(outlook
+      ? graphMailbox.authorizeUrl({ tenant: st.ms.tenant, clientId: st.ms.clientId, redirectUri: callbackUrl(req), state, loginHint: req.added.address })
+      : gmailConnect.authorizeUrl({ env: st.googleEnv, redirectUri: callbackUrl(req), state, loginHint: req.added.address }));
   }));
   async function finishAdded(req, id, expected, back) {
     const row = await store.mailboxById(id);
-    const st = addedState();
+    const st = await addedState();
     if (!row) return back('warn', 'That mailbox is no longer in the list. Add it again.');
-    if (!st.ready) return back('warn', `The mailbox cannot be connected yet. Still needed: ${st.blockers.join('; ')}.`);
-    if (req.query.error) return back('warn', `Google did not connect it: ${String(req.query.error).slice(0, 100)}.`);
+    const outlook = row.provider === 'outlook';
+    const mine = outlook ? st.outlook : st.gmail;
+    if (!mine.ready) return back('warn', `The mailbox cannot be connected yet. Still needed: ${mine.blockers.join('; ')}.`);
+    if (req.query.error) return back('warn', `${outlook ? 'Microsoft' : 'Google'} did not connect it: ${String(req.query.error_description || req.query.error).slice(0, 160)}.`);
     if (!expected || req.query.state !== expected) return back('warn', 'That could not be checked as the connection you started. Start again from Settings, in an ordinary browser window.');
-    if (typeof req.query.code !== 'string' || !req.query.code) return back('warn', 'Google did not send back what it should. Start again.');
-    // Google is asked which address the new token opens. Any other than
+    if (typeof req.query.code !== 'string' || !req.query.code) return back('warn', `${outlook ? 'Microsoft' : 'Google'} did not send back what it should. Start again.`);
+    // Google is asked which address the new token opens, and any other than
     // this mailbox's own is refused and its token cancelled on the spot.
-    const result = await gmailConnect.finish({ env: effEnv(), code: req.query.code, redirectUri: callbackUrl(req), expected: row.address, fetch: fetchImpl, mailboxName: 'the mailbox' });
+    // Microsoft is asked to open this mailbox with the new sign-in, and a
+    // person who cannot open it is refused and nothing of theirs is kept.
+    const result = outlook
+      ? await graphMailbox.finish({ tenant: st.ms.tenant, clientId: st.ms.clientId, clientSecret: st.ms.clientSecret, code: req.query.code, redirectUri: callbackUrl(req), mailbox: row.address, fetch: fetchImpl })
+      : await gmailConnect.finish({ env: st.googleEnv, code: req.query.code, redirectUri: callbackUrl(req), expected: row.address, fetch: fetchImpl, mailboxName: 'the mailbox' });
     if (!result.ok) {
       console.warn(`Abacus office: mailbox connection refused: ${result.message}`);
-      await store.addEvent(null, { actor: req.user, kind: 'mailbox_refused', detail: `Mailbox connection refused for ${row.address}${result.account ? ` (${result.account})` : ''}` });
+      await store.addEvent(null, { actor: req.user, kind: 'mailbox_refused', detail: `Mailbox connection refused for ${row.address}${result.account || result.signedInAs ? ` (${result.account || result.signedInAs})` : ''}` });
       return back('warn', result.message);
     }
     const first = !row.start_at;
-    await store.connectMailbox(row.id, { token: secretBox.seal(result.refreshToken, mailEnv), by: staffName(req.user), at: new Date() });
-    await store.addEvent(null, { actor: req.user, kind: 'mailbox_connected', detail: `Mailbox ${row.address} connected for ${brandName(firm, row.brand) || 'the firm'}` });
+    await store.connectMailbox(row.id, { token: secretBox.seal(result.refreshToken, mailEnv), by: staffName(req.user), at: new Date(), signedInAs: outlook ? result.signedInAs : '' });
+    const through = outlook && result.signedInAs && result.signedInAs !== row.address ? `, signed in as ${result.signedInAs}` : '';
+    await store.addEvent(null, { actor: req.user, kind: 'mailbox_connected', detail: `Mailbox ${row.address} connected for ${brandName(firm, row.brand) || 'the firm'}${through}` });
+    room.forget(row.id);
     console.log(`Abacus office: mailbox ${row.address} (${row.brand || 'every company'}) connected from Settings by ${req.user.username}; token sealed in the database`);
     await room.reload();
     lastSync = 0;
     back('ok', `${row.address} is connected. ${first ? 'Emails that arrive from now on come into the inbox within a couple of minutes; nothing from before today is brought in.' : 'Its emails come into the inbox within a couple of minutes.'} Replies are saved there as drafts. Nothing is sent from the office.`);
   }
+  // Google lets a token be cancelled from here. Microsoft does not: its
+  // saved sign-in is deleted from the office, and the firm's Microsoft
+  // administrator can withdraw the app's access as well.
+  const goneWords = (row) => (row.provider === 'outlook' ? 'its saved sign-in deleted from the office' : 'its token cancelled at Google');
   app.post('/settings/mailboxes/:id/disconnect', requireRole('owner'), loadAdded, wrap(async (req, res) => {
-    await revokeAtGoogle(req.added.token);
+    if (req.added.provider !== 'outlook') await revokeAtGoogle(req.added.token);
     await store.disconnectMailbox(req.added.id);
     await store.addEvent(null, { actor: req.user, kind: 'mailbox_disconnected', detail: `Mailbox ${req.added.address} disconnected` });
+    room.forget(req.added.id);
     await room.reload();
-    flash(req, 'ok', `${req.added.address} is disconnected and its token cancelled at Google. Nothing more is read from it. Its emails stay in the office.`);
+    flash(req, 'ok', `${req.added.address} is disconnected and ${goneWords(req.added)}. Nothing more is read from it. Its emails stay in the office.`);
     res.redirect('/settings#mailbox');
   }));
   app.post('/settings/mailboxes/:id/company', requireRole('owner'), loadAdded, wrap(async (req, res) => {
@@ -1103,11 +1167,12 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     res.redirect('/settings#mailbox');
   }));
   app.post('/settings/mailboxes/:id/remove', requireRole('owner'), loadAdded, wrap(async (req, res) => {
-    await revokeAtGoogle(req.added.token);
+    if (req.added.provider !== 'outlook') await revokeAtGoogle(req.added.token);
     await store.removeMailbox(req.added.id);
     await store.addEvent(null, { actor: req.user, kind: 'mailbox_removed', detail: `Mailbox ${req.added.address} removed` });
+    room.forget(req.added.id);
     await room.reload();
-    flash(req, 'ok', `${req.added.address} is removed and its token cancelled at Google. Its emails stay in the office; a reply to one of them is now copied out by hand.`);
+    flash(req, 'ok', `${req.added.address} is removed and ${goneWords(req.added)}. Its emails stay in the office; a reply to one of them is now copied out by hand.`);
     res.redirect('/settings#mailbox');
   }));
 
