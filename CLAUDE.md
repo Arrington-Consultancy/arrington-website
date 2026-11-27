@@ -11040,6 +11040,13 @@ Settings and a booking email, no sideways scroll, no errors; on a phone each
 copy line is full width. **Not tested:** real Microsoft, real Google, real
 iCabbi, a real phone. The first real connection is the test.
 
+**Live 27/11/2026:** main `d7f1d69`, office deployment `15d7226a`, website
+deployment `5f51a015`. Boot lines: no mailbox connected, "dispatch: by hand",
+AI on, alerts on screen only. The sign-in page answers and the live
+`/office.js` carries the copy code. The AI effort commit `2836569` was not
+released (working branch only, Tom's decision pending). Written back to the
+Handoff Log (entry of 27 November 2026, about 07:45 UTC).
+
 ## Blog, fed from Holo (LIVE 18/11/2026)
 
 Tom signed up to Holo (an AI blog writer) and pasted its embed code
