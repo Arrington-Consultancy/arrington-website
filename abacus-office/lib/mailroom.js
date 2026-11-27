@@ -12,9 +12,13 @@
 // are forwarded or aliased into its mailbox by whoever runs its email, so
 // one mailbox per company is enough, and a second can be added later.
 //
-// Mailboxes from Settings are read only when the server's driver is gmail:
-// "none" is the server's switch (nothing is read until the data processing
-// agreement is signed), and the made-up inbox never sits beside real mail.
+// A mailbox is on Microsoft 365 (./graphMailbox.js, which is what the firm
+// uses) or on Google (rowMailbox in ./mailbox.js); each row says which.
+//
+// Mailboxes from Settings are read only when the server's driver is outlook
+// or gmail: "none" is the server's switch (nothing is read until the data
+// processing agreement is signed), and the made-up inbox never sits beside
+// real mail.
 //
 // A reply is saved as a draft in the mailbox its email came into. A new
 // email (Write, a complaint typed in) is saved in the mailbox of the
@@ -22,13 +26,57 @@
 // by hand. No mailbox sends.
 
 const secretBox = require('./secretBox');
-const { rowMailbox, driverName, CLIENT } = require('./mailbox');
+const { rowMailbox, driverName, driverEnv, CLIENT } = require('./mailbox');
+const graphMailbox = require('./graphMailbox');
+
+// The settings rows that hold the firm's Microsoft app registration, typed
+// in by the owner. The secret is sealed like a token.
+const MS_CLIENT = { tenant: 'mailbox_outlook_tenant_id', id: 'mailbox_outlook_client_id', secret: 'mailbox_outlook_client_secret' };
+const REAL = ['outlook', 'gmail'];
+const PROVIDERS = { outlook: 'Microsoft 365', gmail: 'Google' };
+
+// The Microsoft app's details: Railway's variables first, then what the
+// owner saved in Settings.
+async function microsoftClient(store, env) {
+  const e = driverEnv(env);
+  const get = (k) => (store && store.setting ? store.setting(k).catch(() => '') : Promise.resolve(''));
+  const sealed = await get(MS_CLIENT.secret);
+  const saved = { tenant: await get(MS_CLIENT.tenant), clientId: await get(MS_CLIENT.id), clientSecret: sealed ? (secretBox.open(sealed, env) || '') : '' };
+  const pick = (k, v) => String(e[k] || '').trim() || v || '';
+  return {
+    tenant: pick('TAXI_OFFICE_OUTLOOK_TENANT_ID', saved.tenant), clientId: pick('TAXI_OFFICE_OUTLOOK_CLIENT_ID', saved.clientId), clientSecret: pick('TAXI_OFFICE_OUTLOOK_CLIENT_SECRET', saved.clientSecret),
+    fromSettings: Boolean(saved.tenant && saved.clientId && saved.clientSecret), inRailway: Boolean(String(e.TAXI_OFFICE_OUTLOOK_CLIENT_SECRET || '').trim())
+  };
+}
+
+// A Microsoft 365 mailbox, in the shape the office uses for any mailbox.
+function graphRowMailbox(row, { client, token, onRotate, fetch }) {
+  const inner = graphMailbox.create({ address: row.address, tenant: client.tenant, clientId: client.clientId, clientSecret: client.clientSecret, refreshToken: token, onRotate, fetch });
+  const box = {
+    name: 'outlook',
+    label: `Outlook (${inner.address})`,
+    address: inner.address,
+    demo: false,
+    off: false,
+    get none() { return !inner.configured(); },
+    noneWhy: `${inner.address} is not connected`,
+    configured: () => inner.configured(),
+    missing: () => inner.missing(),
+    listInbox: (opts) => inner.listInbox(opts),
+    async saveReplyDraft(email, text) { if (box.none) return { draftId: null }; return inner.saveReplyDraft(email, text); },
+    async saveNewDraft(to, subject, text) { if (box.none) return { draftId: null }; return inner.saveReplyDraft({ from: to, subject, fresh: true }, text); },
+    account: () => inner.account(),
+    canTrackSent: true,
+    draftState: (ref) => inner.draftState(ref)
+  };
+  return box;
+}
 
 // An email whose mailbox has since been removed: nothing can be saved there.
 function goneBox(address) {
   const where = address ? `${address} is no longer connected` : 'The mailbox this came into is no longer connected';
   return {
-    name: 'gone', label: address ? `Gmail (${address})` : 'the mailbox', demo: false, off: false, none: true, noneWhy: where,
+    name: 'gone', label: address || 'the mailbox', demo: false, off: false, none: true, noneWhy: where,
     configured: () => false, missing: () => [], listInbox: async () => [], account: async () => null,
     saveReplyDraft: async () => ({ draftId: null }), saveNewDraft: async () => ({ draftId: null }), canTrackSent: false
   };
@@ -44,7 +92,7 @@ function createMailRoom({ primary, firm = {}, store = null, env = process.env, f
   const built = new Map();
 
   // Whether mailboxes from Settings are in use at all.
-  const open = () => Boolean(store) && typeof store.mailboxes === 'function' && !primary.demo && !primary.off && driverName(env) === 'gmail';
+  const open = () => Boolean(store) && typeof store.mailboxes === 'function' && !primary.demo && !primary.off && REAL.includes(driverName(env));
 
   async function reload() {
     if (primary.reload) await primary.reload();
@@ -52,13 +100,27 @@ function createMailRoom({ primary, firm = {}, store = null, env = process.env, f
     if (open()) {
       const sealedSecret = await store.setting(CLIENT.secret).catch(() => '');
       const client = { id: await store.setting(CLIENT.id).catch(() => ''), secret: sealedSecret ? (secretBox.open(sealedSecret, env) || '') : '' };
+      const ms = await microsoftClient(store, env);
       const rows = await store.mailboxes().catch(() => []);
       for (const r of rows) {
         const token = r.token ? (secretBox.open(r.token, env) || '') : '';
-        const key = [r.address, token, client.id, client.secret].join('\n');
+        const provider = r.provider === 'outlook' ? 'outlook' : 'gmail';
         let b = built.get(r.id);
-        if (!b || b.key !== key) { b = { key, box: rowMailbox({ address: r.address, token }, { env, client, fetch }) }; built.set(r.id, b); }
-        next.push({ id: r.id, brand: r.brand || '', address: r.address, box: b.box, startAt: r.start_at || null, connected: Boolean(token), unreadable: Boolean(r.token) && !token, by: r.connected_by || '', at: r.connected_at || null });
+        if (provider === 'outlook') {
+          // The token is left out of the key: Microsoft changes it as it is
+          // used, and the mailbox carries the newest one itself.
+          const key = ['outlook', r.address, ms.tenant, ms.clientId, ms.clientSecret, Boolean(token)].join('\n');
+          if (!b || b.key !== key) {
+            const id = r.id;
+            const onRotate = async (fresh) => { if (typeof store.rotateMailboxToken === 'function') await store.rotateMailboxToken(id, secretBox.seal(fresh, env)); };
+            b = { key, box: graphRowMailbox(r, { client: ms, token, onRotate, fetch }) };
+            built.set(r.id, b);
+          }
+        } else {
+          const key = ['gmail', r.address, token, client.id, client.secret].join('\n');
+          if (!b || b.key !== key) { b = { key, box: rowMailbox({ address: r.address, token }, { env, client, fetch }) }; built.set(r.id, b); }
+        }
+        next.push({ id: r.id, brand: r.brand || '', address: r.address, provider, providerName: PROVIDERS[provider], box: b.box, startAt: r.start_at || null, connected: Boolean(token), unreadable: Boolean(r.token) && !token, by: r.connected_by || '', at: r.connected_at || null, signedInAs: r.signed_in_as || '' });
       }
       for (const id of [...built.keys()]) if (!rows.some((r) => r.id === id)) built.delete(id);
     }
@@ -82,6 +144,8 @@ function createMailRoom({ primary, firm = {}, store = null, env = process.env, f
     reload,
     ready,
     get open() { return open(); },
+    // A mailbox connected again is built afresh, with its new sign-in.
+    forget(id) { built.delete(id); },
     // Mailboxes added in Settings, connected or not.
     added: () => entries.slice(),
     // Every mailbox that can be read now.
@@ -123,10 +187,10 @@ function createMailRoom({ primary, firm = {}, store = null, env = process.env, f
     describe() {
       if (!open()) return '';
       if (!entries.length) return 'Abacus office mailboxes: none added in Settings yet';
-      return `Abacus office mailboxes: ${entries.map((e) => `${e.address} for ${e.brand || 'every company'} (${e.connected ? 'connected' : e.unreadable ? 'a token is saved but ABACUS_OFFICE_TOKEN_KEY no longer opens it; connect again' : 'not connected'})`).join('; ')}`;
+      return `Abacus office mailboxes: ${entries.map((e) => `${e.address} on ${e.providerName} for ${e.brand || 'every company'} (${e.connected ? 'connected' : e.unreadable ? 'a token is saved but ABACUS_OFFICE_TOKEN_KEY no longer opens it; connect again' : 'not connected'})`).join('; ')}`;
     }
   };
   return room;
 }
 
-module.exports = { createMailRoom, goneBox, minuteOf };
+module.exports = { createMailRoom, goneBox, minuteOf, microsoftClient, MS_CLIENT, PROVIDERS, REAL };

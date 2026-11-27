@@ -477,3 +477,8 @@ p { margin: 0 0 0.8rem; }
 .to-copy { flex: none; font: inherit; font-size: 0.82rem; font-weight: 700; min-width: 4.2rem; padding: 0 0.6rem; border: 1.5px solid var(--teal); border-radius: 8px; background: var(--teal-pale); color: var(--teal); cursor: pointer; }
 .to-copy:hover { background: var(--teal); color: #fff; }
 .to-copy:focus-visible { outline: 3px solid var(--red); outline-offset: 2px; }
+/* On a phone a line with a Copy button takes the full width, so the value
+   being copied can be read. */
+@media (max-width: 39.99rem) { .to-book .to-field-row.has-copy { grid-template-columns: minmax(0, 1fr); } }
+/* One form after another in the Mailboxes panel. */
+#mailbox .to-form + .to-form, #mailbox .to-form + .to-mailboxes, #mailbox .to-mailboxes + .to-form { margin-top: 1.2rem; }

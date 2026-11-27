@@ -128,16 +128,19 @@
 </section>
 <section class="to-panel" id="mailbox">
   <h2>Mailboxes</h2>
-  <% var _hasServerBox = Boolean(mailConnect.address || mailConnect.envToken || mailConnect.stored.connected); %>
+  <% var _hasServerBox = mailConnect.driverGmail && Boolean(mailConnect.address || mailConnect.envToken || mailConnect.stored.connected); %>
+  <% var _added = mailAdded.list || []; %>
+  <% var _usesGoogle = mailConnect.driverGmail || _added.some(function (m) { return m.provider === 'gmail'; }); %>
+  <% var _day = function (d) { return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/London' }); }; %>
   <% if (mailboxDemo) { %>
   <p>The office is reading a made-up inbox. The firm's real mailbox is connected only once the data processing agreement between the firm and Arrington Consultancy is signed.</p>
   <% } else if (mailboxOff) { %>
   <p>No mailbox is connected, and it stays that way until the data processing agreement between the firm and Arrington Consultancy is signed. Nothing is read from, or saved to, any mailbox. Approved replies are copied out by hand.</p>
   <% } else { %>
-  <p>Each company has its own mailbox. The office reads its inbox and saves approved replies there as drafts for a person to send. It never sends. A company's other addresses, such as its .co.uk or .net, can be forwarded into that one mailbox by whoever runs its email, and another mailbox can be added here at any time.</p>
+  <p>Each company has its own mailbox. The office reads its inbox and saves approved replies there as drafts for a person to send. It never sends. A company's other addresses, such as its .co.uk or .net, can be forwarded into that one mailbox by whoever runs its email, and another mailbox can be added here at any time. Managers' own mailboxes are not connected, so staff never see them.</p>
   <% if (_hasServerBox) { %>
     <% if (mailConnect.stored.connected) { %>
-    <p class="to-status-line"><strong><%= mailConnect.stored.account %></strong> is connected<% if (mailConnect.stored.by) { %>, by <%= mailConnect.stored.by %><% } %><% if (mailConnect.stored.at) { %> on <%= new Date(mailConnect.stored.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/London' }) %><% } %>. The office reads its inbox and saves approved replies there as drafts. It never sends.</p>
+    <p class="to-status-line"><strong><%= mailConnect.stored.account %></strong> is connected<% if (mailConnect.stored.by) { %>, by <%= mailConnect.stored.by %><% } %><% if (mailConnect.stored.at) { %> on <%= _day(mailConnect.stored.at) %><% } %>. The office reads its inbox and saves approved replies there as drafts. It never sends.</p>
     <% } else if (mailConnect.envToken) { %>
     <p class="to-status-line">Connected through a token set on the server for <strong><%= mailConnect.address %></strong>. It reads the inbox and saves drafts. It never sends.</p>
     <% } else { %>
@@ -146,10 +149,24 @@
   <% } %>
   <% } %>
   <% if (!mailboxDemo && !mailboxOff && atLeast(user, 'owner')) { %>
-    <% if (mailConnect.keyReady && !mailConnect.clientInRailway) { %>
+    <% if (mailAdded.open && mailAdded.keyReady && !mailAdded.outlook.inRailway) { %>
+    <form method="post" action="/settings/mailbox/microsoft" class="to-form" autocomplete="off">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <h3>The firm's Microsoft 365 app</h3>
+      <p class="to-small"><%= mailAdded.outlook.saved ? 'Microsoft app details saved' + (mailAdded.outlook.clientId ? ' (client ' + mailAdded.outlook.clientId.slice(0, 8) + '...)' : '') + '. Enter them again only to replace them.' : 'First, the details of the app registered in the firm\'s own Microsoft 365 (see the steps below). They are typed in here so the secret never travels by email or chat.' %></p>
+      <div class="to-field-row">
+        <label class="to-field"><span>Tenant ID</span><input id="ms_tenant_id" name="tenant_id" maxlength="100" required spellcheck="false" placeholder="Directory (tenant) ID"></label>
+        <label class="to-field"><span>Client ID</span><input id="ms_client_id" name="client_id" maxlength="60" required spellcheck="false" placeholder="Application (client) ID"></label>
+        <label class="to-field"><span>Client secret</span><input id="ms_client_secret" name="client_secret" type="password" maxlength="200" required spellcheck="false" placeholder="The secret's Value"></label>
+      </div>
+      <button type="submit" class="to-btn">Save the Microsoft app details</button>
+    </form>
+    <% } %>
+    <% if (_usesGoogle && mailConnect.keyReady && !mailConnect.clientInRailway) { %>
     <form method="post" action="/settings/mailbox/client" class="to-form" autocomplete="off">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-      <p class="to-small"><%= mailConnect.stored.clientFromSettings ? 'Google client saved' + (mailConnect.stored.clientId ? ' (' + mailConnect.stored.clientId.slice(0, 12) + '...)' : '') + '. Enter it again only to replace it.' : 'First, the Google client details from the firm\'s Google Cloud project (see the steps below). They are typed in here so the secret never travels by email or chat.' %></p>
+      <h3>The firm's Google client</h3>
+      <p class="to-small"><%= mailConnect.stored.clientFromSettings || mailAdded.gmail.saved ? 'Google client saved' + (mailConnect.stored.clientId ? ' (' + mailConnect.stored.clientId.slice(0, 12) + '...)' : '') + '. Enter it again only to replace it.' : 'The Google client details from the firm\'s Google Cloud project (see the steps below). They are typed in here so the secret never travels by email or chat.' %></p>
       <div class="to-field-row">
         <label class="to-field"><span>Client ID</span><input id="client_id" name="client_id" maxlength="120" required spellcheck="false" placeholder="ends .apps.googleusercontent.com"></label>
         <label class="to-field"><span>Client secret</span><input id="client_secret" name="client_secret" type="password" maxlength="80" required spellcheck="false"></label>
@@ -172,21 +189,23 @@
     <% } %>
   <% } %>
   <% if (!mailboxDemo && !mailboxOff && mailAdded.open) { %>
-    <% if (mailAdded.list.length) { %>
+    <% if (_added.length) { %>
     <ul class="to-mailboxes">
-      <% mailAdded.list.forEach(function (m) { %>
+      <% _added.forEach(function (m) { var _ms = m.provider === 'outlook'; var _prov = _ms ? mailAdded.outlook : mailAdded.gmail; %>
       <li class="to-mailbox">
-        <p class="to-status-line"><strong><%= m.address %></strong><% if (m.brand) { %> for <%= brandName(m.brand) %><% } %>:
-          <% if (m.connected) { %>connected<% if (m.by) { %> by <%= m.by %><% } %><% if (m.at) { %> on <%= new Date(m.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/London' }) %><% } %>.<% if (m.startAt) { %> It takes in emails received since <%= new Date(m.startAt).toLocaleString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' }) %>.<% } %>
+        <p class="to-status-line"><strong><%= m.address %></strong> (<%= m.providerName %>)<% if (m.brand) { %> for <%= brandName(m.brand) %><% } %>:
+          <% if (m.connected) { %>connected<% if (m.by) { %> by <%= m.by %><% } %><% if (m.at) { %> on <%= _day(m.at) %><% } %><% if (m.signedInAs && m.signedInAs !== m.address) { %>, signed in as <%= m.signedInAs %><% } %>.<% if (m.startAt) { %> It takes in emails received since <%= new Date(m.startAt).toLocaleString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' }) %>.<% } %>
           <% } else if (m.unreadable) { %>its saved connection can no longer be opened. Connect it again.
+          <% } else if (_ms) { %>not connected yet. Press Connect and sign in to Microsoft as that address, or, for a shared mailbox, as someone who has access to it.
           <% } else { %>not connected yet. Whoever can sign in to it presses Connect, signs in to Google as that address and presses Allow.<% } %></p>
         <% if (atLeast(user, 'owner')) { %>
         <div class="to-actions">
-          <% if (mailAdded.ready) { %><a class="to-btn <%= m.connected ? '' : 'to-btn-primary' %>" href="/settings/mailboxes/<%= m.id %>/connect"><%= m.connected ? 'Connect again' : 'Connect' %></a><% } %>
-          <% if (m.connected) { %><form method="post" action="/settings/mailboxes/<%= m.id %>/disconnect" class="to-inline-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="to-btn to-btn-quiet" data-confirm="Disconnect <%= m.address %>? The office stops reading it straight away and the token is cancelled at Google.">Disconnect</button></form><% } %>
+          <% if (_prov.ready) { %><a class="to-btn <%= m.connected ? '' : 'to-btn-primary' %>" href="/settings/mailboxes/<%= m.id %>/connect"><%= m.connected ? 'Connect again' : 'Connect' %></a><% } %>
+          <% if (m.connected) { %><form method="post" action="/settings/mailboxes/<%= m.id %>/disconnect" class="to-inline-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="to-btn to-btn-quiet" data-confirm="Disconnect <%= m.address %>? The office stops reading it straight away<%= _ms ? ' and its saved sign-in is deleted' : ' and the token is cancelled at Google' %>.">Disconnect</button></form><% } %>
           <% if (manyBrands) { %><form method="post" action="/settings/mailboxes/<%= m.id %>/company" class="to-inline-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><label class="to-visually-hidden" for="mailbox_company_<%= m.id %>">Company for <%= m.address %></label><select id="mailbox_company_<%= m.id %>" name="brand"><% brands.forEach(function (b) { %><option value="<%= b.id %>"<%= b.id === m.brand ? ' selected' : '' %>><%= b.name %></option><% }) %></select><button type="submit" class="to-btn to-btn-quiet">Change company</button></form><% } %>
           <form method="post" action="/settings/mailboxes/<%= m.id %>/remove" class="to-inline-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="to-btn to-btn-quiet" data-confirm="Remove <%= m.address %>? The office stops reading it. Emails already in the office stay.">Remove</button></form>
         </div>
+        <% if (!_prov.ready) { %><p class="to-small">Before it can be connected, this is still needed: <%= _prov.blockers.join('; ') %>.</p><% } %>
         <% } %>
       </li>
       <% }) %>
@@ -200,15 +219,29 @@
       <h3>Add a mailbox</h3>
       <div class="to-field-row">
         <label class="to-field"><span>The mailbox's own address</span><input id="mailbox_address" name="address" type="email" maxlength="200" required spellcheck="false" placeholder="bookings@yourcompany.co.uk"></label>
+        <label class="to-field"><span>Its email is with</span><select id="mailbox_provider" name="provider"><% Object.keys(mailAdded.providers).forEach(function (k) { %><option value="<%= k %>"<%= k === mailAdded.defaultProvider ? ' selected' : '' %>><%= mailAdded.providers[k] %></option><% }) %></select></label>
         <% if (manyBrands) { %><label class="to-field"><span>Company</span><select id="mailbox_brand" name="brand" required><option value="">Choose</option><% brands.forEach(function (b) { %><option value="<%= b.id %>"><%= b.name %></option><% }) %></select></label><% } %>
       </div>
       <button type="submit" class="to-btn">Add mailbox</button>
-      <p class="to-small">Use the address people sign in to Google with, not one that only forwards. It starts from the moment it is connected: emails received before then are not brought in.</p>
+      <p class="to-small">Use the mailbox's main address, not one that only forwards into it. It starts from the moment it is connected: emails received before then are not brought in.</p>
     </form>
-    <% if (!mailAdded.ready) { %><p class="to-small">Before a mailbox can be connected, this is still needed: <%= mailAdded.blockers.join('; ') %>.</p><% } %>
     <% } %>
   <% } %>
-  <% if (!mailboxOff) { %>
+  <% if (!mailboxOff && !mailboxDemo && mailAdded.open) { %>
+  <details class="to-details">
+    <summary>Setting up the Microsoft 365 side (for whoever runs the firm's Microsoft 365)</summary>
+    <ol class="to-steps">
+      <li>In the Microsoft Entra admin centre, in the firm's own Microsoft 365, go to App registrations and choose New registration. Supported account types: this organisation only.</li>
+      <li>Redirect URI, type Web, exactly: <code><%= baseUrl %><%= mailConnect.redirectUri %></code></li>
+      <li>API permissions, Microsoft Graph, Delegated: Mail.ReadWrite, Mail.ReadWrite.Shared, offline_access and User.Read. Do not add Mail.Send: the office never sends. Then grant admin consent.</li>
+      <li>Certificates and secrets, New client secret. Copy its Value when it is shown; Microsoft shows it once.</li>
+      <li>Sign in here as the owner and type the tenant ID, the client ID and the secret into the form above. Never send them by email or message.</li>
+      <li>Add each mailbox, press Connect beside it and sign in to Microsoft as that mailbox. A shared mailbox has no sign-in of its own: sign in as a person who has full access to it.</li>
+    </ol>
+    <p class="to-small">The office can then read each connected mailbox's inbox and create drafts in it, and nothing else. It is asked to open only the mailbox named on the row, and a person who cannot open that mailbox is refused.</p>
+  </details>
+  <% } %>
+  <% if (!mailboxOff && !mailboxDemo && _usesGoogle) { %>
   <details class="to-details">
     <summary>Setting up the Google side (for whoever runs the firm's Google account)</summary>
     <ol class="to-steps">

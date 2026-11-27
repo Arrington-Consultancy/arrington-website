@@ -181,7 +181,9 @@ class Office {
   }
 
   emailOf(kase) {
-    return { id: kase.mailbox_email_id, from: kase.from_address, subject: kase.subject, body: kase.body, receivedAt: londonStamp(kase.received_at), threadId: kase.thread_id, messageId: kase.message_id, channel: kase.channel || 'email', logged: isLogged(kase) };
+    // providerId: the mailbox's own id for the email, which Microsoft needs
+    // to put a reply on the right conversation.
+    return { id: kase.mailbox_email_id, providerId: String(kase.mailbox_email_id || '').replace(/^(ol|gm)-/, ''), from: kase.from_address, subject: kase.subject, body: kase.body, receivedAt: londonStamp(kase.received_at), threadId: kase.thread_id, messageId: kase.message_id, channel: kase.channel || 'email', logged: isLogged(kase) };
   }
 
   // A complaint that came in another way (a Google review, a Facebook

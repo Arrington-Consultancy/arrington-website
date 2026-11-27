@@ -241,7 +241,8 @@ test('over HTTP: search, standard replies, fares, changing a booking, reports an
   assert.match(booked.dispatch_ref, /^[A-Z]+-\d{5}$/);
   const ref = booked.dispatch_ref;
   r = await sam.get(`/case/${changeEmail}`);
-  assert.match(r.text, /Dispatch reference of the booking/);
+  // No dispatch system is connected, so staff give the job number as iCabbi shows it.
+  assert.match(r.text, /iCabbi job number of the booking/);
   // Without the tick, nothing changes.
   await sam.post(`/case/${changeEmail}/change-booking`, { ref, ...journey, time: '10:15', name: 'Ann Penrose', phone: '07700 900123', passengers: '2' }, `/case/${changeEmail}`);
   assert.equal((await store.dispatchBookingByRef(ref)).job.time, '09:30');
