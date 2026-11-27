@@ -25,7 +25,8 @@
   <article class="to-email" aria-label="The email">
     <header>
       <p class="to-email-from"><%= kase.from_address %><% if (logged && kase.contact) { %>, <%= kase.contact %><% } %></p>
-      <p class="to-email-when"><% if (logged) { %>Came in by <%= ch.label.toLowerCase() %>, <%= new Date(kase.received_at).toLocaleDateString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', year: 'numeric' }) %>. Typed in by staff.<% } else { %>Received <%= when(kase.received_at) %><% } %></p>
+      <p class="to-email-when"><% if (logged) { %>Came in by <%= ch.label.toLowerCase() %>, <%= new Date(kase.received_at).toLocaleDateString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', year: 'numeric' }) %>. Typed in by staff.<% } else { %>Received <%= when(kase.received_at) %><% if (kase.mailbox_address) { %> in <%= kase.mailbox_address %><% } %><% } %></p>
+      <% if (!logged && kase.sent_to) { %><p class="to-small to-email-to">Sent to <%= kase.sent_to %></p><% } %>
       <h1 class="to-email-subject"><%= kase.subject || '(no subject)' %></h1>
     </header>
     <div class="to-email-body"><%= kase.body %></div>
@@ -130,12 +131,12 @@
       <% } %>
       <% if (logged || (!passedUp && !kase.holding_sent_at)) { %>
       <% } else if (kase.holding_sent_at) { %>
-        <p class="to-note to-note-ok">Holding reply approved <%= when(kase.holding_sent_at) %>. <%= mailboxNone ? 'No mailbox is connected, so nothing has been sent: copy it and send it from your own email.' : (mailboxDemo ? 'This is the made-up inbox, so nothing has been sent.' : 'It is a draft in ' + mailboxLabel + '; nothing has been sent until someone sends it there.') %></p>
+        <p class="to-note to-note-ok">Holding reply approved <%= when(kase.holding_sent_at) %>. <%= mailboxNone ? mailboxWhy + ', so nothing has been sent: copy it and send it from your own email.' : (mailboxDemo ? 'This is the made-up inbox, so nothing has been sent.' : 'It is a draft in ' + mailboxLabel + '; nothing has been sent until someone sends it there.') %></p>
         <% if (mailboxNone) { %><button type="button" class="to-btn to-btn-quiet" data-copy="<%= holdingText %>">Copy the holding reply</button><% } %>
       <% } else { %>
         <p class="to-small"><strong>Holding reply.</strong> Now it has gone to a manager, one click tells the customer so and thanks them for their patience, so they are not left waiting with nothing. Your click, never a timer.</p>
         <div class="to-holding"><%= holdingText %></div>
-        <form method="post" action="/case/<%= kase.id %>/holding" class="to-inline-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="to-btn" data-confirm="Approve the holding reply? <%= mailboxNone ? 'No mailbox is connected, so you then copy it and send it yourself.' : (mailboxDemo ? 'Nothing is sent from this made-up inbox.' : 'It is saved as a draft in ' + mailboxLabel + ' for someone to send.') %>" data-busy="Saving..."><%= mailboxNone ? 'Approve the holding reply' : 'Send the holding reply' %></button></form>
+        <form method="post" action="/case/<%= kase.id %>/holding" class="to-inline-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="to-btn" data-confirm="Approve the holding reply? <%= mailboxNone ? mailboxWhy + ', so you then copy it and send it yourself.' : (mailboxDemo ? 'Nothing is sent from this made-up inbox.' : 'It is saved as a draft in ' + mailboxLabel + ' for someone to send.') %>" data-busy="Saving..."><%= mailboxNone ? 'Approve the holding reply' : 'Send the holding reply' %></button></form>
       <% } %>
     </section>
     <% } %>
@@ -226,7 +227,7 @@
         <% } else if (logged && !savedToMailbox) { %>
         <p class="to-note to-note-ok">Approved. It came in as a <%= ch.label.toLowerCase() %>: <%= ch.send %> Nothing has been posted or sent from here.</p>
         <% } else if (mailboxNone) { %>
-        <p class="to-note to-note-ok">Approved. No mailbox is connected, so it was not saved anywhere and nothing has been sent. Copy the reply into your own email, send it, then press I have sent it.</p>
+        <p class="to-note to-note-ok">Approved. <%= mailboxWhy %>, so it was not saved anywhere and nothing has been sent. Copy the reply into your own email, send it, then press I have sent it.</p>
         <% } else if (mailboxDemo) { %>
         <p class="to-note to-note-ok">Approved. This is the made-up inbox, so it was saved nowhere. Nothing has been sent.</p>
         <% } else { %>
@@ -264,8 +265,8 @@
           <p class="to-small">Approved. To change it, edit the reply and approve the new version.</p>
         <% } else if (mayApprove) { %>
           <% if (mboxUnsure) { %><label class="to-check-box"><input type="checkbox" name="mailbox_checked" value="yes"><span>I have looked in the mailbox drafts and this reply is not there.</span></label><% } %>
-          <button type="submit" class="to-btn to-btn-primary" formaction="/case/<%= kase.id %>/approve" data-confirm="Approve this reply? <%= logged ? 'You then copy it and send or post it where it came in.' : (mailboxNone ? 'No mailbox is connected, so nothing is sent: you copy it and send it yourself.' : (mailboxDemo ? 'Nothing is sent from this made-up inbox.' : 'It will be saved as a draft in ' + mailboxLabel + ' for someone to send.')) %>" data-busy="Approving...">Approve this reply</button>
-          <p class="to-small"><%= forManager ? 'This one is approved by a manager; you are one.' : (logged ? 'It came in as a ' + ch.label.toLowerCase() + '. Once approved: ' + ch.send + ' Nothing is posted or sent from here.' : (mailboxNone ? 'No mailbox is connected, so approving saves nothing anywhere: you copy the reply and send it from your own email. Nothing is sent from here.' : 'Approving saves it as a draft in the firm\'s mailbox for a person to send. Nothing is sent from here.')) %></p>
+          <button type="submit" class="to-btn to-btn-primary" formaction="/case/<%= kase.id %>/approve" data-confirm="Approve this reply? <%= logged ? 'You then copy it and send or post it where it came in.' : (mailboxNone ? mailboxWhy + ', so nothing is sent: you copy it and send it yourself.' : (mailboxDemo ? 'Nothing is sent from this made-up inbox.' : 'It will be saved as a draft in ' + mailboxLabel + ' for someone to send.')) %>" data-busy="Approving...">Approve this reply</button>
+          <p class="to-small"><%= forManager ? 'This one is approved by a manager; you are one.' : (logged ? 'It came in as a ' + ch.label.toLowerCase() + '. Once approved: ' + ch.send + ' Nothing is posted or sent from here.' : (mailboxNone ? mailboxWhy + ', so approving saves nothing anywhere: you copy the reply and send it from your own email. Nothing is sent from here.' : 'Approving saves it as a draft in the firm\'s mailbox for a person to send. Nothing is sent from here.')) %></p>
         <% } else { %>
           <p class="to-note to-note-warn"><%= isCouncil ? 'A reply to the council is approved by a manager or owner.' : (passedUp ? 'This complaint was passed up, so a manager approves the reply.' : 'A safety matter needs a manager to approve the reply.') %> Get the draft right, add a note, and a manager will approve it from here.</p>
         <% } %>

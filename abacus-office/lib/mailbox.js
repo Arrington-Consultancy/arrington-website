@@ -180,6 +180,53 @@ function liveMailbox(name, env, { store, secretEnv = env, fetch } = {}) {
   return box;
 }
 
+// A mailbox the owner added in Settings (lib/mailroom.js): one Gmail
+// address tied to one company. It reads only that address, with its own
+// token. The token set on the server belongs to the server's own mailbox
+// and is never passed to this one; the Google client (id and secret) is
+// the office's, from Railway or from Settings.
+function rowMailbox({ address, token }, { env = process.env, client = {}, fetch } = {}) {
+  const want = String(address || '').trim().toLowerCase();
+  const e = driverEnv(env);
+  delete e.TAXI_OFFICE_GMAIL_REFRESH_TOKEN;
+  e.TAXI_OFFICE_MAIL_DRIVER = 'gmail';
+  e.TAXI_OFFICE_DEMO_ADDRESS = want;
+  if (!String(e.TAXI_OFFICE_GMAIL_CLIENT_ID || '').trim() && client.id) e.TAXI_OFFICE_GMAIL_CLIENT_ID = client.id;
+  if (!String(e.TAXI_OFFICE_GMAIL_CLIENT_SECRET || '').trim() && client.secret) e.TAXI_OFFICE_GMAIL_CLIENT_SECRET = client.secret;
+  if (token) e.TAXI_OFFICE_GMAIL_REFRESH_TOKEN = token;
+  const inner = mail.createMailbox('gmail', fetch ? { env: e, fetch } : { env: e });
+  let checkedOk = false;
+  // Before the first read or draft: Google is asked which address the token
+  // opens, and anything but this mailbox's own is refused.
+  async function checked() {
+    if (!want) throw new MailboxRefused('this mailbox has no address');
+    if (!inner.configured()) throw new MailboxRefused(`${want} is not connected yet`);
+    if (checkedOk) return inner;
+    const got = await inner.account();
+    if (got && got !== want) throw new MailboxRefused(`the credentials open ${got}, not ${want}; nothing was read`);
+    checkedOk = true;
+    return inner;
+  }
+  const box = {
+    name: 'gmail',
+    label: `Gmail (${want})`,
+    address: want,
+    demo: false,
+    off: false,
+    get none() { return !inner.configured(); },
+    noneWhy: `${want} is not connected`,
+    configured: () => inner.configured(),
+    missing: () => inner.missing(),
+    async listInbox(opts) { return (await checked()).listInbox(opts); },
+    async saveReplyDraft(email, text) { if (box.none) return { draftId: null }; return (await checked()).saveReplyDraft(email, text); },
+    async saveNewDraft(to, subject, text) { if (box.none) return { draftId: null }; return (await checked()).saveReplyDraft({ from: to, subject, fresh: true, messageId: '', threadId: '' }, text); },
+    async account() { return inner.account(); },
+    canTrackSent: true,
+    async draftState(ref) { return (await checked()).draftState(ref); }
+  };
+  return box;
+}
+
 function createMailbox(env = process.env, { store, fetch } = {}) {
   const name = driverName(env);
   if (name === 'demo') return demoDriver();
@@ -205,4 +252,4 @@ function describeMailStatus(env = process.env, box = null) {
   return `Abacus office mailbox: ${box.label}${want ? ` for ${want}` : ''}, ${state}`;
 }
 
-module.exports = { createMailbox, describeMailStatus, driverName, driverEnv, expectedAddress, MailboxRefused, STORED, CLIENT, MAPPED };
+module.exports = { createMailbox, rowMailbox, describeMailStatus, driverName, driverEnv, expectedAddress, MailboxRefused, STORED, CLIENT, MAPPED };

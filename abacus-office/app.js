@@ -33,6 +33,7 @@ const alerts = require('./lib/alerts');
 const { createDispatch } = require('./lib/dispatch');
 const { longDate } = require('./lib/demoInbox');
 const mailboxLib = require('./lib/mailbox');
+const { createMailRoom } = require('./lib/mailroom');
 const secretBox = require('./lib/secretBox');
 const gmailConnect = require('../lib/taxiOffice/mail/gmailConnect');
 
@@ -47,7 +48,10 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   if (!sessionSecret || sessionSecret.length < 16) throw new Error('SESSION_SECRET must be set (16 characters or more)');
   const store = new Store(pool);
   if (!dispatch) dispatch = createDispatch({ store, env: dispatchEnv, fetch: fetchImpl, prefix: String(firm.short || 'AB').replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase() || 'AB' });
-  const office = new Office({ store, mailbox, firm, dispatch, aiOn, now });
+  // Every mailbox the office reads: the one set on the server, and those
+  // the owner adds in Settings, one per company (lib/mailroom.js).
+  const room = createMailRoom({ primary: mailbox, firm, store, env: mailEnv, fetch: fetchImpl });
+  const office = new Office({ store, mailbox, mailroom: room, firm, dispatch, aiOn, now });
   const manyBrandsNow = () => (firm.brands || []).length > 1;
   const app = express();
   app.set('trust proxy', 1);
@@ -124,6 +128,18 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     res.locals.counts = null;
     res.locals.section = '';
     next();
+  });
+  // The same four, counting the mailboxes added in Settings, once they
+  // have been loaded. If the database cannot be read the server's own
+  // mailbox still stands, so an error page renders whatever went wrong.
+  app.use((req, res, next) => {
+    room.ready().catch(() => null).then(() => {
+      res.locals.mailboxLabel = room.label;
+      res.locals.mailboxDemo = room.demo;
+      res.locals.mailboxNone = room.none;
+      res.locals.mailboxOff = room.off;
+      next();
+    });
   });
   app.use('/office.css', express.static(path.join(__dirname, 'public', 'office.css'), { maxAge: '1d' }));
   app.use('/office.js', express.static(path.join(__dirname, 'public', 'office.js'), { maxAge: '1d' }));
@@ -302,17 +318,26 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   let lastSync = 0;
   let syncing = false;
   let mailError = '';
+  const mailErrorFor = (e, again) => (e.partial
+    ? `One mailbox was not read (${String(e.message).slice(0, 200)}). The others were.${again ? ' The office tries again every couple of minutes.' : ''}`
+    : e.code === 'MAILBOX_REFUSED' ? `The mailbox was not read: ${e.message}.` : `The mailbox could not be read just now (${String(e.message).slice(0, 160)}).${again ? ' The office tries again every couple of minutes.' : ''}`);
   async function settle() {
     if (syncing || Date.now() - lastSync < 2 * 60 * 1000) return;
     syncing = true;
     try {
-      await office.sync(); mailError = ''; await office.readAllUnread(); lastSync = Date.now();
+      // One mailbox failing while the others were read (partial): what did
+      // arrive is still read, and the failure is shown.
+      let failed = null;
+      try { await office.sync(); } catch (e) { if (!e.partial) throw e; failed = e; }
+      mailError = failed ? mailErrorFor(failed, true) : '';
+      if (failed) console.error('Abacus office: one mailbox was not read:', failed.message);
+      await office.readAllUnread(); lastSync = Date.now();
       // Then whether approved replies have been sent from the mailbox.
       await office.checkSent().catch((e) => console.error('Abacus office: sent check failed', e.message));
     } catch (e) {
       // Shown to staff on the inbox, so a mailbox that stops answering is
       // seen rather than looking like a quiet day.
-      mailError = e.code === 'MAILBOX_REFUSED' ? `The mailbox was not read: ${e.message}.` : `The mailbox could not be read just now (${String(e.message).slice(0, 160)}). The office tries again every couple of minutes.`;
+      mailError = mailErrorFor(e, true);
       console.error('Abacus office: sync failed', e.message);
     } finally { syncing = false; }
   }
@@ -369,17 +394,19 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     res.render('inbox', { title: q ? `Search: ${q}` : 'Inbox', section: 'inbox', cases, show: q ? '' : show, q, liveStamp: await store.liveStamp(scope), lastSync });
   }));
   app.post('/inbox/sync', wrap(async (req, res) => {
-    if (mailbox.none) { flash(req, 'warn', 'No mailbox is connected, so there is nothing to check.'); return res.redirect('/inbox'); }
+    await room.ready();
+    if (room.none) { flash(req, 'warn', 'No mailbox is connected, so there is nothing to check.'); return res.redirect('/inbox'); }
     lastSync = 0;
     let created;
+    let failed = null;
     try { created = await office.sync(); mailError = ''; } catch (e) {
-      mailError = e.code === 'MAILBOX_REFUSED' ? `The mailbox was not read: ${e.message}.` : `The mailbox could not be read just now (${String(e.message).slice(0, 160)}).`;
-      flash(req, 'warn', mailError);
-      return res.redirect('/inbox');
+      mailError = mailErrorFor(e, false);
+      if (!e.partial) { flash(req, 'warn', mailError); return res.redirect('/inbox'); }
+      failed = e; created = e.created || [];
     }
     const read = await office.readAllUnread();
     lastSync = Date.now();
-    flash(req, 'ok', `${created.length} new ${created.length === 1 ? 'email' : 'emails'} from ${mailbox.label}${read ? `, ${read} read` : ''}. The inbox also checks itself every couple of minutes.`);
+    flash(req, failed ? 'warn' : 'ok', `${created.length} new ${created.length === 1 ? 'email' : 'emails'} from ${room.label}${read ? `, ${read} read` : ''}. ${failed ? mailError : 'The inbox also checks itself every couple of minutes.'}`);
     res.redirect('/inbox');
   }));
 
@@ -439,7 +466,10 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     res.locals.lostDraft = lost;
     const kase = req.kase.reading || req.kase.reading_source !== 'none' ? req.kase : await office.read(req.kase, { actor: req.user });
     const [events, users] = await Promise.all([store.eventsFor(kase.id), store.users()]);
-    res.render('case', { title: kase.subject || 'Email', section: kase.kind === 'complaints' ? 'complaints' : (kase.kind === 'licensing' ? 'council' : 'inbox'), kase, events, users: users.filter((u) => u.active && canSee(u, kase)), booking: office.bookingFrom(kase), dispatchRow: kase.dispatch_ref ? await store.dispatchBookingByRef(kase.dispatch_ref) : null, statusWords: require('./lib/icabbi').statusWords, holdingText: kase.kind === 'complaints' ? office.holdingText(kase) : '', standardReplies: await store.standardRepliesFor(kase.brand || '') });
+    // The mailbox this email came into decides what the page says about
+    // where its reply waits.
+    const box = office.boxFor(kase);
+    res.render('case', { mailboxLabel: box.label, mailboxNone: Boolean(box.none), mailboxDemo: Boolean(box.demo), mailboxWhy: box.noneWhy || 'No mailbox is connected', title: kase.subject || 'Email', section: kase.kind === 'complaints' ? 'complaints' : (kase.kind === 'licensing' ? 'council' : 'inbox'), kase, events, users: users.filter((u) => u.active && canSee(u, kase)), booking: office.bookingFrom(kase), dispatchRow: kase.dispatch_ref ? await store.dispatchBookingByRef(kase.dispatch_ref) : null, statusWords: require('./lib/icabbi').statusWords, holdingText: kase.kind === 'complaints' ? office.holdingText(kase) : '', standardReplies: await store.standardRepliesFor(kase.brand || '') });
   }));
   const act = (p, fn) => app.post(`/case/:id/${p}`, loadCase, wrap(async (req, res) => { await fn(req, res); if (!res.headersSent && !res.locals.redirected) res.redirect(`/case/${req.kase.id}`); }));
   // A manager or the owner who sees every company puts an email under the
@@ -497,7 +527,8 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   });
   act('holding', async (req) => {
     await office.sendHolding(req.kase, req.user);
-    flash(req, 'ok', mailbox.none ? 'Holding reply approved. No mailbox is connected, so nothing has been sent: copy it below and send it from your own email.' : mailbox.demo ? 'Holding reply approved. This is the made-up inbox, so nothing has been sent.' : `Holding reply saved as a draft in ${mailbox.label}. Nothing has been sent: open the mailbox to send it.`);
+    const box = office.boxFor(req.kase);
+    flash(req, 'ok', box.none ? `Holding reply approved. ${box.noneWhy || 'No mailbox is connected'}, so nothing has been sent: copy it below and send it from your own email.` : box.demo ? 'Holding reply approved. This is the made-up inbox, so nothing has been sent.' : `Holding reply saved as a draft in ${box.label}. Nothing has been sent: open the mailbox to send it.`);
   });
   act('book', async (req) => {
     try {
@@ -548,7 +579,8 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
       return;
     }
     if (done && done.copyOut) { flash(req, 'ok', `Approved. ${done.send} When it has gone, press I have sent it.`); return; }
-    flash(req, 'ok', mailbox.none ? 'Approved. No mailbox is connected, so nothing has been sent: copy the reply, send it from your own email, then press I have sent it.' : mailbox.demo ? 'Approved. This is the made-up inbox, so nothing has been sent.' : `Approved and saved as a draft in ${mailbox.label}. Nothing has been sent: open the mailbox to send it, then press I have sent it.`);
+    const box = office.boxFor(fresh);
+    flash(req, 'ok', box.none ? `Approved. ${box.noneWhy || 'No mailbox is connected'}, so nothing has been sent: copy the reply, send it from your own email, then press I have sent it.` : box.demo ? 'Approved. This is the made-up inbox, so nothing has been sent.' : `Approved and saved as a draft in ${box.label}. Nothing has been sent: open the mailbox to send it, then press I have sent it.`);
   });
   act('sent', async (req) => {
     try { await office.markSent(req.kase, req.user); flash(req, 'ok', 'Marked as sent. The case now waits on the customer.'); } catch (e) {
@@ -644,7 +676,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   }));
 
   app.get('/settings', requireRole('manager'), wrap(async (req, res) => {
-    res.render('settings', { baseUrl: baseUrl || `${req.protocol}://${req.get('host')}`, title: 'Settings', section: 'settings', hours: await store.escalationHours(), nudgeHours: await store.complaintNudgeHours(), seriousHours: await store.complaintSeriousHours(), prices: await store.fixedPrices(scopeFor(req.user) || req.portal || undefined), tariffBrand: companyChoice(req, req.query.tariff), tariff: await store.tariff(companyChoice(req, req.query.tariff)), fareDefaults: require('./lib/fares').DEFAULT_TARIFF, fareCards: Object.values(require('./lib/fares').FARE_CARDS), fareCard: require('./lib/fares').cardFor(await store.tariff(companyChoice(req, req.query.tariff))), fareLib: require('./lib/fares'), holidaysUntil: require('./lib/fares').HOLIDAYS_KNOWN_UNTIL, replies: (scopeFor(req.user) || req.portal) ? await store.standardRepliesFor(scopeFor(req.user) || req.portal) : await store.standardReplies(), ownBrand: scopeFor(req.user) || '', brands: firm.brands || [], alertStatus: alerts.describeAlertStatus(alertsEnv), mailStatus: mailboxLib.describeMailStatus(mailEnv, mailbox), mailConnect: connectState(), aiStatus: ai.describeAiStatus(), dispatchStatus: require('./lib/dispatch').describeDispatchStatus() });
+    res.render('settings', { baseUrl: baseUrl || `${req.protocol}://${req.get('host')}`, title: 'Settings', section: 'settings', hours: await store.escalationHours(), nudgeHours: await store.complaintNudgeHours(), seriousHours: await store.complaintSeriousHours(), prices: await store.fixedPrices(scopeFor(req.user) || req.portal || undefined), tariffBrand: companyChoice(req, req.query.tariff), tariff: await store.tariff(companyChoice(req, req.query.tariff)), fareDefaults: require('./lib/fares').DEFAULT_TARIFF, fareCards: Object.values(require('./lib/fares').FARE_CARDS), fareCard: require('./lib/fares').cardFor(await store.tariff(companyChoice(req, req.query.tariff))), fareLib: require('./lib/fares'), holidaysUntil: require('./lib/fares').HOLIDAYS_KNOWN_UNTIL, replies: (scopeFor(req.user) || req.portal) ? await store.standardRepliesFor(scopeFor(req.user) || req.portal) : await store.standardReplies(), ownBrand: scopeFor(req.user) || '', brands: firm.brands || [], alertStatus: alerts.describeAlertStatus(alertsEnv), mailStatus: mailboxLib.describeMailStatus(mailEnv, mailbox), mailConnect: connectState(), mailAdded: addedState(), aiStatus: ai.describeAiStatus(), dispatchStatus: require('./lib/dispatch').describeDispatchStatus() });
   }));
   app.post('/settings', requireRole('owner'), wrap(async (req, res) => {
     const n = Number(req.body.escalation_hours);
@@ -782,7 +814,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   // A new email waits in the connected mailbox only for that mailbox's own
   // company (see office.canHoldNew); with no brand given, whether a mailbox
   // can hold drafts at all.
-  const mailboxCanHold = (brand) => (brand === undefined ? !mailbox.demo && !mailbox.none && typeof mailbox.saveNewDraft === 'function' && mailbox.configured() : office.canHoldNew(brand));
+  const mailboxCanHold = (brand) => office.canHoldNew(brand === undefined ? '' : brand);
 
   app.get('/write', wrap(async (req, res) => {
     const drafts = await store.compositions(atLeast(req.user, 'manager') ? { council: false, brand: req.portal || undefined } : { userId: req.user.id, council: false });
@@ -869,20 +901,23 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     // Claimed first, so two presses make one draft in the mailbox.
     if (!(await store.claimComposition(req.draft.id, staffName(req.user)))) { flash(req, 'warn', 'This is already approved. To change it, edit it and approve the new version.'); return; }
     let draftId = '';
-    if (mailboxCanHold(c.brand)) {
+    // The mailbox of the company this email is written for.
+    const entry = room.entryForBrand(c.brand);
+    const box = entry ? entry.box : mailbox;
+    if (entry) {
       try {
-        const r = await mailbox.saveNewDraft(c.to_address, c.subject, c.body);
+        const r = await box.saveNewDraft(c.to_address, c.subject, c.body);
         draftId = String((r && r.draftId) || '');
       } catch (e) {
-        if (e.code === 'MAILBOX_REFUSED') { await store.updateComposition(req.draft.id, { approved_at: null, approved_by_name: '' }); flash(req, 'warn', `${mailbox.label} refused it, so nothing was saved: ${e.message}.`); return; }
+        if (e.code === 'MAILBOX_REFUSED') { await store.updateComposition(req.draft.id, { approved_at: null, approved_by_name: '' }); flash(req, 'warn', `${box.label} refused it, so nothing was saved: ${e.message}.`); return; }
         await store.updateComposition(req.draft.id, { status: 'approved' }).catch(() => {});
-        flash(req, 'warn', `${mailbox.label} did not answer clearly, so the draft may or may not be there. Look in the mailbox drafts. If it is not there, change the email and approve it again.`);
+        flash(req, 'warn', `${box.label} did not answer clearly, so the draft may or may not be there. Look in the mailbox drafts. If it is not there, change the email and approve it again.`);
         return;
       }
     }
-    await store.updateComposition(req.draft.id, { status: 'approved', mailbox_draft_id: draftId });
-    await store.addEvent(null, { actor: req.user, kind: 'write_approved', detail: `${compose.ALL_KINDS[c.kind]} approved for ${companyOf(c.brand)}${c.to_address ? ` to ${c.to_address}` : ''}${draftId ? `, saved as a draft in ${mailbox.label}` : ''}` });
-    flash(req, 'ok', draftId ? `Approved and saved as a draft in ${mailbox.label}. Open the mailbox to send it.` : (mailboxCanHold() ? `Approved. ${companyOf(c.brand)} does not have its own mailbox connected yet, so copy it into that company's email and send it from there.` : 'Approved. No mailbox is connected yet, so copy it into your email and send it from there.'));
+    await store.updateComposition(req.draft.id, { status: 'approved', mailbox_draft_id: draftId, ...(draftId && entry && entry.id ? { mailbox_id: entry.id } : {}) });
+    await store.addEvent(null, { actor: req.user, kind: 'write_approved', detail: `${compose.ALL_KINDS[c.kind]} approved for ${companyOf(c.brand)}${c.to_address ? ` to ${c.to_address}` : ''}${draftId ? `, saved as a draft in ${box.label}` : ''}` });
+    flash(req, 'ok', draftId ? `Approved and saved as a draft in ${box.label}. Open the mailbox to send it.` : (mailboxCanHold() ? `Approved. ${companyOf(c.brand)} does not have its own mailbox connected yet, so copy it into that company's email and send it from there.` : 'Approved. No mailbox is connected yet, so copy it into your email and send it from there.'));
   });
   writeAct('discard', async (req, res) => {
     await store.updateComposition(req.draft.id, { status: 'discarded' });
@@ -916,13 +951,19 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     if (!c.ready) { flash(req, 'warn', `The mailbox cannot be connected yet. Still needed: ${c.blockers.join('; ')}.`); return res.redirect('/settings#mailbox'); }
     const state = crypto.randomBytes(24).toString('hex');
     req.session.mailboxConnectState = state;
+    delete req.session.mailboxConnectId;
     res.redirect(gmailConnect.authorizeUrl({ env: effEnv(), redirectUri: callbackUrl(req), state, loginHint: c.address }));
   }));
   app.get('/settings/mailbox/callback', requireRole('owner'), wrap(async (req, res) => {
     const expected = req.session.mailboxConnectState;
     delete req.session.mailboxConnectState;
-    const c = connectState();
+    const addedId = Number(req.session.mailboxConnectId) || 0;
+    delete req.session.mailboxConnectId;
     const back = (tone, message) => { flash(req, tone, message); res.redirect('/settings#mailbox'); };
+    // A mailbox added in Settings comes back to the same address, so the
+    // firm's Google client needs one redirect URI however many it connects.
+    if (addedId) return finishAdded(req, addedId, expected, back);
+    const c = connectState();
     if (!c.ready) return back('warn', `The mailbox cannot be connected yet. Still needed: ${c.blockers.join('; ')}.`);
     if (req.query.error) return back('warn', `Google did not connect it: ${String(req.query.error).slice(0, 100)}.`);
     if (!expected || req.query.state !== expected) return back('warn', 'That could not be checked as the connection you started. Start again from Settings, in an ordinary browser window.');
@@ -939,7 +980,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     await store.setSetting(mailboxLib.STORED.at, new Date().toISOString());
     await store.addEvent(null, { actor: req.user, kind: 'mailbox_connected', detail: `Mailbox ${result.account} connected` });
     console.log(`Abacus office: mailbox ${result.account} connected from Settings by ${req.user.username}; token sealed in the database`);
-    if (mailbox.reload) await mailbox.reload();
+    await room.reload();
     lastSync = 0;
     back('ok', `${result.account} is connected. The inbox fills from it within a couple of minutes, and replies are saved there as drafts. Nothing is sent from the office.`);
   }));
@@ -952,7 +993,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     await store.setSetting(mailboxLib.CLIENT.id, id);
     await store.setSetting(mailboxLib.CLIENT.secret, secretBox.seal(secret, mailEnv));
     await store.addEvent(null, { actor: req.user, kind: 'mailbox_client_saved', detail: 'Google client details saved for the mailbox connection' });
-    if (mailbox.reload) await mailbox.reload();
+    await room.reload();
     flash(req, 'ok', 'Saved. The secret is sealed and is not shown again. Now press Connect the mailbox.');
     res.redirect('/settings#mailbox');
   }));
@@ -965,8 +1006,108 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     }
     for (const k of Object.values(mailboxLib.STORED)) await store.setSetting(k, '');
     await store.addEvent(null, { actor: req.user, kind: 'mailbox_disconnected', detail: 'Mailbox disconnected' });
-    if (mailbox.reload) await mailbox.reload();
+    await room.reload();
     flash(req, 'ok', 'The mailbox is disconnected and its token cancelled at Google. Nothing more is read from it.');
+    res.redirect('/settings#mailbox');
+  }));
+
+  // ---- A mailbox per company, and more later (Tom, 27 November 2026:
+  // "each company might have multiple inboxes"; ".com .co.uk .net etc can
+  // all go into one company email box. We can create more down the line").
+  // The owner adds a mailbox, ties it to a company and connects it by
+  // signing in to Google as that address; the token comes straight back
+  // here, sealed. From that moment its emails arrive as that company's,
+  // and nothing received before it is taken in. Only with the server's
+  // driver set to gmail, which is Tom's to do once the data processing
+  // agreement is signed.
+  function addedState() {
+    const blockers = [];
+    if (mailboxLib.driverName(mailEnv) !== 'gmail') blockers.push('ABACUS_OFFICE_MAIL_DRIVER is not gmail (set it only once the data processing agreement is signed)');
+    gmailConnect.missing(effEnv()).forEach((v) => blockers.push(`the Google client ${/SECRET/.test(v) ? 'secret' : 'ID'} (in the form above)`));
+    if (!secretBox.available(mailEnv)) blockers.push(`ABACUS_OFFICE_TOKEN_KEY (${secretBox.MIN_KEY} characters or more), which seals the token`);
+    return { open: room.open, ready: room.open && blockers.length === 0, blockers, list: room.added() };
+  }
+  const revokeAtGoogle = async (sealed) => {
+    const token = sealed ? secretBox.open(sealed, mailEnv) : null;
+    if (!token) return;
+    try { await fetchImpl('https://oauth2.googleapis.com/revoke', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ token }).toString() }); } catch { /* best effort */ }
+  };
+  const loadAdded = wrap(async (req, res, next) => {
+    const row = /^\d{1,9}$/.test(req.params.id) ? await store.mailboxById(Number(req.params.id)) : null;
+    if (!row || !room.open) return res.status(404).render('missing', { title: 'Not found', section: '' });
+    req.added = row;
+    next();
+  });
+  app.post('/settings/mailboxes', requireRole('owner'), wrap(async (req, res) => {
+    const back = (tone, message) => { flash(req, tone, message); res.redirect('/settings#mailbox'); };
+    if (!room.open) return back('warn', 'Mailboxes cannot be added yet. The server is not set to read real mailboxes.');
+    const address = String(req.body.address || '').trim().toLowerCase();
+    const brands = firm.brands || [];
+    const brand = brands.some((b) => b.id === String(req.body.brand || '')) ? String(req.body.brand) : (brands.length === 1 ? brands[0].id : '');
+    if (!EMAIL_RE.test(address) || address.length > 200) return back('warn', 'That email address does not look right. Nothing was added.');
+    if (brands.length > 1 && !brand) return back('warn', 'Choose which company this mailbox is for. Nothing was added.');
+    if (address === mailboxLib.expectedAddress(mailEnv)) return back('warn', `${address} is already the mailbox set on the server. Nothing was added.`);
+    const row = await store.addMailbox({ brand, address, by: staffName(req.user) });
+    if (!row) return back('warn', `${address} is already in the list. Nothing was added.`);
+    await store.addEvent(null, { actor: req.user, kind: 'mailbox_added', detail: `Mailbox ${address} added for ${brandName(firm, brand) || 'the firm'}` });
+    await room.reload();
+    back('ok', `${address} added for ${brandName(firm, brand) || 'the firm'}. Now press Connect beside it and sign in to Google as that address.`);
+  }));
+  app.get('/settings/mailboxes/:id/connect', requireRole('owner'), loadAdded, wrap(async (req, res) => {
+    const st = addedState();
+    if (!st.ready) { flash(req, 'warn', `The mailbox cannot be connected yet. Still needed: ${st.blockers.join('; ')}.`); return res.redirect('/settings#mailbox'); }
+    const state = crypto.randomBytes(24).toString('hex');
+    req.session.mailboxConnectState = state;
+    req.session.mailboxConnectId = req.added.id;
+    res.redirect(gmailConnect.authorizeUrl({ env: effEnv(), redirectUri: callbackUrl(req), state, loginHint: req.added.address }));
+  }));
+  async function finishAdded(req, id, expected, back) {
+    const row = await store.mailboxById(id);
+    const st = addedState();
+    if (!row) return back('warn', 'That mailbox is no longer in the list. Add it again.');
+    if (!st.ready) return back('warn', `The mailbox cannot be connected yet. Still needed: ${st.blockers.join('; ')}.`);
+    if (req.query.error) return back('warn', `Google did not connect it: ${String(req.query.error).slice(0, 100)}.`);
+    if (!expected || req.query.state !== expected) return back('warn', 'That could not be checked as the connection you started. Start again from Settings, in an ordinary browser window.');
+    if (typeof req.query.code !== 'string' || !req.query.code) return back('warn', 'Google did not send back what it should. Start again.');
+    // Google is asked which address the new token opens. Any other than
+    // this mailbox's own is refused and its token cancelled on the spot.
+    const result = await gmailConnect.finish({ env: effEnv(), code: req.query.code, redirectUri: callbackUrl(req), expected: row.address, fetch: fetchImpl, mailboxName: 'the mailbox' });
+    if (!result.ok) {
+      console.warn(`Abacus office: mailbox connection refused: ${result.message}`);
+      await store.addEvent(null, { actor: req.user, kind: 'mailbox_refused', detail: `Mailbox connection refused for ${row.address}${result.account ? ` (${result.account})` : ''}` });
+      return back('warn', result.message);
+    }
+    const first = !row.start_at;
+    await store.connectMailbox(row.id, { token: secretBox.seal(result.refreshToken, mailEnv), by: staffName(req.user), at: new Date() });
+    await store.addEvent(null, { actor: req.user, kind: 'mailbox_connected', detail: `Mailbox ${row.address} connected for ${brandName(firm, row.brand) || 'the firm'}` });
+    console.log(`Abacus office: mailbox ${row.address} (${row.brand || 'every company'}) connected from Settings by ${req.user.username}; token sealed in the database`);
+    await room.reload();
+    lastSync = 0;
+    back('ok', `${row.address} is connected. ${first ? 'Emails that arrive from now on come into the inbox within a couple of minutes; nothing from before today is brought in.' : 'Its emails come into the inbox within a couple of minutes.'} Replies are saved there as drafts. Nothing is sent from the office.`);
+  }
+  app.post('/settings/mailboxes/:id/disconnect', requireRole('owner'), loadAdded, wrap(async (req, res) => {
+    await revokeAtGoogle(req.added.token);
+    await store.disconnectMailbox(req.added.id);
+    await store.addEvent(null, { actor: req.user, kind: 'mailbox_disconnected', detail: `Mailbox ${req.added.address} disconnected` });
+    await room.reload();
+    flash(req, 'ok', `${req.added.address} is disconnected and its token cancelled at Google. Nothing more is read from it. Its emails stay in the office.`);
+    res.redirect('/settings#mailbox');
+  }));
+  app.post('/settings/mailboxes/:id/company', requireRole('owner'), loadAdded, wrap(async (req, res) => {
+    const brand = (firm.brands || []).some((b) => b.id === String(req.body.brand || '')) ? String(req.body.brand) : '';
+    if (!brand) { flash(req, 'warn', 'Choose a company. Nothing was changed.'); return res.redirect('/settings#mailbox'); }
+    await store.setMailboxBrand(req.added.id, brand);
+    await store.addEvent(null, { actor: req.user, kind: 'mailbox_company', detail: `Mailbox ${req.added.address} now feeds ${brandName(firm, brand)}` });
+    await room.reload();
+    flash(req, 'ok', `${req.added.address} now feeds ${brandName(firm, brand)}. Emails already in the office stay where they are.`);
+    res.redirect('/settings#mailbox');
+  }));
+  app.post('/settings/mailboxes/:id/remove', requireRole('owner'), loadAdded, wrap(async (req, res) => {
+    await revokeAtGoogle(req.added.token);
+    await store.removeMailbox(req.added.id);
+    await store.addEvent(null, { actor: req.user, kind: 'mailbox_removed', detail: `Mailbox ${req.added.address} removed` });
+    await room.reload();
+    flash(req, 'ok', `${req.added.address} is removed and its token cancelled at Google. Its emails stay in the office; a reply to one of them is now copied out by hand.`);
     res.redirect('/settings#mailbox');
   }));
 
@@ -984,7 +1125,7 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     res.status(500).render('missing', { title: 'Something went wrong', keepTyped: true, message: 'Something went wrong on our side, and what you sent may not have been saved. Go back to the page you were on and check. Anything you typed there is put back for you.' });
   });
 
-  return { app, store, office };
+  return { app, store, office, room };
 }
 
 function safeNext(n) {
