@@ -10903,6 +10903,12 @@ and the additions to `test/abacusOfficeLoggedComplaints.test.js`.
   connection.
 - **A typed-in complaint's overdue clock** runs from the date staff give it,
   so one logged for two days ago is overdue at once. Left as it is.
+- **Live 27/11/2026:** main `ff83268`, office deployment `eba922ee` (boot
+  lines unchanged: no mailbox, stand-in dispatch, AI on, alerts on screen
+  only); website deployment `da3c3486`. Read from the live office: the sign-in
+  page answers, `/favicon.ico` is a 404, `/office.js` carries the send-once
+  and put-it-back code. Written back to the Handoff Log (entry of 27 November
+  2026, about 07:00 UTC).
 
 ## Blog, fed from Holo (LIVE 18/11/2026)
 
