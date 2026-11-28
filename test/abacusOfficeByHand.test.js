@@ -136,20 +136,20 @@ test('over HTTP: a booking email is set out to copy, staff record the iCabbi job
   let r = await post('/login', { username: 'sam', password: 'sam-pass-123456', next: '/' }, '/login');
   assert.equal(r.status, 302);
 
-  const seed = async (key, reading) => {
+  const seed = async (key, reading, over = {}) => {
     const row = await store.insertCase({ id: key, messageId: `<${key}@test>`, from: 'Jenna Pascoe <jenna@example.invalid>', subject: `Taxi to the airport ${key}`, body: 'Hi, can I book a taxi to Newquay airport on 12 June at 6am from 12 Arwenack Street? There are 4 of us. Jenna 07700 900123', receivedAt: new Date().toISOString() }, '');
     await store.updateCase(row.id, { kind: 'bookings', status: 'new', reading_source: 'ai', draft: 'Hello Jenna,\nThanks for getting in touch. We will confirm once it is in the system.\nThanks,\nCornwall Taxis', ai_draft: 'x',
-      reading: { intent: 'new_booking', customer_name: 'Jenna Pascoe', phone: '07700 900123', reference: '', journey: { date: '2031-06-12', time: '06:00', pickup: '12 Arwenack Street, Falmouth', destination: 'Newquay Airport', passengers: '4', flight: '' }, missing: reading || [], seriousness: 'none', summary: 'Wants a taxi to the airport.', reply: '' } });
+      reading: { intent: 'new_booking', customer_name: 'Jenna Pascoe', phone: '07700 900123', reference: '', missing: reading || [], seriousness: 'none', summary: 'Wants a taxi to the airport.', reply: '', ...over, journey: { date: '2031-06-12', time: '06:00', pickup: '12 Arwenack Street, Falmouth', destination: 'Newquay Airport', passengers: '4', flight: '', ...(over.journey || {}) } } });
     return row.id;
   };
-  const one = await seed('one', ['a flight number']);
+  const one = await seed('one');
 
   // The page sets the job out to copy and says the office books nothing itself.
   r = await get(`/case/${one}`);
   assert.match(r.text, /Into iCabbi, by hand/);
   assert.match(r.text, /Copy puts that one line on your clipboard, ready to paste into iCabbi/);
   assert.match(r.text, /The office books nothing in iCabbi itself/);
-  assert.match(r.text, /The email does not give: a flight number/);
+  assert.doesNotMatch(r.text, /The email does not give|enough here to book/, 'nothing is asked for when the email gives it all');
   for (const id of ['date', 'time', 'pickup', 'destination', 'name', 'phone', 'passengers']) assert.match(r.text, new RegExp(`data-copy-from="bk-${id}"`));
   assert.match(r.text, /id="bk-phone" name="phone" type="tel" value="07700 900123"/);
   assert.match(r.text, /data-copy-job="bk"/);
@@ -163,8 +163,10 @@ test('over HTTP: a booking email is set out to copy, staff record the iCabbi job
   assert.equal((await store.caseById(one)).dispatch_ref, '');
   r = await get(`/case/${one}`);
   assert.match(r.text, /Tick the box to say you have keyed this job into iCabbi/);
-  await post(`/case/${one}/book`, { ...job, phone: '', manual_ref: '483920', signed_off: 'yes' }, `/case/${one}`);
+  await post(`/case/${one}/book`, { ...job, time: '', manual_ref: '483920', signed_off: 'yes' }, `/case/${one}`);
   assert.equal((await store.caseById(one)).dispatch_ref, '');
+  r = await get(`/case/${one}`);
+  assert.match(r.text, /Still needed before it is recorded as booked: a pickup time\. Nothing was recorded\./);
   assert.equal(guided.length, 0);
 
   // With both: recorded under iCabbi's own number, by name, and the AI rewrites the reply to confirm it.
@@ -211,4 +213,52 @@ test('over HTTP: a booking email is set out to copy, staff record the iCabbi job
   await post(`/case/${one}/cancel-booking`, { reason: 'Customer emailed to cancel', signed_off: 'yes' }, `/case/${one}`);
   assert.equal((await store.dispatchBookingByRef('483920')).status, 'cancelled');
   assert.match((await store.eventsFor(one)).map((e) => e.detail).join('\n'), /483920 recorded as cancelled \(cancelled in iCabbi by hand\)\. Reason: Customer emailed to cancel/);
+
+  // Enough to book (Tom, 28 November 2026): the day, the pickup time and
+  // both addresses. The email gives no name, phone or number of people.
+  const thin = await seed('thin', ['x'], { customer_name: '', phone: '', journey: { passengers: '' } });
+  r = await get(`/case/${thin}`);
+  assert.match(r.text, /Enough to book it\./);
+  assert.match(r.text, /There is enough here to book it\. The email does not give the passenger&#39;s name, a phone number, how many passengers: leave those lines empty, key the job into iCabbi without them/);
+  assert.match(r.text, /id="bk-date" name="date" type="date" value="2031-06-12" required/);
+  assert.match(r.text, /id="bk-phone" name="phone" type="tel" value="" maxlength="30">/, 'the phone line can be left empty');
+  assert.match(r.text, /id="bk-passengers" name="passengers" inputmode="numeric" value="" maxlength="2" placeholder/);
+  const thinJob = { date: '2031-06-12', time: '06:00', pickup: '12 Arwenack Street, Falmouth', destination: 'Newquay Airport', name: '', phone: '', passengers: '', vehicle: 'Car (up to 4)', notes: '', flight: '' };
+  // Still not without the tick.
+  await post(`/case/${thin}/book`, { ...thinJob, manual_ref: '500100' }, `/case/${thin}`);
+  assert.equal((await store.caseById(thin)).dispatch_ref, '');
+  const before = guided.length;
+  r = await post(`/case/${thin}/book`, { ...thinJob, manual_ref: '500100', signed_off: 'yes' }, `/case/${thin}`);
+  kase = await store.caseById(thin);
+  assert.equal(kase.dispatch_ref, '500100', 'booked with the day, the time and both addresses');
+  const thinRow = await store.dispatchBookingByRef('500100');
+  assert.equal(thinRow.job.passengers, '', 'the number of passengers is not guessed');
+  assert.equal(thinRow.job.phone, '');
+  assert.equal(guided.length, before + 1, 'the reply was redrafted once');
+  const note = guided[guided.length - 1];
+  assert.match(note, /This job is now booked in iCabbi as job 500100: 2031-06-12 06:00, 12 Arwenack Street, Falmouth to Newquay Airport, Car \(up to 4\)\./);
+  assert.match(note, /in the same reply ask them for what the office does not have yet: the passenger's name; a mobile number for the driver; how many people are travelling/);
+  assert.match(note, /The car is booked whether or not they answer/);
+  assert.doesNotMatch(note, /0 passengers| passengers?,/);
+  assert.equal(kase.approved_at, null, 'still a draft for staff to approve');
+  assert.match((await store.eventsFor(thin)).map((e) => e.detail).join('\n'), /Keyed into iCabbi by hand as job 500100: .*Recorded by Sam\. Still to get from the customer: the passenger's name, a phone number, how many passengers/);
+  r = await get(`/case/${thin}`);
+  assert.match(r.text, /asks the customer for the passenger&#39;s name, a phone number, how many passengers; check it and approve/);
+  assert.match(r.text, /<strong>Still to get from the customer:<\/strong> the passenger&#39;s name, a phone number, how many passengers\./);
+  assert.match(r.text, /The customer has changed this job, or sent what was missing/);
+  // The customer answers: staff add it to the job, and nothing is left to get.
+  await post(`/case/${thin}/change-booking`, { ...thinJob, name: 'Jenna Pascoe', phone: '07700 900123', passengers: '4', signed_off: 'yes' }, `/case/${thin}`);
+  assert.equal((await store.dispatchBookingByRef('500100')).job.phone, '07700 900123');
+  assert.match((await store.eventsFor(thin)).map((e) => e.detail).join('\n'), /500100: change recorded, made in iCabbi by hand: passenger to Jenna Pascoe; phone to 07700 900123; passengers to 4\. Recorded by Sam/);
+  r = await get(`/case/${thin}`);
+  assert.doesNotMatch(r.text, /<strong>Still to get from the customer:<\/strong>/, 'the history keeps the line; the job no longer shows it');
+
+  // Not enough: no pickup time. The page says so and nothing is recorded.
+  const noTime = await seed('notime', ['x'], { phone: '', journey: { time: '' } });
+  r = await get(`/case/${noTime}`);
+  assert.match(r.text, /The email does not give a pickup time, and the job cannot be booked without it\. The reply asks the customer for it\. It also asks for a phone number\./);
+  assert.doesNotMatch(r.text, /enough here to book/i);
+  await post(`/case/${noTime}/book`, { ...thinJob, time: '', manual_ref: '500101', signed_off: 'yes' }, `/case/${noTime}`);
+  assert.equal((await store.caseById(noTime)).dispatch_ref, '');
+  assert.equal(await store.dispatchBookingByRef('500101'), null);
 });

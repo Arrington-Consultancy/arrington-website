@@ -40,14 +40,11 @@ function driverName(env = process.env) {
   return LABELS[n] ? n : 'standin';
 }
 
-// What a job must carry before it can be booked anywhere, and what a
-// booking reply must ask the customer for when the email does not say
-// (Tom, 10 November 2026: "when we reply AI to the customer we need to ask
-// for phone number, how many people etc"). One list, used by the reading,
-// the reply and the booking form, so the three cannot disagree. It is what
-// iCabbi's booking API takes: date, time, pickup, destination, the
-// passenger's name and phone, how many are travelling (which picks the
-// car), and a flight number when the pickup is an airport.
+// What a job carries, and what a booking reply asks the customer for when
+// the email does not say (Tom, 10 November 2026: "when we reply AI to the
+// customer we need to ask for phone number, how many people etc"). One
+// list, used by the reading, the reply and the booking form, so the three
+// cannot disagree.
 const REQUIRED = [
   ['date', 'a date', 'the date'],
   ['time', 'a pickup time', 'the pickup time'],
@@ -57,7 +54,19 @@ const REQUIRED = [
   ['phone', 'a phone number', 'a mobile number for the driver'],
   ['passengers', 'how many passengers', 'how many people are travelling (and any large luggage), so the right size of car is sent']
 ];
+// What is ENOUGH to book a job (Tom, 28 November 2026: "jobs with missing
+// info should be booked in and replied for missing info when there's
+// enough, for example as long as there's a pick up time and addresses the
+// rest could be replied and asked"): the day, the pickup time and the two
+// addresses. The rest is still asked for, in the reply that confirms the
+// booking, and shows on the job as still to get.
+const ENOUGH = ['date', 'time', 'pickup', 'destination'];
+// The live iCabbi connection also needs a name and a phone number: it
+// books under a phone number and looks on the board for the same phone
+// before adding anything.
+const LIVE_NEEDS = [...ENOUGH, 'name', 'phone'];
 const AIRPORT = /\b(airport|terminal)\b/i;
+const FLIGHT = ['flight', 'the flight number', 'the flight number, so the driver can watch for a late arrival'];
 
 // What is still missing from a reading of a booking email, worked out in
 // plain code from the fields the reading holds, so the reply always asks
@@ -67,17 +76,27 @@ function missingFromReading(reading) {
   const r = reading || {}; const j = r.journey || {};
   const have = { date: j.date, time: j.time, pickup: j.pickup, destination: j.destination, name: r.customer_name, phone: r.phone, passengers: j.passengers };
   const out = REQUIRED.filter(([k]) => !String(have[k] || '').trim()).map(([, , ask]) => ask);
-  if (j.pickup && AIRPORT.test(j.pickup) && !String(j.flight || '').trim()) out.push('the flight number, so the driver can watch for a late arrival');
+  if (j.pickup && AIRPORT.test(j.pickup) && !String(j.flight || '').trim()) out.push(FLIGHT[2]);
   return out;
 }
 
-function cleanJob(input) {
+// Whether a reading of an email holds enough to book the job.
+function enoughToBook(reading) {
+  const j = (reading || {}).journey || {};
+  return ENOUGH.every((k) => String(j[k] || '').trim());
+}
+
+// A job as typed into the booking form. `missing` is what stops it being
+// booked: anything in `needs` it does not hold, or a date, time or number
+// that cannot be read. `toGet` is what the job can be booked without and
+// the customer is still to be asked for: [{ key, label, ask }].
+function cleanJob(input, { needs = ENOUGH } = {}) {
   const s = (v, n) => String(v || '').replace(/\s+/g, ' ').trim().slice(0, n);
   const job = {
     date: s(input.date, 10), time: s(input.time, 5), pickup: s(input.pickup, 160), destination: s(input.destination, 160),
     name: s(input.name, 80), phone: s(input.phone, 30), passengers: s(input.passengers, 3), vehicle: s(input.vehicle, 60) || 'Car (up to 4)', notes: s(input.notes, 300), flight: s(input.flight, 12)
   };
-  const missing = REQUIRED.filter(([k]) => !job[k]).map(([, label]) => label);
+  const missing = REQUIRED.filter(([k]) => needs.includes(k) && !job[k]).map(([, label]) => label);
   if (job.date && !/^\d{4}-\d{2}-\d{2}$/.test(job.date)) missing.push('a date as YYYY-MM-DD');
   if (job.time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(job.time)) missing.push('a time as HH:MM');
   if (/^\d{4}-\d{2}-\d{2}$/.test(job.date)) {
@@ -86,7 +105,17 @@ function cleanJob(input) {
     if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== job.date) missing.push('a date that exists');
   }
   if (job.passengers && !/^\d{1,2}$/.test(job.passengers)) missing.push('passengers as a number');
-  return { job, missing };
+  return { job, missing, toGet: stillToGet(job, needs) };
+}
+
+// What a job that can be booked is still without. The number of passengers
+// is never guessed: a job booked without it says so until the customer
+// answers.
+function stillToGet(job, needs = ENOUGH) {
+  const j = job || {};
+  const out = REQUIRED.filter(([k]) => !needs.includes(k) && !String(j[k] || '').trim()).map(([key, label, ask]) => ({ key, label, ask }));
+  if (j.pickup && AIRPORT.test(j.pickup) && !String(j.flight || '').trim()) out.push({ key: FLIGHT[0], label: FLIGHT[1], ask: FLIGHT[2] });
+  return out;
 }
 
 function standinDriver(store, prefix, system = 'iCabbi') {
@@ -97,6 +126,7 @@ function standinDriver(store, prefix, system = 'iCabbi') {
     // Staff key the job into the dispatch system themselves; this records it.
     manual: true,
     system,
+    needs: ENOUGH,
     async book({ job, kase, brand, actor, manualRef }) {
       const given = cleanRef(manualRef);
       if (given) {
@@ -148,6 +178,7 @@ function icabbiDriver(env = process.env, { store, fetch } = {}) {
     name: 'icabbi',
     label: LABELS.icabbi,
     live: true,
+    needs: LIVE_NEEDS,
     get configured() { return client.configured(); },
     writes: s.writes,
     client,
@@ -230,4 +261,4 @@ function describeDispatchStatus(env = process.env) {
   return `Abacus office dispatch: iCabbi at ${s.base}, keys present; ${s.writes ? 'LIVE: signed-off bookings go into iCabbi' : 'check only: iCabbi checks each booking and nothing is written (ABACUS_OFFICE_ICABBI_LIVE_WRITES is not true)'}; ${types ? `${types} vehicle type${types === 1 ? '' : 's'} mapped` : 'no vehicle types mapped, so only ordinary cars can be booked'}`;
 }
 
-module.exports = { createDispatch, describeDispatchStatus, driverName, cleanJob, cleanRef, systemName, missingFromReading, LABELS, DispatchNotConnected, REQUIRED };
+module.exports = { createDispatch, describeDispatchStatus, driverName, cleanJob, stillToGet, enoughToBook, cleanRef, systemName, missingFromReading, LABELS, DispatchNotConnected, REQUIRED, ENOUGH, LIVE_NEEDS };

@@ -80,6 +80,8 @@ test('the booking sent to iCabbi is built from the checked job, and anything it 
   assert.equal(b.vehicle_type, 'R4');
   assert.equal(b.idempotency_key, 'office-abacus-7-1', 'a retried request cannot book the job twice');
   assert.match(b.instructions, /^2 passengers\. Two suitcases\. Booked from the office by Sam\.$/);
+  // A job booked before the customer has said how many are travelling tells the driver so, and guesses nothing.
+  assert.match(icabbi.toBooking({ ...JOB, passengers: '' }, s, { actorName: 'Sam' }).instructions, /^Number of passengers not given yet\. Two suitcases\./);
   assert.deepEqual(Object.keys(icabbi.simple(b)).sort(), ['address', 'date', 'destination', 'name', 'phone'], '/bookings/check gets the basic shape');
   assert.throws(() => icabbi.toBooking({ ...JOB, phone: 'ring the office' }, s), /not one iCabbi will take\. Correct it and try again\. Nothing was booked/);
   assert.throws(() => icabbi.toBooking({ ...JOB, vehicle: 'Wheelchair accessible' }, s), /No iCabbi vehicle type is set for "Wheelchair accessible", so it could go out as an ordinary car/);

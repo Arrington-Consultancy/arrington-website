@@ -109,9 +109,11 @@ function toBooking(job, s, { ref, idempotencyKey, actorName } = {}) {
   if (!vehicleKey && vehicle && !/^car \(up to 4\)$/i.test(vehicle)) {
     throw new IcabbiError(`No iCabbi vehicle type is set for "${vehicle}", so it could go out as an ordinary car. Nothing was booked. Arrington sets the vehicle types once.`);
   }
+  // A job can be booked before the customer has said how many are
+  // travelling; the driver is then told the number is not known yet.
   const n = Number(job.passengers);
   const instructions = [
-    `${n} passenger${n === 1 ? '' : 's'}.`,
+    job.passengers ? `${n} passenger${n === 1 ? '' : 's'}.` : 'Number of passengers not given yet.',
     job.notes ? String(job.notes).trim().replace(/([^.!?])$/, '$1.') : '',
     actorName ? `Booked from the office by ${actorName}.` : ''
   ].filter(Boolean).join(' ').slice(0, 250);

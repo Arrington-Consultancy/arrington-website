@@ -10196,7 +10196,9 @@ the inbox in another.
   date, pickup time, full pickup address, destination, the passenger's
   name, a mobile number for the driver, how many people are travelling
   (and any large luggage), plus the flight number when the pickup is an
-  airport. `missingFromReading` works out what the email did not give in
+  airport. **Changed 28/11/2026: the job is booked once it has the
+  day, the time and both addresses, and the rest is asked for; see "A
+  booking with enough is booked" below.** `missingFromReading` works out what the email did not give in
   plain code, so the reading's missing list no longer depends on the
   model; the reply prompt names the same list and must ask for every
   missing item in the one reply and never confirm until it has them;
@@ -11039,6 +11041,52 @@ faults each turned a test red (six Microsoft, five mailbox, one by hand).
 Settings and a booking email, no sideways scroll, no errors; on a phone each
 copy line is full width. **Not tested:** real Microsoft, real Google, real
 iCabbi, a real phone. The first real connection is the test.
+
+### A booking with enough is booked, and the reply asks for the rest (28/11/2026)
+
+Tom, 28 November 2026: "jobs with missing info should be booked in and
+replied for missing info when there's enough, for example as long as
+there's a pick up time and addresses the rest could be replied and asked".
+Branch `feature/office-book-with-enough`.
+
+- **Enough to book:** the day, the pickup time, the pickup address and the
+  destination (`ENOUGH` in `abacus-office/lib/dispatch.js`). The passenger's
+  name, a phone number, how many are travelling and (airport pickups) the
+  flight number are still asked for, but no longer stop the booking. The
+  number of passengers is never guessed: it stays empty until the customer
+  answers. `cleanJob(input, { needs })` returns `missing` (stops the booking)
+  and `toGet` (booked without, still to ask).
+- **Each dispatch connection says what it needs** (`dispatch.needs`). By
+  hand: `ENOUGH`. The live iCabbi connection: `LIVE_NEEDS`, which adds name
+  and phone, because it books under a phone number and looks on the board
+  for the same phone before adding anything. A job sent to iCabbi with no
+  passenger count tells the driver "Number of passengers not given yet."
+- **Still only on a member of staff's tick.** Nothing about sign-off, the
+  once-only claim or the duplicate job number check changed.
+- **The replies.** The first reply never says the job is booked (unchanged);
+  when the email gives enough it says the office is putting the job in now
+  and asks for the rest in the same reply. After staff record the booking,
+  the AI's confirming redraft confirms it and asks for everything still
+  missing in the one reply ("The car is booked whether or not they answer").
+- **On the case.** Before booking: a green note, "There is enough here to
+  book it", naming what the email does not give; the name, phone and
+  passengers lines are labelled "(ask if not given)" and are not required.
+  With the day, time or an address missing the note stays amber and the
+  booking is refused in words. After booking: "Still to get from the
+  customer: ..." on the job and in the history, and the change form (now
+  "The customer has changed this job, or sent what was missing") is open,
+  filled from the booked job, so the answer is added in one go and the note
+  clears.
+- **Known limit:** the customer's answer arrives as a new email, so staff
+  add it on the original email's booking (search finds it by name, subject
+  or job number).
+- **Tests:** `test/abacusOfficeByHand.test.js` (a thin booking end to end,
+  and one with no time refused), `test/abacusOffice.test.js`,
+  `test/abacusOfficeIcabbi.test.js`. Five planted faults each turned a test
+  red (phone needed again, booked with no time, the confirming reply not
+  asking, no tick needed, nothing shown as still to get). 177 office and
+  Tidewell tests pass. Chromium at 1440px and iPhone 13: no sideways scroll,
+  no errors. Not tested: the real AI's wording, a real phone, real iCabbi.
 
 ## Blog, fed from Holo (LIVE 18/11/2026)
 

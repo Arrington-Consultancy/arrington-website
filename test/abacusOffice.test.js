@@ -187,9 +187,21 @@ test('the AI recommends passing a complaint up, a safety matter always goes up, 
   const dispatch = require('../abacus-office/lib/dispatch');
   const full = { date: '2031-11-13', time: '19:30', pickup: 'The Moor', destination: 'Penryn', name: 'Claire Rowe', phone: '07700 900999', passengers: '2' };
   assert.deepEqual(dispatch.cleanJob(full).missing, []);
-  assert.deepEqual(dispatch.cleanJob({ ...full, phone: '' }).missing, ['a phone number']);
+  // Tom, 28 November 2026: the day, the pickup time and both addresses are
+  // enough to book; the rest is asked for and shows as still to get.
+  const noPhone = dispatch.cleanJob({ ...full, phone: '' });
+  assert.deepEqual(noPhone.missing, [], 'a job is booked without a phone number');
+  assert.deepEqual(noPhone.toGet.map((g) => g.label), ['a phone number'], 'and the phone number is still to get');
+  assert.deepEqual(dispatch.cleanJob({ ...full, phone: '' }, { needs: dispatch.LIVE_NEEDS }).missing, ['a phone number'], 'the live iCabbi connection still needs a phone number');
   assert.deepEqual(dispatch.cleanJob({ ...full, time: '7.30pm' }).missing, ['a time as HH:MM']);
-  assert.deepEqual(dispatch.cleanJob({ ...full, passengers: '' }).missing, ['how many passengers'], 'a job is never booked with the passengers guessed');
+  for (const [k, label] of [['date', 'a date'], ['time', 'a pickup time'], ['pickup', 'a pickup address'], ['destination', 'a destination']]) {
+    assert.deepEqual(dispatch.cleanJob({ ...full, [k]: '' }).missing, [label], `never booked without ${label}`);
+  }
+  const noCount = dispatch.cleanJob({ ...full, passengers: '' });
+  assert.equal(noCount.job.passengers, '', 'the number of passengers is never guessed');
+  assert.deepEqual(noCount.toGet.map((g) => g.label), ['how many passengers']);
+  assert.deepEqual(dispatch.cleanJob({ ...full, pickup: 'Newquay Airport' }).toGet.map((g) => g.label), ['the flight number'], 'an airport pickup still wants the flight number');
+  assert.deepEqual(dispatch.cleanJob(full).toGet, []);
   // What the reply asks the customer for is decided by code from the fields
   // (Tom, 10/11/2026: "we need to ask for phone number, how many people etc"),
   // so a model that writes an empty missing list still gets every question asked.
@@ -202,6 +214,9 @@ test('the AI recommends passing a complaint up, a safety matter always goes up, 
   assert.deepEqual(reading({ phone: '07700 900999', journey: { date: '2026-11-14', time: '09:00', pickup: '3 Fore Street', destination: 'Falmouth', passengers: '3', flight: '' } }).missing, [], 'nothing asked for when the email gives it all');
   const sys = ai.readSystem('2026-11-10', { name: 'X', town: 'T', county: 'C', phone: '', signature: 'X', facts: [] });
   for (const [, label] of dispatch.REQUIRED) assert.ok(sys.includes(label), `the reading prompt names ${label}`);
+  assert.match(sys, /The office can book a job once it has a date, a pickup time, a pickup address and a destination\./);
+  assert.match(sys, /do not make the booking wait on the answer/);
+  assert.match(sys, /Never tell the customer the job is booked or confirmed/, 'the first reply still confirms nothing');
   assert.match(sys, /ask for every missing item in the one reply/);
   // The live connection refuses until it has the firm's own API access, and
   // the refusal reaches the person as its own message, not a crash.
@@ -398,8 +413,8 @@ test('the office over HTTP: login, forced password change, one case per email, r
   const bookingFields = { date: '2031-11-13', time: '19:30', pickup: 'The Moor', destination: 'Penryn', name: 'Claire Rowe', phone: '07700 900999', passengers: '2', vehicle: 'Car (up to 4)', notes: '' };
   r = await sam.post(`/case/${rowe.id}/book`, bookingFields, `/case/${rowe.id}`);
   assert.equal((await byId('<demo-rowe@example.invalid>')).dispatch_ref, '', 'no tick, nothing booked');
-  r = await sam.post(`/case/${rowe.id}/book`, { ...bookingFields, phone: '', signed_off: 'yes' }, `/case/${rowe.id}`);
-  assert.equal((await byId('<demo-rowe@example.invalid>')).dispatch_ref, '', 'a missing phone number, nothing booked');
+  r = await sam.post(`/case/${rowe.id}/book`, { ...bookingFields, time: '', signed_off: 'yes' }, `/case/${rowe.id}`);
+  assert.equal((await byId('<demo-rowe@example.invalid>')).dispatch_ref, '', 'no pickup time, nothing booked');
   r = await sam.post(`/case/${rowe.id}/book`, { ...bookingFields, signed_off: 'yes' }, `/case/${rowe.id}`);
   let roweNow = await byId('<demo-rowe@example.invalid>');
   assert.match(roweNow.dispatch_ref, /^[A-Z]{2,3}-\d{5}$/, `booked into the stand-in dispatch with a reference (got "${roweNow.dispatch_ref}")`);
