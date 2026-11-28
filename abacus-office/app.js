@@ -30,7 +30,8 @@ const visits = require('./lib/visits');
 const { CHANNELS, isLogged } = require('./lib/channels');
 const notify = require('./lib/notify');
 const alerts = require('./lib/alerts');
-const { createDispatch } = require('./lib/dispatch');
+const dispatchRules = require('./lib/dispatch');
+const { createDispatch } = dispatchRules;
 const { longDate } = require('./lib/demoInbox');
 const mailboxLib = require('./lib/mailbox');
 const { createMailRoom, microsoftClient, MS_CLIENT, PROVIDERS } = require('./lib/mailroom');
@@ -126,6 +127,8 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     // Jobs are keyed into the dispatch system by hand and recorded here.
     res.locals.dispatchManual = Boolean(dispatch.manual);
     res.locals.dispatchSystem = dispatch.system || 'iCabbi';
+    // What a job must hold before it can be booked; the rest is asked for.
+    res.locals.dispatchNeeds = dispatch.needs || dispatchRules.ENOUGH;
     // Whether an alert email can actually go, so no page says a manager was
     // emailed when nothing could be sent.
     res.locals.alertsReady = Boolean(alerts.smtpConfig(alertsEnv).ready);
@@ -473,7 +476,9 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
     // The mailbox this email came into decides what the page says about
     // where its reply waits.
     const box = office.boxFor(kase);
-    res.render('case', { mailboxLabel: box.label, mailboxNone: Boolean(box.none), mailboxDemo: Boolean(box.demo), mailboxWhy: box.noneWhy || 'No mailbox is connected', title: kase.subject || 'Email', section: kase.kind === 'complaints' ? 'complaints' : (kase.kind === 'licensing' ? 'council' : 'inbox'), kase, events, users: users.filter((u) => u.active && canSee(u, kase)), booking: office.bookingFrom(kase), dispatchRow: kase.dispatch_ref ? await store.dispatchBookingByRef(kase.dispatch_ref) : null, statusWords: require('./lib/icabbi').statusWords, holdingText: kase.kind === 'complaints' ? office.holdingText(kase) : '', standardReplies: await store.standardRepliesFor(kase.brand || '') });
+    const booking = office.bookingFrom(kase);
+    const dispatchRow = kase.dispatch_ref ? await store.dispatchBookingByRef(kase.dispatch_ref) : null;
+    res.render('case', { mailboxLabel: box.label, mailboxNone: Boolean(box.none), mailboxDemo: Boolean(box.demo), mailboxWhy: box.noneWhy || 'No mailbox is connected', title: kase.subject || 'Email', section: kase.kind === 'complaints' ? 'complaints' : (kase.kind === 'licensing' ? 'council' : 'inbox'), kase, events, users: users.filter((u) => u.active && canSee(u, kase)), booking, dispatchRow, jobGaps: dispatchRules.cleanJob(booking, { needs: dispatch.needs }), stillToGet: dispatchRow && dispatchRow.status === 'booked' && dispatchRow.job ? dispatchRules.stillToGet(dispatchRow.job, dispatch.needs) : [], statusWords: require('./lib/icabbi').statusWords, holdingText: kase.kind === 'complaints' ? office.holdingText(kase) : '', standardReplies: await store.standardRepliesFor(kase.brand || '') });
   }));
   const act = (p, fn) => app.post(`/case/:id/${p}`, loadCase, wrap(async (req, res) => { await fn(req, res); if (!res.headersSent && !res.locals.redirected) res.redirect(`/case/${req.kase.id}`); }));
   // A manager or the owner who sees every company puts an email under the
@@ -536,8 +541,11 @@ function createApp({ pool, mailbox, firm, dispatch, sessionSecret = process.env.
   });
   act('book', async (req) => {
     try {
-      const { ref, statusWords, confirmed, manual, numbered, system } = await office.book(req.kase, req.user, req.body, req.body.signed_off === 'yes');
-      const next = confirmed ? ' The reply now confirms it; check it and approve.' : ' Change the reply to confirm it before approving.';
+      const { ref, statusWords, confirmed, manual, numbered, system, toGet } = await office.book(req.kase, req.user, req.body, req.body.signed_off === 'yes');
+      const still = toGet && toGet.length ? toGet.map((g) => g.label).join(', ') : '';
+      const next = confirmed
+        ? (still ? ` The reply now confirms it and asks the customer for ${still}; check it and approve.` : ' The reply now confirms it; check it and approve.')
+        : (still ? ` Change the reply to confirm it and to ask the customer for ${still} before approving.` : ' Change the reply to confirm it before approving.');
       flash(req, 'ok', manual
         ? (numbered ? `Recorded: keyed into ${system} by hand as job ${ref}.${next}` : `Recorded as keyed into ${system} by hand. No ${system} job number was given, so the office calls it ${ref}.${next}`)
         : `Booked into ${dispatch.label} as ${ref}${statusWords ? `, ${statusWords}` : ''}.${next}`);

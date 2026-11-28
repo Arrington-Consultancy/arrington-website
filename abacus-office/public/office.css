@@ -239,6 +239,8 @@ p { margin: 0 0 0.8rem; }
 .to-email-body-small { font-size: 0.95rem; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 0.8rem; margin-bottom: 0.6rem; }
 .to-summary { font-size: 1.05rem; font-weight: 600; }
 .to-missing { background: var(--warn-bg); color: var(--warn); padding: 0.55rem 0.75rem; border-radius: 8px; }
+/* Enough to book: what is still to ask the customer for is not a stop. */
+.to-missing-ok { background: var(--ok-bg); color: var(--ok); }
 .to-facts { display: grid; grid-template-columns: 1fr; gap: 0.35rem 1rem; margin: 0.4rem 0 0.8rem; }
 @media (min-width: 40rem) { .to-facts { grid-template-columns: 1fr 1fr; } }
 .to-facts div { display: flex; flex-direction: column; border-left: 3px solid var(--sand-2); padding-left: 0.6rem; }

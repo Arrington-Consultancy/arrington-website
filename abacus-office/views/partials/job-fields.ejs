@@ -5,6 +5,13 @@
     line on the clipboard as it stands now, corrections included. %>
 <% var _vehicles = ['Car (up to 4)', 'Estate (up to 4, more luggage)', '6 seater', '8 seater', 'Wheelchair accessible']; %>
 <% var _copy = typeof copy !== 'undefined' && copy; %>
+<%# `needs` is what the job cannot be booked without (the day, the time and
+    the two addresses; a live dispatch system also a name and a phone). The
+    other lines may be left empty and are asked for in the reply (Tom,
+    28 November 2026). With no `needs` given every line is required. %>
+<% var _needs = typeof needs !== 'undefined' && Array.isArray(needs) ? needs : ['date', 'time', 'pickup', 'destination', 'name', 'phone', 'passengers']; %>
+<% function _req(k) { return _needs.indexOf(k) === -1 ? '' : ' required'; } %>
+<% function _later(k) { return _needs.indexOf(k) === -1 ? ' (ask if not given)' : ''; } %>
 <% function _btn(id, what, as) { return _copy ? '<button type="button" class="to-copy" data-copy-from="' + p + '-' + id + '"' + (as ? ' data-copy-as="' + as + '"' : '') + ' aria-label="Copy the ' + what + '">Copy</button>' : ''; } %>
 <div class="to-field-row is-two<%= _copy ? " has-copy" : "" %>">
   <div class="to-field"><label for="<%= p %>-date">Date</label><div class="to-copyable"><input id="<%= p %>-date" name="date" type="date" value="<%= j.date || '' %>" required><%- _btn('date', 'date', 'ukdate') %></div></div>
@@ -15,9 +22,9 @@
   <div class="to-field"><label for="<%= p %>-destination">Destination</label><div class="to-copyable"><input id="<%= p %>-destination" name="destination" value="<%= j.destination || '' %>" maxlength="160" required><%- _btn('destination', 'destination') %></div></div>
 </div>
 <div class="to-field-row<%= _copy ? " has-copy" : "" %>">
-  <div class="to-field"><label for="<%= p %>-name">Passenger</label><div class="to-copyable"><input id="<%= p %>-name" name="name" value="<%= j.name || '' %>" maxlength="80" required><%- _btn('name', 'passenger\'s name') %></div></div>
-  <div class="to-field"><label for="<%= p %>-phone">Phone</label><div class="to-copyable"><input id="<%= p %>-phone" name="phone" type="tel" value="<%= j.phone || '' %>" maxlength="30" required><%- _btn('phone', 'phone number') %></div></div>
-  <div class="to-field"><label for="<%= p %>-passengers">Passengers</label><div class="to-copyable"><input id="<%= p %>-passengers" name="passengers" inputmode="numeric" value="<%= j.passengers || '' %>" maxlength="2" required placeholder="How many"><%- _btn('passengers', 'number of passengers') %></div></div>
+  <div class="to-field"><label for="<%= p %>-name">Passenger<%= _later('name') %></label><div class="to-copyable"><input id="<%= p %>-name" name="name" value="<%= j.name || '' %>" maxlength="80"<%- _req('name') %>><%- _btn('name', 'passenger\'s name') %></div></div>
+  <div class="to-field"><label for="<%= p %>-phone">Phone<%= _later('phone') %></label><div class="to-copyable"><input id="<%= p %>-phone" name="phone" type="tel" value="<%= j.phone || '' %>" maxlength="30"<%- _req('phone') %>><%- _btn('phone', 'phone number') %></div></div>
+  <div class="to-field"><label for="<%= p %>-passengers">Passengers<%= _later('passengers') %></label><div class="to-copyable"><input id="<%= p %>-passengers" name="passengers" inputmode="numeric" value="<%= j.passengers || '' %>" maxlength="2"<%- _req('passengers') %> placeholder="How many"><%- _btn('passengers', 'number of passengers') %></div></div>
 </div>
 <div class="to-field-row is-two<%= _copy ? " has-copy" : "" %>">
   <div class="to-field"><label for="<%= p %>-vehicle">Vehicle</label><div class="to-copyable"><select id="<%= p %>-vehicle" name="vehicle"><% _vehicles.forEach(function (v) { %><option<% if ((j.vehicle || 'Car (up to 4)') === v) { %> selected<% } %>><%= v %></option><% }) %></select><%- _btn('vehicle', 'vehicle') %></div></div>

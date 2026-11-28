@@ -520,8 +520,10 @@ ${this.firm.signature}`;
   }
 
   // A member of staff books the job from an email into dispatch. Only with
-  // the sign-off tick, only with every detail present, and only through the
-  // dispatch connection. Until iCabbi is connected that is BY HAND: staff
+  // the sign-off tick, only with enough to book it (the day, the pickup
+  // time and both addresses; Tom, 28 November 2026), and only through the
+  // dispatch connection. What it is booked without is recorded as still to
+  // get, and the confirming reply asks the customer for it. Until iCabbi is connected that is BY HAND: staff
   // copy each detail into iCabbi themselves, then record here that they did
   // (input.manual_ref is iCabbi's own job number).
   bookingFrom(kase) {
@@ -549,13 +551,14 @@ ${this.firm.signature}`;
     const manual = Boolean(this.dispatch.manual);
     const system = this.dispatch.system || 'dispatch';
     if (!signedOff) throw refuse(manual ? `Tick the box to say you have keyed this job into ${system} and checked it against the email. Nothing was recorded.` : 'Tick the sign-off box to confirm you have checked the job against the email. Nothing was booked.');
-    const { job, missing } = cleanJob(input || {});
+    const { job, missing, toGet } = cleanJob(input || {}, { needs: this.dispatch.needs });
     if (missing.length) throw refuse(manual ? `Still needed before it is recorded as booked: ${missing.join(', ')}. Nothing was recorded.` : `Still needed before it can be booked: ${missing.join(', ')}. Nothing was booked.`);
+    const toGetWords = toGet.length ? `. Still to get from the customer: ${toGet.map((g) => g.label).join(', ')}` : '';
     // By hand the job is already in the dispatch system, so its time is
     // that system's business; this check is for a job the office books.
     const gone = manual ? '' : this.pickupGone(job);
     if (gone) throw refuse(`${gone} Nothing was booked.`);
-    const summary = `${job.date} ${job.time}, ${job.pickup} to ${job.destination}, ${job.passengers} passenger${job.passengers === '1' ? '' : 's'}`;
+    const summary = `${job.date} ${job.time}, ${job.pickup} to ${job.destination}${job.passengers ? `, ${job.passengers} passenger${job.passengers === '1' ? '' : 's'}` : ''}`;
     // One booking however many presses: the case is claimed first.
     if (!(await this.store.claimBooking(kase.id))) throw refuse('This job is being booked, or was booked a moment ago. Reload the page before trying again. Nothing was booked twice.');
     let result;
@@ -573,8 +576,8 @@ ${this.firm.signature}`;
     await this.store.updateCase(kase.id, { dispatch_ref: ref, booking_claim_at: null, booked_at: this.now(), booked_by: user.id, status: kase.status === 'new' ? 'in_progress' : kase.status, owner_id: kase.owner_id || user.id });
     const who = user.display_name || user.username;
     const detail = manual
-      ? (result.numbered ? `Keyed into ${system} by hand as job ${ref}: ${summary}. Recorded by ${who}` : `Keyed into ${system} by hand, no ${system} job number given (the office calls it ${ref}): ${summary}. Recorded by ${who}`)
-      : `Booked into ${this.dispatch.label} as ${ref}: ${summary}, signed off by ${who}${result.statusWords ? ` (${result.statusWords})` : ''}`;
+      ? (result.numbered ? `Keyed into ${system} by hand as job ${ref}: ${summary}. Recorded by ${who}${toGetWords}` : `Keyed into ${system} by hand, no ${system} job number given (the office calls it ${ref}): ${summary}. Recorded by ${who}${toGetWords}`)
+      : `Booked into ${this.dispatch.label} as ${ref}: ${summary}, signed off by ${who}${result.statusWords ? ` (${result.statusWords})` : ''}${toGetWords}`;
     await this.store.addEvent(kase.id, { actor: user, kind: 'booked', detail });
     // Once the job is in the dispatch system (booked there by the office,
     // or keyed in by hand and recorded by a named person), the AI rewrites
@@ -585,11 +588,14 @@ ${this.firm.signature}`;
     if ((this.dispatch.live || manual) && this.aiOn() && fresh && !fresh.approved_at) {
       try {
         const where = manual ? (result.numbered ? `booked in ${system} as job ${ref}` : 'booked') : `booked in dispatch as ${ref}`;
-        await this.guide(fresh, user, `This job is now ${where}: ${summary}${job.vehicle ? `, ${job.vehicle}` : ''}. Confirm the booking to the customer with these details, and nothing more.`);
+        const ask = toGet.length
+          ? ` Confirm the booking to the customer with these details, and in the same reply ask them for what the office does not have yet: ${toGet.map((g) => g.ask).join('; ')}. The car is booked whether or not they answer. Nothing more.`
+          : ' Confirm the booking to the customer with these details, and nothing more.';
+        await this.guide(fresh, user, `This job is now ${where}: ${summary}${job.vehicle ? `, ${job.vehicle}` : ''}.${ask}`);
         confirmed = true;
       } catch (e) { /* the booking stands; staff guide the reply by hand */ }
     }
-    return { ref, job, statusWords: result.statusWords || '', confirmed, manual, numbered: Boolean(result.numbered), system };
+    return { ref, job, statusWords: result.statusWords || '', confirmed, manual, numbered: Boolean(result.numbered), system, toGet };
   }
 
   // The booking a change or cancel email is about: the one this case put
@@ -606,14 +612,16 @@ ${this.firm.signature}`;
     return row;
   }
 
-  // Changing a job already in dispatch: the same sign-off tick, every
-  // detail present, and a record of exactly what changed.
+  // Changing a job already in dispatch: the same sign-off tick, enough to
+  // book it still present, and a record of exactly what changed. This is
+  // also where a detail the customer sends later (a phone number, how many
+  // are travelling) is added to a job booked without it.
   async changeBooking(kase, user, input, signedOff, typedRef) {
     if (!this.dispatch || typeof this.dispatch.update !== 'function') throw refuse('This dispatch connection cannot change a booking. Change it on the board.');
     if (kase.kind !== 'bookings') throw refuse('Only a booking email changes a job in dispatch.');
     const row = await this.bookingToAlter(kase, user, typedRef);
     if (!signedOff) throw refuse('Tick the box to confirm you have checked the change against the customer\'s email. Nothing was changed.');
-    const { job, missing } = cleanJob(input || {});
+    const { job, missing } = cleanJob(input || {}, { needs: this.dispatch.needs });
     if (missing.length) throw refuse(`Still needed before it can be changed: ${missing.join(', ')}. Nothing was changed.`);
     const before = row.job || {};
     const names = { date: 'date', time: 'time', pickup: 'pickup', destination: 'destination', name: 'passenger', phone: 'phone', passengers: 'passengers', vehicle: 'vehicle', notes: 'note for the driver', flight: 'flight' };
